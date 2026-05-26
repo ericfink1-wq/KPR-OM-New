@@ -219,23 +219,44 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     finally { setDemoBusy(false); }
   };
 
+  const parsePageSpec = (spec: string, max: number): number[] => {
+    const pages: number[] = [];
+    for (const part of spec.split(",")) {
+      const trimmed = part.trim();
+      const range = trimmed.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (range) {
+        const lo = Math.max(1, parseInt(range[1], 10));
+        const hi = Math.min(max, parseInt(range[2], 10));
+        for (let p = lo; p <= hi; p++) pages.push(p);
+      } else {
+        const n = parseInt(trimmed, 10);
+        if (n >= 1 && n <= max) pages.push(n);
+      }
+    }
+    return [...new Set(pages)].sort((a, b) => a - b);
+  };
+
   const handleSitePlanPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (e.target) e.target.value = "";
-    const page = parseInt(fixPage, 10);
-    if (!file || !(page >= 1)) return;
+    if (!file || !fixPage.trim()) return;
     setFixingPlan(true);
     try {
       const lib = await loadPdfJs();
       const buf = await file.arrayBuffer();
       const pdf = await lib.getDocument({ data: buf }).promise;
-      if (page > pdf.numPages) { alert(`PDF has only ${pdf.numPages} pages.`); return; }
-      const res = await _capturePagePhoto(pdf, page, lib, sitePlanHalf);
+      const pages = parsePageSpec(fixPage, pdf.numPages);
+      if (pages.length === 0) { alert(`No valid pages found in "${fixPage}" (PDF has ${pdf.numPages} pages).`); return; }
+      const imgs_raw: string[] = [];
+      for (const pg of pages) {
+        const res = await _capturePagePhoto(pdf, pg, lib, sitePlanHalf);
+        if (res.cover) imgs_raw.push(res.cover);
+      }
       const current = (await apiLoadImages(d.id)) || {};
-      const next = { ...current, sitePlan: res.cover ? [res.cover] : [], pagePicks: [], needsSitePlanPick: false };
+      const next = { ...current, sitePlan: imgs_raw, pagePicks: [], needsSitePlanPick: false };
       await apiSaveImages(d.id, next);
       setImgs(next);
-      onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: res.cover ? 1 : 0, needsSitePlanPick: false } });
+      onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: imgs_raw.length, needsSitePlanPick: false } });
       setFixPage("");
     } catch (err: unknown) { alert("Couldn't read PDF: " + (err instanceof Error ? err.message : "error")); }
     finally { setFixingPlan(false); }
@@ -514,11 +535,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           </div>
           <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
             <span style={{ fontSize:11, color:"#a89f8f" }}>Wrong page? Set from</span>
-            <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9]/g,""))} placeholder="#" inputMode="numeric"
-              style={{ width:56, fontSize:12, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", textAlign:"center", fontFamily:"'Inter',sans-serif" }}/>
+            <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
+              style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", fontFamily:"'Inter',sans-serif" }}/>
             <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
-            <button onClick={() => { if (parseInt(fixPage,10) >= 1) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!(parseInt(fixPage,10)>=1)}
-              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!(parseInt(fixPage,10)>=1))?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+            <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
+              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
               {fixingPlan?"Rendering…":"Choose PDF & set"}
             </button>
             <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
