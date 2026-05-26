@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Tenant } from "../lib/idb";
-import { fmtLeaseDate } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales } from "../lib/utils";
 
 interface Props {
   tenants: Tenant[];
@@ -53,8 +53,12 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
     ["name","Tenant",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
     ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
     ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["recentlyExercisedRenewal","Recent Renewal",false],
-    ["salesPSF","Sales/SF",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
+    ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
   ];
+
+  const isVacantRow = (t: Tenant) => !t.name || /^vacant(y|ies|s)?$/i.test(String(t.name).trim());
+  const vacantCount = tenants.filter(isVacantRow).length;
+  const occupiedCount = tenants.length - vacantCount;
 
   const asOfDate = tenantsAsOf || omDate;
   const asOfLabel = tenantsSource === "rent-roll" ? "RENT ROLL" : "OM";
@@ -63,7 +67,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
     <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:13, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length?`${tenants.length} tenants`:`${rows.length} of ${tenants.length}`}</div>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length ? `${occupiedCount} tenant${occupiedCount!==1?"s":""}${vacantCount>0?` · ${vacantCount} vacant`:""}` : `${rows.length} of ${tenants.length}`}</div>
           {asOfDate && (
             <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color: tenantsSource==="rent-roll" ? "#0d9488" : "#a89f8f", background: tenantsSource==="rent-roll" ? "#f0fdfa" : "#f6f2ea", border:`1px solid ${tenantsSource==="rent-roll" ? "#99f6e4" : "#e3dccd"}`, borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
               AS OF {fmtAsOf(asOfDate)} · {asOfLabel}
@@ -88,16 +92,22 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
           </thead>
           <tbody>
             {rows.map((t,i) => (
-              <tr key={i} style={{ borderTop:"1px solid #f1eadc" }}>
+              <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isVacantRow(t) ? 0.65 : 1 }}>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
-                  <span
-                    onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
-                    title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
-                    style={{ color:"#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px" }}>
-                    {t.name}
-                  </span>
-                  {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
-                  {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
+                  {isVacantRow(t) ? (
+                    <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
+                  ) : (
+                    <>
+                      <span
+                        onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
+                        title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
+                        style={{ color:"#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px" }}>
+                        {t.name}
+                      </span>
+                      {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+                      {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
+                    </>
+                  )}
                 </td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}</td>
@@ -121,7 +131,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                 <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }} title={[t.rentBumps,t.rentSchedule].filter(Boolean).join("   ·   ")||""}>{t.rentBumps||(t.rentSchedule?"Stepped":"—")}</td>
                 <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{t.renewalOptions||"—"}</td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
-                <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{n(t.salesPSF)!=null?`$${t.salesPSF}`:"—"}</td>
+                <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(t.salesPSF, t.sf)}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", whiteSpace:"nowrap", color:n(t.occupancyCost)!=null&&n(t.occupancyCost)!>15?"#dc2626":n(t.occupancyCost)!=null?"#0f9d63":"#a69e91" }}>{n(t.occupancyCost)!=null?`${t.occupancyCost}%`:"—"}</td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.creditRating==="Investment Grade"?"#0f9d63":"#837c6e" }}>{t.creditRating||"—"}</td>
               </tr>

@@ -1,0 +1,16 @@
+Make the following changes. Preserve everything already working; test in the workspace preview before I publish.
+
+Remove the password gate from the AI chat only — both the AI Analyst chat and the property-page "Ask about this property" assistant should work without the password. Keep password protection in place on every other part of the app exactly as it is now.
+In the Key Anchors section on the property page, make each anchor tenant name clickable; clicking opens that tenant's summary page (the same tenant summary view used from the tenant roster).
+The three summary cards (Key Financials, Income & Expenses, and the third Leasing card) sit in a row wider than a phone screen, so the third card overflows and breaks the page width/alignment on mobile. Make that card row responsive — wrap or stack the cards vertically on narrow/mobile widths so everything fits the screen — without changing each card's internal layout or the desktop appearance.
+Show vacant spaces as rows in the tenant roster (so the roster reflects vacancy, not just leased tenants), but make vacancy rows non-clickable — no tenant-summary link on them, unlike real tenant rows.
+Remove the "Assumed Debt" section/fields entirely from the deal page.
+On both the cover-photo and site-plan upload boxes, add a "Confirm / finalize" checkbox. When checked, hide that entire upload box. Make it reversible — include a small "edit image" link so the box can be reopened later to change the image.
+Update the AI analyst's reasoning on below-market leases and mark-to-market upside to account for remaining renewal options. If a tenant has many options remaining, treat near-term mark-to-market upside as limited/unrealistic, because the tenant can keep exercising options at the existing below-market rate rather than coming to market. Flag heavily-optioned below-market tenants as constrained, not as clean mark-to-market opportunities.
+Display all rent-PSF figures with two decimals (dollars and cents), e.g. $19.59/SF — in the tenant roster, the WTAVG rent/SF figure, and tenant summaries.
+Format tenant sales as "[total] / [PSF]". Total: if ≥ $1M, show millions with one decimal (e.g. $2.0M); if < $1M, show thousands (e.g. $930k). PSF: whole dollars, no cents (e.g. $157 PSF). Examples: "$2.0M / $157 PSF" and "$930k / $280 PSF".
+On the tenant summary page (opened by clicking a tenant), format every date to match the date style already used on that page (appears to be "Mon-YYYY", e.g. "Mar-2025"). Use that same format consistently for all dates there.
+Move the "Edit Metrics" control to directly below the "AI Investment Highlights" section on the deal page.
+Only show the Transaction Details box for deals with status "Under Contract" or "Owned." Hide it for active/prospect and passed deals.
+
+

@@ -198,7 +198,7 @@ export function tenantLabel(name: unknown): string {
 const _MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","June","July","Aug","Sept","Oct","Nov","Dec"];
 
 /**
- * Format a lease date string as "Mon YYYY" (e.g. "Sept 2027").
+ * Format a lease date string as "Mon-YYYY" (e.g. "Sept-2027").
  * Handles ISO (2027-09-30), slash M/D/YY, MM/DD/YYYY, and M/YYYY inputs.
  * Returns "—" for empty/unparseable values.
  */
@@ -209,7 +209,7 @@ export function fmtLeaseDate(raw: unknown): string {
   const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) {
     const m = parseInt(iso[2], 10) - 1;
-    if (m >= 0 && m < 12) return `${_MONTH_ABBR[m]} ${iso[1]}`;
+    if (m >= 0 && m < 12) return `${_MONTH_ABBR[m]}-${iso[1]}`;
   }
   // M/D/YY or MM/DD/YYYY or M/D/YYYY
   const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
@@ -217,15 +217,32 @@ export function fmtLeaseDate(raw: unknown): string {
     const m = parseInt(slash[1], 10) - 1;
     let y = parseInt(slash[3], 10);
     if (y < 100) y += 2000;
-    if (m >= 0 && m < 12) return `${_MONTH_ABBR[m]} ${y}`;
+    if (m >= 0 && m < 12) return `${_MONTH_ABBR[m]}-${y}`;
   }
   // M/YYYY (no day)
   const my = s.match(/^(\d{1,2})\/(\d{4})$/);
   if (my) {
     const m = parseInt(my[1], 10) - 1;
-    if (m >= 0 && m < 12) return `${_MONTH_ABBR[m]} ${my[2]}`;
+    if (m >= 0 && m < 12) return `${_MONTH_ABBR[m]}-${my[2]}`;
   }
   return s;
+}
+
+/**
+ * Format tenant sales volume as "$X.XM / $NNN PSF" or "$NNNk / $NNN PSF".
+ * Returns "—" when salesPSF is absent; returns "$NNN PSF" when sf is absent.
+ */
+export function fmtTenantSales(salesPSF: unknown, sf: unknown): string {
+  const psf = (salesPSF == null || salesPSF === "" || isNaN(Number(salesPSF))) ? null : Number(salesPSF);
+  const sqft = (sf == null || sf === "" || isNaN(Number(sf))) ? null : Number(sf);
+  if (psf == null) return "—";
+  const psfStr = `$${Math.round(psf)} PSF`;
+  if (sqft == null) return psfStr;
+  const total = psf * sqft;
+  const totalStr = total >= 1_000_000
+    ? `$${(total / 1_000_000).toFixed(1)}M`
+    : `$${Math.round(total / 1000)}k`;
+  return `${totalStr} / ${psfStr}`;
 }
 
 export function buildSystemPrompt(deals: Deal[]): string {

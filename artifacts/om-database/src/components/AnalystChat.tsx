@@ -15,6 +15,7 @@ interface Message {
 interface Props {
   deals: Deal[];
   onOpenDeal: (id: string) => void;
+  onTenantClick?: (name: string) => void;
   initialQuery?: string;
   onClearQuery?: () => void;
 }
@@ -55,7 +56,7 @@ const panelLabel: React.CSSProperties = {
   marginTop: 16,
 };
 
-export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQuery }: Props) {
+export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQuery, onClearQuery }: Props) {
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -205,7 +206,8 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
                         <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Key Anchors</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                           {portfolio.anchors.slice(0, 5).map(a => (
-                            <span key={a} style={{ background: "#f0fae8", border: "1px solid #c6e6a0", color: "#3d7a1c", borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600 }}>{a}</span>
+                            <span key={a} onClick={() => onTenantClick?.(a)}
+                              style={{ background: "#f0fae8", border: "1px solid #c6e6a0", color: "#3d7a1c", borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600, cursor: onTenantClick ? "pointer" : "default", textDecoration: onTenantClick ? "underline" : "none", textDecorationColor: "#c6e6a0", textUnderlineOffset: "2px" }}>{a}</span>
                           ))}
                           {portfolio.anchors.length > 5 && <span style={{ fontSize: 10, color: "#a89f8f" }}>+{portfolio.anchors.length - 5}</span>}
                         </div>

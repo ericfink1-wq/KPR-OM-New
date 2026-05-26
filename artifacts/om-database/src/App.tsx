@@ -221,6 +221,7 @@ function AppInner() {
           <AnalystChat
             deals={deals}
             onOpenDeal={handleOpenDeal}
+            onTenantClick={handleOpenTenant}
             initialQuery={pendingQuery}
             onClearQuery={() => setPendingQuery(undefined)}
           />

@@ -136,6 +136,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [pastePanelOpen, setPastePanelOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteError, setPasteError] = useState<string | null>(null);
+  const [coverFinalized, setCoverFinalized] = useState(false);
+  const [sitePlanFinalized, setSitePlanFinalized] = useState(false);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
 
   useEffect(() => {
@@ -213,7 +215,6 @@ TENANT NAME RULES:
 - Strip guarantor, DBA, or legal-entity lines that appear on subsequent lines beneath the tenant name.
 
 ROW FILTERING — skip these rows entirely (do not include them in the output):
-- VACANT / VACANCY rows (any row whose tenant name is blank, "Vacant", "Vacancy", or similar).
 - Total, Subtotal, and Grand Total summary rows.
 - Artifact rows where both SF and Annual Rent are 0 or null (data-entry placeholders).
 - KEEP real gross-lease tenants that have $0 CAM but positive base rent — those are legitimate occupied suites.
@@ -607,33 +608,45 @@ ${text.slice(0, 60000)}`;
 
       {/* Cover fixer */}
       {imgs != null && (
-        <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          {!imgs.cover && (
-            <>
-              <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:6 }}>Cover Photo — not set</div>
-              <p style={{ fontSize:11.5, color:"#6f6a5f", lineHeight:1.55, margin:"0 0 8px 0" }}>Upload a photo or set from a PDF page:</p>
-            </>
-          )}
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-            <button onClick={() => coverPhotoRef.current?.click()}
-              style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
-              Upload a photo
-            </button>
-            <input ref={coverPhotoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleCoverImageFile}/>
-            <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
-            <span style={{ fontSize:11, color:"#7d766a" }}>{imgs.cover ? "Wrong cover? Set from" : "Set from"}</span>
-            <span style={{ fontSize:11, color:"#a69e91" }}>page</span>
-            <input value={coverFixPage} onChange={e => setCoverFixPage(e.target.value.replace(/[^0-9]/g,""))} placeholder="#" inputMode="numeric"
-              style={{ width:56, fontSize:12, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", textAlign:"center", fontFamily:"'Inter',sans-serif" }}/>
-            <span style={{ fontSize:11, color:"#a69e91" }}>spread?</span>
-            <HalfToggle val={coverHalf} set={setCoverHalf}/>
-            <button onClick={() => { if (parseInt(coverFixPage,10) >= 1) coverPdfRef.current?.click(); }} disabled={fixingCover || !(parseInt(coverFixPage,10)>=1)}
-              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"default":"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
-              {fixingCover?"Rendering…":"Choose PDF & set"}
-            </button>
-            <input ref={coverPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleCoverPdf}/>
+        coverFinalized ? (
+          <div style={{ marginBottom:16, textAlign:"right" }}>
+            <button onClick={() => setCoverFinalized(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit cover photo</button>
           </div>
-        </div>
+        ) : (
+          <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            {!imgs.cover && (
+              <>
+                <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:6 }}>Cover Photo — not set</div>
+                <p style={{ fontSize:11.5, color:"#6f6a5f", lineHeight:1.55, margin:"0 0 8px 0" }}>Upload a photo or set from a PDF page:</p>
+              </>
+            )}
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <button onClick={() => coverPhotoRef.current?.click()}
+                style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+                Upload a photo
+              </button>
+              <input ref={coverPhotoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleCoverImageFile}/>
+              <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
+              <span style={{ fontSize:11, color:"#7d766a" }}>{imgs.cover ? "Wrong cover? Set from" : "Set from"}</span>
+              <span style={{ fontSize:11, color:"#a69e91" }}>page</span>
+              <input value={coverFixPage} onChange={e => setCoverFixPage(e.target.value.replace(/[^0-9]/g,""))} placeholder="#" inputMode="numeric"
+                style={{ width:56, fontSize:12, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", textAlign:"center", fontFamily:"'Inter',sans-serif" }}/>
+              <span style={{ fontSize:11, color:"#a69e91" }}>spread?</span>
+              <HalfToggle val={coverHalf} set={setCoverHalf}/>
+              <button onClick={() => { if (parseInt(coverFixPage,10) >= 1) coverPdfRef.current?.click(); }} disabled={fixingCover || !(parseInt(coverFixPage,10)>=1)}
+                style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"default":"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+                {fixingCover?"Rendering…":"Choose PDF & set"}
+              </button>
+              <input ref={coverPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleCoverPdf}/>
+            </div>
+            {imgs.cover && (
+              <div style={{ marginTop:10, borderTop:"1px solid #f1eadc", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
+                <input type="checkbox" id="coverFinalChk" onChange={e => { if (e.target.checked) setCoverFinalized(true); }} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
+                <label htmlFor="coverFinalChk" style={{ fontSize:11, color:"#7d766a", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {/* Lightbox */}
@@ -646,7 +659,6 @@ ${text.slice(0, 60000)}`;
 
       <ExtractionQuality deal={d}/>
       <DataIntegrity deal={d}/>
-      <MetricsEditor deal={d} onUpdate={onUpdate}/>
 
       {/* Market sale */}
       {d.marketSale && (
@@ -682,8 +694,10 @@ ${text.slice(0, 60000)}`;
         </div>
       )}
 
+      <MetricsEditor deal={d} onUpdate={onUpdate}/>
+
       {/* Financial grid */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
         <Card title="KEY FINANCIALS">
           <Row l="ASKING PRICE" v={d.askingPrice?`$${Number(d.askingPrice).toLocaleString()}`:null} c="#6dba43" field="askingPrice"/>
           <Row l="CAP RATE" v={d.capRate?`${d.capRate}%`:null} c="#0f9d63" field="capRate"/>
@@ -698,7 +712,7 @@ ${text.slice(0, 60000)}`;
           <Row l="EFF. GROSS INCOME" v={d.effectiveGrossIncome?`$${Number(d.effectiveGrossIncome).toLocaleString()}`:null} field="effectiveGrossIncome"/>
           <Row l="OPERATING EXPENSES" v={d.operatingExpenses?`$${Number(d.operatingExpenses).toLocaleString()}`:null} field="operatingExpenses"/>
           <Row l="NNN RECOVERIES" v={d.nnnRecoveries?`$${Number(d.nnnRecoveries).toLocaleString()}`:null}/>
-          <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${d.weightedAvgRentPSF}/SF`:null}/>
+          <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null}/>
         </Card>
         <Card title="LEASE METRICS">
           <Row l="WALT" v={d.walt?`${d.walt} yrs`:null} c={d.walt && Number(d.walt)<3?"#dc2626":Number(d.walt)<6?"#383a37":"#0f9d63"} field="walt"/>
@@ -723,37 +737,52 @@ ${text.slice(0, 60000)}`;
 
       {/* Site plan */}
       {imgs != null && imgs.sitePlan && imgs.sitePlan.length > 0 && (
-        <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:12 }}>Site Plan</div>
-          <div style={{ display:"grid", gap:10 }}>
-            {imgs.sitePlan.map((src, i) => (
-              <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7" }}>
-                <img src={src} alt={`Site plan ${i+1}`} style={{ width:"100%", display:"block" }}/>
-              </div>
-            ))}
+        sitePlanFinalized ? (
+          <div style={{ marginBottom:12, textAlign:"right" }}>
+            <button onClick={() => setSitePlanFinalized(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
           </div>
-          <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-            <button onClick={() => sitePlanImgRef.current?.click()}
-              style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
-              Upload image(s)
-            </button>
-            <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
-            <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
-            <span style={{ fontSize:11, color:"#a89f8f" }}>Wrong page? Set from</span>
-            <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
-              style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", fontFamily:"'Inter',sans-serif" }}/>
-            <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
-            <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
-              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
-              {fixingPlan?"Rendering…":"Choose PDF & set"}
-            </button>
-            <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
+        ) : (
+          <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:12 }}>Site Plan</div>
+            <div style={{ display:"grid", gap:10 }}>
+              {imgs.sitePlan.map((src, i) => (
+                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7" }}>
+                  <img src={src} alt={`Site plan ${i+1}`} style={{ width:"100%", display:"block" }}/>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <button onClick={() => sitePlanImgRef.current?.click()}
+                style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+                Upload image(s)
+              </button>
+              <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
+              <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
+              <span style={{ fontSize:11, color:"#a89f8f" }}>Wrong page? Set from</span>
+              <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
+                style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", fontFamily:"'Inter',sans-serif" }}/>
+              <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
+              <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
+                style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+                {fixingPlan?"Rendering…":"Choose PDF & set"}
+              </button>
+              <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
+            </div>
+            <div style={{ marginTop:10, borderTop:"1px solid #f1eadc", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
+              <input type="checkbox" id="sitePlanFinalChk" onChange={e => { if (e.target.checked) setSitePlanFinalized(true); }} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
+              <label htmlFor="sitePlanFinalChk" style={{ fontSize:11, color:"#7d766a", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Site plan — empty state (no images, no page picks yet) */}
       {imgs != null && (!imgs.sitePlan || imgs.sitePlan.length === 0) && (!imgs.pagePicks || imgs.pagePicks.length === 0) && (
+        sitePlanFinalized ? (
+          <div style={{ marginBottom:12, textAlign:"right" }}>
+            <button onClick={() => setSitePlanFinalized(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+          </div>
+        ) : (
         <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:6 }}>Site Plan — not set</div>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
@@ -774,6 +803,7 @@ ${text.slice(0, 60000)}`;
             <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
           </div>
         </div>
+        )
       )}
 
       {/* Site plan picker (manual) */}
@@ -921,7 +951,7 @@ ${text.slice(0, 60000)}`;
       )}
 
       {/* TRANSACTION DETAILS — acquisition record (LOI → close) and disposition */}
-      {(() => {
+      {(d.status === "Under Contract" || d.status === "Owned" || d.status === "Sold") && (() => {
         const owned = d.status === "Owned" || d.status === "Sold";
         const sold  = d.status === "Sold";
         const tf = (p: Omit<TxnFieldProps,"dealId"|"onUpdate">) =>
@@ -1138,15 +1168,8 @@ ${text.slice(0, 60000)}`;
         );
       })()}
 
-      {/* Debt from OM + Property info */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-        <Card title="DEBT NOTED IN OM" accent={d.assumableDebt?"#0f9d6340":undefined}>
-          <Row l="ASSUMABLE" v={d.assumableDebt===true?"YES":d.assumableDebt===false?"NO":null} c={d.assumableDebt?"#0f9d63":undefined}/>
-          <Row l="LOAN BALANCE" v={d.loanBalance?`$${Number(d.loanBalance).toLocaleString()}`:null}/>
-          <Row l="INTEREST RATE" v={d.loanRate?`${d.loanRate}%`:null}/>
-          <Row l="MATURITY" v={d.loanMaturity}/>
-          <Row l="TYPE" v={d.loanType}/>
-        </Card>
+      {/* Property info */}
+      <div style={{ marginBottom:12 }}>
         <Card title="PROPERTY INFO">
           <Row l="MARKET" v={d.market}/>
           <Row l="SUBMARKET" v={d.submarket}/>
@@ -1502,7 +1525,6 @@ function PropertyChat({ deal }: { deal: Deal }) {
 
   const ask = async (text: string) => {
     if (!text.trim() || thinking) return;
-    if (!ensureUploadAllowed()) return;
     const next = [...msgs, { role: "user" as const, content: text }];
     setMsgs(next); setInput(""); setThinking(true);
     try {

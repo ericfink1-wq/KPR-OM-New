@@ -107,11 +107,11 @@ REQUIRED SCHEMA:
   "comparableSales": [{"address": "string", "saleDate": "string", "salePrice": "number or null", "capRate": "number or null", "pricePerSF": "number or null", "sf": "number or null"}],
   "dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "one precise sentence", "strengths": ["string"], "risks": ["string"]},
   "redFlags": [{"severity": "high|medium|low", "description": "string — high only for substantial roof end-of-life or anchor with weak credit/closure history. NEVER flag absent asking price or non-reassessed RE taxes."}],
-  "notes": "2-3 sentence investment summary",
+  "notes": "2-3 sentence investment summary. When noting below-market rents or mark-to-market upside, account for renewal options: if a tenant has many options remaining, treat upside as constrained — the tenant controls the space at existing rent rather than coming to market at expiry. Flag heavily-optioned below-market tenants as limited, not clean mark-to-market plays.",
   "extraFields": {"any_other_notable_metric": "value"}
 }
 
-PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry.
+PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include vacant/availability rows as tenant entries with name "Vacant", their SF if stated, and null for all lease/rent fields — this ensures the roster reflects the actual vacancy picture.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
