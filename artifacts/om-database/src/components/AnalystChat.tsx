@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { Deal } from "../lib/idb";
-import { buildSystemPrompt, cityState } from "../lib/utils";
+import { buildSystemPrompt, cityState, tenantKey, tenantLabel } from "../lib/utils";
 import { SUGGESTED } from "../lib/constants";
 import { apiLoadImages } from "../lib/api";
 import { useCreateAiMessage } from "@workspace/api-client-react";
@@ -115,7 +115,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
   // ── Intelligence Library stats ───────────────────────────────────────────
   const stats = (() => {
     const tenantBrands = new Set(
-      active.flatMap(d => (d.tenants || []).map(t => t.name?.toLowerCase())).filter(Boolean)
+      active.flatMap(d => (d.tenants || []).map(t => tenantKey(t.name))).filter(Boolean)
     ).size;
     const leases = active.reduce((s, d) => s + (d.tenants || []).length, 0);
     const sfAnalyzed = active.reduce((s, d) => s + num(d.totalSF), 0);
@@ -143,7 +143,12 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
   const portfolio = (() => {
     const owned = active.filter(d => d.status === "Owned");
     const tenants = owned.flatMap(d => (d.tenants || []));
-    const anchors = Array.from(new Set(tenants.filter(t => t.isAnchor && t.name).map(t => t.name!.trim())));
+    const seenAnchors = new Set<string>();
+    const anchors = tenants.filter(t => t.isAnchor && t.name).reduce<string[]>((acc, t) => {
+      const k = tenantKey(t.name);
+      if (k && !seenAnchors.has(k)) { seenAnchors.add(k); acc.push(tenantLabel(t.name!)); }
+      return acc;
+    }, []);
     const totalValue = owned.reduce((s, d) => s + (num(d.txnPurchasePrice) || num(d.askingPrice)), 0);
     const totalSF = owned.reduce((s, d) => s + num(d.totalSF), 0);
     return { count: owned.length, value: totalValue, sf: totalSF, anchors };

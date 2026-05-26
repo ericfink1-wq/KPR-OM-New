@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { STATUS_COLORS } from "../lib/constants";
+import { tenantKey } from "../lib/utils";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
 
@@ -28,7 +29,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
     return (Date.now() - new Date(src).getTime()) < 6 * 30.4 * 86400000;
   }).length;
   const brands = new Set(
-    active.flatMap(d => ((d as any).tenants || []).map((t: any) => t.name?.toLowerCase()).filter(Boolean))
+    active.flatMap(d => ((d as any).tenants || []).map((t: any) => tenantKey(t.name)).filter(Boolean))
   ).size;
 
   const handleFiles = (fl: FileList | null) => {

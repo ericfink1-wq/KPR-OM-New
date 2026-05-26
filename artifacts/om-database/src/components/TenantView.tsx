@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
-import { cityState } from "../lib/utils";
+import { cityState, tenantKey, tenantLabel } from "../lib/utils";
 
 interface Props {
   tenantName: string;
@@ -11,13 +11,13 @@ interface Props {
 
 export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Props) {
   const norm = (s: unknown) => (String(s || "")).trim().toLowerCase();
-  const target = norm(tenantName);
+  const target = tenantKey(tenantName);
   const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
   const rows: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }[] = [];
   (deals || []).forEach(d =>
     (d.tenants || []).forEach(t => {
-      if (norm(t.name) === target) rows.push({ deal: d, t });
+      if (tenantKey(t.name) === target) rows.push({ deal: d, t });
     })
   );
 
@@ -84,7 +84,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
       </div>
 
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4, flexWrap:"wrap" }}>
-        <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:600, color:"#26281f", margin:0 }}>{tenantName}</h1>
+        <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:600, color:"#26281f", margin:0 }}>{tenantLabel(tenantName)}</h1>
         {anchors > 0 && <span style={{ fontSize:10, color:"#1f2b16", background:"#6dba4322", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>ANCHOR · {anchors}</span>}
         {credit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Credit: {credit}</span>}
       </div>

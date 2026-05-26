@@ -124,6 +124,76 @@ export function reconcileDeal(deal: Deal) {
   return { checks, errors: checks.filter(c => c.severity==="error").length, warns: checks.filter(c => c.severity==="warn").length, hadData };
 }
 
+// ── Tenant-name normalisation ─────────────────────────────────────────────────
+// These helpers ensure that spelling variants of the same brand (e.g. "T Mobile",
+// "T-Mobile", "TMobile") collapse to one key in every cross-deal grouping.
+//
+// To merge a brand that still splits, add ONE entry to TENANT_ALIASES:
+//   "normalized variant": "Canonical Display Name"
+// The left side must be the *normalized* form (lowercase, no punctuation).
+export const TENANT_ALIASES: Record<string, string> = {
+  "ulta": "Ulta Beauty",
+  "tj maxx": "TJ Maxx", "tjmaxx": "TJ Maxx",
+  "t mobile": "T-Mobile", "tmobile": "T-Mobile",
+  "at and t": "AT&T", "att": "AT&T", "at t": "AT&T",
+  "cvs": "CVS",
+  "bath and body works": "Bath & Body Works",
+  "dicks sporting goods": "Dick's Sporting Goods", "dicks": "Dick's Sporting Goods",
+  "jersey mikes": "Jersey Mike's",
+  "chick fil a": "Chick-fil-A", "chickfila": "Chick-fil-A",
+  "bjs wholesale club": "BJ's Wholesale Club", "bjs": "BJ's Wholesale Club",
+  "sams club": "Sam's Club",
+  "trader joes": "Trader Joe's",
+  "macys": "Macy's", "kohls": "Kohl's",
+  "lowes": "Lowe's", "lowes home improvement": "Lowe's",
+  "raising canes": "Raising Cane's",
+  "mcdonalds": "McDonald's", "wendys": "Wendy's", "dennys": "Denny's",
+  "applebees": "Applebee's",
+  "five guys": "Five Guys", "5 guys": "Five Guys",
+  "ups": "The UPS Store", "ups store": "The UPS Store",
+  // ── add your own variants here (one per line) ──────────────────────────────
+};
+
+// Redundant format/descriptor words safe to strip from the END of a name.
+const _TENANT_TRAIL = new Set([
+  "salon","salons","beauty","supply","supplies","store","stores","shop","shops",
+  "outlet","outlets","cafe","grill","grille","restaurant","restaurants",
+  "supercenter","pharmacy","wireless","bank","boutique","kitchen","bakery","bar",
+  "inc","llc","corp","co","company","ltd","lp","plc","na","and",
+]);
+
+/** Lowercase, punctuation-free normalised form of a tenant name. */
+export function _normTenant(name: unknown): string {
+  let s = String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  s = s.toLowerCase()
+       .replace(/['.]/g, "")
+       .replace(/&/g, " and ")
+       .replace(/#\s*\d[\d-]*/g, " ")
+       .replace(/[^a-z0-9]+/g, " ")
+       .replace(/\s+/g, " ")
+       .trim();
+  if (s.startsWith("the ")) s = s.slice(4);
+  let parts = s.split(" ").filter(Boolean);
+  while (parts.length > 1 && (_TENANT_TRAIL.has(parts[parts.length - 1]) || /^\d+$/.test(parts[parts.length - 1]))) {
+    parts.pop();
+  }
+  return parts.join(" ");
+}
+
+/** Stable grouping key — every spelling of one brand collapses to the same string. */
+export function tenantKey(name: unknown): string {
+  const n = _normTenant(name);
+  const alias = TENANT_ALIASES[n];
+  return alias ? _normTenant(alias) : n;
+}
+
+/** Clean, human-readable canonical name for labels and headers. */
+export function tenantLabel(name: unknown): string {
+  const n = _normTenant(name);
+  if (TENANT_ALIASES[n]) return TENANT_ALIASES[n];
+  return n.replace(/\b\w/g, c => c.toUpperCase()) || String(name || "");
+}
+
 export function buildSystemPrompt(deals: Deal[]): string {
   const active = deals.filter(d => !d.trashedAt);
   const statuses = ["Prospect","Under Contract","Owned","Sold","Passed"];
