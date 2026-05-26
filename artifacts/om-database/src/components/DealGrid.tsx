@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal } from "../lib/idb";
-import { apiLoadImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
+import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
 import { classifyLocation, cityState, assessExtraction } from "../lib/utils";
 import StatusTag from "./StatusTag";
@@ -101,9 +101,14 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
   const [gettingDemo, setGettingDemo] = useState<Set<string>>(new Set());
   const [reanalyzeBusy, setReanalyzeBusy] = useState<Set<string>>(new Set());
 
+  const [combineModal, setCombineModal] = useState<{ ids: string[]; primaryId: string } | null>(null);
+  const [combining, setCombining] = useState(false);
+  const [combineUndo, setCombineUndo] = useState<{ primarySnapshot: Deal; extraIds: string[] } | null>(null);
+
   const confirmResolverRef = useRef<((v: boolean) => void) | null>(null);
   const rerunInputRef = useRef<HTMLInputElement>(null);
   const rerunTargetsRef = useRef<Deal[]>([]);
+  const combineUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-dismiss notice
   useEffect(() => {
@@ -157,6 +162,111 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
   const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
   const toggleSel = (id: string) => setSelected(s => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const clearSelection = () => { setSelected(new Set()); setConfirmBulkDel(false); setBulkStatusOpen(false); };
+
+  // ── Combine phases ───────────────────────────────────────────────────────
+  const openCombine = () => {
+    const ids = Array.from(selected);
+    if (ids.length >= 2) setCombineModal({ ids, primaryId: ids[0] });
+  };
+
+  const doCombine = async (primaryId: string, ids: string[]) => {
+    const others = ids.filter(id => id !== primaryId);
+    if (!others.length) return;
+    setCombining(true);
+    const P = deals.find(d => d.id === primaryId);
+    if (!P) { setCombining(false); return; }
+    const os = deals.filter(d => others.includes(d.id));
+    const all = [P, ...os];
+    const ts = new Date().toISOString();
+
+    // Images: keep primary's cover; fill from extras if missing; concat site plans.
+    try {
+      const pImgs = (await apiLoadImages(primaryId).catch(() => null)) || {};
+      let cover = (pImgs as Record<string, unknown>).cover as string | null || null;
+      let coverThumb = (pImgs as Record<string, unknown>).coverThumb as string | null || null;
+      let sitePlan: unknown[] = Array.isArray((pImgs as Record<string, unknown>).sitePlan) ? [...(pImgs as Record<string, unknown>).sitePlan as unknown[]] : [];
+      for (const oid of others) {
+        const oi = (await apiLoadImages(oid).catch(() => null)) as Record<string, unknown> | null;
+        if (!oi) continue;
+        if (!cover && oi.cover) { cover = oi.cover as string; coverThumb = oi.coverThumb as string | null || null; }
+        if (Array.isArray(oi.sitePlan)) sitePlan = sitePlan.concat(oi.sitePlan as unknown[]);
+      }
+      await apiSaveImages(primaryId, { cover, coverThumb, sitePlan, pagePicks: (pImgs as Record<string, unknown>).pagePicks || [], needsSitePlanPick: false } as Parameters<typeof apiSaveImages>[1]);
+    } catch {}
+
+    const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+    const asRec = (d: unknown) => d as Record<string, unknown>;
+    const combined: Record<string, unknown> = { ...(asRec(P)) };
+
+    // 1. Sum additive size / income fields.
+    const SUM = ["totalSF","noi","grossPotentialRent","effectiveGrossIncome","operatingExpenses","nnnRecoveries","numberOfUnits","numberOfBuildings","lotSizeAcres","parkingSpaces","askingPrice","txnPurchasePrice","txnSalePrice","acqNOIAtClose","debtLoanAmount"];
+    for (const f of SUM) {
+      let s = 0, any = false;
+      for (const d of all) { const v = num(asRec(d)[f]); if (v != null) { s += v; any = true; } }
+      if (any) combined[f] = s;
+    }
+
+    // 2. Concatenate tenant rosters and list fields.
+    const concatArr = (f: string) => all.flatMap(d => { const v = asRec(d)[f]; return Array.isArray(v) ? v : []; });
+    combined.tenants = concatArr("tenants");
+    combined.redFlags = concatArr("redFlags");
+    combined.keyAssumptions = concatArr("keyAssumptions");
+
+    // 3. Recompute per-area / derived metrics.
+    const totSF = num(combined.totalSF), totNOI = num(combined.noi);
+    const totPrice = num(combined.askingPrice) || num(combined.txnPurchasePrice);
+    const totEGI = num(combined.effectiveGrossIncome), totOpex = num(combined.operatingExpenses), totGPR = num(combined.grossPotentialRent);
+    if (totNOI && totPrice) combined.capRate = +(totNOI / totPrice * 100).toFixed(2);
+    if (totPrice && totSF) combined.pricePerSF = Math.round(totPrice / totSF);
+    if (totEGI && totOpex) combined.expenseRatio = +(totOpex / totEGI * 100).toFixed(1);
+    let occW = 0, occSF = 0, waltW = 0, waltSF = 0;
+    for (const d of all) {
+      const r = asRec(d);
+      const sf = num(r.totalSF), oc = num(r.occupancy), w = num(r.walt);
+      if (sf && oc != null) { occW += oc * sf; occSF += sf; }
+      if (sf && w != null) { waltW += w * sf; waltSF += sf; }
+    }
+    if (occSF) combined.occupancy = +(occW / occSF).toFixed(1);
+    if (waltSF) combined.walt = +(waltW / waltSF).toFixed(1);
+    const baseRent = (combined.tenants as Array<Record<string, unknown>>).reduce((s, t) => s + (num(t.annualRent) || 0), 0) || totGPR || 0;
+    if (baseRent && totSF) combined.weightedAvgRentPSF = +(baseRent / totSF).toFixed(2);
+
+    // 4. Combine narrative text (dedupe identical blocks).
+    const join = (f: string) => { const parts = all.map(d => asRec(d)[f]).filter(Boolean) as string[]; return parts.length ? Array.from(new Set(parts)).join("\n\n") : asRec(P)[f] as string; };
+    if (all.some(d => asRec(d).notes)) combined.notes = join("notes");
+    if (all.some(d => asRec(d).userNotes)) combined.userNotes = join("userNotes");
+
+    // 5. Preserve verified flags from every OM.
+    const ver: Record<string, unknown> = { ...(P.verified || {}) };
+    for (const o of os) for (const [k, v] of Object.entries(o.verified || {})) if (!ver[k]) ver[k] = v;
+    combined.verified = ver;
+
+    const pRec = asRec(P);
+    const otherNames = os.map(o => o.propertyName || o.fileName || "deal").join(", ");
+    combined.editHistory = [...((pRec.editHistory as unknown[]) || []), { ts, by: "User", changes: [{ field: "record", from: `${all.length} OMs`, to: `combined into one — summed SF/NOI/income and merged tenant rosters from: ${otherNames}` }] }];
+
+    onUpdate(primaryId, combined as Partial<Deal>);
+    for (const oid of others) onUpdate(oid, { trashedAt: ts });
+
+    // Undo buffer: restore primary snapshot + un-trash extras (15 s window).
+    if (combineUndoTimerRef.current) clearTimeout(combineUndoTimerRef.current);
+    setCombineUndo({ primarySnapshot: P, extraIds: others });
+    combineUndoTimerRef.current = setTimeout(() => setCombineUndo(null), 15000);
+
+    setCombining(false);
+    setCombineModal(null);
+    clearSelection();
+    setNotice(`Combined ${ids.length} OMs into one deal — sizes, income, and tenants added together.`);
+  };
+
+  const undoCombine = () => {
+    if (!combineUndo) return;
+    onUpdate(combineUndo.primarySnapshot.id, combineUndo.primarySnapshot as Partial<Deal>);
+    for (const eid of combineUndo.extraIds) onUpdate(eid, { trashedAt: null });
+    if (combineUndoTimerRef.current) clearTimeout(combineUndoTimerRef.current);
+    setCombineUndo(null);
+    setNotice("Combine undone — all OMs restored.");
+  };
 
   // ── Link / Merge modal ───────────────────────────────────────────────────
   const openModal = (action: GroupAction) => {
@@ -477,14 +587,72 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
         </div>
       )}
 
+      {/* Combine phases modal */}
+      {combineModal && (() => {
+        const sel = deals.filter(d => combineModal.ids.includes(d.id));
+        const numV = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? 0 : Number(v);
+        const sum = (f: string) => sel.reduce((s, d) => s + numV((d as unknown as Record<string, unknown>)[f]), 0);
+        const totSF = sum("totalSF"), totNOI = sum("noi");
+        const totTenants = sel.reduce((s, d) => s + (Array.isArray(d.tenants) ? d.tenants.length : 0), 0);
+        const fmt$ = (v: number) => v > 0 ? "$" + Math.round(v).toLocaleString() : "—";
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(10,14,23,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
+            <div style={{ background: "#faf7f0", border: "1px solid #383a37", borderRadius: 14, padding: 28, maxWidth: 520, width: "100%", maxHeight: "85vh", overflowY: "auto", fontFamily: "'Inter',sans-serif" }}>
+              <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: "#26281f", marginBottom: 6 }}>Combine {sel.length} OMs into one deal</div>
+              <p style={{ fontSize: 12, color: "#3f7a1f", lineHeight: 1.6, margin: "0 0 16px", background: "#f0fae8", border: "1px solid #c6e6a0", borderRadius: 8, padding: "10px 14px" }}>
+                For <strong>phases or parcels of one property you own</strong>. SF, NOI, income, and tenant rosters are <strong>added together</strong>; occupancy, WALT, cap rate, and rent/SF are recalculated. The extra OMs move to Trash (undoable for 15 s).
+              </p>
+              <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+                {([["Combined SF", totSF > 0 ? totSF.toLocaleString() : "—"], ["Combined NOI", fmt$(totNOI)], ["Total tenants", String(totTenants)]] as [string, string][]).map(([l, v]) => (
+                  <div key={l} style={{ flex: "1 1 120px", background: "#fff", border: "1px solid #e7e0d2", borderRadius: 9, padding: "10px 14px" }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.07em", color: "#a69e91", textTransform: "uppercase", marginBottom: 4 }}>{l}</div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#383a37" }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 11.5, color: "#7d766a", marginBottom: 10 }}>Keep this OM's name, address &amp; status for the combined deal:</div>
+              {sel.map(d => (
+                <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px solid " + (combineModal.primaryId === d.id ? "#6dba43" : "#e7e0d2"), borderRadius: 9, padding: "10px 14px", marginBottom: 8, cursor: "pointer" }}>
+                  <input type="radio" name="combinePrimary" checked={combineModal.primaryId === d.id} onChange={() => setCombineModal(m => m ? { ...m, primaryId: d.id } : m)} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: "#2a2c27", fontWeight: 600 }}>
+                      {d.propertyName || d.fileName || "Untitled"}
+                      {combineModal.primaryId === d.id && <span style={{ color: "#0f9d63", fontSize: 10, marginLeft: 8, fontWeight: 700 }}>PRIMARY</span>}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: "#a69e91" }}>
+                      {[d.address, d.totalSF ? Number(d.totalSF).toLocaleString() + " SF" : null, d.tenants?.length ? `${d.tenants.length} tenants` : null].filter(Boolean).join(" · ")}
+                    </div>
+                  </div>
+                </label>
+              ))}
+              <div style={{ display: "flex", gap: 8, marginTop: 12, justifyContent: "flex-end" }}>
+                <button onClick={() => setCombineModal(null)} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                <button onClick={() => doCombine(combineModal.primaryId, combineModal.ids)} disabled={combining} style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "8px 18px", borderRadius: 8, cursor: combining ? "wait" : "pointer", fontSize: 12, fontWeight: 700, opacity: combining ? 0.7 : 1 }}>
+                  {combining ? "Combining…" : "Combine into one deal"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Hidden file input for Re-run from PDF */}
       <input ref={rerunInputRef} type="file" accept=".pdf" multiple style={{ display: "none" }} onChange={handleRerunFiles} />
 
       {/* Notice toast */}
       {notice && (
-        <div style={{ background: "#26281f", color: "#e8e0cf", borderRadius: 10, padding: "10px 16px", fontSize: 12, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ background: "#26281f", color: "#e8e0cf", borderRadius: 10, padding: "10px 16px", fontSize: 12, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {notice}
           <button onClick={() => setNotice(null)} style={{ background: "none", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 14, marginLeft: 12, lineHeight: 1 }}>×</button>
+        </div>
+      )}
+
+      {/* Combine undo banner */}
+      {combineUndo && (
+        <div style={{ background: "#2d4a1e", color: "#d4f0b8", borderRadius: 10, padding: "9px 16px", fontSize: 12, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <span>Extra OMs moved to Trash.</span>
+          <button onClick={undoCombine} style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>Undo combine</button>
+          <button onClick={() => { setCombineUndo(null); if (combineUndoTimerRef.current) clearTimeout(combineUndoTimerRef.current); }} style={{ background: "none", border: "none", color: "#8aad6a", cursor: "pointer", fontSize: 14, lineHeight: 1 }}>×</button>
         </div>
       )}
 
@@ -549,6 +717,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
           {/* Merge */}
           <button onClick={() => openModal("merge")} disabled={selected.size < 2} style={{ ...darkBtn, opacity: selected.size < 2 ? 0.4 : 1 }}>
             Merge…
+          </button>
+
+          {/* Combine phases */}
+          <button onClick={openCombine} disabled={selected.size < 2} style={{ ...darkBtn, opacity: selected.size < 2 ? 0.4 : 1, background: selected.size >= 2 ? "#4a7a2e" : "#52554e" }}>
+            Combine phases…
           </button>
 
           <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
