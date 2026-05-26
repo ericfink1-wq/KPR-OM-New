@@ -130,13 +130,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [coverHalf, setCoverHalf] = useState<"full"|"left"|"right">("full");
   const sitePlanPdfRef = useRef<HTMLInputElement>(null);
   const coverPdfRef = useRef<HTMLInputElement>(null);
+  const coverPhotoRef = useRef<HTMLInputElement>(null);
+  const sitePlanImgRef = useRef<HTMLInputElement>(null);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
 
   useEffect(() => {
     let alive = true;
-    setImgs(null);
+    setImgs({});
     if (d.imageMeta && (d.imageMeta.cover || d.imageMeta.sitePlan)) {
-      apiLoadImages(d.id).then(res => { if (alive) setImgs(res); }).catch(() => {});
+      apiLoadImages(d.id).then(res => { if (alive) setImgs(res || {}); }).catch(() => {});
     }
     return () => { alive = false; };
   }, [d.id]);
@@ -408,6 +410,38 @@ ${text.slice(0, 60000)}`;
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: 1, needsSitePlanPick: false } });
   };
 
+  const handleCoverImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      const current: ImageBundle = imgs || {};
+      const next: ImageBundle = { ...current, cover: dataUrl };
+      setImgs(next);
+      await apiSaveImages(d.id, next);
+      onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSitePlanImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (e.target) e.target.value = "";
+    if (!files.length) return;
+    const urls = await Promise.all(files.map(f => new Promise<string>(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(f);
+    })));
+    const current: ImageBundle = imgs || {};
+    const next: ImageBundle = { ...current, sitePlan: urls, pagePicks: [], needsSitePlanPick: false };
+    setImgs(next);
+    await apiSaveImages(d.id, next);
+    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: urls.length, needsSitePlanPick: false } });
+  };
+
   const HalfToggle = ({ val, set }: { val: string; set: (v: "full"|"left"|"right") => void }) => (
     <div style={{ display:"flex", gap:4 }}>
       {(["full","left","right"] as const).map(v => (
@@ -508,16 +542,22 @@ ${text.slice(0, 60000)}`;
       )}
 
       {/* Cover fixer */}
-      {imgs && (
+      {imgs != null && (
         <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           {!imgs.cover && (
             <>
               <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:6 }}>Cover Photo — not set</div>
-              <p style={{ fontSize:11.5, color:"#6f6a5f", lineHeight:1.55, margin:"0 0 8px 0" }}>Set cover from a specific PDF page:</p>
+              <p style={{ fontSize:11.5, color:"#6f6a5f", lineHeight:1.55, margin:"0 0 8px 0" }}>Upload a photo or set from a PDF page:</p>
             </>
           )}
           <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-            <span style={{ fontSize:11, color:"#7d766a" }}>{imgs.cover ? "Wrong cover? Set from" : "Set cover from"}</span>
+            <button onClick={() => coverPhotoRef.current?.click()}
+              style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+              Upload a photo
+            </button>
+            <input ref={coverPhotoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleCoverImageFile}/>
+            <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
+            <span style={{ fontSize:11, color:"#7d766a" }}>{imgs.cover ? "Wrong cover? Set from" : "Set from"}</span>
             <span style={{ fontSize:11, color:"#a69e91" }}>page</span>
             <input value={coverFixPage} onChange={e => setCoverFixPage(e.target.value.replace(/[^0-9]/g,""))} placeholder="#" inputMode="numeric"
               style={{ width:56, fontSize:12, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", textAlign:"center", fontFamily:"'Inter',sans-serif" }}/>
@@ -550,7 +590,7 @@ ${text.slice(0, 60000)}`;
         <RecencyBadge deal={d}/>
         <ScoreBadge score={d.dealScore} size={12}/>
         <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
-        {d.autoPassed && <span style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
+        {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
         {d.omDate && <span style={{ fontSize:9, color:"#958d80" }}>OM: {d.omDate}</span>}
         {d.pdfPages && <span style={{ fontSize:9, color:"#958d80" }}>{d.pdfPages}pp</span>}
         {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
@@ -637,7 +677,7 @@ ${text.slice(0, 60000)}`;
       })()}
 
       {/* Site plan */}
-      {imgs?.sitePlan && imgs.sitePlan.length > 0 && (
+      {imgs != null && imgs.sitePlan && imgs.sitePlan.length > 0 && (
         <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:12 }}>Site Plan</div>
           <div style={{ display:"grid", gap:10 }}>
@@ -648,6 +688,12 @@ ${text.slice(0, 60000)}`;
             ))}
           </div>
           <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <button onClick={() => sitePlanImgRef.current?.click()}
+              style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+              Upload image(s)
+            </button>
+            <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
+            <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
             <span style={{ fontSize:11, color:"#a89f8f" }}>Wrong page? Set from</span>
             <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
               style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", fontFamily:"'Inter',sans-serif" }}/>
@@ -661,8 +707,32 @@ ${text.slice(0, 60000)}`;
         </div>
       )}
 
+      {/* Site plan — empty state (no images, no page picks yet) */}
+      {imgs != null && (!imgs.sitePlan || imgs.sitePlan.length === 0) && (!imgs.pagePicks || imgs.pagePicks.length === 0) && (
+        <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:6 }}>Site Plan — not set</div>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <button onClick={() => sitePlanImgRef.current?.click()}
+              style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+              Upload image(s)
+            </button>
+            <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
+            <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
+            <span style={{ fontSize:11, color:"#a89f8f" }}>Set from page</span>
+            <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
+              style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", fontFamily:"'Inter',sans-serif" }}/>
+            <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
+            <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
+              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+              {fixingPlan?"Rendering…":"Choose PDF & set"}
+            </button>
+            <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
+          </div>
+        </div>
+      )}
+
       {/* Site plan picker (manual) */}
-      {imgs && (!imgs.sitePlan || imgs.sitePlan.length===0) && imgs.pagePicks && imgs.pagePicks.length > 0 && (
+      {imgs != null && (!imgs.sitePlan || imgs.sitePlan.length===0) && imgs.pagePicks && imgs.pagePicks.length > 0 && (
         <div style={{ background:"#fff", border:"1px solid #e7c48f", borderRadius:12, padding:"16px 18px", marginBottom:12 }}>
           <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#b45309", marginBottom:8 }}>Site Plan — choose the page</div>
           <p style={{ fontSize:11.5, color:"#6f6a5f", lineHeight:1.55, margin:"0 0 12px 0" }}>I couldn't confidently find the site plan. Tap the page that shows it.</p>
@@ -676,6 +746,105 @@ ${text.slice(0, 60000)}`;
                 <span style={{ position:"absolute", bottom:5, right:5, background:"rgba(38,40,31,0.78)", color:"#fff", fontSize:9, fontWeight:600, padding:"1px 6px", borderRadius:10 }}>p.{pk.page}</span>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rent roll importer */}
+      {(d.tenants||[]).length > 0 && (
+        <div style={{ marginBottom:12, background:"#f3f7ee", border:"1px dashed #b8d49a", borderRadius:10, padding:"10px 14px" }}>
+          <style>{`@keyframes rrIndeterminate{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}`}</style>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            <input ref={rrPdfRef} type="file" accept="application/pdf" style={{ display:"none" }} onChange={handleRentRoll}/>
+            <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
+              style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"8px 14px", borderRadius:8, cursor: rrBusy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+              {rrBusy ? "Refreshing…" : "⬆ Refresh tenants from a current rent roll (PDF)"}
+            </button>
+            <span style={{ fontSize:12, color: rrError ? "#dc2626" : (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? "#3f7a1f" : "#6f6a5f") }}>
+              {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf
+                ? `✓ Last refreshed from rent roll — ${d.tenantsAsOf}`
+                : "Replaces the roster with the current rent roll and stamps its date.")}
+            </span>
+          </div>
+          {rrBusy && (
+            <div style={{ marginTop:9, height:5, borderRadius:3, background:"#dfe7d2", overflow:"hidden" }}>
+              <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#6dba43", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tenant roster */}
+      {(d.tenants||[]).length > 0 && (
+        <TenantRoster
+          tenants={d.tenants!}
+          onTenantClick={onTenantClick}
+          tenantsAsOf={d.tenantsAsOf}
+          tenantsSource={d.tenantsSource}
+          omDate={d.omDate}
+        />
+      )}
+
+      {/* Deal score */}
+      {d.dealScore && (
+        <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+            <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
+            <ScoreBadge score={d.dealScore}/>
+          </div>
+          <p style={{ fontSize:12, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{d.dealScore.rationale}</p>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div>
+              <div style={{ fontSize:8, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
+              {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {s}</div>)}
+            </div>
+            <div>
+              <div style={{ fontSize:8, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
+              {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {r}</div>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Red flags */}
+      {(d.redFlags||[]).length > 0 && (
+        <div style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
+          <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626", marginBottom:10 }}>⚠ RED FLAGS</div>
+          {d.redFlags!.map((f,i) => (
+            <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<d.redFlags!.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
+              <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262620":f.severity==="medium"?"#383a3720":"#7d766a20", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#383a37":"#7d766a", flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
+              <span style={{ fontSize:11, color:"#5c5f57" }}>{f.description}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Key assumptions */}
+      <KeyAssumptions deal={d} />
+
+      {/* Cash flow */}
+      {(d.cashFlowProjection||[]).length > 0 && (
+        <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:150+d.cashFlowProjection!.length*108 }}>
+              <thead>
+                <tr style={{ fontSize:10, color:"#a69e91", fontWeight:600 }}>
+                  <th style={{ textAlign:"left", padding:"6px 10px", position:"sticky", left:0, background:"#fff", zIndex:1 }}></th>
+                  {d.cashFlowProjection!.map((r,i) => <th key={i} style={{ textAlign:"right", padding:"6px 10px", whiteSpace:"nowrap", fontWeight:i===0?700:600, color:i===0?"#383a37":"#a69e91" }}>{r.label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {([["Base Rent","totalBaseRent","#5c5f57"],["Reimbursements","reimbursements","#5c5f57"],["Eff. Gross Rev.","egr","#383a37"],["Operating Expenses","operatingExpenses","#837c6e"],["NOI","noi","#0f9d63"]] as [string,string,string][]).map(([label,key,color]) => (
+                  <tr key={key} style={{ borderTop:"1px solid #f1eadc", background:key==="noi"?"#0f9d6308":"transparent" }}>
+                    <td style={{ textAlign:"left", padding:"8px 10px", color:key==="noi"?"#0f7a4e":"#a69e91", fontWeight:key==="noi"?700:500, whiteSpace:"nowrap", position:"sticky", left:0, background:key==="noi"?"#f2faef":"#fff", zIndex:1 }}>{label}</td>
+                    {d.cashFlowProjection!.map((r,ci) => (
+                      <td key={ci} style={{ textAlign:"right", padding:"8px 10px", color, fontWeight:key==="noi"?700:400, whiteSpace:"nowrap" }}>{(r as any)[key]!=null?`$${Number((r as any)[key]).toLocaleString()}`:"—"}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -990,105 +1159,6 @@ ${text.slice(0, 60000)}`;
           <div style={{ fontSize:11.5, color:"#a69e91", lineHeight:1.55 }}>Pull 1/3/5-mile population and average HHI for this address from public Census/ACS-based sources.</div>
         )}
       </div>
-
-      {/* Deal score */}
-      {d.dealScore && (
-        <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-            <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
-            <ScoreBadge score={d.dealScore}/>
-          </div>
-          <p style={{ fontSize:12, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{d.dealScore.rationale}</p>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            <div>
-              <div style={{ fontSize:8, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
-              {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {s}</div>)}
-            </div>
-            <div>
-              <div style={{ fontSize:8, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
-              {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {r}</div>)}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Red flags */}
-      {(d.redFlags||[]).length > 0 && (
-        <div style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-          <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626", marginBottom:10 }}>⚠ RED FLAGS</div>
-          {d.redFlags!.map((f,i) => (
-            <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<d.redFlags!.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
-              <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262620":f.severity==="medium"?"#383a3720":"#7d766a20", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#383a37":"#7d766a", flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
-              <span style={{ fontSize:11, color:"#5c5f57" }}>{f.description}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Key assumptions */}
-      <KeyAssumptions deal={d} />
-
-      {/* Rent roll importer */}
-      {(d.tenants||[]).length > 0 && (
-        <div style={{ marginBottom:12, background:"#f3f7ee", border:"1px dashed #b8d49a", borderRadius:10, padding:"10px 14px" }}>
-          <style>{`@keyframes rrIndeterminate{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}`}</style>
-          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-            <input ref={rrPdfRef} type="file" accept="application/pdf" style={{ display:"none" }} onChange={handleRentRoll}/>
-            <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
-              style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"8px 14px", borderRadius:8, cursor: rrBusy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
-              {rrBusy ? "Refreshing…" : "⬆ Refresh tenants from a current rent roll (PDF)"}
-            </button>
-            <span style={{ fontSize:12, color: rrError ? "#dc2626" : (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? "#3f7a1f" : "#6f6a5f") }}>
-              {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf
-                ? `✓ Last refreshed from rent roll — ${d.tenantsAsOf}`
-                : "Replaces the roster with the current rent roll and stamps its date.")}
-            </span>
-          </div>
-          {rrBusy && (
-            <div style={{ marginTop:9, height:5, borderRadius:3, background:"#dfe7d2", overflow:"hidden" }}>
-              <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#6dba43", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tenant roster */}
-      {(d.tenants||[]).length > 0 && (
-        <TenantRoster
-          tenants={d.tenants!}
-          onTenantClick={onTenantClick}
-          tenantsAsOf={d.tenantsAsOf}
-          tenantsSource={d.tenantsSource}
-          omDate={d.omDate}
-        />
-      )}
-
-      {/* Cash flow */}
-      {(d.cashFlowProjection||[]).length > 0 && (
-        <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
-          <div style={{ overflowX:"auto" }}>
-            <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:150+d.cashFlowProjection!.length*108 }}>
-              <thead>
-                <tr style={{ fontSize:10, color:"#a69e91", fontWeight:600 }}>
-                  <th style={{ textAlign:"left", padding:"6px 10px", position:"sticky", left:0, background:"#fff", zIndex:1 }}></th>
-                  {d.cashFlowProjection!.map((r,i) => <th key={i} style={{ textAlign:"right", padding:"6px 10px", whiteSpace:"nowrap", fontWeight:i===0?700:600, color:i===0?"#383a37":"#a69e91" }}>{r.label}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {([["Base Rent","totalBaseRent","#5c5f57"],["Reimbursements","reimbursements","#5c5f57"],["Eff. Gross Rev.","egr","#383a37"],["Operating Expenses","operatingExpenses","#837c6e"],["NOI","noi","#0f9d63"]] as [string,string,string][]).map(([label,key,color]) => (
-                  <tr key={key} style={{ borderTop:"1px solid #f1eadc", background:key==="noi"?"#0f9d6308":"transparent" }}>
-                    <td style={{ textAlign:"left", padding:"8px 10px", color:key==="noi"?"#0f7a4e":"#a69e91", fontWeight:key==="noi"?700:500, whiteSpace:"nowrap", position:"sticky", left:0, background:key==="noi"?"#f2faef":"#fff", zIndex:1 }}>{label}</td>
-                    {d.cashFlowProjection!.map((r,ci) => (
-                      <td key={ci} style={{ textAlign:"right", padding:"8px 10px", color, fontWeight:key==="noi"?700:400, whiteSpace:"nowrap" }}>{(r as any)[key]!=null?`$${Number((r as any)[key]).toLocaleString()}`:"—"}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* User notes */}
       <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>

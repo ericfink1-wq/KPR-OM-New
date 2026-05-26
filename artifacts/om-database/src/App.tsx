@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout } from "./lib/api";
+import { PROSPECT_STALE_DAYS } from "./lib/constants";
 import Header from "./components/Header";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
@@ -38,7 +39,24 @@ function AppInner() {
   useEffect(() => {
     if (auth !== "authenticated") return;
     apiLoadDeals()
-      .then(d => { setDeals(d); setLoaded(true); })
+      .then(d => {
+        const now = Date.now();
+        const patched = d.map(deal => {
+          if (deal.status === "Prospect" && !deal.trashedAt) {
+            const since = deal.uploadedAt;
+            const sinceMs = since ? new Date(since).getTime() : null;
+            if (sinceMs && (now - sinceMs) >= PROSPECT_STALE_DAYS * 86400000) {
+              const ts = new Date().toISOString();
+              const updated: Deal = { ...deal, status: "Passed", autoPassed: true, autoPassedAt: ts };
+              apiSaveDeal(updated).catch(() => {});
+              return updated;
+            }
+          }
+          return deal;
+        });
+        setDeals(patched);
+        setLoaded(true);
+      })
       .catch(() => setLoaded(true));
   }, [auth]);
 

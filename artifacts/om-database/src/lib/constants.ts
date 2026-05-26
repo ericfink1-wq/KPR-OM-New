@@ -57,3 +57,6 @@ export const SUGGESTED = [
 export const PDF_JS_VERSION = "3.11.174";
 export const PDF_JS_CDN = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.min.js`;
 export const PDF_JS_WORKER = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.worker.min.js`;
+
+// A Prospect sitting untouched this long auto-shifts to Passed (~2 months).
+export const PROSPECT_STALE_DAYS = 61;
