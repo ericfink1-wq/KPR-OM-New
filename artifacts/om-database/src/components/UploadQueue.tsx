@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus } from "../lib/api";
 import { extractPdfText, extractPdfImages } from "../lib/pdfExtract";
@@ -8,6 +8,8 @@ interface QueueItem {
   id: string;
   name: string;
   status: "pending" | "extracting" | "awaiting_dup" | "done" | "error";
+  msg: string;
+  progress: number;
   error?: string;
   deal?: Deal;
   tempDealId?: string;
@@ -18,18 +20,19 @@ interface QueueItem {
 }
 
 interface Props {
+  pendingFiles: File[];
+  onFilesConsumed: () => void;
   onDealsAdded: (deals: Deal[]) => void;
   onDealUpdated?: (deal: Deal) => void;
+  onOpenDeal: (id: string) => void;
   existingDeals: Deal[];
 }
 
 function findDuplicate(fileName: string, extracted: Record<string, unknown>, existing: Deal[]): Deal | null {
   const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-
   const cleanFile = fileName.replace(/\.pdf$/i, "").toLowerCase();
   const byFile = existing.find(d => (d.fileName || "").toLowerCase() === cleanFile);
   if (byFile) return byFile;
-
   const newProp = normName((extracted.propertyName as string) || "");
   const newAddr = normName((extracted.address as string) || "");
   if (newProp.length > 4) {
@@ -51,97 +54,86 @@ function findDuplicate(fileName: string, extracted: Record<string, unknown>, exi
 
 function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): Deal {
   const preserved: Partial<Deal> = {
-    status: existing.status,
-    userNotes: existing.userNotes,
-    verified: existing.verified,
-    propertyGroupId: existing.propertyGroupId,
-    trashedAt: existing.trashedAt,
-    txnPurchasePrice: existing.txnPurchasePrice,
-    txnSeller: existing.txnSeller,
-    txnLoiDate: existing.txnLoiDate,
-    txnCloseDate: existing.txnCloseDate,
-    txnSalePrice: existing.txnSalePrice,
-    txnBuyer: existing.txnBuyer,
-    txnSaleDate: existing.txnSaleDate,
-    txnBroker: existing.txnBroker,
-    acqCapRate: existing.acqCapRate,
-    acqNOIAtClose: existing.acqNOIAtClose,
-    acqEntity: existing.acqEntity,
-    acqBroker: existing.acqBroker,
-    acqContractDate: existing.acqContractDate,
-    acqDDExpiration: existing.acqDDExpiration,
-    acqDeposit: existing.acqDeposit,
-    acqClosingCosts: existing.acqClosingCosts,
-    acqFee: existing.acqFee,
-    acqTitleCo: existing.acqTitleCo,
-    acqCounsel: existing.acqCounsel,
-    acqPropManager: existing.acqPropManager,
-    acqStrategy: existing.acqStrategy,
-    acqHoldPeriod: existing.acqHoldPeriod,
-    acqTargetIRR: existing.acqTargetIRR,
-    acqNotes: existing.acqNotes,
-    debtLender: existing.debtLender,
-    debtType: existing.debtType,
-    debtLoanAmount: existing.debtLoanAmount,
-    debtRate: existing.debtRate,
-    debtRateType: existing.debtRateType,
-    debtMaturityDate: existing.debtMaturityDate,
-    debtNotes: existing.debtNotes,
-    marketSale: existing.marketSale,
+    status: existing.status, userNotes: existing.userNotes, verified: existing.verified,
+    propertyGroupId: existing.propertyGroupId, trashedAt: existing.trashedAt,
+    txnPurchasePrice: existing.txnPurchasePrice, txnSeller: existing.txnSeller,
+    txnLoiDate: existing.txnLoiDate, txnCloseDate: existing.txnCloseDate,
+    txnSalePrice: existing.txnSalePrice, txnBuyer: existing.txnBuyer,
+    txnSaleDate: existing.txnSaleDate, txnBroker: existing.txnBroker,
+    acqCapRate: existing.acqCapRate, acqNOIAtClose: existing.acqNOIAtClose,
+    acqEntity: existing.acqEntity, acqBroker: existing.acqBroker,
+    acqContractDate: existing.acqContractDate, acqDDExpiration: existing.acqDDExpiration,
+    acqDeposit: existing.acqDeposit, acqClosingCosts: existing.acqClosingCosts,
+    acqFee: existing.acqFee, acqTitleCo: existing.acqTitleCo,
+    acqCounsel: existing.acqCounsel, acqPropManager: existing.acqPropManager,
+    acqStrategy: existing.acqStrategy, acqHoldPeriod: existing.acqHoldPeriod,
+    acqTargetIRR: existing.acqTargetIRR, acqNotes: existing.acqNotes,
+    debtLender: existing.debtLender, debtType: existing.debtType,
+    debtLoanAmount: existing.debtLoanAmount, debtRate: existing.debtRate,
+    debtRateType: existing.debtRateType, debtMaturityDate: existing.debtMaturityDate,
+    debtNotes: existing.debtNotes, marketSale: existing.marketSale,
     marketSaleChecked: existing.marketSaleChecked,
-    marketDemographics: existing.marketDemographics,
-    demoChecked: existing.demoChecked,
+    marketDemographics: existing.marketDemographics, demoChecked: existing.demoChecked,
   };
-
   const verifiedFields = Object.keys(existing.verified || {});
   const verifiedOverrides: Partial<Deal> = {};
   for (const f of verifiedFields) {
     const k = f as keyof Deal;
-    if (existing[k] !== undefined) {
-      (verifiedOverrides as Record<string, unknown>)[f] = existing[k];
-    }
+    if (existing[k] !== undefined) (verifiedOverrides as Record<string, unknown>)[f] = existing[k];
   }
-
   return {
-    ...existing,
-    ...(extracted as Partial<Deal>),
-    ...preserved,
-    ...verifiedOverrides,
-    id: existing.id,
-    uploadedAt: existing.uploadedAt,
+    ...existing, ...(extracted as Partial<Deal>), ...preserved, ...verifiedOverrides,
+    id: existing.id, uploadedAt: existing.uploadedAt,
     refreshedAt: new Date().toISOString(),
   } as Deal;
 }
 
-export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals }: Props) {
+export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, onOpenDeal, existingDeals }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [dragging, setDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [queueOpen, setQueueOpen] = useState(true);
+  const pendingRef = useRef<File[]>([]);
+
+  // Process newly added files
+  useEffect(() => {
+    if (!pendingFiles.length) return;
+    const pdfs = pendingFiles.filter(f => f.name.toLowerCase().endsWith(".pdf"));
+    onFilesConsumed();
+    if (pdfs.length) {
+      setQueueOpen(true);
+      pdfs.forEach(processFile);
+    }
+  }, [pendingFiles]);
+
+  const updateItem = (itemId: string, patch: Partial<QueueItem>) => {
+    setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
+  };
 
   const processFile = async (file: File) => {
     const itemId = uid();
     const dealId = uid();
-    setQueue(q => [...q, { id: itemId, name: file.name, status: "pending", tempDealId: dealId }]);
+    setQueue(q => [...q, { id: itemId, name: file.name, status: "pending", msg: "Waiting…", progress: 0, tempDealId: dealId }]);
 
     try {
-      setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "extracting" } : x));
+      updateItem(itemId, { status: "extracting", msg: "Reading PDF…", progress: 5 });
 
       const buf = await file.arrayBuffer();
-      // Give each PDF.js consumer its own copy — the worker transfers (detaches) the buffer
       const imgPromise = extractPdfImages(buf.slice(0)).catch(() => null);
+
+      updateItem(itemId, { msg: "Extracting text…", progress: 20 });
       const { text, pages } = await extractPdfText(buf.slice(0));
 
       const fileName = file.name.replace(/\.pdf$/i, "");
 
-      // Send text to server — returns immediately, extraction runs in background
+      updateItem(itemId, { msg: "Sending to Claude AI…", progress: 40 });
       await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages });
 
-      // Save images + source right away (don't need Claude for these)
+      updateItem(itemId, { msg: "Processing images…", progress: 55 });
       const imgs = await imgPromise;
       if (imgs) await apiSaveImages(dealId, imgs).catch(() => {});
       await apiSaveSource(dealId, text).catch(() => {});
 
-      // Poll until server-side Claude extraction completes (up to 5 min)
+      updateItem(itemId, { msg: "Claude is extracting deal data…", progress: 65 });
+
       let resolvedDeal: Deal | null = null;
       let pollError: string | null = null;
       for (let i = 0; i < 120; i++) {
@@ -152,11 +144,15 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
           resolvedDeal = (status.deal as Deal) ?? null;
           break;
         }
+        const pct = Math.min(65 + Math.round((i / 120) * 28), 93);
+        updateItem(itemId, { progress: pct });
       }
 
       if (pollError || !resolvedDeal) {
         throw new Error(pollError || "Extraction timed out — please retry");
       }
+
+      updateItem(itemId, { msg: "Checking for duplicates…", progress: 95 });
 
       const imageMeta = imgs ? {
         cover: !!imgs.cover,
@@ -164,33 +160,31 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
         needsSitePlanPick: imgs.needsSitePlanPick || false,
       } : undefined;
 
-      // Dup check using the now-resolved AI data
       const extracted = resolvedDeal as unknown as Record<string, unknown>;
       const dup = findDuplicate(fileName, extracted, existingDeals);
 
       if (dup) {
-        setQueue(q => q.map(x => x.id === itemId ? {
-          ...x,
+        updateItem(itemId, {
           status: "awaiting_dup",
+          msg: "Duplicate detected — choose action below",
+          progress: 100,
           dupCandidate: dup,
           pendingExtracted: { ...extracted, imageMeta, fileName, pdfPages: pages },
           pendingImages: imgs,
           pendingText: text,
           tempDealId: dealId,
-        } : x));
+        });
         return;
       }
 
-      // No dup — finalize the already-created deal with imageMeta
       const finalDeal: Deal = { ...resolvedDeal, imageMeta };
       await apiSaveDeal(finalDeal).catch(() => {});
 
-      setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "done", deal: finalDeal } : x));
+      updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal });
       onDealsAdded([finalDeal]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Extraction failed";
-      setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "error", error: msg } : x));
-      // Clean up the orphaned processing deal on error
+      updateItem(itemId, { status: "error", msg: "Failed", error: msg, progress: 0 });
       await apiDeleteDeal(dealId).catch(() => {});
     }
   };
@@ -198,25 +192,18 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
   const handleDupUpdate = async (itemId: string) => {
     const item = queue.find(x => x.id === itemId);
     if (!item?.dupCandidate || !item.pendingExtracted) return;
-
-    // Delete the temp deal created during ingest
     if (item.tempDealId) await apiDeleteDeal(item.tempDealId).catch(() => {});
-
     const refreshed = reconcileRefresh(item.dupCandidate, item.pendingExtracted);
     await apiSaveDeal(refreshed).catch(() => {});
     if (item.pendingText) await apiSaveSource(refreshed.id, item.pendingText).catch(() => {});
     if (item.pendingImages) await apiSaveImages(refreshed.id, item.pendingImages).catch(() => {});
-
-    setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "done", deal: refreshed } : x));
+    updateItem(itemId, { status: "done", msg: refreshed.propertyName || refreshed.fileName || "Updated", progress: 100, deal: refreshed });
     onDealUpdated?.(refreshed);
   };
 
   const handleDupKeepBoth = async (itemId: string) => {
     const item = queue.find(x => x.id === itemId);
     if (!item?.pendingExtracted || !item.tempDealId) return;
-
-    // The temp deal already exists in DB with extracted data + images + source already saved.
-    // Just update it with the imageMeta field and show it as a completed deal.
     const { imageMeta, fileName, pdfPages, ...rest } = item.pendingExtracted;
     const deal: Deal = {
       id: item.tempDealId,
@@ -228,8 +215,7 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
       ...(rest as Partial<Deal>),
     };
     await apiSaveDeal(deal).catch(() => {});
-
-    setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "done", deal } : x));
+    updateItem(itemId, { status: "done", msg: deal.propertyName || deal.fileName || "Saved", progress: 100, deal });
     onDealsAdded([deal]);
   };
 
@@ -239,98 +225,133 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
     setQueue(q => q.filter(x => x.id !== itemId));
   };
 
-  const handleFiles = (files: FileList | null) => {
-    if (!files) return;
-    Array.from(files).filter(f => f.name.toLowerCase().endsWith(".pdf")).forEach(processFile);
+  const retryFailed = () => {
+    const failed = queue.filter(x => x.status === "error");
+    setQueue(q => q.filter(x => x.status !== "error"));
   };
 
-  const busy = queue.some(q => q.status === "extracting" || q.status === "pending");
+  if (!queue.length) return null;
+
+  const done = queue.filter(q => q.status === "done").length;
+  const failed = queue.filter(q => q.status === "error").length;
+  const working = queue.filter(q => q.status === "pending" || q.status === "extracting").length;
+  const waiting = queue.filter(q => q.status === "awaiting_dup").length;
+  const pct = queue.length ? Math.round(((done + failed) / queue.length) * 100) : 0;
 
   return (
-    <div style={{ padding: "28px 28px 0" }}>
-      {/* Drop zone */}
-      <div
-        onDragEnter={e => { e.preventDefault(); setDragging(true); }}
-        onDragOver={e => e.preventDefault()}
-        onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
-        onClick={() => inputRef.current?.click()}
-        style={{
-          border: `2px dashed ${dragging ? "#6dba43" : "#d8d0c0"}`,
-          borderRadius: 14,
-          padding: "28px 24px",
-          textAlign: "center",
-          cursor: "pointer",
-          background: dragging ? "#6dba4309" : "#faf7f0",
-          transition: "all .2s ease",
-          marginBottom: 20,
-        }}
-      >
-        <input ref={inputRef} type="file" accept=".pdf" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
-        <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: "#383a37", fontWeight: 500, marginBottom: 4 }}>
-          Drop Offering Memorandums here
-        </div>
-        <div style={{ fontSize: 12, color: "#a89f8f" }}>
-          PDF files only · Claude AI extracts the deal data automatically
-        </div>
-      </div>
-
-      {/* Queue list */}
-      {queue.length > 0 && (
-        <div style={{ marginBottom: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-          {queue.map(item => (
-            <div key={item.id}>
-              {item.status === "awaiting_dup" && item.dupCandidate ? (
-                <div style={{ background: "#fffbf0", border: "1.5px solid #d9890c", borderRadius: 12, padding: "16px 18px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#a06208", marginBottom: 4 }}>Possible duplicate detected</div>
-                  <div style={{ fontSize: 13, color: "#383a37", marginBottom: 2 }}>
-                    <strong>{item.name}</strong> looks like an existing deal:
-                  </div>
-                  <div style={{ fontSize: 12, color: "#5f5a50", marginBottom: 12 }}>
-                    <strong>{item.dupCandidate.propertyName || item.dupCandidate.fileName || "Untitled"}</strong>
-                    {item.dupCandidate.uploadedAt && <> — uploaded {new Date(item.dupCandidate.uploadedAt).toLocaleDateString()}</>}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button onClick={() => handleDupUpdate(item.id)} style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-                      Update existing deal
-                    </button>
-                    <button onClick={() => handleDupKeepBoth(item.id)} style={{ background: "#fff", color: "#383a37", border: "1px solid #d8d0c0", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                      Keep both
-                    </button>
-                    <button onClick={() => handleDupCancel(item.id)} style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-                    background: item.status === "done" ? "#6dba43"
-                      : item.status === "error" ? "#dc2626"
-                      : item.status === "extracting" ? "#d9890c"
-                      : "#e3dccd",
-                    animation: item.status === "extracting" ? "pulse 1.2s ease infinite" : undefined,
-                  }}/>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, color: "#383a37", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                    {item.status === "error" && <div style={{ fontSize: 11, color: "#dc2626" }}>{item.error}</div>}
-                    {item.status === "extracting" && <div style={{ fontSize: 11, color: "#d9890c" }}>Extracting with Claude AI…</div>}
-                    {item.status === "done" && <div style={{ fontSize: 11, color: "#6dba43" }}>Done — {item.deal?.propertyName || item.deal?.fileName || "saved"}</div>}
-                  </div>
-                </div>
-              )}
+    <>
+      {/* Fixed bottom queue panel */}
+      {queueOpen && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#ffffff", borderTop: "1px solid #ebe4d6", zIndex: 200, maxHeight: "60vh", display: "flex", flexDirection: "column", boxShadow: "0 -12px 48px rgba(56,58,55,0.12)" }}>
+          {/* Header */}
+          <div style={{ padding: "16px 28px 12px", borderBottom: "1px solid #f1eadc" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
+                <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 17, color: "#383a37" }}>Importing OMs</span>
+                <span style={{ fontSize: 12, color: "#a69e91" }}>
+                  <span style={{ color: "#0f9d63", fontWeight: 600 }}>{done} done</span>
+                  {failed > 0 && <> · <span style={{ color: "#dc2626", fontWeight: 600 }}>{failed} failed</span></>}
+                  {waiting > 0 && <> · <span style={{ color: "#d9890c", fontWeight: 600 }}>{waiting} need review</span></>}
+                  {working > 0 && <> · {working} remaining</>}
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {failed > 0 && working === 0 && (
+                  <button onClick={retryFailed}
+                    style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+                    Retry {failed} failed
+                  </button>
+                )}
+                {(done > 0 || failed > 0) && (
+                  <button onClick={() => setQueue(q => q.filter(x => x.status === "pending" || x.status === "extracting" || x.status === "awaiting_dup"))}
+                    style={{ background: "transparent", border: "1px solid #e3dccd", color: "#837c6e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+                    Clear completed
+                  </button>
+                )}
+                <button onClick={() => setQueueOpen(false)}
+                  style={{ background: "transparent", border: "1px solid #e3dccd", color: "#837c6e", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+                  Hide
+                </button>
+              </div>
             </div>
-          ))}
-          {!busy && queue.every(x => x.status !== "awaiting_dup") && (
-            <button onClick={() => setQueue([])}
-              style={{ alignSelf: "flex-end", background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter', sans-serif" }}>
-              Clear
-            </button>
-          )}
+            {/* Aggregate progress bar */}
+            <div style={{ height: 6, background: "#efe8da", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ width: `${pct}%`, height: "100%", background: working > 0 ? "#6dba43" : failed > 0 ? "#dc2626" : "#0f9d63", borderRadius: 4, transition: "width 0.4s ease" }} />
+            </div>
+          </div>
+
+          {/* Queue items */}
+          <div style={{ overflowY: "auto", padding: "4px 0" }}>
+            {queue.map(item => (
+              <div key={item.id}>
+                {item.status === "awaiting_dup" && item.dupCandidate ? (
+                  <div style={{ padding: "14px 28px", borderBottom: "1px solid #f4f6f7", background: "#fffbf0" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#a06208", marginBottom: 4 }}>⚠ Possible duplicate detected</div>
+                    <div style={{ fontSize: 13, color: "#383a37", marginBottom: 2 }}>
+                      <strong>{item.name}</strong> looks like an existing deal:
+                    </div>
+                    <div style={{ fontSize: 12, color: "#5f5a50", marginBottom: 10 }}>
+                      <strong>{item.dupCandidate.propertyName || item.dupCandidate.fileName || "Untitled"}</strong>
+                      {item.dupCandidate.uploadedAt && <> — uploaded {new Date(item.dupCandidate.uploadedAt).toLocaleDateString()}</>}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button onClick={() => handleDupUpdate(item.id)}
+                        style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+                        Update existing deal
+                      </button>
+                      <button onClick={() => handleDupKeepBoth(item.id)}
+                        style={{ background: "#fff", color: "#383a37", border: "1px solid #d8d0c0", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        Keep both
+                      </button>
+                      <button onClick={() => handleDupCancel(item.id)}
+                        style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: "11px 28px", borderBottom: "1px solid #f4f6f7", display: "flex", gap: 14, alignItems: "flex-start" }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0,
+                      background: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "extracting" ? "#6dba43" : "#b3bac1",
+                      animation: item.status === "extracting" ? "pulse 1.2s infinite" : "none",
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: "#383a37", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                      <div style={{ fontSize: 12, color: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : "#a69e91", marginTop: 2 }}>{item.msg}</div>
+                      {(item.status === "extracting" || item.status === "pending") && (
+                        <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ flex: 1, height: 5, background: "#efe8da", borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{ width: `${item.progress}%`, height: "100%", background: "#6dba43", borderRadius: 3, transition: "width 0.4s ease" }} />
+                          </div>
+                          <span style={{ fontSize: 10, color: "#a69e91", fontWeight: 600, minWidth: 30, textAlign: "right" }}>{item.progress}%</span>
+                        </div>
+                      )}
+                      {item.error && <div style={{ fontSize: 11, color: "#c0563b", marginTop: 3, lineHeight: 1.4, wordBreak: "break-word" }}>{item.error}</div>}
+                    </div>
+                    {item.status === "done" && item.deal && (
+                      <button
+                        onClick={() => { onOpenDeal(item.deal!.id); setQueueOpen(false); }}
+                        style={{ background: "#f3f5f6", border: "none", color: "#52554e", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                        View
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
         </div>
       )}
-    </div>
+
+      {/* Floating pill when queue hidden but active */}
+      {!queueOpen && (working > 0 || waiting > 0) && (
+        <button onClick={() => setQueueOpen(true)}
+          style={{ position: "fixed", bottom: 20, right: 20, background: "#6dba43", border: "none", color: "#1f2b16", padding: "10px 16px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif", zIndex: 200, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }}>
+          ⏳ Processing {working + waiting}…
+        </button>
+      )}
+    </>
   );
 }

@@ -1,1 +1,3 @@
 - [KPR OM Database architecture](kpr-om-db.md) — stack decisions, session setup, and idb→API migration details
+- [Upload architecture](upload-architecture.md) — Upload OMs button lives in Header; UploadQueue is a global fixed-bottom panel, not inline in a tab.
+- [PDF image extraction](pdf-image-extraction.md) — Cover extracted via OPS.paintImageXObject (largest embedded image), not page screenshot; site plans via keyword scan + _renderPdfPage.

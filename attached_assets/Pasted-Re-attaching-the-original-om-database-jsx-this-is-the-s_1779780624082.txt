@@ -1,0 +1,15 @@
+Re-attaching the original om-database.jsx — this is the source of truth for the UI and the image logic. The backend you built (Postgres, server-side AI, login, duplicate detection, link/merge) is correct — keep all of it. The problem is the frontend look and the image extraction don't match the original.
+Please bring the live app's frontend back in line with the attached file:
+
+Restore the exact UI from the attached file — layout, typography (Fraunces + Inter), color palette, spacing, and all the screens/components: the home view with the two top stat rows (the "intelligence library" data-volume row and the "owned portfolio" row), the combined deal tiles (Under Contract first, then Prospects, photo-backed, showing name + City, ST), the upload progress/queue UI, the deal detail view, and the tenant roster. Match the original's appearance closely rather than your own redesign. Reuse the original component code wherever possible; only adapt the data layer to read/write through the existing backend instead of IndexedDB.
+Restore the original image-extraction logic for the cover photo and site plan, exactly as implemented in the attached file:
+
+Cover photo: extract the largest embedded image on the page (the actual photo) and strip the broker logos/text overlaid on it — do not just screenshot the page. Generate a cover and a smaller coverThumb.
+Site plan: auto-detect the site-plan page by scanning page text for the original's keyword set (site plan, site map, leasing plan/map, parcel map, tax parcel, key plan, etc.), and capture it. Keep the page-picker fallback when auto-detect fails.
+Keep the original's two-page-spread support (the Full / Left / Right "half" crop) and the manual cover/site-plan fixers (re-select the PDF + page number, with the half toggle) in the deal detail view.
+Store these images in the backend so they persist and are shared.
+
+
+Preserve everything already working — extraction, Postgres persistence, the async upload flow you just added, status counters, duplicate detection, link/merge, and login.
+
+Use the attached om-database.jsx as the definitive reference for how all of this should look and behave.
