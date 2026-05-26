@@ -1,9 +1,21 @@
 import { useState } from "react";
 import type { Tenant } from "../lib/idb";
 
-interface Props { tenants: Tenant[]; onTenantClick?: (name: string) => void; }
+interface Props {
+  tenants: Tenant[];
+  onTenantClick?: (name: string) => void;
+  tenantsAsOf?: string | null;
+  tenantsSource?: string | null;
+  omDate?: string | null;
+}
 
-export default function TenantRoster({ tenants, onTenantClick }: Props) {
+function fmtAsOf(raw: string): string {
+  const d = new Date(raw.includes("T") ? raw : raw + "T00:00:00");
+  if (isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tenantsSource, omDate }: Props) {
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
   const [sortKey, setSortKey] = useState("sf");
@@ -43,10 +55,20 @@ export default function TenantRoster({ tenants, onTenantClick }: Props) {
     ["salesPSF","Sales/SF",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
   ];
 
+  const asOfDate = tenantsAsOf || omDate;
+  const asOfLabel = tenantsSource === "rent-roll" ? "RENT ROLL" : "OM";
+
   return (
     <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:13, flexWrap:"wrap" }}>
-        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length?`${tenants.length} tenants`:`${rows.length} of ${tenants.length}`}</div>
+        <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length?`${tenants.length} tenants`:`${rows.length} of ${tenants.length}`}</div>
+          {asOfDate && (
+            <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color: tenantsSource==="rent-roll" ? "#0d9488" : "#a89f8f", background: tenantsSource==="rent-roll" ? "#f0fdfa" : "#f6f2ea", border:`1px solid ${tenantsSource==="rent-roll" ? "#99f6e4" : "#e3dccd"}`, borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+              AS OF {fmtAsOf(asOfDate)} · {asOfLabel}
+            </span>
+          )}
+        </div>
         <div style={{ display:"flex", gap:7, alignItems:"center", flexWrap:"wrap" }}>
           {chip("all","All")}{chip("anchors","Anchors")}{chip("expiring","Expiring ≤2yr")}
           {tenants.some(t => t.assumptionNote) && chip("footnotes","Has footnote")}

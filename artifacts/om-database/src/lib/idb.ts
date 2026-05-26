@@ -245,6 +245,8 @@ export interface Deal {
   shadowAnchors?: string | null;
   // Tenants
   tenants?: Tenant[];
+  tenantsAsOf?: string | null;
+  tenantsSource?: "om" | "rent-roll" | null;
   // Cash flow
   cashFlowProjection?: CashFlowRow[];
   // Income/expense breakdown

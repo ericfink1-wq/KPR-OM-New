@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal } from "../lib/api";
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote } from "../lib/utils";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
 import StatusTag from "./StatusTag";
@@ -117,6 +117,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [reanalyzeBusy, setReanalyzeBusy] = useState(false);
   const rerunPdfRef = useRef<HTMLInputElement>(null);
+  const [rrBusy, setRrBusy] = useState(false);
+  const [rrError, setRrError] = useState<string | null>(null);
+  const rrPdfRef = useRef<HTMLInputElement>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesVal, setNotesVal] = useState(d.userNotes || "");
   const [fixPage, setFixPage] = useState("");
@@ -146,6 +149,87 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     const ver = { ...(d.verified || {}) };
     if (ver[field]) { delete ver[field]; } else { ver[field] = { ts: Date.now() }; }
     onUpdate(id, { verified: ver });
+  };
+
+  const handleRentRoll = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setRrBusy(true);
+    setRrError(null);
+    try {
+      const { text } = await extractPdfText(await file.arrayBuffer());
+      const prompt = `You are a CRE data extraction engine. Extract every tenant row from this rent roll document.
+Return ONLY valid JSON — no explanation, no markdown fences — with this exact shape:
+{
+  "asOf": "<date string from the rent roll header such as '2025-03-31', or null if not found>",
+  "tenants": [
+    {
+      "name": "string",
+      "sf": number_or_null,
+      "rentPerSF": number_or_null,
+      "annualRent": number_or_null,
+      "leaseStart": "string_or_null",
+      "leaseExpiry": "string_or_null",
+      "remainingTermYears": number_or_null,
+      "reimbursementMethod": "string_or_null",
+      "leaseType": "string_or_null",
+      "rentBumps": "string_or_null",
+      "renewalOptions": "string_or_null",
+      "isAnchor": boolean
+    }
+  ]
+}
+Include every occupied tenant found. Omit vacant rows. Return only JSON.
+
+RENT ROLL TEXT:
+${text.slice(0, 60000)}`;
+
+      const res = await apiAiMessages({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 8000,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const raw = res.content.find(c => c.type === "text")?.text ?? "";
+      const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      let parsed: { asOf?: string | null; tenants?: unknown[] };
+      try { parsed = JSON.parse(jsonStr); } catch { throw new Error("AI returned non-JSON. Try again."); }
+
+      const newTenants = Array.isArray(parsed.tenants) ? parsed.tenants as Deal["tenants"] : [];
+      if (!newTenants || newTenants.length === 0) throw new Error("No tenants found in the rent roll. Check the PDF.");
+
+      const asOf = parsed.asOf || new Date().toISOString().slice(0, 10);
+
+      const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+      const recomputed: Partial<Deal> = {};
+
+      if (!d.verified?.occupancy && d.totalSF) {
+        const occupiedSF = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
+        const occ = Math.round(occupiedSF / Number(d.totalSF) * 1000) / 10;
+        if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
+      }
+      if (!d.verified?.walt) {
+        const sfT = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
+        const wT = newTenants.reduce((s, t) => {
+          const sf = nv((t as Record<string,unknown>).sf), yr = nv((t as Record<string,unknown>).remainingTermYears);
+          return s + (sf ?? 0) * (yr ?? 0);
+        }, 0);
+        if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
+      }
+      if (!d.verified?.weightedAvgRentPSF) {
+        const sfR = newTenants.filter(t => nv((t as Record<string,unknown>).sf) && nv((t as Record<string,unknown>).rentPerSF)).reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
+        const wR = newTenants.reduce((s, t) => {
+          const sf = nv((t as Record<string,unknown>).sf), r = nv((t as Record<string,unknown>).rentPerSF);
+          return s + (sf && r ? sf * r : 0);
+        }, 0);
+        if (sfR > 0) recomputed.weightedAvgRentPSF = Math.round(wR / sfR * 100) / 100;
+      }
+
+      onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", ...recomputed });
+    } catch (err: unknown) {
+      setRrError(err instanceof Error ? err.message : "Rent roll import failed.");
+    }
+    setRrBusy(false);
   };
 
   const pollUntilDone = async (id: string) => {
@@ -914,8 +998,33 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* Key assumptions */}
       <KeyAssumptions deal={d} />
 
+      {/* Rent roll importer */}
+      {(d.tenants||[]).length > 0 && (
+        <div style={{ background:"#f0fdfa", border:"1px solid #99f6e4", borderRadius:10, padding:"11px 16px", marginBottom:10, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+          <span style={{ fontSize:11, color:"#0d7a70", fontWeight:500, flexGrow:1 }}>
+            {d.tenantsSource === "rent-roll" && d.tenantsAsOf
+              ? `Tenants last refreshed from rent roll — ${d.tenantsAsOf}`
+              : "Have a current rent roll? Refresh tenants from it."}
+          </span>
+          {rrError && <span style={{ fontSize:11, color:"#dc2626", maxWidth:320 }}>{rrError}</span>}
+          <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
+            style={{ background:"#0d9488", border:"none", color:"#fff", padding:"6px 14px", borderRadius:7, cursor: rrBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", opacity: rrBusy ? 0.65 : 1, whiteSpace:"nowrap" }}>
+            {rrBusy ? "Extracting…" : "↑ Update from rent roll PDF…"}
+          </button>
+          <input ref={rrPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRentRoll}/>
+        </div>
+      )}
+
       {/* Tenant roster */}
-      {(d.tenants||[]).length > 0 && <TenantRoster tenants={d.tenants!} onTenantClick={onTenantClick}/>}
+      {(d.tenants||[]).length > 0 && (
+        <TenantRoster
+          tenants={d.tenants!}
+          onTenantClick={onTenantClick}
+          tenantsAsOf={d.tenantsAsOf}
+          tenantsSource={d.tenantsSource}
+          omDate={d.omDate}
+        />
+      )}
 
       {/* Cash flow */}
       {(d.cashFlowProjection||[]).length > 0 && (

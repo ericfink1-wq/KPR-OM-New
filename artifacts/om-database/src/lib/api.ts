@@ -143,6 +143,7 @@ export async function apiLoadSource(id: string): Promise<string | null> {
 // --- AI (web search / generic Claude proxy) ---
 
 export async function apiAiMessages(params: {
+  model?: string;
   system?: string;
   messages: { role: string; content: string }[];
   max_tokens?: number;
@@ -151,6 +152,7 @@ export async function apiAiMessages(params: {
   const resp = await apiFetch("/ai/messages", {
     method: "POST",
     body: JSON.stringify({
+      model: params.model,
       max_tokens: params.max_tokens ?? 1500,
       system: params.system,
       messages: params.messages,
