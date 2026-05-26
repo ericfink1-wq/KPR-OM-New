@@ -191,7 +191,7 @@ function repairTruncatedJSON(s: string): unknown {
 }
 
 // Full OM extraction — retries truncated tenant lists automatically
-export async function runOmExtraction(text: string): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean }> {
+export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean }> {
   const truncatedText = text.length > 180000
     ? text.slice(0, 120000) + "\n...[middle truncated]...\n" + text.slice(-40000)
     : text;
@@ -215,7 +215,7 @@ export async function runOmExtraction(text: string): Promise<{ data: Record<stri
     return { raw, stopReason: data.stop_reason as string };
   };
 
-  const first = await callExtract(EXTRACTION_PROMPT + "\n\nOM TEXT:\n" + truncatedText);
+  const first = await callExtract(EXTRACTION_PROMPT + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText);
   let extracted = robustParseJSON(first.raw) as Record<string, unknown>;
   if (!extracted.tenants) extracted.tenants = [];
 
@@ -254,9 +254,10 @@ export async function runBackgroundExtraction(
   fileName: string,
   pageCount: number,
   log: Logger,
+  extraGuidance = "",
 ): Promise<void> {
   try {
-    const { data: extracted } = await runOmExtraction(text);
+    const { data: extracted } = await runOmExtraction(text, extraGuidance);
     const dealData: Record<string, unknown> = {
       ...extracted,
       _processing: false,

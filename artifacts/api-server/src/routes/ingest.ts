@@ -17,11 +17,12 @@ function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], nex
 // Immediately creates a "processing" deal row and returns the id.
 // The actual Claude extraction runs in the background.
 router.post("/deals/ingest", requireAuth, async (req, res) => {
-  const { id, text, fileName, pageCount } = req.body as {
+  const { id, text, fileName, pageCount, correctionsNote } = req.body as {
     id?: string;
     text?: string;
     fileName?: string;
     pageCount?: number;
+    correctionsNote?: string;
   };
 
   if (!id || typeof id !== "string") {
@@ -51,7 +52,7 @@ router.post("/deals/ingest", requireAuth, async (req, res) => {
 
     // Fire background extraction after response is sent
     setImmediate(() => {
-      runBackgroundExtraction(id, text, fileName || "Unknown", pageCount || 0, req.log).catch(() => {});
+      runBackgroundExtraction(id, text, fileName || "Unknown", pageCount || 0, req.log, correctionsNote || "").catch(() => {});
     });
   } catch (err) {
     req.log.error({ err }, "Failed to create processing deal");

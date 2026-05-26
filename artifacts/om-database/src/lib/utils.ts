@@ -62,6 +62,28 @@ export function humanizeKey(key: string): string {
   return key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase()).trim();
 }
 
+// Tally fields the user has manually corrected across all deals and return
+// in-context guidance to inject into the extraction prompt for new runs.
+// This is NOT model training — it's a "corrections memory" in the prompt.
+export function buildCorrectionsNote(deals: Deal[]): string {
+  const skip = new Set(["extraction","record","propertyGroup","status","marketSale","marketDemographics","imageMeta","userNotes"]);
+  const counts: Record<string, number> = {};
+  for (const d of deals || []) {
+    for (const h of (((d as unknown) as Record<string, unknown>).editHistory as Array<{ by?: string; changes?: Array<{ field?: string; to?: unknown }> }> || [])) {
+      if (/^(AI|Auto|PDF)/i.test(h.by || "")) continue;
+      for (const c of h.changes || []) {
+        const f = c.field;
+        if (!f || skip.has(f)) continue;
+        if (c.to === "verified" || c.to === "unverified") continue;
+        counts[f] = (counts[f] || 0) + 1;
+      }
+    }
+  }
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([f]) => humanizeKey(f));
+  if (!top.length) return "";
+  return `\n\nANALYST CORRECTION HISTORY — across prior deals the user has manually corrected these fields, so the source figures or a first read were often off. Extract these with extra care: prefer the ACTUAL/in-place figures stated in the OM (not asking, pro-forma, or marketing numbers) and double-check them: ${top.join(", ")}.`;
+}
+
 export function assessExtraction(deal: Deal): { quality: "good" | "partial" | "thin"; missing: string[] } {
   const core: [keyof Deal, string][] = [
     ["propertyName","Property Name"],["totalSF","Total SF"],

@@ -831,6 +831,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         </div>
       )}
 
+      {/* Edit metrics (useful when verifying extracted numbers) */}
+      <MetricsEditor deal={d} onUpdate={onUpdate}/>
+
       {/* Key assumptions */}
       <KeyAssumptions deal={d} />
 
@@ -957,6 +960,52 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
             placeholder={placeholder}
             style={{ flex:1, background:"transparent", border:"none", outline:"none", padding:"10px 6px", fontSize:14, color:"#383a37" }}/>
           {suffix && <span style={{ color:"#a69e91", fontSize:13 }}>{suffix}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Core metrics editor ───────────────────────────────────────────────────────
+// Toggle panel on the detail page to correct extracted numbers. Saves through the
+// normal onUpdate path so every change is logged in the deal's edit history.
+function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
+  const [open, setOpen] = useState(false);
+  const fields: Array<{ field: keyof Deal; label: string; prefix?: string; suffix?: string; numeric?: boolean }> = [
+    { field:"noi", label:"NOI", prefix:"$" },
+    { field:"capRate", label:"Cap Rate", suffix:"%" },
+    { field:"askingPrice", label:"Asking Price", prefix:"$" },
+    { field:"totalSF", label:"Total SF", numeric:true },
+    { field:"occupancy", label:"Occupancy", suffix:"%" },
+    { field:"weightedAvgRentPSF", label:"Wtd Avg Rent / SF", prefix:"$" },
+    { field:"walt", label:"WALT (yrs)", numeric:true },
+    { field:"grossPotentialRent", label:"Gross Potential Rent", prefix:"$" },
+    { field:"effectiveGrossIncome", label:"Effective Gross Income", prefix:"$" },
+    { field:"operatingExpenses", label:"Operating Expenses", prefix:"$" },
+    { field:"nnnRecoveries", label:"NNN Recoveries", prefix:"$" },
+    { field:"yearBuilt", label:"Year Built", numeric:true },
+    { field:"renovationYear", label:"Renovation Year", numeric:true },
+    { field:"numberOfBuildings", label:"# Buildings", numeric:true },
+    { field:"lotSizeAcres", label:"Lot Size (acres)", numeric:true },
+  ];
+  return (
+    <div style={{ marginBottom:14 }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ background:open?"#383a37":"transparent", color:open?"#f6f2ea":"#5c5f57", border:"1px solid "+(open?"#383a37":"#d8cfbd"), padding:"6px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+        {open ? "✕ Close metric editor" : "✎ Edit metrics"}
+      </button>
+      {open && (
+        <div style={{ marginTop:11, background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"16px 18px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ fontSize:11, color:"#9a917f", marginBottom:13, lineHeight:1.5 }}>
+            Correct any figure that doesn't match the OM. Changes save automatically and are logged in this deal's edit history — and the fields you most often correct get flagged for extra care on future extractions.
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(190px, 1fr))", gap:13 }}>
+            {fields.map(f => (
+              <TxnField key={f.field as string} label={f.label} field={f.field} initial={deal[f.field]}
+                prefix={f.prefix} suffix={f.suffix} numeric={f.numeric}
+                dealId={deal.id} onUpdate={onUpdate}/>
+            ))}
+          </div>
         </div>
       )}
     </div>

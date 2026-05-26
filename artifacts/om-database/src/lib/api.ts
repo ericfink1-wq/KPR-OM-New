@@ -96,7 +96,7 @@ export async function apiLoadImages(id: string): Promise<ImageBundle | null> {
 
 // --- Async ingest ---
 
-export async function apiIngestDeal(params: { id: string; text: string; fileName: string; pageCount: number }): Promise<void> {
+export async function apiIngestDeal(params: { id: string; text: string; fileName: string; pageCount: number; correctionsNote?: string }): Promise<void> {
   const resp = await apiFetch("/deals/ingest", {
     method: "POST",
     body: JSON.stringify(params),

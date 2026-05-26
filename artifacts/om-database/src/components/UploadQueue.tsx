@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus } from "../lib/api";
 import { extractPdfText, extractPdfImages } from "../lib/pdfExtract";
-import { uid } from "../lib/utils";
+import { uid, buildCorrectionsNote } from "../lib/utils";
 
 interface QueueItem {
   id: string;
@@ -161,7 +161,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const fileName = file.name.replace(/\.pdf$/i, "");
 
       updateItem(itemId, { msg: "Sending to Claude AI…", progress: 40 });
-      await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages });
+      await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages, correctionsNote: buildCorrectionsNote(existingDeals) });
 
       updateItem(itemId, { msg: "Processing images…", progress: 55 });
       const imgs = await imgPromise;
