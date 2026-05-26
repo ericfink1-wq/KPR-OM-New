@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
-import { cityState, tenantKey, tenantLabel } from "../lib/utils";
+import { cityState, tenantKey, tenantLabel, fmtLeaseDate } from "../lib/utils";
 
 interface Props {
   tenantName: string;
@@ -126,7 +126,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
                   <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
                   <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
                   <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{num(r.t.annualRent) != null ? `$${num(r.t.annualRent)!.toLocaleString()}` : "—"}</td>
-                  <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{r.t.leaseExpiry || "—"}</td>
+                  <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
                   <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.salesPSF) != null ? `$${r.t.salesPSF}` : "—"}</td>
                   <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
                 </tr>

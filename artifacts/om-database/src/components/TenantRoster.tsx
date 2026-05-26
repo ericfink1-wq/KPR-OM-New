@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Tenant } from "../lib/idb";
+import { fmtLeaseDate } from "../lib/utils";
 
 interface Props {
   tenants: Tenant[];
@@ -101,8 +102,8 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${n(t.annualRent)!.toLocaleString()}`:"—"}</td>
-                <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{t.leaseStart||"—"}</td>
-                <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{t.leaseExpiry||"—"}</td>
+                <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>
+                <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{fmtLeaseDate(t.leaseExpiry)}</td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap" }}>
                   {(() => {
                     const m = t.reimbursementMethod || t.leaseType || "";

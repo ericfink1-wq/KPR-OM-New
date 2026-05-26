@@ -13,7 +13,7 @@ export default function DealTiles({ deals, onOpen }: Props) {
   const recency = (d: Deal) => new Date(d.uploadedAt || 0).getTime();
   const uc = deals.filter(d => d.status === "Under Contract").sort((a, b) => recency(b) - recency(a));
   const prospects = deals.filter(d => d.status === "Prospect").sort((a, b) => recency(b) - recency(a));
-  const tiles = [...uc, ...prospects].slice(0, 8);
+  const tiles = [...uc, ...prospects].slice(0, 10);
   const [covers, setCovers] = useState<Record<string, string>>({});
   const key = tiles.map(d => d.id).join(",");
 
@@ -35,7 +35,7 @@ export default function DealTiles({ deals, onOpen }: Props) {
 
   return (
     <div style={{ marginBottom: 26 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 13 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 13 }}>
         {tiles.map(d => {
           const sc = STATUS_COLORS[d.status || ""] || "#7d766a";
           const loc = cityState(d);
