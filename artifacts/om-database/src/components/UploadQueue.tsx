@@ -7,6 +7,7 @@ import { uid } from "../lib/utils";
 interface QueueItem {
   id: string;
   name: string;
+  file?: File;
   status: "pending" | "extracting" | "awaiting_dup" | "done" | "error";
   msg: string;
   progress: number;
@@ -88,10 +89,32 @@ function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): D
   } as Deal;
 }
 
+const MAX_CONCURRENT = 3;
+
 export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, onOpenDeal, existingDeals }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [queueOpen, setQueueOpen] = useState(true);
   const pendingRef = useRef<File[]>([]);
+  const activeCountRef = useRef(0);
+  const waitingFilesRef = useRef<{ file: File; itemId: string }[]>([]);
+
+  const drainQueue = () => {
+    while (activeCountRef.current < MAX_CONCURRENT && waitingFilesRef.current.length > 0) {
+      const next = waitingFilesRef.current.shift()!;
+      activeCountRef.current++;
+      processFile(next.file, next.itemId).finally(() => {
+        activeCountRef.current--;
+        drainQueue();
+      });
+    }
+  };
+
+  const enqueueFile = (file: File) => {
+    const itemId = uid();
+    setQueue(q => [...q, { id: itemId, name: file.name, file, status: "pending", msg: "Queued…", progress: 0 }]);
+    waitingFilesRef.current.push({ file, itemId });
+    drainQueue();
+  };
 
   // Process newly added files
   useEffect(() => {
@@ -100,7 +123,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     onFilesConsumed();
     if (pdfs.length) {
       setQueueOpen(true);
-      pdfs.forEach(processFile);
+      pdfs.forEach(enqueueFile);
     }
   }, [pendingFiles]);
 
@@ -108,10 +131,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
   };
 
-  const processFile = async (file: File) => {
-    const itemId = uid();
+  const processFile = async (file: File, itemId: string) => {
     const dealId = uid();
-    setQueue(q => [...q, { id: itemId, name: file.name, status: "pending", msg: "Waiting…", progress: 0, tempDealId: dealId }]);
+    updateItem(itemId, { tempDealId: dealId });
 
     try {
       updateItem(itemId, { status: "extracting", msg: "Reading PDF…", progress: 5 });
@@ -136,7 +158,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
       let resolvedDeal: Deal | null = null;
       let pollError: string | null = null;
-      for (let i = 0; i < 120; i++) {
+      const POLL_ITERS = 240; // 240 × 2.5s = 10 min
+      for (let i = 0; i < POLL_ITERS; i++) {
         await new Promise(r => setTimeout(r, 2500));
         const status = await apiPollDealStatus(dealId);
         if (!status.processing) {
@@ -144,7 +167,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           resolvedDeal = (status.deal as Deal) ?? null;
           break;
         }
-        const pct = Math.min(65 + Math.round((i / 120) * 28), 93);
+        const pct = Math.min(65 + Math.round((i / POLL_ITERS) * 28), 93);
         updateItem(itemId, { progress: pct });
       }
 
@@ -226,8 +249,11 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   };
 
   const retryFailed = () => {
-    const failed = queue.filter(x => x.status === "error");
+    const failed = queue.filter(x => x.status === "error" && x.file);
     setQueue(q => q.filter(x => x.status !== "error"));
+    for (const item of failed) {
+      if (item.file) enqueueFile(item.file);
+    }
   };
 
   if (!queue.length) return null;
