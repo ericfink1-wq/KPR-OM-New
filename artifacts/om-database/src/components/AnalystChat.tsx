@@ -60,8 +60,14 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
   const active = deals.filter(d => !d.trashedAt);
+
+  // Reset to top on initial mount — prevents opening scrolled to bottom
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, []);
 
   // Handle incoming query from DetailView
   useEffect(() => {
@@ -71,7 +77,9 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
     }
   }, [initialQuery]);
 
+  // Only auto-scroll to newest message after the user has sent something
   useEffect(() => {
+    if (msgs.length === 0 && !loading) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, loading]);
 
@@ -146,7 +154,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "transparent" }}>
       {/* Messages area */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 28px" }}>
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 28px" }}>
         {isEmpty ? (
           <div style={{ animation: "riseIn 0.3s ease both" }}>
             {/* Hero */}

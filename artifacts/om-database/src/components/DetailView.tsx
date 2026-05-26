@@ -485,6 +485,222 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         </div>
       )}
 
+      {/* TRANSACTION DETAILS — acquisition record (LOI → close) and disposition */}
+      {(() => {
+        const owned = d.status === "Owned" || d.status === "Sold";
+        const sold  = d.status === "Sold";
+        const tf = (p: Omit<TxnFieldProps,"dealId"|"onUpdate">) =>
+          <TxnField key={p.field as string} {...p} initial={d[p.field]} dealId={d.id} onUpdate={onUpdate} />;
+        const Grp = ({ title }: { title: string }) => (
+          <div style={{ gridColumn:"1 / -1", fontSize:13, fontWeight:600, color:"#383a37", marginTop:8, marginBottom:-2, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{title}
+          </div>
+        );
+        const pp = Number(d.txnPurchasePrice)||0, sp = Number(d.txnSalePrice)||0;
+        const gain = pp && sp ? sp - pp : null;
+        const closingCosts = Number(d.acqClosingCosts)||0, acqFee = Number(d.acqFee)||0;
+        const allInBasis   = pp ? pp + closingCosts + acqFee : null;
+        const noiClose     = Number(d.acqNOIAtClose) || Number(d.noi) || 0;
+        const goingInCap   = pp && noiClose ? (noiClose/pp*100) : null;
+        const pricePerSFCalc = pp && d.totalSF ? (pp/Number(d.totalSF)) : null;
+        return (
+          <div style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
+                {owned ? "Acquisition Record" : "Transaction Details"}
+              </div>
+              <div style={{ fontSize:12, color:"#a69e91" }}>
+                {owned ? "Complete the closing details below" : "Set status to Owned when acquired to record full closing details"}
+              </div>
+            </div>
+
+            {owned && (() => {
+              const req: [string, unknown][] = [
+                ["Purchase price", d.txnPurchasePrice],["Seller", d.txnSeller],["Close date", d.txnCloseDate],
+                ["Going-in cap", d.acqCapRate],["Acquiring entity", d.acqEntity],["Strategy", d.acqStrategy],
+                ["Lender", d.debtLender],["Loan amount", d.debtLoanAmount],["Interest rate", d.debtRate],["Loan maturity", d.debtMaturityDate],
+              ];
+              const missing = req.filter(([,v]) => v == null || v === "");
+              const filled  = req.length - missing.length;
+              const pct     = Math.round((filled/req.length)*100);
+              const done    = missing.length === 0;
+              return (
+                <div style={{ background:done?"#f0faf0":"#fffaf2", border:`1px solid ${done?"#cfe9c4":"#f0d9b5"}`, borderRadius:10, padding:"12px 16px", marginBottom:18 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:done?0:8 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:done?"#0f7a3d":"#9a6a1e" }}>
+                      {done ? "✓ Acquisition record complete" : `Acquisition record ${pct}% complete — ${missing.length} key detail${missing.length===1?"":"s"} still needed`}
+                    </span>
+                    <div style={{ width:90, height:6, background:"#efe8da", borderRadius:4, overflow:"hidden", flexShrink:0 }}>
+                      <div style={{ width:`${pct}%`, height:"100%", background:done?"#0f9d63":"#d9a441", borderRadius:4, transition:"width 0.3s" }}/>
+                    </div>
+                  </div>
+                  {!done && (
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:4 }}>
+                      {missing.map(([label]) => (
+                        <span key={label as string} style={{ fontSize:11, color:"#9a6a1e", background:"#fbeed5", padding:"2px 8px", borderRadius:10 }}>{label as string}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Acquisition */}
+            <div style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{owned ? "Deal Terms" : "Acquisition"}
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14, marginBottom:18 }}>
+              {tf({ label:"Purchase Price", field:"txnPurchasePrice", placeholder:"e.g. 42,500,000", prefix:"$" })}
+              {tf({ label:"Acquired From (Seller)", field:"txnSeller", placeholder:"Seller entity / name" })}
+              {tf({ label:"Close Date", field:"txnCloseDate", placeholder:"YYYY-MM-DD" })}
+              {owned && <>
+                {tf({ label:"Going-In Cap Rate", field:"acqCapRate", placeholder:"e.g. 6.50", suffix:"%" })}
+                {tf({ label:"NOI at Close", field:"acqNOIAtClose", placeholder:"actual in-place NOI", prefix:"$" })}
+                {tf({ label:"Acquiring Entity", field:"acqEntity", placeholder:"title-holding LLC / SPV" })}
+                {tf({ label:"Acquisition Broker", field:"acqBroker", placeholder:"firm representing buyer/seller" })}
+                <Grp title="Closing Economics"/>
+                {tf({ label:"Earnest Money / Deposit", field:"acqDeposit", placeholder:"e.g. 1,000,000", prefix:"$" })}
+                {tf({ label:"Closing Costs", field:"acqClosingCosts", placeholder:"e.g. 850,000", prefix:"$" })}
+                {tf({ label:"Acquisition Fee", field:"acqFee", placeholder:"e.g. 425,000", prefix:"$" })}
+                <Grp title="Parties & Advisors"/>
+                {tf({ label:"Legal Counsel", field:"acqCounsel", placeholder:"acquisition counsel" })}
+                <Grp title="Business Plan"/>
+                {tf({ label:"Strategy", field:"acqStrategy", options:["Core","Core-Plus","Value-Add","Opportunistic"] })}
+                {tf({ label:"Target Hold", field:"acqHoldPeriod", placeholder:"e.g. 7", suffix:"yrs" })}
+                {tf({ label:"Target IRR", field:"acqTargetIRR", placeholder:"e.g. 14", suffix:"%" })}
+              </>}
+            </div>
+
+            {owned && (allInBasis || goingInCap || pricePerSFCalc) && (
+              <div style={{ marginBottom:18, paddingBottom:16, borderBottom:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
+                {goingInCap && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Going-In Cap (calc)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#0f9d63" }}>{goingInCap.toFixed(2)}%</div></div>}
+                {pricePerSFCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Price / SF</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${pricePerSFCalc.toFixed(0)}</div></div>}
+                {allInBasis && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>All-In Basis</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${allInBasis.toLocaleString()}</div></div>}
+              </div>
+            )}
+
+            {/* Disposition */}
+            <div style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:6, height:6, borderRadius:"50%", background:sold?"#0d9488":"#d0c9bc" }}/>{sold ? "Disposition Record" : "Disposition"}
+            </div>
+
+            {sold && (() => {
+              const req: [string, unknown][] = [["Sale price", d.txnSalePrice],["Buyer", d.txnBuyer],["Sale date", d.txnSaleDate],["Exit cap", d.dispExitCap]];
+              const missing = req.filter(([,v]) => v == null || v === "");
+              const filled  = req.length - missing.length, pct = Math.round((filled/req.length)*100), done = missing.length === 0;
+              return (
+                <div style={{ background:done?"#eefcfa":"#fffaf2", border:`1px solid ${done?"#bfe9e3":"#f0d9b5"}`, borderRadius:10, padding:"12px 16px", marginBottom:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:done?0:8 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:done?"#0a7d72":"#9a6a1e" }}>
+                      {done ? "✓ Disposition record complete" : `Disposition record ${pct}% complete — ${missing.length} detail${missing.length===1?"":"s"} still needed`}
+                    </span>
+                    <div style={{ width:90, height:6, background:"#efe8da", borderRadius:4, overflow:"hidden", flexShrink:0 }}>
+                      <div style={{ width:`${pct}%`, height:"100%", background:done?"#0d9488":"#d9a441", borderRadius:4, transition:"width 0.3s" }}/>
+                    </div>
+                  </div>
+                  {!done && <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:4 }}>{missing.map(([l]) => <span key={l as string} style={{ fontSize:11, color:"#9a6a1e", background:"#fbeed5", padding:"2px 8px", borderRadius:10 }}>{l as string}</span>)}</div>}
+                </div>
+              );
+            })()}
+
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
+              {tf({ label:"Sale Price", field:"txnSalePrice", placeholder:"e.g. 54,000,000", prefix:"$" })}
+              {tf({ label:"Sold To (Buyer)", field:"txnBuyer", placeholder:"Buyer entity / name" })}
+              {tf({ label:"Sale Date", field:"txnSaleDate", placeholder:"YYYY-MM-DD" })}
+              {tf({ label:"Disposition Broker", field:"txnBroker", placeholder:"firm representing the sale" })}
+              {sold && <>
+                {tf({ label:"Exit Cap Rate", field:"dispExitCap", placeholder:"e.g. 5.75", suffix:"%" })}
+                {tf({ label:"Selling Costs", field:"dispCosts", placeholder:"commission, legal, transfer", prefix:"$" })}
+                {tf({ label:"Loan Payoff at Sale", field:"dispLoanPayoff", placeholder:"outstanding balance repaid", prefix:"$" })}
+                {tf({ label:"Disposition Notes", field:"dispNotes", placeholder:"rationale, terms, buyer profile", wide:true })}
+              </>}
+            </div>
+
+            {gain != null && (
+              <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
+                <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Realized Gain / (Loss)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:gain>=0?"#0f9d63":"#dc2626" }}>{gain>=0?"":"-"}${Math.abs(gain).toLocaleString()}</div></div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* FINANCING & DEBT — full loan record once a deal is Owned or Sold */}
+      {(() => {
+        const owned = d.status === "Owned" || d.status === "Sold";
+        const f = (p: Omit<TxnFieldProps,"dealId"|"onUpdate">) =>
+          <TxnField key={p.field as string} {...p} initial={d[p.field]} dealId={d.id} onUpdate={onUpdate} />;
+        const Group = ({ title }: { title: string }) => (
+          <div style={{ gridColumn:"1 / -1", fontSize:13, fontWeight:600, color:"#383a37", marginTop:6, marginBottom:-2, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{title}
+          </div>
+        );
+        const amt = Number(d.debtLoanAmount)||0, rate = Number(d.debtRate)||0, amortY = Number(d.debtAmortYears)||0;
+        let annualDS: number|null = null;
+        if (amt && rate) {
+          if (amortY > 0) { const r = rate/100/12, n = amortY*12; annualDS = (r>0 ? amt*r/(1-Math.pow(1+r,-n)) : amt/n)*12; }
+          else annualDS = amt * rate/100;
+        }
+        const pp2    = Number(d.txnPurchasePrice)||0;
+        const equity = pp2 && amt ? pp2 - amt : null;
+        const ltvCalc  = pp2 && amt ? (amt/pp2*100) : null;
+        const noi2     = Number(d.noi)||0;
+        const dscrCalc = annualDS && noi2 ? noi2/annualDS : null;
+
+        if (!owned) return (
+          <div style={{ background:"#ffffff", border:"1px dashed #ddd4c2", borderRadius:12, padding:"16px 20px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+            <div style={{ fontSize:13, color:"#837c6e" }}>
+              <span style={{ fontWeight:600, color:"#383a37" }}>Financing & Debt</span> — set this deal's status to <span style={{ fontWeight:600 }}>Owned</span> to record acquisition financing.
+            </div>
+            <button onClick={() => onUpdate(d.id, { status:"Owned" })}
+              style={{ background:"#6dba43", border:"none", color:"#1f2b16", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
+              Mark as Owned
+            </button>
+          </div>
+        );
+
+        return (
+          <div style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Financing & Debt</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
+              <Group title="Lender & Loan"/>
+              {f({ label:"Lender / Servicer", field:"debtLender", placeholder:"e.g. JPMorgan, Fannie Mae" })}
+              {f({ label:"Loan Type", field:"debtType", options:["Senior / Acquisition","Permanent","Bridge","Construction","Mezzanine","CMBS","Agency (Fannie/Freddie)","Life Co","Bank","Other"] })}
+              {f({ label:"Original Loan Amount", field:"debtLoanAmount", placeholder:"e.g. 30,000,000", prefix:"$" })}
+              {f({ label:"Lender Contact", field:"debtContact", placeholder:"Name / email / phone", wide:true })}
+              <Group title="Rate"/>
+              {f({ label:"Interest Rate", field:"debtRate", placeholder:"e.g. 6.25", suffix:"%" })}
+              {f({ label:"Rate Type", field:"debtRateType", options:["Fixed","Floating"] })}
+              {f({ label:"Index (if floating)", field:"debtIndex", placeholder:"e.g. 1-mo SOFR" })}
+              {f({ label:"Spread / Margin", field:"debtSpread", placeholder:"e.g. 250", suffix:"bps" })}
+              <Group title="Term & Amortization"/>
+              {f({ label:"Origination / Close Date", field:"debtOriginationDate", placeholder:"YYYY-MM-DD" })}
+              {f({ label:"Maturity Date", field:"debtMaturityDate", placeholder:"YYYY-MM-DD" })}
+              {f({ label:"Term", field:"debtTermYears", placeholder:"e.g. 10", suffix:"yrs" })}
+              {f({ label:"Amortization", field:"debtAmortYears", placeholder:"e.g. 30 (0 = IO)", suffix:"yrs" })}
+              {f({ label:"Interest-Only Period", field:"debtIOPeriod", placeholder:"e.g. 36", suffix:"mo" })}
+              {f({ label:"Extension Options", field:"debtExtensions", placeholder:"e.g. 2 × 1-yr" })}
+              <Group title="Covenants & Terms"/>
+              {f({ label:"LTV at Close", field:"debtLTV", placeholder:"e.g. 60", suffix:"%" })}
+              {f({ label:"Recourse", field:"debtRecourse", options:["Non-Recourse","Full Recourse","Partial / Bad-Boy Carveouts"] })}
+              {f({ label:"Assumable", field:"debtAssumable", options:["Yes","No","With Lender Approval"] })}
+              {f({ label:"Prepayment", field:"debtPrepay", placeholder:"e.g. Yield maintenance, defeasance, 5-4-3-2-1 step-down" })}
+              {f({ label:"Escrows / Reserves", field:"debtEscrows", placeholder:"e.g. Tax, insurance, TI/LC, replacement" })}
+              {f({ label:"Notes", field:"debtNotes", placeholder:"Anything else worth recording", wide:true })}
+            </div>
+            {(annualDS || equity != null || ltvCalc || dscrCalc) && (
+              <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
+                {annualDS && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Est. Annual Debt Service</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${Math.round(annualDS).toLocaleString()}</div></div>}
+                {equity != null && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Equity Invested</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${equity.toLocaleString()}</div></div>}
+                {ltvCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied LTV</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:ltvCalc>75?"#dc2626":"#0f9d63" }}>{ltvCalc.toFixed(1)}%</div></div>}
+                {dscrCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied DSCR (NOI)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:dscrCalc<1.2?"#dc2626":"#0f9d63" }}>{dscrCalc.toFixed(2)}x</div></div>}
+              </div>
+            )}
+            <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; LTV/DSCR use your purchase price and the OM NOI). For reference only.</div>
+          </div>
+        );
+      })()}
+
       {/* Debt from OM + Property info */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
         <Card title="DEBT NOTED IN OM" accent={d.assumableDebt?"#0f9d6340":undefined}>
@@ -666,6 +882,78 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <p style={{ fontSize:13, color: d.userNotes?"#383a37":"#c4bba7", lineHeight:1.65, margin:0, whiteSpace:"pre-wrap" }}>{d.userNotes || "No notes yet. Click Edit to add."}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Fields that hold numeric values in the transaction / debt / acq forms ──
+const NUMERIC_TXN_FIELDS = new Set<string>([
+  "txnPurchasePrice","txnSalePrice","debtLoanAmount","debtRate","debtSpread",
+  "debtTermYears","debtAmortYears","debtIOPeriod","debtLTV","debtDSCR",
+  "acqCapRate","acqNOIAtClose","acqDeposit","acqClosingCosts","acqFee",
+  "acqHoldPeriod","acqTargetIRR","dispExitCap","dispCosts","dispLoanPayoff",
+]);
+
+interface TxnFieldProps {
+  label: string;
+  field: keyof Deal;
+  initial?: unknown;
+  placeholder?: string;
+  prefix?: string;
+  suffix?: string;
+  options?: string[];
+  wide?: boolean;
+  dealId: string;
+  onUpdate: (id: string, patch: Partial<Deal>) => void;
+  numeric?: boolean;
+}
+
+// Stable input: local state only, never calls onUpdate on keystroke.
+// Commits on blur or Enter; formats money as $40,000,000 on blur.
+function TxnField({ label, field, initial, placeholder, prefix, suffix, options, wide, dealId, onUpdate, numeric }: TxnFieldProps) {
+  const isMoney = prefix === "$";
+  const isPct   = suffix === "%";
+  const isNum   = !!(numeric || isMoney || isPct || NUMERIC_TXN_FIELDS.has(field as string));
+  const fmt = (v: unknown): string => {
+    if (v == null || v === "") return "";
+    if (isMoney) { const n = Number(String(v).replace(/[^0-9.\-]/g,"")); return isNaN(n) ? String(v) : n.toLocaleString("en-US"); }
+    return String(v);
+  };
+  const [val, setVal] = useState(() => fmt(initial));
+  useEffect(() => { setVal(fmt(initial)); }, [initial, dealId]);
+  const commit = () => {
+    if (val === "" || val == null) { onUpdate(dealId, { [field]: null } as Partial<Deal>); return; }
+    if (isNum) {
+      const n = Number(String(val).replace(/[^0-9.\-]/g,""));
+      if (isNaN(n)) { onUpdate(dealId, { [field]: null } as Partial<Deal>); setVal(""); return; }
+      setVal(isMoney ? n.toLocaleString("en-US") : String(n));
+      onUpdate(dealId, { [field]: n } as Partial<Deal>);
+    } else {
+      onUpdate(dealId, { [field]: val } as Partial<Deal>);
+    }
+  };
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:5, gridColumn: wide?"1 / -1":"auto" }}>
+      <label style={{ fontSize:11, color:"#a69e91", fontWeight:600, letterSpacing:"0.03em", textTransform:"uppercase" }}>{label}</label>
+      {options ? (
+        <select value={val} onChange={e => { setVal(e.target.value); onUpdate(dealId, { [field]: e.target.value || null } as Partial<Deal>); }}
+          style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"10px", fontSize:14, color:"#383a37", outline:"none" }}>
+          <option value="">—</option>
+          {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : (
+        <div style={{ display:"flex", alignItems:"center", background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"0 10px" }}>
+          {prefix && <span style={{ color:"#a69e91", fontSize:14 }}>{prefix}</span>}
+          <input
+            value={val}
+            onChange={e => setVal(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+            placeholder={placeholder}
+            style={{ flex:1, background:"transparent", border:"none", outline:"none", padding:"10px 6px", fontSize:14, color:"#383a37" }}/>
+          {suffix && <span style={{ color:"#a69e91", fontSize:13 }}>{suffix}</span>}
+        </div>
+      )}
     </div>
   );
 }
