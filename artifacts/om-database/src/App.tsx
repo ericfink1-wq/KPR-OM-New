@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout } from "./lib/api";
@@ -25,6 +25,7 @@ function AppInner() {
   const [loaded, setLoaded] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | undefined>();
   const [dragging, setDragging] = useState(false);
+  const dragCounter = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   useEffect(() => {
@@ -95,22 +96,36 @@ function AppInner() {
     if (pdfs.length) setPendingFiles(pdfs);
   }, []);
 
-  // Drag and drop on entire app
+  // Drag and drop on entire app — use a counter so child dragenter/dragleave
+  // events don't misfire. Overlay shows on first enter, hides when counter hits 0.
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
-    setDragging(true);
+    dragCounter.current += 1;
+    if (dragCounter.current === 1) setDragging(true);
   };
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
   const handleDragLeave = (e: React.DragEvent) => {
-    if (e.currentTarget === e.target) setDragging(false);
+    e.preventDefault();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) { dragCounter.current = 0; setDragging(false); }
   };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    dragCounter.current = 0;
     setDragging(false);
     if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   };
+
+  // Hide overlay on Escape and on any window dragleave that exits the document
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") { dragCounter.current = 0; setDragging(false); } };
+    const onDragLeaveDoc = (e: DragEvent) => { if (!e.relatedTarget) { dragCounter.current = 0; setDragging(false); } };
+    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("dragleave", onDragLeaveDoc);
+    return () => { window.removeEventListener("keydown", onKeyDown); document.removeEventListener("dragleave", onDragLeaveDoc); };
+  }, []);
 
   const processingCount = 0; // UploadQueue tracks this internally now
 
