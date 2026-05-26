@@ -144,7 +144,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
     rows = rows.filter(d => [d.propertyName, d.fileName, d.market, d.address, d.assetType].some(v => v?.toLowerCase().includes(s)));
   }
   const STATUS_ORDER: Record<string, number> = {
-    "Under Contract": 0, "Owned": 1, "Prospect": 2, "Sold": 3, "Passed": 4,
+    "Under Contract": 0, "Prospect": 1, "Owned": 2, "Sold": 3, "Passed": 4,
   };
   rows.sort((a, b) => {
     if (sortKey === "status") {
