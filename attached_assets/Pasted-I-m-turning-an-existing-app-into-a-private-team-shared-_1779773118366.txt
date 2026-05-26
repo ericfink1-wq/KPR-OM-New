@@ -1,0 +1,81 @@
+I'm turning an existing app into a private, team-shared website called KPR Deal Intelligence —
+a tool for analyzing commercial real estate Offering Memorandums (OMs). The complete app (all UI and
+logic) already exists in the attached React file om-database.jsx. Preserve its features, layout,
+and visual design exactly — do not redesign it. We are only changing how data is stored and how the
+AI calls are made, so the app can run as a real website where the whole team shares the same data and
+the data survives every code change.
+Keep exactly as-is:
+
+The entire user interface, styling, fonts, colors, and all existing features: OM PDF upload +
+extraction, tenant roster, financials, site-plan/cover images, deal scoring, the AI analyst chat,
+sale and demographics lookups, export/backup, and the deal status workflow. Use the attached file
+as the source of truth for the frontend.
+PDF reading stays in the browser (it already uses PDF.js).
+
+Make exactly these five changes:
+
+Shared database instead of browser storage. The app currently stores everything in the
+browser's IndexedDB (functions named idbSaveDeals/idbLoadDeals, idbSaveImages/idbLoadImages,
+idbSaveSource/idbLoadSource). Replace this entire storage layer with Replit's built-in
+PostgreSQL database so every team member sees the same data.
+
+Tables: deals (the deal JSON records), deal_images (cover, coverThumb, sitePlan[], pagePicks[]
+per deal), deal_sources (extracted OM text per deal). Store large image/text blobs in suitable
+columns or Replit Object Storage.
+Add backend API endpoints (GET/POST/PUT/DELETE) for deals, images, and sources, and change the
+frontend's data layer to call these endpoints instead of IndexedDB. Keep the same data shapes so
+nothing else in the app breaks.
+
+
+Move the AI calls to the server. The app currently calls the Anthropic API directly from the
+browser (fetch to https://api.anthropic.com/v1/messages, model claude-sonnet-4-6; some calls
+use the web_search tool). On a public website the API key must never be in the browser. Create a
+backend endpoint (e.g. POST /api/ai) that reads the key from the Replit Secret ANTHROPIC_API_KEY
+and forwards requests to the Anthropic API, returning the response. Update every browser-side
+Anthropic call to go through this endpoint. Preserve all behavior: OM extraction, the analyst chat,
+sale lookup, and demographics — including the web_search tool option where it's currently used.
+Team login. Add a simple login screen so only our team can use the app. Start with a single
+shared password read from the Replit Secret APP_PASSWORD, and gate the whole app behind it.
+(We'll upgrade to individual accounts later.)
+Catch duplicate uploads. When someone uploads an OM, check before saving whether it likely
+matches a deal already in the database — by exact filename, or by a close match on property name
+and street address. If a likely match is found, do NOT save silently. Instead show a prompt:
+"This looks like [Property Name], already in the database (uploaded [date]) — Update the
+existing deal / Keep both as separate deals / Cancel."
+
+Update the existing deal → refresh that deal in place from the new PDF, preserving its status,
+user notes, verified/locked fields, and edit history (the app already has refresh-in-place logic
+for this — reuse it).
+Keep both → save as a new, separate deal.
+Cancel → discard the upload, change nothing.
+Only create a brand-new deal when there's no likely match, or the user explicitly chose "keep both."
+This must work for single files AND multi-file/folder uploads (check each incoming file).
+
+
+Manual "Link" and "Merge" cleanup tools. Let the user multi-select deals from the database
+list and then choose one of two distinct actions (make the difference obvious in the UI):
+
+Link as same property — for the same property offered in different years. Tag the selected
+deals with a shared property group so they show as one property's version history, with each OM
+kept fully intact and comparable across years. The app ALREADY has this grouping
+(propertyGroupId), a Version History panel, and a linkDeals function — extend it so it can be
+triggered from a multi-select on the list, not only from the upload prompt. Linking must NOT
+collapse or delete any records.
+Merge duplicates — for the same OM that got uploaded more than once. Let the user pick which
+selected deal is the "keeper," then fold the others' human-entered data into it (user notes,
+status, verified/locked fields, transaction/acquisition record, and any cover or site-plan images
+the keeper is missing), and move the leftover duplicates to Trash (reversible). When copies
+disagree on a field, keep the keeper's value, preferring verified/locked and non-empty values.
+Show a short summary of what will be absorbed before committing.
+Guardrail: the UI must make clear that Link keeps every OM (use for different years) while
+Merge collapses copies into one (use only for true duplicates) — so a user can't accidentally
+flatten years of history.
+
+
+
+Tech: Use a conventional full-stack setup — React frontend + Node/Express backend — with Replit's
+PostgreSQL database. Keep it simple and standard so it's easy to maintain. Do not add features we
+didn't ask for. If anything is ambiguous, ask me before guessing.
+When it's built, confirm: I can log in; upload an OM PDF and it extracts; deals persist after a
+page refresh; a second browser or device, logged in, sees the same data; and uploading the same OM
+again triggers the duplicate prompt (Update / Keep both / Cancel) instead of silently making a copy.

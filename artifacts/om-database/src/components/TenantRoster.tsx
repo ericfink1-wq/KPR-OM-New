@@ -1,0 +1,94 @@
+import { useState } from "react";
+import type { Tenant } from "../lib/idb";
+
+interface Props { tenants: Tenant[]; }
+
+export default function TenantRoster({ tenants }: Props) {
+  const [q, setQ] = useState("");
+  const [quick, setQuick] = useState("all");
+  const [sortKey, setSortKey] = useState("sf");
+  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+
+  let rows = tenants.slice();
+  if (quick==="anchors") rows = rows.filter(t => t.isAnchor);
+  else if (quick==="expiring") rows = rows.filter(t => n(t.remainingTermYears) != null && n(t.remainingTermYears)! < 2);
+  else if (quick==="footnotes") rows = rows.filter(t => t.assumptionNote);
+  if (q.trim()) { const s = q.toLowerCase(); rows = rows.filter(t => (t.name||"").toLowerCase().includes(s)); }
+
+  const numKeys = new Set(["sf","rentPerSF","annualRent","salesPSF","occupancyCost"]);
+  if (sortKey) {
+    rows = rows.slice().sort((a, b) => {
+      if (numKeys.has(sortKey)) {
+        let av = n((a as any)[sortKey]), bv = n((b as any)[sortKey]);
+        av = av==null?-Infinity:av; bv = bv==null?-Infinity:bv;
+        return sortDir==="asc" ? av-bv : bv-av;
+      }
+      const av = ((a as any)[sortKey]==null?"":String((a as any)[sortKey])).toLowerCase();
+      const bv = ((b as any)[sortKey]==null?"":String((b as any)[sortKey])).toLowerCase();
+      return sortDir==="asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+  }
+
+  const setSort = (k: string) => { if (sortKey===k) setSortDir(x => x==="asc"?"desc":"asc"); else { setSortKey(k); setSortDir("asc"); } };
+  const arrow = (k: string) => sortKey===k ? (sortDir==="asc"?" ▲":" ▼") : "";
+  const chip = (key: string, label: string) => (
+    <button key={key} onClick={() => setQuick(key)} style={{ background:quick===key?"#2a2c27":"transparent", color:quick===key?"#f6f2ea":"#7d766a", border:`1px solid ${quick===key?"#2a2c27":"#e3dccd"}`, padding:"4px 11px", borderRadius:20, fontSize:11, cursor:"pointer", fontWeight:500, fontFamily:"'Inter',sans-serif" }}>{label}</button>
+  );
+
+  const cols: [string, string, boolean][] = [
+    ["name","Tenant",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
+    ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
+    ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["recentlyExercisedRenewal","Recent Renewal",false],
+    ["salesPSF","Sales/SF",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
+  ];
+
+  return (
+    <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:13, flexWrap:"wrap" }}>
+        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length?`${tenants.length} tenants`:`${rows.length} of ${tenants.length}`}</div>
+        <div style={{ display:"flex", gap:7, alignItems:"center", flexWrap:"wrap" }}>
+          {chip("all","All")}{chip("anchors","Anchors")}{chip("expiring","Expiring ≤2yr")}
+          {tenants.some(t => t.assumptionNote) && chip("footnotes","Has footnote")}
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Filter tenants…"
+            style={{ fontSize:12, padding:"5px 10px", border:"1px solid #e3dccd", borderRadius:7, color:"#383a37", background:"#fff", width:150, fontFamily:"'Inter',sans-serif" }}/>
+        </div>
+      </div>
+      <div style={{ overflowX:"auto" }}>
+        <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:1180, width:"100%" }}>
+          <thead>
+            <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
+              {cols.map(([k,label,right]) => (
+                <th key={k} onClick={() => setSort(k)} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>{label}{arrow(k)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((t,i) => (
+              <tr key={i} style={{ borderTop:"1px solid #f1eadc" }}>
+                <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
+                  <span style={{ color:"#383a37", fontWeight:600 }}>{t.name}</span>
+                  {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+                  {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
+                </td>
+                <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
+                <td style={{ padding:"8px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}</td>
+                <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${n(t.annualRent)!.toLocaleString()}`:"—"}</td>
+                <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{t.leaseStart||"—"}</td>
+                <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{t.leaseExpiry||"—"}</td>
+                <td style={{ padding:"8px 10px", color:"#5c5f57", fontSize:11, whiteSpace:"nowrap" }}>{t.reimbursementMethod||t.leaseType||"—"}</td>
+                <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }} title={[t.rentBumps,t.rentSchedule].filter(Boolean).join("   ·   ")||""}>{t.rentBumps||(t.rentSchedule?"Stepped":"—")}</td>
+                <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{t.renewalOptions||"—"}</td>
+                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
+                <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{n(t.salesPSF)!=null?`$${t.salesPSF}`:"—"}</td>
+                <td style={{ padding:"8px 10px", textAlign:"right", whiteSpace:"nowrap", color:n(t.occupancyCost)!=null&&n(t.occupancyCost)!>15?"#dc2626":n(t.occupancyCost)!=null?"#0f9d63":"#a69e91" }}>{n(t.occupancyCost)!=null?`${t.occupancyCost}%`:"—"}</td>
+                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.creditRating==="Investment Grade"?"#0f9d63":"#837c6e" }}>{t.creditRating||"—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · hover ⚑ for a tenant footnote.</div>
+    </div>
+  );
+}

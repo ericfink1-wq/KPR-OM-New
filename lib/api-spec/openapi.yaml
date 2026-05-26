@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: ai
+    description: AI proxy operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /ai/messages:
+    post:
+      operationId: createAiMessage
+      tags: [ai]
+      summary: Proxy a message to Anthropic Claude
+      description: Forwards a chat completion request to the Anthropic API and returns the response. The API key is kept server-side.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiMessageInput"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiMessageResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /ai/extract:
+    post:
+      operationId: extractOmData
+      tags: [ai]
+      summary: Extract structured data from OM text using Claude
+      description: Sends extracted PDF text to Claude and returns structured deal data. Auto-recovers truncated tenant lists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OmExtractInput"
+      responses:
+        "200":
+          description: Extracted deal data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OmExtractResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server or AI error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +101,108 @@ components:
       required:
         - status
 
+    AiMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    AiTool:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        input_schema:
+          type: object
+          additionalProperties: true
+      required:
+        - name
+        - input_schema
+
+    AiMessageInput:
+      type: object
+      properties:
+        model:
+          type: string
+        max_tokens:
+          type: integer
+        system:
+          type: ["string", "null"]
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiMessage"
+        tools:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/AiTool"
+      required:
+        - max_tokens
+        - messages
+
+    AiMessageResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        role:
+          type: string
+        content:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        model:
+          type: string
+        stop_reason:
+          type: ["string", "null"]
+        usage:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - type
+        - role
+        - content
+        - model
+
+    OmExtractInput:
+      type: object
+      properties:
+        text:
+          type: string
+          description: The raw OM text extracted from PDF
+      required:
+        - text
+
+    OmExtractResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          description: The extracted deal data matching the OM schema
+        tenantsComplete:
+          type: boolean
+          description: Whether the full tenant list was extracted without truncation
+      required:
+        - data
+        - tenantsComplete
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+/**
+ * The extracted deal data matching the OM schema
+ */
+export type OmExtractResponseData = { [key: string]: unknown };
