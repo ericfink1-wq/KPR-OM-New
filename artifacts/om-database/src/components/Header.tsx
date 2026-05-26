@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { STATUS_COLORS } from "../lib/constants";
-import type { Deal } from "../lib/idb";
+import type { Deal, ImageBundle } from "../lib/idb";
+import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
 
 interface Props {
   tab: string;
@@ -14,8 +15,11 @@ interface Props {
 export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
+  const restoreRef = useRef<HTMLInputElement>(null);
   const [backupMenu, setBackupMenu] = useState(false);
   const [uploadMenu, setUploadMenu] = useState(false);
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<string | null>(null);
 
   const active = deals.filter(d => !d.trashedAt);
   const fresh = active.filter(d => {
@@ -56,6 +60,78 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
     setBackupMenu(false);
   };
 
+  const handleFullBackup = async () => {
+    setBackupMenu(false);
+    try {
+      const ids = deals.map(d => d.id);
+      const [sourcePairs, imagePairs] = await Promise.all([
+        Promise.all(ids.map(id => apiLoadSource(id).then(t => [id, t] as const).catch(() => [id, null] as const))),
+        Promise.all(ids.map(id => apiLoadImages(id).then(img => [id, img] as const).catch(() => [id, null] as const))),
+      ]);
+      const sources: Record<string, string> = {};
+      for (const [id, t] of sourcePairs) if (t) sources[id] = t;
+      const images: Record<string, unknown> = {};
+      for (const [id, img] of imagePairs) if (img) images[id] = img;
+
+      const payload = {
+        app: "KPR Deal Intelligence",
+        schema: 2,
+        exportedAt: new Date().toISOString(),
+        dealCount: deals.length,
+        deals,
+        sources,
+        images,
+      };
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+      a.download = `kpr-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    } catch (err) {
+      alert("Backup failed: " + (err instanceof Error ? err.message : "error"));
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!file) return;
+    setRestoreBusy(true);
+    setRestoreResult(null);
+    try {
+      const raw = JSON.parse(await file.text());
+      const incoming: Deal[] = Array.isArray(raw) ? raw : Array.isArray(raw.deals) ? raw.deals : [];
+      if (incoming.length === 0) {
+        setRestoreResult("No deals found in that file.");
+        setRestoreBusy(false);
+        return;
+      }
+      const existingIds = new Set(deals.map(d => d.id));
+      const added = incoming.filter(d => d.id && !existingIds.has(d.id)).length;
+      const updated = incoming.filter(d => d.id && existingIds.has(d.id)).length;
+
+      await Promise.all(incoming.filter(d => !!d.id).map(d => apiSaveDeal(d).catch(() => {})));
+
+      const srcMap: Record<string, string> = (raw && typeof raw === "object" && !Array.isArray(raw)) ? (raw.sources || {}) : {};
+      const imgMap: Record<string, unknown> = (raw && typeof raw === "object" && !Array.isArray(raw)) ? (raw.images || {}) : {};
+
+      await Promise.all([
+        ...Object.entries(srcMap).map(([id, text]) =>
+          typeof text === "string" ? apiSaveSource(id, text).catch(() => {}) : Promise.resolve()
+        ),
+        ...Object.entries(imgMap).map(([id, bundle]) =>
+          bundle ? apiSaveImages(id, bundle as ImageBundle).catch(() => {}) : Promise.resolve()
+        ),
+      ]);
+
+      const total = deals.length + added;
+      setRestoreResult(`Restored — ${added} added, ${updated} updated, ${total} total.`);
+      setTimeout(() => window.location.reload(), 2200);
+    } catch {
+      setRestoreResult("Restore failed — make sure the file is a valid KPR backup (.json).");
+    }
+    setRestoreBusy(false);
+  };
+
   const T = (isActive: boolean) => ({
     background: isActive ? "#2a2c27" : "transparent",
     border: "none",
@@ -69,6 +145,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
     boxShadow: isActive ? "0 6px 18px -8px rgba(42,44,39,0.6)" : "none",
     fontFamily: "'Inter',sans-serif",
   });
+
+  const menuBtn = (onClick: () => void, title: string, sub: string, border = true) => (
+    <button onClick={onClick}
+      style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: border ? "1px solid #f1eadc" : "none", padding: "12px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+      onMouseEnter={e => e.currentTarget.style.background = "#f9f6f0"}
+      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+      <div style={{ fontWeight: 600, color: "#383a37" }}>{title}</div>
+      <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>{sub}</div>
+    </button>
+  );
 
   return (
     <div style={{
@@ -126,6 +212,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
         {/* Hidden inputs */}
         <input ref={fileRef} type="file" accept=".pdf" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
         <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
+        <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
 
         {/* Upload OMs split button */}
         <div style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
@@ -160,24 +247,22 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
 
         {/* Backup menu */}
         <div style={{ position: "relative" }}>
-          <button onClick={() => setBackupMenu(m => !m)}
-            style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, fontFamily: "'Inter',sans-serif" }}>
-            Backup <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
+          <button onClick={() => setBackupMenu(m => !m)} disabled={restoreBusy}
+            style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: restoreBusy ? "default" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, fontFamily: "'Inter',sans-serif", opacity: restoreBusy ? 0.7 : 1 }}>
+            {restoreBusy ? "Restoring…" : "Backup"} <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
           </button>
+          {restoreResult && (
+            <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41, background: restoreResult.startsWith("Restore failed") ? "#fef2f2" : "#f0fdf4", border: `1px solid ${restoreResult.startsWith("Restore failed") ? "#fecaca" : "#bbf7d0"}`, borderRadius: 9, padding: "10px 14px", fontSize: 12, color: restoreResult.startsWith("Restore failed") ? "#b91c1c" : "#166534", whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(56,58,55,0.12)" }}>
+              {restoreResult}
+            </div>
+          )}
           {backupMenu && (
             <>
               <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 240, overflow: "hidden" }}>
-                <button onClick={exportCSV}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "12px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ fontWeight: 600, color: "#383a37" }}>Export spreadsheet</div>
-                  <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Key fields for Excel (.csv)</div>
-                </button>
-                <button onClick={() => setBackupMenu(false)}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "12px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ fontWeight: 600, color: "#383a37" }}>More options coming soon</div>
-                  <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Full backup / restore</div>
-                </button>
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 260, overflow: "hidden" }}>
+                {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
+                {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
+                {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals", false)}
               </div>
             </>
           )}
