@@ -2,11 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import type { Deal } from "../lib/idb";
 import { buildSystemPrompt, cityState } from "../lib/utils";
 import { SUGGESTED } from "../lib/constants";
-import { STATUS_COLORS } from "../lib/constants";
 import { apiLoadImages } from "../lib/api";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
-import PortfolioMontage from "./PortfolioMontage";
 
 interface Message {
   role: "user" | "assistant";
@@ -138,19 +136,15 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
     const owned = active.filter(d => d.status === "Owned");
     const tenants = owned.flatMap(d => (d.tenants || []));
     const anchors = Array.from(new Set(tenants.filter(t => t.isAnchor && t.name).map(t => t.name!.trim())));
-    const topByRent = tenants
-      .filter(t => t.name && num(t.annualRent) > 0)
-      .sort((a, b) => num(b.annualRent) - num(a.annualRent))
-      .slice(0, 4);
     const totalValue = owned.reduce((s, d) => s + (num(d.txnPurchasePrice) || num(d.askingPrice)), 0);
     const totalSF = owned.reduce((s, d) => s + num(d.totalSF), 0);
-    return { count: owned.length, value: totalValue, sf: totalSF, anchors, topByRent };
+    return { count: owned.length, value: totalValue, sf: totalSF, anchors };
   })();
 
   const isEmpty = msgs.length === 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "transparent" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "transparent" }}>
       {/* Messages area */}
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
         {isEmpty ? (
@@ -204,37 +198,9 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
                         </div>
                       </div>
                     )}
-                    {portfolio.topByRent.length > 0 && (
-                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", minWidth: 160 }}>
-                        <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Largest Tenants by Rent</div>
-                        {portfolio.topByRent.map((t, i) => (
-                          <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 10.5, color: "#383a37", marginBottom: 2 }}>
-                            <span style={{ fontWeight: 500 }}>{t.name}</span>
-                            <span style={{ color: "#6dba43", fontWeight: 600 }}>${(num(t.annualRent) / 1000).toFixed(0)}K</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )}
               </>
-            )}
-
-            {/* ── Original portfolio stat strip ────────────────────────────── */}
-            {active.length > 0 && (
-              <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap", marginTop: 16 }}>
-                {[
-                  ["DEALS", active.length, "#383a37"],
-                  ["UNDER CONTRACT", active.filter(d => d.status === "Under Contract").length, STATUS_COLORS["Under Contract"]],
-                  ["OWNED", active.filter(d => d.status === "Owned").length, STATUS_COLORS.Owned],
-                  ["PASSED", active.filter(d => d.status === "Passed").length, STATUS_COLORS.Passed],
-                ].map(([l, v, c]) => (
-                  <div key={l as string} style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "12px 16px", minWidth: 80 }}>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: c as string, lineHeight: 1 }}>{v as number}</div>
-                    <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginTop: 4 }}>{l as string}</div>
-                  </div>
-                ))}
-              </div>
             )}
 
             {/* Deal tiles */}
@@ -255,8 +221,6 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
               </div>
             </div>
 
-            {/* Montage */}
-            {active.length >= 2 && <PortfolioMontage deals={active} onOpen={onOpenDeal} />}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
