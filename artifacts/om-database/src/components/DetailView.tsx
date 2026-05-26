@@ -882,6 +882,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <p style={{ fontSize:13, color: d.userNotes?"#383a37":"#c4bba7", lineHeight:1.65, margin:0, whiteSpace:"pre-wrap" }}>{d.userNotes || "No notes yet. Click Edit to add."}</p>
         )}
       </div>
+
+      <PropertyChat deal={d} />
     </div>
   );
 }
@@ -955,6 +957,140 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
         </div>
       )}
     </div>
+  );
+}
+
+// ── Inline markdown renderer for PropertyChat responses ──────────────────────
+function _pcInlineFmt(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) return <strong key={i}>{p.slice(2, -2)}</strong>;
+    if (p.startsWith("`") && p.endsWith("`")) return <code key={i} style={{ background:"#f1eadc", borderRadius:3, padding:"0 4px", fontSize:"0.9em" }}>{p.slice(1, -1)}</code>;
+    return p;
+  });
+}
+function _pcMarkdown({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const els: React.ReactNode[] = [];
+  lines.forEach((line, i) => {
+    if (line.startsWith("### ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:13, color:"#26281f", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(line.slice(4))}</div>);
+    else if (line.startsWith("## ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:14, color:"#26281f", marginTop:10, marginBottom:2 }}>{_pcInlineFmt(line.slice(3))}</div>);
+    else if (/^[-*] /.test(line)) els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#6dba43", flexShrink:0 }}>›</span><span>{_pcInlineFmt(line.slice(2))}</span></div>);
+    else if (/^\d+\. /.test(line)) { const [num2,...rest] = line.split(". "); els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#a89f8f", flexShrink:0 }}>{num2}.</span><span>{_pcInlineFmt(rest.join(". "))}</span></div>); }
+    else if (line === "") els.push(<div key={i} style={{ height:5 }}/>);
+    else els.push(<span key={i}>{_pcInlineFmt(line)}<br/></span>);
+  });
+  return <>{els}</>;
+}
+
+// Floating scoped mini-chat — sends only this deal's data to the AI via the
+// shared server proxy (same route as the main Analyst chat).
+function PropertyChat({ deal }: { deal: Deal }) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [msgs, setMsgs] = useState<{ role: "user"|"assistant"; content: string }[]>([]);
+  const [thinking, setThinking] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+  const { mutateAsync: sendMessage } = useCreateAiMessage();
+
+  useEffect(() => {
+    if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, thinking, open]);
+
+  const buildContext = () => ({
+    property: deal.propertyName, address: deal.address, market: deal.market,
+    assetType: deal.assetType, centerType: deal.centerType, status: deal.status,
+    totalSF: deal.totalSF, occupancy: deal.occupancy, noi: deal.noi, capRate: deal.capRate,
+    askingPrice: deal.askingPrice, walt: deal.walt, weightedAvgRentPSF: deal.weightedAvgRentPSF,
+    grossPotentialRent: deal.grossPotentialRent, operatingExpenses: deal.operatingExpenses,
+    nnnRecoveries: deal.nnnRecoveries, yearBuilt: deal.yearBuilt,
+    highlights: deal.notes, redFlags: deal.redFlags, keyAssumptions: deal.keyAssumptions,
+    demographics: deal.marketDemographics, sale: deal.marketSale,
+    tenants: (deal.tenants || []).map(t => ({
+      name: t.name, sf: t.sf, rentPSF: t.rentPerSF, annualRent: t.annualRent,
+      start: t.leaseStart, expiry: t.leaseExpiry, reimbursement: t.reimbursementMethod,
+      salesPSF: t.salesPSF, anchor: t.isAnchor || undefined,
+      options: t.renewalOptions, rentSteps: t.rentSchedule,
+    })),
+  });
+
+  const ask = async (text: string) => {
+    if (!text.trim() || thinking) return;
+    const next = [...msgs, { role: "user" as const, content: text }];
+    setMsgs(next); setInput(""); setThinking(true);
+    try {
+      const system = `You are a commercial real estate analyst answering questions about ONE specific property. Use ONLY the property data below. If something isn't in the data, say it isn't available rather than guessing. Be concise and specific — cite tenant names, dollar figures, dates, and PSF where relevant.\n\nProperty data (JSON):\n${JSON.stringify(buildContext())}`;
+      const resp = await sendMessage({
+        data: {
+          system,
+          messages: next.map(m => ({ role: m.role, content: m.content })),
+          max_tokens: 1200,
+        }
+      });
+      const reply = ((resp as any)?.content || []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim()
+        || (resp as any)?.text
+        || "No response.";
+      setMsgs(h => [...h, { role: "assistant", content: reply }]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Request failed";
+      setMsgs(h => [...h, { role: "assistant", content: `Error: ${msg}` }]);
+    } finally {
+      setThinking(false);
+    }
+  };
+
+  const suggestions = [
+    "What's the largest near-term rollover risk?",
+    "Which tenants pay below-market rent?",
+    "Summarize the lease and reimbursement profile",
+  ];
+
+  return (
+    <>
+      <button onClick={() => setOpen(o => !o)} title="Ask AI about this property"
+        style={{ position:"fixed", bottom:24, right:24, zIndex:160, height:52, padding:open?0:"0 20px", width:open?52:"auto", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif", transition:"width .2s,padding .2s" }}>
+        {open ? "✕" : "✦ Ask about this property"}
+      </button>
+      {open && (
+        <div style={{ position:"fixed", bottom:88, right:24, zIndex:160, width:374, maxWidth:"calc(100vw - 48px)", height:480, maxHeight:"calc(100vh - 130px)", background:"#fff", border:"1px solid #e7e0d2", borderRadius:16, boxShadow:"0 16px 50px -12px rgba(56,58,55,0.4)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          {/* Header */}
+          <div style={{ padding:"13px 16px", borderBottom:"1px solid #f1eadc", background:"#faf7f0", flexShrink:0 }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:600, fontSize:15, color:"#26281f" }}>Property assistant</div>
+            <div style={{ fontSize:11, color:"#a69e91", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{deal.propertyName || "This property"}</div>
+          </div>
+          {/* Messages */}
+          <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:11 }}>
+            {msgs.length === 0 && (
+              <div style={{ color:"#9a917f", fontSize:12.5, lineHeight:1.6 }}>
+                Ask anything about this property — e.g. what a specific tenant pays and their sales. Try:
+                <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:10 }}>
+                  {suggestions.map(s => (
+                    <button key={s} onClick={() => ask(s)}
+                      style={{ textAlign:"left", background:"#f3eee3", border:"1px solid #e7e0d2", borderRadius:9, padding:"7px 11px", fontSize:12, color:"#5c5f57", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>{s}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {msgs.map((m, i) => (
+              m.role === "user"
+                ? <div key={i} style={{ alignSelf:"flex-end", background:"#383a37", color:"#fff", borderRadius:"12px 12px 4px 12px", padding:"8px 12px", fontSize:13, maxWidth:"85%" }}>{m.content}</div>
+                : <div key={i} style={{ alignSelf:"flex-start", background:"#f5f1e8", borderRadius:"12px 12px 12px 4px", padding:"10px 13px", fontSize:13, color:"#383a37", maxWidth:"92%", lineHeight:1.55 }}><_pcMarkdown text={m.content}/></div>
+            ))}
+            {thinking && <div style={{ alignSelf:"flex-start", color:"#a69e91", fontSize:12.5 }}>Thinking…</div>}
+            <div ref={endRef}/>
+          </div>
+          {/* Input */}
+          <div style={{ borderTop:"1px solid #f1eadc", padding:"10px 12px", display:"flex", gap:7, flexShrink:0 }}>
+            <input value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); ask(input); } }}
+              disabled={thinking} placeholder="Ask about this property…"
+              style={{ flex:1, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:"9px 12px", fontSize:13, color:"#383a37", outline:"none", fontFamily:"'Inter',sans-serif" }}/>
+            <button onClick={() => ask(input)} disabled={thinking || !input.trim()}
+              style={{ background:(!thinking && input.trim()) ? "#6dba43" : "#efe8da", color:(!thinking && input.trim()) ? "#1f2b16" : "#b3aa9b", border:"none", borderRadius:9, padding:"0 15px", fontSize:15, fontWeight:700, cursor:(!thinking && input.trim()) ? "pointer" : "default" }}>↑</button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
