@@ -2,8 +2,16 @@
 import type { Logger } from "pino";
 import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+
+// Undici agent with generous timeouts — Claude can take 60-90s for large OMs
+const anthropicAgent = new Agent({
+  headersTimeout: 5 * 60 * 1000,
+  bodyTimeout: 10 * 60 * 1000,
+  connectTimeout: 30 * 1000,
+});
 
 export const EXTRACTION_PROMPT = `You are an expert real estate investment analyst. Extract ALL available data from this Offering Memorandum text and return ONLY a single valid JSON object. Use null for anything not found.
 
@@ -109,15 +117,28 @@ Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
 export async function callAnthropicOnce(body: object, retryCount = 0): Promise<Response> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  const resp = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey!,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(body),
-  });
+
+  let resp: Response;
+  try {
+    resp = await undiciFetch(ANTHROPIC_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey!,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(body),
+      dispatcher: anthropicAgent,
+    }) as unknown as Response;
+  } catch (err) {
+    // Network-level error (timeout, connection reset, etc.) — retry with backoff
+    if (retryCount < 5) {
+      const waitMs = Math.min(2000 * Math.pow(2, retryCount) + Math.random() * 1000, 60000);
+      await new Promise((r) => setTimeout(r, waitMs));
+      return callAnthropicOnce(body, retryCount + 1);
+    }
+    throw err;
+  }
 
   if ((resp.status === 429 || resp.status === 529 || resp.status === 503) && retryCount < 5) {
     const retryAfter = parseFloat(resp.headers.get("retry-after") ?? "");
