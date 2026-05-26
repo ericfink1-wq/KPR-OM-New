@@ -163,7 +163,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
                 Good {getTimeGreeting()}.
               </div>
               <p style={{ fontSize: 14, color: "#7d766a", lineHeight: 1.65, maxWidth: 560, margin: 0 }}>
-                I'm your KPR deal analyst. I know your entire portfolio — ask me anything about your deals, comps, lease rollover, demographics, or market trends.
+                I'm your KPR deal analyst. I know your entire deal library — ask me anything about your deals, comps, lease rollover, demographics, or market trends.
               </p>
             </div>
 
@@ -212,7 +212,12 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
             )}
 
             {/* Deal tiles */}
-            {active.length > 0 && <DealTiles deals={active} onOpen={onOpenDeal} />}
+            {active.length > 0 && (
+              <>
+                <div style={{ marginTop: 12, marginBottom: 8, fontSize: 9, letterSpacing: "0.16em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" }}>Pipeline</div>
+                <DealTiles deals={active} onOpen={onOpenDeal} />
+              </>
+            )}
 
             {/* Suggested prompts */}
             <div>
@@ -284,7 +289,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(input); } }}
-            placeholder={active.length === 0 ? "Upload some OMs first, then ask me anything…" : "Ask anything about your portfolio…"}
+            placeholder={active.length === 0 ? "Upload some OMs first, then ask me anything…" : "Ask anything about your deal library…"}
             disabled={loading}
             rows={2}
             style={{
