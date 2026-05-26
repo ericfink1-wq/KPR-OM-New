@@ -114,7 +114,6 @@ export function reconcileDeal(deal: Deal) {
   }
   if (gpr && egi && noi) {
     if (noi > egi) checks.push({ severity:"error", label:"NOI exceeds EGI", detail:`NOI ($${noi.toLocaleString()}) should not exceed Effective Gross Income ($${egi.toLocaleString()}).` });
-    if (egi > gpr) checks.push({ severity:"warn", label:"EGI exceeds GPR", detail:`EGI ($${egi.toLocaleString()}) exceeds Gross Potential Rent ($${gpr.toLocaleString()}).` });
     if (egi && opex && noi) {
       const impliedNOI = egi - opex;
       const diff = Math.abs(impliedNOI - noi) / noi;

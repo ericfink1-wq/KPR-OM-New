@@ -368,6 +368,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       <ExtractionQuality deal={d}/>
       <DataIntegrity deal={d}/>
+      <MetricsEditor deal={d} onUpdate={onUpdate}/>
 
       {/* Market sale */}
       {d.marketSale && (
@@ -830,9 +831,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           ))}
         </div>
       )}
-
-      {/* Edit metrics (useful when verifying extracted numbers) */}
-      <MetricsEditor deal={d} onUpdate={onUpdate}/>
 
       {/* Key assumptions */}
       <KeyAssumptions deal={d} />
