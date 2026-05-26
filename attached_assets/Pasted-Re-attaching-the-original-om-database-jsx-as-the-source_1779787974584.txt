@@ -1,0 +1,21 @@
+Re-attaching the original om-database.jsx as the source of truth for the frontend. The backend you built (Postgres, server-side AI, login, async upload, duplicate detection, link/merge) is correct — keep all of it. Three areas of the UI got simplified and need to be restored to match the attached file faithfully. Reuse the original component code wherever possible; only adapt the data layer to read/write through the existing backend instead of IndexedDB.
+1. Home screen — restore the two top stat rows (currently there's only one small 4-box row). Above the "Good morning" hero, add two full rows of stat cards exactly as in the original, in the same serif (Fraunces) numerals and warm card style:
+
+Row 1 — "Intelligence library": OMs Read · Tenant Brands (unique brand count) · Leases Analyzed (total tenant rows across all deals) · SF Analyzed (sum of total SF, formatted like 2.4M) · Markets Covered (unique markets) · Data Points (count of all populated data fields across every deal, recursive).
+Row 2 — "Owned portfolio" (only deals with status = Owned): Properties (count) · Portfolio Value (sum of acquisition price, falling back to asking price, formatted $X.XM) · Square Footage · Key Anchors (chip list of unique anchor tenant names across owned deals) · Largest Tenants by Base Rent (top tenants by annual rent, shown as "Name — $X.XM"). If there are no Owned deals, show the muted placeholder from the original instead of empty boxes.
+
+2. Portfolio page — restore the multi-select bulk action bar and tools (right now selecting a checkbox does nothing). When one or more deals are checked, show the floating bulk action bar from the original with all of these actions, run across the selected deals:
+
+Find sale, Pull demographics, Re-analyze, Re-run from PDF, Set status (Prospect / Under Contract / Owned / Sold / Passed), Trash, Clear selection.
+Link as same property and Merge duplicates — surface these from the multi-select (the backend already supports them: Link groups deals via propertyGroupId into version history and keeps every OM; Merge picks a keeper, folds the others' human-entered data in, and trashes the leftovers). Make the UI clearly distinguish Link (different years, keeps all) from Merge (true duplicates, collapses into one).
+Token-spend confirmation: before the expensive bulk actions (Find sale, Pull demographics, Re-analyze, Re-run from PDF), show the original's confirmation prompt ("This will use API tokens… Continue?") for batches. Single-deal actions from a deal's detail page should not prompt.
+Restore the richer columns, filter chips, and the data-integrity badges from the original list view.
+
+3. Cover photo & site-plan extraction — re-implement faithfully to match the original's logic (current results are missing or wrong — e.g. one deal has no images at all, another grabbed a different photo than the original would):
+
+Cover: extract the largest embedded image on the page (the actual photo) and strip the broker logos/text layered on top — do not screenshot the rendered page. Produce a cover and a smaller coverThumb.
+Site plan: auto-detect the site-plan page by scanning page text for the original's keyword set (site plan, site map, leasing plan, leasing map, parcel map, tax parcel, key plan, etc.); keep the page-picker fallback when auto-detect fails.
+Keep the two-page-spread support (Full / Left / Right half-crop) and the manual cover/site-plan fixers in the deal detail view (re-select the PDF + page number + half toggle).
+Store images in the backend so they persist and are shared across the team.
+
+Preserve everything already working — extraction, Postgres persistence, async uploads, status counters, duplicate detection, link/merge, and login. Use the attached om-database.jsx as the definitive reference for how all of this looks and behaves.

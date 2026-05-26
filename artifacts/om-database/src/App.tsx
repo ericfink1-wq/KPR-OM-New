@@ -201,6 +201,7 @@ function AppInner() {
                   onOpen={handleOpenDeal}
                   onUpdate={handleUpdate}
                   onCompare={handleCompare}
+                  onAddFiles={files => setPendingFiles(prev => [...prev, ...files])}
                 />
               )}
 

@@ -113,6 +113,16 @@ export async function apiPollDealStatus(id: string): Promise<{ processing: boole
   return resp.json() as Promise<{ processing: boolean; deal?: Deal; error?: string }>;
 }
 
+// Re-run AI extraction from stored source text, preserving all user-entered fields
+export async function apiReanalyzeDeal(id: string): Promise<{ processing: boolean; error?: string }> {
+  const resp = await apiFetch(`/deals/${id}/reanalyze`, { method: "POST" });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to start re-analysis");
+  }
+  return resp.json() as Promise<{ processing: boolean; error?: string }>;
+}
+
 // --- Sources ---
 
 export async function apiSaveSource(id: string, text: string): Promise<void> {
@@ -128,4 +138,28 @@ export async function apiLoadSource(id: string): Promise<string | null> {
   if (!resp.ok) return null;
   const body = await resp.json() as { text?: string | null };
   return body.text ?? null;
+}
+
+// --- AI (web search / generic Claude proxy) ---
+
+export async function apiAiMessages(params: {
+  system?: string;
+  messages: { role: string; content: string }[];
+  max_tokens?: number;
+  tools?: unknown[];
+}): Promise<{ content: { type: string; text?: string }[] }> {
+  const resp = await apiFetch("/ai/messages", {
+    method: "POST",
+    body: JSON.stringify({
+      max_tokens: params.max_tokens ?? 1500,
+      system: params.system,
+      messages: params.messages,
+      tools: params.tools,
+    }),
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "AI request failed");
+  }
+  return resp.json() as Promise<{ content: { type: string; text?: string }[] }>;
 }

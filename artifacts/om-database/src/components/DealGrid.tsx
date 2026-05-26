@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal } from "../lib/idb";
-import { apiLoadImages, apiSaveDeal } from "../lib/api";
+import { apiLoadImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
 import { classifyLocation, cityState, assessExtraction } from "../lib/utils";
 import StatusTag from "./StatusTag";
@@ -12,6 +12,7 @@ interface Props {
   onOpen: (id: string) => void;
   onUpdate: (id: string, patch: Partial<Deal>) => void;
   onCompare: (ids: string[]) => void;
+  onAddFiles?: (files: File[]) => void;
 }
 
 function RowThumb({ deal }: { deal: Deal }) {
@@ -38,7 +39,49 @@ interface LinkMergeModal {
   keeperId?: string;
 }
 
-export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) {
+interface ConfirmGate {
+  body: string;
+}
+
+// Web-search system prompts (mirrors the original JSX)
+const SALE_SYSTEM = `You are a commercial real estate research assistant. Using web search, determine whether the specific property described has SOLD in a closed transaction AFTER the date of its offering memorandum (the "omDate" field). We want the eventual sale that resulted from this offering — typically closing in the months after the OM. CRITICAL: ignore any earlier/prior transaction, such as the current seller's own past acquisition of the property. A sale dated before the omDate is NOT relevant — if the only sale you can find predates the omDate, treat it as found=false. Find the confirmed sale price, buyer, seller, sale date, and cap rate where reported by credible sources (brokerage press releases, trade press such as Commercial Observer / Bisnow / REBusinessOnline, local business journals, public records). Be rigorous: report "high" confidence ONLY when an authoritative source, or several credible ones, clearly confirm a post-OM sale of THIS exact property (match address/market). If you cannot confirm it is the same property, the sale predates the OM, or the data is thin or conflicting, use found=false or a lower confidence. Never guess a price or a date. Always include the sale date you found in "soldDate". After researching, output ONLY a single JSON object and nothing else — no markdown, no prose — with exactly this shape: {"found":boolean,"confidence":"high"|"medium"|"low","soldDate":string|null,"price":number|null,"pricePerSF":number|null,"capRate":number|null,"buyer":string|null,"seller":string|null,"summary":string,"sources":[{"title":string,"url":string}]}.`;
+
+const DEMO_SYSTEM = `You are a commercial real estate research assistant. Using web search, find the 1-, 3-, and 5-mile RADIUS demographics centered on the given property address: total POPULATION and AVERAGE household income for each ring. Prefer figures derived from the latest US Census American Community Survey (ACS) 5-year estimates (2020-2024 is the newest). Active listing pages (LoopNet, Crexi, broker sites) and demographic tools often publish these exact ring figures — use them when they clearly match this address/market. If precise ring figures are not available, give your best estimate from the most local ACS data you can find and explain that in "note", but lower the confidence accordingly. Average household income is preferred; if only MEDIAN is available, return it and say so in "note". Always state the data source and as-of vintage. Be reasonable and do not leave everything blank — an approximate, clearly-labeled estimate is useful — but never fabricate a precise-looking number you have no basis for. Output ONLY a single JSON object and nothing else — no markdown, no prose — with exactly this shape: {"found":boolean,"confidence":"high"|"medium"|"low","asOf":string|null,"source":string|null,"pop1mi":number|null,"pop3mi":number|null,"pop5mi":number|null,"avgHHI1mi":number|null,"avgHHI3mi":number|null,"avgHHI5mi":number|null,"note":string,"sources":[{"title":string,"url":string}]}.`;
+
+function robustParseJSON(s: string): Record<string, unknown> | null {
+  try {
+    const m = s.match(/\{[\s\S]*\}/);
+    return m ? JSON.parse(m[0]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saleIsAfterOM(soldDate: string | null, omDate: string | null): boolean {
+  if (!soldDate) return true;
+  if (!omDate) return true;
+  return soldDate >= omDate;
+}
+
+const darkBtn: React.CSSProperties = {
+  background: "#52554e",
+  border: "none",
+  color: "#ffffff",
+  padding: "7px 13px",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontSize: 11.5,
+  fontWeight: 600,
+  fontFamily: "'Inter', sans-serif",
+  whiteSpace: "nowrap",
+};
+
+const darkBtnDanger: React.CSSProperties = {
+  ...darkBtn,
+  background: "#7a2020",
+};
+
+export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFiles }: Props) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [sortKey, setSortKey] = useState("uploadedAt");
@@ -48,6 +91,42 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
   const [viewMode, setViewMode] = useState<"table"|"grid">("table");
   const [modal, setModal] = useState<LinkMergeModal | null>(null);
   const [merging, setMerging] = useState(false);
+
+  // Bulk action state
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [confirmBulkDel, setConfirmBulkDel] = useState(false);
+  const [confirmGate, setConfirmGate] = useState<ConfirmGate | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [lookingUp, setLookingUp] = useState<Set<string>>(new Set());
+  const [gettingDemo, setGettingDemo] = useState<Set<string>>(new Set());
+  const [reanalyzeBusy, setReanalyzeBusy] = useState<Set<string>>(new Set());
+
+  const confirmResolverRef = useRef<((v: boolean) => void) | null>(null);
+  const rerunInputRef = useRef<HTMLInputElement>(null);
+  const rerunTargetsRef = useRef<Deal[]>([]);
+
+  // Auto-dismiss notice
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  // ── Token-spend confirmation ─────────────────────────────────────────────
+  const confirmTokens = useCallback((actionDesc: string, count: number, web: boolean): Promise<boolean> => {
+    return new Promise(resolve => {
+      confirmResolverRef.current = resolve;
+      setConfirmGate({
+        body: `You're about to ${actionDesc}. That sends ${count} ${web ? "web search + AI request" : "AI request"}${count === 1 ? "" : "s"} to the Claude API and will draw down your usage. Continue?`,
+      });
+    });
+  }, []);
+
+  const resolveConfirm = (v: boolean) => {
+    setConfirmGate(null);
+    confirmResolverRef.current?.(v);
+    confirmResolverRef.current = null;
+  };
 
   const types = Array.from(new Set(deals.map(d => d.assetType).filter(Boolean))) as string[];
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
@@ -76,10 +155,10 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
     else { setSortKey(k); setSortDir("desc"); }
   };
   const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
-  const toggleSel = (id: string) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleSel = (id: string) => setSelected(s => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const clearSelection = () => { setSelected(new Set()); setConfirmBulkDel(false); setBulkStatusOpen(false); };
 
-  const selectedDeals = rows.filter(d => selected.has(d.id));
-
+  // ── Link / Merge modal ───────────────────────────────────────────────────
   const openModal = (action: GroupAction) => {
     const sel = deals.filter(d => selected.has(d.id));
     setModal({ action, deals: sel, keeperId: sel[0]?.id });
@@ -87,12 +166,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
 
   const commitLink = async () => {
     if (!modal) return;
-    const groupId = modal.deals[0].propertyGroupId || (`grp_${Date.now()}`);
-    for (const d of modal.deals) {
-      onUpdate(d.id, { propertyGroupId: groupId });
-    }
+    const groupId = modal.deals.find(d => d.propertyGroupId)?.propertyGroupId || `grp_${Date.now()}`;
+    for (const d of modal.deals) onUpdate(d.id, { propertyGroupId: groupId });
     setModal(null);
-    setSelected(new Set());
+    clearSelection();
+    setNotice(`Linked ${modal.deals.length} deals as one property's version history.`);
   };
 
   const commitMerge = async () => {
@@ -101,7 +179,6 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
     const keeper = modal.deals.find(d => d.id === modal.keeperId)!;
     const others = modal.deals.filter(d => d.id !== modal.keeperId);
 
-    // User-entered fields to absorb from others into keeper (prefer non-empty, non-null over keeper's empty)
     const absorbableFields: (keyof Deal)[] = [
       "userNotes","status","txnPurchasePrice","txnSeller","txnLoiDate","txnCloseDate",
       "txnSalePrice","txnBuyer","txnSaleDate","txnBroker",
@@ -118,15 +195,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
       if (keeperVal == null || keeperVal === "") {
         for (const o of others) {
           const v = o[f];
-          if (v != null && v !== "") {
-            (merged as Record<string, unknown>)[f] = v;
-            break;
-          }
+          if (v != null && v !== "") { (merged as Record<string, unknown>)[f] = v; break; }
         }
       }
     }
 
-    // Merge verified fields
     const mergedVerified = { ...(keeper.verified || {}) };
     for (const o of others) {
       for (const [k, v] of Object.entries(o.verified || {})) {
@@ -135,31 +208,191 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
     }
     merged.verified = mergedVerified;
 
-    // Absorb missing images meta
     if (!keeper.imageMeta?.cover) {
       for (const o of others) {
         if (o.imageMeta?.cover) { merged.imageMeta = o.imageMeta; break; }
       }
     }
 
-    // Absorb user notes by concatenating if both non-empty
     const otherNotes = others.map(o => o.userNotes).filter(Boolean).join("\n---\n");
     if (otherNotes && !keeper.userNotes) merged.userNotes = otherNotes;
     else if (otherNotes && keeper.userNotes) merged.userNotes = keeper.userNotes + "\n---\n" + otherNotes;
 
-    // Save keeper with merged data
     const updatedKeeper: Deal = { ...keeper, ...merged };
     await apiSaveDeal(updatedKeeper).catch(() => {});
     onUpdate(keeper.id, merged);
 
-    // Trash the others
-    for (const o of others) {
-      onUpdate(o.id, { trashedAt: new Date().toISOString() });
-    }
+    for (const o of others) onUpdate(o.id, { trashedAt: new Date().toISOString() });
 
     setMerging(false);
     setModal(null);
-    setSelected(new Set());
+    clearSelection();
+    setNotice(`Merged ${modal.deals.length} deals into one. The extras are in Trash if you need them back.`);
+  };
+
+  // ── Bulk: change status ──────────────────────────────────────────────────
+  const bulkChangeStatus = (status: string) => {
+    for (const id of selected) onUpdate(id, { status });
+    setBulkStatusOpen(false);
+    clearSelection();
+    setNotice(`Status set to "${status}" for ${selected.size} deal${selected.size === 1 ? "" : "s"}.`);
+  };
+
+  // ── Bulk: delete (trash) ─────────────────────────────────────────────────
+  const bulkDelete = () => {
+    const ids = Array.from(selected);
+    const ts = new Date().toISOString();
+    for (const id of ids) onUpdate(id, { trashedAt: ts });
+    clearSelection();
+    setNotice(`Moved ${ids.length} deal${ids.length === 1 ? "" : "s"} to Trash.`);
+  };
+
+  // ── Bulk: re-analyze from stored source text ─────────────────────────────
+  const reanalyzeSelected = async () => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    if (ids.length >= 2 && !(await confirmTokens(`re-analyze ${ids.length} deals`, ids.length, false))) return;
+    clearSelection();
+    setReanalyzeBusy(new Set(ids));
+
+    let done = 0, failed = 0;
+    await Promise.all(ids.map(async id => {
+      try {
+        await apiReanalyzeDeal(id);
+        // Poll until complete (max 10 min)
+        const start = Date.now();
+        while (Date.now() - start < 10 * 60 * 1000) {
+          await new Promise(r => setTimeout(r, 4000));
+          const status = await apiPollDealStatus(id);
+          if (!status.processing) {
+            if (status.deal) onUpdate(id, status.deal as Partial<Deal>);
+            done++;
+            break;
+          }
+        }
+      } catch {
+        failed++;
+      } finally {
+        setReanalyzeBusy(prev => { const next = new Set(prev); next.delete(id); return next; });
+      }
+    }));
+
+    setNotice(`Re-analysis done — ${done} updated${failed ? `, ${failed} failed` : ""}.`);
+  };
+
+  // ── Bulk: re-run from PDF ────────────────────────────────────────────────
+  const bulkRerun = () => {
+    rerunTargetsRef.current = deals.filter(d => selected.has(d.id));
+    rerunInputRef.current?.click();
+  };
+
+  const handleRerunFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter(f => f.name.toLowerCase().endsWith(".pdf"));
+    e.target.value = "";
+    if (!files.length) return;
+    clearSelection();
+    if (onAddFiles) onAddFiles(files);
+  };
+
+  // ── Sale lookup ──────────────────────────────────────────────────────────
+  const lookupSale = async (deal: Deal) => {
+    const idInfo = {
+      property: deal.propertyName, address: deal.address, market: deal.market,
+      assetType: deal.assetType, centerType: deal.centerType,
+      sellerInOM: deal.seller, brokerInOM: deal.broker, omDate: deal.omDate,
+      approxSF: deal.totalSF, askingPriceInOM: deal.askingPrice,
+    };
+    const resp = await apiAiMessages({
+      system: SALE_SYSTEM,
+      messages: [{ role: "user", content: `Find the eventual sale of this property:\n${JSON.stringify(idInfo, null, 2)}\n\nReturn ONLY the JSON object.` }],
+      max_tokens: 1500,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+    });
+    const textOut = (resp.content || []).filter(b => b.type === "text").map(b => b.text || "").join("\n").trim();
+    return robustParseJSON(textOut);
+  };
+
+  const applySaleResult = (id: string, res: Record<string, unknown> | null) => {
+    const ts = new Date().toISOString();
+    const deal = deals.find(d => d.id === id);
+    const relevant = !(res?.soldDate) || saleIsAfterOM(res.soldDate as string, deal?.omDate || null);
+    const confirmed = !!(res?.found && res.confidence === "high" && relevant);
+    if (confirmed) {
+      const ms = {
+        soldDate: res!.soldDate || null, price: res!.price ?? null, pricePerSF: res!.pricePerSF ?? null,
+        capRate: res!.capRate ?? null, buyer: res!.buyer || null, seller: res!.seller || null,
+        summary: res!.summary || "", sources: ((res!.sources as unknown[]) || []).slice(0, 6),
+        confidence: res!.confidence, lookedUpAt: ts,
+      };
+      onUpdate(id, { marketSale: ms as any, marketSaleChecked: ts });
+    } else {
+      onUpdate(id, { marketSaleChecked: ts });
+    }
+    return confirmed;
+  };
+
+  const runSaleLookup = async (idsIterable: Iterable<string>) => {
+    const ids = Array.from(idsIterable);
+    if (!ids.length) return;
+    if (ids.length >= 2 && !(await confirmTokens(`search the web for sales on ${ids.length} deals`, ids.length, true))) return;
+    clearSelection();
+    setLookingUp(prev => new Set([...prev, ...ids]));
+    let found = 0, none = 0, failed = 0;
+    for (const id of ids) {
+      const deal = deals.find(d => d.id === id);
+      if (!deal) { setLookingUp(p => { const next = new Set(p); next.delete(id); return next; }); continue; }
+      try {
+        if (applySaleResult(id, await lookupSale(deal))) found++; else none++;
+      } catch { failed++; }
+      setLookingUp(p => { const next = new Set(p); next.delete(id); return next; });
+    }
+    setNotice(`Sale lookup done — ${found} confirmed sale${found === 1 ? "" : "s"} added${none ? `, ${none} with no confident match` : ""}${failed ? `, ${failed} failed` : ""}.`);
+  };
+
+  // ── Demographics lookup ──────────────────────────────────────────────────
+  const lookupDemographics = async (deal: Deal) => {
+    const idInfo = { property: deal.propertyName, address: deal.address, market: deal.market, submarket: deal.submarket };
+    const resp = await apiAiMessages({
+      system: DEMO_SYSTEM,
+      messages: [{ role: "user", content: `Find 1/3/5-mile demographics for this property:\n${JSON.stringify(idInfo, null, 2)}\n\nReturn ONLY the JSON object.` }],
+      max_tokens: 1500,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+    });
+    const textOut = (resp.content || []).filter(b => b.type === "text").map(b => b.text || "").join("\n").trim();
+    return robustParseJSON(textOut);
+  };
+
+  const applyDemoResult = (id: string, res: Record<string, unknown> | null) => {
+    const ts = new Date().toISOString();
+    const num2 = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+    const md = res ? {
+      pop1mi: num2(res.pop1mi), pop3mi: num2(res.pop3mi), pop5mi: num2(res.pop5mi),
+      avgHHI1mi: num2(res.avgHHI1mi), avgHHI3mi: num2(res.avgHHI3mi), avgHHI5mi: num2(res.avgHHI5mi),
+      source: res.source || null, asOf: res.asOf || null, note: res.note || "",
+      confidence: res.confidence || "low", sources: ((res.sources as unknown[]) || []).slice(0, 6), lookedUpAt: ts,
+    } : null;
+    const has = md && [md.pop1mi, md.pop3mi, md.pop5mi, md.avgHHI1mi, md.avgHHI3mi, md.avgHHI5mi].some(v => v != null);
+    if (has) onUpdate(id, { marketDemographics: md as any, demoChecked: ts });
+    else onUpdate(id, { demoChecked: ts });
+    return !!has;
+  };
+
+  const runDemographicsLookup = async (idsIterable: Iterable<string>) => {
+    const ids = Array.from(idsIterable);
+    if (!ids.length) return;
+    if (ids.length >= 2 && !(await confirmTokens(`pull web demographics for ${ids.length} deals`, ids.length, true))) return;
+    clearSelection();
+    setGettingDemo(prev => new Set([...prev, ...ids]));
+    let got = 0, none = 0, failed = 0;
+    for (const id of ids) {
+      const deal = deals.find(d => d.id === id);
+      if (!deal) { setGettingDemo(p => { const next = new Set(p); next.delete(id); return next; }); continue; }
+      try {
+        if (applyDemoResult(id, await lookupDemographics(deal))) got++; else none++;
+      } catch { failed++; }
+      setGettingDemo(p => { const next = new Set(p); next.delete(id); return next; });
+    }
+    setNotice(`Demographics done — ${got} properties updated${none ? `, ${none} with no confident data` : ""}${failed ? `, ${failed} failed` : ""}.`);
   };
 
   const cols: [string, string, boolean][] = [
@@ -168,8 +401,24 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
     ["noi","NOI",true],["capRate","Cap",true],["walt","WALT",true],["uploadedAt","Added",false],
   ];
 
+  const isBusy = reanalyzeBusy.size > 0 || lookingUp.size > 0 || gettingDemo.size > 0;
+
   return (
     <div style={{ padding: "0 28px 28px" }}>
+      {/* ── Token-spend confirmation modal ─────────────────────────────── */}
+      {confirmGate && (
+        <div onClick={() => resolveConfirm(false)} style={{ position: "fixed", inset: 0, background: "rgba(38,40,31,0.45)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, maxWidth: 430, width: "100%", padding: "26px 26px 22px", boxShadow: "0 24px 60px rgba(38,40,31,0.28)", border: "1px solid #ece5d7" }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, color: "#26281f", fontWeight: 600, marginBottom: 10 }}>This will use API tokens</div>
+            <div style={{ fontSize: 13.5, color: "#6f6a5f", lineHeight: 1.55, marginBottom: 22 }}>{confirmGate.body}</div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button onClick={() => resolveConfirm(false)} style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", padding: "9px 18px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>Cancel</button>
+              <button onClick={() => resolveConfirm(true)} style={{ background: "#2a2c27", border: "none", color: "#f6f2ea", padding: "9px 18px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Link/Merge Modal */}
       {modal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -228,6 +477,112 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
         </div>
       )}
 
+      {/* Hidden file input for Re-run from PDF */}
+      <input ref={rerunInputRef} type="file" accept=".pdf" multiple style={{ display: "none" }} onChange={handleRerunFiles} />
+
+      {/* Notice toast */}
+      {notice && (
+        <div style={{ background: "#26281f", color: "#e8e0cf", borderRadius: 10, padding: "10px 16px", fontSize: 12, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {notice}
+          <button onClick={() => setNotice(null)} style={{ background: "none", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 14, marginLeft: 12, lineHeight: 1 }}>×</button>
+        </div>
+      )}
+
+      {/* Busy indicator */}
+      {isBusy && (
+        <div style={{ background: "#f0fae8", border: "1px solid #c6e6a0", color: "#3d7a1c", borderRadius: 10, padding: "8px 14px", fontSize: 11.5, marginBottom: 10 }}>
+          {reanalyzeBusy.size > 0 && `Re-analyzing ${reanalyzeBusy.size} deal${reanalyzeBusy.size === 1 ? "" : "s"}…`}
+          {lookingUp.size > 0 && ` Looking up ${lookingUp.size} sale${lookingUp.size === 1 ? "" : "s"}…`}
+          {gettingDemo.size > 0 && ` Pulling demographics for ${gettingDemo.size}…`}
+        </div>
+      )}
+
+      {/* ── Bulk action bar (dark, fixed above list) ─────────────────────── */}
+      {selected.size > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "#383a37", borderRadius: 12, padding: "11px 16px", marginBottom: 12, boxShadow: "0 4px 16px rgba(56,58,55,0.18)" }}>
+          <span style={{ color: "#ffffff", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{selected.size} selected</span>
+          <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
+
+          {/* Change status */}
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setBulkStatusOpen(o => !o)} style={darkBtn}>
+              Change status ▾
+            </button>
+            {bulkStatusOpen && (
+              <div style={{ position: "absolute", top: "110%", left: 0, background: "#ffffff", border: "1px solid #e3dccd", borderRadius: 10, padding: 6, zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 160 }}>
+                {STATUS_OPTS.map(s => (
+                  <button key={s} onClick={() => bulkChangeStatus(s)} style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "8px 10px", borderRadius: 7, cursor: "pointer", fontSize: 12, color: "#383a37", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f6f2ea"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: STATUS_COLORS[s] || "#a69e91", marginRight: 8 }} />
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
+
+          {/* Re-analyze */}
+          <button onClick={reanalyzeSelected} style={{ ...darkBtn, opacity: reanalyzeBusy.size > 0 ? 0.6 : 1 }} disabled={reanalyzeBusy.size > 0}>
+            Re-analyze
+          </button>
+
+          {/* Re-run from PDF */}
+          <button onClick={bulkRerun} style={darkBtn}>
+            Re-run from PDF
+          </button>
+
+          <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
+
+          {/* Compare */}
+          <button onClick={() => onCompare(Array.from(selected))} disabled={selected.size < 2} style={{ ...darkBtn, opacity: selected.size < 2 ? 0.4 : 1 }}>
+            Compare
+          </button>
+
+          {/* Link as property */}
+          <button onClick={() => openModal("link")} disabled={selected.size < 2} style={{ ...darkBtn, opacity: selected.size < 2 ? 0.4 : 1 }}>
+            Link as property
+          </button>
+
+          {/* Merge */}
+          <button onClick={() => openModal("merge")} disabled={selected.size < 2} style={{ ...darkBtn, opacity: selected.size < 2 ? 0.4 : 1 }}>
+            Merge…
+          </button>
+
+          <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
+
+          {/* Find sale */}
+          <button onClick={() => runSaleLookup(selected)} style={{ ...darkBtn, opacity: lookingUp.size > 0 ? 0.6 : 1 }} disabled={lookingUp.size > 0}>
+            {lookingUp.size > 0 ? "Looking up…" : "Find sale"}
+          </button>
+
+          {/* Pull demographics */}
+          <button onClick={() => runDemographicsLookup(selected)} style={{ ...darkBtn, opacity: gettingDemo.size > 0 ? 0.6 : 1 }} disabled={gettingDemo.size > 0}>
+            {gettingDemo.size > 0 ? "Pulling…" : "Pull demographics"}
+          </button>
+
+          <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
+
+          {/* Delete */}
+          {confirmBulkDel ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: "#ffb3b3", fontSize: 11.5 }}>Move {selected.size} to trash?</span>
+              <button onClick={bulkDelete} style={{ ...darkBtnDanger, padding: "5px 10px" }}>Yes, trash</button>
+              <button onClick={() => setConfirmBulkDel(false)} style={{ ...darkBtn, padding: "5px 10px" }}>Cancel</button>
+            </span>
+          ) : (
+            <button onClick={() => setConfirmBulkDel(true)} style={{ ...darkBtnDanger }}>Delete</button>
+          )}
+
+          {/* Clear selection */}
+          <button onClick={clearSelection} style={{ background: "transparent", border: "none", color: "#b5b8b0", fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif", marginLeft: "auto", flexShrink: 0 }}>
+            ✕ Clear
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search deals…"
@@ -245,22 +600,6 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
           </select>
         )}
         <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
-        {selected.size >= 2 && (
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => onCompare(Array.from(selected))}
-              style={{ background: "#383a37", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-              Compare {selected.size}
-            </button>
-            <button onClick={() => openModal("link")}
-              style={{ background: "#0f9d63", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-              Link
-            </button>
-            <button onClick={() => openModal("merge")}
-              style={{ background: "#fff", border: "1px solid #dc2626", color: "#dc2626", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-              Merge
-            </button>
-          </div>
-        )}
         <button onClick={() => setViewMode(v => v === "table" ? "grid" : "table")}
           style={{ background: "transparent", border: "1px solid #e3dccd", color: "#a89f8f", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11 }}>
           {viewMode === "table" ? "⊞" : "☰"}
@@ -293,9 +632,10 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
               <tbody>
                 {rows.map((d, i) => {
                   const { quality } = assessExtraction(d);
+                  const busyRow = reanalyzeBusy.has(d.id) || lookingUp.has(d.id) || gettingDemo.has(d.id);
                   return (
                     <tr key={d.id}
-                      style={{ borderBottom: "1px solid #f4f0e8", background: selected.has(d.id) ? "#6dba4309" : i % 2 === 1 ? "#fdf9f3" : "#fff", cursor: "pointer" }}
+                      style={{ borderBottom: "1px solid #f4f0e8", background: selected.has(d.id) ? "#6dba4309" : busyRow ? "#fffbf0" : i % 2 === 1 ? "#fdf9f3" : "#fff", cursor: "pointer" }}
                       onClick={() => onOpen(d.id)}>
                       <td style={{ padding: "10px 8px 10px 14px" }} onClick={e => { e.stopPropagation(); toggleSel(d.id); }}>
                         <input type="checkbox" checked={selected.has(d.id)} onChange={() => {}} />
@@ -304,8 +644,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
                         <RowThumb deal={d} />
                       </td>
                       <td style={{ padding: "10px 10px" }}>
-                        <div style={{ fontWeight: 600, color: "#26281f", fontSize: 12.5, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{d.propertyName || d.fileName || "Untitled"}</div>
-                        {quality !== "good" && <div style={{ fontSize: 9, color: quality === "thin" ? "#dc2626" : "#d9890c" }}>{quality === "thin" ? "thin extraction" : "partial"}</div>}
+                        <div style={{ fontWeight: 600, color: "#26281f", fontSize: 12.5, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {d.propertyName || d.fileName || "Untitled"}
+                          {busyRow && <span style={{ marginLeft: 6, fontSize: 9, color: "#d9890c" }}>● processing</span>}
+                        </div>
+                        {quality !== "good" && !busyRow && <div style={{ fontSize: 9, color: quality === "thin" ? "#dc2626" : "#d9890c" }}>{quality === "thin" ? "thin extraction" : "partial"}</div>}
                       </td>
                       <td style={{ padding: "10px 10px" }}>
                         <StatusTag status={d.status} size="sm" />

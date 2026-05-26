@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { runOmExtraction } from "../lib/extract";
 
 const router = Router();
 
@@ -12,6 +13,22 @@ function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], nex
   }
   next();
 }
+
+// Fields entered by humans — preserved across re-analysis so user data is never overwritten
+const USER_PRESERVED_KEYS = new Set([
+  "status", "statusSince", "autoPassed",
+  "userNotes",
+  "txnPurchasePrice", "txnSeller", "txnLoiDate", "txnCloseDate",
+  "txnSalePrice", "txnBuyer", "txnSaleDate", "txnBroker",
+  "acqCapRate", "acqNOIAtClose", "acqEntity", "acqBroker", "acqContractDate", "acqDDExpiration",
+  "acqDeposit", "acqClosingCosts", "acqFee", "acqTitleCo", "acqCounsel", "acqPropManager",
+  "acqStrategy", "acqHoldPeriod", "acqTargetIRR", "acqNotes",
+  "debtLender", "debtType", "debtLoanAmount", "debtRate", "debtMaturityDate", "debtNotes",
+  "marketSale", "marketSaleChecked",
+  "marketDemographics", "demoChecked",
+  "verified", "propertyGroupId", "editHistory",
+  "trashedAt", "uploadedAt", "fileName", "pdfPages", "imageMeta", "dealScore",
+]);
 
 // GET /api/deals — list all deals (excludes in-progress ingests)
 router.get("/deals", requireAuth, async (req, res) => {
@@ -120,6 +137,27 @@ router.put("/deals/:id/images", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/deals/:id/status — poll whether an async extraction is still in progress
+router.get("/deals/:id/status", requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    if (!rows.length) { res.status(404).json({ error: "Deal not found" }); return; }
+    const data = rows[0].data;
+    if (data._processing) {
+      res.json({ processing: true });
+    } else if (data._processingError) {
+      res.json({ processing: false, error: data._processingError });
+    } else {
+      const { _processing: _p, _processingError: _e, ...rest } = data;
+      res.json({ processing: false, deal: { ...rest, id } });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Failed to check deal status");
+    res.status(500).json({ error: "Failed to check status" });
+  }
+});
+
 // GET /api/deals/:id/source
 router.get("/deals/:id/source", requireAuth, async (req, res) => {
   try {
@@ -144,6 +182,78 @@ router.put("/deals/:id/source", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to save source");
     res.status(500).json({ error: "Failed to save source" });
+  }
+});
+
+// POST /api/deals/:id/reanalyze
+// Re-runs AI extraction from the stored source text, preserving all user-entered fields.
+router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
+  const id = req.params.id as string;
+
+  try {
+    // Load existing deal data + source text
+    const [dealRows, srcRows] = await Promise.all([
+      db.select().from(dealsTable).where(eq(dealsTable.id, id)),
+      db.select().from(dealSourcesTable).where(eq(dealSourcesTable.id, id)),
+    ]);
+
+    if (!dealRows.length) {
+      res.status(404).json({ error: "Deal not found" });
+      return;
+    }
+    const existing = dealRows[0].data as Record<string, unknown>;
+    const sourceText = srcRows[0]?.sourceText ?? null;
+
+    if (!sourceText) {
+      res.status(422).json({ error: "No stored source text for this deal — upload the PDF again to re-extract." });
+      return;
+    }
+
+    // Build processing snapshot preserving all user fields
+    const userFields: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(existing)) {
+      if (USER_PRESERVED_KEYS.has(k)) userFields[k] = v;
+    }
+    const processingData: Record<string, unknown> = {
+      ...userFields,
+      _processing: true,
+      fileName: existing.fileName || "Unknown",
+    };
+
+    await db.update(dealsTable)
+      .set({ data: processingData, updatedAt: new Date() })
+      .where(eq(dealsTable.id, id));
+
+    // Return immediately — extraction runs in background
+    res.json({ id, processing: true });
+
+    // Fire background re-analysis
+    setImmediate(() => {
+      (async () => {
+        try {
+          const { data: extracted } = await runOmExtraction(sourceText);
+          const dealData: Record<string, unknown> = {
+            ...extracted,
+            ...userFields,
+            _processing: false,
+            fileName: existing.fileName || "Unknown",
+          };
+          await db.update(dealsTable)
+            .set({ data: dealData, updatedAt: new Date() })
+            .where(eq(dealsTable.id, id));
+          req.log.info({ id }, "Re-analysis complete");
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : "Re-analysis failed";
+          req.log.error({ err, id }, "Re-analysis failed");
+          await db.update(dealsTable)
+            .set({ data: { ...userFields, _processing: false, _processingError: errorMsg, fileName: existing.fileName || "Unknown" }, updatedAt: new Date() })
+            .where(eq(dealsTable.id, id));
+        }
+      })().catch(() => {});
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to start re-analysis");
+    res.status(500).json({ error: "Failed to start re-analysis" });
   }
 });
 

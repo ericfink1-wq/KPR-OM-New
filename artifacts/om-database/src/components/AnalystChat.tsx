@@ -21,6 +21,42 @@ interface Props {
   onClearQuery?: () => void;
 }
 
+// ── Formatting helpers ──────────────────────────────────────────────────────
+function fmtSF(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M SF`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K SF`;
+  return `${n} SF`;
+}
+function fmtM(n: number): string {
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
+  return `$${n}`;
+}
+const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? 0 : Number(v);
+
+// Stat box tile
+function StatBox({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
+  return (
+    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", minWidth: 90 }}>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, color: accent || "#26281f", lineHeight: 1.1 }}>
+        {typeof value === "number" ? value.toLocaleString() : value}
+      </div>
+      <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" as const, marginTop: 4 }}>{label}</div>
+    </div>
+  );
+}
+
+const panelLabel: React.CSSProperties = {
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: "0.14em",
+  color: "#a89f8f",
+  textTransform: "uppercase",
+  marginBottom: 8,
+  marginTop: 16,
+};
+
 export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQuery }: Props) {
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -70,6 +106,47 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
     }
   };
 
+  // ── Intelligence Library stats ───────────────────────────────────────────
+  const stats = (() => {
+    const tenantBrands = new Set(
+      active.flatMap(d => (d.tenants || []).map(t => t.name?.toLowerCase())).filter(Boolean)
+    ).size;
+    const leases = active.reduce((s, d) => s + (d.tenants || []).length, 0);
+    const sfAnalyzed = active.reduce((s, d) => s + num(d.totalSF), 0);
+    const markets = new Set(active.map(d => (d.market || "").trim().toLowerCase()).filter(Boolean)).size;
+    const dataPoints = (() => {
+      let n = 0;
+      const skip = (k: string) => k === "editHistory" || k === "images" || k.startsWith("_");
+      function walk(o: Record<string, unknown>) {
+        for (const k in o) {
+          if (skip(k)) continue;
+          const v = o[k];
+          if (v == null || v === "") continue;
+          if (Array.isArray(v)) v.forEach(x => (x && typeof x === "object") ? walk(x as Record<string, unknown>) : (x != null && x !== "" && n++));
+          else if (typeof v === "object") walk(v as Record<string, unknown>);
+          else n++;
+        }
+      }
+      active.forEach(d => walk(d as unknown as Record<string, unknown>));
+      return n;
+    })();
+    return { total: active.length, tenantBrands, leases, sfAnalyzed, markets, dataPoints };
+  })();
+
+  // ── Owned portfolio stats ────────────────────────────────────────────────
+  const portfolio = (() => {
+    const owned = active.filter(d => d.status === "Owned");
+    const tenants = owned.flatMap(d => (d.tenants || []));
+    const anchors = Array.from(new Set(tenants.filter(t => t.isAnchor && t.name).map(t => t.name!.trim())));
+    const topByRent = tenants
+      .filter(t => t.name && num(t.annualRent) > 0)
+      .sort((a, b) => num(b.annualRent) - num(a.annualRent))
+      .slice(0, 4);
+    const totalValue = owned.reduce((s, d) => s + (num(d.txnPurchasePrice) || num(d.askingPrice)), 0);
+    const totalSF = owned.reduce((s, d) => s + num(d.totalSF), 0);
+    return { count: owned.length, value: totalValue, sf: totalSF, anchors, topByRent };
+  })();
+
   const isEmpty = msgs.length === 0;
 
   return (
@@ -79,7 +156,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
         {isEmpty ? (
           <div style={{ animation: "riseIn 0.3s ease both" }}>
             {/* Hero */}
-            <div style={{ marginBottom: 32 }}>
+            <div style={{ marginBottom: 20 }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: "#26281f", marginBottom: 6, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
                 Good {getTimeGreeting()}.
               </div>
@@ -88,9 +165,64 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
               </p>
             </div>
 
-            {/* Portfolio stat strip */}
+            {/* ── Intelligence Library stat row ────────────────────────────── */}
             {active.length > 0 && (
-              <div style={{ display: "flex", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
+              <>
+                <div style={panelLabel}>Intelligence library — everything read into the system</div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+                  <StatBox label="OMs Read" value={stats.total || "—"} />
+                  <StatBox label="Tenant Brands" value={stats.tenantBrands ? stats.tenantBrands.toLocaleString() : "—"} accent="#0f9d63" />
+                  <StatBox label="Leases Analyzed" value={stats.leases ? stats.leases.toLocaleString() : "—"} />
+                  <StatBox label="SF Analyzed" value={stats.sfAnalyzed ? fmtSF(stats.sfAnalyzed) : "—"} />
+                  <StatBox label="Markets Covered" value={stats.markets || "—"} />
+                  <StatBox label="Data Points" value={stats.dataPoints ? stats.dataPoints.toLocaleString() : "—"} accent="#0f9d63" />
+                </div>
+              </>
+            )}
+
+            {/* ── Owned portfolio stat row ─────────────────────────────────── */}
+            {active.length > 0 && (
+              <>
+                <div style={panelLabel}>Owned portfolio</div>
+                {portfolio.count === 0 ? (
+                  <div style={{ background: "#faf7f0", border: "1px dashed #e3dccd", borderRadius: 12, padding: "12px 16px", fontSize: 12, color: "#9a917f", marginBottom: 4 }}>
+                    No owned properties yet — mark a deal as <span style={{ color: "#6dba43", fontWeight: 600 }}>Owned</span> to build your portfolio snapshot here.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+                    <StatBox label="Properties" value={portfolio.count} accent="#6dba43" />
+                    {portfolio.value > 0 && <StatBox label="Portfolio Value" value={fmtM(portfolio.value)} accent="#6dba43" />}
+                    {portfolio.sf > 0 && <StatBox label="Square Footage" value={fmtSF(portfolio.sf)} />}
+                    {portfolio.anchors.length > 0 && (
+                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", minWidth: 120 }}>
+                        <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Key Anchors</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {portfolio.anchors.slice(0, 5).map(a => (
+                            <span key={a} style={{ background: "#f0fae8", border: "1px solid #c6e6a0", color: "#3d7a1c", borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600 }}>{a}</span>
+                          ))}
+                          {portfolio.anchors.length > 5 && <span style={{ fontSize: 10, color: "#a89f8f" }}>+{portfolio.anchors.length - 5}</span>}
+                        </div>
+                      </div>
+                    )}
+                    {portfolio.topByRent.length > 0 && (
+                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", minWidth: 160 }}>
+                        <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Largest Tenants by Rent</div>
+                        {portfolio.topByRent.map((t, i) => (
+                          <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 10.5, color: "#383a37", marginBottom: 2 }}>
+                            <span style={{ fontWeight: 500 }}>{t.name}</span>
+                            <span style={{ color: "#6dba43", fontWeight: 600 }}>${(num(t.annualRent) / 1000).toFixed(0)}K</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── Original portfolio stat strip ────────────────────────────── */}
+            {active.length > 0 && (
+              <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap", marginTop: 16 }}>
                 {[
                   ["DEALS", active.length, "#383a37"],
                   ["UNDER CONTRACT", active.filter(d => d.status === "Under Contract").length, STATUS_COLORS["Under Contract"]],
@@ -224,8 +356,8 @@ function MarkdownText({ text }: { text: string }) {
     } else if (/^[-*] /.test(line)) {
       elements.push(<div key={i} style={{ display: "flex", gap: 8, marginLeft: 4 }}><span style={{ color: "#6dba43", flexShrink: 0 }}>›</span><span>{inlineFmt(line.slice(2))}</span></div>);
     } else if (/^\d+\. /.test(line)) {
-      const [num, ...rest] = line.split(". ");
-      elements.push(<div key={i} style={{ display: "flex", gap: 8, marginLeft: 4 }}><span style={{ color: "#a89f8f", flexShrink: 0 }}>{num}.</span><span>{inlineFmt(rest.join(". "))}</span></div>);
+      const [num2, ...rest] = line.split(". ");
+      elements.push(<div key={i} style={{ display: "flex", gap: 8, marginLeft: 4 }}><span style={{ color: "#a89f8f", flexShrink: 0 }}>{num2}.</span><span>{inlineFmt(rest.join(". "))}</span></div>);
     } else if (line === "") {
       elements.push(<div key={i} style={{ height: 6 }} />);
     } else {
