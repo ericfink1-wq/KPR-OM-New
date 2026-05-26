@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiLoadImages, apiSaveImages } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency } from "../lib/utils";
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal } from "../lib/api";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote } from "../lib/utils";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
@@ -114,6 +114,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [imgs, setImgs] = useState<ImageBundle | null>(null);
   const [saleBusy, setSaleBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
+  const [analyzeOpen, setAnalyzeOpen] = useState(false);
+  const [reanalyzeBusy, setReanalyzeBusy] = useState(false);
+  const rerunPdfRef = useRef<HTMLInputElement>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesVal, setNotesVal] = useState(d.userNotes || "");
   const [fixPage, setFixPage] = useState("");
@@ -143,6 +146,35 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     const ver = { ...(d.verified || {}) };
     if (ver[field]) { delete ver[field]; } else { ver[field] = { ts: Date.now() }; }
     onUpdate(id, { verified: ver });
+  };
+
+  const pollUntilDone = async (id: string) => {
+    const start = Date.now();
+    while (Date.now() - start < 10 * 60 * 1000) {
+      await new Promise(r => setTimeout(r, 3000));
+      const status = await apiPollDealStatus(id);
+      if (!status.processing) { if (status.deal) onUpdate(id, status.deal); break; }
+    }
+  };
+
+  const handleReanalyze = async () => {
+    setAnalyzeOpen(false);
+    setReanalyzeBusy(true);
+    try { await apiReanalyzeDeal(d.id); await pollUntilDone(d.id); } catch {}
+    setReanalyzeBusy(false);
+  };
+
+  const handleRerunPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setReanalyzeBusy(true);
+    try {
+      const { text, pages } = await extractPdfText(await file.arrayBuffer());
+      await apiIngestDeal({ id: d.id, text, fileName: file.name, pageCount: pages, correctionsNote: buildCorrectionsNote(allDeals) });
+      await pollUntilDone(d.id);
+    } catch {}
+    setReanalyzeBusy(false);
   };
 
   const onLookupSale = async (id: string) => {
@@ -288,8 +320,34 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
         <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-          <button onClick={() => onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`)}
-            style={{ background:"transparent", border:"1px solid #383a37", color:"#383a37", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>ANALYZE</button>
+          {/* Analyze dropdown */}
+          <div style={{ position:"relative" }}>
+            <button onClick={() => setAnalyzeOpen(o => !o)} disabled={reanalyzeBusy}
+              style={{ background:"transparent", border:"1px solid #383a37", color: reanalyzeBusy ? "#a69e91" : "#383a37", padding:"5px 10px", borderRadius:4, cursor: reanalyzeBusy ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
+              {reanalyzeBusy ? "ANALYZING…" : <>ANALYZE <span style={{ fontSize:8 }}>▾</span></>}
+            </button>
+            {analyzeOpen && !reanalyzeBusy && (
+              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:200 }}>
+                <button onClick={handleReanalyze}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ↺ Re-analyze (stored text)
+                </button>
+                <button onClick={() => { setAnalyzeOpen(false); rerunPdfRef.current?.click(); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ↑ Re-run from PDF…
+                </button>
+                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+                <button onClick={() => { setAnalyzeOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#6f6a5f", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ↗ Query Analyst
+                </button>
+              </div>
+            )}
+            <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
+          </div>
           <button onClick={() => onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`)}
             style={{ background:"transparent", border:"1px solid #6dba43", color:"#6dba43", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>COMPS</button>
           <button onClick={() => onLookupSale(d.id)} disabled={saleBusy}
