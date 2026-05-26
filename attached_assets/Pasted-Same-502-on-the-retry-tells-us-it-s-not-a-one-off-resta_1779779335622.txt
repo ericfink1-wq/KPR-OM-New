@@ -1,0 +1,11 @@
+Same 502 on the retry tells us it's not a one-off restart hiccup — it's the timeout I mentioned. The extraction request runs longer than the server allows for a single connection, so the platform cuts it and returns the "couldn't reach this app" page. This is the single most common issue with long AI requests on a fresh build, and it has a clean fix.
+The robust solution isn't just "make the timeout longer" (that's a band-aid that still breaks on big OMs). The right fix is to make the upload asynchronous: the server accepts the file, says "got it, working on it," and processes the extraction in the background while the page checks for the result — so there's no single long connection to time out. Relay this to the Agent — paste it into the "Make, test, iterate…" box:
+
+PDF upload now fails with HTTP 502 Bad Gateway ("We couldn't reach this app") every time. The cause is the OM extraction request running too long for a single HTTP connection (it takes 20–40+ seconds — PDF text extraction plus one or more Claude API calls), so the proxy times out and kills the connection.
+Please make OM ingestion resilient to long processing times:
+
+Make extraction asynchronous / non-blocking. When a PDF is uploaded, immediately create the deal row in a processing state and return a response right away (e.g. return a job/deal id). Run the actual extraction (PDF text + Claude calls + image capture) in the background, then update that deal row to done (or error) when finished.
+Have the frontend poll for status (or use the existing upload-queue UI) and show the deal flipping from "Extracting…" to done — instead of holding one long request open and timing out.
+Raise the server/Express timeout and any body-size limits for the AI/extraction routes as a backstop (allow at least 120 seconds and large request bodies for the PDF text).
+Make sure the Anthropic call itself uses a long enough timeout (≥120s) and isn't aborted early.
+Keep all existing behavior — duplicate detection, saving to Postgres, the status counters, and persistence after refresh.
