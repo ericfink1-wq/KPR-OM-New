@@ -1,0 +1,1 @@
+- [KPR OM Database architecture](kpr-om-db.md) — stack decisions, session setup, and idb→API migration details
