@@ -18,6 +18,7 @@ interface Props {
   onUpdate: (id: string, patch: Partial<Deal>) => void;
   onQuery: (q: string) => void;
   onCompare: (ids: string[]) => void;
+  onTenantClick?: (name: string) => void;
 }
 
 function DataIntegrity({ deal }: { deal: Deal }) {
@@ -107,7 +108,7 @@ function KeyAssumptions({ deal }: { deal: Deal }) {
   );
 }
 
-export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare }: Props) {
+export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick }: Props) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [imgs, setImgs] = useState<ImageBundle | null>(null);
@@ -832,7 +833,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       <KeyAssumptions deal={d} />
 
       {/* Tenant roster */}
-      {(d.tenants||[]).length > 0 && <TenantRoster tenants={d.tenants!}/>}
+      {(d.tenants||[]).length > 0 && <TenantRoster tenants={d.tenants!} onTenantClick={onTenantClick}/>}
 
       {/* Cash flow */}
       {(d.cashFlowProjection||[]).length > 0 && (

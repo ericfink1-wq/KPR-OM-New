@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { Tenant } from "../lib/idb";
 
-interface Props { tenants: Tenant[]; }
+interface Props { tenants: Tenant[]; onTenantClick?: (name: string) => void; }
 
-export default function TenantRoster({ tenants }: Props) {
+export default function TenantRoster({ tenants, onTenantClick }: Props) {
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
   const [sortKey, setSortKey] = useState("sf");
@@ -67,7 +67,12 @@ export default function TenantRoster({ tenants }: Props) {
             {rows.map((t,i) => (
               <tr key={i} style={{ borderTop:"1px solid #f1eadc" }}>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
-                  <span style={{ color:"#383a37", fontWeight:600 }}>{t.name}</span>
+                  <span
+                    onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
+                    title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
+                    style={{ color:"#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px" }}>
+                    {t.name}
+                  </span>
                   {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
                   {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
                 </td>

@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import DetailView from "./components/DetailView";
+import TenantView from "./components/TenantView";
 import AnalystChat from "./components/AnalystChat";
 import Login from "./components/Login";
 
@@ -14,7 +15,7 @@ const queryClient = new QueryClient({
 });
 
 type TabId = "analyst" | "portfolio";
-type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] };
+type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
@@ -82,6 +83,13 @@ function AppInner() {
   const handleCompare = useCallback((ids: string[]) => {
     setView({ type: "compare", dealIds: ids });
     setTab("portfolio");
+  }, []);
+
+  const handleOpenTenant = useCallback((name: string) => {
+    if (window.confirm(`View the tenant summary for ${name}? It shows every property in your database where ${name} is a tenant.`)) {
+      setView({ type: "tenant", tenantName: name });
+      setTab("portfolio");
+    }
   }, []);
 
   const handleLogout = async () => {
@@ -251,6 +259,7 @@ function AppInner() {
                 onUpdate={handleUpdate}
                 onQuery={handleQuery}
                 onCompare={handleCompare}
+                onTenantClick={handleOpenTenant}
               />
             </div>
           )}
@@ -268,6 +277,17 @@ function AppInner() {
               onBack={() => setView({ type: "list" })}
               onOpen={handleOpenDeal}
             />
+          )}
+
+          {view.type === "tenant" && (
+            <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 72px)" }}>
+              <TenantView
+                tenantName={view.tenantName}
+                deals={activeDeals}
+                onBack={() => setView({ type: "list" })}
+                onOpenDeal={d => setView({ type: "detail", dealId: d.id })}
+              />
+            </div>
           )}
         </div>
       )}
