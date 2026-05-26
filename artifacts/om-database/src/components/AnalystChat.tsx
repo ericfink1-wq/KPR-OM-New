@@ -154,9 +154,9 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "transparent" }}>
       {/* Messages area */}
-      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 28px" }}>
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 0 0" }}>
         {isEmpty ? (
-          <div style={{ animation: "riseIn 0.3s ease both" }}>
+          <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 28px", animation: "riseIn 0.3s ease both" }}>
             {/* Hero */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: "#26281f", marginBottom: 6, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
@@ -231,7 +231,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
 
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 28px", display: "flex", flexDirection: "column", gap: 20 }}>
             {msgs.map((m, i) => (
               <div key={i} style={{ display: "flex", flexDirection: m.role === "user" ? "row-reverse" : "row", gap: 12, animation: "riseIn 0.22s ease both" }}>
                 {m.role === "assistant" && (
@@ -272,7 +272,8 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
       </div>
 
       {/* Input bar */}
-      <div style={{ borderTop: "1px solid #e7e0d2", padding: "14px 28px", background: "rgba(250,247,240,0.85)", backdropFilter: "blur(12px)", flexShrink: 0 }}>
+      <div style={{ borderTop: "1px solid #e7e0d2", background: "rgba(250,247,240,0.85)", backdropFilter: "blur(12px)", flexShrink: 0 }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "14px 28px" }}>
         {msgs.length > 0 && (
           <button onClick={() => setMsgs([])} style={{ fontSize: 10, color: "#a89f8f", background: "transparent", border: "none", cursor: "pointer", marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>
             ← New conversation
@@ -304,6 +305,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
           </button>
         </div>
         <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6 }}>Enter to send · Shift+Enter for new line · Powered by Claude</div>
+        </div>
       </div>
     </div>
   );

@@ -84,8 +84,8 @@ const darkBtnDanger: React.CSSProperties = {
 export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFiles }: Props) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const [sortKey, setSortKey] = useState("uploadedAt");
-  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  const [sortKey, setSortKey] = useState("status");
+  const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table"|"grid">("table");
@@ -143,7 +143,19 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
     const s = q.toLowerCase();
     rows = rows.filter(d => [d.propertyName, d.fileName, d.market, d.address, d.assetType].some(v => v?.toLowerCase().includes(s)));
   }
+  const STATUS_ORDER: Record<string, number> = {
+    "Owned": 0, "Under Contract": 1, "Prospect": 2, "Sold": 3, "Passed": 4,
+  };
   rows.sort((a, b) => {
+    if (sortKey === "status") {
+      const ao = STATUS_ORDER[a.status || ""] ?? 99;
+      const bo = STATUS_ORDER[b.status || ""] ?? 99;
+      if (ao !== bo) return sortDir === "asc" ? ao - bo : bo - ao;
+      // Within same status group: newest-first
+      const at = new Date(a.uploadedAt || 0).getTime();
+      const bt = new Date(b.uploadedAt || 0).getTime();
+      return bt - at;
+    }
     const numKeys = ["capRate","noi","askingPrice","totalSF","occupancy","walt"];
     if (numKeys.includes(sortKey)) {
       const av = n(a[sortKey as keyof Deal]) ?? -Infinity;
