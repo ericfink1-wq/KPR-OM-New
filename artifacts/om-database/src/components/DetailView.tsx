@@ -159,10 +159,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     setRrError(null);
     try {
       const { text } = await extractPdfText(await file.arrayBuffer());
-      const prompt = `You are a CRE data extraction engine. Extract every tenant row from this rent roll document.
-Return ONLY valid JSON — no explanation, no markdown fences — with this exact shape:
+      const prompt = `You are a CRE data extraction engine. Extract every occupied tenant from this rent roll.
+Return ONLY valid JSON — no markdown fences, no explanation — with this exact shape:
 {
-  "asOf": "<date string from the rent roll header such as '2025-03-31', or null if not found>",
+  "asOf": "<'as of' date printed on the rent roll header as YYYY-MM-DD, or null if not shown>",
   "tenants": [
     {
       "name": "string",
@@ -180,7 +180,26 @@ Return ONLY valid JSON — no explanation, no markdown fences — with this exac
     }
   ]
 }
-Include every occupied tenant found. Omit vacant rows. Return only JSON.
+
+COLUMN MAPPING RULES (apply to Yardi/MRI and similar property-management exports):
+- annualRent  → use the "Annual Rent" column (base rent only). NEVER use "Gross Annual Rent", "Gross Monthly Rent", "Annual Rent Increase", or "Annual Option Rent".
+- rentPerSF   → use the "Rent/SF" column (base rent per SF). Never use a gross or option PSF figure.
+- leaseStart  → "Term Comm. Date" or "Commencement Date" (not option dates).
+- leaseExpiry → "Term Exp. Date" or "Expiration Date" (not option expiry).
+- reimbursementMethod → infer from expense columns: if CAM, tax, and insurance are billed separately to the tenant → "NNN"; if the tenant pays a fixed lump or nothing for expenses → "Gross" or "Modified Gross". Use the actual column label when present.
+
+TENANT NAME RULES:
+- Take only the primary trade name from the first line of the tenant cell.
+- Strip any parenthetical echo that repeats the name (e.g. "Tenant Name (Tenant Name)").
+- Strip guarantor, DBA, or legal-entity lines that appear on subsequent lines beneath the tenant name.
+
+ROW FILTERING — skip these rows entirely (do not include them in the output):
+- VACANT / VACANCY rows (any row whose tenant name is blank, "Vacant", "Vacancy", or similar).
+- Total, Subtotal, and Grand Total summary rows.
+- Artifact rows where both SF and Annual Rent are 0 or null (data-entry placeholders).
+- KEEP real gross-lease tenants that have $0 CAM but positive base rent — those are legitimate occupied suites.
+
+Return only the JSON object.
 
 RENT ROLL TEXT:
 ${text.slice(0, 60000)}`;
