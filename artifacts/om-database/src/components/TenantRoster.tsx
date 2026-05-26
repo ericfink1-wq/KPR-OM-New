@@ -76,7 +76,20 @@ export default function TenantRoster({ tenants }: Props) {
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${n(t.annualRent)!.toLocaleString()}`:"—"}</td>
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{t.leaseStart||"—"}</td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{t.leaseExpiry||"—"}</td>
-                <td style={{ padding:"8px 10px", color:"#5c5f57", fontSize:11, whiteSpace:"nowrap" }}>{t.reimbursementMethod||t.leaseType||"—"}</td>
+                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap" }}>
+                  {(() => {
+                    const m = t.reimbursementMethod || t.leaseType || "";
+                    const gross = /gross/i.test(m), fixed = /\bfixed\b/i.test(m);
+                    const flag = gross ? { t:"GROSS", c:"#b91c1c", bg:"#fdecea", tip:"Gross lease — landlord absorbs expense growth (no recovery)" }
+                              : fixed ? { t:"FIXED", c:"#b45309", bg:"#fbe6cf", tip:"Fixed reimbursement — landlord absorbs expense growth above the fixed amount" } : null;
+                    return (
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:flag?flag.c:"#5c5f57" }}>
+                        {flag && <span title={flag.tip} style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.c, background:flag.bg, padding:"1px 6px", borderRadius:9, cursor:"help" }}>{flag.t}</span>}
+                        {m || "—"}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }} title={[t.rentBumps,t.rentSchedule].filter(Boolean).join("   ·   ")||""}>{t.rentBumps||(t.rentSchedule?"Stepped":"—")}</td>
                 <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{t.renewalOptions||"—"}</td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>

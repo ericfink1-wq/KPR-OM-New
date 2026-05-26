@@ -150,7 +150,7 @@ function AppInner() {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      style={{ minHeight: "100vh", background: "#f6f2ea", display: "flex", flexDirection: "column", fontFamily: "'Inter',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any }}>
+      style={{ height: "100dvh", background: "#f6f2ea", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Inter',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any }}>
 
       <Header
         tab={tab}

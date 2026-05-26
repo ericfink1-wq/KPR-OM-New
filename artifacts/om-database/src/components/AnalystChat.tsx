@@ -146,7 +146,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "transparent" }}>
       {/* Messages area */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 28px" }}>
         {isEmpty ? (
           <div style={{ animation: "riseIn 0.3s ease both" }}>
             {/* Hero */}
@@ -264,7 +264,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
       </div>
 
       {/* Input bar */}
-      <div style={{ borderTop: "1px solid #e7e0d2", padding: "14px 28px", background: "rgba(250,247,240,0.85)", backdropFilter: "blur(12px)" }}>
+      <div style={{ borderTop: "1px solid #e7e0d2", padding: "14px 28px", background: "rgba(250,247,240,0.85)", backdropFilter: "blur(12px)", flexShrink: 0 }}>
         {msgs.length > 0 && (
           <button onClick={() => setMsgs([])} style={{ fontSize: 10, color: "#a89f8f", background: "transparent", border: "none", cursor: "pointer", marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>
             ← New conversation

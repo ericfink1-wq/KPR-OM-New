@@ -81,6 +81,32 @@ function ExtractionQuality({ deal }: { deal: Deal }) {
   );
 }
 
+function KeyAssumptions({ deal }: { deal: Deal }) {
+  const [expanded, setExpanded] = useState(false);
+  const tenantNotes = (deal.tenants||[]).filter(t=>t.assumptionNote).map(t=>({ name:t.name, text:t.assumptionNote! }));
+  const dealNotes = Array.isArray(deal.keyAssumptions) ? deal.keyAssumptions.filter(Boolean).map(n=>({ text:n })) : (deal.keyAssumptions ? [{ text:deal.keyAssumptions }] : []);
+  const all = [...dealNotes, ...tenantNotes];
+  if (all.length === 0) return null;
+  const LIMIT = 5;
+  const shown = expanded ? all : all.slice(0, LIMIT);
+  const hidden = all.length - LIMIT;
+  return (
+    <div style={{ background:"#fff8ec", border:"1px solid #e7c48f", borderLeft:"3px solid #d9890c", borderRadius:12, padding:"14px 18px", marginBottom:12 }}>
+      <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#b45309", marginBottom:9 }}>⚑ Key Assumptions &amp; Footnotes</div>
+      {shown.map((n,i) => (
+        <div key={i} style={{ fontSize:12.5, color:"#6b4a16", lineHeight:1.6, marginBottom:4 }}>
+          •&nbsp; {(n as {name?:string; text:string}).name && <span style={{ fontWeight:600 }}>{(n as {name?:string; text:string}).name}: </span>}{(n as {name?:string; text:string}).text}
+        </div>
+      ))}
+      {hidden > 0 && (
+        <button onClick={() => setExpanded(e => !e)} style={{ marginTop:7, background:"transparent", border:"none", color:"#b45309", fontWeight:600, fontSize:12, cursor:"pointer", padding:0, fontFamily:"'Inter',sans-serif" }}>
+          {expanded ? "Show less" : `Show ${hidden} more`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare }: Props) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -587,18 +613,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       )}
 
       {/* Key assumptions */}
-      {(() => {
-        const tenantNotes = (d.tenants||[]).filter(t=>t.assumptionNote).map(t=>({name:t.name,note:t.assumptionNote}));
-        const dealNotes = Array.isArray(d.keyAssumptions) ? d.keyAssumptions.filter(Boolean) : (d.keyAssumptions ? [d.keyAssumptions] : []);
-        if (dealNotes.length===0 && tenantNotes.length===0) return null;
-        return (
-          <div style={{ background:"#fff8ec", border:"1px solid #e7c48f", borderLeft:"3px solid #d9890c", borderRadius:12, padding:"14px 18px", marginBottom:12 }}>
-            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#b45309", marginBottom:9 }}>⚑ Key Assumptions & Footnotes</div>
-            {dealNotes.map((n,i) => <div key={"d"+i} style={{ fontSize:12.5, color:"#6b4a16", lineHeight:1.6, marginBottom:4 }}>•&nbsp; {n}</div>)}
-            {tenantNotes.map((t,i) => <div key={"t"+i} style={{ fontSize:12.5, color:"#6b4a16", lineHeight:1.6, marginBottom:4 }}>•&nbsp; <span style={{fontWeight:600}}>{t.name}:</span> {t.note}</div>)}
-          </div>
-        );
-      })()}
+      <KeyAssumptions deal={d} />
 
       {/* Tenant roster */}
       {(d.tenants||[]).length > 0 && <TenantRoster tenants={d.tenants!}/>}

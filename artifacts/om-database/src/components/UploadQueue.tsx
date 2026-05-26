@@ -97,9 +97,16 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const pendingRef = useRef<File[]>([]);
   const activeCountRef = useRef(0);
   const waitingFilesRef = useRef<{ file: File; itemId: string }[]>([]);
+  const stopRef = useRef(false);
 
   const drainQueue = () => {
     while (activeCountRef.current < MAX_CONCURRENT && waitingFilesRef.current.length > 0) {
+      if (stopRef.current) {
+        // Mark remaining waiting items as stopped
+        setQueue(prev => prev.map(it => it.status === "pending" ? { ...it, status: "error", msg: "Stopped", error: "Stopped by user" } : it));
+        waitingFilesRef.current = [];
+        break;
+      }
       const next = waitingFilesRef.current.shift()!;
       activeCountRef.current++;
       processFile(next.file, next.itemId).finally(() => {
@@ -109,7 +116,14 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   };
 
+  const stopAll = () => {
+    stopRef.current = true;
+    waitingFilesRef.current = [];
+    setQueue(prev => prev.map(it => it.status === "pending" ? { ...it, status: "error", msg: "Stopped", error: "Stopped by user" } : it));
+  };
+
   const enqueueFile = (file: File) => {
+    stopRef.current = false;
     const itemId = uid();
     setQueue(q => [...q, { id: itemId, name: file.name, file, status: "pending", msg: "Queued…", progress: 0 }]);
     waitingFilesRef.current.push({ file, itemId });
@@ -282,6 +296,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                 </span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
+                {working > 0 && (
+                  <button onClick={stopAll}
+                    style={{ background: "#dc2626", border: "none", color: "#fff", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+                    Stop
+                  </button>
+                )}
                 {failed > 0 && working === 0 && (
                   <button onClick={retryFailed}
                     style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
