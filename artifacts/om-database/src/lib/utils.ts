@@ -107,7 +107,32 @@ export function buildSystemPrompt(deals: Deal[]): string {
   const active = deals.filter(d => !d.trashedAt);
   const statuses = ["Prospect","Under Contract","Owned","Sold","Passed"];
   const bySt = Object.fromEntries(statuses.map(s => [s, active.filter(d => d.status === s).length]));
-  const portfolio = active.map(d => ({ id:d.id, name:d.propertyName||d.fileName, market:d.market, assetType:d.assetType, status:d.status, totalSF:d.totalSF, noi:d.noi, capRate:d.capRate, askingPrice:d.askingPrice, occupancy:d.occupancy, walt:d.walt }));
+  const portfolio = active.map(d => {
+    const isPassed = d.status === "Passed";
+    const tenantList = (d.tenants || []);
+    // Active deals: full roster. Passed deals: anchor-only compact summary to save tokens.
+    const tenants = isPassed
+      ? tenantList
+          .filter(t => t.isAnchor || (t.sf && Number(t.sf) >= 5000))
+          .map(t => ({ name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry }))
+      : tenantList.map(t => ({
+          name: t.name,
+          sf: t.sf,
+          rentPSF: t.rentPerSF,
+          annualRent: t.annualRent,
+          expiry: t.leaseExpiry,
+          salesPSF: t.salesPSF ?? undefined,
+          anchor: t.isAnchor || undefined,
+          reimb: t.reimbursementMethod ?? undefined,
+        }));
+    return {
+      id: d.id, name: d.propertyName||d.fileName, market: d.market,
+      assetType: d.assetType, status: d.status, totalSF: d.totalSF,
+      noi: d.noi, capRate: d.capRate, askingPrice: d.askingPrice,
+      occupancy: d.occupancy, walt: d.walt,
+      tenants: tenants.length ? tenants : undefined,
+    };
+  });
   return `You are an expert commercial real estate analyst specializing in retail shopping centers (KPR Centers portfolio).
 
 Portfolio summary: ${active.length} deals — ${statuses.map(s => `${bySt[s]} ${s}`).join(", ")}.
