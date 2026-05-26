@@ -133,10 +133,10 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
       setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "extracting" } : x));
 
       const buf = await file.arrayBuffer();
-      const { text, pages } = await extractPdfText(buf);
-
-      // Start image extraction in background
+      // PDF.js transfers the ArrayBuffer into its worker (detaching the original),
+      // so each consumer must receive its own copy made before any call runs.
       const imgPromise = extractPdfImages(buf.slice(0)).catch(() => null);
+      const { text, pages } = await extractPdfText(buf.slice(0));
 
       // Call AI extraction
       const truncated = text.slice(0, 90000);
