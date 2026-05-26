@@ -34,10 +34,10 @@ function fmtM(n: number): string {
 const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? 0 : Number(v);
 
 // Stat box tile
-function StatBox({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
+function StatBox({ label, value, accent, flexWeight }: { label: string; value: string | number; accent?: string; flexWeight?: number }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", minWidth: 90 }}>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, color: accent || "#26281f", lineHeight: 1.1 }}>
+    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", flex: `${flexWeight ?? 1} 1 0`, minWidth: 80 }}>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(1.3rem, 2.2vw, 2.4rem)", fontWeight: 500, color: accent || "#26281f", lineHeight: 1.1 }}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </div>
       <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" as const, marginTop: 4 }}>{label}</div>
@@ -171,7 +171,7 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
             {active.length > 0 && (
               <>
                 <div style={panelLabel}>Intelligence library — everything read into the system</div>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 4, width: "100%" }}>
                   <StatBox label="OMs Read" value={stats.total || "—"} />
                   <StatBox label="Tenant Brands" value={stats.tenantBrands ? stats.tenantBrands.toLocaleString() : "—"} accent="#0f9d63" />
                   <StatBox label="Leases Analyzed" value={stats.leases ? stats.leases.toLocaleString() : "—"} />
@@ -191,12 +191,12 @@ export default function AnalystChat({ deals, onOpenDeal, initialQuery, onClearQu
                     No owned properties yet — mark a deal as <span style={{ color: "#6dba43", fontWeight: 600 }}>Owned</span> to build your portfolio snapshot here.
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 4, width: "100%" }}>
                     <StatBox label="Properties" value={portfolio.count} accent="#6dba43" />
                     {portfolio.value > 0 && <StatBox label="Portfolio Value" value={fmtM(portfolio.value)} accent="#6dba43" />}
                     {portfolio.sf > 0 && <StatBox label="Square Footage" value={fmtSF(portfolio.sf)} />}
                     {portfolio.anchors.length > 0 && (
-                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", minWidth: 120 }}>
+                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", flex: "3 1 0", minWidth: 160 }}>
                         <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Key Anchors</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                           {portfolio.anchors.slice(0, 5).map(a => (
