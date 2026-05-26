@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Deal } from "../lib/idb";
-import { idbLoadImages } from "../lib/idb";
+import { apiLoadImages } from "../lib/api";
 
 interface Props { deals: Deal[]; onOpen: (id: string) => void; }
 
@@ -12,7 +12,7 @@ export default function PortfolioMontage({ deals, onOpen }: Props) {
   useEffect(() => {
     let alive = true;
     Promise.all(withCover.map(d =>
-      idbLoadImages(d.id).then(r => (r && r.cover) ? { id: d.id, name: d.propertyName || d.fileName || "", market: d.market || undefined, src: r.cover! } : null).catch(() => null)
+      apiLoadImages(d.id).then(r => (r && r.cover) ? { id: d.id, name: d.propertyName || d.fileName || "", market: d.market || undefined, src: r.cover! } : null).catch(() => null)
     )).then(list => { if (alive) setCovers(list.filter(Boolean) as typeof covers); });
     return () => { alive = false; };
   }, [key]);

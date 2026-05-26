@@ -186,13 +186,14 @@ router.post("/ai/messages", async (req, res) => {
 
   const { model, max_tokens, system, messages, tools } = req.body;
 
-  if (!model || !max_tokens || !Array.isArray(messages)) {
-    res.status(400).json({ error: "model, max_tokens, and messages are required" });
+  if (!max_tokens || !Array.isArray(messages)) {
+    res.status(400).json({ error: "max_tokens and messages are required" });
     return;
   }
 
   try {
-    const body: Record<string, unknown> = { model, max_tokens, messages };
+    const resolvedModel = model || "claude-sonnet-4-5";
+    const body: Record<string, unknown> = { model: resolvedModel, max_tokens, messages };
     if (system) body.system = system;
     if (tools) body.tools = tools;
 

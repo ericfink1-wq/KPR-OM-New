@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Deal } from "../lib/idb";
-import { idbLoadImages } from "../lib/idb";
+import { apiLoadImages } from "../lib/api";
 import { STATUS_COLORS } from "../lib/constants";
 import { cityState } from "../lib/utils";
 
@@ -20,11 +20,11 @@ export default function DealTiles({ deals, onOpen }: Props) {
   useEffect(() => {
     let alive = true;
     Promise.all(tiles.map(d =>
-      idbLoadImages(d.id).then(r => ({ id: d.id, src: r && (r.cover || r.coverThumb) })).catch(() => ({ id: d.id, src: null }))
+      apiLoadImages(d.id).then((r: Awaited<ReturnType<typeof apiLoadImages>>) => ({ id: d.id, src: r && (r.cover || r.coverThumb) })).catch(() => ({ id: d.id, src: null }))
     )).then(list => {
       if (alive) {
         const m: Record<string, string> = {};
-        list.forEach(x => { if (x.src) m[x.id] = x.src; });
+        list.forEach((x: { id: string; src: string | null | undefined }) => { if (x.src) m[x.id] = x.src; });
         setCovers(m);
       }
     });

@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
-import { idbLoadDeals, idbSaveDeals, idbDeleteDeal } from "./lib/idb";
+import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout } from "./lib/api";
 import Header from "./components/Header";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import DetailView from "./components/DetailView";
 import AnalystChat from "./components/AnalystChat";
+import Login from "./components/Login";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -14,48 +15,54 @@ const queryClient = new QueryClient({
 
 type TabId = "analyst" | "portfolio";
 type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] };
+type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
+  const [auth, setAuth] = useState<AuthState>("checking");
   const [deals, setDeals] = useState<Deal[]>([]);
   const [tab, setTab] = useState<TabId>("analyst");
   const [view, setView] = useState<View>({ type: "list" });
   const [loaded, setLoaded] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | undefined>();
-  const [uploadKey, setUploadKey] = useState(0);
 
-  // Load all deals from IndexedDB on mount
+  // Check auth status on mount
   useEffect(() => {
-    idbLoadDeals()
-      .then(d => { setDeals(d); setLoaded(true); })
-      .catch(() => setLoaded(true));
+    apiCheckAuth().then(authenticated => {
+      setAuth(authenticated ? "authenticated" : "unauthenticated");
+    });
   }, []);
 
-  // Persist deals whenever they change
-  const saveDeals = useCallback(async (next: Deal[]) => {
-    setDeals(next);
-    await idbSaveDeals(next).catch(() => {});
+  // Load all deals from server once authenticated
+  useEffect(() => {
+    if (auth !== "authenticated") return;
+    apiLoadDeals()
+      .then(d => { setDeals(d); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, [auth]);
+
+  const handleUpdate = useCallback((id: string, patch: Partial<Deal>) => {
+    setDeals(prev => {
+      const next = prev.map(d => d.id === id ? { ...d, ...patch } : d);
+      const updated = next.find(d => d.id === id);
+      if (updated) apiSaveDeal(updated).catch(() => {});
+      return next;
+    });
   }, []);
 
   const handleDealsAdded = useCallback((newDeals: Deal[]) => {
     setDeals(prev => {
       const byId = new Map(prev.map(d => [d.id, d]));
       for (const d of newDeals) byId.set(d.id, d);
-      const next = Array.from(byId.values());
-      idbSaveDeals(next).catch(() => {});
-      return next;
+      return Array.from(byId.values());
     });
   }, []);
 
-  const handleUpdate = useCallback((id: string, patch: Partial<Deal>) => {
-    setDeals(prev => {
-      const next = prev.map(d => d.id === id ? { ...d, ...patch } : d);
-      idbSaveDeals(next).catch(() => {});
-      return next;
-    });
+  const handleDealUpdated = useCallback((updated: Deal) => {
+    setDeals(prev => prev.map(d => d.id === updated.id ? updated : d));
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {
-    await idbDeleteDeal(id).catch(() => {});
+    await apiDeleteDeal(id).catch(() => {});
     setDeals(prev => prev.filter(d => d.id !== id));
     if (view.type === "detail" && view.dealId === id) setView({ type: "list" });
   }, [view]);
@@ -76,10 +83,15 @@ function AppInner() {
     setTab("portfolio");
   }, []);
 
-  const activeDeals = deals.filter(d => !d.trashedAt);
-  const trashedDeals = deals.filter(d => d.trashedAt);
+  const handleLogout = async () => {
+    await apiLogout();
+    setAuth("unauthenticated");
+    setDeals([]);
+    setLoaded(false);
+  };
 
-  if (!loaded) {
+  // Auth checking
+  if (auth === "checking") {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f1ece1" }}>
         <div style={{ textAlign: "center" }}>
@@ -90,11 +102,30 @@ function AppInner() {
     );
   }
 
+  // Not authenticated — show login
+  if (auth === "unauthenticated") {
+    return <Login onLogin={() => { setAuth("authenticated"); }} />;
+  }
+
+  // Authenticated but still loading deals
+  if (!loaded) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f1ece1" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: "#383a37", fontWeight: 400 }}>KPR OM Database</div>
+          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 8 }}>Loading deals…</div>
+        </div>
+      </div>
+    );
+  }
+
+  const activeDeals = deals.filter(d => !d.trashedAt);
+  const trashedDeals = deals.filter(d => d.trashedAt);
   const currentDeal = view.type === "detail" ? deals.find(d => d.id === view.dealId) : null;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f1ece1", display: "flex", flexDirection: "column" }}>
-      <Header tab={tab} onTab={t => { setTab(t as TabId); setView({ type: "list" }); }} deals={deals} queueLen={0} />
+      <Header tab={tab} onTab={t => { setTab(t as TabId); setView({ type: "list" }); }} deals={deals} queueLen={0} onLogout={handleLogout} />
 
       {/* Analyst tab */}
       {tab === "analyst" && (
@@ -111,11 +142,10 @@ function AppInner() {
       {/* Portfolio tab */}
       {tab === "portfolio" && (
         <div style={{ flex: 1, overflowY: "auto" }}>
-          {/* Upload zone always visible at top of portfolio */}
           {view.type === "list" && (
             <UploadQueue
-              key={uploadKey}
               onDealsAdded={handleDealsAdded}
+              onDealUpdated={handleDealUpdated}
               existingDeals={deals}
             />
           )}
@@ -136,7 +166,6 @@ function AppInner() {
                 />
               )}
 
-              {/* Trash section */}
               {trashedDeals.length > 0 && (
                 <div style={{ padding: "0 28px 28px" }}>
                   <div style={{ borderTop: "1px solid #e7e0d2", paddingTop: 18, marginTop: 4 }}>
@@ -192,7 +221,6 @@ function AppInner() {
   );
 }
 
-// Simple side-by-side compare view
 function CompareView({ deals, onBack, onOpen }: { deals: Deal[]; onBack: () => void; onOpen: (id: string) => void }) {
   const cols = [
     ["ASKING PRICE", (d: Deal) => d.askingPrice ? `$${Number(d.askingPrice).toLocaleString()}` : "—"],

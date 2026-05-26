@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Deal } from "../lib/idb";
-import { idbLoadImages } from "../lib/idb";
+import { apiLoadImages, apiSaveDeal } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
 import { classifyLocation, cityState, assessExtraction } from "../lib/utils";
 import StatusTag from "./StatusTag";
@@ -19,7 +19,7 @@ function RowThumb({ deal }: { deal: Deal }) {
   useEffect(() => {
     let alive = true;
     if (deal.imageMeta?.cover) {
-      idbLoadImages(deal.id).then(r => { if (alive) setSrc(r?.coverThumb || r?.cover || null); }).catch(() => {});
+      apiLoadImages(deal.id).then(r => { if (alive) setSrc(r?.coverThumb || r?.cover || null); }).catch(() => {});
     }
     return () => { alive = false; };
   }, [deal.id]);
@@ -30,6 +30,14 @@ function RowThumb({ deal }: { deal: Deal }) {
   );
 }
 
+type GroupAction = "link" | "merge";
+
+interface LinkMergeModal {
+  action: GroupAction;
+  deals: Deal[];
+  keeperId?: string;
+}
+
 export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -38,6 +46,8 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table"|"grid">("table");
+  const [modal, setModal] = useState<LinkMergeModal | null>(null);
+  const [merging, setMerging] = useState(false);
 
   const types = Array.from(new Set(deals.map(d => d.assetType).filter(Boolean))) as string[];
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
@@ -68,6 +78,90 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
   const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
   const toggleSel = (id: string) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  const selectedDeals = rows.filter(d => selected.has(d.id));
+
+  const openModal = (action: GroupAction) => {
+    const sel = deals.filter(d => selected.has(d.id));
+    setModal({ action, deals: sel, keeperId: sel[0]?.id });
+  };
+
+  const commitLink = async () => {
+    if (!modal) return;
+    const groupId = modal.deals[0].propertyGroupId || (`grp_${Date.now()}`);
+    for (const d of modal.deals) {
+      onUpdate(d.id, { propertyGroupId: groupId });
+    }
+    setModal(null);
+    setSelected(new Set());
+  };
+
+  const commitMerge = async () => {
+    if (!modal || !modal.keeperId) return;
+    setMerging(true);
+    const keeper = modal.deals.find(d => d.id === modal.keeperId)!;
+    const others = modal.deals.filter(d => d.id !== modal.keeperId);
+
+    // User-entered fields to absorb from others into keeper (prefer non-empty, non-null over keeper's empty)
+    const absorbableFields: (keyof Deal)[] = [
+      "userNotes","status","txnPurchasePrice","txnSeller","txnLoiDate","txnCloseDate",
+      "txnSalePrice","txnBuyer","txnSaleDate","txnBroker",
+      "acqCapRate","acqNOIAtClose","acqEntity","acqBroker","acqContractDate","acqDDExpiration",
+      "acqDeposit","acqClosingCosts","acqFee","acqTitleCo","acqCounsel","acqPropManager",
+      "acqStrategy","acqHoldPeriod","acqTargetIRR","acqNotes",
+      "debtLender","debtType","debtLoanAmount","debtRate","debtMaturityDate","debtNotes",
+      "marketSale","marketDemographics",
+    ];
+
+    const merged: Partial<Deal> = {};
+    for (const f of absorbableFields) {
+      const keeperVal = keeper[f];
+      if (keeperVal == null || keeperVal === "") {
+        for (const o of others) {
+          const v = o[f];
+          if (v != null && v !== "") {
+            (merged as Record<string, unknown>)[f] = v;
+            break;
+          }
+        }
+      }
+    }
+
+    // Merge verified fields
+    const mergedVerified = { ...(keeper.verified || {}) };
+    for (const o of others) {
+      for (const [k, v] of Object.entries(o.verified || {})) {
+        if (!mergedVerified[k]) mergedVerified[k] = v;
+      }
+    }
+    merged.verified = mergedVerified;
+
+    // Absorb missing images meta
+    if (!keeper.imageMeta?.cover) {
+      for (const o of others) {
+        if (o.imageMeta?.cover) { merged.imageMeta = o.imageMeta; break; }
+      }
+    }
+
+    // Absorb user notes by concatenating if both non-empty
+    const otherNotes = others.map(o => o.userNotes).filter(Boolean).join("\n---\n");
+    if (otherNotes && !keeper.userNotes) merged.userNotes = otherNotes;
+    else if (otherNotes && keeper.userNotes) merged.userNotes = keeper.userNotes + "\n---\n" + otherNotes;
+
+    // Save keeper with merged data
+    const updatedKeeper: Deal = { ...keeper, ...merged };
+    await apiSaveDeal(updatedKeeper).catch(() => {});
+    onUpdate(keeper.id, merged);
+
+    // Trash the others
+    for (const o of others) {
+      onUpdate(o.id, { trashedAt: new Date().toISOString() });
+    }
+
+    setMerging(false);
+    setModal(null);
+    setSelected(new Set());
+  };
+
   const cols: [string, string, boolean][] = [
     ["propertyName","Property",false],["status","Status",false],["assetType","Type",false],
     ["market","Market",false],["totalSF","SF",true],["occupancy","Occ%",true],
@@ -76,6 +170,64 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
 
   return (
     <div style={{ padding: "0 28px 28px" }}>
+      {/* Link/Merge Modal */}
+      {modal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "32px 36px", maxWidth: 480, width: "90%", boxShadow: "0 8px 40px rgba(0,0,0,0.15)", fontFamily: "'Inter', sans-serif" }}>
+            {modal.action === "link" ? (
+              <>
+                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 500, color: "#26281f", marginBottom: 6 }}>Link as same property</div>
+                <div style={{ fontSize: 12, color: "#7d766a", marginBottom: 16, lineHeight: 1.6 }}>
+                  Links these {modal.deals.length} deals as different years of the same property. <strong>Every OM is kept intact</strong> — nothing is deleted or merged. They'll appear together in Version History.
+                </div>
+                <div style={{ background: "#f1ece1", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
+                  {modal.deals.map(d => (
+                    <div key={d.id} style={{ fontSize: 12, color: "#383a37", padding: "3px 0" }}>
+                      {d.propertyName || d.fileName || "Untitled"} {d.omDate ? `(${d.omDate.slice(0,4)})` : d.uploadedAt ? `(${new Date(d.uploadedAt).getFullYear()})` : ""}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                  <button onClick={() => setModal(null)} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                  <button onClick={commitLink} style={{ background: "#26281f", color: "#f1ece1", border: "none", padding: "8px 20px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Link deals</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 500, color: "#26281f", marginBottom: 6 }}>Merge duplicates</div>
+                <div style={{ fontSize: 12, color: "#7d766a", marginBottom: 4, lineHeight: 1.6 }}>
+                  <strong>Warning:</strong> Merge is for the <em>same OM uploaded more than once</em>. The non-keeper copies will be moved to Trash (reversible). Pick which deal is the "keeper":
+                </div>
+                <div style={{ background: "#fff8e6", border: "1px solid #d9890c40", borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 11, color: "#a06208" }}>
+                  Use "Link" instead if these are different years of the same property — Merge is only for true duplicates of the same OM.
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  {modal.deals.map(d => (
+                    <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: modal.keeperId === d.id ? "#6dba4312" : "transparent", border: modal.keeperId === d.id ? "1.5px solid #6dba43" : "1.5px solid transparent", marginBottom: 4, cursor: "pointer" }}>
+                      <input type="radio" name="keeper" checked={modal.keeperId === d.id} onChange={() => setModal(m => m ? { ...m, keeperId: d.id } : m)} />
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#26281f" }}>{d.propertyName || d.fileName || "Untitled"}</div>
+                        <div style={{ fontSize: 10, color: "#a89f8f" }}>{d.status} · uploaded {d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : "unknown"}</div>
+                      </div>
+                      {modal.keeperId === d.id && <span style={{ marginLeft: "auto", fontSize: 10, color: "#6dba43", fontWeight: 700 }}>KEEPER</span>}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 16 }}>
+                  Human-entered data from the other copies will be absorbed into the keeper (notes, status, transaction details, images). The copies move to Trash.
+                </div>
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                  <button onClick={() => setModal(null)} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                  <button onClick={commitMerge} disabled={merging} style={{ background: "#dc2626", color: "#fff", border: "none", padding: "8px 20px", borderRadius: 8, cursor: merging ? "wait" : "pointer", fontSize: 12, fontWeight: 600, opacity: merging ? 0.7 : 1 }}>
+                    {merging ? "Merging…" : `Merge (trash ${modal.deals.length - 1} cop${modal.deals.length - 1 === 1 ? "y" : "ies"})`}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search deals…"
@@ -94,10 +246,20 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
         )}
         <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
         {selected.size >= 2 && (
-          <button onClick={() => onCompare(Array.from(selected))}
-            style={{ background: "#383a37", border: "none", color: "#fff", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-            Compare {selected.size}
-          </button>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => onCompare(Array.from(selected))}
+              style={{ background: "#383a37", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+              Compare {selected.size}
+            </button>
+            <button onClick={() => openModal("link")}
+              style={{ background: "#0f9d63", border: "none", color: "#fff", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+              Link
+            </button>
+            <button onClick={() => openModal("merge")}
+              style={{ background: "#fff", border: "1px solid #dc2626", color: "#dc2626", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+              Merge
+            </button>
+          </div>
         )}
         <button onClick={() => setViewMode(v => v === "table" ? "grid" : "table")}
           style={{ background: "transparent", border: "1px solid #e3dccd", color: "#a89f8f", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11 }}>
@@ -130,7 +292,6 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare }: Props) 
               </thead>
               <tbody>
                 {rows.map((d, i) => {
-                  const sc = STATUS_COLORS[d.status || ""] || "#a69e91";
                   const { quality } = assessExtraction(d);
                   return (
                     <tr key={d.id}

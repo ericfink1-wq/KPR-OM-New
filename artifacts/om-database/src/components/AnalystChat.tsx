@@ -3,7 +3,7 @@ import type { Deal } from "../lib/idb";
 import { buildSystemPrompt, cityState } from "../lib/utils";
 import { SUGGESTED } from "../lib/constants";
 import { STATUS_COLORS } from "../lib/constants";
-import { idbLoadImages } from "../lib/idb";
+import { apiLoadImages } from "../lib/api";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
 import PortfolioMontage from "./PortfolioMontage";

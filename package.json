@@ -12,5 +12,9 @@
   "devDependencies": {
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "connect-pg-simple": "^10.0.0",
+    "express-session": "^1.19.0"
   }
 }

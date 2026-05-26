@@ -6,9 +6,10 @@ interface Props {
   onTab: (t: string) => void;
   deals: Deal[];
   queueLen: number;
+  onLogout?: () => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout }: Props) {
   const active = deals.filter(d => !d.trashedAt);
   const stats = [
     { label: "DEALS", val: active.length, color: "#383a37" },
@@ -65,7 +66,7 @@ export default function Header({ tab, onTab, deals, queueLen }: Props) {
           </button>
         ))}
       </div>
-      {/* Stats */}
+      {/* Stats + logout */}
       <div style={{ display: "flex", gap: 18, alignItems: "center" }} className="hdr-stats">
         {stats.map(s => (
           <div key={s.label} style={{ textAlign: "right" }}>
@@ -73,6 +74,12 @@ export default function Header({ tab, onTab, deals, queueLen }: Props) {
             <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#b3aa9b", fontWeight: 600, textTransform: "uppercase" }}>{s.label}</div>
           </div>
         ))}
+        {onLogout && (
+          <button onClick={onLogout}
+            style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10, fontFamily: "'Inter',sans-serif", letterSpacing: "0.04em", marginLeft: 4 }}>
+            Sign out
+          </button>
+        )}
       </div>
     </div>
   );

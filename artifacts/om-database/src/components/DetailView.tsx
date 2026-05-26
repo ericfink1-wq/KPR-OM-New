@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { idbLoadImages, idbSaveImages } from "../lib/idb";
+import { apiLoadImages, apiSaveImages } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency } from "../lib/utils";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
 import StatusTag from "./StatusTag";
@@ -103,7 +103,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     let alive = true;
     setImgs(null);
     if (d.imageMeta && (d.imageMeta.cover || d.imageMeta.sitePlan)) {
-      idbLoadImages(d.id).then(res => { if (alive) setImgs(res); }).catch(() => {});
+      apiLoadImages(d.id).then(res => { if (alive) setImgs(res); }).catch(() => {});
     }
     return () => { alive = false; };
   }, [d.id]);
@@ -172,9 +172,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       const pdf = await lib.getDocument({ data: buf }).promise;
       if (page > pdf.numPages) { alert(`PDF has only ${pdf.numPages} pages.`); return; }
       const res = await _capturePagePhoto(pdf, page, lib, sitePlanHalf);
-      const current = (await idbLoadImages(d.id)) || {};
+      const current = (await apiLoadImages(d.id)) || {};
       const next = { ...current, sitePlan: res.cover ? [res.cover] : [], pagePicks: [], needsSitePlanPick: false };
-      await idbSaveImages(d.id, next);
+      await apiSaveImages(d.id, next);
       setImgs(next);
       onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: res.cover ? 1 : 0, needsSitePlanPick: false } });
       setFixPage("");
@@ -194,9 +194,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       const pdf = await lib.getDocument({ data: buf }).promise;
       if (page > pdf.numPages) { alert(`PDF has only ${pdf.numPages} pages.`); return; }
       const res = await _capturePagePhoto(pdf, page, lib, coverHalf);
-      const current = (await idbLoadImages(d.id)) || {};
+      const current = (await apiLoadImages(d.id)) || {};
       const next = { ...current, cover: res.cover || null, coverThumb: res.thumb || null };
-      await idbSaveImages(d.id, next);
+      await apiSaveImages(d.id, next);
       setImgs(next);
       onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: !!res.cover } });
       setCoverFixPage("");
@@ -210,7 +210,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     if (!pick) return;
     const next = { ...imgs, sitePlan: [pick.img], pagePicks: [], needsSitePlanPick: false };
     setImgs(next);
-    await idbSaveImages(d.id, next);
+    await apiSaveImages(d.id, next);
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: 1, needsSitePlanPick: false } });
   };
 
