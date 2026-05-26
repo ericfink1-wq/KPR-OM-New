@@ -184,6 +184,41 @@ export function cityState(d: Deal): string {
   return d.market || "";
 }
 
+// Robust AI-response JSON parser — strips markdown fences, trailing commas, and
+// recovers gracefully from truncated output (the same strategy used server-side
+// in extract.ts). Use this whenever parsing a raw AI text response.
+export function robustParseJSON(raw: string): unknown {
+  if (!raw?.trim()) throw new Error("Empty response");
+  let s = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  try { return JSON.parse(s); } catch {}
+  try { return JSON.parse(s.replace(/,(\s*[}\]])/g, "$1")); } catch {}
+  const first = s.indexOf("{");
+  const last = s.lastIndexOf("}");
+  if (first !== -1 && last !== -1 && last > first) {
+    try { return JSON.parse(s.slice(first, last + 1)); } catch {}
+  }
+  if (first !== -1) {
+    try { return _repairTruncatedJSON(s.slice(first)); } catch {}
+  }
+  throw new Error("All parse strategies failed");
+}
+function _repairTruncatedJSON(s: string): unknown {
+  let inStr = false, esc = false;
+  const stack: string[] = [];
+  let safeLen = -1, safeClosers = "";
+  const closersFor = () => stack.map(b => b === "{" ? "}" : "]").reverse().join("");
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (esc) esc = false; else if (c === "\\") esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === "{" || c === "[") stack.push(c);
+    else if (c === "}" || c === "]") { stack.pop(); safeLen = i + 1; safeClosers = closersFor(); }
+    else if (c === ",") { safeLen = i; safeClosers = closersFor(); }
+  }
+  if (safeLen <= 0) throw new Error("Could not repair truncated JSON");
+  return JSON.parse(s.slice(0, safeLen).replace(/,\s*$/, "") + safeClosers);
+}
+
 export function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }

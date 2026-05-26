@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON } from "../lib/utils";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
@@ -187,13 +187,12 @@ ${text.slice(0, 60000)}`;
 
       const res = await apiAiMessages({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 8000,
+        max_tokens: 32000,
         messages: [{ role: "user", content: prompt }],
       });
       const raw = res.content.find(c => c.type === "text")?.text ?? "";
-      const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
       let parsed: { asOf?: string | null; tenants?: unknown[] };
-      try { parsed = JSON.parse(jsonStr); } catch { throw new Error("AI returned non-JSON. Try again."); }
+      try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't parse the AI response — try again."); }
 
       const newTenants = Array.isArray(parsed.tenants) ? parsed.tenants as Deal["tenants"] : [];
       if (!newTenants || newTenants.length === 0) throw new Error("No tenants found in the rent roll. Check the PDF.");
@@ -1000,18 +999,25 @@ ${text.slice(0, 60000)}`;
 
       {/* Rent roll importer */}
       {(d.tenants||[]).length > 0 && (
-        <div style={{ background:"#f0fdfa", border:"1px solid #99f6e4", borderRadius:10, padding:"11px 16px", marginBottom:10, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-          <span style={{ fontSize:11, color:"#0d7a70", fontWeight:500, flexGrow:1 }}>
-            {d.tenantsSource === "rent-roll" && d.tenantsAsOf
-              ? `Tenants last refreshed from rent roll — ${d.tenantsAsOf}`
-              : "Have a current rent roll? Refresh tenants from it."}
-          </span>
-          {rrError && <span style={{ fontSize:11, color:"#dc2626", maxWidth:320 }}>{rrError}</span>}
-          <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
-            style={{ background:"#0d9488", border:"none", color:"#fff", padding:"6px 14px", borderRadius:7, cursor: rrBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", opacity: rrBusy ? 0.65 : 1, whiteSpace:"nowrap" }}>
-            {rrBusy ? "Extracting…" : "↑ Update from rent roll PDF…"}
-          </button>
-          <input ref={rrPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRentRoll}/>
+        <div style={{ marginBottom:12, background:"#f3f7ee", border:"1px dashed #b8d49a", borderRadius:10, padding:"10px 14px" }}>
+          <style>{`@keyframes rrIndeterminate{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}`}</style>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            <input ref={rrPdfRef} type="file" accept="application/pdf" style={{ display:"none" }} onChange={handleRentRoll}/>
+            <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
+              style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"8px 14px", borderRadius:8, cursor: rrBusy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+              {rrBusy ? "Refreshing…" : "⬆ Refresh tenants from a current rent roll (PDF)"}
+            </button>
+            <span style={{ fontSize:12, color: rrError ? "#dc2626" : (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? "#3f7a1f" : "#6f6a5f") }}>
+              {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf
+                ? `✓ Last refreshed from rent roll — ${d.tenantsAsOf}`
+                : "Replaces the roster with the current rent roll and stamps its date.")}
+            </span>
+          </div>
+          {rrBusy && (
+            <div style={{ marginTop:9, height:5, borderRadius:3, background:"#dfe7d2", overflow:"hidden" }}>
+              <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#6dba43", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
+            </div>
+          )}
         </div>
       )}
 
