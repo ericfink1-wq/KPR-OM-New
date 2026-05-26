@@ -188,6 +188,18 @@ COLUMN MAPPING RULES (apply to Yardi/MRI and similar property-management exports
 - leaseExpiry → "Term Exp. Date" or "Expiration Date" (not option expiry).
 - reimbursementMethod → infer from expense columns: if CAM, tax, and insurance are billed separately to the tenant → "NNN"; if the tenant pays a fixed lump or nothing for expenses → "Gross" or "Modified Gross". Use the actual column label when present.
 
+RENT STEPS (rentBumps field):
+- The "Annual Rent Increase" (or "Rent Steps" / "Scheduled Increases") block lists each future in-term step as one row with columns: [ Effective Date | New Annual Rent | Incr/SF (or $/SF) ].
+- Read ACROSS each row — every date MUST be paired with the Incr/SF dollar amount from that same row. Never emit a date without its amount.
+- Format as a semicolon-separated list of per-SF rate + month-year: "$19.06 Jan-28; $19.63 Jan-29; $20.22 Jan-30"
+- Use the per-SF value (Incr/SF column). If only an annual total is given, divide by the tenant's SF and round to 2 decimal places.
+- If there are no in-term scheduled steps, set rentBumps to null. Never output a bare date with no dollar amount.
+
+RENEWAL OPTIONS (renewalOptions field):
+- Capture option counts, term lengths, and option-period rents ONLY in renewalOptions (e.g. "2 × 5yr @ $21.50/SF").
+- NEVER copy renewal-option dates or option rents into rentBumps.
+- Option rents are NOT current rents — never use them for rentPerSF or annualRent.
+
 TENANT NAME RULES:
 - Take only the primary trade name from the first line of the tenant cell.
 - Strip any parenthetical echo that repeats the name (e.g. "Tenant Name (Tenant Name)").
