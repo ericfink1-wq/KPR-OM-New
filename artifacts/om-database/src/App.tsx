@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout } from "./lib/api";
 import { PROSPECT_STALE_DAYS } from "./lib/constants";
+import { ensureUploadAllowed } from "./lib/uploadAuth";
 import Header from "./components/Header";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
@@ -118,6 +119,7 @@ function AppInner() {
   };
 
   const handleFiles = useCallback((fl: FileList) => {
+    if (!ensureUploadAllowed()) return;
     const pdfs = Array.from(fl).filter(f => f.name.toLowerCase().endsWith(".pdf"));
     if (pdfs.length) setPendingFiles(pdfs);
   }, []);

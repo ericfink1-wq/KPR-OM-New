@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON } from "../lib/utils";
+import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
@@ -132,6 +133,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const coverPdfRef = useRef<HTMLInputElement>(null);
   const coverPhotoRef = useRef<HTMLInputElement>(null);
   const sitePlanImgRef = useRef<HTMLInputElement>(null);
+  const [pastePanelOpen, setPastePanelOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteError, setPasteError] = useState<string | null>(null);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
 
   useEffect(() => {
@@ -157,6 +161,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (!ensureUploadAllowed()) return;
     setRrBusy(true);
     setRrError(null);
     try {
@@ -274,6 +279,7 @@ ${text.slice(0, 60000)}`;
   };
 
   const handleReanalyze = async () => {
+    if (!ensureUploadAllowed()) return;
     setAnalyzeOpen(false);
     setReanalyzeBusy(true);
     try { await apiReanalyzeDeal(d.id); await pollUntilDone(d.id); } catch {}
@@ -284,6 +290,7 @@ ${text.slice(0, 60000)}`;
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (!ensureUploadAllowed()) return;
     setReanalyzeBusy(true);
     try {
       const { text, pages } = await extractPdfText(await file.arrayBuffer());
@@ -294,6 +301,7 @@ ${text.slice(0, 60000)}`;
   };
 
   const onLookupSale = async (id: string) => {
+    if (!ensureUploadAllowed()) return;
     setSaleBusy(true);
     try {
       const resp = await sendMessage({ data: {
@@ -316,6 +324,7 @@ ${text.slice(0, 60000)}`;
   };
 
   const onGetDemo = async (id: string) => {
+    if (!ensureUploadAllowed()) return;
     setDemoBusy(true);
     try {
       const resp = await sendMessage({ data: {
@@ -442,6 +451,42 @@ ${text.slice(0, 60000)}`;
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: urls.length, needsSitePlanPick: false } });
   };
 
+  const applyParsed = (parsed: { asOf?: string | null; tenants?: unknown[] }) => {
+    const newTenants = Array.isArray(parsed.tenants) ? parsed.tenants as Deal["tenants"] : [];
+    if (!newTenants || newTenants.length === 0) { setPasteError("No tenants found — check the pasted text."); return; }
+    const asOf = parsed.asOf || new Date().toISOString().slice(0, 10);
+    const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+    const recomputed: Partial<Deal> = {};
+    if (!d.verified?.occupancy && d.totalSF) {
+      const occupiedSF = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
+      const occ = Math.round(occupiedSF / Number(d.totalSF) * 1000) / 10;
+      if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
+    }
+    if (!d.verified?.walt) {
+      const sfT = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
+      const wT = newTenants.reduce((s, t) => {
+        const sf = nv((t as Record<string,unknown>).sf), yr = nv((t as Record<string,unknown>).remainingTermYears);
+        return s + (sf ?? 0) * (yr ?? 0);
+      }, 0);
+      if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
+    }
+    onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", ...recomputed });
+    setPastePanelOpen(false);
+    setPasteText("");
+    setPasteError(null);
+  };
+
+  const applyPaste = () => {
+    setPasteError(null);
+    try {
+      const parsed = robustParseJSON(pasteText) as { asOf?: string | null; tenants?: unknown[] };
+      if (!parsed || typeof parsed !== "object") throw new Error("Not valid JSON.");
+      applyParsed(parsed);
+    } catch (err: unknown) {
+      setPasteError(err instanceof Error ? err.message : "Couldn't parse — paste the raw JSON from Claude.");
+    }
+  };
+
   const HalfToggle = ({ val, set }: { val: string; set: (v: "full"|"left"|"right") => void }) => (
     <div style={{ display:"flex", gap:4 }}>
       {(["full","left","right"] as const).map(v => (
@@ -531,6 +576,25 @@ ${text.slice(0, 60000)}`;
         </div>
       </div>
 
+      {/* Badges row */}
+      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:6 }}>
+        <span style={{ background:"#e7e0d2", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#7d766a" }}>{d.assetType||"?"}</span>
+        {d.centerType && <span style={{ background:"#6dba4322", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#2f5e1c", fontWeight:600 }}>{d.centerType}</span>}
+        {loc.urbanicity && <span style={{ background:"#383a3712", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#383a37", fontWeight:600 }}>{loc.urbanicity}</span>}
+        {loc.density && <span style={{ background:`${loc.density.color}1a`, padding:"2px 8px", borderRadius:3, fontSize:9, color:loc.density.color, fontWeight:600 }}>{loc.density.tier}</span>}
+        {loc.income && <span style={{ background:`${loc.income.color}1a`, padding:"2px 8px", borderRadius:3, fontSize:9, color:loc.income.color, fontWeight:600 }}>{loc.income.tier}</span>}
+        <RecencyBadge deal={d}/>
+        <ScoreBadge score={d.dealScore} size={12}/>
+        <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
+        {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
+        {d.omDate && <span style={{ fontSize:9, color:"#958d80" }}>OM: {d.omDate}</span>}
+        {d.pdfPages && <span style={{ fontSize:9, color:"#958d80" }}>{d.pdfPages}pp</span>}
+        {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
+      </div>
+
+      <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:"0 0 4px 0", letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
+      <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{d.address}</p>
+
       {/* Cover hero */}
       {imgs?.cover && (
         <div onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge"
@@ -579,25 +643,6 @@ ${text.slice(0, 60000)}`;
           <button onClick={() => setLightbox(null)} style={{ position:"fixed", top:20, right:24, background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:18 }}>✕</button>
         </div>
       )}
-
-      {/* Badges row */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:6 }}>
-        <span style={{ background:"#e7e0d2", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#7d766a" }}>{d.assetType||"?"}</span>
-        {d.centerType && <span style={{ background:"#6dba4322", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#2f5e1c", fontWeight:600 }}>{d.centerType}</span>}
-        {loc.urbanicity && <span style={{ background:"#383a3712", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#383a37", fontWeight:600 }}>{loc.urbanicity}</span>}
-        {loc.density && <span style={{ background:`${loc.density.color}1a`, padding:"2px 8px", borderRadius:3, fontSize:9, color:loc.density.color, fontWeight:600 }}>{loc.density.tier}</span>}
-        {loc.income && <span style={{ background:`${loc.income.color}1a`, padding:"2px 8px", borderRadius:3, fontSize:9, color:loc.income.color, fontWeight:600 }}>{loc.income.tier}</span>}
-        <RecencyBadge deal={d}/>
-        <ScoreBadge score={d.dealScore} size={12}/>
-        <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
-        {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
-        {d.omDate && <span style={{ fontSize:9, color:"#958d80" }}>OM: {d.omDate}</span>}
-        {d.pdfPages && <span style={{ fontSize:9, color:"#958d80" }}>{d.pdfPages}pp</span>}
-        {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
-      </div>
-
-      <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:"0 0 4px 0", letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
-      <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 18px 0" }}>{d.address}</p>
 
       <ExtractionQuality deal={d}/>
       <DataIntegrity deal={d}/>
@@ -771,6 +816,32 @@ ${text.slice(0, 60000)}`;
               <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#6dba43", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
             </div>
           )}
+          <div style={{ marginTop:10, borderTop:"1px solid #d2e5ba", paddingTop:10 }}>
+            <button onClick={() => { setPastePanelOpen(o => !o); setPasteError(null); }}
+              style={{ background:"transparent", border:"none", color:"#4d8a2a", fontSize:11.5, fontWeight:600, cursor:"pointer", padding:0, fontFamily:"'Inter',sans-serif" }}>
+              {pastePanelOpen ? "Close paste box" : "⌘ Paste roster from Claude (no API)"}
+            </button>
+            {pastePanelOpen && (
+              <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:7 }}>
+                <textarea
+                  value={pasteText} onChange={e => setPasteText(e.target.value)}
+                  placeholder='Paste the JSON Claude returned — {"asOf":"…","tenants":[…]}'
+                  style={{ width:"100%", minHeight:90, fontSize:11, padding:"8px 10px", border:"1px solid #b8d49a", borderRadius:7, fontFamily:"monospace", resize:"vertical", color:"#383a37", boxSizing:"border-box" }}
+                />
+                {pasteError && <div style={{ fontSize:11, color:"#dc2626" }}>{pasteError}</div>}
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={applyPaste} disabled={!pasteText.trim()}
+                    style={{ background: pasteText.trim() ? "#6dba43" : "#ccc", border:"none", color:"#fff", padding:"7px 16px", borderRadius:7, cursor: pasteText.trim() ? "pointer" : "default", fontSize:12, fontWeight:700, fontFamily:"'Inter',sans-serif" }}>
+                    Apply
+                  </button>
+                  <button onClick={() => { setPastePanelOpen(false); setPasteText(""); setPasteError(null); }}
+                    style={{ background:"transparent", border:"1px solid #b8d49a", color:"#6f6a5f", padding:"7px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1431,6 +1502,7 @@ function PropertyChat({ deal }: { deal: Deal }) {
 
   const ask = async (text: string) => {
     if (!text.trim() || thinking) return;
+    if (!ensureUploadAllowed()) return;
     const next = [...msgs, { role: "user" as const, content: text }];
     setMsgs(next); setInput(""); setThinking(true);
     try {

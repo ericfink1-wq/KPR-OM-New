@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
+import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { classifyLocation, cityState, assessExtraction } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
@@ -412,6 +413,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
     const files = Array.from(e.target.files || []).filter(f => f.name.toLowerCase().endsWith(".pdf"));
     e.target.value = "";
     if (!files.length) return;
+    if (!ensureUploadAllowed()) return;
     clearSelection();
     if (onAddFiles) onAddFiles(files);
   };
@@ -456,6 +458,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
   const runSaleLookup = async (idsIterable: Iterable<string>) => {
     const ids = Array.from(idsIterable);
     if (!ids.length) return;
+    if (!ensureUploadAllowed()) return;
     if (ids.length >= 2 && !(await confirmTokens(`search the web for sales on ${ids.length} deals`, ids.length, true))) return;
     clearSelection();
     setLookingUp(prev => new Set([...prev, ...ids]));
@@ -502,6 +505,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
   const runDemographicsLookup = async (idsIterable: Iterable<string>) => {
     const ids = Array.from(idsIterable);
     if (!ids.length) return;
+    if (!ensureUploadAllowed()) return;
     if (ids.length >= 2 && !(await confirmTokens(`pull web demographics for ${ids.length} deals`, ids.length, true))) return;
     clearSelection();
     setGettingDemo(prev => new Set([...prev, ...ids]));
