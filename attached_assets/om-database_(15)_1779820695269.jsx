@@ -111,7 +111,7 @@ const PROSPECT_STALE_DAYS = 61; // ~2 months
 // IMPORTANT: keep this DIFFERENT from the site login password. To change it, edit
 // the value on the next line and re-sync. (Front-end deterrent, not hard security —
 // the real backstop is the API spend cap in your Anthropic Console.)
-const UPLOAD_PASSWORD = "kpr-upload";   // <-- set your upload password here
+const UPLOAD_PASSWORD = "omkey";   // <-- set your upload password here
 function uploadsUnlocked() {
   try { return sessionStorage.getItem("kpr_upload_unlocked") === "1"; } catch { return false; }
 }

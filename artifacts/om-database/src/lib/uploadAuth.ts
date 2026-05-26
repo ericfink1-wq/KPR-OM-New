@@ -1,4 +1,4 @@
-const UPLOAD_PASSWORD = "kpr-upload";
+const UPLOAD_PASSWORD = "omkey";
 
 export function uploadsUnlocked(): boolean {
   try { return sessionStorage.getItem("kpr_upload_unlocked") === "1"; } catch { return false; }
