@@ -111,7 +111,7 @@ REQUIRED SCHEMA:
   "extraFields": {"any_other_notable_metric": "value"}
 }
 
-PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned.
+PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
@@ -190,6 +190,49 @@ function repairTruncatedJSON(s: string): unknown {
   return JSON.parse(repaired);
 }
 
+// Strip trailing phase/building identifiers like "(West)", "(Phase 2)", "(Bldg A)"
+// so duplicate phase entries collapse to the same base name.
+const PHASE_SUFFIX = /\s*\(\s*(west|east|north|south|phase\s*\w+|bldg\s*\w+|building\s*\w+|pad\s*\w+|site\s*\w+|unit\s*\w+|suite\s*\w+|section\s*\w+|wing\s*\w+|\w+\s+phase\s*\w*)\s*\)\s*$/i;
+
+function normTenantName(name: string): string {
+  return name.replace(PHASE_SUFFIX, "").trim().toLowerCase();
+}
+
+function mergePhaseDuplicates(tenants: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  if (!tenants || tenants.length === 0) return tenants;
+  const groups = new Map<string, Array<Record<string, unknown>>>();
+  for (const t of tenants) {
+    const name = typeof t.name === "string" ? t.name : "";
+    const key = normTenantName(name);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(t);
+  }
+  const merged: Array<Record<string, unknown>> = [];
+  for (const group of groups.values()) {
+    if (group.length === 1) { merged.push(group[0]); continue; }
+    // Pick the entry with the canonical (un-suffixed) name if one exists, else the first
+    const base = group.find(t => !PHASE_SUFFIX.test(String(t.name || ""))) || group[0];
+    const result: Record<string, unknown> = { ...base };
+    // Strip any lingering phase suffix from the chosen name
+    if (typeof result.name === "string") result.name = result.name.replace(PHASE_SUFFIX, "").trim();
+    // Sum numeric fields across all phases; fill nulls from other entries
+    const numSum = (field: string) => {
+      const vals = group.map(t => { const v = t[field]; return v != null && !isNaN(Number(v)) ? Number(v) : null; }).filter((v): v is number => v !== null);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
+    };
+    const sumSF = numSum("sf"); if (sumSF != null) result.sf = sumSF;
+    const sumRent = numSum("annualRent"); if (sumRent != null) result.annualRent = sumRent;
+    // For any field that's null in the base, fill from other entries
+    for (const t of group) {
+      for (const k of Object.keys(t)) {
+        if (result[k] == null && t[k] != null) result[k] = t[k];
+      }
+    }
+    merged.push(result);
+  }
+  return merged;
+}
+
 // Full OM extraction — retries truncated tenant lists automatically
 export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean }> {
   const truncatedText = text.length > 180000
@@ -243,6 +286,8 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       break;
     }
   }
+
+  extracted.tenants = mergePhaseDuplicates(extracted.tenants as Array<Record<string, unknown>>);
 
   return { data: extracted, tenantsComplete: stopReason !== "max_tokens" };
 }
