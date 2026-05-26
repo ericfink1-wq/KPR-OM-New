@@ -13,11 +13,16 @@ function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], nex
   next();
 }
 
-// GET /api/deals — list all deals
+// GET /api/deals — list all deals (excludes in-progress ingests)
 router.get("/deals", requireAuth, async (req, res) => {
   try {
     const rows = await db.select().from(dealsTable).orderBy(dealsTable.createdAt);
-    const deals = rows.map(r => ({ ...(r.data as Record<string, unknown>), id: r.id }));
+    const deals = rows
+      .filter(r => !r.data._processing)
+      .map(r => {
+        const { _processing: _p, _processingError: _e, ...rest } = r.data;
+        return { ...rest, id: r.id };
+      });
     res.json(deals);
   } catch (err) {
     req.log.error({ err }, "Failed to load deals");

@@ -94,6 +94,25 @@ export async function apiLoadImages(id: string): Promise<ImageBundle | null> {
   return resp.json() as Promise<ImageBundle | null>;
 }
 
+// --- Async ingest ---
+
+export async function apiIngestDeal(params: { id: string; text: string; fileName: string; pageCount: number }): Promise<void> {
+  const resp = await apiFetch("/deals/ingest", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to start extraction");
+  }
+}
+
+export async function apiPollDealStatus(id: string): Promise<{ processing: boolean; deal?: Deal; error?: string }> {
+  const resp = await apiFetch(`/deals/${id}/status`);
+  if (!resp.ok) throw new Error("Failed to poll status");
+  return resp.json() as Promise<{ processing: boolean; deal?: Deal; error?: string }>;
+}
+
 // --- Sources ---
 
 export async function apiSaveSource(id: string, text: string): Promise<void> {

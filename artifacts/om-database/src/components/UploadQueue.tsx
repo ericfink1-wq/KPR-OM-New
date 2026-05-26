@@ -1,9 +1,8 @@
 import { useRef, useState } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiSaveSource, apiSaveImages, apiCreateDeal, apiSaveDeal } from "../lib/api";
+import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus } from "../lib/api";
 import { extractPdfText, extractPdfImages } from "../lib/pdfExtract";
 import { uid } from "../lib/utils";
-import { useExtractOmData } from "@workspace/api-client-react";
 
 interface QueueItem {
   id: string;
@@ -11,7 +10,7 @@ interface QueueItem {
   status: "pending" | "extracting" | "awaiting_dup" | "done" | "error";
   error?: string;
   deal?: Deal;
-  // Dup detection
+  tempDealId?: string;
   dupCandidate?: Deal;
   pendingExtracted?: Record<string, unknown>;
   pendingImages?: ImageBundle | null;
@@ -27,12 +26,10 @@ interface Props {
 function findDuplicate(fileName: string, extracted: Record<string, unknown>, existing: Deal[]): Deal | null {
   const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-  // 1. Exact filename match
   const cleanFile = fileName.replace(/\.pdf$/i, "").toLowerCase();
   const byFile = existing.find(d => (d.fileName || "").toLowerCase() === cleanFile);
   if (byFile) return byFile;
 
-  // 2. Close match on property name + address
   const newProp = normName((extracted.propertyName as string) || "");
   const newAddr = normName((extracted.address as string) || "");
   if (newProp.length > 4) {
@@ -49,11 +46,9 @@ function findDuplicate(fileName: string, extracted: Record<string, unknown>, exi
     });
     if (byAddr) return byAddr;
   }
-
   return null;
 }
 
-// Merge extracted AI data into existing deal, preserving user-entered fields
 function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): Deal {
   const preserved: Partial<Deal> = {
     status: existing.status,
@@ -98,7 +93,6 @@ function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): D
     demoChecked: existing.demoChecked,
   };
 
-  // Preserve verified fields specifically
   const verifiedFields = Object.keys(existing.verified || {});
   const verifiedOverrides: Partial<Deal> = {};
   for (const f of verifiedFields) {
@@ -123,39 +117,58 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { mutateAsync: extractOm } = useExtractOmData();
 
   const processFile = async (file: File) => {
     const itemId = uid();
-    setQueue(q => [...q, { id: itemId, name: file.name, status: "pending" }]);
+    const dealId = uid();
+    setQueue(q => [...q, { id: itemId, name: file.name, status: "pending", tempDealId: dealId }]);
 
     try {
       setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "extracting" } : x));
 
       const buf = await file.arrayBuffer();
-      // PDF.js transfers the ArrayBuffer into its worker (detaching the original),
-      // so each consumer must receive its own copy made before any call runs.
+      // Give each PDF.js consumer its own copy — the worker transfers (detaches) the buffer
       const imgPromise = extractPdfImages(buf.slice(0)).catch(() => null);
       const { text, pages } = await extractPdfText(buf.slice(0));
 
-      // Call AI extraction
-      const truncated = text.slice(0, 90000);
-      const resp = await extractOm({ data: { text: truncated } });
-      const extracted = resp as unknown as Record<string, unknown>;
+      const fileName = file.name.replace(/\.pdf$/i, "");
 
+      // Send text to server — returns immediately, extraction runs in background
+      await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages });
+
+      // Save images + source right away (don't need Claude for these)
       const imgs = await imgPromise;
+      if (imgs) await apiSaveImages(dealId, imgs).catch(() => {});
+      await apiSaveSource(dealId, text).catch(() => {});
+
+      // Poll until server-side Claude extraction completes (up to 5 min)
+      let resolvedDeal: Deal | null = null;
+      let pollError: string | null = null;
+      for (let i = 0; i < 120; i++) {
+        await new Promise(r => setTimeout(r, 2500));
+        const status = await apiPollDealStatus(dealId);
+        if (!status.processing) {
+          if (status.error) { pollError = status.error; break; }
+          resolvedDeal = (status.deal as Deal) ?? null;
+          break;
+        }
+      }
+
+      if (pollError || !resolvedDeal) {
+        throw new Error(pollError || "Extraction timed out — please retry");
+      }
+
       const imageMeta = imgs ? {
         cover: !!imgs.cover,
         sitePlan: imgs.sitePlan ? imgs.sitePlan.length : 0,
         needsSitePlanPick: imgs.needsSitePlanPick || false,
       } : undefined;
 
-      // Check for duplicates
-      const fileName = file.name.replace(/\.pdf$/i, "");
+      // Dup check using the now-resolved AI data
+      const extracted = resolvedDeal as unknown as Record<string, unknown>;
       const dup = findDuplicate(fileName, extracted, existingDeals);
 
       if (dup) {
-        // Pause and ask user
         setQueue(q => q.map(x => x.id === itemId ? {
           ...x,
           status: "awaiting_dup",
@@ -163,38 +176,31 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
           pendingExtracted: { ...extracted, imageMeta, fileName, pdfPages: pages },
           pendingImages: imgs,
           pendingText: text,
+          tempDealId: dealId,
         } : x));
         return;
       }
 
-      // No dup — save as new deal
-      const dealId = uid();
-      await apiSaveSource(dealId, text).catch(() => {});
-      if (imgs) await apiSaveImages(dealId, imgs).catch(() => {});
+      // No dup — finalize the already-created deal with imageMeta
+      const finalDeal: Deal = { ...resolvedDeal, imageMeta };
+      await apiSaveDeal(finalDeal).catch(() => {});
 
-      const deal: Deal = {
-        id: dealId,
-        fileName,
-        uploadedAt: new Date().toISOString(),
-        pdfPages: pages,
-        status: "Prospect",
-        imageMeta,
-        ...(extracted as Partial<Deal>),
-      };
-      await apiCreateDeal(deal);
-
-      setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "done", deal } : x));
-      onDealsAdded([deal]);
+      setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "done", deal: finalDeal } : x));
+      onDealsAdded([finalDeal]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Extraction failed";
       setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "error", error: msg } : x));
+      // Clean up the orphaned processing deal on error
+      await apiDeleteDeal(dealId).catch(() => {});
     }
   };
 
   const handleDupUpdate = async (itemId: string) => {
-    // Update existing deal in place
     const item = queue.find(x => x.id === itemId);
     if (!item?.dupCandidate || !item.pendingExtracted) return;
+
+    // Delete the temp deal created during ingest
+    if (item.tempDealId) await apiDeleteDeal(item.tempDealId).catch(() => {});
 
     const refreshed = reconcileRefresh(item.dupCandidate, item.pendingExtracted);
     await apiSaveDeal(refreshed).catch(() => {});
@@ -207,14 +213,13 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
 
   const handleDupKeepBoth = async (itemId: string) => {
     const item = queue.find(x => x.id === itemId);
-    if (!item?.pendingExtracted) return;
+    if (!item?.pendingExtracted || !item.tempDealId) return;
 
-    const dealId = uid();
-    const extracted = item.pendingExtracted;
-    const { imageMeta, fileName, pdfPages, ...rest } = extracted;
-
+    // The temp deal already exists in DB with extracted data + images + source already saved.
+    // Just update it with the imageMeta field and show it as a completed deal.
+    const { imageMeta, fileName, pdfPages, ...rest } = item.pendingExtracted;
     const deal: Deal = {
-      id: dealId,
+      id: item.tempDealId,
       fileName: (fileName as string) || item.name.replace(/\.pdf$/i, ""),
       uploadedAt: new Date().toISOString(),
       pdfPages: pdfPages as number | undefined,
@@ -222,15 +227,15 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
       imageMeta: imageMeta as Deal["imageMeta"],
       ...(rest as Partial<Deal>),
     };
-    await apiCreateDeal(deal);
-    if (item.pendingText) await apiSaveSource(dealId, item.pendingText).catch(() => {});
-    if (item.pendingImages) await apiSaveImages(dealId, item.pendingImages).catch(() => {});
+    await apiSaveDeal(deal).catch(() => {});
 
     setQueue(q => q.map(x => x.id === itemId ? { ...x, status: "done", deal } : x));
     onDealsAdded([deal]);
   };
 
-  const handleDupCancel = (itemId: string) => {
+  const handleDupCancel = async (itemId: string) => {
+    const item = queue.find(x => x.id === itemId);
+    if (item?.tempDealId) await apiDeleteDeal(item.tempDealId).catch(() => {});
     setQueue(q => q.filter(x => x.id !== itemId));
   };
 
@@ -277,7 +282,6 @@ export default function UploadQueue({ onDealsAdded, onDealUpdated, existingDeals
           {queue.map(item => (
             <div key={item.id}>
               {item.status === "awaiting_dup" && item.dupCandidate ? (
-                // Duplicate prompt card
                 <div style={{ background: "#fffbf0", border: "1.5px solid #d9890c", borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "#a06208", marginBottom: 4 }}>Possible duplicate detected</div>
                   <div style={{ fontSize: 13, color: "#383a37", marginBottom: 2 }}>
