@@ -7,7 +7,7 @@ import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
 import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
-import { loadPdfJs, _capturePagePhoto } from "../lib/pdfExtract";
+import { loadPdfJs, _capturePagePhoto, extractPdfText } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 
 interface Props {
@@ -546,6 +546,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               );
             })()}
 
+            {owned && <TermSheetImport deal={d} onUpdate={onUpdate}/>}
+
             {/* Acquisition */}
             <div style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
               <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{owned ? "Deal Terms" : "Acquisition"}
@@ -957,6 +959,76 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
           {suffix && <span style={{ color:"#a69e91", fontSize:13 }}>{suffix}</span>}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Term sheet / closing statement PDF importer ──────────────────────────────
+// Only shown on Owned/Sold deals. Extracts acquisition & financing terms via
+// the existing server AI proxy and fills BLANK fields only — never overwrites.
+function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+  const { mutateAsync: sendMessage } = useCreateAiMessage();
+
+  const SCHEMA: Record<string, string> = {
+    txnPurchasePrice:"purchase price (number)", txnSeller:"seller / counterparty", txnCloseDate:"closing date YYYY-MM-DD",
+    acqCapRate:"going-in cap rate %", acqNOIAtClose:"in-place NOI at close (number)", acqEntity:"acquiring entity / borrower",
+    acqBroker:"broker", acqDeposit:"earnest money / deposit (number)", acqClosingCosts:"closing costs (number)", acqFee:"acquisition fee (number)",
+    acqCounsel:"legal counsel", acqStrategy:"strategy (Core/Core-Plus/Value-Add/Opportunistic)", acqHoldPeriod:"target hold years", acqTargetIRR:"target IRR %",
+    debtLender:"lender", debtType:"loan type", debtLoanAmount:"loan amount (number)", debtRate:"interest rate %", debtRateType:"Fixed or Floating",
+    debtIndex:"floating index", debtSpread:"spread in bps (number)", debtOriginationDate:"origination date YYYY-MM-DD", debtMaturityDate:"maturity date YYYY-MM-DD",
+    debtTermYears:"term years", debtAmortYears:"amortization years", debtIOPeriod:"interest-only months", debtLTV:"LTV %", debtRecourse:"recourse",
+    debtPrepay:"prepayment terms", debtExtensions:"extension options", debtEscrows:"escrows / reserves", debtAssumable:"assumable", debtContact:"lender contact",
+  };
+
+  async function handle(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!file) return;
+    setBusy(true); setStatus("Reading term sheet…");
+    try {
+      const buf = await file.arrayBuffer();
+      const { text } = await extractPdfText(buf);
+      setStatus("Extracting deal terms with AI…");
+      const sys = `You extract acquisition and financing terms from a commercial real estate term sheet, loan term sheet, or closing statement. Output ONLY a single JSON object with exactly these keys; use null for anything not clearly stated. For money use plain numbers (no $ or commas); for percentages use numbers (6.25 not "6.25%"). Keys and meanings: ${JSON.stringify(SCHEMA)}`;
+      const resp = await sendMessage({ data: {
+        system: sys,
+        messages: [{ role: "user", content: `Term sheet / closing document text:\n${(text||"").slice(0,60000)}\n\nReturn ONLY the JSON object, no prose.` }],
+        max_tokens: 1500,
+      }});
+      const raw = ((resp as any)?.content || []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n");
+      let out: Record<string, unknown> | null = null;
+      try {
+        const m = raw.match(/\{[\s\S]+\}/);
+        if (m) out = JSON.parse(m[0]);
+      } catch {}
+      if (!out) { setStatus("Couldn't read terms from that PDF — try a clearer term sheet."); setBusy(false); return; }
+      const patch: Partial<Deal> = {};
+      for (const k of Object.keys(SCHEMA)) {
+        const v = out[k];
+        if (v == null || v === "") continue;
+        if ((deal as any)[k] != null && (deal as any)[k] !== "") continue;
+        (patch as any)[k] = NUMERIC_TXN_FIELDS.has(k) && !isNaN(Number(v)) ? Number(v) : v;
+      }
+      const n = Object.keys(patch).length;
+      if (n) onUpdate(deal.id, patch);
+      setStatus(n ? `✓ Filled ${n} blank field${n>1?"s":""} from the term sheet — review and verify each before relying on it.` : "No new blank fields found to fill (existing entries were left untouched).");
+    } catch { setStatus("Couldn't read that PDF — try again."); }
+    setBusy(false);
+  }
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:14, background:"#fffaf2", border:"1px dashed #e7c48f", borderRadius:10, padding:"10px 14px" }}>
+      <input ref={fileRef} type="file" accept="application/pdf" style={{ display:"none" }} onChange={handle}/>
+      <button onClick={() => fileRef.current?.click()} disabled={busy}
+        style={{ background:busy?"#efe8da":"#fff", border:"1px solid #e7c48f", color:"#9a6a1e", padding:"8px 14px", borderRadius:8, cursor:busy?"default":"pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+        {busy ? "Importing…" : "⬆ Import term sheet (PDF) to auto-fill blanks"}
+      </button>
+      <span style={{ fontSize:12, color:status.startsWith("✓")?"#0a7d4f":"#9a6a1e" }}>
+        {status || "Upload a signed term sheet or closing statement — it fills empty fields only."}
+      </span>
     </div>
   );
 }
