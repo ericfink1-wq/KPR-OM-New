@@ -117,7 +117,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   // ── Intelligence Library stats ───────────────────────────────────────────
   const stats = (() => {
     const tenantBrands = new Set(
-      active.flatMap(d => (d.tenants || []).map(t => tenantKey(t.name))).filter(Boolean)
+      active.flatMap(d => (d.tenants || []).map(t => tenantKey(t.canonicalName || t.name))).filter(Boolean)
     ).size;
     const leases = active.reduce((s, d) => s + (d.tenants || []).length, 0);
     const sfAnalyzed = active.reduce((s, d) => s + num(d.totalSF), 0);
@@ -147,7 +147,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     const tenants = owned.flatMap(d => (d.tenants || []));
     const seenAnchors = new Set<string>();
     const anchors = tenants.filter(t => t.isAnchor && t.name).reduce<string[]>((acc, t) => {
-      const k = tenantKey(t.name);
+      const k = tenantKey(t.canonicalName || t.name);
       if (k && !seenAnchors.has(k)) { seenAnchors.add(k); acc.push(tenantLabel(t.name!)); }
       return acc;
     }, []);

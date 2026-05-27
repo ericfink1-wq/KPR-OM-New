@@ -1,0 +1,83 @@
+TENANT NAME MATCHING BUG: The "tenant summary" page (TenantView.tsx) doesn't find tenants whose raw name has a lease-type suffix like "Ground Lease", "NNN Lease", "Net Lease". For example, clicking "McDonald's" in one deal finds only that one — the McDonald's recorded as "McDonald's Ground Lease" in another deal is missed because the tenantKey() helper doesn't normalize lease-type suffixes and the click-through filter doesn't fall back to the canonicalName field that the server already sets.
+
+Two surgical changes:
+
+CHANGE 1 — STRIP LEASE-TYPE SUFFIXES IN _normTenant().
+
+In artifacts/om-database/src/lib/utils.ts, locate the _normTenant function (around line 167-182). Add a new step early in the function — AFTER the lowercase/punctuation cleanup but BEFORE the trail-word stripping loop — that removes lease-structure descriptors that aren't part of a tenant's actual brand name.
+
+After the existing line:
+   s = s.toLowerCase()
+        .replace(/['.]/g, "")
+        .replace(/&/g, " and ")
+        .replace(/#\s*\d[\d-]*/g, " ")
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+INSERT this new step before the `if (s.startsWith("the "))` line:
+
+   // Strip lease-structure descriptors that aren't brand names
+   // (handles "McDonald's Ground Lease", "Walgreens NNN Lease", "Starbucks (Net Lease)", etc.)
+   s = s.replace(/\s*\b(absolute\s+net|triple\s+net|modified\s+gross|ground|net|nnn|gross)\s+lease\b\s*/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+This single-line replacement handles "Ground Lease", "Net Lease", "Triple Net Lease", "Absolute Net Lease", "Modified Gross Lease", "NNN Lease", and "Gross Lease" — all common CRE phrases that get embedded in tenant names but actually describe lease structure, not the tenant brand.
+
+CHANGE 2 — TENANTVIEW SHOULD ALSO MATCH ON canonicalName.
+
+In artifacts/om-database/src/components/TenantView.tsx around line 18-22, the current filter is:
+
+   (deals || []).forEach(d =>
+     (d.tenants || []).forEach(t => {
+       if (tenantKey(t.name) === target) rows.push({ deal: d, t });
+     })
+   );
+
+Replace with:
+
+   (deals || []).forEach(d =>
+     (d.tenants || []).forEach(t => {
+       const matchByName = tenantKey(t.name) === target;
+       const matchByCanonical = t.canonicalName && tenantKey(t.canonicalName) === target;
+       if (matchByName || matchByCanonical) rows.push({ deal: d, t });
+     })
+   );
+
+This way: even if the lease-suffix-stripping in CHANGE 1 misses an edge case, the server's canonicalName (populated from the tenantAliasesTable) provides a backstop. Belt and suspenders — both layers protect against mismatches.
+
+CHANGE 3 — ALSO FIX THE TENANT-BRAND COUNT IN ANALYSTCHAT.
+
+While we're in here, the "Intelligence Library" stat for unique tenant brands on the home page uses the same flawed grouping. In artifacts/om-database/src/components/AnalystChat.tsx around line 119-121:
+
+   const tenantBrands = new Set(
+     active.flatMap(d => (d.tenants || []).map(t => tenantKey(t.name))).filter(Boolean)
+   ).size;
+
+Replace with:
+
+   const tenantBrands = new Set(
+     active.flatMap(d => (d.tenants || []).map(t => tenantKey(t.canonicalName || t.name))).filter(Boolean)
+   ).size;
+
+Same change for the anchor dedup around line 149-153. Where it currently has:
+
+   const k = tenantKey(t.name);
+
+Change to:
+
+   const k = tenantKey(t.canonicalName || t.name);
+
+These two AnalystChat aggregations were undercounting brand uniqueness for the same reason — variants like "McDonald's Ground Lease" were being treated as a separate brand from "McDonald's".
+
+VERIFICATION AFTER THIS LANDS:
+1. Click "McDonald's" from a deal where the tenant is recorded as "McDonald's" — the tenant summary should now also show the deal where it's recorded as "McDonald's Ground Lease".
+2. Click "McDonald's" from the OTHER direction (from the "Ground Lease" deal) — should also find both.
+3. The unique tenant brand count on the home page should drop slightly as duplicates collapse.
+4. Other lease-suffix variants in your data (search for tenants with "Net Lease", "NNN Lease", "Ground Lease" in the name) should also start matching their root brand.
+
+DO NOT TOUCH:
+- The server-side tenantAliasesTable or apply-aliases.ts script — they continue to handle DB-level aliasing for non-suffix variants
+- The buildSystemPrompt function — the LLM fuzzy-matches brand names well enough; don't add complexity there
+- The TENANT_ALIASES hardcoded map — leave the existing entries; the new regex handles the structured suffix cases generically

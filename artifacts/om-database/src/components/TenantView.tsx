@@ -17,7 +17,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
   const rows: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }[] = [];
   (deals || []).forEach(d =>
     (d.tenants || []).forEach(t => {
-      if (tenantKey(t.name) === target) rows.push({ deal: d, t });
+      const matchByName = tenantKey(t.name) === target;
+      const matchByCanonical = t.canonicalName && tenantKey(t.canonicalName) === target;
+      if (matchByName || matchByCanonical) rows.push({ deal: d, t });
     })
   );
 

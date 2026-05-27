@@ -173,6 +173,9 @@ export function _normTenant(name: unknown): string {
        .replace(/[^a-z0-9]+/g, " ")
        .replace(/\s+/g, " ")
        .trim();
+  s = s.replace(/\s*\b(absolute\s+net|triple\s+net|modified\s+gross|ground|net|nnn|gross)\s+lease\b\s*/g, " ")
+       .replace(/\s+/g, " ")
+       .trim();
   if (s.startsWith("the ")) s = s.slice(4);
   let parts = s.split(" ").filter(Boolean);
   while (parts.length > 1 && (_TENANT_TRAIL.has(parts[parts.length - 1]) || /^\d+$/.test(parts[parts.length - 1]))) {
