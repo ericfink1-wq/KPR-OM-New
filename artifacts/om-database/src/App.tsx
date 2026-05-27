@@ -215,6 +215,7 @@ function AppInner() {
         onLogout={handleLogout}
         onFiles={handleFiles}
         onHelpOpen={() => setHelpOpen(true)}
+        onDealsAdded={handleDealsAdded}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 

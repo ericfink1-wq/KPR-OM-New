@@ -13,9 +13,10 @@ interface Props {
   queueLen: number;
   onLogout?: () => void;
   onFiles: (files: FileList) => void;
+  onDealsAdded?: (deals: Deal[]) => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -161,6 +162,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       <PasteDealsModal
         onClose={() => setPasteDealsOpen(false)}
         onDone={() => { setPasteDealsOpen(false); onTab("analyst"); }}
+        onDealsAdded={onDealsAdded}
       />
     )}
     <div style={{

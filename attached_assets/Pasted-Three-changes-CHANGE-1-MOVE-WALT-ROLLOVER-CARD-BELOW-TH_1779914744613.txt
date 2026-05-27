@@ -1,0 +1,131 @@
+Three changes:
+
+CHANGE 1 — MOVE WALT/ROLLOVER CARD BELOW THE TENANT ROSTER.
+
+In artifacts/om-database/src/components/DetailView.tsx around lines 974-990, swap the order of the two conditional blocks so the tenant roster renders FIRST and the Lease Rollover & WALT card renders SECOND. Keep both blocks' contents and conditions exactly as they are — only their order changes. The result should be:
+
+  {/* Tenant roster */}
+  {(d.tenants||[]).length > 0 && (
+    <TenantRoster
+      tenants={d.tenants!}
+      onTenantClick={onTenantClick}
+      tenantsAsOf={d.tenantsAsOf}
+      tenantsSource={d.tenantsSource}
+      omDate={d.omDate}
+    />
+  )}
+
+  {/* Lease Rollover & WALT */}
+  {(d.tenants||[]).length > 0 && (
+    <LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} />
+  )}
+
+CHANGE 2 — MAKE NEW DEALS FROM "PASTE DEALS FROM CLAUDE" APPEAR WITHOUT A PAGE REFRESH.
+
+Currently, deals created via the paste modal save to the database but the App.tsx in-memory deals state isn't updated, so the user must refresh. The App component already has a callback `handleDealsAdded` (App.tsx line 85) that's used by UploadQueue for the PDF flow. Thread it through to the paste modal:
+
+(a) In App.tsx where <Header ... /> is rendered (around line 213 based on grep), pass a new prop: onDealsAdded={handleDealsAdded}.
+
+(b) In Header.tsx:
+   - Add `onDealsAdded?: (deals: Deal[]) => void` to the Props interface (lines 7-15).
+   - Add `onDealsAdded` to the destructured params on line 17.
+   - Where <PasteDealsModal ... /> is rendered (line 156), pass it through:
+     <PasteDealsModal
+       onClose={() => setPasteDealsOpen(false)}
+       onDone={() => { setPasteDealsOpen(false); onTab("analyst"); }}
+       onDealsAdded={onDealsAdded}
+     />
+
+(c) In PasteDealsModal.tsx:
+   - Add `onDealsAdded?: (deals: Deal[]) => void` to the Props interface (lines 5-8).
+   - Add `onDealsAdded` to destructured params on line 60.
+   - In handleCreate (around line 129-150), after the for-loop completes, collect the deals that succeeded (everything except those in `failed`) into an array and call `onDealsAdded?.(successfulDeals)` BEFORE setSave({ kind: "done", ... }). Pseudo:
+
+       const succeeded = deals.filter((_, i) => !failed.some(f => f.index === i));
+       if (succeeded.length > 0) onDealsAdded?.(succeeded);
+       setSave({ kind: "done", created: deals.length - failed.length, failed });
+
+After this lands, pasting JSON and clicking Create should make the new deals show up in the pipeline immediately when the modal closes, no refresh needed.
+
+CHANGE 3 — MULTI-FILE UPLOAD + AUTO-VALIDATION (REMOVE THE SEPARATE VALIDATE CLICK).
+
+The current paste modal requires three clicks for any upload: select file → click Validate → click Create. Streamline to two clicks: select files → click Create. Validation happens automatically.
+
+In PasteDealsModal.tsx:
+
+(a) FILE INPUT: change the hidden file input to accept multiple files. Find the line:
+       <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleFile} />
+    Add the `multiple` attribute:
+       <input ref={fileRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleFile} />
+
+(b) HANDLE MULTIPLE FILES: rewrite handleFile (lines 66-76) to process all selected files:
+
+   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     const files = Array.from(e.target.files ?? []);
+     if (e.target) e.target.value = "";
+     if (files.length === 0) return;
+
+     const nonJson = files.find(f => !f.name.toLowerCase().endsWith(".json"));
+     if (nonJson) {
+       setValidation({ kind: "errors", errors: [`"${nonJson.name}" is not a .json file. Please select .json files only.`] });
+       return;
+     }
+
+     // Read all files and combine their parsed contents into one deals array
+     try {
+       const contents = await Promise.all(files.map(f => f.text()));
+       const combinedDeals: unknown[] = [];
+       for (let i = 0; i < contents.length; i++) {
+         let parsed: unknown;
+         try {
+           parsed = JSON.parse(contents[i]);
+         } catch (err) {
+           const msg = err instanceof Error ? err.message : String(err);
+           setValidation({ kind: "errors", errors: [`Could not parse "${files[i].name}": ${msg}`] });
+           return;
+         }
+         combinedDeals.push(...parseDealJson(parsed));
+       }
+       const combinedJson = JSON.stringify(combinedDeals, null, 2);
+       setText(combinedJson);
+       // Auto-validate the combined content
+       validateJsonString(combinedJson);
+     } catch (err) {
+       const msg = err instanceof Error ? err.message : String(err);
+       setValidation({ kind: "errors", errors: [`Could not read files: ${msg}`] });
+     }
+   };
+
+(c) EXTRACT VALIDATION INTO A REUSABLE FUNCTION: refactor the existing handleValidate (lines 78-127) by extracting its body into a new helper `validateJsonString(jsonText: string)` that takes the text as a parameter (instead of reading from state). The existing handleValidate can either be removed or just call `validateJsonString(text)`. The new helper does the same parse → normalize → setValidation work.
+
+(d) AUTO-VALIDATE ON TEXT CHANGES (DEBOUNCED): in the textarea's onChange, debounce a validation call. Add a ref or useEffect with setTimeout to run validateJsonString 400ms after the user stops typing. Simple implementation using useEffect:
+
+   useEffect(() => {
+     if (!text.trim()) {
+       setValidation({ kind: "idle" });
+       return;
+     }
+     const timer = setTimeout(() => validateJsonString(text), 400);
+     return () => clearTimeout(timer);
+   }, [text]);
+
+   And change the textarea onChange to just: onChange={e => setText(e.target.value)}.
+
+(e) REMOVE THE "VALIDATE" BUTTON ENTIRELY. In the action row (around lines 282-300), delete the Validate button. Keep the Create button (which already only appears when validation.kind === "valid") and the Cancel button. The Create button is now the only positive action, and it's only shown when validation has already passed automatically.
+
+(f) UPDATE THE SUBTITLE/PLACEHOLDER to hint at multi-file support. Change the subtitle text (line 170) from:
+       "Skip the AI extraction step — paste JSON Claude already produced for one or more deals. No API tokens used."
+   to:
+       "Skip the AI extraction step — paste JSON or load one or more .json files Claude produced. No API tokens used."
+
+   Change the "Load from .json file" button label (line 238) to: "Load .json file(s)".
+
+(g) The empty-state validation when text is empty should NOT show an error banner. Validation only runs when there's content. If there's no content, show no validation banner and don't render the Create button — neutral state.
+
+After all three changes land, the flow becomes:
+
+  • Open modal → click "Load .json file(s)" → pick 1 or 5 .json files (Cmd/Ctrl-click or Shift-click to multi-select) → validation runs automatically → preview shows "✓ Parsed N deals successfully" with each deal listed → click "Create N deals" → modal closes and new deals appear in the pipeline immediately.
+
+  • Or: paste JSON manually into the textarea → validation runs automatically after ~400ms of no typing → Create button appears when valid → click Create.
+
+NO OTHER CHANGES. Don't touch DealGrid, TenantRoster, the rollover card itself (LeaseRollover.tsx), or anything outside the four files mentioned (DetailView.tsx, App.tsx, Header.tsx, PasteDealsModal.tsx).

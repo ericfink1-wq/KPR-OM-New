@@ -973,11 +973,6 @@ ${text.slice(0, 60000)}`;
         </div>
       )}
 
-      {/* Lease Rollover & WALT */}
-      {(d.tenants||[]).length > 0 && (
-        <LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} />
-      )}
-
       {/* Tenant roster */}
       {(d.tenants||[]).length > 0 && (
         <TenantRoster
@@ -987,6 +982,11 @@ ${text.slice(0, 60000)}`;
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}
         />
+      )}
+
+      {/* Lease Rollover & WALT */}
+      {(d.tenants||[]).length > 0 && (
+        <LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} />
       )}
 
       {/* Deal score */}

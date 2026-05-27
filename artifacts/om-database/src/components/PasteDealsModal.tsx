@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Deal } from "../lib/idb";
 import { apiSaveDeal } from "../lib/api";
 
 interface Props {
   onClose: () => void;
   onDone: () => void;
+  onDealsAdded?: (deals: Deal[]) => void;
 }
 
 type ValidationState =
@@ -57,33 +58,21 @@ function formatSF(v: unknown): string {
   return ` · ${n.toLocaleString()} SF`;
 }
 
-export default function PasteDealsModal({ onClose, onDone }: Props) {
+export default function PasteDealsModal({ onClose, onDone, onDealsAdded }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [validation, setValidation] = useState<ValidationState>({ kind: "idle" });
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (e.target) e.target.value = "";
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".json")) {
-      setValidation({ kind: "errors", errors: ["Please select a .json file."] });
-      return;
-    }
-    setText(await file.text());
-    setValidation({ kind: "idle" });
-  };
-
-  const handleValidate = () => {
-    if (!text.trim()) {
-      setValidation({ kind: "errors", errors: ["No JSON to validate."] });
+  const validateJsonString = (jsonText: string) => {
+    if (!jsonText.trim()) {
+      setValidation({ kind: "idle" });
       return;
     }
 
     let raw: unknown;
     try {
-      raw = JSON.parse(text);
+      raw = JSON.parse(jsonText);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setValidation({ kind: "errors", errors: [`Could not parse JSON: ${msg}`] });
@@ -126,6 +115,49 @@ export default function PasteDealsModal({ onClose, onDone }: Props) {
     setValidation({ kind: "valid", deals, warnings: allWarnings });
   };
 
+  useEffect(() => {
+    if (!text.trim()) {
+      setValidation({ kind: "idle" });
+      return;
+    }
+    const timer = setTimeout(() => validateJsonString(text), 400);
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (e.target) e.target.value = "";
+    if (files.length === 0) return;
+
+    const nonJson = files.find(f => !f.name.toLowerCase().endsWith(".json"));
+    if (nonJson) {
+      setValidation({ kind: "errors", errors: [`"${nonJson.name}" is not a .json file. Please select .json files only.`] });
+      return;
+    }
+
+    try {
+      const contents = await Promise.all(files.map(f => f.text()));
+      const combinedDeals: unknown[] = [];
+      for (let i = 0; i < contents.length; i++) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(contents[i]);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setValidation({ kind: "errors", errors: [`Could not parse "${files[i].name}": ${msg}`] });
+          return;
+        }
+        combinedDeals.push(...parseDealJson(parsed));
+      }
+      const combinedJson = JSON.stringify(combinedDeals, null, 2);
+      setText(combinedJson);
+      validateJsonString(combinedJson);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setValidation({ kind: "errors", errors: [`Could not read files: ${msg}`] });
+    }
+  };
+
   const handleCreate = async () => {
     if (validation.kind !== "valid") return;
     const { deals } = validation;
@@ -146,6 +178,8 @@ export default function PasteDealsModal({ onClose, onDone }: Props) {
       }
     }
 
+    const succeeded = deals.filter((_, i) => !failed.some(f => f.index === i));
+    if (succeeded.length > 0) onDealsAdded?.(succeeded);
     setSave({ kind: "done", created: deals.length - failed.length, failed });
   };
 
@@ -167,7 +201,7 @@ export default function PasteDealsModal({ onClose, onDone }: Props) {
                 Paste deals from Claude
               </div>
               <div style={{ fontSize: 12, color: "#a89f8f", lineHeight: 1.5 }}>
-                Skip the AI extraction step — paste JSON Claude already produced for one or more deals. No API tokens used.
+                Skip the AI extraction step — paste JSON or load one or more .json files Claude produced. No API tokens used.
               </div>
             </div>
             <button
@@ -223,7 +257,7 @@ export default function PasteDealsModal({ onClose, onDone }: Props) {
               <div style={{ marginBottom: 10 }}>
                 <textarea
                   value={text}
-                  onChange={e => { setText(e.target.value); setValidation({ kind: "idle" }); }}
+                  onChange={e => setText(e.target.value)}
                   placeholder={'[\n  {\n    "propertyName": "Sunset Plaza",\n    "city": "Columbus",\n    "state": "OH",\n    "totalSF": 95000,\n    "capRate": 6.5,\n    "tenants": []\n  }\n]'}
                   style={{ width: "100%", minHeight: 300, fontFamily: "monospace", fontSize: 12, padding: "12px", border: "1px solid #ddd4c2", borderRadius: 9, resize: "vertical", color: "#26281f", background: "#fafaf8", boxSizing: "border-box", outline: "none" }}
                 />
@@ -235,9 +269,9 @@ export default function PasteDealsModal({ onClose, onDone }: Props) {
                 <button
                   onClick={() => fileRef.current?.click()}
                   style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter', sans-serif" }}>
-                  Load from .json file
+                  Load .json file(s)
                 </button>
-                <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleFile} />
+                <input ref={fileRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleFile} />
               </div>
 
               {/* Validation result */}
@@ -280,11 +314,6 @@ export default function PasteDealsModal({ onClose, onDone }: Props) {
 
               {/* Action row */}
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <button
-                  onClick={handleValidate}
-                  style={{ background: "#383a37", border: "none", color: "#f6f2ea", padding: "10px 20px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-                  Validate
-                </button>
                 {validation.kind === "valid" && (
                   <button
                     onClick={handleCreate}
