@@ -1,0 +1,160 @@
+Replace the existing AI-based demographics fetch with a free US Census Bureau APIs implementation, and make it auto-fire on deal creation. The existing UI (the "TRADE AREA — 1 / 3 / 5 MILE" block in DetailView.tsx) stays exactly as it is — it already renders source, asOf, confidence, and the data table correctly. The only changes are: the backend that powers the fetch, the auto-trigger on creation, and removing the upload-password gate.
+
+CURRENT STATE (so you know what to change):
+- The "PULL DEMOGRAPHICS" / "RE-PULL" button in DetailView.tsx calls onGetDemo(d.id) around line 348-367
+- onGetDemo currently calls sendMessage() with an AI prompt asking Claude to find demographics — this costs API tokens per click and is gated by ensureUploadAllowed()
+- The resulting MarketDemographics object is stored on the deal and rendered in the existing UI block (~line 1314-1364), which already displays source, asOf, confidence badge, note, and the 1/3/5-mile table. Don't touch that UI block.
+- The marketDemographics schema is already defined (lib/idb.ts MarketDemographics interface)
+
+NEW IMPLEMENTATION:
+
+PART 1 — SERVER MODULE: artifacts/api-server/src/lib/demographics.ts (new file)
+
+Export one function: fetchCensusDemographics(address: string): Promise<MarketDemographics | null>
+
+Implementation steps:
+
+1. GEOCODE THE ADDRESS — use the free US Census Geocoder:
+   GET https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address={encodeURIComponent(address)}&benchmark=Public_AR_Current&format=json
+   
+   Parse: result.addressMatches[0].coordinates.x (longitude), .y (latitude). Also grab matchedAddress for logging.
+   If no match returned, return { confidence: "low", source: "US Census Bureau", note: "Address could not be geocoded", lookedUpAt: new Date().toISOString() }.
+
+2. FIND TRACTS WITHIN EACH RADIUS — use the TIGERweb spatial query (free, no key):
+   For each radius in [1, 3, 5] miles:
+     GET https://tigerweb.geo.census.gov/arcgis/rest/services/Census2020/Tracts_Blocks/MapServer/0/query?geometry={lng},{lat}&geometryType=esriGeometryPoint&distance={miles}&units=esriSRUnit_StatuteMile&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=GEOID,STATE,COUNTY,TRACT&returnGeometry=false&f=json
+     
+   Collect tract GEOIDs into three sets: tracts1mi, tracts3mi, tracts5mi.
+   Note: 3mi will include all of 1mi's tracts; 5mi will include 3mi's. That's correct — these are nested rings.
+
+3. PULL ACS 5-YEAR DATA — for each unique tract:
+   The most recent ACS 5-year vintage as of build time (early 2026) is the 2024 vintage (covering 2020-2024 estimates), released December 2025. Use that if available; if the 2024 endpoint returns an error or empty, fall back to 2023 vintage.
+   
+   For each (state, county) combination, batch a single query:
+   GET https://api.census.gov/data/{VINTAGE}/acs/acs5?get=B01003_001E,B19025_001E,B11001_001E&for=tract:*&in=state:{state_fips}+county:{county_fips}
+   
+   Variables:
+     B01003_001E = Total Population
+     B19025_001E = Aggregate Household Income
+     B11001_001E = Total Households
+   
+   Response is a 2D array; the first row is the header. Parse rows into a map keyed by GEOID (state+county+tract = 11 digits).
+
+4. AGGREGATE PER RADIUS:
+   For each radius ring:
+     pop{N}mi = sum of B01003_001E across the ring's tracts
+     totalHH = sum of B11001_001E
+     aggIncome = sum of B19025_001E
+     avgHHI{N}mi = totalHH > 0 ? Math.round(aggIncome / totalHH) : null
+   
+   Round populations to nearest integer. Round avgHHI to nearest whole dollar.
+
+5. BUILD AND RETURN the MarketDemographics object:
+   {
+     pop1mi, pop3mi, pop5mi,
+     avgHHI1mi, avgHHI3mi, avgHHI5mi,
+     confidence: "high",
+     source: "US Census Bureau ACS 5-Year Estimates",
+     asOf: "{startYear}–{endYear}",  // e.g., "2020–2024" — note: use en-dash not hyphen for the display
+     note: null,
+     sources: [
+       { url: "https://www.census.gov/programs-surveys/acs", title: "American Community Survey 5-Year Estimates" }
+     ],
+     lookedUpAt: new Date().toISOString(),
+   }
+
+ERROR HANDLING — never throw. Wrap each external call in try/catch with a 10-second timeout per request. On any failure, return a MarketDemographics object with confidence: "low", a descriptive note, and lookedUpAt set. So the deal always gets demoChecked even if the fetch fails — prevents retry storms.
+
+PART 2 — NEW SERVER ROUTE: artifacts/api-server/src/routes/deals.ts
+
+Add POST /api/deals/:id/refresh-demographics:
+- Load deal by id. 404 if not found.
+- 400 with { error: "Deal has no address" } if deal.address is missing.
+- Call fetchCensusDemographics(deal.address).
+- Update the deal: set marketDemographics = result AND demoChecked = new Date().toISOString().
+- Return { ok: true, marketDemographics: result }.
+
+PART 3 — AUTO-FETCH ON DEAL CREATION:
+
+In artifacts/api-server/src/routes/deals.ts, find the POST /api/deals handler (the upsert that the paste-deals-modal and AI extraction both hit). After successfully saving a deal, check:
+
+  if (savedDeal.address && !savedDeal.marketDemographics && !savedDeal.demoChecked) {
+    // Fire-and-forget. Don't block the response.
+    (async () => {
+      try {
+        const demo = await fetchCensusDemographics(savedDeal.address);
+        if (demo) {
+          await updateDeal(savedDeal.id, { 
+            marketDemographics: demo, 
+            demoChecked: new Date().toISOString() 
+          });
+        }
+      } catch {}
+    })();
+  }
+
+This way every newly-created deal that has an address will get demographics populated within ~5-15 seconds in the background. The client picks them up next time the deal is fetched (which DetailView does on mount).
+
+PART 4 — CLIENT API CLIENT: artifacts/om-database/src/lib/api.ts
+
+Add:
+  export async function apiRefreshDemographics(dealId: string): Promise<MarketDemographics | null> {
+    const res = await fetch(`${API_BASE}/api/deals/${dealId}/refresh-demographics`, { 
+      method: "POST", 
+      credentials: "include" 
+    });
+    if (!res.ok) throw new Error(`Refresh failed: ${res.status}`);
+    const data = await res.json();
+    return data.marketDemographics ?? null;
+  }
+
+PART 5 — REWIRE THE EXISTING BUTTON: DetailView.tsx
+
+Replace the existing onGetDemo handler (lines ~348-367) with this simpler version that calls the new endpoint instead of AI:
+
+  const onGetDemo = async (id: string) => {
+    setDemoBusy(true);
+    try {
+      const demo = await apiRefreshDemographics(id);
+      if (demo) {
+        onUpdate(id, { 
+          marketDemographics: demo, 
+          demoChecked: new Date().toISOString() 
+        });
+      } else {
+        onUpdate(id, { demoChecked: new Date().toISOString() });
+      }
+    } catch {} 
+    finally { setDemoBusy(false); }
+  };
+
+Note: REMOVE the ensureUploadAllowed() check at the top — Census APIs are free, no token-cost gate needed. Also REMOVE the sendMessage import for this handler (might still be needed for other code in the file; leave the import if so).
+
+Add the import: import { apiRefreshDemographics } from "../lib/api";
+
+DO NOT TOUCH the existing JSX block at ~lines 1314-1364 that renders the demographics table — it already correctly displays source, asOf, confidence, note, and the 1/3/5-mile grid. The new server returns data in exactly the shape that block expects.
+
+PART 6 — UPDATE THE PLACEHOLDER TEXT to reflect the new auto-pull behavior:
+
+Find this line around 1362:
+  <div style={{ fontSize:11.5, color:"#a69e91", lineHeight:1.55 }}>Pull 1/3/5-mile population and average HHI for this address from public Census/ACS-based sources.</div>
+
+Change to:
+  <div style={{ fontSize:11.5, color:"#a69e91", lineHeight:1.55 }}>Auto-pulled on deal creation from US Census ACS 5-Year Estimates. Click "RE-PULL" to refresh.</div>
+
+(This text only shows when marketDemographics is missing, so it's informational about how the data normally arrives.)
+
+WHAT NOT TO CHANGE:
+- The existing demographics display block UI/layout (~lines 1314-1364)
+- The MarketDemographics type definition in lib/idb.ts — already correct
+- Any other deal flows (PDF upload, paste-deals, restore from backup)
+- The marketSale lookup (separate flow, still AI-based — leave it alone)
+- The PULL/RE-PULL button styling
+
+TESTING AFTER IT LANDS:
+1. Create a new deal with a real US address. Wait ~15 seconds. Open the deal — demographics should appear with "2020–2024" (or whatever vintage) shown next to the source.
+2. For Village of Blaine (4335 Pheasant Ridge Dr NE, Blaine, MN 55449): expect pop3mi around 45,000–50,000 (the OM cites 45,802 for 2025; ACS 5-yr will be slightly lower since the survey spans earlier years). If numbers are wildly off, the tract-to-ring matching has a bug.
+3. Click "RE-PULL" on an existing deal — should refresh in under 15 seconds with no upload password prompt.
+4. The asOf field should render as " · 2020–2024" next to "US Census Bureau ACS 5-Year Estimates" in the existing display.
+
+NO NEW DEPENDENCIES. Node 18+ has fetch built in. All Census endpoints return JSON.

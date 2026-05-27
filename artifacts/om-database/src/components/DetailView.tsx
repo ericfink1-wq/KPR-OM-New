@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages } from "../lib/api";
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON } from "../lib/utils";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
@@ -346,19 +346,11 @@ ${text.slice(0, 60000)}`;
   };
 
   const onGetDemo = async (id: string) => {
-    if (!ensureUploadAllowed()) return;
     setDemoBusy(true);
     try {
-      const resp = await sendMessage({ data: {
-        system: "You are a CRE demographics analyst. Return trade area demographics as JSON: {pop1mi, pop3mi, pop5mi, avgHHI1mi, avgHHI3mi, avgHHI5mi, confidence (high/medium/low), source, asOf, note, sources: [{url, title}]}.",
-        messages: [{ role: "user", content: `Pull 1/3/5-mile demographics for: ${d.address || d.propertyName}, ${d.market}. Return JSON only.` }],
-        max_tokens: 1024,
-      }});
-      const text = (resp as any)?.content?.[0]?.text || "";
-      const jsonMatch = text.match(/\{[\s\S]+\}/);
-      if (jsonMatch) {
-        const data = JSON.parse(jsonMatch[0]);
-        onUpdate(id, { marketDemographics: { ...data, lookedUpAt: new Date().toISOString() } });
+      const demo = await apiRefreshDemographics(id);
+      if (demo) {
+        onUpdate(id, { marketDemographics: demo, demoChecked: new Date().toISOString() });
       } else {
         onUpdate(id, { demoChecked: new Date().toISOString() });
       }
@@ -1359,7 +1351,7 @@ ${text.slice(0, 60000)}`;
             </>
           );
         })() : (
-          <div style={{ fontSize:11.5, color:"#a69e91", lineHeight:1.55 }}>Pull 1/3/5-mile population and average HHI for this address from public Census/ACS-based sources.</div>
+          <div style={{ fontSize:11.5, color:"#a69e91", lineHeight:1.55 }}>Auto-pulled on deal creation from US Census ACS 5-Year Estimates. Click "RE-PULL" to refresh.</div>
         )}
       </div>
 

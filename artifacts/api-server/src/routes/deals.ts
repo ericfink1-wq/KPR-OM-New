@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { rebuildCompsIndex } from "../lib/compsIndex";
+import { fetchCensusDemographics } from "../lib/demographics";
 
 async function loadAliasMap(): Promise<Record<string, string>> {
   try {
@@ -106,6 +107,29 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     setImmediate(() => {
       rebuildTenantIndex(id, rest).catch(() => {});
       rebuildCompsIndex(id, rest).catch(() => {});
+      // Auto-fetch demographics for new deals that have an address but no demo data yet
+      if (
+        typeof rest.address === "string" && rest.address &&
+        !rest.marketDemographics && !rest.demoChecked
+      ) {
+        (async () => {
+          try {
+            const demo = await fetchCensusDemographics(rest.address as string);
+            if (demo) {
+              const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+              if (rows.length) {
+                const current = rows[0].data as Record<string, unknown>;
+                await db.update(dealsTable)
+                  .set({
+                    data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() },
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(dealsTable.id, id));
+              }
+            }
+          } catch {}
+        })();
+      }
     });
   } catch (err) {
     req.log.error({ err }, "Failed to upsert deal");
@@ -220,6 +244,31 @@ router.put("/deals/:id/source", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to save source");
     res.status(500).json({ error: "Failed to save source" });
+  }
+});
+
+// POST /api/deals/:id/refresh-demographics
+router.post("/deals/:id/refresh-demographics", requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    if (!rows.length) { res.status(404).json({ error: "Deal not found" }); return; }
+    const current = rows[0].data as Record<string, unknown>;
+    if (!current.address || typeof current.address !== "string") {
+      res.status(400).json({ error: "Deal has no address" });
+      return;
+    }
+    const demo = await fetchCensusDemographics(current.address);
+    await db.update(dealsTable)
+      .set({
+        data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() },
+        updatedAt: new Date(),
+      })
+      .where(eq(dealsTable.id, id));
+    res.json({ ok: true, marketDemographics: demo });
+  } catch (err) {
+    req.log.error({ err }, "Failed to refresh demographics");
+    res.status(500).json({ error: "Failed to refresh demographics" });
   }
 });
 

@@ -140,6 +140,15 @@ export async function apiLoadSource(id: string): Promise<string | null> {
   return body.text ?? null;
 }
 
+// --- Demographics ---
+
+export async function apiRefreshDemographics(dealId: string): Promise<import("./idb").MarketDemographics | null> {
+  const resp = await apiFetch(`/deals/${dealId}/refresh-demographics`, { method: "POST" });
+  if (!resp.ok) throw new Error(`Refresh failed: ${resp.status}`);
+  const data = await resp.json() as { marketDemographics?: import("./idb").MarketDemographics | null };
+  return data.marketDemographics ?? null;
+}
+
 // --- AI (web search / generic Claude proxy) ---
 
 export async function apiAiMessages(params: {
