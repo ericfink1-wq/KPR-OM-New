@@ -1,0 +1,83 @@
+The Upload OMs and Backup dropdown menus in artifacts/om-database/src/components/Header.tsx are broken — clicking the trigger buttons does not show the dropdown panels.
+
+ROOT CAUSE:
+The header's scrollable wrapper around line 196 has `overflowX: "auto"` (added for mobile horizontal scrolling). Per CSS spec, setting overflow-x to "auto" implicitly sets overflow-y to "auto" as well, which creates a clipping context. The dropdown panels use `position: absolute` and are descendants of this wrapper, so they get clipped vertically when they extend below the header's 72px height. The state toggles work, the panels just aren't visible.
+
+FIX: Render both dropdown panels (and their backdrop overlays) via React Portal directly into document.body. This bypasses the ancestor's clipping context. The dropdowns will be positioned with `position: fixed` using coordinates computed from the trigger button's getBoundingClientRect().
+
+STEP-BY-STEP CHANGES TO Header.tsx:
+
+1. ADD IMPORT at the top:
+   import { createPortal } from "react-dom";
+
+2. ADD TWO REFS AND TWO RECT-STATE VARIABLES inside the Header component, alongside the existing useState calls:
+   const uploadTriggerRef = useRef<HTMLDivElement>(null);
+   const backupTriggerRef = useRef<HTMLDivElement>(null);
+   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
+   const [backupRect, setBackupRect] = useState<DOMRect | null>(null);
+
+3. UPDATE the Upload OMs split-button container around line 227. Add the ref to the outer wrapper:
+   - Change `<div style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "..." }}>` to:
+     `<div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "..." }}>`
+
+4. UPDATE the chevron toggle button (the "▾" button around line 233) so it captures the trigger rect when opening:
+   onClick={() => {
+     if (!uploadMenu && uploadTriggerRef.current) {
+       setUploadRect(uploadTriggerRef.current.getBoundingClientRect());
+     }
+     setUploadMenu(m => !m);
+   }}
+
+5. REPLACE the entire `{uploadMenu && (...)}` block (the fragment containing the backdrop + dropdown panel) with a portal-rendered version. The new block should be:
+
+{uploadMenu && uploadRect && createPortal(
+  <>
+    <div onClick={() => setUploadMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
+    <div style={{
+      position: "fixed",
+      top: uploadRect.bottom + 6,
+      right: window.innerWidth - uploadRect.right,
+      zIndex: 9001,
+      background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+      boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 220, overflow: "hidden"
+    }}>
+      <button onClick={() => { setUploadMenu(false); fileRef.current?.click(); }}
+        style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ fontWeight: 600, color: "#383a37" }}>Upload files…</div>
+        <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pick one or more PDFs</div>
+      </button>
+      <button onClick={() => { setUploadMenu(false); folderRef.current?.click(); }}
+        style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ fontWeight: 600, color: "#383a37" }}>Import a folder…</div>
+        <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Scan a whole folder of OMs</div>
+      </button>
+      <button onClick={() => { setUploadMenu(false); setPasteDealsOpen(true); }}
+        style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+        <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Paste deals from Claude</div>
+        <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Add deals from JSON — no API tokens used</div>
+      </button>
+    </div>
+  </>,
+  document.body
+)}
+
+6. DO THE EQUIVALENT FOR THE BACKUP DROPDOWN:
+   - Add `ref={backupTriggerRef}` to the Backup button's outer container around line 265.
+   - Update the Backup toggle button's onClick to capture the rect:
+     onClick={() => {
+       if (!backupMenu && backupTriggerRef.current) {
+         setBackupRect(backupTriggerRef.current.getBoundingClientRect());
+       }
+       setBackupMenu(m => !m);
+     }}
+   - Replace the `{backupMenu && (...)}` block (around line 275) with the portal version, same pattern as upload — backdrop + fixed-positioned panel containing the three existing menuBtn calls (Full backup, Export CSV, Restore). Width 260 instead of 220 since that's what the original has. Keep the existing menuBtn() function and its callers.
+
+7. DO NOT TOUCH the `restoreResult` toast notification block — leave it as-is. It's positioned within the relative wrapper and works fine since it's small.
+
+8. DO NOT TOUCH the rest of Header.tsx — the tabs, the logo block, the Tutorial button, Sign out, all the rest of the styling and structure. Don't refactor what isn't broken.
+
+9. DO NOT CHANGE the scrollable wrapper at line 196 — the mobile horizontal scroll behavior should remain intact. The portal fix is what lets the dropdowns escape the clipping without us having to remove the scroll.
+
+After this lands, both Upload OMs ▾ and Backup ▾ dropdowns should open as visible menus below their trigger buttons on both desktop AND mobile, with all menu items clickable, and clicking outside the menu (the backdrop) should close it as before.

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { STATUS_COLORS } from "../lib/constants";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
@@ -18,11 +19,15 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
+  const uploadTriggerRef = useRef<HTMLDivElement>(null);
+  const backupTriggerRef = useRef<HTMLDivElement>(null);
   const [backupMenu, setBackupMenu] = useState(false);
   const [uploadMenu, setUploadMenu] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [pasteDealsOpen, setPasteDealsOpen] = useState(false);
+  const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
+  const [backupRect, setBackupRect] = useState<DOMRect | null>(null);
 
   const active = deals.filter(d => !d.trashedAt);
   const handleFiles = (fl: FileList | null) => {
@@ -224,46 +229,71 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
 
         {/* Upload OMs split button */}
-        <div style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
+        <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
           <button
             onClick={() => fileRef.current?.click()}
             style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
             Upload OMs
           </button>
           <button
-            onClick={() => setUploadMenu(m => !m)}
+            onClick={() => {
+              if (!uploadMenu && uploadTriggerRef.current) {
+                setUploadRect(uploadTriggerRef.current.getBoundingClientRect());
+              }
+              setUploadMenu(m => !m);
+            }}
             style={{ background: "#6dba43", border: "none", borderLeft: "1px solid rgba(31,43,22,0.22)", color: "#1f2b16", padding: "8px 9px", borderRadius: "0 8px 8px 0", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>
             ▾
           </button>
-          {uploadMenu && (
-            <>
-              <div onClick={() => setUploadMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 300, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 220, overflow: "hidden" }}>
-                <button onClick={() => { setUploadMenu(false); fileRef.current?.click(); }}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ fontWeight: 600, color: "#383a37" }}>Upload files…</div>
-                  <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pick one or more PDFs</div>
-                </button>
-                <button onClick={() => { setUploadMenu(false); folderRef.current?.click(); }}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ fontWeight: 600, color: "#383a37" }}>Import a folder…</div>
-                  <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Scan a whole folder of OMs</div>
-                </button>
-                <button onClick={() => { setUploadMenu(false); setPasteDealsOpen(true); }}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Paste deals from Claude</div>
-                  <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Add deals from JSON — no API tokens used</div>
-                </button>
-              </div>
-            </>
-          )}
         </div>
 
+        {uploadMenu && uploadRect && createPortal(
+          <>
+            <div onClick={() => setUploadMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
+            <div style={{
+              position: "fixed",
+              top: uploadRect.bottom + 6,
+              right: window.innerWidth - uploadRect.right,
+              zIndex: 9001,
+              background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+              boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 220, overflow: "hidden"
+            }}>
+              <button onClick={() => { setUploadMenu(false); fileRef.current?.click(); }}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                <div style={{ fontWeight: 600, color: "#383a37" }}>Upload files…</div>
+                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pick one or more PDFs</div>
+              </button>
+              <button onClick={() => { setUploadMenu(false); folderRef.current?.click(); }}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                <div style={{ fontWeight: 600, color: "#383a37" }}>Import a folder…</div>
+                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Scan a whole folder of OMs</div>
+              </button>
+              <button onClick={() => { setUploadMenu(false); setPasteDealsOpen(true); }}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Paste deals from Claude</div>
+                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Add deals from JSON — no API tokens used</div>
+              </button>
+            </div>
+          </>,
+          document.body
+        )}
+
         {/* Backup menu */}
-        <div style={{ position: "relative" }}>
-          <button onClick={() => setBackupMenu(m => !m)} disabled={restoreBusy}
+        <div ref={backupTriggerRef} style={{ position: "relative" }}>
+          <button
+            onClick={() => {
+              if (!backupMenu && backupTriggerRef.current) {
+                setBackupRect(backupTriggerRef.current.getBoundingClientRect());
+              }
+              setBackupMenu(m => !m);
+            }}
+            disabled={restoreBusy}
             style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: restoreBusy ? "default" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, fontFamily: "'Inter',sans-serif", opacity: restoreBusy ? 0.7 : 1 }}>
             {restoreBusy ? "Restoring…" : "Backup"} <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
           </button>
@@ -272,17 +302,26 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               {restoreResult}
             </div>
           )}
-          {backupMenu && (
-            <>
-              <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 300, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 260, overflow: "hidden" }}>
-                {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
-                {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
-                {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals", false)}
-              </div>
-            </>
-          )}
         </div>
+
+        {backupMenu && backupRect && createPortal(
+          <>
+            <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
+            <div style={{
+              position: "fixed",
+              top: backupRect.bottom + 6,
+              right: window.innerWidth - backupRect.right,
+              zIndex: 9001,
+              background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+              boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 260, overflow: "hidden"
+            }}>
+              {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
+              {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
+              {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals", false)}
+            </div>
+          </>,
+          document.body
+        )}
 
         <button
           type="button"
