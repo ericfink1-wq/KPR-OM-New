@@ -13,7 +13,6 @@ export interface MarketDemographics {
   note?: string | null;
   sources?: { url: string; title?: string }[];
   lookedUpAt?: string;
-  _debug?: Record<string, unknown>;
 }
 
 const TIMEOUT_MS = 10_000;
@@ -52,7 +51,6 @@ export async function fetchCensusDemographics(address: string): Promise<MarketDe
       asOf: "2020\u20132024",
       note: "Census API key not configured. Set CENSUS_API_KEY in Replit Secrets and re-pull.",
       lookedUpAt: new Date().toISOString(),
-      _debug: { reason: "missing_api_key" },
     };
   }
 
@@ -98,7 +96,6 @@ export async function fetchCensusDemographics(address: string): Promise<MarketDe
         source: "US Census Bureau",
         note: "Address could not be geocoded",
         lookedUpAt: new Date().toISOString(),
-        _debug: debug,
       };
     }
 
@@ -316,16 +313,13 @@ export async function fetchCensusDemographics(address: string): Promise<MarketDe
         },
       ],
       lookedUpAt: new Date().toISOString(),
-      _debug: debug,
     };
   } catch (err) {
-    debug.fatalError = err instanceof Error ? err.message : String(err);
     return {
       confidence: "low",
       source: "US Census Bureau",
       note: err instanceof Error ? `Census fetch failed: ${err.message}` : "Census fetch failed",
       lookedUpAt: new Date().toISOString(),
-      _debug: debug,
     };
   }
 }
