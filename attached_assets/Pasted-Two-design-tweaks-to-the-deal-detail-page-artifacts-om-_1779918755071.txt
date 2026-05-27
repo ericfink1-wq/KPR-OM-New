@@ -1,0 +1,122 @@
+Two design tweaks to the deal detail page (artifacts/om-database/src/components/DetailView.tsx):
+
+CHANGE 1 — SHOW FULL ADDRESS (STREET, CITY, STATE) UNDER THE PROPERTY NAME.
+
+Currently the address line under the property title (around line 676) only renders the street:
+   <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{d.address}</p>
+
+The city and state are stored in separate fields (d.city, d.state) and aren't being shown. Fix it to display the full composed address.
+
+(a) Near the top of the component (after the existing `const d = ...` line, or wherever it makes sense for derived values), add a small helper:
+
+   const fullAddress = (() => {
+     const street = (d.address || "").trim();
+     const city = (d.city || "").trim();
+     const state = (d.state || "").trim();
+     // If the street already contains the state (e.g. "100 Main St, Newark, NJ 07866"), just use it as-is
+     if (state && new RegExp(`\\b${state}\\b`, "i").test(street)) return street;
+     // Otherwise compose from the parts that exist
+     const parts = [street, city, state].filter(Boolean);
+     return parts.join(", ");
+   })();
+
+(b) Replace the existing address paragraph at ~line 676:
+   <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{d.address}</p>
+
+With:
+   <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{fullAddress || "—"}</p>
+
+CHANGE 2 — FLOATING/PINNED MINI-HEADER WHEN SCROLLED.
+
+When the user scrolls past the main property title, show a compact bar pinned to the top of the viewport (just below the site nav) showing the property name and address. When scrolled back to the top, the bar slides away.
+
+Implementation uses IntersectionObserver to detect when the h1 leaves the viewport.
+
+(a) Add the necessary imports if not already present in DetailView.tsx:
+   import { useRef, useState, useEffect } from "react";
+
+(b) Inside the DetailView component, add state and a ref:
+
+   const titleRef = useRef<HTMLHeadingElement>(null);
+   const [titleScrolled, setTitleScrolled] = useState(false);
+
+   useEffect(() => {
+     const el = titleRef.current;
+     if (!el) return;
+     const observer = new IntersectionObserver(
+       (entries) => setTitleScrolled(!entries[0].isIntersecting),
+       { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
+     );
+     observer.observe(el);
+     return () => observer.disconnect();
+   }, []);
+
+The rootMargin of -80px accounts for the site header (72px) plus a small buffer, so the floating bar appears just as the h1 disappears under the site nav.
+
+(c) Attach the ref to the existing h1 around line 675. Change:
+   <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:"0 0 4px 0", letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
+
+To:
+   <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:"0 0 4px 0", letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
+
+(d) Add the floating bar as the FIRST thing rendered by the component's return JSX. It's a position:fixed element that's always in the DOM but slides in/out based on titleScrolled:
+
+   <div style={{
+     position: "fixed",
+     top: 72,
+     left: 0,
+     right: 0,
+     zIndex: 90,
+     background: "rgba(252,250,245,0.94)",
+     backdropFilter: "blur(12px)",
+     WebkitBackdropFilter: "blur(12px)",
+     borderBottom: "1px solid #e7e0d2",
+     padding: "10px 28px",
+     boxShadow: titleScrolled ? "0 6px 18px -10px rgba(56,58,55,0.25)" : "none",
+     transform: titleScrolled ? "translateY(0)" : "translateY(-110%)",
+     transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
+     pointerEvents: titleScrolled ? "auto" : "none",
+   }}>
+     <div style={{
+       fontFamily: "'Fraunces',serif",
+       fontSize: 17,
+       fontWeight: 600,
+       color: "#26281f",
+       letterSpacing: "-0.01em",
+       lineHeight: 1.2,
+       whiteSpace: "nowrap",
+       overflow: "hidden",
+       textOverflow: "ellipsis",
+     }}>
+       {d.propertyName || d.fileName}
+     </div>
+     {fullAddress && (
+       <div style={{
+         fontSize: 11,
+         color: "#6f6a5f",
+         marginTop: 1,
+         whiteSpace: "nowrap",
+         overflow: "hidden",
+         textOverflow: "ellipsis",
+       }}>
+         {fullAddress}
+       </div>
+     )}
+   </div>
+
+This bar is always rendered (so the transition animates cleanly), but it sits offscreen via translateY(-110%) when titleScrolled is false. When true, it slides into place.
+
+The zIndex of 90 keeps it below the site nav (100) and well below any dropdown portals (9000+), so existing menus continue to work correctly. The pointerEvents:"none" when hidden prevents the invisible bar from intercepting clicks at the top of the page.
+
+VERIFICATION:
+
+1. Open any deal. The address line under the title should now show "[street], [city], [state]" instead of just the street.
+2. Scroll down. As the title scrolls off the top, a compact bar should slide in from the top showing the property name + address. The bar should sit just below the green Upload OMs / Tutorial / Sign out nav.
+3. Scroll back up. The bar should slide back out as the original title comes back into view.
+4. On mobile: the bar should still appear (sticky positioning works on touch devices) and the property name should truncate with an ellipsis if it's very long.
+
+DO NOT TOUCH:
+- The cover photo, financial cards, or any other deal page sections
+- The site header in components/Header.tsx
+- The dropdown portal z-indices
+- The cityState() helper in lib/utils.ts (the new fullAddress logic is local to DetailView)

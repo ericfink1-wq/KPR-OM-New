@@ -583,8 +583,73 @@ ${text.slice(0, 60000)}`;
     return warns;
   })();
 
+  const fullAddress = (() => {
+    const street = (d.address || "").trim();
+    const city = (d.city || "").trim();
+    const state = (d.state || "").trim();
+    if (state && new RegExp(`\\b${state}\\b`, "i").test(street)) return street;
+    const parts = [street, city, state].filter(Boolean);
+    return parts.join(", ");
+  })();
+
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [titleScrolled, setTitleScrolled] = useState(false);
+
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => setTitleScrolled(!entries[0].isIntersecting),
+      { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+      <div style={{
+        position: "fixed",
+        top: 72,
+        left: 0,
+        right: 0,
+        zIndex: 90,
+        background: "rgba(252,250,245,0.94)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid #e7e0d2",
+        padding: "10px 28px",
+        boxShadow: titleScrolled ? "0 6px 18px -10px rgba(56,58,55,0.25)" : "none",
+        transform: titleScrolled ? "translateY(0)" : "translateY(-110%)",
+        transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
+        pointerEvents: titleScrolled ? "auto" : "none",
+      }}>
+        <div style={{
+          fontFamily: "'Fraunces',serif",
+          fontSize: 17,
+          fontWeight: 600,
+          color: "#26281f",
+          letterSpacing: "-0.01em",
+          lineHeight: 1.2,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}>
+          {d.propertyName || d.fileName}
+        </div>
+        {fullAddress && (
+          <div style={{
+            fontSize: 11,
+            color: "#6f6a5f",
+            marginTop: 1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}>
+            {fullAddress}
+          </div>
+        )}
+      </div>
       {/* Top bar */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
@@ -664,8 +729,8 @@ ${text.slice(0, 60000)}`;
         {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
       </div>
 
-      <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:"0 0 4px 0", letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
-      <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{d.address}</p>
+      <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:"0 0 4px 0", letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
+      <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{fullAddress || "—"}</p>
 
       {/* Cover hero */}
       {imgs?.cover && (
