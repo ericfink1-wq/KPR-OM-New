@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { STATUS_COLORS } from "../lib/constants";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
+import PasteDealsModal from "./PasteDealsModal";
 
 interface Props {
   tab: string;
@@ -21,6 +22,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [uploadMenu, setUploadMenu] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
+  const [pasteDealsOpen, setPasteDealsOpen] = useState(false);
 
   const active = deals.filter(d => !d.trashedAt);
   const handleFiles = (fl: FileList | null) => {
@@ -149,6 +151,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   );
 
   return (
+    <>
+    {pasteDealsOpen && (
+      <PasteDealsModal
+        onClose={() => setPasteDealsOpen(false)}
+        onDone={() => { setPasteDealsOpen(false); onTab("analyst"); }}
+      />
+    )}
     <div style={{
       borderBottom: "1px solid #e7e0d2",
       background: "rgba(252,250,245,0.92)",
@@ -236,9 +245,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                   <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pick one or more PDFs</div>
                 </button>
                 <button onClick={() => { setUploadMenu(false); folderRef.current?.click(); }}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
+                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
                   <div style={{ fontWeight: 600, color: "#383a37" }}>Import a folder…</div>
                   <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Scan a whole folder of OMs</div>
+                </button>
+                <button onClick={() => { setUploadMenu(false); setPasteDealsOpen(true); }}
+                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Paste deals from Claude</div>
+                  <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Add deals from JSON — no API tokens used</div>
                 </button>
               </div>
             </>
@@ -290,5 +306,6 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         </div>
       </div>
     </div>
+    </>
   );
 }

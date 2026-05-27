@@ -1,0 +1,81 @@
+Build a "Paste deals from Claude" feature so users can create deals directly from pre-authored JSON, bypassing the Anthropic-API OM extraction path.
+
+LOCATION & ENTRY POINT:
+
+In the Header.tsx, add a new option inside the existing "Upload OMs" dropdown menu. The dropdown currently has whatever Upload OM options it has now — add a new menu item at the bottom labeled "Paste deals from Claude". Use the same olive styling as other dropdown items. Clicking it opens the new modal described below.
+
+WHY this placement: it's conceptually an "add deals to the library" action, just a different path than PDF upload. It belongs with Upload OMs, not Backup. It does NOT require the upload password (no API tokens are spent — it's a free path, same rationale as the tenant-roster paste).
+
+NEW COMPONENT: src/components/PasteDealsModal.tsx
+
+A modal dialog with:
+- Title: "Paste deals from Claude"
+- Subtitle in muted text: "Skip the AI extraction step — paste JSON Claude already produced for one or more deals. No API tokens used."
+- A large <textarea> (min 300px tall, monospace font 12pt) for pasting JSON
+- OR a file input that accepts .json files — if a file is selected, read its contents into the textarea
+- A "Validate" button below the textarea
+- After validation succeeds: a preview block showing parsed deals (each on one line: "✓ {name} — {city}, {state} · {N} tenants · {SF formatted with commas} SF") and a "Create {N} deal(s)" confirm button
+- After confirm: progress indicator while saving, then redirect to the home page (Analyst view) so the user sees the new deals appear in the pipeline
+
+ACCEPTED INPUT SHAPES:
+
+Accept three shapes, in this order of preference:
+
+1. An array of deal objects: [ {deal1}, {deal2}, ... ]
+2. A single deal object: { ...one deal }
+3. An object with a `deals` key containing an array: { "deals": [ {deal1}, {deal2} ] }
+
+Normalize all three into an array of deal objects internally.
+
+VALIDATION RULES (run on "Validate" click):
+
+For each deal in the parsed array:
+- REQUIRED: a `name` field (or `propertyName` — accept either, normalize to `name`). If missing, mark the deal invalid and show the index + reason.
+- If `id` is missing, auto-generate one using `Date.now().toString() + "_" + index` so multiple deals in the same paste get unique ids.
+- If `status` is missing, default to "Prospect".
+- If `tenants` is missing or not an array, default to [].
+- If `rentRollDate` is missing on a deal that has tenants, warn (yellow) but don't block — that field is nice-to-have.
+- All other fields are passed through as-is; the backend's PUT /api/deals/:id endpoint accepts arbitrary shape.
+
+VALIDATION OUTPUT:
+
+Show one of three states:
+- Empty / not yet validated: just the textarea + Validate button.
+- Validation found errors: red banner listing each invalid deal with index + reason. Do not show the Create button.
+- Validation passed (with or without warnings): green banner "Parsed {N} deal(s) successfully" + per-deal preview lines + any yellow warnings + the "Create {N} deal(s)" button.
+
+CREATE BEHAVIOR:
+
+On Create click:
+- Loop through the parsed deals.
+- For each, call apiSaveDeal(deal) — the same function the Backup Restore feature uses (Header.tsx around lines 86–125 references this).
+- Show progress: "Saving deal 3 of 7…" updating as each completes.
+- If a save fails, capture the error but continue with the rest; collect all errors and show them at the end.
+- On completion: show a summary ("Created 7 deals successfully" or "Created 5 deals; 2 failed — see details") with a "Done" button.
+- Done button closes the modal and navigates to the Analyst home page so new deals are visible.
+
+EDGE CASES:
+
+- Empty paste: Validate shows error "No JSON to validate."
+- Invalid JSON: Validate shows "Could not parse JSON: {error message}" with no crash.
+- Zero deals after parsing (empty array): "No deals found in JSON."
+- File input with non-.json file: reject with "Please select a .json file."
+- Very large paste (100+ deals): no special handling needed at this volume, but show the running count clearly so the user knows it's working.
+
+DON'T TOUCH:
+
+- The Upload OMs PDF path — unchanged.
+- The Backup / Restore flow — unchanged.
+- The tenant-roster "Paste roster from Claude" toggle on individual deal pages — unchanged.
+- The POST /api/deals and PUT /api/deals/:id backend endpoints — they already handle this; no backend work needed.
+- No new dependencies. Use only what's already in the project.
+
+DELIVERABLE:
+
+After this lands, the workflow becomes:
+1. User asks Claude to extract an OM (or several).
+2. Claude produces a JSON file or pastable block.
+3. User opens site → Upload OMs dropdown → "Paste deals from Claude" → pastes JSON → clicks Validate, then Create.
+4. New deals appear on the home page within seconds, with zero API tokens spent.
+
+Test that pasting both a single-deal object and an array of multiple deals both work correctly.
