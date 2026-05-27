@@ -1,0 +1,82 @@
+Add diagnostic logging to the Census demographics fetch. We need to see what's actually happening at each step because the function is returning HIGH CONFIDENCE with all-null data, which shouldn't be possible.
+
+CHANGE 1 — INSTRUMENT fetchCensusDemographics IN artifacts/api-server/src/lib/demographics.ts
+
+Wrap each external call and report what it produced. Capture into a diagnostic object that gets included in the returned MarketDemographics under a new `_debug` field, AND log each step to req.log or console.
+
+After the geocode step, capture:
+   debug.geocode = { 
+     ok: <boolean>, 
+     lat: <number or null>, 
+     lng: <number or null>, 
+     matchedAddress: <string or null>,
+     rawResponseSnippet: <first 300 chars of response body, for debugging> 
+   };
+
+After the tract spatial query (for each radius 1/3/5), capture:
+   debug.tracts1mi = { count: <N tracts found>, sample: <first 3 GEOIDs>, error?: <message> };
+   debug.tracts3mi = { count, sample, error? };
+   debug.tracts5mi = { count, sample, error? };
+
+After the ACS query, capture:
+   debug.acs = { 
+     vintageTried: <2024 or 2023>, 
+     endpointUrl: <full URL minus the long state+county string>, 
+     statusCode: <number>, 
+     rowsReturned: <N>, 
+     sample: <first row of response>,
+     error?: <message>
+   };
+
+After aggregation, capture:
+   debug.aggregation = { 
+     pop1mi, pop3mi, pop5mi, 
+     avgHHI1mi, avgHHI3mi, avgHHI5mi,
+     totalHouseholds1mi, totalHouseholds3mi, totalHouseholds5mi,
+   };
+
+Return the diagnostic object as part of the result:
+   return {
+     pop1mi, pop3mi, pop5mi,
+     avgHHI1mi, avgHHI3mi, avgHHI5mi,
+     confidence: <whatever the existing logic computes>,
+     source: "US Census Bureau ACS 5-Year Estimates",
+     asOf: "2020–2024",
+     // ...other existing fields
+     _debug: debug,  // NEW
+   };
+
+CHANGE 2 — FIX THE CONFIDENCE LOGIC SO IT REFLECTS REALITY
+
+Currently the function returns confidence: "high" even when all data fields are null. Fix this so confidence is "low" when no usable data was returned. Add this near the end of the function, just before the return:
+
+   const hasAnyData = [pop1mi, pop3mi, pop5mi, avgHHI1mi, avgHHI3mi, avgHHI5mi]
+     .some(v => v != null && v > 0);
+   const confidence = hasAnyData ? "high" : "low";
+   const note = hasAnyData 
+     ? null 
+     : `No demographic data returned. Tracts found: ${debug.tracts3mi?.count ?? 0}. ACS rows: ${debug.acs?.rowsReturned ?? 0}.`;
+
+CHANGE 3 — SHOW THE DEBUG INFO IN THE UI (TEMPORARY)
+
+In artifacts/om-database/src/components/DetailView.tsx, find the demographics block (~line 1314-1364) and add at the very end (just before the closing div):
+
+   {(d.marketDemographics as any)?._debug && (
+     <details style={{ marginTop: 12, fontSize: 10, color: "#7d766a" }}>
+       <summary style={{ cursor: "pointer" }}>Debug info (click to expand)</summary>
+       <pre style={{ background: "#faf7f0", padding: 8, borderRadius: 6, overflow: "auto", fontSize: 9, marginTop: 6 }}>
+         {JSON.stringify((d.marketDemographics as any)._debug, null, 2)}
+       </pre>
+     </details>
+   )}
+
+This is a temporary diagnostic UI — we'll remove it once we've fixed the underlying issue.
+
+VERIFICATION:
+
+1. After deploy, open Overland Plaza, click RE-PULL.
+2. Wait for the response.
+3. Expand the "Debug info" section.
+4. Screenshot the JSON content and send it for diagnosis.
+
+NO OTHER CHANGES. Don't try to fix the underlying bug yet — we need to see the diagnostic output first to know what to fix.

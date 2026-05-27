@@ -1413,6 +1413,14 @@ ${text.slice(0, 60000)}`;
               </div>
               {m.note && <div style={{ fontSize:10.5, color:"#7d766a", lineHeight:1.55, marginTop:7 }}>{m.note}</div>}
               <div style={{ fontSize:9, color:"#a69e91", marginTop:9 }}>Sourced from US Census Bureau ACS 5-Year Estimates. Tract-aggregated within radius rings — verify before relying on it.</div>
+              {(d.marketDemographics as any)?._debug && (
+                <details style={{ marginTop: 12, fontSize: 10, color: "#7d766a" }}>
+                  <summary style={{ cursor: "pointer" }}>Debug info (click to expand)</summary>
+                  <pre style={{ background: "#faf7f0", padding: 8, borderRadius: 6, overflow: "auto", fontSize: 9, marginTop: 6 }}>
+                    {JSON.stringify((d.marketDemographics as any)._debug, null, 2)}
+                  </pre>
+                </details>
+              )}
             </>
           );
         })() : (
