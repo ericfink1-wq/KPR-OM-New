@@ -6,6 +6,7 @@ import dealsRouter from "./deals";
 import ingestRouter from "./ingest";
 import aliasesRouter from "./aliases";
 import tenantIndexRouter from "./tenantIndex";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.use(ingestRouter);
 router.use(dealsRouter);
 router.use(aliasesRouter);
 router.use(tenantIndexRouter);
+router.use(analyticsRouter);
 router.use(aiRouter);
 
 export default router;

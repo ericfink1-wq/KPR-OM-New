@@ -10,13 +10,14 @@ import DealGrid from "./components/DealGrid";
 import DetailView from "./components/DetailView";
 import TenantView from "./components/TenantView";
 import AnalystChat from "./components/AnalystChat";
+import PortfolioAnalytics from "./components/PortfolioAnalytics";
 import Login from "./components/Login";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
 
-type TabId = "analyst" | "portfolio";
+type TabId = "analyst" | "portfolio" | "analytics";
 type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
@@ -212,6 +213,13 @@ function AppInner() {
             <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, color: "#383a37" }}>Drop your OMs to import</div>
             <div style={{ fontSize: 13, color: "#8b9aa8", marginTop: 6 }}>PDF files only</div>
           </div>
+        </div>
+      )}
+
+      {/* Analytics tab */}
+      {tab === "analytics" && (
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+          <PortfolioAnalytics />
         </div>
       )}
 
