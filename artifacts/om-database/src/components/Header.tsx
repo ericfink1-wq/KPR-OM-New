@@ -164,7 +164,6 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       top: 0,
       zIndex: 100,
       boxShadow: "0 8px 28px -22px rgba(56,58,55,0.55)",
-      overflowX: "auto",
     }}>
       {/* Logo + tabs */}
       <div style={{ display: "flex", alignItems: "center", gap: 28, flexShrink: 0 }}>
@@ -221,7 +220,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           {uploadMenu && (
             <>
               <div onClick={() => setUploadMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 220, overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 300, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 220, overflow: "hidden" }}>
                 <button onClick={() => { setUploadMenu(false); fileRef.current?.click(); }}
                   style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
                   <div style={{ fontWeight: 600, color: "#383a37" }}>Upload files…</div>
@@ -251,7 +250,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           {backupMenu && (
             <>
               <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 260, overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 300, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 260, overflow: "hidden" }}>
                 {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
                 {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
                 {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals", false)}
