@@ -11,6 +11,7 @@ import TenantRoster from "./TenantRoster";
 import { loadPdfJs, _capturePagePhoto, extractPdfText } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel } from "../lib/exportExcel";
+import MyUnderwritingPanel from "./MyUnderwritingPanel";
 
 interface Props {
   deal: Deal;
@@ -777,6 +778,9 @@ ${text.slice(0, 60000)}`;
           <Row l="# BUILDINGS" v={d.numberOfBuildings}/>
         </Card>
       </div>
+
+      {/* My Underwriting */}
+      <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
 
       {/* Verified hint */}
       {(() => {

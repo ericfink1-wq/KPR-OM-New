@@ -322,6 +322,17 @@ export interface Deal {
   debtLoanNumber?: string | null;
   debtContact?: string | null;
   debtNotes?: string | null;
+  // My underwriting
+  myUnderwriting?: MyUnderwritingInputs | null;
   // Trash
   trashedAt?: string | null;
+}
+
+export interface MyUnderwritingInputs {
+  myNoi?: number | null;
+  vacancyPct?: number | null;
+  mgmtFeePct?: number | null;
+  reservesPerSF?: number | null;
+  marketRentPSF?: number | null;
+  targetCapRate?: number | null;
 }
