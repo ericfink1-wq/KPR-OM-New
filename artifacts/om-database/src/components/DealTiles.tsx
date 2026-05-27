@@ -37,13 +37,13 @@ export default function DealTiles({ deals, onOpen }: Props) {
     <div style={{ marginBottom: 26 }}>
       <style>{`.deal-tiles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}@media(min-width:1024px){.deal-tiles-grid{grid-template-columns:repeat(5,1fr)}}`}</style>
       <div className="deal-tiles-grid">
-        {tiles.map(d => {
+        {tiles.map((d, i) => {
           const sc = STATUS_COLORS[d.status || ""] || "#7d766a";
           const loc = cityState(d);
           const src = covers[d.id];
           const noi = d.noi != null ? `$${(Number(d.noi) / 1e6).toFixed(1)}M NOI` : null;
           return (
-            <button key={d.id} onClick={() => onOpen(d.id)}
+            <button key={d.id} onClick={() => onOpen(d.id)} className={i === 9 ? "hidden lg:block" : undefined}
               style={{ position: "relative", height: 150, borderRadius: 14, overflow: "hidden", cursor: "pointer", border: "1px solid #ece5d7", textAlign: "left", padding: 0, boxShadow: "0 1px 2px rgba(56,58,55,0.05), 0 14px 30px -24px rgba(56,58,55,0.6)", background: src ? "#26281f" : "linear-gradient(135deg,#43463b,#26281f)", transition: "transform .2s ease" }}
               onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "scale(1.06)"; }}
               onMouseLeave={e => { e.currentTarget.style.transform = "none"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "none"; }}>
