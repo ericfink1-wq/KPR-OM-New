@@ -35,7 +35,8 @@ export default function DealTiles({ deals, onOpen }: Props) {
 
   return (
     <div style={{ marginBottom: 26 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 13 }}>
+      <style>{`.deal-tiles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}@media(min-width:1024px){.deal-tiles-grid{grid-template-columns:repeat(5,1fr)}}`}</style>
+      <div className="deal-tiles-grid">
         {tiles.map(d => {
           const sc = STATUS_COLORS[d.status || ""] || "#7d766a";
           const loc = cityState(d);
