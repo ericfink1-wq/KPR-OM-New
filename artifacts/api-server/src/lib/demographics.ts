@@ -172,10 +172,18 @@ export async function fetchCensusDemographics(address: string): Promise<MarketDe
 
     const acsDebugEntries: unknown[] = [];
 
+    const censusKey = process.env.CENSUS_API_KEY;
+
     for (const { state, county } of countyPairs.values()) {
       let succeeded = false;
       for (const vintage of [2024, 2023]) {
-        const baseUrl = `https://api.census.gov/data/${vintage}/acs/acs5?get=B01003_001E,B19025_001E,B11001_001E&for=tract:*&in=state:${state}+county:${county}`;
+        const params = new URLSearchParams({
+          get: "B01003_001E,B19025_001E,B11001_001E",
+          for: "tract:*",
+          in: `state:${state} county:${county}`,
+        });
+        if (censusKey) params.set("key", censusKey);
+        const baseUrl = `https://api.census.gov/data/${vintage}/acs/acs5?${params.toString()}`;
         const entry: Record<string, unknown> = { vintage, state, county, endpointBase: `https://api.census.gov/data/${vintage}/acs/acs5` };
         try {
           const resp = await fetchWithTimeout(baseUrl);
@@ -185,7 +193,11 @@ export async function fetchCensusDemographics(address: string): Promise<MarketDe
             acsDebugEntries.push(entry);
             continue;
           }
-          const rows = await resp.json() as string[][];
+          const responseText = await resp.text();
+          if (responseText.trim().startsWith("<") || responseText.includes("<html")) {
+            throw new Error(`Census API returned HTML (likely auth or rate limit issue). First 200 chars: ${responseText.slice(0, 200)}`);
+          }
+          const rows = JSON.parse(responseText) as string[][];
           entry.rowsReturned = rows ? rows.length - 1 : 0;
           entry.sample = rows?.[1] ?? null;
           if (!rows || rows.length < 2) {
