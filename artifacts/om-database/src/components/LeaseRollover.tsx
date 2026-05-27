@@ -1,4 +1,7 @@
-import { BarChart, Bar, XAxis, Cell, LabelList, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, Cell, LabelList,
+  ResponsiveContainer, Tooltip, ReferenceLine,
+} from "recharts";
 import type { Tenant } from "../lib/idb";
 
 interface Props {
@@ -21,6 +24,7 @@ function fmtRent(r: number): string {
 interface BucketDatum {
   label: string;
   pct: number;
+  cumPct: number;
   rent: number;
   sf: number;
   count: number;
@@ -77,14 +81,21 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
 
   const totalOccupiedRent = occupied.reduce((acc, t) => acc + toNum(t.annualRent), 0);
 
-  const chartData: BucketDatum[] = raw.map((b, i) => ({
-    label: b.label,
-    pct: totalOccupiedRent > 0 ? (b.rent / totalOccupiedRent) * 100 : 0,
-    rent: b.rent,
-    sf: b.sf,
-    count: b.count,
-    nearTerm: i <= 1,
-  }));
+  // Build chart data with cumulative %
+  let running = 0;
+  const chartData: BucketDatum[] = raw.map((b, i) => {
+    const pct = totalOccupiedRent > 0 ? (b.rent / totalOccupiedRent) * 100 : 0;
+    running += pct;
+    return {
+      label: b.label,
+      pct,
+      cumPct: Math.min(100, running),
+      rent: b.rent,
+      sf: b.sf,
+      count: b.count,
+      nearTerm: i <= 1,
+    };
+  });
 
   // 24-month summary: buckets 0, 1, 2 per spec
   const rent24mo = raw.slice(0, 3).reduce((acc, b) => acc + b.rent, 0);
@@ -120,14 +131,29 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
         </p>
       ) : (
         <>
-          <ResponsiveContainer width="100%" height={190}>
-            <BarChart data={chartData} margin={{ top: 22, right: 4, left: 4, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={210}>
+            <ComposedChart data={chartData} margin={{ top: 22, right: 42, left: 4, bottom: 0 }}>
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 10, fill: "#a89f8f", fontFamily: "'Inter',sans-serif" }}
                 axisLine={false}
                 tickLine={false}
               />
+              {/* Hidden left axis — just for bar scale */}
+              <YAxis yAxisId="bar" hide domain={[0, "auto"]} />
+              {/* Right axis — cumulative %, 0–100 */}
+              <YAxis
+                yAxisId="cum"
+                orientation="right"
+                domain={[0, 100]}
+                tickFormatter={v => `${v}%`}
+                tick={{ fontSize: 9, fill: "#c0b8ab", fontFamily: "'Inter',sans-serif" }}
+                axisLine={false}
+                tickLine={false}
+                width={34}
+                ticks={[0, 25, 50, 75, 100]}
+              />
+              <ReferenceLine yAxisId="cum" y={50} stroke="#e7e0d2" strokeDasharray="3 3" />
               <Tooltip
                 cursor={{ fill: "rgba(63,122,31,0.06)" }}
                 content={({ active, payload }) => {
@@ -138,11 +164,14 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
                       <div style={{ fontWeight: 700, color: "#2a2c28", marginBottom: 2 }}>{d.label}</div>
                       <div style={{ color: "#52554e" }}>{fmtRent(d.rent)} · {Math.round(d.pct)}% of rent</div>
                       <div style={{ color: "#a89f8f" }}>{Math.round(d.sf).toLocaleString()} SF · {d.count} tenant{d.count !== 1 ? "s" : ""}</div>
+                      <div style={{ color: "#3f7a1f", fontWeight: 600, marginTop: 3, borderTop: "1px solid #f1eadc", paddingTop: 3 }}>
+                        {Math.round(d.cumPct)}% cumulative roll
+                      </div>
                     </div>
                   );
                 }}
               />
-              <Bar dataKey="pct" radius={[3, 3, 0, 0]} maxBarSize={44}>
+              <Bar yAxisId="bar" dataKey="pct" radius={[3, 3, 0, 0]} maxBarSize={44}>
                 {chartData.map((entry, index) => (
                   <Cell key={index} fill={entry.nearTerm ? "#8cbf63" : "#3f7a1f"} />
                 ))}
@@ -156,8 +185,29 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
                   style={{ fontSize: 9, fill: "#6f6a5f", fontFamily: "'Inter',sans-serif" }}
                 />
               </Bar>
-            </BarChart>
+              <Line
+                yAxisId="cum"
+                dataKey="cumPct"
+                type="monotone"
+                stroke="#c97a18"
+                strokeWidth={1.5}
+                dot={{ r: 2.5, fill: "#c97a18", strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: "#c97a18", strokeWidth: 0 }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
+
+          {/* Legend */}
+          <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 4, marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: "#3f7a1f" }} />
+              <span style={{ fontSize: 10, color: "#a89f8f", fontFamily: "'Inter',sans-serif" }}>Roll by year</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 14, height: 2, background: "#c97a18", borderRadius: 1 }} />
+              <span style={{ fontSize: 10, color: "#a89f8f", fontFamily: "'Inter',sans-serif" }}>Cumulative roll %</span>
+            </div>
+          </div>
 
           <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 2, fontFamily: "'Inter',sans-serif" }}>
             <strong style={{ color: "#383a37", fontWeight: 600 }}>{pct24mo}%</strong> of base rent rolls in the next 24 months.
