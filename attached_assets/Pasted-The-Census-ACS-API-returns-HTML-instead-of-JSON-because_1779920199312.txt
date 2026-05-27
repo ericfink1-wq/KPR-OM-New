@@ -1,0 +1,68 @@
+The Census ACS API returns HTML instead of JSON because it now strictly requires an API key for all data queries. Add API key support to the demographics fetch.
+
+CHANGE 1 — APPEND THE KEY TO ACS REQUESTS
+
+In artifacts/api-server/src/lib/demographics.ts, locate the ACS endpoint URL construction. The current call looks like:
+   `https://api.census.gov/data/${vintage}/acs/acs5?get=B01003_001E,B19025_001E,B11001_001E&for=tract:*&in=state:${state}+county:${county}`
+
+Update it to append &key=${process.env.CENSUS_API_KEY} when the env var is set. Build the URL like this:
+
+   const censusKey = process.env.CENSUS_API_KEY;
+   const baseUrl = `https://api.census.gov/data/${vintage}/acs/acs5`;
+   const params = new URLSearchParams({
+     get: "B01003_001E,B19025_001E,B11001_001E",
+     for: "tract:*",
+     in: `state:${state} county:${county}`,
+   });
+   if (censusKey) params.set("key", censusKey);
+   const url = `${baseUrl}?${params.toString()}`;
+
+Two improvements baked in: (a) URLSearchParams handles encoding properly (the `+` between state and county becomes a proper space encoding via `%20`, which the Census API accepts cleanly); (b) the key is included only when set, so the function still works in dev environments without a key (with reduced reliability).
+
+CHANGE 2 — DETECT THE MISSING-KEY CASE EARLY AND RETURN A USEFUL ERROR
+
+Before making any ACS calls, check whether the key is configured. If it's not, skip the ACS step and return a low-confidence result with a clear note:
+
+   if (!process.env.CENSUS_API_KEY) {
+     return {
+       confidence: "low",
+       source: "US Census Bureau ACS 5-Year Estimates",
+       asOf: "2020–2024",
+       note: "Census API key not configured. Set CENSUS_API_KEY in Replit Secrets and re-pull.",
+       lookedUpAt: new Date().toISOString(),
+       _debug: { reason: "missing_api_key" },
+     } as MarketDemographics & { _debug?: unknown };
+   }
+
+This sits at the top of fetchCensusDemographics, after the address validation but before the geocoder call.
+
+CHANGE 3 — HANDLE THE HTML-RESPONSE CASE GRACEFULLY (DEFENSE IN DEPTH)
+
+If for some reason the ACS endpoint still returns non-JSON (rate limit, server hiccup, etc.), don't let the parse error swallow the diagnostic. In the existing ACS fetch loop where the JSON.parse currently throws, wrap it:
+
+   let acsData;
+   try {
+     const responseText = await acsResponse.text();
+     // Detect HTML response (means the API returned an error page)
+     if (responseText.trim().startsWith("<") || responseText.includes("<html")) {
+       throw new Error(`Census API returned HTML (likely auth or rate limit issue). First 200 chars: ${responseText.slice(0, 200)}`);
+     }
+     acsData = JSON.parse(responseText);
+   } catch (err) {
+     // existing error capture logic
+   }
+
+VERIFICATION:
+
+1. After deploying, click RE-PULL on Overland Plaza.
+2. Within ~15 seconds, you should see the 1/3/5 mile table populate:
+   - Pop 3mi: should be in the range of ~70,000–110,000 (the OM-extracted value is 101,935, ACS will be a bit lower since it's a 2020-2024 average)
+   - Avg HHI 3mi: should be in the $70,000–$90,000 range
+3. Confidence badge should show HIGH CONFIDENCE.
+4. The "Debug info" expandable section should show non-zero totalACSTractsLoaded and populated aggregation values.
+
+If you still see HTML errors after the key is set, the most likely cause is that the key hasn't been activated yet — go back to the email Census sent and click the activation link, then wait 1-2 minutes and try again.
+
+KEEP THE DEBUG UI for now (the expandable "Debug info" section in DetailView.tsx) — we'll remove it in a separate cleanup pass once we've confirmed everything is working across multiple deals.
+
+NO OTHER CHANGES.

@@ -44,6 +44,18 @@ interface ACSRow {
 export async function fetchCensusDemographics(address: string): Promise<MarketDemographics> {
   const debug: Record<string, unknown> = { address };
 
+  // ── Guard: API key required ────────────────────────────────────────────────
+  if (!process.env.CENSUS_API_KEY) {
+    return {
+      confidence: "low",
+      source: "US Census Bureau ACS 5-Year Estimates",
+      asOf: "2020\u20132024",
+      note: "Census API key not configured. Set CENSUS_API_KEY in Replit Secrets and re-pull.",
+      lookedUpAt: new Date().toISOString(),
+      _debug: { reason: "missing_api_key" },
+    };
+  }
+
   try {
     // ── Step 1: Geocode ─────────────────────────────────────────────────────
     const geocodeUrl =
