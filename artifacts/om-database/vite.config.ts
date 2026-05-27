@@ -50,6 +50,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "@react-pdf/renderer": path.resolve(import.meta.dirname, "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js"),
     },
     dedupe: ["react", "react-dom", "@tanstack/react-query"],
   },

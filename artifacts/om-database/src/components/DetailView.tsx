@@ -13,6 +13,8 @@ import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel } from "../lib/exportExcel";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import DealSummaryPDF from "./DealSummaryPDF";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 
 interface Props {
@@ -631,6 +633,17 @@ ${text.slice(0, 60000)}`;
               <span style={{ fontSize:11, lineHeight:1 }}>⬇</span> EXCEL
             </button>
           )}
+          <PDFDownloadLink
+            document={<DealSummaryPDF deal={d} imgs={imgs} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />}
+            fileName={`${(d.propertyName||d.fileName||"deal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}-summary.pdf`}
+            style={{ textDecoration:"none" }}
+          >
+            {({ loading }: { loading: boolean }) => (
+              <button style={{ background:"transparent", border:"1px solid #4a7fb5", color: loading ? "#a69e91" : "#4a7fb5", padding:"5px 10px", borderRadius:4, cursor: loading ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4, opacity: loading ? 0.7 : 1 }}>
+                <span style={{ fontSize:11, lineHeight:1 }}>⬇</span>{loading ? "PDF…" : "SUMMARY"}
+              </button>
+            )}
+          </PDFDownloadLink>
           <button onClick={() => onLookupSale(d.id)} disabled={saleBusy}
             style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"5px 10px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"FIND SALE"}</button>
           {!confirmDel
