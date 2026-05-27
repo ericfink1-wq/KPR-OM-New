@@ -1,0 +1,187 @@
+Replace the existing "Paste deals from Claude" modal with a simpler file-picker upload flow that mirrors the PDF Upload OMs pattern: pick .json files, they process automatically in the background, deals appear in the pipeline — no modal, no validate step, no create button.
+
+CURRENT STATE TO REPLACE:
+- Header.tsx has a "Paste deals from Claude" menu item in the Upload OMs dropdown that opens a modal (PasteDealsModal.tsx) with textarea + auto-validate + create button
+- That flow has too many UI stages and feels heavy compared to the PDF upload which is just file-picker → done
+
+NEW DESIGN:
+- Replace the menu item label "Paste deals from Claude" with "Upload .json deal(s)"
+- Clicking it opens a multi-file .json file picker (no modal)
+- Selected files are read, parsed, and saved as deals automatically in the background
+- A small progress indicator appears (e.g., toast or inline strip in the header) showing "Importing N of M deals…"
+- On completion: deals are pushed into the parent state so they appear in the pipeline without a refresh
+- Toast disappears after 3 seconds with a final "✓ Imported N deals" message
+- The PasteDealsModal.tsx component is no longer used and should be deleted (along with its import in Header.tsx)
+
+DETAILED CHANGES:
+
+PART 1 — Header.tsx
+
+(a) Remove the PasteDealsModal import (line 5).
+
+(b) Remove the pasteDealsOpen state and its setter (line 25).
+
+(c) Remove the entire <PasteDealsModal ...> block from the return (around lines 155-160).
+
+(d) ADD a new hidden file input alongside the existing fileRef/folderRef/restoreRef inputs (around lines 222-224):
+   <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
+
+(e) ADD a new ref at the top of the component, alongside the other refs:
+   const jsonRef = useRef<HTMLInputElement>(null);
+
+(f) ADD a new state for the import progress toast:
+   const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number } | null>(null);
+
+(g) ADD the import handler. This is where the work happens — read each file, parse JSON, normalize each deal, save via apiSaveDeal, accumulate results:
+
+   const handleJsonFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     const files = Array.from(e.target.files ?? []);
+     if (e.target) e.target.value = "";
+     if (files.length === 0) return;
+
+     // Parse all files first to get total deal count
+     const allDeals: Deal[] = [];
+     const parseErrors: string[] = [];
+     for (const file of files) {
+       try {
+         const text = await file.text();
+         const raw = JSON.parse(text);
+         const items: unknown[] = Array.isArray(raw)
+           ? raw
+           : (raw && typeof raw === "object" && Array.isArray((raw as any).deals))
+             ? (raw as any).deals
+             : [raw];
+         for (let i = 0; i < items.length; i++) {
+           const obj = items[i];
+           if (!obj || typeof obj !== "object") continue;
+           const r = { ...(obj as Record<string, unknown>) };
+           // Normalize: accept "name" or "propertyName"
+           if (typeof r.name === "string" && !r.propertyName) r.propertyName = r.name;
+           delete r.name;
+           if (!r.propertyName || typeof r.propertyName !== "string" || !r.propertyName.trim()) {
+             parseErrors.push(`"${file.name}" deal at index ${i}: missing propertyName`);
+             continue;
+           }
+           if (!r.id || typeof r.id !== "string") {
+             r.id = `${Date.now().toString(36)}_${allDeals.length}_${Math.random().toString(36).slice(2, 7)}`;
+           }
+           if (!r.status) r.status = "Prospect";
+           if (!Array.isArray(r.tenants)) r.tenants = [];
+           if (!r.uploadedAt) r.uploadedAt = new Date().toISOString();
+           allDeals.push(r as unknown as Deal);
+         }
+       } catch (err) {
+         const msg = err instanceof Error ? err.message : String(err);
+         parseErrors.push(`"${file.name}": ${msg}`);
+       }
+     }
+
+     if (allDeals.length === 0) {
+       setImportProgress({ current: 0, total: 0, done: 0, failed: parseErrors.length });
+       setTimeout(() => setImportProgress(null), 4000);
+       console.warn("JSON upload errors:", parseErrors);
+       return;
+     }
+
+     // Save each deal sequentially with progress
+     const succeeded: Deal[] = [];
+     let failed = 0;
+     for (let i = 0; i < allDeals.length; i++) {
+       setImportProgress({ current: i + 1, total: allDeals.length });
+       try {
+         await apiSaveDeal(allDeals[i]);
+         succeeded.push(allDeals[i]);
+       } catch {
+         failed++;
+       }
+     }
+
+     // Push into parent state
+     if (succeeded.length > 0 && onDealsAdded) onDealsAdded(succeeded);
+
+     // Show completion toast, auto-dismiss
+     setImportProgress({ current: allDeals.length, total: allDeals.length, done: succeeded.length, failed });
+     setTimeout(() => setImportProgress(null), 3500);
+   };
+
+(h) REPLACE the existing "Paste deals from Claude" menu item (currently around lines 252-258) with:
+
+   <button onClick={() => { setUploadMenu(false); jsonRef.current?.click(); }}
+     style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+     onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+     <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Upload .json deal(s)</div>
+     <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pre-extracted deals from Claude — no API tokens used</div>
+   </button>
+
+(i) ADD the progress toast somewhere in the JSX. Render it at the bottom of the component's returned JSX, before the closing fragment. Use position: fixed bottom-right so it doesn't interfere with the dropdown layout. Example:
+
+   {importProgress && createPortal(
+     <div style={{ 
+       position: "fixed", 
+       bottom: 24, 
+       right: 24, 
+       zIndex: 9500,
+       background: "#fff",
+       border: "1px solid #e3dccd",
+       borderLeft: importProgress.failed && importProgress.failed > 0 ? "3px solid #d9890c" : "3px solid #6dba43",
+       borderRadius: 10,
+       padding: "12px 18px",
+       boxShadow: "0 12px 36px rgba(56,58,55,0.18)",
+       fontSize: 12,
+       fontFamily: "'Inter',sans-serif",
+       color: "#383a37",
+       maxWidth: 320,
+     }}>
+       {importProgress.done !== undefined ? (
+         <div>
+           <div style={{ fontWeight: 700, marginBottom: 2 }}>
+             {importProgress.failed && importProgress.failed > 0
+               ? `Imported ${importProgress.done} · ${importProgress.failed} failed`
+               : `✓ Imported ${importProgress.done} deal${importProgress.done !== 1 ? "s" : ""}`}
+           </div>
+           {importProgress.failed && importProgress.failed > 0 ? (
+             <div style={{ fontSize: 11, color: "#a69e91" }}>Check console for details</div>
+           ) : null}
+         </div>
+       ) : (
+         <div>
+           <div style={{ fontWeight: 600, marginBottom: 6 }}>Importing deal {importProgress.current} of {importProgress.total}…</div>
+           <div style={{ background: "#f0f0ec", borderRadius: 4, height: 4, overflow: "hidden" }}>
+             <div style={{ background: "#6dba43", height: "100%", width: `${(importProgress.current / importProgress.total) * 100}%`, transition: "width 0.2s" }} />
+           </div>
+         </div>
+       )}
+     </div>,
+     document.body
+   )}
+
+(j) Make sure `createPortal` and `apiSaveDeal` are imported at the top of Header.tsx (apiSaveDeal already is; createPortal needs to be added if it isn't already: `import { createPortal } from "react-dom";`).
+
+PART 2 — DELETE PasteDealsModal.tsx
+
+Delete the file at artifacts/om-database/src/components/PasteDealsModal.tsx — it's no longer used.
+
+PART 3 — VERIFY App.tsx PASSES onDealsAdded TO HEADER
+
+The previous build of the modal already required threading onDealsAdded from App.tsx → Header → PasteDealsModal. That same threading needs to remain in place for the new file-upload flow: Header needs the onDealsAdded prop. If <Header onDealsAdded={handleDealsAdded} ... /> is already in App.tsx (it should be from the earlier build), leave it. If not, add it.
+
+WHAT NOT TO CHANGE:
+- The PDF Upload OMs flow — completely untouched
+- The Import a folder flow — completely untouched
+- The Backup/Restore flow — completely untouched
+- The handleDealsAdded callback in App.tsx — already works, just keep using it
+
+USER FLOW AFTER THIS LANDS:
+
+1. Click "Upload OMs" chevron → dropdown opens
+2. Click "Upload .json deal(s)"
+3. File picker opens, user selects 1 or more .json files (Cmd/Ctrl-click for multi-select on desktop, multi-select sheet on mobile)
+4. Toast appears bottom-right: "Importing deal 1 of 5…" with a progress bar
+5. As each deal saves, the toast updates
+6. On completion, toast shows "✓ Imported 5 deals" for ~3.5 seconds then disappears
+7. The new deals are visible in the Analyst home pipeline immediately — no refresh needed
+
+If any file has malformed JSON or a deal is missing propertyName, that file/deal is skipped, the error logged to console, and the toast indicates "N failed" at the end. The rest still succeed.
+
+NO new dependencies. Uses createPortal (already standard in react-dom) and apiSaveDeal (already imported). No backend changes — POST /api/deals already handles arbitrary deal JSON with nested tenants.

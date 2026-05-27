@@ -1,9 +1,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { STATUS_COLORS } from "../lib/constants";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
-import PasteDealsModal from "./PasteDealsModal";
 
 interface Props {
   tab: string;
@@ -20,19 +18,86 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
+  const jsonRef = useRef<HTMLInputElement>(null);
   const uploadTriggerRef = useRef<HTMLDivElement>(null);
   const backupTriggerRef = useRef<HTMLDivElement>(null);
   const [backupMenu, setBackupMenu] = useState(false);
   const [uploadMenu, setUploadMenu] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
-  const [pasteDealsOpen, setPasteDealsOpen] = useState(false);
   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
   const [backupRect, setBackupRect] = useState<DOMRect | null>(null);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number } | null>(null);
 
   const active = deals.filter(d => !d.trashedAt);
   const handleFiles = (fl: FileList | null) => {
     if (fl && fl.length > 0) onFiles(fl);
+  };
+
+  const handleJsonFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (e.target) e.target.value = "";
+    if (files.length === 0) return;
+
+    const allDeals: Deal[] = [];
+    const parseErrors: string[] = [];
+
+    for (const file of files) {
+      try {
+        const text = await file.text();
+        const raw = JSON.parse(text);
+        const items: unknown[] = Array.isArray(raw)
+          ? raw
+          : (raw && typeof raw === "object" && Array.isArray((raw as any).deals))
+            ? (raw as any).deals
+            : [raw];
+        for (let i = 0; i < items.length; i++) {
+          const obj = items[i];
+          if (!obj || typeof obj !== "object") continue;
+          const r = { ...(obj as Record<string, unknown>) };
+          if (typeof r.name === "string" && !r.propertyName) r.propertyName = r.name;
+          delete r.name;
+          if (!r.propertyName || typeof r.propertyName !== "string" || !(r.propertyName as string).trim()) {
+            parseErrors.push(`"${file.name}" deal at index ${i}: missing propertyName`);
+            continue;
+          }
+          if (!r.id || typeof r.id !== "string") {
+            r.id = `${Date.now().toString(36)}_${allDeals.length}_${Math.random().toString(36).slice(2, 7)}`;
+          }
+          if (!r.status) r.status = "Prospect";
+          if (!Array.isArray(r.tenants)) r.tenants = [];
+          if (!r.uploadedAt) r.uploadedAt = new Date().toISOString();
+          allDeals.push(r as unknown as Deal);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        parseErrors.push(`"${file.name}": ${msg}`);
+      }
+    }
+
+    if (allDeals.length === 0) {
+      setImportProgress({ current: 0, total: 0, done: 0, failed: parseErrors.length });
+      setTimeout(() => setImportProgress(null), 4000);
+      console.warn("JSON upload errors:", parseErrors);
+      return;
+    }
+
+    const succeeded: Deal[] = [];
+    let failed = 0;
+    for (let i = 0; i < allDeals.length; i++) {
+      setImportProgress({ current: i + 1, total: allDeals.length });
+      try {
+        await apiSaveDeal(allDeals[i]);
+        succeeded.push(allDeals[i]);
+      } catch {
+        failed++;
+      }
+    }
+
+    if (succeeded.length > 0 && onDealsAdded) onDealsAdded(succeeded);
+
+    setImportProgress({ current: allDeals.length, total: allDeals.length, done: succeeded.length, failed });
+    setTimeout(() => setImportProgress(null), 3500);
   };
 
   const exportCSV = () => {
@@ -158,13 +223,6 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
   return (
     <>
-    {pasteDealsOpen && (
-      <PasteDealsModal
-        onClose={() => setPasteDealsOpen(false)}
-        onDone={() => { setPasteDealsOpen(false); onTab("analyst"); }}
-        onDealsAdded={onDealsAdded}
-      />
-    )}
     <div style={{
       borderBottom: "1px solid #e7e0d2",
       background: "rgba(252,250,245,0.92)",
@@ -229,6 +287,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={fileRef} type="file" accept=".pdf" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
         <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
+        <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
 
         {/* Upload OMs split button */}
         <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
@@ -274,12 +333,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                 <div style={{ fontWeight: 600, color: "#383a37" }}>Import a folder…</div>
                 <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Scan a whole folder of OMs</div>
               </button>
-              <button onClick={() => { setUploadMenu(false); setPasteDealsOpen(true); }}
+              <button onClick={() => { setUploadMenu(false); jsonRef.current?.click(); }}
                 style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Paste deals from Claude</div>
-                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Add deals from JSON — no API tokens used</div>
+                <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Upload .json deal(s)</div>
+                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pre-extracted deals from Claude — no API tokens used</div>
               </button>
             </div>
           </>,
@@ -347,6 +406,46 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         </div>
       </div>
     </div>
+
+    {importProgress && createPortal(
+      <div style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
+        zIndex: 9500,
+        background: "#fff",
+        border: "1px solid #e3dccd",
+        borderLeft: importProgress.failed && importProgress.failed > 0 ? "3px solid #d9890c" : "3px solid #6dba43",
+        borderRadius: 10,
+        padding: "12px 18px",
+        boxShadow: "0 12px 36px rgba(56,58,55,0.18)",
+        fontSize: 12,
+        fontFamily: "'Inter',sans-serif",
+        color: "#383a37",
+        maxWidth: 320,
+      }}>
+        {importProgress.done !== undefined ? (
+          <div>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>
+              {importProgress.failed && importProgress.failed > 0
+                ? `Imported ${importProgress.done} · ${importProgress.failed} failed`
+                : `✓ Imported ${importProgress.done} deal${importProgress.done !== 1 ? "s" : ""}`}
+            </div>
+            {importProgress.failed && importProgress.failed > 0 ? (
+              <div style={{ fontSize: 11, color: "#a69e91" }}>Check console for details</div>
+            ) : null}
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Importing deal {importProgress.current} of {importProgress.total}…</div>
+            <div style={{ background: "#f0f0ec", borderRadius: 4, height: 4, overflow: "hidden" }}>
+              <div style={{ background: "#6dba43", height: "100%", width: `${(importProgress.current / importProgress.total) * 100}%`, transition: "width 0.2s" }} />
+            </div>
+          </div>
+        )}
+      </div>,
+      document.body
+    )}
     </>
   );
 }
