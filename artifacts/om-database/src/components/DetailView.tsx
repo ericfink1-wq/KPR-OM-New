@@ -13,6 +13,7 @@ import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel } from "../lib/exportExcel";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
+import { isInvestmentGrade } from "../lib/tenantCredit";
 
 interface Props {
   deal: Deal;
@@ -784,6 +785,19 @@ ${text.slice(0, 60000)}`;
         </Card>
         <Card title="LEASE METRICS">
           <Row l="WALT" v={d.walt?`${d.walt} yrs`:null} c={d.walt && Number(d.walt)<3?"#dc2626":Number(d.walt)<6?"#383a37":"#0f9d63"} field="walt"/>
+          {(d.tenants||[]).length > 0 && (() => {
+            const toN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
+            const occ = (d.tenants||[]).filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
+            const ig = occ.filter(t => t.name && isInvestmentGrade(t.name));
+            const totalR = occ.reduce((s, t) => s + toN(t.annualRent), 0);
+            const igR = ig.reduce((s, t) => s + toN(t.annualRent), 0);
+            const totalS = occ.reduce((s, t) => s + toN(t.sf), 0);
+            const igS = ig.reduce((s, t) => s + toN(t.sf), 0);
+            const pR = totalR > 0 ? Math.round(igR / totalR * 100) : null;
+            const pS = totalS > 0 ? Math.round(igS / totalS * 100) : null;
+            const v = [pR != null ? `${pR}% rent` : null, pS != null ? `${pS}% GLA` : null].filter(Boolean).join(" · ");
+            return v ? <Row l="IG EXPOSURE" v={v} /> : null;
+          })()}
           <Row l="YEAR BUILT" v={d.yearBuilt}/>
           <Row l="RENOVATION YEAR" v={d.renovationYear}/>
           <Row l="LOT SIZE" v={d.lotSizeAcres?`${d.lotSizeAcres} ac`:null}/>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Tenant } from "../lib/idb";
 import { fmtLeaseDate, fmtTenantSales } from "../lib/utils";
+import { isInvestmentGrade } from "../lib/tenantCredit";
 
 interface Props {
   tenants: Tenant[];
@@ -105,6 +106,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+                      {t.name && isInvestmentGrade(t.name) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>IG</span>}
                       {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
                     </>
                   )}

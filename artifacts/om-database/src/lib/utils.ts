@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { Deal } from "./idb";
+import { isInvestmentGrade } from "./tenantCredit";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -256,7 +257,7 @@ export function buildSystemPrompt(deals: Deal[]): string {
     const tenants = isPassed
       ? tenantList
           .filter(t => t.isAnchor || (t.sf && Number(t.sf) >= 5000))
-          .map(t => ({ name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry }))
+          .map(t => ({ name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry, isIG: isInvestmentGrade(t.name || "") || undefined }))
       : tenantList.map(t => ({
           name: t.name,
           sf: t.sf,
@@ -266,6 +267,7 @@ export function buildSystemPrompt(deals: Deal[]): string {
           salesPSF: t.salesPSF ?? undefined,
           anchor: t.isAnchor || undefined,
           reimb: t.reimbursementMethod ?? undefined,
+          isIG: isInvestmentGrade(t.name || "") || undefined,
         }));
     return {
       id: d.id, name: d.propertyName||d.fileName, market: d.market,
