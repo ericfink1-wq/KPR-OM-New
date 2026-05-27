@@ -31,6 +31,14 @@ description: Architecture decisions, gotchas, and migration notes for the KPR De
 
 **Why:** Images stored as base64 TEXT — large payloads, JSON body limit set to 50mb in Express.
 
+## tenant_index (flattened mirror table)
+- `tenant_index`: serial PK, deal_id, deal_name, raw_name, canonical_name, sf, rent_per_sf, annual_rent, lease_expiry (text), lease_expiry_date (date, parsed), lease_type, credit_rating, is_anchor, deal_status, updated_at
+- Rebuild helper: `artifacts/api-server/src/lib/tenantIndex.ts` → `rebuildTenantIndex(dealId, data)` — deletes + reinserts; loads alias map internally; errors are swallowed (non-fatal mirror)
+- Hooked into: PUT /api/deals/:id (setImmediate), runBackgroundExtraction (awaited), reanalyze background job (awaited)
+- Query: `GET /api/tenant-index` with AND filters: expiringBefore/After, rentPerSFBelow, canonicalName (ilike), status, dealId, isAnchor
+- One-time / on-demand full backfill: `POST /api/tenant-index/rebuild-all`
+- `parseLeaseDate()` in tenantIndex.ts handles ISO, YYYY-MM, MM/DD/YYYY, M/YYYY, "Sept-2027" style
+
 ## Tenant name normalization
 - `tenant_aliases` table maps rawName → canonicalName (PK = rawName)
 - `enrichTenants()` helper in `deals.ts` applies the alias map at read time; fallback is raw name

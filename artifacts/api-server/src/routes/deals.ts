@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
+import { rebuildTenantIndex } from "../lib/tenantIndex";
 
 async function loadAliasMap(): Promise<Record<string, string>> {
   try {
@@ -101,6 +102,7 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
       .values({ id, data: rest })
       .onConflictDoUpdate({ target: dealsTable.id, set: { data: rest, updatedAt: new Date() } });
     res.json({ ok: true, id });
+    setImmediate(() => { rebuildTenantIndex(id, rest).catch(() => {}); });
   } catch (err) {
     req.log.error({ err }, "Failed to upsert deal");
     res.status(500).json({ error: "Failed to upsert deal" });
@@ -273,6 +275,7 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
           await db.update(dealsTable)
             .set({ data: dealData, updatedAt: new Date() })
             .where(eq(dealsTable.id, id));
+          await rebuildTenantIndex(id, dealData);
           req.log.info({ id }, "Re-analysis complete");
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : "Re-analysis failed";

@@ -2,6 +2,7 @@
 import type { Logger } from "pino";
 import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { rebuildTenantIndex } from "./tenantIndex";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -314,6 +315,7 @@ export async function runBackgroundExtraction(
     await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })
       .where(eq(dealsTable.id, id));
+    await rebuildTenantIndex(id, dealData);
     log.info({ id }, "Background extraction complete");
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : "Extraction failed";
