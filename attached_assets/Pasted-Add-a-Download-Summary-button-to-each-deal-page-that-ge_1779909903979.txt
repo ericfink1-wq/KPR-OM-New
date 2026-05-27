@@ -1,0 +1,96 @@
+Add a "Download Summary" button to each deal page that generates a 2-page PDF executive summary for sending to leadership without requiring site access.
+
+INSTALL: Add `@react-pdf/renderer` as a dependency.
+
+NEW BUTTON on every deal detail page, in the same row as the existing action buttons (Refresh rent roll, Re-run extraction, etc.):
+Label: "Download Summary" with a download icon if convenient.
+On click: generates and triggers a download. Filename: `{kebab-case-property-name}-summary.pdf`.
+
+NEW COMPONENT: src/components/DealSummaryPDF.tsx
+Exports a React-PDF document using Document, Page, View, Text, Image, StyleSheet primitives.
+
+VISUAL STYLING (match the in-app KPR look):
+- Font: Helvetica (built into react-pdf)
+- Colors: ink #2a2c28, body #383a37, muted #6f6a5f, olive #3f7a1f, sage soft #eef3e6, border #b8d49a, rule #d8d2c1
+- Page size: Letter (612 × 792 pt), 36pt margins all sides
+
+PAGE 1 — top to bottom:
+
+[Header band, ~36pt tall]
+- Left: KPR logo (use /apple-touch-icon.png) at 24pt tall
+- Center-left: "KPR DEAL LIBRARY" in 8pt olive bold caps
+- Right: "PROPERTY SUMMARY · {today as 'MMM D, YYYY'}" in 8pt muted
+- Bottom: 1pt olive #3f7a1f rule
+
+[Title block]
+- Property name in 20pt bold ink
+- Address in 10pt muted on the next line
+- Status pill (Owned / Under Contract / Prospect) floated top-right: sage #eef3e6 bg, olive #3f7a1f text, 8pt bold caps, rounded 4pt
+
+[Cover photo]
+- Full content-width, 180pt tall, rounded corners 6pt
+- If no cover photo, render an olive gradient placeholder with the property name centered in white
+
+[Hero metrics row — 5 equal-width boxes]
+GLA · Occupancy · Cap Rate · NOI · IG Exposure
+Each box: sage #eef3e6 background, olive #b8d49a 0.5pt border, ~60pt tall, value in 13pt bold ink, label in 7pt muted caps below.
+Format:
+- GLA: total SF with commas, e.g. "193,623 SF"
+- Occupancy: e.g. "96.0%"
+- Cap Rate: deal.goingInCap or deal.askingCap, 2 decimals + "%"; if missing, show "—"
+- NOI: formatted "$X.XM"; if missing, show "—"
+- IG Exposure: use the % of rent from the IG feature added in the previous run; if data unavailable, "—"
+
+[Financial Summary section]
+Heading "FINANCIAL SUMMARY" in 9pt olive bold caps, with thin olive underline.
+Two-column table (label left, value right). Render whichever rows have data; skip blanks. Possible rows:
+For Prospects/UC: Asking Price · Price/SF · Going-in Cap · NOI (in-place) · NOI (stabilized) · Year Built · Year Renovated
+For Owned: Purchase Price · Closing Date · Going-in Cap at Close · Current NOI · Lender · Loan Amount · Loan Rate · Maturity Date
+
+[Anchor Tenants section]
+Heading "ANCHOR TENANTS" (same styling as Financial Summary).
+For each anchor (tenant.isAnchor === true), one line: "{name} — {sf with commas} SF · lease through {leaseExpiry year}"
+Top 5 by SF, descending. If no anchors, omit section.
+
+PAGE 2 — top to bottom:
+
+[Same header band as Page 1]
+
+[Lease Rollover section]
+Heading "LEASE ROLLOVER"
+Inline stats line: "WALT (by SF): X.X yrs   ·   WALT (by rent): Y.Y yrs"  (use the values from the WALT feature added in the first run)
+Below: a horizontal bar chart of % of rent rolling per year, years 0 through 9 plus "10+". Render as react-pdf <View> primitives with widths proportional to each bucket's % — no chart library needed. Show the % value at the right end of each bar.
+Below the chart: "{pct}% of base rent rolls in the next 24 months."
+
+[Top Tenants section]
+Heading "TOP TENANTS BY RENT"
+Simple table, columns: Tenant | SF | Annual Rent | Rent/SF | Lease Expiry
+Show the top 10 occupied tenants by annualRent, descending. Format rent as "$X,XXX" and rent/SF as "$X.XX". Show IG badge next to the tenant name if isInvestmentGrade(name).
+
+[Demographics section]
+Heading "DEMOGRAPHICS"
+If the deal has demographics data, render a 3-column block (1-mile / 3-mile / 5-mile):
+   Population · Households · Avg HHI · Median HHI · 5-yr Pop Growth
+If no demographics, omit the entire section.
+
+[Investment Thesis section]
+Heading "INVESTMENT THESIS"
+Bulleted list of the top 5 Key Assumptions for the deal (same source the deal page shows in its Key Assumptions widget). Bullet style: "•" in olive, then 10pt body text. If no Key Assumptions, omit the section.
+
+[Site Plan / Aerial]
+If the deal has a site plan image, render at full content width, ~140pt tall, rounded corners. If not, omit.
+
+[Footer band, ~24pt tall, at bottom of page 2]
+- Top: 0.5pt #d8d2c1 rule
+- Left: "Generated {today} · KPR Deal Library" in 7.5pt muted
+- Right: "Internal use only" in 7.5pt muted
+
+DOWNLOAD BEHAVIOR:
+Use react-pdf's PDFDownloadLink to wrap the button for a one-click download. Show a brief loading state while the PDF generates (typically <1 second on the client).
+
+EDGE CASES:
+- If a deal is very new and missing most data, render only the sections that have data — never render empty placeholders.
+- Cover photo: react-pdf needs the image as a URL or base64. If stored as a URL, pass it directly; if base64, decode and use.
+- If a tenant's annualRent is 0 (ground lease, free rent), skip it in the Top Tenants table.
+
+Don't change anything else — the deal page UI, the rent roll panel, the analyst chat, all stay as they are. This is a pure addition.

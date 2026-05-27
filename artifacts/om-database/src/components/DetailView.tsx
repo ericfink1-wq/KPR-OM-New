@@ -12,6 +12,7 @@ import { loadPdfJs, _capturePagePhoto, extractPdfText } from "../lib/pdfExtract"
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel } from "../lib/exportExcel";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
+import LeaseRollover from "./LeaseRollover";
 
 interface Props {
   deal: Deal;
@@ -943,6 +944,11 @@ ${text.slice(0, 60000)}`;
             )}
           </div>
         </div>
+      )}
+
+      {/* Lease Rollover & WALT */}
+      {(d.tenants||[]).length > 0 && (
+        <LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} />
       )}
 
       {/* Tenant roster */}
