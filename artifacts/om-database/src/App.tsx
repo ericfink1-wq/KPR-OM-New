@@ -36,10 +36,6 @@ function AppInner() {
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem("kpr_help_seen")) setHelpOpen(true);
-  }, []);
-
-  useEffect(() => {
     apiCheckAuth().then(authenticated => {
       setAuth(authenticated ? "authenticated" : "unauthenticated");
     });

@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "kpr_help_seen";
-
 interface HelpModalProps {
   open: boolean;
   onClose: () => void;
@@ -64,9 +62,9 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
-        <>Forgot the team password? Ping the admin who shared the site with you — there's no self-serve reset.</>,
+        <>Forgot the team password? Ping the admin who shared the site — there's no self-serve reset.</>,
         <>Same login works on phone, tablet, and desktop.</>,
-        <>If you get signed out unexpectedly, your work isn't lost — everything lives in the shared database. Just sign back in.</>,
+        <>If you get signed out unexpectedly, nothing's lost — everything lives in the shared database. Just sign back in.</>,
       ]} />
     ),
   },
@@ -85,9 +83,9 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
-        <><B>Intelligence Library</B> stats: OMs Read = how many offering memoranda the AI has processed. Tenant Brands = unique brands across the library (a Target counts once even if it appears at five centers). Leases Analyzed = total lease records. SF Analyzed = total gross leasable area across every deal. Markets Covered = unique metros.</>,
+        <><B>Intelligence Library</B> stats: OMs Read = how many offering memoranda the AI has processed. Tenant Brands = unique brands across the library (Target counts once even if it shows up at five centers). SF Analyzed = total gross leasable area.</>,
         <><B>Owned Portfolio</B> only counts deals tagged Owned. If a deal is missing here that you'd expect, check its status flag on the deal page.</>,
-        <><B>Deal statuses</B> flow Prospect → Under Contract → Owned → Sold (or Passed). The status drives where the deal shows up on the home page.</>,
+        <><B>Deal statuses</B> flow Prospect → Under Contract → Owned → Sold (or Passed). Status drives where the deal shows up on the home page.</>,
       ]} />
     ),
   },
@@ -110,11 +108,11 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
-        <><B>Be specific.</B> "What's the WALT for our owned grocery-anchored centers?" gets a real answer; "Tell me about the portfolio" gets a vague one.</>,
-        <><B>Ask for tables and ranked lists</B> — the analyst will format them. Try "Rank our prospects by cap rate" or "Table the top 10 tenants by total rent across the portfolio."</>,
+        <><B>Be specific.</B> "WALT for our owned grocery-anchored centers" gets a real answer; "Tell me about the portfolio" gets a vague one.</>,
+        <><B>Ask for tables and ranked lists</B> — the analyst will format them. Try "Rank our prospects by cap rate" or "Top 10 tenants by total rent across the portfolio."</>,
         <><B>Comparisons are a strong use case.</B> "Compare Vestavia and Pointe Plaza on tenant mix and occupancy" works well.</>,
-        <><B>It only knows what's been uploaded.</B> If you ask about a property that isn't in the library, it won't know. Upload the OM first.</>,
-        <><B>If an answer's numbers look off,</B> open the source deal — the rent roll might be stale and need a refresh.</>,
+        <><B>It only knows what's been uploaded.</B> If you ask about a property that isn't in the library, it won't know — upload the OM first.</>,
+        <><B>If the numbers look off,</B> open the source deal — the rent roll might be stale and need a refresh.</>,
       ]} />
     ),
   },
@@ -133,7 +131,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
-        <><B>Tenant roster columns:</B> base rent (not gross), rent/SF, lease commencement and expiration, remaining term keyed to the as-of date, and an anchor flag for tenants ≥10,000 SF or branded as such.</>,
+        <><B>Tenant roster columns:</B> base rent (not gross), rent/SF, lease commencement and expiration, remaining term keyed to the as-of date, and an anchor flag for tenants ≥ 10,000 SF or branded as such.</>,
         <><B>Vacant suites</B> show up as "Vacant" rows with their square footage — they keep occupancy math honest.</>,
         <><B>The "as of" date</B> at the top tells you how stale the data is. If it's months old, refresh the roster (see Section 5).</>,
         <><B>For owned deals,</B> you'll also see Deal Terms (purchase price, going-in cap, closing date, seller, broker) and Financing (lender, loan amount, rate, maturity). Click the edit pencil to update any field.</>,
@@ -158,9 +156,9 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     detail: (
       <DetailList items={[
         <><B>Why the upload password exists:</B> OM extraction and rent-roll AI refresh hit the Anthropic API and cost real money per run. Keeping that password tight means everyone can browse the library and chat with the analyst freely, but only a couple of people can spend.</>,
-        <><B>OM upload flow:</B> drop a PDF on the home page, the extractor runs for 1–3 minutes, the deal appears in the home grid with cover photo and site plan auto-picked. If the data looks wrong, use "Re-run extraction" on the deal page rather than re-uploading.</>,
-        <><B>The free rent-roll path in detail:</B> open Claude (the regular chat app, not the API) and send the rent roll PDF. Ask for it in the site's roster schema — Claude returns a JSON block. Copy it, open the "Paste roster from Claude" toggle on the deal's roster panel, paste, and click Apply. Same end result as the PDF refresh, zero tokens spent.</>,
-        <><B>Backup vs Restore:</B> Backup downloads a full JSON snapshot of the database. Restore <em>merges</em> deals back in by ID — it does NOT wipe what's there. Do a Backup before any big import, batch edit, or anything that makes you nervous.</>,
+        <><B>OM upload flow:</B> drop a PDF on the home page, the extractor runs for 1–3 minutes, the deal appears with cover photo and site plan auto-picked. If data looks wrong, use "Re-run extraction" on the deal page rather than re-uploading.</>,
+        <><B>The free rent-roll path in detail:</B> open Claude (the regular chat app, not the API) and send the rent roll PDF. Ask for it in the site's roster schema — Claude returns a JSON block. Copy it, open the "Paste roster from Claude" toggle, paste, and click Apply. Same result as the PDF refresh, zero tokens spent.</>,
+        <><B>Backup vs Restore:</B> Backup downloads a full JSON snapshot. Restore <em>merges</em> deals back in by ID — it does NOT wipe what's there. Do a Backup before any big import or batch edit.</>,
       ]} />
     ),
   },
@@ -176,16 +174,11 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+      if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   });
-
-  const handleClose = () => {
-    localStorage.setItem(STORAGE_KEY, "1");
-    onClose();
-  };
 
   const toggle = (id: number) => {
     setExpanded(prev => {
@@ -201,7 +194,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
   return (
     <>
       <div
-        onClick={handleClose}
+        onClick={onClose}
         style={{ position:"fixed", inset:0, background:"rgba(42,44,40,0.52)", zIndex:1000, backdropFilter:"blur(2px)" }}
         aria-hidden="true"
       />
@@ -215,11 +208,11 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
           <div>
             <div id="help-modal-title" style={{ fontSize:21, fontWeight:700, color:"#2a2c28", fontFamily:"'Fraunces',Georgia,serif", lineHeight:1.2 }}>A quick tour</div>
-            <div style={{ fontSize:13, color:"#6f6a5f", marginTop:5 }}>Click any step to expand more detail.</div>
+            <div style={{ fontSize:13, color:"#6f6a5f", marginTop:5 }}>Skim the briefs to get going. Click any section for more detail when you want it.</div>
           </div>
           <button
             type="button"
-            onClick={handleClose}
+            onClick={onClose}
             aria-label="Close help"
             style={{ background:"transparent", border:"none", cursor:"pointer", color:"#a89f8f", fontSize:18, lineHeight:1, padding:"2px 4px", marginTop:2, borderRadius:4 }}
           >✕</button>
@@ -266,7 +259,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
         <div style={{ marginTop:12, textAlign:"center" }}>
           <button
             type="button"
-            onClick={handleClose}
+            onClick={onClose}
             style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 24px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
           >
             Close
