@@ -13,6 +13,7 @@ import AnalystChat from "./components/AnalystChat";
 import PortfolioAnalytics from "./components/PortfolioAnalytics";
 import CompsSearch from "./components/CompsSearch";
 import Login from "./components/Login";
+import HelpModal from "./components/HelpModal";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -32,6 +33,11 @@ function AppInner() {
   const [dragging, setDragging] = useState(false);
   const dragCounter = useRef(0);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem("kpr_help_seen")) setHelpOpen(true);
+  }, []);
 
   useEffect(() => {
     apiCheckAuth().then(authenticated => {
@@ -204,7 +210,9 @@ function AppInner() {
         queueLen={processingCount}
         onLogout={handleLogout}
         onFiles={handleFiles}
+        onHelpOpen={() => setHelpOpen(true)}
       />
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {/* Drag overlay */}
       {dragging && (

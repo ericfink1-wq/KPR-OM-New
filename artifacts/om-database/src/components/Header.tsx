@@ -5,6 +5,7 @@ import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages
 
 interface Props {
   tab: string;
+  onHelpOpen?: () => void;
   onTab: (t: string) => void;
   deals: Deal[];
   queueLen: number;
@@ -12,7 +13,7 @@ interface Props {
   onFiles: (files: FileList) => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -258,6 +259,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
             </>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={onHelpOpen}
+          aria-label="Help"
+          style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:30, height:30, background:"#fff", border:"1px solid #c8d8b8", color:"#3f7a1f", borderRadius:"50%", cursor:"pointer", fontSize:15, fontWeight:700, fontFamily:"'Inter',sans-serif", flexShrink:0 }}
+        >?</button>
 
         <span style={{ width: 1, height: 24, background: "#e3dccd" }} />
 

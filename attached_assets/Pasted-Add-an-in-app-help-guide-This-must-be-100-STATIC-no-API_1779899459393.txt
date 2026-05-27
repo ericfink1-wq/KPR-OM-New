@@ -1,0 +1,132 @@
+Add an in-app help guide. This must be 100% STATIC — no API calls, no Anthropic client, no AI of any kind. Just hardcoded JSX content in a modal. Don't add any new dependencies.
+
+WHAT TO BUILD
+
+1. Create `src/components/HelpModal.tsx` containing the modal, its sections, and the per-section expand/collapse behavior described below.
+
+2. In the top-right of the existing app header (next to buttons like Upload OMs / Backup), add a small circular "?" button. Match the styling of the existing header buttons — same height, same subtle olive accent. aria-label="Help". On click, open the HelpModal.
+
+3. Modal behavior:
+   - Semi-transparent backdrop covers the screen.
+   - Content panel ~680px wide on desktop, full-width with 16px side margins on mobile, max-height 85vh, internally scrollable.
+   - "X" close button top-right of the panel and a "Close" button at the bottom.
+   - Clicking the backdrop OR pressing Escape also closes it.
+   - When closed by any method, set localStorage.setItem('kpr_help_seen', '1').
+   - Each time the modal OPENS, all sections start collapsed.
+
+4. First-visit auto-open: on app mount, check localStorage.getItem('kpr_help_seen'). If null, auto-open the HelpModal once. The "?" button always reopens it regardless of the flag.
+
+5. SECTION EXPAND/COLLAPSE BEHAVIOR (the new part):
+   - Define sections as an array of objects: { id, title, brief, detail } where brief and detail are JSX nodes.
+   - Render each section as a card with three regions:
+     (a) A clickable HEADER row containing: the olive numbered square chip, the section title in olive bold, and a chevron icon on the far right that rotates 180° when the section is expanded.
+     (b) The BRIEF content — always visible directly below the header.
+     (c) The DETAIL content — rendered only when that section's expanded state is true.
+   - The entire header row is the click target (use a <button> element with type="button"). Set aria-expanded={isOpen} and aria-controls on it, pointing to the detail region's id.
+   - Multiple sections can be expanded at once (don't auto-collapse others when one opens). Manage state as a Set<number> of expanded section ids in a useState.
+   - Keyboard: Enter and Space toggle the section. Tab order should be natural.
+   - Animation: a simple CSS height transition is nice-to-have but not required. If you skip animation, just render/unrender the detail block.
+   - Mobile: header row min-height 48px so it's a comfortable tap target.
+
+STYLING
+
+Match the existing site palette: olive #3f7a1f for section headings and the numbered chips, sage #eef3e6 for the "Try asking" callout background with #b8d49a border, body text #383a37, muted #6f6a5f, near-black title #2a2c28. Use whatever font the rest of the app uses (Inter). Numbered chip: ~26×26px filled olive square, rounded 4px, white bold number centered. Chevron: simple unicode-free SVG (e.g., a chevron-down path), 16×16px, color #6f6a5f. Each section card has a subtle bottom border (#e7e0d2) separating it from the next, no background fill. The brief content shows immediately under the header with normal spacing. The detail content has a slight left indent (~14px) and a thin olive accent line on its left edge (1px solid #b8d49a) to visually distinguish it as "more info." Don't use any special Unicode icons (no ⎘, no glyphs that may not render) — stick to SVG and standard punctuation.
+
+CONTENT — render exactly this wording, in this order
+
+Modal title: "A quick tour"
+Modal subtitle (muted): "Click any step to expand more detail."
+
+---
+
+SECTION 1 — title "Sign in"
+
+Brief:
+"Open the site link the team shared with you and enter the team password. You'll stay signed in on that device until you log out or clear your browser."
+
+Detail:
+- Forgot the team password? Ping the admin who shared the site with you — there's no self-serve reset.
+- Same login works on phone, tablet, and desktop.
+- If you get signed out unexpectedly, your work isn't lost — everything lives in the shared database. Just sign back in.
+
+---
+
+SECTION 2 — title "What you see on the home page"
+
+Brief (lead + bullets):
+Lead: "Three things, top to bottom:"
+- **Stat rows.** Intelligence Library (everything we've ingested) and Owned Portfolio (properties we actually own, with key anchors).
+- **Deal cards.** Under Contract first, then Pipeline prospects. Click any card to open the deal.
+- **Ask anything.** The chat bar pinned at the bottom. That's the analyst — it can answer questions across every deal in the library.
+
+Detail:
+- **Intelligence Library** stats: OMs Read = how many offering memoranda the AI has processed. Tenant Brands = unique brands across the library (a Target counts once even if it appears at five centers). Leases Analyzed = total lease records. SF Analyzed = total gross leasable area across every deal. Markets Covered = unique metros.
+- **Owned Portfolio** only counts deals tagged Owned. If a deal is missing here that you'd expect, check its status flag on the deal page.
+- **Deal statuses** flow Prospect → Under Contract → Owned → Sold (or Passed). The status drives where the deal shows up on the home page.
+
+---
+
+SECTION 3 — title "Ask the analyst"
+
+Brief:
+Paragraph: "Type a question in the bar at the bottom. It reads the whole deal library — tenants, rents, expirations, demographics, financials — so you can ask things you'd otherwise have to dig for. Follow-up questions work; it remembers the conversation."
+
+Then a sage-tinted callout box (background #eef3e6, border #b8d49a, 8px radius, 12px padding) titled "TRY ASKING…" in small olive bold caps, with these four items each prefixed by an em-dash:
+— Which deals have a grocery anchor?
+— Compare the Marshalls at University Hills vs Vestavia.
+— What leases roll in the next 24 months across the owned portfolio?
+— Which prospect has the highest going-in cap rate?
+
+Detail:
+- **Be specific.** "What's the WALT for our owned grocery-anchored centers?" gets a real answer; "Tell me about the portfolio" gets a vague one.
+- **Ask for tables and ranked lists** — the analyst will format them. Try "Rank our prospects by cap rate" or "Table the top 10 tenants by total rent across the portfolio."
+- **Comparisons are a strong use case.** "Compare Vestavia and Pointe Plaza on tenant mix and occupancy" works well.
+- **It only knows what's been uploaded.** If you ask about a property that isn't in the library, it won't know. Upload the OM first.
+- **If an answer's numbers look off,** open the source deal — the rent roll might be stale and need a refresh.
+
+---
+
+SECTION 4 — title "Open a deal"
+
+Brief:
+Paragraph: "Clicking a card takes you to the deal page. The tags, title, and address sit right under the button row, with the cover photo below. Scroll for the tenant roster, key assumptions, demographics, and (for owned deals) the full acquisition and financing record."
+Bullets:
+- **Tenant roster** is the live rent roll — square footage, rent, lease dates, NNN flags. The *as of* date is shown at the top.
+- **Key Assumptions** shows the top 5 from the OM with a "Show more" toggle for the rest.
+- **Cover photo / site plan** can be re-picked from any page of the OM if the auto-pick missed.
+
+Detail:
+- **Tenant roster columns:** base rent (not gross), rent/SF, lease commencement and expiration, remaining term keyed to the as-of date, and an anchor flag for tenants ≥10,000 SF or branded as such.
+- **Vacant suites** show up as "Vacant" rows with their square footage — they keep occupancy math honest.
+- **The "as of" date** at the top tells you how stale the data is. If it's months old, refresh the roster (see Section 5).
+- **For owned deals,** you'll also see Deal Terms (purchase price, going-in cap, closing date, seller, broker) and Financing (lender, loan amount, rate, maturity). Click the edit pencil to update any field.
+- **Cover photo wrong?** Use "Set cover from page #" to pick a different page from the OM. Same for the site plan.
+
+---
+
+SECTION 5 — title "Refresh or add deals (admin)"
+
+Brief:
+Paragraph: "These actions cost API tokens, so they're behind a separate **upload password** (different from your sign-in). The site asks for it the first time you use one in a browser session."
+Bullets:
+- **Upload OMs** — drop one or more PDFs on the home page. The extractor reads the whole document and creates the deal.
+- **Refresh a rent roll (PDF)** — on the deal page, upload a new rent roll and the roster updates automatically.
+- **Refresh a rent roll (free)** — same deal page, the "Paste roster from Claude" toggle on the roster panel. Send the rent roll in a Claude chat, paste the JSON it gives back. No tokens.
+- **Backup** the database from the header before any big change. Costs nothing, saves you if something goes sideways.
+
+Detail:
+- **Why the upload password exists:** OM extraction and rent-roll AI refresh hit the Anthropic API and cost real money per run. Keeping that password tight means everyone can browse the library and chat with the analyst freely, but only a couple of people can spend.
+- **OM upload flow:** drop a PDF on the home page, the extractor runs for 1–3 minutes, the deal appears in the home grid with cover photo and site plan auto-picked. If the data looks wrong, use "Re-run extraction" on the deal page rather than re-uploading.
+- **The free rent-roll path in detail:** open Claude (the regular chat app, not the API) and send the rent roll PDF. Ask for it in the site's roster schema — Claude returns a JSON block. Copy it, open the "Paste roster from Claude" toggle on the deal's roster panel, paste, and click Apply. Same end result as the PDF refresh, zero tokens spent.
+- **Backup vs Restore:** Backup downloads a full JSON snapshot of the database. Restore *merges* deals back in by ID — it does NOT wipe what's there. Do a Backup before any big import, batch edit, or anything that makes you nervous.
+
+---
+
+Footer (muted, small, with a thin top border): "Something broken or confusing? Send a screenshot — fixes are quick.  ·  KPR Deal Library  ·  v1"
+
+CONSTRAINTS
+
+- No API calls anywhere in this feature. No fetch to Anthropic, no model usage, nothing dynamic.
+- Don't touch the analyst chat, the upload flow, the password gate, or any existing routes. Only add HelpModal.tsx and mount the "?" button in the header.
+- Don't modify any backend code, env vars, or build config.
+- All copy above must appear verbatim. Don't paraphrase or summarize.
