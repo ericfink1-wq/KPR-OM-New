@@ -27,5 +27,16 @@ description: Architecture decisions, gotchas, and migration notes for the KPR De
 - `deals`: id TEXT PK, data JSONB, createdAt, updatedAt
 - `deal_images`: id TEXT PK, cover TEXT, coverThumb TEXT, sitePlan JSONB (string[]), pagePicks JSONB, needsSitePlanPick BOOLEAN
 - `deal_sources`: id TEXT PK, sourceText TEXT
+- `tenant_aliases`: raw_name TEXT PK, canonical_name TEXT NOT NULL, notes TEXT, createdAt, updatedAt
 
 **Why:** Images stored as base64 TEXT — large payloads, JSON body limit set to 50mb in Express.
+
+## Tenant name normalization
+- `tenant_aliases` table maps rawName → canonicalName (PK = rawName)
+- `enrichTenants()` helper in `deals.ts` applies the alias map at read time; fallback is raw name
+- `GET /api/aliases` and `POST /api/aliases` (batch upsert) — auth-required
+- `Tenant.canonicalName?: string | null` added to idb.ts interface
+- `propose-aliases` script: scans all deals → one Claude call → writes `aliases-proposal.json`
+- `apply-aliases` script: reads proposal, upserts to DB, backfills stored deal JSONs
+- **Never overwrite tenant.name** — canonicalName is additive only
+- Lib declarations must be rebuilt (`pnpm run typecheck:libs`) before leaf packages see new exports

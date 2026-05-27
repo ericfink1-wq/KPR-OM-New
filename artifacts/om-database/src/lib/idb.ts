@@ -105,6 +105,7 @@ export async function idbLoadImages(id: string): Promise<ImageBundle | null> {
 // Types
 export interface Tenant {
   name?: string;
+  canonicalName?: string | null;
   sf?: number | string | null;
   rentPerSF?: number | string | null;
   annualRent?: number | string | null;

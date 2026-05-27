@@ -1,8 +1,34 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { dealsTable, dealImagesTable, dealSourcesTable } from "@workspace/db";
+import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
+
+async function loadAliasMap(): Promise<Record<string, string>> {
+  try {
+    const rows = await db.select().from(tenantAliasesTable);
+    const map: Record<string, string> = {};
+    for (const r of rows) map[r.rawName] = r.canonicalName;
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+function enrichTenants(
+  data: Record<string, unknown>,
+  aliasMap: Record<string, string>
+): Record<string, unknown> {
+  const tenants = data.tenants as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(tenants)) return data;
+  const enriched = tenants.map((t) => {
+    const raw = typeof t.name === "string" ? t.name : "";
+    const canonical = aliasMap[raw] ?? raw ?? null;
+    if (!canonical || canonical === t.canonicalName) return t;
+    return { ...t, canonicalName: canonical };
+  });
+  return { ...data, tenants: enriched };
+}
 
 const router = Router();
 
@@ -33,12 +59,15 @@ const USER_PRESERVED_KEYS = new Set([
 // GET /api/deals — list all deals (excludes in-progress ingests)
 router.get("/deals", requireAuth, async (req, res) => {
   try {
-    const rows = await db.select().from(dealsTable).orderBy(dealsTable.createdAt);
+    const [rows, aliasMap] = await Promise.all([
+      db.select().from(dealsTable).orderBy(dealsTable.createdAt),
+      loadAliasMap(),
+    ]);
     const deals = rows
       .filter(r => !r.data._processing)
       .map(r => {
         const { _processing: _p, _processingError: _e, ...rest } = r.data;
-        return { ...rest, id: r.id };
+        return { ...enrichTenants(rest, aliasMap), id: r.id };
       });
     res.json(deals);
   } catch (err) {
@@ -141,7 +170,10 @@ router.put("/deals/:id/images", requireAuth, async (req, res) => {
 router.get("/deals/:id/status", requireAuth, async (req, res) => {
   try {
     const id = req.params.id as string;
-    const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    const [rows, aliasMap] = await Promise.all([
+      db.select().from(dealsTable).where(eq(dealsTable.id, id)),
+      loadAliasMap(),
+    ]);
     if (!rows.length) { res.status(404).json({ error: "Deal not found" }); return; }
     const data = rows[0].data;
     if (data._processing) {
@@ -150,7 +182,7 @@ router.get("/deals/:id/status", requireAuth, async (req, res) => {
       res.json({ processing: false, error: data._processingError });
     } else {
       const { _processing: _p, _processingError: _e, ...rest } = data;
-      res.json({ processing: false, deal: { ...rest, id } });
+      res.json({ processing: false, deal: { ...enrichTenants(rest, aliasMap), id } });
     }
   } catch (err) {
     req.log.error({ err }, "Failed to check deal status");
