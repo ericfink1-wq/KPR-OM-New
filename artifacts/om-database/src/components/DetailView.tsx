@@ -129,7 +129,7 @@ function KeyAssumptions({ deal }: { deal: Deal }) {
   );
 }
 
-function SectionJump({ deal }: { deal: Deal }) {
+function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObject<HTMLDivElement | null> }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -164,9 +164,10 @@ function SectionJump({ deal }: { deal: Deal }) {
   const scrollTo = (id: string) => {
     setOpen(false);
     const el = document.getElementById(id);
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 130;
-      window.scrollTo({ top: y, behavior: "smooth" });
+    const container = scrollRef.current;
+    if (el && container) {
+      const y = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
+      container.scrollTo({ top: y, behavior: "smooth" });
     }
   };
 
@@ -711,8 +712,10 @@ ${text.slice(0, 60000)}`;
     return () => observer.disconnect();
   }, []);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+    <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
       <div style={{
         position: "fixed",
         top: 72,
@@ -757,7 +760,7 @@ ${text.slice(0, 60000)}`;
               </div>
             )}
           </div>
-          <SectionJump deal={d} />
+          <SectionJump deal={d} scrollRef={scrollContainerRef} />
         </div>
       </div>
       {/* Back */}
@@ -768,7 +771,7 @@ ${text.slice(0, 60000)}`;
       {/* Property name + jump */}
       <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, margin:"0 0 4px 0" }}>
         <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
-        <SectionJump deal={d} />
+        <SectionJump deal={d} scrollRef={scrollContainerRef} />
       </div>
       <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 12px 0" }}>{fullAddress || "—"}</p>
 
