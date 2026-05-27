@@ -1,0 +1,26 @@
+Change the HelpModal so it docks side-by-side with the site on desktop, instead of overlaying as a centered modal. Mobile behavior stays exactly as it is now (full-screen modal).
+
+DESKTOP BEHAVIOR (lg breakpoint and up, ≥1024px) — NEW:
+
+When the Tutorial button is clicked, the modal becomes a right-side dock panel:
+- Fixed to the right edge of the viewport, full viewport height
+- Width: 420px
+- White background, a 1px left border in #d8d2c1 to separate it visually from the page
+- A soft shadow on its left edge: shadow-[-4px_0_24px_rgba(0,0,0,0.06)] or equivalent
+- z-index high enough to sit above page content but no backdrop behind it (the page stays visible and interactive)
+- The "X" close button stays in the panel's top-right
+- Escape still closes it; clicking outside does NOT close it (so users can click site content without dismissing the panel)
+- The site's main content area gets a right padding of 420px while the panel is open, so nothing on the page is hidden behind it. Use a layout state that the main app shell reads — when `isHelpOpen && isDesktop`, apply `pr-[420px]` (or equivalent) to the main content wrapper. When the panel closes, the padding returns to 0 and the site reflows back to full width.
+- Smooth transition: 200ms ease on both the panel sliding in and the content padding adjusting
+
+MOBILE BEHAVIOR (below lg breakpoint) — UNCHANGED:
+
+Stays as the centered full-width modal with backdrop, exactly as it is today. Backdrop click and Escape still close it. Don't change anything about the mobile experience.
+
+EVERYTHING ELSE STAYS THE SAME:
+
+- All five sections, brief content, detail content, expand/collapse behavior, rotating chevrons, colors, fonts, the Tutorial button itself and its slate-blue styling — all untouched.
+- Don't add any dependencies. Use CSS / Tailwind utilities only.
+- The localStorage flag is gone (modal only opens when Tutorial is clicked) — keep it that way.
+
+Test that on desktop the site content shifts left when the panel opens and you can click and scroll the site normally while the panel is visible. On mobile (or a narrow window), the experience should look identical to before.

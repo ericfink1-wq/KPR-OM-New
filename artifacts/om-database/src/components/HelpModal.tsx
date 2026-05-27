@@ -164,18 +164,105 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   },
 ];
 
+function PanelContent({ expanded, toggle, onClose }: {
+  expanded: Set<number>;
+  toggle: (id: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
+        <div>
+          <div id="help-modal-title" style={{ fontSize:21, fontWeight:700, color:"#2a2c28", fontFamily:"'Fraunces',Georgia,serif", lineHeight:1.2 }}>A quick tour</div>
+          <div style={{ fontSize:13, color:"#6f6a5f", marginTop:5 }}>Skim the briefs to get going. Click any section for more detail when you want it.</div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close help"
+          style={{ background:"transparent", border:"none", cursor:"pointer", color:"#a89f8f", fontSize:18, lineHeight:1, padding:"2px 4px", marginTop:2, borderRadius:4 }}
+        >✕</button>
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {SECTIONS.map(section => {
+          const isOpen = expanded.has(section.id);
+          return (
+            <div key={section.id} style={{ border:"1px solid #e3dccd", borderRadius:10, overflow:"hidden", background:"#fff" }}>
+              <button
+                type="button"
+                onClick={() => toggle(section.id)}
+                aria-expanded={isOpen}
+                aria-controls={`help-detail-${section.id}`}
+                style={{ display:"flex", alignItems:"center", gap:11, width:"100%", background:"#faf7f0", border:"none", cursor:"pointer", padding:"11px 14px", minHeight:48, textAlign:"left", fontFamily:"'Inter',-apple-system,sans-serif" }}
+              >
+                <Chip n={section.id} />
+                <span style={{ flex:1, fontWeight:700, color:"#3f7a1f", fontSize:14 }}>{section.title}</span>
+                <Chevron up={isOpen} />
+              </button>
+
+              <div style={{ padding:"12px 14px 12px 51px", fontSize:13, color:"#383a37", lineHeight:1.65 }}>
+                {section.brief}
+              </div>
+
+              {isOpen && (
+                <div
+                  id={`help-detail-${section.id}`}
+                  style={{ padding:"10px 14px 14px 51px", fontSize:13, color:"#383a37", lineHeight:1.65, borderTop:"1px solid #f0e9db", background:"#fcfbf8" }}
+                >
+                  {section.detail}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop:18, paddingTop:14, borderTop:"1px solid #e3dccd", fontSize:11, color:"#a89f8f", textAlign:"center", lineHeight:1.6 }}>
+        Something broken or confusing? Send a screenshot — fixes are quick.&nbsp;&nbsp;·&nbsp;&nbsp;KPR Deal Library&nbsp;&nbsp;·&nbsp;&nbsp;v1
+      </div>
+
+      <div style={{ marginTop:12, textAlign:"center" }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 24px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
+        >
+          Close
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function HelpModal({ open, onClose }: HelpModalProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const [panelIn, setPanelIn] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     if (open) setExpanded(new Set());
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    if (open && isDesktop) {
+      const id = setTimeout(() => setPanelIn(true), 10);
+      return () => clearTimeout(id);
+    }
+    setPanelIn(false);
+    return undefined;
+  }, [open, isDesktop]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   });
@@ -191,6 +278,27 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
 
   if (!open) return null;
 
+  if (isDesktop) {
+    return (
+      <div
+        role="dialog"
+        aria-labelledby="help-modal-title"
+        style={{
+          position: "fixed", top: 0, right: 0, bottom: 0, width: 420,
+          zIndex: 1001, background: "#fff",
+          borderLeft: "1px solid #d8d2c1",
+          boxShadow: "-4px 0 24px rgba(0,0,0,0.06)",
+          overflowY: "auto", padding: "26px 26px 22px",
+          fontFamily: "'Inter',-apple-system,sans-serif",
+          transform: panelIn ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 0.2s ease",
+        }}
+      >
+        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} />
+      </div>
+    );
+  }
+
   return (
     <>
       <div
@@ -198,73 +306,13 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
         style={{ position:"fixed", inset:0, background:"rgba(42,44,40,0.52)", zIndex:1000, backdropFilter:"blur(2px)" }}
         aria-hidden="true"
       />
-
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="help-modal-title"
         style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1001, width:"min(680px, calc(100vw - 32px))", maxHeight:"85vh", overflowY:"auto", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", padding:"26px 26px 22px", fontFamily:"'Inter',-apple-system,sans-serif" }}
       >
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
-          <div>
-            <div id="help-modal-title" style={{ fontSize:21, fontWeight:700, color:"#2a2c28", fontFamily:"'Fraunces',Georgia,serif", lineHeight:1.2 }}>A quick tour</div>
-            <div style={{ fontSize:13, color:"#6f6a5f", marginTop:5 }}>Skim the briefs to get going. Click any section for more detail when you want it.</div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close help"
-            style={{ background:"transparent", border:"none", cursor:"pointer", color:"#a89f8f", fontSize:18, lineHeight:1, padding:"2px 4px", marginTop:2, borderRadius:4 }}
-          >✕</button>
-        </div>
-
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {SECTIONS.map(section => {
-            const isOpen = expanded.has(section.id);
-            return (
-              <div key={section.id} style={{ border:"1px solid #e3dccd", borderRadius:10, overflow:"hidden", background:"#fff" }}>
-                <button
-                  type="button"
-                  onClick={() => toggle(section.id)}
-                  aria-expanded={isOpen}
-                  aria-controls={`help-detail-${section.id}`}
-                  style={{ display:"flex", alignItems:"center", gap:11, width:"100%", background:"#faf7f0", border:"none", cursor:"pointer", padding:"11px 14px", minHeight:48, textAlign:"left", fontFamily:"'Inter',-apple-system,sans-serif" }}
-                >
-                  <Chip n={section.id} />
-                  <span style={{ flex:1, fontWeight:700, color:"#3f7a1f", fontSize:14 }}>{section.title}</span>
-                  <Chevron up={isOpen} />
-                </button>
-
-                <div style={{ padding:"12px 14px 12px 51px", fontSize:13, color:"#383a37", lineHeight:1.65 }}>
-                  {section.brief}
-                </div>
-
-                {isOpen && (
-                  <div
-                    id={`help-detail-${section.id}`}
-                    style={{ padding:"10px 14px 14px 51px", fontSize:13, color:"#383a37", lineHeight:1.65, borderTop:"1px solid #f0e9db", background:"#fcfbf8" }}
-                  >
-                    {section.detail}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{ marginTop:18, paddingTop:14, borderTop:"1px solid #e3dccd", fontSize:11, color:"#a89f8f", textAlign:"center", lineHeight:1.6 }}>
-          Something broken or confusing? Send a screenshot — fixes are quick.&nbsp;&nbsp;·&nbsp;&nbsp;KPR Deal Library&nbsp;&nbsp;·&nbsp;&nbsp;v1
-        </div>
-
-        <div style={{ marginTop:12, textAlign:"center" }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 24px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
-          >
-            Close
-          </button>
-        </div>
+        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} />
       </div>
     </>
   );
