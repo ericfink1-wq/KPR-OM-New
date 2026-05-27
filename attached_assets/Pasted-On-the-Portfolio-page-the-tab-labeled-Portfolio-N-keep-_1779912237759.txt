@@ -1,0 +1,31 @@
+On the Portfolio page (the tab labeled "Portfolio (N)"), keep the existing checkbox column EXACTLY as it is — same width, same styling, same select-all behavior, same downstream wiring. Do not touch it.
+
+Replace the columns to the RIGHT of the checkbox with this exact set, in this exact left-to-right order:
+
+1. PHOTO — thumbnail of the deal's cover photo. ~48px tall × 64px wide, rounded 4px, object-fit: cover. If the deal has no cover photo, render a sage-tinted placeholder (#eef3e6 background) with the deal's first letter centered in olive #3f7a1f. Column width ~80px. Header cell: empty.
+
+2. PROPERTY — `deal.name` in 13pt body color #383a37. Header label: "Property". The cell text should hover-style as a link (color shifts to olive #3f7a1f) so users know it's clickable; the entire row stays clickable as it is today. Allocate the remaining flexible horizontal space to this column.
+
+3. STATUS — use the existing status pill component the rest of the app already uses (so styling stays consistent with deal cards). If no shared component exists, render a 9pt bold caps rounded pill: Owned = olive #3f7a1f bg / white text; Under Contract = amber bg / dark text; Prospect = sage #b8d49a bg / olive #3f7a1f text; Sold = muted gray bg; Passed = muted gray strike. Header label: "Status".
+
+4. CITY — `deal.city`. If missing, render "—" in muted #6f6a5f. Header label: "City".
+
+5. STATE — `deal.state` (2-letter abbreviation, e.g. "OH"). If missing, "—". Header label: "State". Column width ~70px since the value is always 2 chars.
+
+6. MSA — `deal.market` (e.g. "Cleveland MSA", "DC MSA"). If missing, "—". Header label: "MSA".
+
+7. SF — total gross leasable area, formatted with thousands separators (e.g. "193,623"). If missing or 0, "—". Right-align both the header label and the values — numbers belong right-aligned in tables. Header label: "SF".
+
+BEHAVIOR:
+
+- Row click navigates to the deal page exactly as today.
+- Keep the checkbox's click-doesn't-navigate behavior exactly as it works today (don't add or remove any stopPropagation).
+- Keep any existing sort/filter/search controls above the table — don't remove them. If headers are currently sortable, keep them sortable for these new columns.
+- Row vertical padding: ~8px top/bottom, enough to fit the 48px photo comfortably.
+
+MOBILE:
+
+If the current Portfolio page on mobile is already a stacked card layout (not a table), leave it alone — this change is desktop-table only.
+If mobile is currently a table, hide the State and MSA columns below the lg breakpoint (≥1024px) so the mobile view shows: checkbox, photo, Property, Status, City, SF. Use Tailwind's `hidden lg:table-cell` on the affected cells (both header AND body cells of those two columns).
+
+Don't change anything else — the page title, any tab counts, the analyst chat, other pages.

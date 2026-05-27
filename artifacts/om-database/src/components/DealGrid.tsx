@@ -25,9 +25,12 @@ function RowThumb({ deal }: { deal: Deal }) {
     }
     return () => { alive = false; };
   }, [deal.id]);
+  const initial = (deal.propertyName || deal.fileName || "?").charAt(0).toUpperCase();
   return (
-    <div style={{ width: 48, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: "#f1eadc", border: "1px solid #ece5d7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      {src ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 12, color: "#cabfa7" }}>▦</span>}
+    <div style={{ width: 64, height: 48, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "#eef3e6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {src
+        ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : <span style={{ fontSize: 17, fontWeight: 700, color: "#3f7a1f", fontFamily: "'Inter', sans-serif" }}>{initial}</span>}
     </div>
   );
 }
@@ -521,11 +524,6 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
     setNotice(`Demographics done — ${got} properties updated${none ? `, ${none} with no confident data` : ""}${failed ? `, ${failed} failed` : ""}.`);
   };
 
-  const cols: [string, string, boolean][] = [
-    ["propertyName","Property",false],["status","Status",false],["assetType","Type",false],
-    ["market","Market",false],["totalSF","SF",true],["occupancy","Occ%",true],
-    ["noi","NOI",true],["capRate","Cap",true],["walt","WALT",true],["uploadedAt","Added",false],
-  ];
 
   const isBusy = reanalyzeBusy.size > 0 || lookingUp.size > 0 || gettingDemo.size > 0;
 
@@ -802,20 +800,38 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
       {viewMode === "table" && rows.length > 0 && (
         <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 600 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #f1eadc", background: "#faf7f0" }}>
                   <th style={{ width: 28, padding: "10px 8px 10px 14px" }}>
                     <input type="checkbox" checked={selected.size === rows.length && rows.length > 0}
                       onChange={e => setSelected(e.target.checked ? new Set(rows.map(d => d.id)) : new Set())} />
                   </th>
-                  <th style={{ width: 56, padding: "10px 8px" }} />
-                  {cols.map(([k, label, right]) => (
-                    <th key={k} onClick={() => toggleSort(k)}
-                      style={{ padding: "10px 10px", textAlign: right ? "right" : "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === k ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
-                      {label}{arrow(k)}
-                    </th>
-                  ))}
+                  <th style={{ width: 80, padding: "10px 8px" }} />
+                  <th onClick={() => toggleSort("propertyName")}
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "propertyName" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Property{arrow("propertyName")}
+                  </th>
+                  <th onClick={() => toggleSort("status")}
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "status" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Status{arrow("status")}
+                  </th>
+                  <th onClick={() => toggleSort("city")}
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "city" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    City{arrow("city")}
+                  </th>
+                  <th onClick={() => toggleSort("state")} className="hidden lg:table-cell"
+                    style={{ width: 70, padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "state" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    State{arrow("state")}
+                  </th>
+                  <th onClick={() => toggleSort("market")} className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "market" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    MSA{arrow("market")}
+                  </th>
+                  <th onClick={() => toggleSort("totalSF")}
+                    style={{ padding: "10px 14px 10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "totalSF" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    SF{arrow("totalSF")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -826,30 +842,29 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                     <tr key={d.id}
                       style={{ borderBottom: "1px solid #f4f0e8", background: selected.has(d.id) ? "#6dba4309" : busyRow ? "#fffbf0" : i % 2 === 1 ? "#fdf9f3" : "#fff", cursor: "pointer" }}
                       onClick={() => onOpen(d.id)}>
-                      <td style={{ padding: "10px 8px 10px 14px" }} onClick={e => { e.stopPropagation(); toggleSel(d.id); }}>
+                      <td style={{ padding: "8px 8px 8px 14px" }} onClick={e => { e.stopPropagation(); toggleSel(d.id); }}>
                         <input type="checkbox" checked={selected.has(d.id)} onChange={() => {}} />
                       </td>
-                      <td style={{ padding: "10px 8px" }} onClick={e => e.stopPropagation()}>
+                      <td style={{ padding: "8px 8px" }}>
                         <RowThumb deal={d} />
                       </td>
-                      <td style={{ padding: "10px 10px" }}>
-                        <div style={{ fontWeight: 600, color: "#26281f", fontSize: 12.5, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <td style={{ padding: "8px 10px" }}>
+                        <div
+                          style={{ fontSize: 13, color: "#383a37", whiteSpace: "nowrap", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}
+                          onMouseEnter={e => (e.currentTarget.style.color = "#3f7a1f")}
+                          onMouseLeave={e => (e.currentTarget.style.color = "#383a37")}>
                           {d.propertyName || d.fileName || "Untitled"}
                           {busyRow && <span style={{ marginLeft: 6, fontSize: 9, color: "#d9890c" }}>● processing</span>}
                         </div>
                         {quality !== "good" && !busyRow && <div style={{ fontSize: 9, color: quality === "thin" ? "#dc2626" : "#d9890c" }}>{quality === "thin" ? "thin extraction" : "partial"}</div>}
                       </td>
-                      <td style={{ padding: "10px 10px" }}>
+                      <td style={{ padding: "8px 10px" }}>
                         <StatusTag status={d.status} size="sm" />
                       </td>
-                      <td style={{ padding: "10px 10px", fontSize: 11, color: "#6f6a5f", whiteSpace: "nowrap" }}>{d.assetType || "—"}</td>
-                      <td style={{ padding: "10px 10px", fontSize: 11, color: "#6f6a5f", whiteSpace: "nowrap" }}>{d.market || "—"}</td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.totalSF ? Number(d.totalSF).toLocaleString() : "—"}</td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", fontSize: 11, color: d.occupancy && Number(d.occupancy) < 90 ? "#dc2626" : "#5c5f57", whiteSpace: "nowrap" }}>{d.occupancy ? `${d.occupancy}%` : "—"}</td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", fontSize: 11, color: "#0f9d63", fontWeight: 500, whiteSpace: "nowrap" }}>{d.noi ? `$${Number(d.noi).toLocaleString()}` : "—"}</td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", fontSize: 11, color: "#0f9d63", fontWeight: 500, whiteSpace: "nowrap" }}>{d.capRate ? `${d.capRate}%` : "—"}</td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", fontSize: 11, color: d.walt && Number(d.walt) < 3 ? "#dc2626" : "#5c5f57", whiteSpace: "nowrap" }}>{d.walt ? `${d.walt}y` : "—"}</td>
-                      <td style={{ padding: "10px 10px", fontSize: 10, color: "#a89f8f", whiteSpace: "nowrap" }}>{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : "—"}</td>
+                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.city || "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: d.market ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{d.market || "—"}</td>
+                      <td style={{ padding: "8px 14px 8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.totalSF ? Number(d.totalSF).toLocaleString() : "—"}</td>
                     </tr>
                   );
                 })}
