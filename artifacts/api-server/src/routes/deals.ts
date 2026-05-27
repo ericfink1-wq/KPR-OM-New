@@ -7,6 +7,20 @@ import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { rebuildCompsIndex } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
 
+function composeAddressForGeocoder(deal: {
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+}): string | null {
+  const parts = [deal.address, deal.city, deal.state]
+    .map(s => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  const street = parts[0];
+  if (parts.length === 1 && /,.*\b[A-Z]{2}\b/.test(street)) return street;
+  return parts.join(", ");
+}
+
 async function loadAliasMap(): Promise<Record<string, string>> {
   try {
     const rows = await db.select().from(tenantAliasesTable);
@@ -108,13 +122,12 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
       rebuildTenantIndex(id, rest).catch(() => {});
       rebuildCompsIndex(id, rest).catch(() => {});
       // Auto-fetch demographics for new deals that have an address but no demo data yet
-      if (
-        typeof rest.address === "string" && rest.address &&
-        !rest.marketDemographics && !rest.demoChecked
-      ) {
+      if (!rest.marketDemographics && !rest.demoChecked) {
         (async () => {
+          const composed = composeAddressForGeocoder(rest as { address?: string | null; city?: string | null; state?: string | null });
+          if (!composed) return;
           try {
-            const demo = await fetchCensusDemographics(rest.address as string);
+            const demo = await fetchCensusDemographics(composed);
             if (demo) {
               const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
               if (rows.length) {
@@ -254,11 +267,12 @@ router.post("/deals/:id/refresh-demographics", requireAuth, async (req, res) => 
     const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
     if (!rows.length) { res.status(404).json({ error: "Deal not found" }); return; }
     const current = rows[0].data as Record<string, unknown>;
-    if (!current.address || typeof current.address !== "string") {
+    const composed = composeAddressForGeocoder(current as { address?: string | null; city?: string | null; state?: string | null });
+    if (!composed) {
       res.status(400).json({ error: "Deal has no address" });
       return;
     }
-    const demo = await fetchCensusDemographics(current.address);
+    const demo = await fetchCensusDemographics(composed);
     await db.update(dealsTable)
       .set({
         data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() },

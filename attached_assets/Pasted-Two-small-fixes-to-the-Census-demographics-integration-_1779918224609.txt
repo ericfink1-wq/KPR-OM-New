@@ -1,0 +1,66 @@
+Two small fixes to the Census demographics integration:
+
+FIX 1 — COMPOSE THE FULL ADDRESS BEFORE GEOCODING.
+
+The Census Geocoder is currently failing because it's being passed only deal.address (the street portion). For a deal where address="4335 Pheasant Ridge Dr NE", city="Blaine", state="MN" — the geocoder needs all three concatenated into one string like "4335 Pheasant Ridge Dr NE, Blaine, MN".
+
+In artifacts/api-server/src/routes/deals.ts, locate both places where fetchCensusDemographics is called: (a) the POST /api/deals/:id/refresh-demographics route handler, and (b) the auto-fetch hook fired on deal creation (inside the existing POST /api/deals handler).
+
+In BOTH spots, replace the direct call:
+   fetchCensusDemographics(deal.address)
+
+With a composed-address version. Add this helper at the top of deals.ts (or in lib/demographics.ts and export it):
+
+   function composeAddressForGeocoder(deal: {
+     address?: string | null;
+     city?: string | null;
+     state?: string | null;
+   }): string | null {
+     const parts = [deal.address, deal.city, deal.state]
+       .map(s => (typeof s === "string" ? s.trim() : ""))
+       .filter(Boolean);
+     if (parts.length === 0) return null;
+     // If address field already contains a comma + state-like pattern, assume it's full
+     const street = parts[0];
+     if (parts.length === 1 && /,.*\b[A-Z]{2}\b/.test(street)) return street;
+     return parts.join(", ");
+   }
+
+Then update both call sites:
+
+  (route handler) Change:
+     const demo = await fetchCensusDemographics(deal.address);
+
+  To:
+     const composed = composeAddressForGeocoder(deal);
+     if (!composed) {
+       res.status(400).json({ error: "Deal has no address" });
+       return;
+     }
+     const demo = await fetchCensusDemographics(composed);
+
+  (auto-fetch hook) Same swap — use composeAddressForGeocoder(savedDeal) instead of just savedDeal.address, and skip the fetch silently if it returns null.
+
+FIX 2 — UPDATE THE STALE FOOTER TEXT.
+
+In artifacts/om-database/src/components/DetailView.tsx, find the demographics block (around line 1358):
+
+   <div style={{ fontSize:9, color:"#a69e91", marginTop:9 }}>AI-gathered from public sources. Approximate — verify before relying on it.</div>
+
+That text is left over from the previous AI-based implementation. Replace with:
+
+   <div style={{ fontSize:9, color:"#a69e91", marginTop:9 }}>Sourced from US Census Bureau ACS 5-Year Estimates. Tract-aggregated within radius rings — verify before relying on it.</div>
+
+VERIFICATION AFTER IT LANDS:
+
+1. Open Village of Blaine. Click RE-PULL. Within ~15 seconds, you should see:
+   - 1 MILE Population: ~3,000-5,000 (a small inner ring)
+   - 3 MILE Population: ~40,000-50,000 (the OM cites 45,802)
+   - 5 MILE Population: ~100,000-130,000 (the OM cites 118,590)
+   - Avg HH Income values populated for all three rings
+   - HIGH CONFIDENCE badge
+   - Source line: "US Census Bureau ACS 5-Year Estimates · 2020–2024" (or whatever vintage was hardcoded)
+
+2. If you still see "Address could not be geocoded" after the fix, the geocoder is matching a different address than expected. Capture what the server logs say — the error message in the response should be more specific.
+
+NO OTHER CHANGES. Don't touch the rest of the demographics flow, the auto-fetch trigger, or the UI block.
