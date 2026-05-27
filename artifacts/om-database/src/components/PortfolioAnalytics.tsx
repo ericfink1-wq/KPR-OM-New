@@ -280,6 +280,8 @@ export default function PortfolioAnalytics() {
   const [error, setError] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
   const [rebuildMsg, setRebuildMsg] = useState<string | null>(null);
+  const [rebuildingComps, setRebuildingComps] = useState(false);
+  const [rebuildCompsMsg, setRebuildCompsMsg] = useState<string | null>(null);
 
   const load = useCallback((f: "all" | "owned") => {
     setLoading(true);
@@ -307,6 +309,20 @@ export default function PortfolioAnalytics() {
       })
       .catch(e => setRebuildMsg(`⚠ ${e.message}`))
       .finally(() => setRebuilding(false));
+  };
+
+  const handleRebuildComps = () => {
+    setRebuildingComps(true);
+    setRebuildCompsMsg(null);
+    fetch("/api/comps/rebuild-all", { method: "POST", credentials: "include" })
+      .then(r => r.json() as Promise<{ ok: boolean; rebuilt?: number; error?: string }>)
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || "Rebuild failed");
+        setRebuildCompsMsg(`✓ ${d.rebuilt ?? "?"} comps indexed`);
+        load(filter);
+      })
+      .catch(e => setRebuildCompsMsg(`⚠ ${e.message}`))
+      .finally(() => setRebuildingComps(false));
   };
 
   const Btn = (f: "all" | "owned", label: string) => (
@@ -339,6 +355,34 @@ export default function PortfolioAnalytics() {
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <button
+              onClick={handleRebuildComps}
+              disabled={rebuildingComps}
+              style={{
+                background: rebuildingComps ? "#f1eadc" : "transparent",
+                border: "1px solid #c9c2b8",
+                color: rebuildingComps ? "#a89f8f" : "#6f6a5f",
+                padding: "6px 12px",
+                borderRadius: 7,
+                cursor: rebuildingComps ? "default" : "pointer",
+                fontSize: 11,
+                fontFamily: "'Inter',sans-serif",
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <span style={{ fontSize: 12 }}>↺</span>
+              {rebuildingComps ? "Rebuilding…" : "Rebuild comps index"}
+            </button>
+            {rebuildCompsMsg && (
+              <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>
+                {rebuildCompsMsg}
+              </span>
+            )}
+          </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
             <button
               onClick={handleRebuild}
