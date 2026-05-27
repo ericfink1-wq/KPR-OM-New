@@ -56,20 +56,6 @@ function BriefList({ items }: { items: React.ReactNode[] }) {
 const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: React.ReactNode }[] = [
   {
     id: 1,
-    title: "Sign in",
-    brief: (
-      <p style={{ margin:0 }}>Open the site link the team shared with you and enter the team password. You'll stay signed in on that device until you log out or clear your browser.</p>
-    ),
-    detail: (
-      <DetailList items={[
-        <>Forgot the team password? Ping the admin who shared the site — there's no self-serve reset.</>,
-        <>Same login works on phone, tablet, and desktop.</>,
-        <>If you get signed out unexpectedly, nothing's lost — everything lives in the shared database. Just sign back in.</>,
-      ]} />
-    ),
-  },
-  {
-    id: 2,
     title: "What you see on the home page",
     brief: (
       <>
@@ -90,7 +76,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
   },
   {
-    id: 3,
+    id: 2,
     title: "Ask the analyst",
     brief: (
       <>
@@ -117,7 +103,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
   },
   {
-    id: 4,
+    id: 3,
     title: "Open a deal",
     brief: (
       <>
@@ -140,7 +126,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
   },
   {
-    id: 5,
+    id: 4,
     title: "Refresh or add deals (admin)",
     brief: (
       <>
