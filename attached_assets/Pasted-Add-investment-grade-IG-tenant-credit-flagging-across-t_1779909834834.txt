@@ -1,0 +1,81 @@
+Add investment-grade (IG) tenant credit flagging across the app.
+
+STEP 1 — CREATE src/lib/tenantCredit.ts:
+
+// Curated list of retail tenants generally considered investment-grade
+// (BBB- or higher S&P/Moody's, or recognized IG-equivalent private companies).
+// Conservative starter — add/remove as the team's view evolves.
+export const IG_TENANTS = [
+  // Big-box & general merch
+  "Walmart", "Sam's Club", "Target", "Costco",
+  // Home improvement & hardware
+  "Home Depot", "Lowe's", "Tractor Supply", "Sherwin-Williams",
+  // Grocery (rated IG or IG-equivalent private)
+  "Kroger", "King Soopers", "Publix", "Stop & Shop",
+  "Whole Foods", "Trader Joe's", "Aldi", "Sprouts Farmers Market",
+  // Pharmacy
+  "Walgreens", "CVS",
+  // Off-price / discount
+  "TJ Maxx", "Marshalls", "HomeGoods", "Sierra",
+  "Ross Dress For Less", "DD's Discounts",
+  "Dollar General", "Dollar Tree", "Five Below",
+  // Auto
+  "AutoZone", "O'Reilly Auto Parts", "Advance Auto Parts",
+  // Electronics
+  "Best Buy",
+  // QSR & coffee (rated IG)
+  "McDonald's", "Starbucks", "Chipotle", "Wingstop", "Chick-fil-A",
+  // Telecom
+  "Verizon", "AT&T", "T-Mobile",
+  // Financial
+  "Bank of America", "Wells Fargo", "JPMorgan Chase", "Chase",
+  // Beauty
+  "Ulta Beauty", "Ulta", "Sephora",
+  // Logistics
+  "FedEx", "UPS", "USPS",
+  // Convenience
+  "7-Eleven", "Wawa",
+  // Other big-format
+  "IKEA", "Hobby Lobby",
+];
+
+export function isInvestmentGrade(tenantName: string): boolean {
+  if (!tenantName) return false;
+  // Normalize: lowercase, remove parenthesized aliases, store numbers, common corporate suffixes
+  const cleaned = tenantName
+    .toLowerCase()
+    .replace(/\(.*?\)/g, "")
+    .replace(/#\s*[\w-]+/g, "")
+    .replace(/\b(corporation|corp|inc|llc|ltd|co|stores?)\b\.?/g, "")
+    .replace(/[^\w\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  for (const brand of IG_TENANTS) {
+    const b = brand.toLowerCase();
+    if (cleaned === b) return true;
+    // Word-boundary contains check for multi-word brand names
+    const padded = " " + cleaned + " ";
+    if (padded.includes(" " + b + " ")) return true;
+    // Allow short-form contains for 4+ char single-word brands
+    if (!b.includes(" ") && b.length >= 4 && cleaned.includes(b)) return true;
+  }
+  return false;
+}
+
+STEP 2 — TENANT ROSTER BADGE:
+On each row of the tenant roster, if isInvestmentGrade(tenant.name) returns true, render a small olive pill labeled "IG" next to the tenant name. Match the visual style of the existing anchor pill (if there isn't one, use background #eef3e6, border #b8d49a, text #3f7a1f, 9pt bold, ~14px tall, rounded 4px).
+
+STEP 3 — DEAL HERO METRIC:
+On each deal page, in the same hero/overview area that shows occupancy, GLA, NOI, etc., add a new metric:
+"IG Exposure: {pct_rent}% of rent · {pct_sf}% of GLA"
+where:
+  pct_rent = sum(annualRent for occupied IG tenants) / sum(annualRent for all occupied) × 100, rounded to 0 decimals
+  pct_sf   = sum(sf for occupied IG tenants) / sum(sf for all occupied) × 100, rounded to 0 decimals
+
+STEP 4 — PORTFOLIO ROLLUP:
+On the home page Analyst view, in the "Owned Portfolio" stat row (currently: Properties, Portfolio Value, Square Footage, Key Anchors), add one more stat: "IG Tenant Rent" with the % computed across ALL occupied tenants in all OWNED deals (status === "Owned"). Same formula as STEP 3 but aggregated. Place it before Key Anchors so the order reads Properties · Portfolio Value · Square Footage · IG Tenant Rent · Key Anchors.
+
+STEP 5 — ANALYST CHAT CONTEXT:
+In the data passed to the analyst chat for each tenant, add a boolean field `isIG` set from isInvestmentGrade(name). This lets the chat answer questions like "What's our IG exposure?" and "Which deals have the highest non-IG concentration?" accurately.
+
+Don't change extraction prompts, the database schema, or anything else. IG flagging happens at display/query time, not at storage, so existing deals don't need to be re-extracted.

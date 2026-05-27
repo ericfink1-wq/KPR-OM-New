@@ -1,0 +1,48 @@
+Add Weighted Average Lease Term (WALT) and a lease-rollover visualization to each deal page.
+
+DATA SOURCE: Use the deal's existing tenant roster and rentRollDate (the "as of" date). For each occupied tenant (name !== "Vacant"), inputs are: sf, annualRent, leaseExpiry (ISO date string).
+
+CALCULATIONS:
+
+1. For each occupied tenant with a valid leaseExpiry:
+   remaining_term_years = (leaseExpiry - rentRollDate) / 365.25
+   - If remaining_term_years < 0 (expired/holdover), treat as 0.
+   - If leaseExpiry is null (ground leases, month-to-month), EXCLUDE from WALT.
+
+2. WALT by SF (weighted by square footage):
+   walt_sf = Σ(tenant.sf × remaining_term_years) / Σ(tenant.sf)
+   Across all occupied tenants with a valid leaseExpiry.
+
+3. WALT by rent (weighted by annual rent):
+   walt_rent = Σ(tenant.annualRent × remaining_term_years) / Σ(tenant.annualRent)
+   Across all occupied tenants with valid leaseExpiry and annualRent > 0.
+
+4. Rollover schedule: for each calendar year from rentRollDate's year through rentRollDate's year + 9, bucket every tenant whose leaseExpiry falls in that calendar year. For each bucket compute bucket_sf and bucket_rent. Anything expiring more than 9 years out goes into a single "10+" bucket.
+
+UI — ADD A NEW CARD on the deal page, positioned IMMEDIATELY ABOVE the tenant roster.
+
+Card title: "Lease Rollover & WALT"
+
+Top of the card: two stats side by side
+   WALT (by SF): {walt_sf.toFixed(1)} yrs
+   WALT (by rent): {walt_rent.toFixed(1)} yrs
+
+Below the stats: a vertical bar chart
+   X-axis: 11 buckets — rentRollDate year + 0, +1, +2, ..., +9, "10+"
+   Y-axis: % of base rent expiring in each bucket (bucket_rent / total_occupied_rent × 100)
+   Bar color: olive #3f7a1f for years 2+ and lighter sage #8cbf63 for years 0 and 1 (flags near-term rollover visually)
+   Bar tooltip on hover: "{year}: ${bucket_rent} ({pct}% of rent) · {bucket_sf} SF · {n} tenants"
+   Y-axis can be implicit (no gridlines), but show the % value above each bar so it's readable without hovering.
+
+Below the chart: a one-line summary in 11pt muted text:
+   "{pct_24mo}% of base rent rolls in the next 24 months."
+   Where pct_24mo = (sum of buckets 0, 1, 2 rent) / total_occupied_rent × 100, rounded to 0 decimals.
+
+EDGE CASES:
+- If a deal has no tenant roster at all, hide the card entirely (don't render an empty state).
+- If all occupied tenants are missing leaseExpiry, show the card with WALT stats as "—" and skip the chart, with a small italic note: "No lease expiration dates available."
+- Vacant tenants are always excluded.
+
+CHARTING: Use whatever charting library the project already has. If none, draw with pure SVG — these are 11 vertical bars, doesn't justify a dependency.
+
+Don't touch the tenant roster itself, the analyst chat, or any other page.
