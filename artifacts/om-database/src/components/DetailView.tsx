@@ -10,6 +10,7 @@ import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
 import { loadPdfJs, _capturePagePhoto, extractPdfText } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
+import { exportDealToExcel } from "../lib/exportExcel";
 
 interface Props {
   deal: Deal;
@@ -612,6 +613,12 @@ ${text.slice(0, 60000)}`;
           </div>
           <button onClick={() => onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`)}
             style={{ background:"transparent", border:"1px solid #6dba43", color:"#6dba43", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>COMPS</button>
+          {((d.tenants||[]).length > 0 || (d.cashFlowProjection||[]).length > 0) && (
+            <button onClick={() => exportDealToExcel(d)}
+              style={{ background:"transparent", border:"1px solid #7c6f5e", color:"#7c6f5e", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontSize:11, lineHeight:1 }}>⬇</span> EXCEL
+            </button>
+          )}
           <button onClick={() => onLookupSale(d.id)} disabled={saleBusy}
             style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"5px 10px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"FIND SALE"}</button>
           {!confirmDel
