@@ -30,6 +30,14 @@ function ReconBadge({ msg }: { msg: string }) {
   );
 }
 
+function StaleBadge() {
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fffbeb", border:"1px solid #f59e0b", borderRadius:5, padding:"2px 8px", fontSize:10, color:"#92400e", fontWeight:500, fontFamily:"'Inter',sans-serif", lineHeight:1.4 }}>
+      ⚠ Roster updated — AI grade, summary &amp; red flags may be out of date.
+    </span>
+  );
+}
+
 function DataIntegrity({ deal }: { deal: Deal }) {
   const [open, setOpen] = useState(false);
   const { checks, errors, warns, hadData } = reconcileDeal(deal);
@@ -271,7 +279,7 @@ ${text.slice(0, 60000)}`;
         if (sfR > 0) recomputed.weightedAvgRentPSF = Math.round(wR / sfR * 100) / 100;
       }
 
-      onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", ...recomputed });
+      onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", analysisStale: true, ...recomputed });
     } catch (err: unknown) {
       setRrError(err instanceof Error ? err.message : "Rent roll import failed.");
     }
@@ -291,7 +299,7 @@ ${text.slice(0, 60000)}`;
     if (!ensureUploadAllowed()) return;
     setAnalyzeOpen(false);
     setReanalyzeBusy(true);
-    try { await apiReanalyzeDeal(d.id); await pollUntilDone(d.id); } catch {}
+    try { await apiReanalyzeDeal(d.id); await pollUntilDone(d.id); onUpdate(d.id, { analysisStale: false }); } catch {}
     setReanalyzeBusy(false);
   };
 
@@ -305,6 +313,7 @@ ${text.slice(0, 60000)}`;
       const { text, pages } = await extractPdfText(await file.arrayBuffer());
       await apiIngestDeal({ id: d.id, text, fileName: file.name, pageCount: pages, correctionsNote: buildCorrectionsNote(allDeals) });
       await pollUntilDone(d.id);
+      onUpdate(d.id, { analysisStale: false });
     } catch {}
     setReanalyzeBusy(false);
   };
@@ -479,7 +488,7 @@ ${text.slice(0, 60000)}`;
       }, 0);
       if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
     }
-    onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", ...recomputed });
+    onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", analysisStale: true, ...recomputed });
     setPastePanelOpen(false);
     setPasteText("");
     setPasteError(null);
@@ -742,10 +751,13 @@ ${text.slice(0, 60000)}`;
       )}
 
       {/* AI highlights */}
-      {d.notes && (
+      {(d.notes || d.analysisStale) && (
         <div style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24", marginBottom:9 }}>AI Investment Highlights</div>
-          <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}>{d.notes}</p>
+          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
+            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
+            {d.analysisStale && <StaleBadge />}
+          </div>
+          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}>{d.notes}</p>}
         </div>
       )}
 
@@ -945,31 +957,37 @@ ${text.slice(0, 60000)}`;
       )}
 
       {/* Deal score */}
-      {d.dealScore && (
+      {(d.dealScore || d.analysisStale) && (
         <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
             <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
-            <ScoreBadge score={d.dealScore}/>
+            {d.dealScore && <ScoreBadge score={d.dealScore}/>}
+            {d.analysisStale && <StaleBadge />}
           </div>
-          <p style={{ fontSize:12, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{d.dealScore.rationale}</p>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            <div>
-              <div style={{ fontSize:8, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
-              {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {s}</div>)}
+          {d.dealScore && <>
+            <p style={{ fontSize:12, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{d.dealScore.rationale}</p>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <div>
+                <div style={{ fontSize:8, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
+                {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {s}</div>)}
+              </div>
+              <div>
+                <div style={{ fontSize:8, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
+                {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {r}</div>)}
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize:8, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
-              {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {r}</div>)}
-            </div>
-          </div>
+          </>}
         </div>
       )}
 
       {/* Red flags */}
-      {(d.redFlags||[]).length > 0 && (
+      {((d.redFlags||[]).length > 0 || d.analysisStale) && (
         <div style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-          <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626", marginBottom:10 }}>⚠ RED FLAGS</div>
-          {d.redFlags!.map((f,i) => (
+          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+            <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
+            {d.analysisStale && <StaleBadge />}
+          </div>
+          {(d.redFlags||[]).map((f,i) => (
             <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<d.redFlags!.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
               <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262620":f.severity==="medium"?"#383a3720":"#7d766a20", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#383a37":"#7d766a", flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
               <span style={{ fontSize:11, color:"#5c5f57" }}>{f.description}</span>

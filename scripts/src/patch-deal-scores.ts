@@ -86,6 +86,7 @@ async function main() {
     const patch: Record<string, unknown> = {};
     if ("dealScore" in entry) patch.dealScore = entry.dealScore;
     if ("notes" in entry) patch.notes = entry.notes;
+    patch.analysisStale = false;
 
     if (Object.keys(patch).length === 0) {
       console.warn(`  ⚠  Entry for ${dealId} has neither dealScore nor notes — skipping`);

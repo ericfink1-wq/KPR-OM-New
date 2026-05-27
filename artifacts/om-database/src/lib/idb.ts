@@ -257,6 +257,8 @@ export interface Deal {
   roofData?: RoofData | null;
   // Images meta
   imageMeta?: { cover?: boolean; sitePlan?: number; needsSitePlanPick?: boolean } | null;
+  // Staleness
+  analysisStale?: boolean;
   // User data
   userNotes?: string | null;
   verified?: Record<string, { by?: string; ts?: number }>;
