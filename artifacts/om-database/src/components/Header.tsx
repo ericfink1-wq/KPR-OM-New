@@ -154,10 +154,9 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       background: "rgba(252,250,245,0.92)",
       backdropFilter: "blur(12px)",
       WebkitBackdropFilter: "blur(12px)",
-      padding: "0 28px",
+      paddingLeft: 28,
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
       height: 72,
       flexShrink: 0,
       position: "sticky",
@@ -165,26 +164,34 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       zIndex: 100,
       boxShadow: "0 8px 28px -22px rgba(56,58,55,0.55)",
     }}>
-      {/* Logo + tabs */}
-      <div style={{ display: "flex", alignItems: "center", gap: 28, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-          <img
-            src="https://kprcenters.com/wp-content/uploads/2018/11/KPR_logo_cmyk.png"
-            alt="KPR Centers"
-            style={{ height: 28, width: "auto", display: "block" }}
-            onError={e => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-              const sib = e.currentTarget.nextElementSibling as HTMLElement;
-              if (sib) sib.style.display = "flex";
-            }}
-          />
-          <div style={{ display: "none", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 8, height: 8, background: "#6dba43", borderRadius: "50%", boxShadow: "0 0 0 3px #6dba4326" }} />
-            <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: "#2a2c27", letterSpacing: "-0.01em" }}>KPR Centers</span>
-          </div>
-          <span style={{ fontSize: 9, color: "#958d80", letterSpacing: "0.22em", borderLeft: "1px solid #e3dccd", paddingLeft: 11, fontWeight: 600, textTransform: "uppercase" }}>Deal Intelligence</span>
+      {/* Logo + wordmark — anchored, never scrolls */}
+      <div style={{ display: "flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
+        <img
+          src="https://kprcenters.com/wp-content/uploads/2018/11/KPR_logo_cmyk.png"
+          alt="KPR Centers"
+          style={{ height: 28, width: "auto", display: "block" }}
+          onError={e => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+            const sib = e.currentTarget.nextElementSibling as HTMLElement;
+            if (sib) sib.style.display = "flex";
+          }}
+        />
+        <div style={{ display: "none", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 8, height: 8, background: "#6dba43", borderRadius: "50%", boxShadow: "0 0 0 3px #6dba4326" }} />
+          <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: "#2a2c27", letterSpacing: "-0.01em" }}>KPR Centers</span>
         </div>
-        <div style={{ display: "flex", gap: 2 }}>
+        <span style={{ fontSize: 9, color: "#958d80", letterSpacing: "0.22em", borderLeft: "1px solid #e3dccd", paddingLeft: 11, fontWeight: 600, textTransform: "uppercase" }}>Deal Intelligence</span>
+      </div>
+
+      {/* Scrollable zone: tabs + action buttons — swipeable on mobile */}
+      <div style={{
+        display: "flex", alignItems: "center", flex: 1, minWidth: 0,
+        overflowX: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"],
+        scrollbarWidth: "none" as React.CSSProperties["scrollbarWidth"],
+        paddingLeft: 28,
+      }}>
+        {/* Nav tabs */}
+        <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
           <button style={T(tab === "analyst")} onClick={() => onTab("analyst")}>Analyst</button>
           <button style={T(tab === "portfolio")} onClick={() => onTab("portfolio")}>
             Portfolio{active.length > 0 ? ` (${active.length})` : ""}
@@ -192,10 +199,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <button style={T(tab === "analytics")} onClick={() => onTab("analytics")}>Analytics</button>
           <button style={T(tab === "comps")} onClick={() => onTab("comps")}>Comps</button>
         </div>
-      </div>
 
-      {/* Right side: upload + backup + logout */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        {/* Spacer pushes buttons to right on desktop; collapses on mobile */}
+        <div style={{ flex: 1, minWidth: 16 }} />
+
+        {/* Action buttons */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, paddingRight: 28 }}>
         {queueLen > 0 && (
           <span style={{ fontSize: 11, color: "#d9890c", fontWeight: 600 }}>⏳ {queueLen} processing…</span>
         )}
@@ -278,6 +287,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             Sign out
           </button>
         )}
+        </div>
       </div>
     </div>
   );

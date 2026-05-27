@@ -1,0 +1,29 @@
+Two mobile layout fixes on the Analyst home page.
+
+FIX 1 — STAT CARDS ARE TOO CRAMPED ON MOBILE.
+
+On the Analyst home page, both stat rows ("Intelligence Library" — OMs Read, Tenant Brands, Leases Analyzed, SF Analyzed, Markets Covered, Data Points — and "Owned Portfolio" — Properties, Portfolio Value, Square Footage, IG Tenant Rent) currently render too many columns on mobile, causing values like "$138.5M" and "5.1M SF" to either wrap to two lines or overflow the card edge.
+
+Change both stat-row grids to be responsive:
+- Mobile (default, below the lg breakpoint): 2 columns
+- Desktop (lg and up, ≥1024px): unchanged from current — keep whatever column counts they currently use on desktop
+
+If the grids use Tailwind, change classes like `grid-cols-6` or `grid-cols-4` to `grid-cols-2 lg:grid-cols-6` and `grid-cols-2 lg:grid-cols-4` respectively (use the existing desktop col count, just prepend `grid-cols-2` as the mobile default).
+
+ADDITIONALLY, on the stat VALUE text (the large number/figure in each card — e.g. "5.1M SF", "$138.5M", "24%"), add `whitespace-nowrap` so a value with a space in it ("5.1M SF") doesn't break mid-value across two lines. The LABEL text below the value can still wrap normally.
+
+FIX 2 — HEADER NAV CUT OFF ON MOBILE.
+
+The site header (KPR logo, DEAL INTELLIGENCE wordmark, then nav tabs Analyst / Portfolio / Analytics / Comps, then action buttons Upload OMs / Backup / Tutorial / Sign out) overflows the viewport on mobile. Items past "Portfolio" are unreachable — the user can't navigate to Analytics, Comps, or hit Tutorial / Sign out from their phone.
+
+Fix by making the header's nav+buttons strip horizontally scrollable on mobile:
+- The KPR logo and "DEAL INTELLIGENCE" wordmark stay anchored on the left (don't scroll).
+- Everything to the right of the wordmark — all tabs AND all action buttons — sits in a single flex container that:
+   - On mobile: `overflow-x: auto`, `white-space: nowrap`, `scrollbar-width: none` (hide native scrollbar for cleanliness), `-webkit-overflow-scrolling: touch` for smooth iOS swipe
+   - On desktop (lg+): behaves as it currently does, no horizontal scroll
+
+Also: check the header's parent container and the outermost app shell — if either has `overflow: hidden` or `overflow-x: hidden` applied, that will defeat the inner scroll. Change those to `overflow-y: auto` (or remove the x-axis hidden) so horizontal scrolling inside the header actually works.
+
+OPTIONAL POLISH (do this if it's not too much extra work): add a subtle right-edge fade gradient on the header on mobile only — a 24px-wide gradient from transparent to the header's background color on the right side — so users see there's more content to scroll to. If skipped, that's fine; the swipe still works without it.
+
+Don't change desktop behavior on either fix. Don't change any other page, the analyst chat, the stat values themselves, or the IG calculation. Only the mobile layout of the header and the two stat rows.
