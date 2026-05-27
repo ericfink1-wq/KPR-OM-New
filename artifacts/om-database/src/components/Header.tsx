@@ -264,7 +264,11 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           type="button"
           onClick={onHelpOpen}
           aria-label="Open tutorial"
-          style={{ background:"#fff", border:"1px solid #c8d8b8", color:"#3f7a1f", padding:"7px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", flexShrink:0 }}
+          style={{ background:"#4f7aac", border:"none", color:"#fff", padding:"7px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", flexShrink:0 }}
+          onMouseEnter={e => (e.currentTarget.style.background = "#3f6595")}
+          onMouseLeave={e => (e.currentTarget.style.background = "#4f7aac")}
+          onFocus={e => (e.currentTarget.style.outline = "2px solid #4f7aac", e.currentTarget.style.outlineOffset = "2px")}
+          onBlur={e => (e.currentTarget.style.outline = "none")}
         >Tutorial</button>
 
         <span style={{ width: 1, height: 24, background: "#e3dccd" }} />
