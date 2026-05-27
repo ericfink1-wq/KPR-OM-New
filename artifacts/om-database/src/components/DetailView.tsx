@@ -22,6 +22,12 @@ interface Props {
   onTenantClick?: (name: string) => void;
 }
 
+function ReconBadge({ msg }: { msg: string }) {
+  return (
+    <span title={msg} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:15, height:15, borderRadius:3, background:"#fef3c7", border:"1px solid #f59e0b", color:"#92400e", fontSize:9, cursor:"help", flexShrink:0, lineHeight:1 }}>!</span>
+  );
+}
+
 function DataIntegrity({ deal }: { deal: Deal }) {
   const [open, setOpen] = useState(false);
   const { checks, errors, warns, hadData } = reconcileDeal(deal);
@@ -499,7 +505,7 @@ ${text.slice(0, 60000)}`;
     </div>
   );
 
-  const Row = ({ l, v, c, field }: { l: string; v: unknown; c?: string; field?: string }) => {
+  const Row = ({ l, v, c, field, warn }: { l: string; v: unknown; c?: string; field?: string; warn?: string }) => {
     const lockable = !!(field && LOCKABLE[field]);
     const ver = lockable ? (d.verified || {})[field!] : null;
     const hasVal = v != null && v !== "";
@@ -508,6 +514,7 @@ ${text.slice(0, 60000)}`;
         <span style={{ fontSize:10, color:"#6f6a5f", letterSpacing:"0.05em" }}>{l}</span>
         <span style={{ display:"flex", alignItems:"center", gap:7 }}>
           <span style={{ fontSize:11, color:c||"#383a37", fontWeight:500 }}>{hasVal ? String(v) : <span style={{color:"#958d80"}}>—</span>}</span>
+          {warn && <ReconBadge msg={warn}/>}
           {lockable && hasVal && (
             <button onClick={() => onToggleVerified(d.id, field!)}
               title={ver ? "Verified — click to unlock" : "Mark verified — locks against re-analyze"}
@@ -528,6 +535,46 @@ ${text.slice(0, 60000)}`;
   );
 
   const loc = classifyLocation(d);
+
+  // ── Reconciliation warnings (display-only, ~2% tolerance) ─────────────────
+  const reconWarns = (() => {
+    const TOL = 0.02;
+    const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+    const warns: Record<string, string> = {};
+    const occupied = (d.tenants || []).filter(t => t.name && !/^vacant/i.test(String(t.name).trim()));
+
+    // 1) Sum of tenant base rents vs Gross Potential Rent
+    const gpr = n(d.grossPotentialRent);
+    const sumRent = occupied.reduce((s, t) => s + (n(t.annualRent) ?? 0), 0);
+    if (gpr && sumRent > 0) {
+      const diff = Math.abs(sumRent - gpr) / gpr;
+      if (diff > TOL) warns.grossPotentialRent =
+        `Tenant base rents sum to $${Math.round(sumRent).toLocaleString()} — expected (GPR) $${Math.round(gpr).toLocaleString()} (${(diff*100).toFixed(1)}% gap)`;
+    }
+
+    // 2) Computed weighted-avg rent/SF vs stated WTAVG
+    const wtavg = n(d.weightedAvgRentPSF);
+    const withBoth = occupied.filter(t => n(t.annualRent) != null && n(t.sf) != null);
+    const leasedSFw = withBoth.reduce((s, t) => s + n(t.sf)!, 0);
+    const computedWtavg = leasedSFw > 0 ? withBoth.reduce((s, t) => s + n(t.annualRent)!, 0) / leasedSFw : null;
+    if (wtavg && computedWtavg != null) {
+      const diff = Math.abs(computedWtavg - wtavg) / wtavg;
+      if (diff > TOL) warns.weightedAvgRentPSF =
+        `Computed from tenants: $${computedWtavg.toFixed(2)}/SF — stated $${Number(wtavg).toFixed(2)}/SF (${(diff*100).toFixed(1)}% gap)`;
+    }
+
+    // 3) Leased SF vs occupancy %
+    const totalSF = n(d.totalSF), occ = n(d.occupancy);
+    const leasedSF = occupied.reduce((s, t) => s + (n(t.sf) ?? 0), 0);
+    if (totalSF && occ && leasedSF > 0) {
+      const computedOcc = (leasedSF / totalSF) * 100;
+      const diff = Math.abs(computedOcc - occ) / occ;
+      if (diff > TOL) warns.occupancy =
+        `Tenant SF sums to ${leasedSF.toLocaleString()} SF = ${computedOcc.toFixed(1)}% of total — stated ${occ}%`;
+    }
+
+    return warns;
+  })();
 
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
@@ -704,15 +751,15 @@ ${text.slice(0, 60000)}`;
           <Row l="NOI" v={d.noi?`$${Number(d.noi).toLocaleString()}`:null} c="#0f9d63" field="noi"/>
           <Row l="PRICE / SF" v={d.pricePerSF?`$${d.pricePerSF}`:null} field="pricePerSF"/>
           <Row l="TOTAL SF" v={d.totalSF?`${Number(d.totalSF).toLocaleString()} SF`:null} field="totalSF"/>
-          <Row l="OCCUPANCY" v={d.occupancy?`${d.occupancy}%`:null} c="#383a37" field="occupancy"/>
+          <Row l="OCCUPANCY" v={d.occupancy?`${d.occupancy}%`:null} c="#383a37" field="occupancy" warn={reconWarns.occupancy}/>
           <PriceCapEditor deal={d} onUpdate={onUpdate}/>
         </Card>
         <Card title="INCOME & EXPENSES">
-          <Row l="GROSS POTENTIAL RENT" v={d.grossPotentialRent?`$${Number(d.grossPotentialRent).toLocaleString()}`:null} field="grossPotentialRent"/>
+          <Row l="GROSS POTENTIAL RENT" v={d.grossPotentialRent?`$${Number(d.grossPotentialRent).toLocaleString()}`:null} field="grossPotentialRent" warn={reconWarns.grossPotentialRent}/>
           <Row l="EFF. GROSS INCOME" v={d.effectiveGrossIncome?`$${Number(d.effectiveGrossIncome).toLocaleString()}`:null} field="effectiveGrossIncome"/>
           <Row l="OPERATING EXPENSES" v={d.operatingExpenses?`$${Number(d.operatingExpenses).toLocaleString()}`:null} field="operatingExpenses"/>
           <Row l="NNN RECOVERIES" v={d.nnnRecoveries?`$${Number(d.nnnRecoveries).toLocaleString()}`:null}/>
-          <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null}/>
+          <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null} warn={reconWarns.weightedAvgRentPSF}/>
         </Card>
         <Card title="LEASE METRICS">
           <Row l="WALT" v={d.walt?`${d.walt} yrs`:null} c={d.walt && Number(d.walt)<3?"#dc2626":Number(d.walt)<6?"#383a37":"#0f9d63"} field="walt"/>
