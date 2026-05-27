@@ -136,7 +136,7 @@ export default function DealSummaryPDF({ deal: d, imgs, logoUrl }: DealSummaryPD
   const isOwned = d.status === "Owned";
 
   // IG exposure
-  const igTens = occupied.filter(t => t.name && isInvestmentGrade(t.name));
+  const igTens = occupied.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating));
   const totalRentAll = occupied.reduce((s, t) => s + toN(t.annualRent), 0);
   const igRentAll = igTens.reduce((s, t) => s + toN(t.annualRent), 0);
   const igPct = totalRentAll > 0 ? Math.round(igRentAll / totalRentAll * 100) : null;
@@ -213,7 +213,7 @@ export default function DealSummaryPDF({ deal: d, imgs, logoUrl }: DealSummaryPD
             ["Occupancy", d.occupancy ? `${Number(d.occupancy).toFixed(1)}%` : "—"],
             ["Cap Rate", fmtPct(d.capRate) ?? "—"],
             ["NOI", fmtNOI(d.noi) ?? "—"],
-            ["IG Exposure", igPct != null ? `${igPct}% rent` : "—"],
+            ["Investment Grade Exposure", igPct != null ? `${igPct}% rent` : "—"],
           ] as [string, string][]).map(([lbl, val], i, arr) => (
             <View key={lbl} style={i === arr.length - 1 ? s.mBoxL : s.mBox}>
               <Text style={s.mVal}>{val}</Text>

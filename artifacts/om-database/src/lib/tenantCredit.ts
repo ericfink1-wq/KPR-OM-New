@@ -18,7 +18,14 @@ export const IG_TENANTS = [
   "IKEA", "Hobby Lobby",
 ];
 
-export function isInvestmentGrade(tenantName: string): boolean {
+export function isInvestmentGrade(tenantName: string, creditRating?: string | null): boolean {
+  if (creditRating && typeof creditRating === "string") {
+    const r = creditRating.toLowerCase();
+    if (
+      r.includes("investment grade") ||
+      /\b(aaa|aa[+-]?|a[+-]?|bbb[+-]?)\b/i.test(creditRating)
+    ) return true;
+  }
   if (!tenantName) return false;
   const cleaned = tenantName
     .toLowerCase()

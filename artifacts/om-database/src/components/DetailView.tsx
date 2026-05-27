@@ -793,7 +793,7 @@ ${text.slice(0, 60000)}`;
           {(d.tenants||[]).length > 0 && (() => {
             const toN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
             const occ = (d.tenants||[]).filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
-            const ig = occ.filter(t => t.name && isInvestmentGrade(t.name));
+            const ig = occ.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating));
             const totalR = occ.reduce((s, t) => s + toN(t.annualRent), 0);
             const igR = ig.reduce((s, t) => s + toN(t.annualRent), 0);
             const totalS = occ.reduce((s, t) => s + toN(t.sf), 0);
@@ -801,7 +801,7 @@ ${text.slice(0, 60000)}`;
             const pR = totalR > 0 ? Math.round(igR / totalR * 100) : null;
             const pS = totalS > 0 ? Math.round(igS / totalS * 100) : null;
             const v = [pR != null ? `${pR}% rent` : null, pS != null ? `${pS}% GLA` : null].filter(Boolean).join(" · ");
-            return v ? <Row l="IG EXPOSURE" v={v} /> : null;
+            return v ? <Row l="INVESTMENT GRADE EXPOSURE" v={v} /> : null;
           })()}
           <Row l="YEAR BUILT" v={d.yearBuilt}/>
           <Row l="RENOVATION YEAR" v={d.renovationYear}/>

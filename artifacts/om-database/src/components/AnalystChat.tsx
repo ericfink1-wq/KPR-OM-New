@@ -154,7 +154,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     const totalValue = owned.reduce((s, d) => s + (num(d.txnPurchasePrice) || num(d.askingPrice)), 0);
     const totalSF = owned.reduce((s, d) => s + num(d.totalSF), 0);
     const allOccupied = tenants.filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
-    const igTenants = allOccupied.filter(t => t.name && isInvestmentGrade(t.name));
+    const igTenants = allOccupied.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating));
     const totalRent = allOccupied.reduce((s, t) => s + num(t.annualRent), 0);
     const igRent = igTenants.reduce((s, t) => s + num(t.annualRent), 0);
     const igRentPct = totalRent > 0 ? Math.round(igRent / totalRent * 100) : null;
@@ -207,7 +207,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                     <StatBox label="Properties" value={portfolio.count} accent="#6dba43" />
                     {portfolio.value > 0 && <StatBox label="Portfolio Value" value={fmtM(portfolio.value)} accent="#6dba43" />}
                     {portfolio.sf > 0 && <StatBox label="Square Footage" value={fmtSF(portfolio.sf)} />}
-                    {portfolio.igRentPct != null && <StatBox label="IG Tenant Rent" value={`${portfolio.igRentPct}%`} accent="#3f7a1f" />}
+                    {portfolio.igRentPct != null && <StatBox label="Investment Grade Tenant Rent" value={`${portfolio.igRentPct}%`} accent="#3f7a1f" />}
                     {portfolio.anchors.length > 0 && (
                       <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", flex: "3 1 0", minWidth: 160 }}>
                         <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Key Anchors</div>

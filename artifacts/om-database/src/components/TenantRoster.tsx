@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Tenant } from "../lib/idb";
 import { fmtLeaseDate, fmtTenantSales } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
@@ -15,6 +15,76 @@ function fmtAsOf(raw: string): string {
   const d = new Date(raw.includes("T") ? raw : raw + "T00:00:00");
   if (isNaN(d.getTime())) return raw;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function FlagTip({ content, children, color = "#b45309" }: { content: string; children: React.ReactNode; color?: string }) {
+  const [open, setOpen] = useState(false);
+  const showTimer = useRef<number | null>(null);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  const showSoon = () => {
+    if (showTimer.current) window.clearTimeout(showTimer.current);
+    showTimer.current = window.setTimeout(() => setOpen(true), 150);
+  };
+  const cancelHover = () => {
+    if (showTimer.current) {
+      window.clearTimeout(showTimer.current);
+      showTimer.current = null;
+    }
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [open]);
+
+  return (
+    <span ref={ref} style={{ position: "relative", display: "inline-block", marginLeft: 6 }}>
+      <span
+        onMouseEnter={showSoon}
+        onMouseLeave={cancelHover}
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        style={{ color, cursor: "pointer", userSelect: "none" }}
+        aria-label={content}
+        role="button"
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      {open && (
+        <span
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            background: "#26281f",
+            color: "#f6f2ea",
+            padding: "9px 13px",
+            borderRadius: 7,
+            fontSize: 12,
+            lineHeight: 1.5,
+            whiteSpace: "normal",
+            width: "max-content",
+            maxWidth: 320,
+            zIndex: 10000,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+          }}
+        >
+          {content}
+        </span>
+      )}
+    </span>
+  );
 }
 
 export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tenantsSource, omDate }: Props) {
@@ -106,8 +176,8 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
-                      {t.name && isInvestmentGrade(t.name) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>IG</span>}
-                      {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
+                      {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>Investment Grade</span>}
+                      {t.assumptionNote && <FlagTip content={t.assumptionNote}>⚑</FlagTip>}
                     </>
                   )}
                 </td>
@@ -141,7 +211,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · hover ⚑ for a tenant footnote.</div>
+      <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover ⚑ for a tenant footnote.</div>
     </div>
   );
 }

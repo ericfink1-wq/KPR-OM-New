@@ -1,0 +1,199 @@
+Three related polish changes:
+
+CHANGE 1 — REPLACE "IG" WITH "INVESTMENT GRADE" EVERYWHERE USER-FACING.
+
+There are exactly 4 places "IG" appears in user-visible text. Update each:
+
+(a) artifacts/om-database/src/components/TenantRoster.tsx around line 109
+    The IG badge text:
+       <span style={{ ... }}>IG</span>
+    Change to:
+       <span style={{ ... }}>Investment Grade</span>
+    This will make the badge wider — that's fine, the user prefers clarity over compactness.
+
+(b) artifacts/om-database/src/components/AnalystChat.tsx around line 210
+    The portfolio rollup stat box label:
+       <StatBox label="IG Tenant Rent" value={`${portfolio.igRentPct}%`} accent="#3f7a1f" />
+    Change to:
+       <StatBox label="Investment Grade Tenant Rent" value={`${portfolio.igRentPct}%`} accent="#3f7a1f" />
+
+(c) artifacts/om-database/src/components/DealSummaryPDF.tsx around line 216
+    The PDF metric row label:
+       ["IG Exposure", igPct != null ? `${igPct}% rent` : "—"],
+    Change to:
+       ["Investment Grade Exposure", igPct != null ? `${igPct}% rent` : "—"],
+
+(d) artifacts/om-database/src/components/DetailView.tsx around line 812
+    The deal hero metric row label:
+       return v ? <Row l="IG EXPOSURE" v={v} /> : null;
+    Change to:
+       return v ? <Row l="INVESTMENT GRADE EXPOSURE" v={v} /> : null;
+
+DO NOT change internal variable names (igPct, igRentPct, IG_TENANTS, isInvestmentGrade) — those are code-internal and renaming them is churn with no user value.
+
+CHANGE 2 — EXTEND THE INVESTMENT-GRADE CHECK TO ALSO CONSIDER THE creditRating FIELD.
+
+Currently isInvestmentGrade(name) only checks against the static IG_TENANTS list. That misses tenants whose parent companies are IG-rated but aren't on the list (e.g., regional grocers that are subsidiaries of IG parents). Extend the function to optionally check the tenant's creditRating string.
+
+(a) In artifacts/om-database/src/lib/tenantCredit.ts, change the isInvestmentGrade signature to accept an optional creditRating parameter, and check it before/after the name match:
+
+    export function isInvestmentGrade(tenantName: string, creditRating?: string | null): boolean {
+      // Check creditRating field first — explicit overrides the static list
+      if (creditRating && typeof creditRating === "string") {
+        const r = creditRating.toLowerCase();
+        // Match "investment grade", "ig-rated", "BBB", "A-", "A1", "AA", "AAA" etc.
+        if (
+          r.includes("investment grade") ||
+          /\b(aaa|aa[+-]?|a[+-]?|bbb[+-]?)\b/i.test(creditRating)
+        ) return true;
+      }
+      // Existing name-based check (unchanged logic)
+      if (!tenantName) return false;
+      const cleaned = tenantName
+        .toLowerCase()
+        .replace(/\(.*?\)/g, "")
+        .replace(/#\s*[\w-]+/g, "")
+        .replace(/\b(corporation|corp|inc|llc|ltd|co|stores?)\b\.?/g, "")
+        .replace(/[^\w\s']/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      for (const brand of IG_TENANTS) {
+        const b = brand.toLowerCase();
+        if (cleaned === b) return true;
+        const padded = " " + cleaned + " ";
+        if (padded.includes(" " + b + " ")) return true;
+        if (!b.includes(" ") && b.length >= 4 && cleaned.includes(b)) return true;
+      }
+      return false;
+    }
+
+(b) Update all callers to pass the creditRating as the second argument:
+
+    artifacts/om-database/src/components/TenantRoster.tsx line 109:
+      Change:  isInvestmentGrade(t.name)
+      To:      isInvestmentGrade(t.name, t.creditRating)
+
+    artifacts/om-database/src/components/AnalystChat.tsx line 157:
+      Change:  allOccupied.filter(t => t.name && isInvestmentGrade(t.name))
+      To:      allOccupied.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating))
+
+    artifacts/om-database/src/components/DealSummaryPDF.tsx lines 139 and 310:
+      Change:  isInvestmentGrade(t.name)
+      To:      isInvestmentGrade(t.name, t.creditRating)
+
+    artifacts/om-database/src/components/DetailView.tsx line 804:
+      Change:  occ.filter(t => t.name && isInvestmentGrade(t.name))
+      To:      occ.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating))
+
+    artifacts/om-database/src/lib/utils.ts line where isInvestmentGrade is called (around the imported usage):
+      Update to pass creditRating if a Tenant object is in scope at that call site.
+
+NOTE ON MULTI-BADGE RENDERING: A tenant can already display both ANCHOR and Investment Grade badges simultaneously — the existing JSX in TenantRoster.tsx (lines 108-110) renders each badge as an independent sibling element, conditioned on its own flag. Don't change that rendering logic — just verify it still works after the IG text change (it should, since you're only swapping the label text).
+
+CHANGE 3 — FAST + CLICKABLE TOOLTIP FOR THE ⚑ FLAG IN TENANT ROSTER.
+
+Currently artifacts/om-database/src/components/TenantRoster.tsx line 110 uses the browser's native `title` attribute on the ⚑ flag emoji:
+
+  {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
+
+Two problems with native `title`: the browser's hover delay is ~700ms (slow), and there's no way to view it on touch devices (no hover). Replace with a small inline tooltip component that:
+  • Shows on mouse hover with 150ms delay (much faster than browser native)
+  • Shows on click/tap (works on mobile, also lets desktop users pin it open)
+  • Dismisses on mouse leave (after hover-open) OR on click outside (after click-open)
+
+(a) At the top of TenantRoster.tsx, near the existing imports, add the necessary React imports if not present:
+    import { useState, useRef, useEffect } from "react";
+
+(b) Add a small FlagTip component inside the TenantRoster.tsx file, above the default export. Don't put it in a separate file — keep it local since it's only used here.
+
+    function FlagTip({ content, children, color = "#b45309" }: { content: string; children: React.ReactNode; color?: string }) {
+      const [open, setOpen] = useState(false);
+      const showTimer = useRef<number | null>(null);
+      const ref = useRef<HTMLSpanElement>(null);
+
+      const showSoon = () => {
+        if (showTimer.current) window.clearTimeout(showTimer.current);
+        showTimer.current = window.setTimeout(() => setOpen(true), 150);
+      };
+      const cancelHover = () => {
+        if (showTimer.current) {
+          window.clearTimeout(showTimer.current);
+          showTimer.current = null;
+        }
+        setOpen(false);
+      };
+
+      // Close on outside click/tap (only when opened by click)
+      useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent | TouchEvent) => {
+          if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        document.addEventListener("touchstart", handler);
+        return () => {
+          document.removeEventListener("mousedown", handler);
+          document.removeEventListener("touchstart", handler);
+        };
+      }, [open]);
+
+      return (
+        <span ref={ref} style={{ position: "relative", display: "inline-block", marginLeft: 6 }}>
+          <span
+            onMouseEnter={showSoon}
+            onMouseLeave={cancelHover}
+            onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+            style={{ color, cursor: "pointer", userSelect: "none" }}
+            aria-label={content}
+            role="button"
+            tabIndex={0}
+          >
+            {children}
+          </span>
+          {open && (
+            <span
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                left: 0,
+                background: "#26281f",
+                color: "#f6f2ea",
+                padding: "9px 13px",
+                borderRadius: 7,
+                fontSize: 12,
+                lineHeight: 1.5,
+                whiteSpace: "normal",
+                width: "max-content",
+                maxWidth: 320,
+                zIndex: 10000,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+              }}
+            >
+              {content}
+            </span>
+          )}
+        </span>
+      );
+    }
+
+(c) Replace the existing line 110 in TenantRoster.tsx:
+
+    {t.assumptionNote && <span title={t.assumptionNote} style={{ marginLeft:6, color:"#b45309", cursor:"help" }}>⚑</span>}
+
+    With:
+
+    {t.assumptionNote && <FlagTip content={t.assumptionNote}>⚑</FlagTip>}
+
+(d) Update the footer hint on the same component (around line 144) from:
+    "hover ⚑ for a tenant footnote."
+    To:
+    "tap or hover ⚑ for a tenant footnote."
+
+DO NOT change the other `title=` tooltips in TenantRoster.tsx (the GROSS/FIXED flag, the rent bumps cell, the sales notes cell). Those can be migrated later if the user wants the same treatment — keeping this change tightly scoped to the ⚑ footnote.
+
+WHAT NOT TO TOUCH:
+- The IG_TENANTS list itself — adding regional grocers is a credit-judgment call best handled per-deal via the creditRating field, not by expanding the global list.
+- The internal variable names (igRentPct, igPct, etc.)
+- Any other tooltip in the app
+- Multi-badge rendering logic in TenantRoster.tsx — it already handles multiple flags correctly
