@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { STATUS_COLORS } from "../lib/constants";
-import { tenantKey } from "../lib/utils";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
 
@@ -23,15 +22,6 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
 
   const active = deals.filter(d => !d.trashedAt);
-  const fresh = active.filter(d => {
-    const src = (d as any).omDate || d.uploadedAt;
-    if (!src) return false;
-    return (Date.now() - new Date(src).getTime()) < 6 * 30.4 * 86400000;
-  }).length;
-  const brands = new Set(
-    active.flatMap(d => ((d as any).tenants || []).map((t: any) => tenantKey(t.name)).filter(Boolean))
-  ).size;
-
   const handleFiles = (fl: FileList | null) => {
     if (fl && fl.length > 0) onFiles(fl);
   };
@@ -204,11 +194,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
         </div>
       </div>
 
-      {/* Right side: stats + upload + backup + logout */}
+      {/* Right side: upload + backup + logout */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        <span className="hdr-stats" style={{ fontSize: 11, color: "#a69e91", letterSpacing: "0.02em" }}>
-          {fresh} fresh · {brands} brands · {active.length} deals
-        </span>
         {queueLen > 0 && (
           <span style={{ fontSize: 11, color: "#d9890c", fontWeight: 600 }}>⏳ {queueLen} processing…</span>
         )}
