@@ -278,6 +278,8 @@ export default function PortfolioAnalytics() {
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState(false);
+  const [rebuildMsg, setRebuildMsg] = useState<string | null>(null);
 
   const load = useCallback((f: "all" | "owned") => {
     setLoading(true);
@@ -292,6 +294,20 @@ export default function PortfolioAnalytics() {
   }, []);
 
   useEffect(() => { load(filter); }, [filter, load]);
+
+  const handleRebuild = () => {
+    setRebuilding(true);
+    setRebuildMsg(null);
+    fetch("/api/tenant-index/rebuild-all", { method: "POST", credentials: "include" })
+      .then(r => r.json() as Promise<{ ok: boolean; rebuilt?: number; error?: string }>)
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || "Rebuild failed");
+        setRebuildMsg(`✓ ${d.rebuilt ?? "?"} tenants indexed`);
+        load(filter);
+      })
+      .catch(e => setRebuildMsg(`⚠ ${e.message}`))
+      .finally(() => setRebuilding(false));
+  };
 
   const Btn = (f: "all" | "owned", label: string) => (
     <button
@@ -317,14 +333,44 @@ export default function PortfolioAnalytics() {
   return (
     <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
           <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
         </div>
-        <div style={{ display: "flex", background: "#f1eadc", borderRadius: 10, padding: 3, gap: 2 }}>
-          {Btn("all", "All Deals")}
-          {Btn("owned", "Owned Only")}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <button
+              onClick={handleRebuild}
+              disabled={rebuilding}
+              style={{
+                background: rebuilding ? "#f1eadc" : "transparent",
+                border: "1px solid #c9c2b8",
+                color: rebuilding ? "#a89f8f" : "#6f6a5f",
+                padding: "6px 12px",
+                borderRadius: 7,
+                cursor: rebuilding ? "default" : "pointer",
+                fontSize: 11,
+                fontFamily: "'Inter',sans-serif",
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <span style={{ fontSize: 12 }}>↺</span>
+              {rebuilding ? "Rebuilding…" : "Rebuild index"}
+            </button>
+            {rebuildMsg && (
+              <span style={{ fontSize: 10.5, color: rebuildMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>
+                {rebuildMsg}
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", background: "#f1eadc", borderRadius: 10, padding: 3, gap: 2 }}>
+            {Btn("all", "All Deals")}
+            {Btn("owned", "Owned Only")}
+          </div>
         </div>
       </div>
 
