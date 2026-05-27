@@ -1,0 +1,631 @@
+{
+  "1779787607536-ai7516t": {
+    "tenants": [
+      {
+        "name": "Fresh Farms International Market",
+        "sf": 58000,
+        "rentPerSF": 14.5,
+        "annualRent": 840999,
+        "leaseStart": "1999-02-11",
+        "leaseExpiry": "2030-12-31",
+        "remainingTermYears": 4.7,
+        "renewalOptions": "3 x 5yr remaining",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "Ross Dress For Less",
+        "sf": 30122,
+        "rentPerSF": 11.0,
+        "annualRent": 331341,
+        "leaseStart": "2011-11-27",
+        "leaseExpiry": "2032-01-31",
+        "remainingTermYears": 5.8,
+        "renewalOptions": "2nd of multiple 5yr; steps to $14",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "dd's Discounts",
+        "sf": 21660,
+        "rentPerSF": 12.5,
+        "annualRent": 270750,
+        "leaseStart": "2022-05-03",
+        "leaseExpiry": "2033-01-31",
+        "remainingTermYears": 6.8,
+        "renewalOptions": "options remaining",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "Daiso",
+        "sf": 15456,
+        "rentPerSF": 10.5,
+        "annualRent": 162288,
+        "leaseStart": "2025-03-29",
+        "leaseExpiry": "2035-03-31",
+        "remainingTermYears": 8.9,
+        "renewalOptions": "2 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Walgreens",
+        "sf": 13905,
+        "rentPerSF": 25.17,
+        "annualRent": 350000,
+        "leaseStart": "2000-01-01",
+        "leaseExpiry": "2060-12-31",
+        "remainingTermYears": 34.7,
+        "renewalOptions": "long term",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Chick-Fil-A",
+        "sf": 6575,
+        "rentPerSF": 35.15,
+        "annualRent": 231125,
+        "leaseStart": "2019-04-05",
+        "leaseExpiry": "2039-09-30",
+        "remainingTermYears": 13.4,
+        "renewalOptions": "6 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "18G Coffee and Roastery",
+        "sf": 4944,
+        "rentPerSF": 27.5,
+        "annualRent": 135960,
+        "leaseStart": "2026-06-21",
+        "leaseExpiry": "2036-06-30",
+        "remainingTermYears": 10.2,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Hello Shawarma",
+        "sf": 4064,
+        "rentPerSF": 24.0,
+        "annualRent": 97536,
+        "leaseStart": "2025-10-28",
+        "leaseExpiry": "2032-10-31",
+        "remainingTermYears": 6.5,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "America's Best Contacts & Eyeglasses",
+        "sf": 3500,
+        "rentPerSF": 25.68,
+        "annualRent": 89880,
+        "leaseStart": "2016-05-16",
+        "leaseExpiry": "2029-05-31",
+        "remainingTermYears": 3.1,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Bath & Body Works",
+        "sf": 3000,
+        "rentPerSF": 26.0,
+        "annualRent": 78000,
+        "leaseStart": "2001-04-27",
+        "leaseExpiry": "2027-04-30",
+        "remainingTermYears": 1.0,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Lee Nails",
+        "sf": 3000,
+        "rentPerSF": 36.85,
+        "annualRent": 110550,
+        "leaseStart": "2008-03-10",
+        "leaseExpiry": "2029-05-31",
+        "remainingTermYears": 3.1,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Melt n Dip",
+        "sf": 2808,
+        "rentPerSF": 28.5,
+        "annualRent": 80028,
+        "leaseStart": "2022-06-02",
+        "leaseExpiry": "2030-05-31",
+        "remainingTermYears": 4.1,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Jimmy John's",
+        "sf": 2180,
+        "rentPerSF": 35.67,
+        "annualRent": 77760,
+        "leaseStart": "2002-04-01",
+        "leaseExpiry": "2031-12-31",
+        "remainingTermYears": 5.7,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Blaze Pizza",
+        "sf": 2133,
+        "rentPerSF": 49.61,
+        "annualRent": 105818,
+        "leaseStart": "2015-05-07",
+        "leaseExpiry": "2030-11-30",
+        "remainingTermYears": 4.6,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "T-Mobile",
+        "sf": 2100,
+        "rentPerSF": 38.0,
+        "annualRent": 79800,
+        "leaseStart": "2011-01-21",
+        "leaseExpiry": "2029-01-31",
+        "remainingTermYears": 2.8,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Verizon Wireless",
+        "sf": 2000,
+        "rentPerSF": 46.5,
+        "annualRent": 93000,
+        "leaseStart": "2004-09-24",
+        "leaseExpiry": "2027-12-31",
+        "remainingTermYears": 1.7,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Crumbl Cookies",
+        "sf": 2000,
+        "rentPerSF": 31.83,
+        "annualRent": 63660,
+        "leaseStart": "2022-08-27",
+        "leaseExpiry": "2027-08-31",
+        "remainingTermYears": 1.3,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Poke Bros.",
+        "sf": 1908,
+        "rentPerSF": 30.0,
+        "annualRent": 57240,
+        "leaseStart": "2022-01-07",
+        "leaseExpiry": "2032-01-31",
+        "remainingTermYears": 5.8,
+        "renewalOptions": "2 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "WingStop",
+        "sf": 1520,
+        "rentPerSF": 27.0,
+        "annualRent": 41040,
+        "leaseStart": "2011-03-02",
+        "leaseExpiry": "2031-12-31",
+        "remainingTermYears": 5.7,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Batteries Plus Bulbs",
+        "sf": 1500,
+        "rentPerSF": 32.55,
+        "annualRent": 48825,
+        "leaseStart": "2012-02-26",
+        "leaseExpiry": "2026-12-31",
+        "remainingTermYears": 0.7,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Destiny Dental",
+        "sf": 1450,
+        "rentPerSF": 32.31,
+        "annualRent": 46849,
+        "leaseStart": "2012-07-01",
+        "leaseExpiry": "2027-12-31",
+        "remainingTermYears": 1.7,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Great Clips",
+        "sf": 1050,
+        "rentPerSF": 27.87,
+        "annualRent": 29263,
+        "leaseStart": "2021-09-30",
+        "leaseExpiry": "2031-09-30",
+        "remainingTermYears": 5.4,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Posh Beauty Bar",
+        "sf": 1044,
+        "rentPerSF": 18.0,
+        "annualRent": 18792,
+        "leaseStart": "2018-11-16",
+        "leaseExpiry": "2026-11-30",
+        "remainingTermYears": 0.6,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      }
+    ],
+    "tenantsAsOf": "2026-04-30",
+    "tenantsSource": "rent-roll",
+    "occupancy": 96.0,
+    "weightedAvgRentPSF": 17.07,
+    "walt": 7.95,
+    "dealScore": {
+      "grade": "A-",
+      "rationale": "Category-leading independent grocer with improved occupancy, offset by Walgreens credit and small-shop rollover.",
+      "strengths": [
+        "Fresh Farms anchors at $14.50/SF (~$1,113/SF reported sales) on a lease to 2030 with options",
+        "Occupancy up to 96% (one ~7,700 SF box remaining); national junior anchors Ross and dd's both in place to 2032-33",
+        "Shadow Walmart and dense, affluent Chicago trade area"
+      ],
+      "risks": [
+        "Walgreens (13,905 SF) pays a strong $25.17/SF to 2060 but carries WBA store-closure credit risk",
+        "Cluster of small-shop expirations in 2026-27 (Batteries Plus, Posh Beauty, Bath & Body Works, Verizon)",
+        "Fresh Farms is a privately held grocer \u2014 no public credit rating"
+      ]
+    },
+    "notes": "Pointe Plaza's April-2026 roll shows occupancy improved to ~96% (one ~7,700 SF vacancy left), anchored by Fresh Farms at a below-market $14.50/SF \u2014 but with options remaining that rent is durable income rather than mark-to-market upside. Ross and dd's are locked to 2032-33; the live items are a handful of small-shop rolls in 2026-27 and Walgreens' credit (still paying $25.17/SF on a long lease).",
+    "redFlags": [
+      {
+        "severity": "medium",
+        "description": "Walgreens (13,905 SF, $25.17/SF to 2060) carries WBA store-closure credit risk despite the long term."
+      },
+      {
+        "severity": "medium",
+        "description": "~7,700 SF (Suite 5674) vacant; small-shop expirations cluster in late 2026-2027."
+      },
+      {
+        "severity": "low",
+        "description": "Fresh Farms is privately held with no public credit rating; ~46% expense ratio remains elevated."
+      }
+    ],
+    "analysisStale": false
+  },
+  "1779801734732-g4dq4s3": {
+    "tenants": [
+      {
+        "name": "Costco",
+        "sf": 136739,
+        "rentPerSF": 4.67,
+        "annualRent": 638141,
+        "leaseStart": "2004-07-29",
+        "leaseExpiry": "2039-07-31",
+        "remainingTermYears": 13.3,
+        "renewalOptions": "multiple 5yr to ~2069",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "Dick's Sporting Goods",
+        "sf": 50754,
+        "rentPerSF": 8.5,
+        "annualRent": 431409,
+        "leaseStart": "2025-08-01",
+        "leaseExpiry": "2030-07-31",
+        "remainingTermYears": 4.3,
+        "renewalOptions": "3rd of 4 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "P.C. Richard & Son",
+        "sf": 32603,
+        "rentPerSF": 9.5,
+        "annualRent": 309728,
+        "leaseStart": "2026-02-01",
+        "leaseExpiry": "2031-01-31",
+        "remainingTermYears": 4.8,
+        "renewalOptions": "2nd 5yr; multiple to 2051",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "Dollar Tree",
+        "sf": 20228,
+        "rentPerSF": 11.14,
+        "annualRent": 225339,
+        "leaseStart": "2004-11-16",
+        "leaseExpiry": "2030-01-31",
+        "remainingTermYears": 3.8,
+        "renewalOptions": "3 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "AutoZone",
+        "sf": 10162,
+        "rentPerSF": 16.18,
+        "annualRent": 164408,
+        "leaseStart": "1997-01-13",
+        "leaseExpiry": "2032-01-31",
+        "remainingTermYears": 5.8,
+        "renewalOptions": "3 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Buffalo Wild Wings",
+        "sf": 5700,
+        "rentPerSF": 28.0,
+        "annualRent": 159600,
+        "leaseStart": "2025-12-08",
+        "leaseExpiry": "2040-12-31",
+        "remainingTermYears": 14.7,
+        "renewalOptions": "3 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Panera Bread",
+        "sf": 4312,
+        "rentPerSF": 42.9,
+        "annualRent": 184984,
+        "leaseStart": "2020-02-18",
+        "leaseExpiry": "2035-02-17",
+        "remainingTermYears": 8.8,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Shah's Halal Food",
+        "sf": 4170,
+        "rentPerSF": 12.5,
+        "annualRent": 52125,
+        "leaseStart": "2026-09-29",
+        "leaseExpiry": "2036-12-31",
+        "remainingTermYears": 10.7,
+        "renewalOptions": "2 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Wine Liquor Mart",
+        "sf": 4100,
+        "rentPerSF": 15.0,
+        "annualRent": 61500,
+        "leaseStart": "2025-06-01",
+        "leaseExpiry": "2035-05-31",
+        "remainingTermYears": 9.1,
+        "renewalOptions": "2 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "My Gym Enfield",
+        "sf": 2800,
+        "rentPerSF": 12.5,
+        "annualRent": 35000,
+        "leaseStart": "2024-07-01",
+        "leaseExpiry": "2027-06-30",
+        "remainingTermYears": 1.2,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Gloss Nail Bar and Spa",
+        "sf": 2019,
+        "rentPerSF": 22.5,
+        "annualRent": 45427,
+        "leaseStart": "2024-02-29",
+        "leaseExpiry": "2034-02-28",
+        "remainingTermYears": 7.8,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Great Clips",
+        "sf": 1500,
+        "rentPerSF": 20.64,
+        "annualRent": 30962,
+        "leaseStart": "2014-07-12",
+        "leaseExpiry": "2026-07-31",
+        "remainingTermYears": 0.3,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Miracle Shakes",
+        "sf": 1400,
+        "rentPerSF": 24.59,
+        "annualRent": 34420,
+        "leaseStart": "2022-12-24",
+        "leaseExpiry": "2028-12-31",
+        "remainingTermYears": 2.7,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Bank of America (ATM)",
+        "sf": 610,
+        "rentPerSF": 49.87,
+        "annualRent": 30420,
+        "leaseStart": "2024-09-01",
+        "leaseExpiry": "2029-08-31",
+        "remainingTermYears": 3.3,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      }
+    ],
+    "tenantsAsOf": "2026-04-30",
+    "tenantsSource": "rent-roll",
+    "occupancy": 92.2,
+    "weightedAvgRentPSF": 7.98,
+    "walt": 9.23,
+    "dealScore": {
+      "grade": "B+",
+      "rationale": "Costco-anchored New England center, now confirmed current and materially de-risked, with backfill of dark space the main task.",
+      "strengths": [
+        "Costco RENEWED through 2039 ($4.67/SF) with options to ~2069 \u2014 resolves the prior 2029 expiry/go-dark concern",
+        "Dick's and a new P.C. Richard lease (commenced Feb-2026) both current to 2030-31; held free and clear of debt",
+        "Strong competitive position (adjacent Home Depot via REA; no nearby Lowe's)"
+      ],
+      "risks": [
+        "~7.8% vacant including a dark ~13,865 SF former Jo-Ann box to backfill",
+        "Very low overall rent ($7.98/SF) \u2014 Costco's $4.67/SF is locked by options, so durable income not upside",
+        "Costco retains a go-dark clause"
+      ]
+    },
+    "notes": "Freshwater-Stateline's April-2026 roll confirms the data is now CURRENT (the prior record showed 2018-2023 expiries) and the asset is much stronger than that stale view implied: Costco has renewed through 2039 with options to ~2069, and Dick's and a new P.C. Richard lease are in place. The main value-add now is backfilling ~7.8% vacancy, led by the dark ~13,865 SF former Jo-Ann box; Costco's very low rent is durable income, not a mark-to-market play.",
+    "redFlags": [
+      {
+        "severity": "medium",
+        "description": "~7.8% vacant including a dark ~13,865 SF former Jo-Ann box and a former Town Fair Tire suite to backfill."
+      },
+      {
+        "severity": "medium",
+        "description": "Costco ($4.67/SF, ~52% of GLA) retains a go-dark clause; rent is locked low by its option stack."
+      },
+      {
+        "severity": "low",
+        "description": "Prior Phase I environmental is dated; confirm current environmental status given asset age."
+      }
+    ],
+    "analysisStale": false
+  },
+  "1779801905346-1ncffal": {
+    "tenants": [
+      {
+        "name": "Stop & Shop",
+        "sf": 64257,
+        "rentPerSF": 18.2,
+        "annualRent": 1169477,
+        "leaseStart": "1994-09-26",
+        "leaseExpiry": "2032-05-31",
+        "remainingTermYears": 6.1,
+        "renewalOptions": "8 x 5yr to ~2062",
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "Barnes & Noble",
+        "sf": 21875,
+        "rentPerSF": 18.97,
+        "annualRent": 414999,
+        "leaseStart": "2024-02-01",
+        "leaseExpiry": "2031-01-31",
+        "remainingTermYears": 4.8,
+        "renewalOptions": null,
+        "reimbursementMethod": "NNN",
+        "isAnchor": true
+      },
+      {
+        "name": "The Paper Store",
+        "sf": 8500,
+        "rentPerSF": 20.0,
+        "annualRent": 170000,
+        "leaseStart": "1998-02-06",
+        "leaseExpiry": "2031-06-30",
+        "remainingTermYears": 5.2,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "J. Gilbert's",
+        "sf": 7000,
+        "rentPerSF": 26.46,
+        "annualRent": 185244,
+        "leaseStart": "1995-04-30",
+        "leaseExpiry": "2031-12-31",
+        "remainingTermYears": 5.7,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "Phenix Salon Suites",
+        "sf": 6500,
+        "rentPerSF": 27.6,
+        "annualRent": 179400,
+        "leaseStart": "2018-12-22",
+        "leaseExpiry": "2028-12-21",
+        "remainingTermYears": 2.6,
+        "renewalOptions": "2 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      },
+      {
+        "name": "FedEx Office",
+        "sf": 4282,
+        "rentPerSF": 29.7,
+        "annualRent": 127175,
+        "leaseStart": "1998-02-06",
+        "leaseExpiry": "2029-08-31",
+        "remainingTermYears": 3.3,
+        "renewalOptions": "1 x 5yr",
+        "reimbursementMethod": "NNN",
+        "isAnchor": false
+      }
+    ],
+    "tenantsAsOf": "2026-04-30",
+    "tenantsSource": "rent-roll",
+    "occupancy": 100.0,
+    "weightedAvgRentPSF": 19.98,
+    "walt": 5.45,
+    "dealScore": {
+      "grade": "A-",
+      "rationale": "Fully-leased, affluent-Glastonbury grocery center, now confirmed current with anchor and junior leases renewed.",
+      "strengths": [
+        "100% occupied; Stop & Shop (IG, Ahold guarantee) at $18.20/SF to 2032 with options to ~2062",
+        "Barnes & Noble RE-SIGNED (new lease commenced 2024, runs to 2031) \u2014 resolves the prior expiry concern",
+        "Affluent Glastonbury, CT trade area"
+      ],
+      "risks": [
+        "Concentrated 6-tenant roster; Stop & Shop is ~57% of GLA",
+        "FedEx (4,282 SF) rolls 2029",
+        "Small absolute tenant count limits diversification"
+      ]
+    },
+    "notes": "Somerset Square's April-2026 roll confirms current data (the prior record showed 2019-2021 expiries) and a clean, 100%-leased center: Stop & Shop is locked to 2032 with a deep option stack and Barnes & Noble has re-signed through 2031, eliminating the old 'near-term rollover' flag. The main structural note is concentration \u2014 six tenants, with Stop & Shop at ~57% of GLA \u2014 but the anchor's IG credit and guarantee make that durable.",
+    "redFlags": [
+      {
+        "severity": "medium",
+        "description": "Concentrated roster: 6 tenants, with Stop & Shop ~57% of GLA (mitigated by IG credit and Ahold guarantee)."
+      },
+      {
+        "severity": "low",
+        "description": "FedEx (4,282 SF) expires 2029; next meaningful rollover to monitor."
+      }
+    ],
+    "analysisStale": false
+  }
+}

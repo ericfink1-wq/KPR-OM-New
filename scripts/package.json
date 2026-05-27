@@ -8,6 +8,7 @@
     "propose-aliases": "tsx ./src/propose-aliases.ts",
     "apply-aliases": "tsx ./src/apply-aliases.ts",
     "patch-deal-scores": "tsx ./src/patch-deal-scores.ts",
+    "apply-deal-updates": "tsx ./src/apply-deal-updates.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
