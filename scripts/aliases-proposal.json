@@ -1,0 +1,771 @@
+{
+  "_instructions": "Review the 'merges' array. Each entry maps all rawNames → canonicalName. Edit as needed, then run: pnpm --filter @workspace/scripts run apply-aliases",
+  "_stats": {
+    "totalRawNames": 438,
+    "alreadyMapped": 0,
+    "proposedMergeGroups": 64,
+    "singletons": 292
+  },
+  "merges": [
+    {
+      "canonicalName": "ALDI",
+      "rawNames": [
+        "ALDI",
+        "Aldi, Inc"
+      ]
+    },
+    {
+      "canonicalName": "AMC Theatres",
+      "rawNames": [
+        "AMC",
+        "AMC Theatres",
+        "American Multi-Cinema"
+      ]
+    },
+    {
+      "canonicalName": "America's Best Contacts & Eyecare",
+      "rawNames": [
+        "America's Best",
+        "America's Best Contacts",
+        "America's Best Contacts & Eyecare"
+      ]
+    },
+    {
+      "canonicalName": "Bank of America ATM",
+      "rawNames": [
+        "Bank of America (ATM)",
+        "Bank of America ATM"
+      ]
+    },
+    {
+      "canonicalName": "Best Buy",
+      "rawNames": [
+        "Best Buy",
+        "Best Buy Stores, LP"
+      ]
+    },
+    {
+      "canonicalName": "Burlington Coat Factory",
+      "rawNames": [
+        "Burlington",
+        "Burlington Coat Factory"
+      ]
+    },
+    {
+      "canonicalName": "CAVA",
+      "rawNames": [
+        "CAVA",
+        "Cava"
+      ]
+    },
+    {
+      "canonicalName": "Carter's",
+      "rawNames": [
+        "Carter's",
+        "Carter's / Osh Kosh",
+        "Carter's Babies and Kids"
+      ]
+    },
+    {
+      "canonicalName": "Chipotle Mexican Grill",
+      "rawNames": [
+        "Chipotle",
+        "Chipotle Mexican Grill"
+      ]
+    },
+    {
+      "canonicalName": "Chopt",
+      "rawNames": [
+        "Chop't",
+        "Chopt"
+      ]
+    },
+    {
+      "canonicalName": "Crumbl Cookies",
+      "rawNames": [
+        "Crumbl Cookies",
+        "Crumble Cookies"
+      ]
+    },
+    {
+      "canonicalName": "Davenport's Pizza",
+      "rawNames": [
+        "Davenport Pizza",
+        "Davenport's Pizza"
+      ]
+    },
+    {
+      "canonicalName": "Dollar Tree",
+      "rawNames": [
+        "Dollar Tree",
+        "Dollar Tree #4038",
+        "Dollar Tree Stores"
+      ]
+    },
+    {
+      "canonicalName": "Dunkin' Donuts",
+      "rawNames": [
+        "Dunkin' Donuts",
+        "Dunkin' Donuts / Baskin Robbins"
+      ]
+    },
+    {
+      "canonicalName": "Empire Wine & Spirits",
+      "rawNames": [
+        "Empire Wine & Liquor",
+        "Empire Wine & Spirits"
+      ]
+    },
+    {
+      "canonicalName": "FedEx Office",
+      "rawNames": [
+        "FedEx",
+        "FedEx Kinko's",
+        "FedEx Office"
+      ]
+    },
+    {
+      "canonicalName": "Five Below",
+      "rawNames": [
+        "Five Below",
+        "Five Below, Inc"
+      ]
+    },
+    {
+      "canonicalName": "Five Guys",
+      "rawNames": [
+        "Five Guys",
+        "Five Guys Burger"
+      ]
+    },
+    {
+      "canonicalName": "GNC",
+      "rawNames": [
+        "GNC",
+        "General Nutrition Center",
+        "General Nutrition Corp (GNC)"
+      ]
+    },
+    {
+      "canonicalName": "GameStop",
+      "rawNames": [
+        "GameStop",
+        "Gamestop"
+      ]
+    },
+    {
+      "canonicalName": "Girl Scouts",
+      "rawNames": [
+        "Girl Scouts",
+        "Girl Scouts of North Alabama"
+      ]
+    },
+    {
+      "canonicalName": "H&R Block",
+      "rawNames": [
+        "H&R Block",
+        "H&R Block Enterprises"
+      ]
+    },
+    {
+      "canonicalName": "Hair Cuttery",
+      "rawNames": [
+        "Hair Cuttery",
+        "Hair Cuttery Store"
+      ]
+    },
+    {
+      "canonicalName": "Hallmark",
+      "rawNames": [
+        "Hallmark",
+        "Karen's Hallmark",
+        "Norman's Hallmark Store"
+      ]
+    },
+    {
+      "canonicalName": "Hand & Stone Massage and Facial Spa",
+      "rawNames": [
+        "Hand & Stone",
+        "Hand & Stone Massage",
+        "Hand & Stone Massage and Facial",
+        "Hand & Stone Massage and Facial Spa"
+      ]
+    },
+    {
+      "canonicalName": "Happy Dog Bath & Grooming",
+      "rawNames": [
+        "Happy Dog Bath & Grooming",
+        "Happy Dog Bath & Grooming- Vestavia"
+      ]
+    },
+    {
+      "canonicalName": "Hibbett Sports",
+      "rawNames": [
+        "Hibbett Sporting Goods",
+        "Hibbetts (Hibbett Sports)"
+      ]
+    },
+    {
+      "canonicalName": "Hotworx",
+      "rawNames": [
+        "Hotworx",
+        "Hotworx Yoga"
+      ]
+    },
+    {
+      "canonicalName": "Houliang Massage",
+      "rawNames": [
+        "Houliang Massage",
+        "Houliang Massage (Phase 1, B05)",
+        "Houliang Massage (Phase 1, E03B)"
+      ]
+    },
+    {
+      "canonicalName": "J. Gilbert's Restaurant",
+      "rawNames": [
+        "J. Gilbert's",
+        "J. Gilbert's Restaurant"
+      ]
+    },
+    {
+      "canonicalName": "Jimmy John's",
+      "rawNames": [
+        "Jimmy John's",
+        "Jimmy Johns",
+        "Jimmy Johns Gourmet Sandwiches"
+      ]
+    },
+    {
+      "canonicalName": "Ledo Pizza",
+      "rawNames": [
+        "Ledo Pizza",
+        "Ledo Pizza and Pasta"
+      ]
+    },
+    {
+      "canonicalName": "McDonald's",
+      "rawNames": [
+        "McDonald's",
+        "McDonald's (Ground Lease)"
+      ]
+    },
+    {
+      "canonicalName": "Michaels",
+      "rawNames": [
+        "Michael's",
+        "Michaels",
+        "Michaels Stores, Inc"
+      ]
+    },
+    {
+      "canonicalName": "Movement Mortgage",
+      "rawNames": [
+        "Movement Mortgage",
+        "Movement Mortgage (Phase 3, MC02A)"
+      ]
+    },
+    {
+      "canonicalName": "Myrick Gurosky & Associates",
+      "rawNames": [
+        "Myrick Gurosky & Associates",
+        "Myrick Gurosky & Associates, Inc."
+      ]
+    },
+    {
+      "canonicalName": "Newk's Express Cafe",
+      "rawNames": [
+        "Newk's Express Cafe",
+        "Newk's Express Café"
+      ]
+    },
+    {
+      "canonicalName": "Nothing Bundt Cakes",
+      "rawNames": [
+        "Nothing Bundt Cake (Sweet Delights NJ)",
+        "Nothing Bundt Cakes",
+        "Nothing Bundt Cakes (LOI)"
+      ]
+    },
+    {
+      "canonicalName": "Old Navy",
+      "rawNames": [
+        "Old Navy",
+        "Old Navy Loading Dock"
+      ]
+    },
+    {
+      "canonicalName": "Once Upon A Child",
+      "rawNames": [
+        "Once Upon A Child",
+        "Once Upon a Child (Storage)"
+      ]
+    },
+    {
+      "canonicalName": "Orangetheory Fitness",
+      "rawNames": [
+        "Orange Theory",
+        "Orangetheory Fitness"
+      ]
+    },
+    {
+      "canonicalName": "Panera Bread",
+      "rawNames": [
+        "Panera",
+        "Panera Bread",
+        "Panera Bread #809"
+      ]
+    },
+    {
+      "canonicalName": "Paul Logistics",
+      "rawNames": [
+        "Paul Logistics",
+        "Paul Logistics, Inc."
+      ]
+    },
+    {
+      "canonicalName": "Pearle Vision",
+      "rawNames": [
+        "Pearl Vision Center",
+        "Pearle Vision"
+      ]
+    },
+    {
+      "canonicalName": "Pet Supermarket",
+      "rawNames": [
+        "Pet Supermarket",
+        "Pet Supermarket #252"
+      ]
+    },
+    {
+      "canonicalName": "Publix",
+      "rawNames": [
+        "Publix",
+        "Publix Supermarkets #842"
+      ]
+    },
+    {
+      "canonicalName": "Qdoba",
+      "rawNames": [
+        "Qdoba",
+        "Qdoba/Acai Express"
+      ]
+    },
+    {
+      "canonicalName": "Rainbow",
+      "rawNames": [
+        "Rainbow",
+        "Rainbow USA"
+      ]
+    },
+    {
+      "canonicalName": "Ross Dress for Less",
+      "rawNames": [
+        "Ross Dress For Less, Inc",
+        "Ross Dress for Less"
+      ]
+    },
+    {
+      "canonicalName": "Royal Nails",
+      "rawNames": [
+        "Royal Nail",
+        "Royal Nails"
+      ]
+    },
+    {
+      "canonicalName": "Sally Beauty",
+      "rawNames": [
+        "Sally Beauty",
+        "Sally Beauty Supply"
+      ]
+    },
+    {
+      "canonicalName": "Schnucks",
+      "rawNames": [
+        "Schnuck Markets, Inc",
+        "Schnucks"
+      ]
+    },
+    {
+      "canonicalName": "Shoe Station",
+      "rawNames": [
+        "Shoe Station",
+        "Shoe Station #5027"
+      ]
+    },
+    {
+      "canonicalName": "Skechers",
+      "rawNames": [
+        "Skechers",
+        "Skechers USA Retail, LLC"
+      ]
+    },
+    {
+      "canonicalName": "Starbucks",
+      "rawNames": [
+        "Starbucks",
+        "Starbucks #8560",
+        "Starbucks Coffee"
+      ]
+    },
+    {
+      "canonicalName": "Static Space",
+      "rawNames": [
+        "Static Space (1:A03A)",
+        "Static Space (1:A15)",
+        "Static Space (3:MB02A)",
+        "Static Space (3:ME05A)"
+      ]
+    },
+    {
+      "canonicalName": "TJ Maxx",
+      "rawNames": [
+        "T.J. Maxx",
+        "TJ Maxx"
+      ]
+    },
+    {
+      "canonicalName": "The Great Greek Mediterranean Grill",
+      "rawNames": [
+        "The Great Greek Mediterranean",
+        "The Great Greek Mediterranean Grill"
+      ]
+    },
+    {
+      "canonicalName": "Ulta Beauty",
+      "rawNames": [
+        "Ulta",
+        "Ulta Beauty",
+        "Ulta Salon"
+      ]
+    },
+    {
+      "canonicalName": "Verizon Wireless",
+      "rawNames": [
+        "Verizon Wireless",
+        "Verizon Wireless (OM Ganesh)"
+      ]
+    },
+    {
+      "canonicalName": "Vestavia Hills Nutrition",
+      "rawNames": [
+        "Vestavia Hill Nutrition Co LLC",
+        "Vestavia Hills Nutrition"
+      ]
+    },
+    {
+      "canonicalName": "Wingstop",
+      "rawNames": [
+        "Wing Stop",
+        "Wingstop"
+      ]
+    },
+    {
+      "canonicalName": "Xfinity",
+      "rawNames": [
+        "XFINITY",
+        "Xfinity"
+      ]
+    },
+    {
+      "canonicalName": "Your Kids Urgent Care",
+      "rawNames": [
+        "Your Kid's Urgent Care",
+        "Your Kids Urgent Care"
+      ]
+    }
+  ],
+  "singletons": [
+    "7 Brews (Ground Lease)",
+    "AAA East Central",
+    "AT&T",
+    "ATI Physical Therapy",
+    "Academy Sports",
+    "Advance Auto Parts",
+    "Allstate Insurance",
+    "American Eagle Outfitters",
+    "American Family Care",
+    "Anytime Fitness",
+    "Arby's",
+    "Archwell Health",
+    "Armed Forces Career Center",
+    "Asian Taste Inn",
+    "Athletes Foot",
+    "Athletico",
+    "AutoZone",
+    "Avance Primary Care",
+    "Axiva Medical",
+    "B' Luxury Barber & Beauty",
+    "BJ's Gas",
+    "BJ's Wholesale Club",
+    "Back Nine Golf",
+    "Bank of America",
+    "Banter by Piercing Pagoda",
+    "Barnes & Noble",
+    "Bath & Body Works",
+    "Batteries Plus",
+    "Be Young Med Spa",
+    "Beach Bum Tanning",
+    "Ben's Soft Pretzels",
+    "Berris Optical",
+    "Beyond Oishii",
+    "Blackwater Management",
+    "Blaze Pizza",
+    "Bliss Nails",
+    "Blondie's Cookies",
+    "Bonefish Grill",
+    "Books-A-Million",
+    "Bradford Building Company",
+    "Bubbles",
+    "Buffalo Wild Wings Go",
+    "Building H",
+    "Building J",
+    "Burger King",
+    "CVS",
+    "Café De France",
+    "California Pizza Kitchen",
+    "Cassa Kitchen & Catering",
+    "Cellteck",
+    "Centennial Wireless",
+    "Chase Bank",
+    "Chevys Fresh Mex",
+    "Chick-fil-A",
+    "Chili's",
+    "Chiro One Wellness Center",
+    "City Gear",
+    "Claire's",
+    "Clarkson Eye Care",
+    "Club Pilates",
+    "Cold Stone Creamery",
+    "Color Me Mine",
+    "Connection Nail & Lash",
+    "Costco",
+    "Create Me Pottery",
+    "DSW Shoe Warehouse, Inc",
+    "DTLR",
+    "DaVita Dialysis",
+    "Dairy Queen",
+    "Daiso",
+    "Damascus Studio of Dance",
+    "Dave's Hot Chicken",
+    "Dear Emmaline",
+    "Dependable Cleaners",
+    "Destiny Dental",
+    "Dick's Sporting Goods",
+    "Dr. David Tavel/Premium Optical",
+    "Dreams to Reality Cakes",
+    "Dunham's Sports",
+    "East Café",
+    "Edward Jones",
+    "Einstein Bros Bagels",
+    "Elite Massage",
+    "Elite Nutrition",
+    "Embassy Nails",
+    "Englin's Fine Footwear",
+    "Euro Nails",
+    "European Wax Center",
+    "EyeShop Optical Center",
+    "FYE",
+    "Fabulous Nails",
+    "Famous Footwear",
+    "Fashion Care Cleaner",
+    "Filli Cafe",
+    "First Watch",
+    "Floor & Decor",
+    "Fong Long Nails",
+    "Foot Locker",
+    "Fresh Farms",
+    "Funshi Ramen & Bubble Tea",
+    "Gannon Insurance",
+    "GenX",
+    "GoPuff",
+    "Gold Corner",
+    "Golden Boar",
+    "Golf Galaxy",
+    "Good Stuff Thrift",
+    "Goodwill",
+    "Grandview Medical Center",
+    "Grapes & Grains Wine",
+    "Gravity 765",
+    "Great Clips",
+    "Great Hibachi Express",
+    "Great Southern Bank",
+    "Grow Pediatric Dentistry",
+    "Hami Brows",
+    "Hello Shawarma",
+    "Hilltop Liquor",
+    "Hobby Lobby",
+    "Home Depot",
+    "HomeGoods",
+    "Homesense",
+    "Hot Topic",
+    "House of Bronze",
+    "House of Curry",
+    "IKEA (Dark)",
+    "ITAC Solutions",
+    "Innovative Urgent Care",
+    "Iron Mountain",
+    "Island Nails Spa",
+    "J Crew",
+    "J&K Damascus Barber",
+    "Jersey Mike's",
+    "Jewelers Toll's Marketplace",
+    "Jo-Ann Fabrics & Crafts",
+    "K-Pot",
+    "Kai Liu",
+    "Kay Jewelers",
+    "King Soopers",
+    "Kirkland's",
+    "Klippers Barber & Beauty Salon",
+    "Koester DMV",
+    "Krispy Kreme",
+    "LA Fitness",
+    "La-Z-Boy",
+    "Lee Nails",
+    "Let's Lose Weight Loss & Wellness",
+    "Liberty Primary Care",
+    "Lids",
+    "Little Caesars",
+    "Lucky Flowers",
+    "Magnolia Soap and Bath",
+    "Malley's Chocolates",
+    "Management Office",
+    "Marc's",
+    "Marketplace Cleaners",
+    "Marshalls",
+    "Masaman",
+    "Mathnasium",
+    "Mattress Firm",
+    "Mattress Warehouse",
+    "Maurices",
+    "Melt N Dip",
+    "Men's Wearhouse",
+    "Merle Norman",
+    "Mermaid Spirits",
+    "Mezeh",
+    "Mika Sushi and Japanese Rolls",
+    "Mimi Nails",
+    "Miniso",
+    "Moe's Southwest Grill",
+    "Mugshots Grill & Bar",
+    "Music & Arts",
+    "My Gym Enfield",
+    "My Salon Suites",
+    "Nail Art",
+    "Nail Fever",
+    "Nails",
+    "New Japanese Express",
+    "New Smiles Kids Dentistry",
+    "Noble Roman's Craft Pizza & Pub",
+    "Nordstrom Rack",
+    "North City Phenix Salon Suites",
+    "Oak Street Health",
+    "Office Depot",
+    "Old Carolina Barbecue Company",
+    "Omaha Steaks",
+    "OneMain Financial",
+    "Oyama Enfield",
+    "P.C. Richard & Son",
+    "PA Wine & Spirits (Fine Wine & Good Spirits)",
+    "PNC Bank",
+    "PR Family Medicine",
+    "Painted Tree Boutiques",
+    "Palm Beach Tan",
+    "Panda Express",
+    "Patoo DBA Luna Beauty",
+    "Paws & Claws Animal Hospital",
+    "Penn Cinema",
+    "Pennsylvania Driver License Center",
+    "PetSmart",
+    "Phenix Salon Suites",
+    "Pigtails & Crewcuts",
+    "Pivot Physical Therapy",
+    "Planet Fitness",
+    "Playa Bowls",
+    "Poke Bros",
+    "Popeye's",
+    "Posh Beauty Bar",
+    "Prescription Aesthetic And Wellness Spa",
+    "Primo Hoagies",
+    "Protel",
+    "Quest Diagnostics",
+    "Rack Room Shoes",
+    "Rally House",
+    "Randazzo's Pizza",
+    "Regional Finance",
+    "Results Physiotherapy",
+    "Rita's Water Ice",
+    "Rockaway Dental Center",
+    "Rue 21",
+    "SPL - Daily Thread",
+    "SPL - Feng's A1 Spa",
+    "SPL - Fun Zone",
+    "SPL - Makers Mart",
+    "SPL - Nirvana",
+    "SPL - R & R Barber and Beauty Salon",
+    "SPL - Unique Creations by Joe",
+    "Safeway",
+    "Saltgrass Steak House",
+    "Samurai Japan",
+    "Scuba Ventures",
+    "Sephora",
+    "Serenity Spa and Boutique",
+    "Shake Shack",
+    "Sleep Number",
+    "Slice of NY Pizza",
+    "Smile Culture Dental",
+    "Soccer Post",
+    "Sola Salons",
+    "Sonic",
+    "Spa Nails",
+    "Spencer's",
+    "Sport Clips",
+    "Stop & Shop",
+    "Studio Fit One",
+    "Subway",
+    "Sun's Wigs & Alterations",
+    "Sweet Frog",
+    "T-Mobile",
+    "TGI Friday's",
+    "Taco Mama",
+    "Taire Hair Salon",
+    "Target",
+    "Target (Shadow)",
+    "Tecate Bar & Grill",
+    "Teriyaki Madness",
+    "That Smoothie Place",
+    "The Better Mattress",
+    "The Buckle",
+    "The Cage Cocktail Bar",
+    "The Finish Line",
+    "The GAP, Inc",
+    "The Joint Chiropractic",
+    "The Pour House",
+    "The Standard",
+    "The UPS Store",
+    "The Vape Saloon",
+    "Therapy South",
+    "Third Federal Savings & Loan",
+    "Tokyo Fire",
+    "Tom & Ray's",
+    "Torrid",
+    "Tropical Smoothie Cafe",
+    "TrueRest Float Spa",
+    "TrustCare Health",
+    "US Army Corp",
+    "US Bank",
+    "Utility Space (Static)",
+    "Vida Dulce",
+    "Vision 20/20",
+    "Visionworks",
+    "Wade Jurney Home",
+    "Walgreens",
+    "Walmart",
+    "Waxing the City",
+    "Wayback Burgers",
+    "Weis Markets",
+    "Wells Fargo",
+    "Wendy's",
+    "Woof Bakery and Grooming",
+    "dd's Discounts"
+  ]
+}
