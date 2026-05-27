@@ -173,9 +173,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
       top: 0,
       zIndex: 100,
       boxShadow: "0 8px 28px -22px rgba(56,58,55,0.55)",
+      overflowX: "auto",
     }}>
       {/* Logo + tabs */}
-      <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 28, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
           <img
             src="https://kprcenters.com/wp-content/uploads/2018/11/KPR_logo_cmyk.png"
@@ -204,7 +205,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
       </div>
 
       {/* Right side: stats + upload + backup + logout */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <span className="hdr-stats" style={{ fontSize: 11, color: "#a69e91", letterSpacing: "0.02em" }}>
           {fresh} fresh · {brands} brands · {active.length} deals
         </span>
