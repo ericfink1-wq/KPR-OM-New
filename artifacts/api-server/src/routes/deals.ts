@@ -4,6 +4,7 @@ import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable } fro
 import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
+import { rebuildCompsIndex } from "../lib/compsIndex";
 
 async function loadAliasMap(): Promise<Record<string, string>> {
   try {
@@ -102,7 +103,10 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
       .values({ id, data: rest })
       .onConflictDoUpdate({ target: dealsTable.id, set: { data: rest, updatedAt: new Date() } });
     res.json({ ok: true, id });
-    setImmediate(() => { rebuildTenantIndex(id, rest).catch(() => {}); });
+    setImmediate(() => {
+      rebuildTenantIndex(id, rest).catch(() => {});
+      rebuildCompsIndex(id, rest).catch(() => {});
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to upsert deal");
     res.status(500).json({ error: "Failed to upsert deal" });

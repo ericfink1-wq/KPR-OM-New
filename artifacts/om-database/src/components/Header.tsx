@@ -199,6 +199,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles 
             Portfolio{active.length > 0 ? ` (${active.length})` : ""}
           </button>
           <button style={T(tab === "analytics")} onClick={() => onTab("analytics")}>Analytics</button>
+          <button style={T(tab === "comps")} onClick={() => onTab("comps")}>Comps</button>
         </div>
       </div>
 
