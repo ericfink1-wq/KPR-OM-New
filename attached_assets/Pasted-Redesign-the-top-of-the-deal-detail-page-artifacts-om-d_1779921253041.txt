@@ -1,0 +1,224 @@
+Redesign the top of the deal detail page (artifacts/om-database/src/components/DetailView.tsx). Three changes that work together: move property name+address to the top, consolidate the badge row, and add a section navigator dropdown.
+
+CHANGE 1 — REORDER THE TOP.
+
+Current order (around lines 600-676):
+   1. ← BACK
+   2. Action buttons row (ANALYZE, COMPS, EXCEL, SUMMARY, FIND SALE, TRASH)
+   3. Badges row (13+ tags including asset type, center type, urbanicity, density, income, recency, score, status, OM date, pages, etc.)
+   4. Property name (h1)
+   5. Address
+
+New order should be:
+   1. ← BACK (alone on its own line, top)
+   2. Property name (h1) — RAISED TO TOP
+   3. Address line — RAISED TO TOP
+   4. Action buttons row (ANALYZE, COMPS, EXCEL, SUMMARY, FIND SALE, TRASH)
+   5. Status/score/property tag row (consolidated — see CHANGE 2)
+   6. Cover image
+
+The h1 and address now appear as the very first content the user sees after the back button. The fullAddress logic for the address line (composing street+city+state) is already in place from a prior change — keep it.
+
+CHANGE 2 — CONSOLIDATE THE BADGE ROW.
+
+The current badges row at line 660-673 has 13+ tags crammed together. Restructure into a tighter, more organized presentation:
+
+(a) PRIMARY OPERATIONAL BADGES (left side, larger, action-oriented):
+   - StatusTag (UNDER CONTRACT) — keep prominent
+   - ScoreBadge (B+) — keep prominent
+   - RecencyBadge (RECENT) — keep
+   - Conditional: AUTO-PASSED, ASSUMABLE DEBT (only render when applicable)
+
+(b) PROPERTY CLASSIFICATION TAGS (subtle, single inline run rather than separate pills):
+   Combine asset type, center type, urbanicity, density tier, income tier into a single inline string separated by middle-dots (·). Example:
+   "Retail · Grocery-Anchored · Suburban · Upper-Middle"
+   
+   Render this as a single subdued text line in muted gray (#a69e91 or similar), NOT as separate colored pills. This dramatically reduces visual noise. Only include parts that have values — skip "unknown" or missing ones.
+
+(c) METADATA (smallest, rightmost):
+   "OM 2026-02-11 · 43pp" as small gray text. Skip the field if missing.
+
+Layout idea:
+
+   [STATUS_BADGE] [SCORE_BADGE] [RECENCY] [conditional flags]      OM 2026-02-11 · 43pp
+   Retail · Grocery-Anchored · Suburban · Upper-Middle
+
+Two compact lines instead of one cluttered row of 13 pills. Use flexbox with justify-content: space-between for the top line (operational left, metadata right), with the classification tags as a separate muted line below.
+
+CHANGE 3 — ADD A "JUMP TO SECTION" DROPDOWN.
+
+A small dropdown that lets the user navigate to any section of the deal page without scrolling. Show it in TWO places:
+   (a) On the main page, on the right side of the property name row
+   (b) On the floating mini-header that already exists (when scrolled past the title)
+
+(a) ADD ID ATTRIBUTES TO EACH MAJOR SECTION.
+
+Find each major section's outer container <div> in DetailView.tsx and add a stable id attribute. The IDs should be simple and consistent. Suggested IDs (match these to the existing sections — only add for sections that exist in the file):
+
+   - id="section-cover" → cover image block (around line 679)
+   - id="section-highlights" → AI Investment Highlights block (around line 769)
+   - id="section-financials" → KEY FINANCIALS card (around line 783)
+   - id="section-income-expenses" → INCOME & EXPENSES card
+   - id="section-lease-metrics" → LEASE METRICS card
+   - id="section-demographics" → DEMOGRAPHICS & SITE card (around line 1290ish)
+   - id="section-trade-area" → TRADE AREA Census block (around line 1314)
+   - id="section-tenants" → TenantRoster wrapper (around line 982)
+   - id="section-rollover" → LeaseRollover wrapper (around line 977)
+   - id="section-cashflow" → Cash flow projection (around line 1036)
+   - id="section-redflags" → Red flags block (around line 1017)
+   - id="section-assumptions" → Key Assumptions block (around line 1033)
+   - id="section-notes" → User Notes block (around line 1367)
+   - id="section-sale" → Market sale comp block
+   - id="section-images" → Site plan / images block
+
+(b) BUILD THE DROPDOWN COMPONENT.
+
+Add this small component inside DetailView.tsx (above the default export, similar to where we'd add a FlagTip if it lived locally):
+
+   function SectionJump({ deal }: { deal: Deal }) {
+     const [open, setOpen] = useState(false);
+     const ref = useRef<HTMLDivElement>(null);
+     
+     // Build list of sections that actually have data on this deal
+     const items: { id: string; label: string }[] = [];
+     items.push({ id: "section-cover", label: "Overview" });
+     if (deal.notes) items.push({ id: "section-highlights", label: "Investment Highlights" });
+     items.push({ id: "section-financials", label: "Key Financials" });
+     items.push({ id: "section-demographics", label: "Demographics & Site" });
+     items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
+     if (deal.tenants && deal.tenants.length > 0) {
+       items.push({ id: "section-tenants", label: "Tenant Roster" });
+       items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
+     }
+     if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
+     if (deal.redFlags && deal.redFlags.length > 0) items.push({ id: "section-redflags", label: "Red Flags" });
+     if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
+     if (deal.roofData) items.push({ id: "section-roof", label: "Roof" });
+     items.push({ id: "section-notes", label: "Your Notes" });
+
+     useEffect(() => {
+       if (!open) return;
+       const handler = (e: MouseEvent | TouchEvent) => {
+         if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+       };
+       document.addEventListener("mousedown", handler);
+       document.addEventListener("touchstart", handler);
+       return () => {
+         document.removeEventListener("mousedown", handler);
+         document.removeEventListener("touchstart", handler);
+       };
+     }, [open]);
+
+     const scrollTo = (id: string) => {
+       setOpen(false);
+       const el = document.getElementById(id);
+       if (el) {
+         // Offset for site header (72px) + floating bar (~50px) so section title isn't hidden
+         const y = el.getBoundingClientRect().top + window.scrollY - 130;
+         window.scrollTo({ top: y, behavior: "smooth" });
+       }
+     };
+
+     return (
+       <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+         <button
+           onClick={() => setOpen(o => !o)}
+           style={{
+             background: "#fff",
+             border: "1px solid #ddd4c2",
+             color: "#52554e",
+             padding: "5px 11px",
+             borderRadius: 6,
+             cursor: "pointer",
+             fontSize: 11,
+             fontWeight: 600,
+             fontFamily: "'Inter', sans-serif",
+             display: "flex",
+             alignItems: "center",
+             gap: 5,
+             whiteSpace: "nowrap",
+           }}
+         >
+           Jump to ▾
+         </button>
+         {open && (
+           <div style={{
+             position: "absolute",
+             top: "calc(100% + 5px)",
+             right: 0,
+             background: "#fff",
+             border: "1px solid #e6dfd0",
+             borderRadius: 8,
+             boxShadow: "0 8px 24px rgba(56,58,55,0.16)",
+             minWidth: 200,
+             zIndex: 95,
+             overflow: "hidden",
+           }}>
+             {items.map(it => (
+               <button
+                 key={it.id}
+                 onClick={() => scrollTo(it.id)}
+                 style={{
+                   display: "block",
+                   width: "100%",
+                   textAlign: "left",
+                   background: "transparent",
+                   border: "none",
+                   padding: "9px 14px",
+                   cursor: "pointer",
+                   fontSize: 12,
+                   color: "#383a37",
+                   fontFamily: "'Inter', sans-serif",
+                   borderBottom: "1px solid #f5efe2",
+                 }}
+                 onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+               >
+                 {it.label}
+               </button>
+             ))}
+           </div>
+         )}
+       </div>
+     );
+   }
+
+(c) PLACE THE DROPDOWN IN TWO LOCATIONS.
+
+   LOCATION 1 — Main page, on the property name row. Wrap the existing h1 in a flex container so the dropdown sits to its right:
+
+     <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, margin: "0 0 4px 0" }}>
+       <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
+       <SectionJump deal={d} />
+     </div>
+     <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{fullAddress || "—"}</p>
+
+   LOCATION 2 — Inside the existing floating mini-header (the position:fixed bar that appears when scrolled). Add the same <SectionJump deal={d} /> component inside that bar, positioned on the right side. Adjust the floating bar's flex layout to accommodate it:
+
+     <div style={{ ...existing floating bar styles..., display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+       <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+         <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:600, color:"#26281f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+           {d.propertyName || d.fileName}
+         </div>
+         {fullAddress && <div style={{ fontSize:11, color:"#6f6a5f", marginTop:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{fullAddress}</div>}
+       </div>
+       <SectionJump deal={d} />
+     </div>
+
+   The flex layout lets the title/address column shrink with ellipsis while the dropdown stays at its natural width on the right.
+
+CONSTRAINTS:
+
+- The Jump dropdown's z-index of 95 sits between the floating header (90) and the site nav (100). The site nav portal dropdowns (Upload OMs etc.) at 9000+ still override everything as they should.
+- Scroll offset of 130px in scrollTo accounts for site header (72px) + floating bar (~50px) + small breathing room. Sections won't be hidden behind the sticky elements.
+- On mobile, the dropdown panel sits below the button (top: calc(100% + 5px), right: 0) — same as Upload OMs dropdown.
+
+WHAT NOT TO TOUCH:
+
+- The existing floating header IntersectionObserver logic (already working)
+- The fullAddress computation (already working)
+- The action buttons themselves (ANALYZE, COMPS, EXCEL, SUMMARY, FIND SALE, TRASH) — keep functionality identical, just relocated
+- The Status, Score, Recency badge components themselves — only their grouping/layout changes
+- Any other deal page section (financials cards, demographics, trade area, tenants, etc.)
+
+The end state: name and address at the very top, dropdown to skip anywhere on the page from there or while scrolled, action buttons below, just two tighter lines of metadata under that — much cleaner first impression for every deal.

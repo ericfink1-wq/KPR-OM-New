@@ -129,6 +129,111 @@ function KeyAssumptions({ deal }: { deal: Deal }) {
   );
 }
 
+function SectionJump({ deal }: { deal: Deal }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const items: { id: string; label: string }[] = [];
+  items.push({ id: "section-cover", label: "Overview" });
+  if (deal.notes) items.push({ id: "section-highlights", label: "Investment Highlights" });
+  items.push({ id: "section-financials", label: "Key Financials" });
+  items.push({ id: "section-demographics", label: "Demographics & Site" });
+  items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
+  if (deal.tenants && deal.tenants.length > 0) {
+    items.push({ id: "section-tenants", label: "Tenant Roster" });
+    items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
+  }
+  if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
+  if (deal.redFlags && deal.redFlags.length > 0) items.push({ id: "section-redflags", label: "Red Flags" });
+  if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
+  items.push({ id: "section-notes", label: "Your Notes" });
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [open]);
+
+  const scrollTo = (id: string) => {
+    setOpen(false);
+    const el = document.getElementById(id);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 130;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-block", flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: "#fff",
+          border: "1px solid #ddd4c2",
+          color: "#52554e",
+          padding: "5px 11px",
+          borderRadius: 6,
+          cursor: "pointer",
+          fontSize: 11,
+          fontWeight: 600,
+          fontFamily: "'Inter', sans-serif",
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          whiteSpace: "nowrap",
+        }}
+      >
+        Jump to ▾
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute",
+          top: "calc(100% + 5px)",
+          right: 0,
+          background: "#fff",
+          border: "1px solid #e6dfd0",
+          borderRadius: 8,
+          boxShadow: "0 8px 24px rgba(56,58,55,0.16)",
+          minWidth: 200,
+          zIndex: 95,
+          overflow: "hidden",
+        }}>
+          {items.map(it => (
+            <button
+              key={it.id}
+              onClick={() => scrollTo(it.id)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                background: "transparent",
+                border: "none",
+                padding: "9px 14px",
+                cursor: "pointer",
+                fontSize: 12,
+                color: "#383a37",
+                fontFamily: "'Inter', sans-serif",
+                borderBottom: "1px solid #f5efe2",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick }: Props) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -624,117 +729,142 @@ ${text.slice(0, 60000)}`;
         transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
         pointerEvents: titleScrolled ? "auto" : "none",
       }}>
-        <div style={{
-          fontFamily: "'Fraunces',serif",
-          fontSize: 17,
-          fontWeight: 600,
-          color: "#26281f",
-          letterSpacing: "-0.01em",
-          lineHeight: 1.2,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}>
-          {d.propertyName || d.fileName}
-        </div>
-        {fullAddress && (
-          <div style={{
-            fontSize: 11,
-            color: "#6f6a5f",
-            marginTop: 1,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}>
-            {fullAddress}
-          </div>
-        )}
-      </div>
-      {/* Top bar */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
-        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
-        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-          {/* Analyze dropdown */}
-          <div style={{ position:"relative" }}>
-            <button onClick={() => setAnalyzeOpen(o => !o)} disabled={reanalyzeBusy}
-              style={{ background:"transparent", border:"1px solid #383a37", color: reanalyzeBusy ? "#a69e91" : "#383a37", padding:"5px 10px", borderRadius:4, cursor: reanalyzeBusy ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
-              {reanalyzeBusy ? "ANALYZING…" : <>ANALYZE <span style={{ fontSize:8 }}>▾</span></>}
-            </button>
-            {analyzeOpen && !reanalyzeBusy && (
-              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:200 }}>
-                <button onClick={handleReanalyze}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ↺ Re-analyze (stored text)
-                </button>
-                <button onClick={() => { setAnalyzeOpen(false); rerunPdfRef.current?.click(); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ↑ Re-run from PDF…
-                </button>
-                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
-                <button onClick={() => { setAnalyzeOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#6f6a5f", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ↗ Query Analyst
-                </button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+            <div style={{
+              fontFamily: "'Fraunces',serif",
+              fontSize: 17,
+              fontWeight: 600,
+              color: "#26281f",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}>
+              {d.propertyName || d.fileName}
+            </div>
+            {fullAddress && (
+              <div style={{
+                fontSize: 11,
+                color: "#6f6a5f",
+                marginTop: 1,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {fullAddress}
               </div>
             )}
-            <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
           </div>
-          <button onClick={() => onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`)}
-            style={{ background:"transparent", border:"1px solid #6dba43", color:"#6dba43", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>COMPS</button>
-          {((d.tenants||[]).length > 0 || (d.cashFlowProjection||[]).length > 0) && (
-            <button onClick={() => exportDealToExcel(d)}
-              style={{ background:"transparent", border:"1px solid #7c6f5e", color:"#7c6f5e", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
-              <span style={{ fontSize:11, lineHeight:1 }}>⬇</span> EXCEL
-            </button>
-          )}
-          <PDFDownloadLink
-            document={<DealSummaryPDF deal={d} imgs={imgs} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />}
-            fileName={`${(d.propertyName||d.fileName||"deal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}-summary.pdf`}
-            style={{ textDecoration:"none" }}
-          >
-            {({ loading }: { loading: boolean }) => (
-              <button style={{ background:"transparent", border:"1px solid #4a7fb5", color: loading ? "#a69e91" : "#4a7fb5", padding:"5px 10px", borderRadius:4, cursor: loading ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4, opacity: loading ? 0.7 : 1 }}>
-                <span style={{ fontSize:11, lineHeight:1 }}>⬇</span>{loading ? "PDF…" : "SUMMARY"}
-              </button>
-            )}
-          </PDFDownloadLink>
-          <button onClick={() => onLookupSale(d.id)} disabled={saleBusy}
-            style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"5px 10px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"FIND SALE"}</button>
-          {!confirmDel
-            ? <button onClick={() => setConfirmDel(true)} style={{ background:"transparent", border:"1px solid #dc2626", color:"#dc2626", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>TRASH</button>
-            : <>
-                <button onClick={() => onDelete(d.id)} style={{ background:"#dc2626", border:"none", color:"#fff", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>CONFIRM DELETE</button>
-                <button onClick={() => setConfirmDel(false)} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>CANCEL</button>
-              </>
-          }
+          <SectionJump deal={d} />
         </div>
       </div>
-
-      {/* Badges row */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:6 }}>
-        <span style={{ background:"#e7e0d2", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#7d766a" }}>{d.assetType||"?"}</span>
-        {d.centerType && <span style={{ background:"#6dba4322", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#2f5e1c", fontWeight:600 }}>{d.centerType}</span>}
-        {loc.urbanicity && <span style={{ background:"#383a3712", padding:"2px 8px", borderRadius:3, fontSize:9, color:"#383a37", fontWeight:600 }}>{loc.urbanicity}</span>}
-        {loc.density && <span style={{ background:`${loc.density.color}1a`, padding:"2px 8px", borderRadius:3, fontSize:9, color:loc.density.color, fontWeight:600 }}>{loc.density.tier}</span>}
-        {loc.income && <span style={{ background:`${loc.income.color}1a`, padding:"2px 8px", borderRadius:3, fontSize:9, color:loc.income.color, fontWeight:600 }}>{loc.income.tier}</span>}
-        <RecencyBadge deal={d}/>
-        <ScoreBadge score={d.dealScore} size={12}/>
-        <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
-        {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
-        {d.omDate && <span style={{ fontSize:9, color:"#958d80" }}>OM: {d.omDate}</span>}
-        {d.pdfPages && <span style={{ fontSize:9, color:"#958d80" }}>{d.pdfPages}pp</span>}
-        {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
+      {/* Back */}
+      <div style={{ marginBottom:10 }}>
+        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
       </div>
 
-      <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:"0 0 4px 0", letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
-      <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 16px 0" }}>{fullAddress || "—"}</p>
+      {/* Property name + jump */}
+      <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, margin:"0 0 4px 0" }}>
+        <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
+        <SectionJump deal={d} />
+      </div>
+      <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 12px 0" }}>{fullAddress || "—"}</p>
+
+      {/* Action buttons */}
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
+        {/* Analyze dropdown */}
+        <div style={{ position:"relative" }}>
+          <button onClick={() => setAnalyzeOpen(o => !o)} disabled={reanalyzeBusy}
+            style={{ background:"transparent", border:"1px solid #383a37", color: reanalyzeBusy ? "#a69e91" : "#383a37", padding:"5px 10px", borderRadius:4, cursor: reanalyzeBusy ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
+            {reanalyzeBusy ? "ANALYZING…" : <>ANALYZE <span style={{ fontSize:8 }}>▾</span></>}
+          </button>
+          {analyzeOpen && !reanalyzeBusy && (
+            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:200 }}>
+              <button onClick={handleReanalyze}
+                style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                ↺ Re-analyze (stored text)
+              </button>
+              <button onClick={() => { setAnalyzeOpen(false); rerunPdfRef.current?.click(); }}
+                style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                ↑ Re-run from PDF…
+              </button>
+              <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+              <button onClick={() => { setAnalyzeOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`); }}
+                style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#6f6a5f", fontFamily:"'Inter',sans-serif" }}
+                onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                ↗ Query Analyst
+              </button>
+            </div>
+          )}
+          <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
+        </div>
+        <button onClick={() => onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`)}
+          style={{ background:"transparent", border:"1px solid #6dba43", color:"#6dba43", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>COMPS</button>
+        {((d.tenants||[]).length > 0 || (d.cashFlowProjection||[]).length > 0) && (
+          <button onClick={() => exportDealToExcel(d)}
+            style={{ background:"transparent", border:"1px solid #7c6f5e", color:"#7c6f5e", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
+            <span style={{ fontSize:11, lineHeight:1 }}>⬇</span> EXCEL
+          </button>
+        )}
+        <PDFDownloadLink
+          document={<DealSummaryPDF deal={d} imgs={imgs} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />}
+          fileName={`${(d.propertyName||d.fileName||"deal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}-summary.pdf`}
+          style={{ textDecoration:"none" }}
+        >
+          {({ loading }: { loading: boolean }) => (
+            <button style={{ background:"transparent", border:"1px solid #4a7fb5", color: loading ? "#a69e91" : "#4a7fb5", padding:"5px 10px", borderRadius:4, cursor: loading ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4, opacity: loading ? 0.7 : 1 }}>
+              <span style={{ fontSize:11, lineHeight:1 }}>⬇</span>{loading ? "PDF…" : "SUMMARY"}
+            </button>
+          )}
+        </PDFDownloadLink>
+        <button onClick={() => onLookupSale(d.id)} disabled={saleBusy}
+          style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"5px 10px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"FIND SALE"}</button>
+        {!confirmDel
+          ? <button onClick={() => setConfirmDel(true)} style={{ background:"transparent", border:"1px solid #dc2626", color:"#dc2626", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>TRASH</button>
+          : <>
+              <button onClick={() => onDelete(d.id)} style={{ background:"#dc2626", border:"none", color:"#fff", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>CONFIRM DELETE</button>
+              <button onClick={() => setConfirmDel(false)} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>CANCEL</button>
+            </>
+        }
+      </div>
+
+      {/* Badges */}
+      <div style={{ marginBottom:14 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:6, marginBottom:4 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+            <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
+            <ScoreBadge score={d.dealScore} size={12}/>
+            <RecencyBadge deal={d}/>
+            {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
+            {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
+          </div>
+          {(d.omDate || d.pdfPages) && (
+            <span style={{ fontSize:9, color:"#958d80" }}>
+              {[d.omDate ? `OM ${d.omDate}` : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
+            </span>
+          )}
+        </div>
+        {(() => {
+          const parts = [
+            d.assetType && d.assetType !== "unknown" ? d.assetType : null,
+            d.centerType || null,
+            loc.urbanicity || null,
+            loc.density?.tier || null,
+            loc.income?.tier || null,
+          ].filter(Boolean) as string[];
+          return parts.length > 0 ? (
+            <div style={{ fontSize:10, color:"#a69e91" }}>{parts.join(" · ")}</div>
+          ) : null;
+        })()}
+      </div>
 
       {/* Cover hero */}
       {imgs?.cover && (
-        <div onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge"
+        <div id="section-cover" onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge"
           style={{ position:"relative", height:228, borderRadius:14, overflow:"hidden", marginBottom:16, cursor:"zoom-in", boxShadow:"0 1px 2px rgba(56,58,55,0.05), 0 20px 40px -28px rgba(56,58,55,0.6)", border:"1px solid #ece5d7" }}>
           <img src={imgs.cover} alt={`${d.propertyName||"Property"} cover`} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(38,40,31,0) 45%, rgba(38,40,31,0.55) 100%)" }}/>
@@ -824,7 +954,7 @@ ${text.slice(0, 60000)}`;
 
       {/* AI highlights */}
       {(d.notes || d.analysisStale) && (
-        <div style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+        <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
             <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
             {d.analysisStale && <StaleBadge />}
@@ -836,7 +966,7 @@ ${text.slice(0, 60000)}`;
       <MetricsEditor deal={d} onUpdate={onUpdate}/>
 
       {/* Financial grid */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
+      <div id="section-financials" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
         <Card title="KEY FINANCIALS">
           <Row l="ASKING PRICE" v={d.askingPrice?`$${Number(d.askingPrice).toLocaleString()}`:null} c="#6dba43" field="askingPrice"/>
           <Row l="CAP RATE" v={d.capRate?`${d.capRate}%`:null} c="#0f9d63" field="capRate"/>
@@ -1032,18 +1162,18 @@ ${text.slice(0, 60000)}`;
 
       {/* Tenant roster */}
       {(d.tenants||[]).length > 0 && (
-        <TenantRoster
+        <div id="section-tenants"><TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
           tenantsAsOf={d.tenantsAsOf}
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}
-        />
+        /></div>
       )}
 
       {/* Lease Rollover & WALT */}
       {(d.tenants||[]).length > 0 && (
-        <LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} />
+        <div id="section-rollover"><LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} /></div>
       )}
 
       {/* Deal score */}
@@ -1072,7 +1202,7 @@ ${text.slice(0, 60000)}`;
 
       {/* Red flags */}
       {((d.redFlags||[]).length > 0 || d.analysisStale) && (
-        <div style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
+        <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
           <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
             <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
             {d.analysisStale && <StaleBadge />}
@@ -1087,11 +1217,11 @@ ${text.slice(0, 60000)}`;
       )}
 
       {/* Key assumptions */}
-      <KeyAssumptions deal={d} />
+      <div id="section-assumptions"><KeyAssumptions deal={d} /></div>
 
       {/* Cash flow */}
       {(d.cashFlowProjection||[]).length > 0 && (
-        <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+        <div id="section-cashflow" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
           <div style={{ overflowX:"auto" }}>
             <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:150+d.cashFlowProjection!.length*108 }}>
@@ -1348,7 +1478,7 @@ ${text.slice(0, 60000)}`;
 
       {/* Demographics from OM */}
       {(d.trafficCountVPD || d.population3mi || d.medianHHIncome3mi) && (
-        <Card title="DEMOGRAPHICS & SITE">
+        <div id="section-demographics"><Card title="DEMOGRAPHICS & SITE">
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8 }}>
             {[["TRAFFIC/DAY", d.trafficCountVPD?`${Number(d.trafficCountVPD).toLocaleString()} VPD`:null],
               ["POP. 3MI", d.population3mi?`${Number(d.population3mi).toLocaleString()}`:null],
@@ -1363,12 +1493,12 @@ ${text.slice(0, 60000)}`;
           </div>
           {d.proximityHighways && <div style={{ marginTop:8, fontSize:11, color:"#7d766a" }}>Highways: {d.proximityHighways}</div>}
           {d.retailCotenants && <div style={{ marginTop:4, fontSize:11, color:"#7d766a" }}>Co-tenants: {d.retailCotenants}</div>}
-        </Card>
+        </Card></div>
       )}
       {(d.trafficCountVPD || d.population3mi || d.medianHHIncome3mi) && <div style={{ height:12 }}/>}
 
       {/* Trade area demographics pull */}
-      <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"16px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div id="section-trade-area" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"16px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:d.marketDemographics?12:9, flexWrap:"wrap" }}>
           <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Trade Area — 1 / 3 / 5 Mile</div>
           <button onClick={() => onGetDemo(d.id)} disabled={demoBusy}
@@ -1422,7 +1552,7 @@ ${text.slice(0, 60000)}`;
       </div>
 
       {/* User notes */}
-      <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div id="section-notes" style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
           <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Your Notes</div>
           {!notesOpen && <button onClick={() => setNotesOpen(true)} style={{ fontSize:10, color:"#7d766a", background:"transparent", border:"1px solid #e7e0d2", padding:"3px 9px", borderRadius:5, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Edit</button>}
