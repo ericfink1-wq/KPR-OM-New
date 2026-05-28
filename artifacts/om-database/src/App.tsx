@@ -286,6 +286,14 @@ function AppInner() {
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
           {view.type === "list" && (
             <>
+              <div style={{ padding: "28px 28px 4px" }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: "#383a37", letterSpacing: "-0.01em" }}>
+                  Deal Library
+                </div>
+                <div style={{ fontSize: 13, color: "#a89f8f", marginTop: 4 }}>
+                  {activeDeals.length > 0 ? `${activeDeals.length} offering memorand${activeDeals.length === 1 ? "um" : "a"} on file` : "No deals uploaded yet"}
+                </div>
+              </div>
               {activeDeals.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "80px 28px", color: "#a89f8f" }}>
                   <div style={{ fontSize: 36, marginBottom: 16 }}>📄</div>
