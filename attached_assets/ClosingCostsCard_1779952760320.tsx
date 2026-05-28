@@ -11,6 +11,7 @@ const fmtPct = (r: number) => `${(r * 100).toFixed(2)}%`;
 
 export default function ClosingCostsCard({ deal }: Props) {
   const defaultPrice = Number(deal.txnPurchasePrice ?? deal.askingPrice ?? 0) || 0;
+  // Loan defaults to known balance, else 65% LTV of price (DEFAULT_LTV)
   const knownLoan = Number(deal.loanBalance ?? 0) || 0;
   const defaultLoan = knownLoan || (defaultPrice ? Math.round(defaultPrice * DEFAULT_LTV) : 0);
 
@@ -23,6 +24,7 @@ export default function ClosingCostsCard({ deal }: Props) {
   const breakdown = useMemo(() => calculateClosingCosts(jurisdiction, price, loan), [jurisdiction, price, loan]);
 
   const hasPrice = price > 0;
+  // Loan was auto-derived (not a known balance and not manually different from the 65% default)
   const loanIsAssumed = !knownLoan && hasPrice && loan === Math.round(price * DEFAULT_LTV);
 
   return (
