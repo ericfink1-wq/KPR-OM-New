@@ -58,6 +58,18 @@ function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], nex
   next();
 }
 
+function requireAdmin(req: Parameters<Router>[0], res: Parameters<Router>[1], next: Parameters<Router>[2]) {
+  if (!req.session.authenticated) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  if (!req.session.isAdmin) {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  next();
+}
+
 // Fields entered by humans — preserved across re-analysis so user data is never overwritten
 const USER_PRESERVED_KEYS = new Set([
   "status", "statusSince", "autoPassed",
@@ -270,8 +282,8 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/deals/:id — delete a deal and its images/source
-router.delete("/deals/:id", requireAuth, async (req, res) => {
+// DELETE /api/deals/:id — delete a deal and its images/source (admin only)
+router.delete("/deals/:id", requireAdmin, async (req, res) => {
   try {
     const id = req.params.id as string;
     await db.delete(dealImagesTable).where(eq(dealImagesTable.id, id));

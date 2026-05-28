@@ -17,6 +17,22 @@ function requireAuth(
   next();
 }
 
+function requireAdmin(
+  req: Parameters<Router>[0],
+  res: Parameters<Router>[1],
+  next: Parameters<Router>[2],
+) {
+  if (!req.session.authenticated) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  if (!req.session.isAdmin) {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  next();
+}
+
 async function createSnapshot(
   reason: string,
 ): Promise<{ id: number; createdAt: Date } | { skipped: true }> {
@@ -81,8 +97,8 @@ router.post("/snapshots", requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/snapshots
-router.get("/snapshots", requireAuth, async (req, res) => {
+// GET /api/snapshots (admin only)
+router.get("/snapshots", requireAdmin, async (req, res) => {
   try {
     const rows = await db
       .select({
@@ -100,8 +116,8 @@ router.get("/snapshots", requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/snapshots/:id/restore
-router.post("/snapshots/:id/restore", requireAuth, async (req, res) => {
+// POST /api/snapshots/:id/restore (admin only)
+router.post("/snapshots/:id/restore", requireAdmin, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {

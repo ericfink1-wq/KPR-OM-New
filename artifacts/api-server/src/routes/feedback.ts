@@ -17,6 +17,22 @@ function requireAuth(
   next();
 }
 
+function requireAdmin(
+  req: Parameters<Router>[0],
+  res: Parameters<Router>[1],
+  next: Parameters<Router>[2],
+) {
+  if (!req.session.authenticated) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  if (!req.session.isAdmin) {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  next();
+}
+
 // POST /api/feedback
 router.post("/feedback", requireAuth, async (req, res) => {
   try {
@@ -107,7 +123,7 @@ router.post("/feedback", requireAuth, async (req, res) => {
 });
 
 // GET /api/feedback
-router.get("/feedback", requireAuth, async (req, res) => {
+router.get("/feedback", requireAdmin, async (req, res) => {
   try {
     const rows = await db
       .select()
@@ -121,7 +137,7 @@ router.get("/feedback", requireAuth, async (req, res) => {
 });
 
 // PATCH /api/feedback/:id
-router.patch("/feedback/:id", requireAuth, async (req, res) => {
+router.patch("/feedback/:id", requireAdmin, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {

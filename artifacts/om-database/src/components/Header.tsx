@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 
 interface Props {
@@ -13,9 +13,11 @@ interface Props {
   onLogout?: () => void;
   onFiles: (files: FileList) => void;
   onDealsAdded?: (deals: Deal[]) => void;
+  isAdmin?: boolean;
+  onAdminChange?: () => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -37,6 +39,11 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackUnresolved, setFeedbackUnresolved] = useState<number | null>(null);
+  const logoClickTimesRef = useRef<number[]>([]);
+  const [adminPrompt, setAdminPrompt] = useState(false);
+  const [adminPw, setAdminPw] = useState("");
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
 
   const openFeedbackInbox = async () => {
     setBackupMenu(false);
@@ -51,6 +58,34 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       setFeedbackList([]);
     } finally {
       setFeedbackLoading(false);
+    }
+  };
+
+  const handleLogoClick = () => {
+    const now = Date.now();
+    const recent = [...logoClickTimesRef.current, now].filter(t => now - t < 3000);
+    logoClickTimesRef.current = recent;
+    if (recent.length >= 5) {
+      logoClickTimesRef.current = [];
+      setAdminPw("");
+      setAdminError(null);
+      setAdminPrompt(true);
+    }
+  };
+
+  const handleAdminUnlock = async () => {
+    if (!adminPw.trim() || adminSubmitting) return;
+    setAdminSubmitting(true);
+    setAdminError(null);
+    try {
+      await apiAdminUnlock(adminPw);
+      setAdminPrompt(false);
+      setAdminPw("");
+      onAdminChange?.();
+    } catch {
+      setAdminError("Incorrect password");
+    } finally {
+      setAdminSubmitting(false);
     }
   };
 
@@ -347,7 +382,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <img
           src="https://kprcenters.com/wp-content/uploads/2018/11/KPR_logo_cmyk.png"
           alt="KPR Centers"
-          style={{ height: 28, width: "auto", display: "block" }}
+          onClick={handleLogoClick}
+          style={{ height: 28, width: "auto", display: "block", cursor: "default" }}
           onError={e => {
             (e.currentTarget as HTMLImageElement).style.display = "none";
             const sib = e.currentTarget.nextElementSibling as HTMLElement;
@@ -449,8 +485,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           document.body
         )}
 
-        {/* Backup menu */}
-        <div ref={backupTriggerRef} style={{ position: "relative" }}>
+        {/* Backup menu — admin only */}
+        {isAdmin && <div ref={backupTriggerRef} style={{ position: "relative" }}>
           <button
             onClick={() => {
               if (!backupMenu) {
@@ -470,9 +506,9 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               {restoreResult}
             </div>
           )}
-        </div>
+        </div>}
 
-        {backupMenu && backupRect && createPortal(
+        {isAdmin && backupMenu && backupRect && createPortal(
           <>
             <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
             <div style={{
@@ -562,6 +598,51 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           </div>
         )}
       </div>,
+      document.body
+    )}
+
+    {adminPrompt && createPortal(
+      <>
+        <div
+          onClick={() => setAdminPrompt(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 9800, background: "rgba(38,40,31,0.35)" }}
+        />
+        <div style={{
+          position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          zIndex: 9801, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 12,
+          boxShadow: "0 16px 48px rgba(56,58,55,0.22)", padding: "24px 28px", width: 300, maxWidth: "90vw",
+          fontFamily: "'Inter',sans-serif",
+        }}>
+          <input
+            type="password"
+            value={adminPw}
+            onChange={e => { setAdminPw(e.target.value); setAdminError(null); }}
+            onKeyDown={e => { if (e.key === "Enter") handleAdminUnlock(); if (e.key === "Escape") setAdminPrompt(false); }}
+            placeholder="Password"
+            autoFocus
+            style={{
+              width: "100%", boxSizing: "border-box", padding: "9px 12px",
+              border: adminError ? "1px solid #fca5a5" : "1px solid #e3dccd",
+              borderRadius: 8, fontSize: 13.5, fontFamily: "'Inter',sans-serif",
+              color: "#383a37", outline: "none",
+            }}
+          />
+          {adminError && (
+            <div style={{ fontSize: 11, color: "#b91c1c", marginTop: 6 }}>{adminError}</div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 14, justifyContent: "flex-end" }}>
+            <button
+              onClick={() => setAdminPrompt(false)}
+              style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}
+            >Cancel</button>
+            <button
+              onClick={handleAdminUnlock}
+              disabled={adminSubmitting || !adminPw.trim()}
+              style={{ background: adminPw.trim() && !adminSubmitting ? "#26281f" : "#e3dccd", border: "none", color: adminPw.trim() && !adminSubmitting ? "#e8e0cf" : "#a89f8f", padding: "7px 18px", borderRadius: 7, cursor: adminPw.trim() && !adminSubmitting ? "pointer" : "default", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}
+            >{adminSubmitting ? "…" : "Unlock"}</button>
+          </div>
+        </div>
+      </>,
       document.body
     )}
 

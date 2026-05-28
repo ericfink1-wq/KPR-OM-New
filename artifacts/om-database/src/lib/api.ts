@@ -32,15 +32,23 @@ export async function apiLogout(): Promise<void> {
   await apiFetch("/auth/logout", { method: "POST" });
 }
 
-export async function apiCheckAuth(): Promise<boolean> {
+export async function apiCheckAuth(): Promise<{ authenticated: boolean; isAdmin: boolean }> {
   try {
     const resp = await apiFetch("/auth/me");
-    if (!resp.ok) return false;
-    const body = await resp.json() as { authenticated?: boolean };
-    return !!body.authenticated;
+    if (!resp.ok) return { authenticated: false, isAdmin: false };
+    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean };
+    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin };
   } catch {
-    return false;
+    return { authenticated: false, isAdmin: false };
   }
+}
+
+export async function apiAdminUnlock(password: string): Promise<void> {
+  const resp = await apiFetch("/auth/admin-unlock", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
+  if (!resp.ok) throw new Error("Invalid admin password");
 }
 
 // --- Deals ---

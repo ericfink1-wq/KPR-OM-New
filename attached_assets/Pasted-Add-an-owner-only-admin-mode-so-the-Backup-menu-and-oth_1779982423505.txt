@@ -1,0 +1,17 @@
+Add an owner-only "admin" mode so the Backup menu and other sensitive actions are hidden from regular users and enforced on the backend. Everyone still logs in with the existing single shared APP_PASSWORD; admin is an additional unlock on top.
+
+BACKEND (artifacts/api-server):
+1. In src/types/session.d.ts add `isAdmin?: boolean` to SessionData.
+2. In src/routes/auth.ts: read ADMIN_PASSWORD from process.env. Add POST /auth/admin-unlock (body {password}) that requires the session to already be authenticated; if ADMIN_PASSWORD is set and the submitted password matches it, set req.session.isAdmin = true and return {ok:true}; otherwise 401. Add POST /auth/admin-lock that sets req.session.isAdmin = false. Update GET /auth/me to also return isAdmin: !!req.session.isAdmin.
+3. Add a requireAdmin middleware (responds 403 if !req.session.isAdmin) and apply it to these sensitive endpoints (keep everything else available to any authenticated user):
+   - In routes/feedback.ts: GET /feedback and PATCH /feedback/:id require admin. POST /feedback (submitting feedback) stays available to any authenticated user.
+   - In routes/deals.ts: DELETE /deals/:id (permanent delete) requires admin.
+   - If a snapshots route exists (routes/snapshots.ts): GET /snapshots and POST /snapshots/:id/restore require admin, but POST /snapshots (creating the automatic safety snapshot) stays available to any authenticated user.
+
+FRONTEND (artifacts/om-database/src):
+4. In src/lib/api.ts: add apiAdminUnlock(password) calling POST /auth/admin-unlock, and update the auth check so the app can read isAdmin from GET /auth/me (return both authenticated and isAdmin). Store isAdmin in App-level state and pass it down.
+5. In src/components/Header.tsx: only render the "Backup" dropdown button when isAdmin is true. (The floating Send Feedback button is separate and stays visible to everyone.)
+6. Discreet owner unlock: in the Header, make clicking the KPR logo 5 times in quick succession (within ~3 seconds) open a small password prompt; on submit call apiAdminUnlock(password); on success, refresh auth state so isAdmin becomes true and the Backup menu appears; on failure show a brief "incorrect" message. This must have no visible label or hint so regular users won't discover it.
+7. In src/App.tsx Trash section: only show the "Delete permanently" button when isAdmin is true. Regular users can still move deals to Trash and Restore them, but cannot permanently delete.
+
+Do not change the normal login flow or break any features for regular authenticated users. Make, test, iterate until: a normal logged-in user does NOT see the Backup button or the "Delete permanently" button and gets 403 if those endpoints are called directly; clicking the KPR logo 5 times and entering the correct ADMIN_PASSWORD reveals the Backup menu and admin actions; and admin state persists for the session.
