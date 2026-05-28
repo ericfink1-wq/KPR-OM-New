@@ -9,6 +9,7 @@ import tenantIndexRouter from "./tenantIndex";
 import analyticsRouter from "./analytics";
 import compsRouter from "./comps";
 import snapshotsRouter from "./snapshots";
+import feedbackRouter from "./feedback";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,7 @@ router.use(tenantIndexRouter);
 router.use(analyticsRouter);
 router.use(compsRouter);
 router.use(snapshotsRouter);
+router.use(feedbackRouter);
 router.use(aiRouter);
 
 export default router;

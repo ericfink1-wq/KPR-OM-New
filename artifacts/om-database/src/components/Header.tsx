@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot } from "../lib/api";
-import type { SnapshotMeta } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved } from "../lib/api";
+import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 
 interface Props {
   tab: string;
@@ -33,6 +33,36 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotRestoring, setSnapshotRestoring] = useState<number | null>(null);
+  const [feedbackModal, setFeedbackModal] = useState(false);
+  const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackUnresolved, setFeedbackUnresolved] = useState<number | null>(null);
+
+  const openFeedbackInbox = async () => {
+    setBackupMenu(false);
+    setFeedbackModal(true);
+    setFeedbackLoading(true);
+    try {
+      const list = await apiListFeedback();
+      const sorted = [...list.filter(f => !f.resolved), ...list.filter(f => f.resolved)];
+      setFeedbackList(sorted);
+      setFeedbackUnresolved(list.filter(f => !f.resolved).length);
+    } catch {
+      setFeedbackList([]);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handleToggleResolved = async (id: number, resolved: boolean) => {
+    await apiSetFeedbackResolved(id, resolved).catch(() => {});
+    setFeedbackList(prev => {
+      const updated = prev.map(f => f.id === id ? { ...f, resolved } : f);
+      const sorted = [...updated.filter(f => !f.resolved), ...updated.filter(f => f.resolved)];
+      return sorted;
+    });
+    setFeedbackUnresolved(prev => Math.max(0, (prev ?? 0) + (resolved ? -1 : 1)));
+  };
 
   const SNAPSHOT_LABELS: Record<string, string> = {
     "auto": "Automatic backup",
@@ -423,8 +453,11 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <div ref={backupTriggerRef} style={{ position: "relative" }}>
           <button
             onClick={() => {
-              if (!backupMenu && backupTriggerRef.current) {
-                setBackupRect(backupTriggerRef.current.getBoundingClientRect());
+              if (!backupMenu) {
+                if (backupTriggerRef.current) setBackupRect(backupTriggerRef.current.getBoundingClientRect());
+                apiListFeedback()
+                  .then(list => setFeedbackUnresolved(list.filter(f => !f.resolved).length))
+                  .catch(() => {});
               }
               setBackupMenu(m => !m);
             }}
@@ -453,7 +486,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
               {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
               {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals")}
-              {menuBtn(openSnapshotModal, "Restore a snapshot…", "Auto-saved before imports, deletes & restores", false)}
+              {menuBtn(openSnapshotModal, "Restore a snapshot…", "Auto-saved before imports, deletes & restores")}
+              {menuBtn(openFeedbackInbox, `Feedback${feedbackUnresolved ? ` (${feedbackUnresolved})` : ""}`, "Bug reports, ideas & comments", false)}
             </div>
           </>,
           document.body
@@ -528,6 +562,91 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           </div>
         )}
       </div>,
+      document.body
+    )}
+
+    {feedbackModal && createPortal(
+      <>
+        <div
+          onClick={() => setFeedbackModal(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(38,40,31,0.38)" }}
+        />
+        <div style={{
+          position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          zIndex: 9101, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 14,
+          boxShadow: "0 16px 48px rgba(56,58,55,0.22)", width: 580, maxWidth: "92vw",
+          maxHeight: "75vh", display: "flex", flexDirection: "column", overflow: "hidden",
+          fontFamily: "'Inter',sans-serif",
+        }}>
+          <div style={{ padding: "18px 22px 13px", borderBottom: "1px solid #f1eadc", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 500, color: "#26281f" }}>
+                Feedback inbox
+                {feedbackUnresolved != null && feedbackUnresolved > 0 && (
+                  <span style={{ marginLeft: 10, background: "#6dba43", color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "2px 8px", fontFamily: "'Inter',sans-serif", verticalAlign: "middle" }}>
+                    {feedbackUnresolved}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: "#9a917f", marginTop: 3 }}>Submitted via the feedback button. Unresolved items shown first.</div>
+            </div>
+            <button onClick={() => setFeedbackModal(false)} style={{ background: "none", border: "none", color: "#b0a898", cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
+          </div>
+          <div style={{ overflowY: "auto", flex: 1 }}>
+            {feedbackLoading ? (
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>Loading…</div>
+            ) : feedbackList.length === 0 ? (
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>No feedback yet.</div>
+            ) : feedbackList.map((f, i) => {
+              const date = new Date(f.createdAt).toLocaleString(undefined, {
+                month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+              });
+              const typeColors: Record<string, { bg: string; color: string }> = {
+                bug: { bg: "#fef2f2", color: "#b91c1c" },
+                idea: { bg: "#eff6ff", color: "#1d4ed8" },
+                other: { bg: "#f5f5f4", color: "#57534e" },
+              };
+              const tc = typeColors[f.type.toLowerCase()] ?? typeColors.other;
+              return (
+                <div key={f.id} style={{
+                  padding: "13px 22px",
+                  borderBottom: i < feedbackList.length - 1 ? "1px solid #f5efe2" : "none",
+                  opacity: f.resolved ? 0.55 : 1,
+                }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 6 }}>
+                    <span style={{ background: tc.bg, color: tc.color, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
+                      {f.type}
+                    </span>
+                    <span style={{ fontSize: 12, color: "#a89f8f", flexShrink: 0 }}>
+                      {f.name || "anonymous"} · {f.page || "unknown page"} · {date}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#383a37", lineHeight: 1.55, marginBottom: 8, whiteSpace: "pre-wrap" }}>{f.message}</div>
+                  <button
+                    onClick={() => handleToggleResolved(f.id, !f.resolved)}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid #ddd4c2",
+                      color: f.resolved ? "#6dba43" : "#7d766a",
+                      padding: "4px 12px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontSize: 11,
+                      fontFamily: "'Inter',sans-serif",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {f.resolved ? "✓ Resolved — Reopen" : "Mark resolved"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: "10px 22px", borderTop: "1px solid #f1eadc", flexShrink: 0 }}>
+            <button onClick={() => setFeedbackModal(false)} style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#7d766a", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>Close</button>
+          </div>
+        </div>
+      </>,
       document.body
     )}
 

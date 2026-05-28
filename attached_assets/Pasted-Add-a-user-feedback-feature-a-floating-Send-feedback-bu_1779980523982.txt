@@ -1,0 +1,27 @@
+Add a user feedback feature: a floating "Send feedback" button on every page, submissions saved to the database, an in-app inbox to read them, and email notifications to the owner. Saving to the database must always happen first; the email is best-effort and must never block or fail the submission.
+
+DATABASE (lib/db):
+1. Create lib/db/src/schema/feedback.ts defining a Postgres table "feedback" (drizzle-orm/pg-core): id (serial primary key), createdAt (timestamp with timezone, notNull, defaultNow), type (text, notNull, default "other"), message (text, notNull), name (text, nullable), page (text, nullable), userAgent (text, nullable), resolved (boolean, notNull, default false). Export it from lib/db/src/schema/index.ts.
+2. Actually create the table in the database using this project's existing Drizzle push/migration workflow.
+
+BACKEND (artifacts/api-server), new file routes/feedback.ts, all routes requireAuth, registered in routes/index.ts under /api:
+3. POST /feedback (body: { type, message, name?, page?, userAgent? }) -> insert a feedback row, then attempt an email notification wrapped in try/catch so any failure is only logged and the request still returns success:
+   - Build a readable summary, e.g.: "New KPR feedback\nType: {type}\nFrom: {name or 'anonymous'}\nPage: {page}\nTime: {timestamp}\n\n{message}".
+   - const to = process.env.FEEDBACK_EMAIL_TO || "efink@kprcenters.com";
+   - If process.env.RESEND_API_KEY is set: POST to https://api.resend.com/emails with header Authorization: "Bearer " + RESEND_API_KEY and Content-Type application/json, body { from: "KPR Feedback <onboarding@resend.dev>", to, subject: "New KPR feedback: " + type, text: summary }.
+   - If RESEND_API_KEY is not set, skip the email silently.
+   - Always respond 200 once the row is saved, regardless of email outcome.
+4. GET /feedback -> return all feedback rows, newest first.
+5. PATCH /feedback/:id (body: { resolved: boolean }) -> update that row's resolved flag.
+
+FRONTEND API CLIENT (src/lib/api.ts): add apiSubmitFeedback(payload), apiListFeedback(), and apiSetFeedbackResolved(id, resolved) following the existing apiFetch patterns.
+
+FRONTEND WIDGET — new component src/components/FeedbackWidget.tsx:
+6. A fixed-position floating circular button (~48px) pinned to the BOTTOM-LEFT (left:24, bottom:24) so it never overlaps the existing bottom-right upload-progress toast. Use a speech-bubble/feedback icon and a "Send feedback" tooltip; style it to match the app (cream/Inter aesthetic) with a subtle shadow and a high z-index so it stays above content.
+7. Clicking it opens a compact popover/panel with: a type selector (Bug / Idea / Other), a required message textarea, an optional "Your name" input, and a Submit button. On submit, call apiSubmitFeedback({ type, message, name, page: a currentPage prop, userAgent: navigator.userAgent }). Show a brief "Thanks — got it!" confirmation, then close and reset. Handle errors gracefully with a retry message.
+8. Render <FeedbackWidget currentPage={...} /> at the top level of src/App.tsx so it appears on every page, passing the current tab/view name as currentPage so submissions capture where the user was.
+
+FRONTEND INBOX:
+9. Add a "Feedback" item to the Header "Backup" dropdown menu that opens a modal/panel loading apiListFeedback(). Show unresolved items first; each row shows a type badge, the message, the name (or "anonymous"), the page, the date/time, and a "Mark resolved" / "Reopen" toggle (apiSetFeedbackResolved). Show a small count of unresolved items on the menu item.
+
+Do not change unrelated behavior. Make, test, iterate until: the floating button appears bottom-left on every page without overlapping the upload toast; submitting feedback saves it and shows a thank-you; an email is sent to efink@kprcenters.com when RESEND_API_KEY is set (and submissions still save fine when it isn't); and the inbox in the Backup menu lists submissions and toggles resolved.

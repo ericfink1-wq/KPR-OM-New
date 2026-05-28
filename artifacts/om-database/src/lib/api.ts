@@ -240,6 +240,50 @@ export async function apiListSnapshots(): Promise<SnapshotMeta[]> {
   return resp.json() as Promise<SnapshotMeta[]>;
 }
 
+// --- Feedback ---
+
+export interface FeedbackItem {
+  id: number;
+  createdAt: string;
+  type: string;
+  message: string;
+  name: string | null;
+  page: string | null;
+  userAgent: string | null;
+  resolved: boolean;
+}
+
+export async function apiSubmitFeedback(payload: {
+  type: string;
+  message: string;
+  name?: string;
+  page?: string;
+  userAgent?: string;
+}): Promise<{ id: number; createdAt: string }> {
+  const resp = await apiFetch("/feedback", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Failed to submit feedback");
+  }
+  return resp.json() as Promise<{ id: number; createdAt: string }>;
+}
+
+export async function apiListFeedback(): Promise<FeedbackItem[]> {
+  const resp = await apiFetch("/feedback");
+  if (!resp.ok) throw new Error("Failed to list feedback");
+  return resp.json() as Promise<FeedbackItem[]>;
+}
+
+export async function apiSetFeedbackResolved(id: number, resolved: boolean): Promise<void> {
+  await apiFetch(`/feedback/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ resolved }),
+  });
+}
+
 export async function apiRestoreSnapshot(
   id: number,
 ): Promise<{ restored: number; updated: number }> {

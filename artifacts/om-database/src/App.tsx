@@ -5,6 +5,7 @@ import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiC
 import { PROSPECT_STALE_DAYS } from "./lib/constants";
 import { ensureUploadAllowed } from "./lib/uploadAuth";
 import Header from "./components/Header";
+import FeedbackWidget from "./components/FeedbackWidget";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import DetailView from "./components/DetailView";
@@ -379,6 +380,17 @@ function AppInner() {
           )}
         </div>
       )}
+
+      <FeedbackWidget
+        currentPage={
+          view.type === "detail" ? `deal / ${tab}` :
+          view.type === "tenant-audit" ? "tenant-audit" :
+          view.type === "tenant" ? `tenant / ${view.tenantName}` :
+          view.type === "lender" ? `lender / ${view.lenderName}` :
+          view.type === "compare" ? "compare" :
+          tab
+        }
+      />
 
       {/* Global fixed-bottom upload queue — always rendered so it can track uploads from any tab */}
       <UploadQueue
