@@ -9,6 +9,7 @@ import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import DetailView from "./components/DetailView";
 import TenantView from "./components/TenantView";
+import LenderView from "./components/LenderView";
 import AnalystChat from "./components/AnalystChat";
 import PortfolioAnalytics from "./components/PortfolioAnalytics";
 import CompsSearch from "./components/CompsSearch";
@@ -21,7 +22,7 @@ const queryClient = new QueryClient({
 });
 
 type TabId = "analyst" | "portfolio" | "analytics" | "comps";
-type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "tenant-audit" };
+type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "tenant-audit" } | { type: "lender"; lenderName: string };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
@@ -118,7 +119,10 @@ function AppInner() {
   }, []);
 
   const handleOpenTenant = useCallback((name: string) => {
-    if (window.confirm(`View the tenant summary for ${name}? It shows every property in your database where ${name} is a tenant.`)) {
+    if (name.startsWith("__lender__")) {
+      setView({ type: "lender", lenderName: name.replace("__lender__", "") });
+      setTab("portfolio");
+    } else if (window.confirm(`View the tenant summary for ${name}? It shows every property in your database where ${name} is a tenant.`)) {
       setView({ type: "tenant", tenantName: name });
       setTab("portfolio");
     }
@@ -347,6 +351,17 @@ function AppInner() {
               onBack={() => setView({ type: "list" })}
               onOpen={handleOpenDeal}
             />
+          )}
+
+          {view.type === "lender" && (
+            <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 72px)" }}>
+              <LenderView
+                lenderName={view.lenderName}
+                deals={activeDeals}
+                onBack={() => setView({ type: "list" })}
+                onOpenDeal={d => setView({ type: "detail", dealId: d.id })}
+              />
+            </div>
           )}
 
           {view.type === "tenant" && (

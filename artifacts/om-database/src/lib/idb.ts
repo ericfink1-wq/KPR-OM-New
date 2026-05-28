@@ -359,6 +359,16 @@ export interface Deal {
   debtLoanNumber?: string | null;
   debtContact?: string | null;
   debtNotes?: string | null;
+  // Preferred equity (second tranche, acts like a second loan)
+  prefLender?: string | null;
+  prefAmount?: number | null;
+  prefRate?: number | null;
+  prefReturnType?: string | null;
+  prefOriginationDate?: string | null;
+  prefMaturityDate?: string | null;
+  prefTermYears?: number | null;
+  prefRecourse?: string | null;
+  prefNotes?: string | null;
   // My underwriting
   myUnderwriting?: MyUnderwritingInputs | null;
   // Trash

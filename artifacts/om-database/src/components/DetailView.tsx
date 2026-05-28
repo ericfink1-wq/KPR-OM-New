@@ -1577,6 +1577,13 @@ ${text.slice(0, 40000)}`;
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
               <Group title="Lender & Loan"/>
               {f({ label:"Lender / Servicer", field:"debtLender", placeholder:"e.g. JPMorgan, Fannie Mae" })}
+              {d.debtLender && onTenantClick && (
+                <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
+                  <button onClick={() => onTenantClick("__lender__" + d.debtLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
+                    View all loans with {d.debtLender} ›
+                  </button>
+                </div>
+              )}
               {f({ label:"Loan Type", field:"debtType", options:["Senior / Acquisition","Permanent","Bridge","Construction","Mezzanine","CMBS","Agency (Fannie/Freddie)","Life Co","Bank","Other"] })}
               {f({ label:"Original Loan Amount", field:"debtLoanAmount", placeholder:"e.g. 30,000,000", prefix:"$" })}
               {f({ label:"Lender Contact", field:"debtContact", placeholder:"Name / email / phone", wide:true })}
@@ -1599,6 +1606,16 @@ ${text.slice(0, 40000)}`;
               {f({ label:"Prepayment", field:"debtPrepay", placeholder:"e.g. Yield maintenance, defeasance, 5-4-3-2-1 step-down" })}
               {f({ label:"Escrows / Reserves", field:"debtEscrows", placeholder:"e.g. Tax, insurance, TI/LC, replacement" })}
               {f({ label:"Notes", field:"debtNotes", placeholder:"Anything else worth recording", wide:true })}
+              <Group title="Preferred Equity (if applicable)"/>
+              {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
+              {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
+              {f({ label:"Pref Rate / Return", field:"prefRate", placeholder:"e.g. 12.0", suffix:"%" })}
+              {f({ label:"Return Type", field:"prefReturnType", options:["Current Pay","Accruing","Hybrid"] })}
+              {f({ label:"Origination Date", field:"prefOriginationDate", placeholder:"YYYY-MM-DD" })}
+              {f({ label:"Maturity / Redemption Date", field:"prefMaturityDate", placeholder:"YYYY-MM-DD" })}
+              {f({ label:"Term", field:"prefTermYears", placeholder:"e.g. 3", suffix:"yrs" })}
+              {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
+              {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
             </div>
             {(annualDS || equity != null || ltvCalc || dscrCalc) && (
               <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>

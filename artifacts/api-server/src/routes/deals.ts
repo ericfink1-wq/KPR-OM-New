@@ -72,6 +72,7 @@ const USER_PRESERVED_KEYS = new Set([
   "marketDemographics", "demoChecked",
   "verified", "propertyGroupId", "editHistory",
   "trashedAt", "uploadedAt", "fileName", "pdfPages", "imageMeta", "dealScore",
+  "prefLender", "prefAmount", "prefRate", "prefReturnType", "prefOriginationDate", "prefMaturityDate", "prefTermYears", "prefRecourse", "prefNotes",
   "tenantSalesHistory",
 ]);
 
