@@ -127,6 +127,21 @@ export interface Tenant {
   salesNotes?: string | null;
 }
 
+export interface TenantSalesRecord {
+  name: string;
+  salesPSF?: number | null;
+  annualSales?: number | null;
+  sf?: number | null;
+  occupancyCost?: number | null;
+}
+
+export interface TenantSalesYear {
+  year: number;
+  uploadedAt: string;
+  source: "om" | "upload";
+  tenants: TenantSalesRecord[];
+}
+
 // One uploaded tenant-sales snapshot (one year of data)
 export interface TenantSalesRecord {
   name: string;
@@ -259,6 +274,7 @@ export interface Deal {
   notes?: string | null;
   dealScore?: DealScore | null;
   redFlags?: { severity: string; description: string }[];
+  upsideItems?: { priority: string; item: string; detail: string }[];
   keyAssumptions?: string | string[] | null;
   shadowAnchors?: string | null;
   // Tenants

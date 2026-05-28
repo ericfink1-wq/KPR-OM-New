@@ -149,6 +149,7 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
   }
   if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
+  if ((deal.upsideItems && deal.upsideItems.length > 0)) items.push({ id: "section-upside", label: "Upside Items" });
   if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
   if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
   items.push({ id: "section-notes", label: "Your Notes" });
@@ -1317,6 +1318,30 @@ ${text.slice(0, 40000)}`;
           </>}
         </div>
       )}
+
+
+      {/* Upside items */}
+      {(d.upsideItems && d.upsideItems.length > 0) && (() => {
+        const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+        const sorted = [...d.upsideItems!].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
+        return (
+          <div id="section-upside" style={{ background:"#f2faf0", border:"1px solid #3f7a1f40", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+              <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#2d7a0e", fontWeight:700 }}>&#10024; UPSIDE ITEMS</div>
+              {d.analysisStale && <StaleBadge />}
+            </div>
+            {sorted.map((u,i) => (
+              <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<sorted.length-1?"1px solid #d4edca":"none", alignItems:"flex-start" }}>
+                <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:u.priority==="high"?"#22c55e20":u.priority==="medium"?"#86efac20":"#bbf7d020", color:u.priority==="high"?"#166534":u.priority==="medium"?"#15803d":"#166534", fontWeight:600, flexShrink:0 }}>{u.priority?.toUpperCase()}</span>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#1a3d12", marginBottom:2 }}>{u.item}</div>
+                  <div style={{ fontSize:11, color:"#3d5c35", lineHeight:1.55 }}>{u.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Red flags */}
       {(() => {
