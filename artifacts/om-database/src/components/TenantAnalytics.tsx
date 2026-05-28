@@ -58,10 +58,10 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
 
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 18px", flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#26281f", lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 4 }}>{sub}</div>}
+    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 18px", minWidth: 0 }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: "#26281f", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{value}</div>
+      {sub && <div style={{ fontSize: 9, color: "#a69e91", marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -269,7 +269,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* Stat tiles */}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
             <StatBox label="Unique Tenants" value={rows.length.toLocaleString()} />
             <StatBox label="Total Annual Rent" value={fmtRent(totalRent)} />
             <StatBox label="Avg Rent PSF" value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"} sub="rent-weighted" />

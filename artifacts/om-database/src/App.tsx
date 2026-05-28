@@ -41,6 +41,7 @@ function AppInner() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant">("portfolio");
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
@@ -265,18 +266,45 @@ function AppInner() {
               </div>
               <TenantAudit deals={deals} onTenantClick={handleOpenTenant} />
             </div>
-          ) : view.type === "tenant-analytics" ? (
-            <TenantAnalytics
-              deals={deals}
-              onTenantClick={handleOpenTenant}
-              onTenantAudit={() => setView({ type: "tenant-audit" })}
-              onBack={() => setView({ type: "list" })}
-            />
           ) : (
-            <PortfolioAnalytics
-              onTenantAudit={() => setView({ type: "tenant-audit" })}
-              onTenantAnalytics={() => setView({ type: "tenant-analytics" })}
-            />
+            <>
+              {/* Segmented toggle */}
+              <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 0" }}>
+                <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
+                  {(["portfolio", "tenant"] as const).map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setAnalyticsView(v)}
+                      style={{
+                        padding: "7px 18px",
+                        borderRadius: 7,
+                        border: "none",
+                        background: analyticsView === v ? "#2a2c27" : "transparent",
+                        color: analyticsView === v ? "#f6f2ea" : "#8a8579",
+                        fontSize: 12.5,
+                        fontWeight: analyticsView === v ? 600 : 500,
+                        cursor: "pointer",
+                        fontFamily: "'Inter',sans-serif",
+                        letterSpacing: "-0.01em",
+                        boxShadow: analyticsView === v ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {v === "portfolio" ? "Portfolio Analytics" : "Tenant Analytics"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {analyticsView === "portfolio" ? (
+                <PortfolioAnalytics onTenantAudit={() => setView({ type: "tenant-audit" })} />
+              ) : (
+                <TenantAnalytics
+                  deals={deals}
+                  onTenantClick={handleOpenTenant}
+                  onTenantAudit={() => setView({ type: "tenant-audit" })}
+                />
+              )}
+            </>
           )}
         </div>
       )}
