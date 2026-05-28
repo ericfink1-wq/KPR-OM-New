@@ -5,6 +5,7 @@ import { tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant, i
 
 interface Props {
   deals: Deal[];
+  onTenantClick?: (name: string) => void;
 }
 
 interface Group {
@@ -33,7 +34,7 @@ function saveDismissed(ids: string[]) {
   } catch { /**/ }
 }
 
-export default function TenantAudit({ deals }: Props) {
+export default function TenantAudit({ deals, onTenantClick }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<string[]>(loadDismissed);
   const [showRestored, setShowRestored] = useState(false);
@@ -403,7 +404,14 @@ export default function TenantAudit({ deals }: Props) {
             <div key={g.key} style={{ padding: "9px 0", borderBottom: "1px solid #f5efe2", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, color: "#383a37", fontWeight: 600 }}>
-                  {variants[0]}
+                  {onTenantClick ? (
+                    <span
+                      onClick={() => onTenantClick(g.key)}
+                      style={{ cursor: "pointer", textDecoration: "underline", color: "#383a37" }}
+                    >
+                      {variants[0]}
+                    </span>
+                  ) : variants[0]}
                   {hasVariants && (
                     <span style={{ fontSize: 10, color: "#b45309", marginLeft: 8, fontWeight: 500 }}>
                       +{variants.length - 1} name variant{variants.length > 2 ? "s" : ""}

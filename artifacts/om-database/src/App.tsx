@@ -262,7 +262,7 @@ function AppInner() {
               <div style={{ padding: "14px 24px 0" }}>
                 <button onClick={() => setView({ type: "list" })} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
               </div>
-              <TenantAudit deals={deals} />
+              <TenantAudit deals={deals} onTenantClick={handleOpenTenant} />
             </div>
           ) : (
             <PortfolioAnalytics onTenantAudit={() => setView({ type: "tenant-audit" })} />
