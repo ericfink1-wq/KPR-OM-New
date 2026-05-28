@@ -824,13 +824,13 @@ ${text.slice(0, 40000)}`;
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
         borderBottom: "1px solid #e7e0d2",
-        padding: "10px 28px",
+        padding: "10px 16px",
         boxShadow: titleScrolled ? "0 6px 18px -10px rgba(56,58,55,0.25)" : "none",
         transform: titleScrolled ? "translateY(0)" : "translateY(-110%)",
         transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
         pointerEvents: titleScrolled ? "auto" : "none",
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div style={{ flex: "1 1 auto", minWidth: 0 }}>
             <div style={{
               fontFamily: "'Fraunces',serif",
@@ -840,8 +840,6 @@ ${text.slice(0, 40000)}`;
               letterSpacing: "-0.01em",
               lineHeight: 1.2,
               whiteSpace: "normal",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
             }}>
               {d.propertyName || d.fileName}
             </div>
