@@ -17,7 +17,7 @@ function fmtAsOf(raw: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function FlagTip({ content, children, color = "#b45309" }: { content: string; children: React.ReactNode; color?: string }) {
+function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; children: React.ReactNode; color?: string }) {
   const [open, setOpen] = useState(false);
   const showTimer = useRef<number | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
@@ -178,7 +178,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>Investment Grade</span>}
-                      {t.assumptionNote && <FlagTip content={t.assumptionNote}>⚑</FlagTip>}
+                      {t.assumptionNote && <FlagTip content={t.assumptionNote}>ⓘ</FlagTip>}
                     </>
                   )}
                 </td>
@@ -242,7 +242,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover ⚑ for a tenant footnote.</div>
+      <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover ⓘ for tenant notes.</div>
     </div>
   );
 }
