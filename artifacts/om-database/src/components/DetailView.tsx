@@ -1238,7 +1238,9 @@ ${text.slice(0, 60000)}`;
       {/* Red flags */}
       {(() => {
         const expenseFlag = deriveExpenseRiskFlag(d);
-        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(d.redFlags || [])];
+        const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(d.redFlags || [])]
+          .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return (allRedFlags.length > 0 || d.analysisStale) && (
           <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
             <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
@@ -1247,7 +1249,7 @@ ${text.slice(0, 60000)}`;
             </div>
             {allRedFlags.map((f,i) => (
               <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<allRedFlags.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
-                <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262620":f.severity==="medium"?"#383a3720":"#7d766a20", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#383a37":"#7d766a", flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
+                <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262615":f.severity==="medium"?"#f9731615":"#eab30815", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#ea6000":"#b08000", fontWeight:600, flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
                 <span style={{ fontSize:11, color:"#5c5f57" }}>{f.description}</span>
               </div>
             ))}
