@@ -44,12 +44,14 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
     .filter(t => t.leaseExpiry)
     .map(t => {
       const exp = new Date(t.leaseExpiry!);
+      if (isNaN(exp.getTime())) return null;
       const remainingYears = Math.max(
         0,
         (exp.getTime() - refDate.getTime()) / (365.25 * 86_400_000)
       );
       return { ...t, remainingYears, expYear: exp.getFullYear() };
-    });
+    })
+    .filter((t): t is NonNullable<typeof t> => t !== null);
 
   const hasExpiry = withExpiry.length > 0;
 
