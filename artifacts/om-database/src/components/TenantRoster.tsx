@@ -127,6 +127,30 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
     ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
   ];
 
+  function RentStepsCell({ schedule, bumps }: { schedule?: string | null; bumps?: string | null }) {
+    const [expanded, setExpanded] = useState(false);
+    if (!schedule) {
+      return <span style={{ color:"#837c6e", fontSize:11 }}>{bumps || "—"}</span>;
+    }
+    const steps = schedule.split(";").map(s => s.trim()).filter(Boolean);
+    const LIMIT = 3;
+    const visible = expanded ? steps : steps.slice(0, LIMIT);
+    const extra = steps.length - LIMIT;
+    return (
+      <div style={{ fontSize:11, color:"#5c5f57", minWidth:160, maxWidth:280 }}>
+        {visible.map((step, i) => (
+          <div key={i} style={{ lineHeight:1.45, marginBottom: i < visible.length - 1 ? 3 : 0 }}>{step}</div>
+        ))}
+        {!expanded && extra > 0 && (
+          <button onClick={e => { e.stopPropagation(); setExpanded(true); }}
+            style={{ background:"none", border:"none", padding:0, cursor:"pointer", color:"#a89f8f", fontSize:10, marginTop:3, fontFamily:"'Inter',sans-serif" }}>
+            +{extra} more…
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const isVacantRow = (t: Tenant) => isVacant(t.name);
   const vacantCount = tenants.filter(isVacantRow).length;
   const occupiedCount = tenants.length - vacantCount;
@@ -200,7 +224,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                     );
                   })()}
                 </td>
-                <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }} title={[t.rentBumps,t.rentSchedule].filter(Boolean).join("   ·   ")||""}>{t.rentBumps||(t.rentSchedule?"Stepped":"—")}</td>
+                <td style={{ padding:"8px 10px", verticalAlign:"top" }}><RentStepsCell schedule={t.rentSchedule} bumps={t.rentBumps} /></td>
                 <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{t.renewalOptions||"—"}</td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
                 <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(t.salesPSF, t.sf)}</td>

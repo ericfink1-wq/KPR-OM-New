@@ -57,7 +57,9 @@ export function exportDealToExcel(deal: Deal): void {
     safeNum(t.remainingTermYears),
     t.leaseType ?? "",
     t.renewalOptions ?? "",
-    t.rentBumps ?? "",
+    t.rentSchedule
+      ? t.rentSchedule.split(";").map(s => s.trim()).filter(Boolean).join("\n")
+      : (t.rentBumps ?? ""),
     safeNum(t.salesPSF),
     t.assumptionNote ?? "",
   ]);
