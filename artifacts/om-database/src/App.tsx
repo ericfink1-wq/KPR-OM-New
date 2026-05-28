@@ -6,6 +6,7 @@ import { PROSPECT_STALE_DAYS } from "./lib/constants";
 import { ensureUploadAllowed } from "./lib/uploadAuth";
 import Header from "./components/Header";
 import FeedbackWidget from "./components/FeedbackWidget";
+import AnalystBar from "./components/AnalystBar";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import DetailView from "./components/DetailView";
@@ -240,14 +241,14 @@ function AppInner() {
 
       {/* Comps tab */}
       {tab === "comps" && (
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
           <CompsSearch onOpenDeal={id => { handleOpenDeal(id); }} />
         </div>
       )}
 
       {/* Analytics tab */}
       {tab === "analytics" && (
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
           {view.type === "tenant-audit" ? (
             <div>
               <div style={{ padding: "14px 24px 0" }}>
@@ -276,7 +277,7 @@ function AppInner() {
 
       {/* Portfolio tab */}
       {tab === "portfolio" && (
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
           {view.type === "list" && (
             <>
               <div style={{ padding: "28px 28px 4px" }}>
@@ -358,7 +359,7 @@ function AppInner() {
           )}
 
           {view.type === "lender" && (
-            <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 72px)" }}>
+            <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 160px)" }}>
               <LenderView
                 lenderName={view.lenderName}
                 deals={activeDeals}
@@ -369,7 +370,7 @@ function AppInner() {
           )}
 
           {view.type === "tenant" && (
-            <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 72px)" }}>
+            <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 160px)" }}>
               <TenantView
                 tenantName={view.tenantName}
                 deals={activeDeals}
@@ -381,6 +382,10 @@ function AppInner() {
         </div>
       )}
 
+      {tab !== "analyst" && view.type !== "detail" && (
+        <AnalystBar onAsk={handleQuery} />
+      )}
+
       <FeedbackWidget
         currentPage={
           view.type === "detail" ? `deal / ${tab}` :
@@ -390,6 +395,7 @@ function AppInner() {
           view.type === "compare" ? "compare" :
           tab
         }
+        liftAboveBar={tab !== "analyst" && view.type !== "detail"}
       />
 
       {/* Global fixed-bottom upload queue — always rendered so it can track uploads from any tab */}
