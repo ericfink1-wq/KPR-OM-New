@@ -134,7 +134,7 @@ function AppInner() {
     if (name.startsWith("__lender__")) {
       setView({ type: "lender", lenderName: name.replace("__lender__", "") });
       setTab("portfolio");
-    } else if (window.confirm(`View the tenant summary for ${name}? It shows every property in your database where ${name} is a tenant.`)) {
+    } else {
       setView({ type: "tenant", tenantName: name });
       setTab("portfolio");
     }
