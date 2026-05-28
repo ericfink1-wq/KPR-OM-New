@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales } from "../lib/utils";
+import StatusTag from "./StatusTag";
 
 interface Props {
   tenantName: string;
@@ -165,13 +166,16 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((r, i) => (
+                  {sorted.map((r, i) => {
+                    const owned = r.deal.status === "Owned" || r.deal.status === "Sold";
+                    return (
                     <tr key={i} onClick={() => onOpenDeal(r.deal)}
-                      style={{ borderTop:"1px solid #f1eadc", cursor:"pointer" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      style={{ borderTop:"1px solid #f1eadc", cursor:"pointer", background: owned ? "#f3faef" : "transparent", borderLeft: owned ? "3px solid #6dba43" : "3px solid transparent" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = owned ? "#eaf5e2" : "#faf7f0")}
+                      onMouseLeave={e => (e.currentTarget.style.background = owned ? "#f3faef" : "transparent")}>
                       <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
                         {r.deal.propertyName || "Untitled"}
+                        {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
                         {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
                       </td>
                       <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
@@ -182,7 +186,8 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
                       <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
                       <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
