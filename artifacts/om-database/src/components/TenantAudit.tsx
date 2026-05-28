@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { Deal } from "../lib/idb";
+import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "../lib/idb";
 import { tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant, isVacant } from "../lib/utils";
 
 interface Props {
@@ -36,6 +37,28 @@ export default function TenantAudit({ deals }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<string[]>(loadDismissed);
   const [showRestored, setShowRestored] = useState(false);
+
+  // On mount: load dismissed decisions from IndexedDB, merge with localStorage,
+  // and migrate any localStorage-only items into IDB for cross-device persistence.
+  useEffect(() => {
+    getTenantDecisions().then(decisions => {
+      const idbDismissed = decisions.filter(d => d.type === "dismiss").map(d => d.id);
+      const lsItems = loadDismissed();
+      const merged = Array.from(new Set([...idbDismissed, ...lsItems]));
+      // Migrate localStorage-only entries into IDB
+      for (const id of lsItems) {
+        if (!idbDismissed.includes(id)) {
+          const parts = id.split("||");
+          saveTenantDecision({ id, type: "dismiss", nameA: parts[0] ?? id, nameB: parts[1] ?? "" }).catch(() => { /**/ });
+        }
+      }
+      if (merged.length !== lsItems.length || merged.some((v, i) => v !== lsItems[i])) {
+        setDismissed(merged);
+        saveDismissed(merged);
+      }
+    }).catch(() => { /**/ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [showMergeRestored, setShowMergeRestored] = useState(false);
   // Incrementing this forces useMemo to recompute after user merges change
   const [aliasVersion, setAliasVersion] = useState(0);
@@ -136,12 +159,14 @@ export default function TenantAudit({ deals }: Props) {
     const next = dismissed.includes(id) ? dismissed : [...dismissed, id];
     setDismissed(next);
     saveDismissed(next);
+    saveTenantDecision({ id, type: "dismiss", nameA: s.a.key, nameB: s.b.key }).catch(() => { /**/ });
   };
   const restoreDismissed = (s: { a: Group; b: Group }) => {
     const id = getPairId(s);
     const next = dismissed.filter(d => d !== id);
     setDismissed(next);
     saveDismissed(next);
+    removeTenantDecision(id).catch(() => { /**/ });
   };
 
   // Merge (correct)

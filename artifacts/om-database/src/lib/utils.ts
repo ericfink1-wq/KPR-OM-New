@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { Deal } from "./idb";
+import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "./idb";
 import { isInvestmentGrade } from "./tenantCredit";
 
 export function cn(...inputs: ClassValue[]) {
@@ -158,23 +159,41 @@ function rebuildUserAliases() {
   }
 }
 
-// Bootstrap on load (relies on _normTenant defined below — hoisted at runtime)
-// We call this after _normTenant is defined; the initializer above runs lazily
-// since _normTenant is referenced via closure after module evaluation.
-// We schedule a microtask so _normTenant is guaranteed to be defined.
-Promise.resolve().then(rebuildUserAliases);
+// Bootstrap on load — runs after _normTenant is defined.
+// Also seeds _userMerges from IndexedDB so decisions persist across devices.
+async function _seedFromIdb() {
+  try {
+    const decisions = await getTenantDecisions();
+    const mergeDecisions = decisions.filter(d => d.type === "merge");
+    let changed = false;
+    for (const d of mergeDecisions) {
+      if (!_userMerges.find(m => m.id === d.id)) {
+        _userMerges.push({ id: d.id, canonical: d.nameA, variants: d.variants ?? [] });
+        changed = true;
+      }
+    }
+    if (changed) {
+      rebuildUserAliases();
+      try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
+    }
+  } catch { /**/ }
+}
+
+Promise.resolve().then(rebuildUserAliases).then(_seedFromIdb);
 
 export function addUserMerge(merge: UserMerge): void {
   _userMerges = _userMerges.filter(m => m.id !== merge.id);
   _userMerges.push(merge);
   rebuildUserAliases();
   try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
+  saveTenantDecision({ id: merge.id, type: "merge", nameA: merge.canonical, nameB: "", variants: merge.variants }).catch(() => { /**/ });
 }
 
 export function removeUserMerge(id: string): void {
   _userMerges = _userMerges.filter(m => m.id !== id);
   rebuildUserAliases();
   try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
+  removeTenantDecision(id).catch(() => { /**/ });
 }
 
 export function getUserMerges(): UserMerge[] {

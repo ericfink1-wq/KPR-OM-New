@@ -1,0 +1,27 @@
+In artifacts/om-database/src/lib/idb.ts and artifacts/om-database/src/lib/utils.ts and artifacts/om-database/src/components/TenantAudit.tsx, move tenant split decisions (both merges and dismissals) from localStorage into IndexedDB so they persist across browsers and devices.
+
+STEP 1 — Add a "tenant_decisions" object store to idb.ts:
+In the openDB upgrade function, add:
+  if (!db.objectStoreNames.contains("tenant_decisions")) db.createObjectStore("tenant_decisions", { keyPath: "id" });
+
+Also add these two exported async functions to idb.ts:
+  export async function getTenantDecisions(): Promise<{id: string, type: "merge"|"dismiss", nameA: string, nameB: string}[]>
+  export async function saveTenantDecision(d: {id: string, type: "merge"|"dismiss", nameA: string, nameB: string}): Promise<void>
+  export async function removeTenantDecision(id: string): Promise<void>
+
+Each function opens the "tenant_decisions" store and does getAll / put / delete respectively.
+
+STEP 2 — Update utils.ts:
+- Keep the existing getUserMerges/addUserMerge/removeUserMerge API shape so nothing else breaks
+- But on app load, seed _userMerges from IndexedDB (getTenantDecisions filtered to type="merge") instead of only localStorage
+- When addUserMerge or removeUserMerge is called, also call saveTenantDecision / removeTenantDecision to persist to IndexedDB
+- Keep localStorage as a fallback write so old data isn't lost
+
+STEP 3 — Update TenantAudit.tsx:
+- Replace the localStorage-only dismissed state with IndexedDB persistence
+- On mount, load dismissed decisions from getTenantDecisions() filtered to type="dismiss"
+- When dismiss() is called, call saveTenantDecision with type="dismiss"
+- When a dismissal is restored/undone, call removeTenantDecision
+- Also migrate any existing localStorage dismissed data into IndexedDB on first load so users don't lose their prior work
+
+Make, test, iterate until saved and working. The goal is that merge and dismiss decisions survive clearing the browser cache, switching devices, or opening the app on a new browser.

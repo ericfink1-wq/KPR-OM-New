@@ -1,7 +1,7 @@
 // IndexedDB storage layer — deals, sources (PDF text), images
 
 const DB_NAME = "om_database";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -11,9 +11,48 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains("deals")) db.createObjectStore("deals", { keyPath: "id" });
       if (!db.objectStoreNames.contains("sources")) db.createObjectStore("sources", { keyPath: "id" });
       if (!db.objectStoreNames.contains("images")) db.createObjectStore("images", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("tenant_decisions")) db.createObjectStore("tenant_decisions", { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
+  });
+}
+
+export interface TenantDecision {
+  id: string;
+  type: "merge" | "dismiss";
+  nameA: string;
+  nameB: string;
+  variants?: string[]; // only for type="merge" — stores all variant names
+}
+
+export async function getTenantDecisions(): Promise<TenantDecision[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("tenant_decisions", "readonly");
+    const req = tx.objectStore("tenant_decisions").getAll();
+    req.onsuccess = () => resolve(req.result as TenantDecision[]);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function saveTenantDecision(d: TenantDecision): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("tenant_decisions", "readwrite");
+    tx.objectStore("tenant_decisions").put(d);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function removeTenantDecision(id: string): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("tenant_decisions", "readwrite");
+    tx.objectStore("tenant_decisions").delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
   });
 }
 
