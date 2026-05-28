@@ -16,6 +16,7 @@ import LeaseRollover from "./LeaseRollover";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import DealSummaryPDF from "./DealSummaryPDF";
 import { isInvestmentGrade } from "../lib/tenantCredit";
+import ClosingCostsCard from "./ClosingCostsCard";
 
 interface Props {
   deal: Deal;
@@ -139,6 +140,7 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
   items.push({ id: "section-financials", label: "Key Financials" });
   items.push({ id: "section-demographics", label: "Demographics & Site" });
   items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
+  items.push({ id: "section-closing-costs", label: "Closing Costs" });
   if (deal.tenants && deal.tenants.length > 0) {
     items.push({ id: "section-tenants", label: "Tenant Roster" });
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
@@ -1478,6 +1480,8 @@ ${text.slice(0, 60000)}`;
           <Row l="LAST SALE PRICE" v={d.lastSalePrice?`$${Number(d.lastSalePrice).toLocaleString()}`:null}/>
         </Card>
       </div>
+
+      <ClosingCostsCard deal={d} />
 
       {/* Demographics from OM */}
       {(d.trafficCountVPD || d.population3mi || d.medianHHIncome3mi) && (
