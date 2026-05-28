@@ -273,7 +273,7 @@ function TopTenantsPanel({ data }: { data: TenantConcentration }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export default function PortfolioAnalytics() {
+export default function PortfolioAnalytics({ onTenantAudit }: { onTenantAudit?: () => void }) {
   const [filter, setFilter] = useState<"all" | "owned">("all");
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -355,6 +355,14 @@ export default function PortfolioAnalytics() {
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {onTenantAudit && (
+            <button
+              onClick={onTenantAudit}
+              style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
+            >
+              Tenant Audit
+            </button>
+          )}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
             <button
               onClick={handleRebuildComps}

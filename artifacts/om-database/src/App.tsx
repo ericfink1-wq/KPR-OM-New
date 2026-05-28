@@ -253,17 +253,7 @@ function AppInner() {
               <TenantAudit deals={deals} />
             </div>
           ) : (
-            <>
-              <div style={{ display: "flex", justifyContent: "flex-end", padding: "14px 24px 0" }}>
-                <button
-                  onClick={() => setView({ type: "tenant-audit" })}
-                  style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "5px 11px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
-                >
-                  Tenant Audit
-                </button>
-              </div>
-              <PortfolioAnalytics />
-            </>
+            <PortfolioAnalytics onTenantAudit={() => setView({ type: "tenant-audit" })} />
           )}
         </div>
       )}
