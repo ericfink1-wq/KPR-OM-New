@@ -108,7 +108,7 @@ REQUIRED SCHEMA:
   "shadowAnchors": "string or null — ONLY on-site parcels NOT part of this sale (NAP/unowned). Most centers have none.",
   "keyAssumptions": ["array of deal-level footnotes affecting underwriting — empty array if none"],
   "comparableSales": [{"name": "string or null — property name if stated", "address": "string", "market": "string or null — MSA or city/market label", "saleDate": "string", "salePrice": "number or null", "capRate": "number or null", "pricePerSF": "number or null", "sf": "number or null", "occupancy": "number or null"}],
-  "dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "one precise sentence", "strengths": ["string"], "risks": ["string"]},
+  "dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "one precise sentence based on the OM data available now — NOTE: a post-extraction portfolio benchmark pass will inject recency-weighted rent data from previously analyzed deals and may revise this score; when that data is present it supersedes general market assumptions", "strengths": ["string"], "risks": ["string"]},
   "redFlags": [{"severity": "high|medium|low", "description": "string — high only for substantial roof end-of-life or anchor with weak credit/closure history. NEVER flag absent asking price or non-reassessed RE taxes."}],
   "notes": "2-3 sentence investment summary. When noting below-market rents or mark-to-market upside, account for renewal options: if a tenant has many options remaining, treat upside as constrained — the tenant controls the space at existing rent rather than coming to market at expiry. Flag heavily-optioned below-market tenants as limited, not clean mark-to-market plays.",
   "extraFields": {"any_other_notable_metric": "value"}

@@ -2,26 +2,53 @@
 //
 // Flow (called AFTER main extraction returns):
 //   1. Resolve raw tenant names → canonical names (via alias map)
-//   2. Query tenant_index for avg rent/SF, avg SF, location count — excluding this deal
-//   3. If any matches: call Claude with existing dealScore + redFlags + benchmark deltas
-//   4. Merge updated dealScore + redFlags back; return amended extracted object
+//   2. Query tenant_index rows (joined with deals for uploadedAt) — excluding this deal
+//   3. Compute recency-weighted averages in TS:
+//        uploaded ≤3yr ago → weight 1.0 | 3–7yr → 0.5 | >7yr → 0.25
+//   4. If any matches: call Claude with existing dealScore + redFlags + weighted benchmark lines
+//      The prompt instructs the model to treat portfolio data as authoritative when confidence is high.
+//   5. Merge updated dealScore + redFlags back; return amended extracted object
 //
-// Non-fatal — if anything throws, the original extracted data is returned unchanged.
+// Non-fatal — any throw returns the original extracted data unchanged.
 
 import { db } from "@workspace/db";
 import { tenantIndexTable, tenantAliasesTable, dealsTable } from "@workspace/db";
-import { and, ne, inArray, isNotNull } from "drizzle-orm";
+import { and, ne, inArray, isNotNull, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { Logger } from "pino";
 import { callAnthropicOnce, robustParseJSON } from "./extract";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type Confidence = "high" | "medium" | "low";
+
 interface TenantBenchmark {
   canonicalName: string;
   locationCount: number;
-  avgRentPerSf: number | null;
+  weightedAvgRentPerSf: number | null; // primary — recency-weighted
+  simpleAvgRentPerSf: number | null;   // unweighted reference
   avgSf: number | null;
+  effectiveWeightedCount: number;      // sum of weights (effective sample size)
+  oldestDataYear: number | null;
+  newestDataYear: number | null;
+  confidence: Confidence;
+}
+
+// ─── Recency weight ───────────────────────────────────────────────────────────
+
+function recencyWeight(uploadedAt: string | null): number {
+  if (!uploadedAt) return 0.5; // unknown vintage — conservative middle weight
+  const yearsAgo =
+    (Date.now() - new Date(uploadedAt).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  if (yearsAgo <= 3) return 1.0;
+  if (yearsAgo <= 7) return 0.5;
+  return 0.25;
+}
+
+function deriveConfidence(locationCount: number, effectiveWeightedCount: number): Confidence {
+  if (locationCount >= 3 && effectiveWeightedCount >= 2.0) return "high";
+  if (locationCount >= 2 || effectiveWeightedCount >= 1.0) return "medium";
+  return "low";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,7 +74,7 @@ function pctStr(pct: number): string {
   return `${pct > 0 ? "+" : ""}${pct.toFixed(0)}%`;
 }
 
-// ─── DB query ─────────────────────────────────────────────────────────────────
+// ─── DB query — fetches individual rows with uploadedAt from deal JSONB ───────
 
 async function queryBenchmarks(
   canonicalNames: string[],
@@ -55,34 +82,86 @@ async function queryBenchmarks(
 ): Promise<Map<string, TenantBenchmark>> {
   if (canonicalNames.length === 0) return new Map();
 
+  // Fetch individual rows joined with deals to get uploadedAt for recency weighting
   const rows = await db
     .select({
       canonicalName: tenantIndexTable.canonicalName,
-      locationCount: sql<number>`cast(count(*) as int)`,
-      avgRentPerSf: sql<number | null>`avg(${tenantIndexTable.rentPerSf})`,
-      avgSf: sql<number | null>`avg(${tenantIndexTable.sf})`,
+      rentPerSf: tenantIndexTable.rentPerSf,
+      sf: tenantIndexTable.sf,
+      uploadedAt: sql<string | null>`${dealsTable.data}->>'uploadedAt'`,
     })
     .from(tenantIndexTable)
+    .innerJoin(dealsTable, eq(tenantIndexTable.dealId, dealsTable.id))
     .where(
       and(
         ne(tenantIndexTable.dealId, excludeDealId),
         inArray(tenantIndexTable.canonicalName, canonicalNames),
         isNotNull(tenantIndexTable.canonicalName),
       ),
-    )
-    .groupBy(tenantIndexTable.canonicalName);
+    );
+
+  // Group by canonical name and compute recency-weighted statistics
+  const groups = new Map<
+    string,
+    Array<{ rentPerSf: number | null; sf: number | null; uploadedAt: string | null }>
+  >();
+  for (const row of rows) {
+    if (!row.canonicalName) continue;
+    const arr = groups.get(row.canonicalName) ?? [];
+    arr.push({ rentPerSf: row.rentPerSf, sf: row.sf, uploadedAt: row.uploadedAt });
+    groups.set(row.canonicalName, arr);
+  }
 
   const result = new Map<string, TenantBenchmark>();
-  for (const row of rows) {
-    if (row.canonicalName) {
-      result.set(row.canonicalName, {
-        canonicalName: row.canonicalName,
-        locationCount: row.locationCount,
-        avgRentPerSf: row.avgRentPerSf != null ? Number(row.avgRentPerSf) : null,
-        avgSf: row.avgSf != null ? Number(row.avgSf) : null,
-      });
+
+  for (const [canonicalName, entries] of groups) {
+    let weightedRentSum = 0;
+    let weightSum = 0;
+    let simpleRentSum = 0;
+    let simpleRentCount = 0;
+    let sfSum = 0;
+    let sfCount = 0;
+    let oldest: Date | null = null;
+    let newest: Date | null = null;
+
+    for (const e of entries) {
+      const weight = recencyWeight(e.uploadedAt);
+
+      if (e.rentPerSf != null) {
+        weightedRentSum += e.rentPerSf * weight;
+        weightSum += weight;
+        simpleRentSum += e.rentPerSf;
+        simpleRentCount++;
+      }
+      if (e.sf != null) {
+        sfSum += e.sf;
+        sfCount++;
+      }
+      if (e.uploadedAt) {
+        const d = new Date(e.uploadedAt);
+        if (!oldest || d < oldest) oldest = d;
+        if (!newest || d > newest) newest = d;
+      }
     }
+
+    const weightedAvgRentPerSf = weightSum > 0 ? weightedRentSum / weightSum : null;
+    const simpleAvgRentPerSf = simpleRentCount > 0 ? simpleRentSum / simpleRentCount : null;
+    const effectiveWeightedCount = weightSum; // sum of weights = effective sample size
+    const confidence = deriveConfidence(entries.length, effectiveWeightedCount);
+
+    result.set(canonicalName, {
+      canonicalName,
+      locationCount: entries.length,
+      weightedAvgRentPerSf,
+      simpleAvgRentPerSf,
+      avgSf: sfCount > 0 ? sfSum / sfCount : null,
+      effectiveWeightedCount,
+      oldestDataYear: oldest ? oldest.getFullYear() : null,
+      newestDataYear: newest ? newest.getFullYear() : null,
+      confidence,
+    });
   }
+
   return result;
 }
 
@@ -101,7 +180,7 @@ function buildAugmentPrompt(
   const strengths = Array.isArray(score?.strengths) ? (score.strengths as string[]).join("; ") : "—";
   const risks = Array.isArray(score?.risks) ? (score.risks as string[]).join("; ") : "—";
 
-  return `You are a CRE analyst reviewing a deal. The existing score and flags were produced without portfolio benchmark data. You now have portfolio-wide rent/SF averages for tenants at this property — use them to augment the score and flags.
+  return `You are a CRE investment analyst. The existing score below was produced from OM text alone, without portfolio benchmark data. You now have recency-weighted rent/SF benchmarks from previously analyzed deals in the portfolio — use them to augment the score and flags.
 
 DEAL: ${name}, ${addr}
 
@@ -111,22 +190,30 @@ Rationale: ${rationale}
 Strengths: ${strengths}
 Risks: ${risks}
 
-EXISTING RED FLAGS (JSON — preserve all of these):
+EXISTING RED FLAGS (JSON — preserve ALL of these):
 ${existingFlagsJson}
 
-TENANT RENT BENCHMARK ANALYSIS (for tenants where portfolio data exists):
+RECENCY-WEIGHTED TENANT BENCHMARK DATA (primary reference for flagging):
 ${tenantLines.join("\n")}
 
+DATA CONFIDENCE LEVELS (already computed — use as stated):
+- "high" (≥3 portfolio locations, effective weighted count ≥2.0): Portfolio weighted avg is AUTHORITATIVE. It supersedes general market assumptions. Explicitly state "Portfolio data from N locations (YYYY–YYYY) shows…" in the description.
+- "medium" (2 locations or effective weight ≥1.0): Reliable comparison. Flag normally with sample context.
+- "low" (1 location or low effective weight): Directional only. Cap severity at "medium". Note "single data point" in description.
+
 RULES:
-1. For any tenant paying >20% BELOW their portfolio average: add a red flag.
-   - 20–34% below → severity "medium"
-   - ≥35% below → severity "high"
-   - Description must include: tenant name, this deal's rent/SF, portfolio avg, location count, and % gap. Example: "Gap is paying $11.00/SF — portfolio avg is $18.50/SF across 3 locations (41% below benchmark). May indicate weak lease or market softness at this center."
-2. For any tenant paying >20% ABOVE their portfolio average: add a bullet to dealScore.strengths noting the premium.
-3. Keep ALL existing red flags — append benchmark flags after them.
-4. Update dealScore.grade / rationale ONLY if the benchmarks materially change the investment thesis (e.g. multiple anchor tenants are deeply below-market vs. portfolio). Otherwise leave grade unchanged.
+1. For any tenant paying >20% BELOW their weighted portfolio avg:
+   - high confidence + 20–34% below → severity "medium"
+   - high confidence + ≥35% below → severity "high"
+   - medium confidence → severity "medium" regardless of gap size
+   - low confidence → severity "low" regardless of gap size
+   - Description must include: tenant name, this deal rent/SF, weighted portfolio avg, location count, data years, confidence, and % gap. Example: "Portfolio data from 4 locations (2021–2024, high confidence) shows Petco averaging $22.50/SF; this deal has them at $14.00/SF — 38% below benchmark, suggesting below-market rent or market softness."
+2. For any tenant paying >20% ABOVE their weighted portfolio avg with high or medium confidence: add a strength bullet to dealScore.strengths noting the premium and data source.
+3. Keep ALL existing red flags unchanged — append benchmark-derived flags after them.
+4. When high-confidence data exists, prefer it over general market assumptions. You may update dealScore.grade and rationale if high-confidence benchmarks materially change the investment thesis (e.g. multiple anchors are deeply below-market vs. portfolio). Otherwise leave the grade unchanged.
 5. DO NOT invent benchmark data. Only flag tenants listed in the analysis above.
 6. Vacant tenants: skip entirely.
+7. For low-confidence flags, prefix the description with "(1 portfolio data point — directional only)".
 
 Return ONLY valid JSON with no markdown or explanation:
 {"dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "string", "strengths": ["string"], "risks": ["string"]}, "redFlags": [{"severity": "high|medium|low", "description": "string"}]}`;
@@ -163,7 +250,13 @@ export async function rescoreDeal(
     : [];
   const strippedFlags = existingFlags.filter((f) => {
     const desc = typeof f.description === "string" ? f.description.toLowerCase() : "";
-    return !desc.includes("portfolio avg") && !desc.includes("benchmark");
+    return (
+      !desc.includes("portfolio avg") &&
+      !desc.includes("weighted avg") &&
+      !desc.includes("portfolio data from") &&
+      !desc.includes("benchmark") &&
+      !desc.includes("data point — directional")
+    );
   });
 
   const freshData: Record<string, unknown> = { ...dealData, redFlags: strippedFlags };
@@ -211,11 +304,11 @@ export async function augmentScoringWithBenchmarks(
     }
     const canonicalNames = [...new Set(rawToCanonical.values())];
 
-    // Query portfolio benchmarks (exclude this deal)
+    // Query recency-weighted portfolio benchmarks (exclude this deal)
     const benchmarks = await queryBenchmarks(canonicalNames, dealId);
-    if (benchmarks.size === 0) return extracted; // No other portfolio data — skip augmentation
+    if (benchmarks.size === 0) return extracted;
 
-    // Build per-tenant benchmark lines — only where comparison is possible
+    // Build per-tenant benchmark lines
     const tenantLines: string[] = [];
     for (const t of scorable) {
       const rawName = t.name as string;
@@ -223,28 +316,44 @@ export async function augmentScoringWithBenchmarks(
       const bench = benchmarks.get(canonical);
       if (!bench) continue;
 
-      // Compute effective rent/SF for this deal
       const rentPSF =
         toNum(t.rentPerSF) ??
         (toNum(t.annualRent) != null && toNum(t.sf) != null
           ? toNum(t.annualRent)! / toNum(t.sf)!
           : null);
 
-      const sfStr = toNum(t.sf) != null ? `${Math.round(toNum(t.sf)!).toLocaleString()} SF` : "SF unknown";
+      const sfStr =
+        toNum(t.sf) != null ? `${Math.round(toNum(t.sf)!).toLocaleString()} SF` : "SF unknown";
 
-      if (rentPSF != null && bench.avgRentPerSf != null) {
-        const pct = ((rentPSF - bench.avgRentPerSf) / bench.avgRentPerSf) * 100;
+      const dateRange =
+        bench.oldestDataYear && bench.newestDataYear
+          ? bench.oldestDataYear === bench.newestDataYear
+            ? `${bench.oldestDataYear}`
+            : `${bench.oldestDataYear}–${bench.newestDataYear}`
+          : "date unknown";
+
+      const effCount = bench.effectiveWeightedCount.toFixed(1);
+
+      if (rentPSF != null && bench.weightedAvgRentPerSf != null) {
+        const pct = ((rentPSF - bench.weightedAvgRentPerSf) / bench.weightedAvgRentPerSf) * 100;
+        const simpleNote =
+          bench.simpleAvgRentPerSf != null &&
+          Math.abs(bench.simpleAvgRentPerSf - bench.weightedAvgRentPerSf) > 0.5
+            ? ` (unweighted avg ${fmtMoney(bench.simpleAvgRentPerSf)}/SF)`
+            : "";
         tenantLines.push(
-          `• ${rawName} (${sfStr}): this deal ${fmtMoney(rentPSF)}/SF vs portfolio avg ${fmtMoney(bench.avgRentPerSf)}/SF across ${bench.locationCount} other location(s) → ${pctStr(pct)} vs benchmark`,
+          `• ${rawName} (${sfStr}): this deal ${fmtMoney(rentPSF)}/SF vs weighted portfolio avg ${fmtMoney(bench.weightedAvgRentPerSf)}/SF${simpleNote}` +
+            ` [${bench.locationCount} location(s), ${dateRange}, effective weight ${effCount}, confidence: ${bench.confidence}]` +
+            ` → ${pctStr(pct)} vs benchmark`,
         );
       } else if (bench.locationCount > 0) {
         tenantLines.push(
-          `• ${rawName} (${sfStr}): ${bench.locationCount} other location(s) in portfolio — no rent/SF data available for comparison`,
+          `• ${rawName} (${sfStr}): ${bench.locationCount} location(s) in portfolio [${dateRange}, confidence: ${bench.confidence}] — no rent/SF data for comparison`,
         );
       }
     }
 
-    // If we have no lines with actual comparisons, don't waste a Claude call
+    // Only proceed if we have lines with actual rent comparisons
     const comparableLines = tenantLines.filter((l) => l.includes("vs benchmark"));
     if (comparableLines.length === 0) return extracted;
 
@@ -263,13 +372,17 @@ export async function augmentScoringWithBenchmarks(
       messages: [{ role: "user", content: prompt }],
     });
 
-    const respData = await upstream.json() as Record<string, unknown>;
+    const respData = (await upstream.json()) as Record<string, unknown>;
     if (!upstream.ok) {
       const errMsg =
         typeof respData.error === "object" && respData.error !== null
-          ? ((respData.error as Record<string, unknown>).message ?? JSON.stringify(respData.error))
+          ? ((respData.error as Record<string, unknown>).message ??
+            JSON.stringify(respData.error))
           : String(respData.error ?? "Unknown error");
-      log.warn({ errMsg }, "Benchmark scoring augmentation: Claude returned error — using original score");
+      log.warn(
+        { errMsg },
+        "Benchmark scoring augmentation: Claude returned error — using original score",
+      );
       return extracted;
     }
 
@@ -283,7 +396,14 @@ export async function augmentScoringWithBenchmarks(
 
     if (!updatedScore && !updatedFlags) return extracted;
 
-    log.info({ dealId, benchmarkTenants: comparableLines.length }, "Benchmark scoring augmentation applied");
+    log.info(
+      {
+        dealId,
+        benchmarkTenants: comparableLines.length,
+        highConfidence: [...benchmarks.values()].filter((b) => b.confidence === "high").length,
+      },
+      "Benchmark scoring augmentation applied",
+    );
 
     return {
       ...extracted,
