@@ -145,13 +145,13 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
     items.push({ id: "section-tenant-sales", label: "Tenant Sales" });
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
   }
+  if (deal.upsideItems && deal.upsideItems.length > 0) items.push({ id: "section-upside", label: "Upside Items" });
+  if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
+  if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
   if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
   if (deal.trafficCountVPD || deal.population3mi || deal.medianHHIncome3mi || deal.avgHHIncome3mi || deal.proximityHighways) items.push({ id: "section-demographics", label: "Demographics & Site" });
   if (deal.marketDemographics) items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
   if (deal.acqNOIAtClose || deal.acqClosingCosts || deal.acqFee) items.push({ id: "section-closing-costs", label: "Closing Costs" });
-  if (deal.upsideItems && deal.upsideItems.length > 0) items.push({ id: "section-upside", label: "Upside Items" });
-  if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
-  if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
   items.push({ id: "section-notes", label: "Your Notes" });
 
   useEffect(() => {
@@ -172,7 +172,7 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
     const el = document.getElementById(id);
     const container = scrollRef.current;
     if (el && container) {
-      const y = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
+      const y = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 72;
       container.scrollTo({ top: y, behavior: "smooth" });
     }
   };
@@ -839,7 +839,7 @@ ${text.slice(0, 40000)}`;
               color: "#26281f",
               letterSpacing: "-0.01em",
               lineHeight: 1.2,
-              whiteSpace: "nowrap",
+              whiteSpace: "normal",
               overflow: "hidden",
               textOverflow: "ellipsis",
             }}>
