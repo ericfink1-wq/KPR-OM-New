@@ -804,7 +804,7 @@ ${text.slice(0, 40000)}`;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => setTitleScrolled(!entries[0].isIntersecting),
-      { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
+      { threshold: 0, rootMargin: "-96px 0px 0px 0px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -816,7 +816,7 @@ ${text.slice(0, 40000)}`;
     <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"32px 24px 20px 24px" }}>
       <div style={{
         position: "fixed",
-        top: 72,
+        top: 88,
         left: 0,
         right: 0,
         zIndex: 90,
