@@ -14,13 +14,14 @@ import PortfolioAnalytics from "./components/PortfolioAnalytics";
 import CompsSearch from "./components/CompsSearch";
 import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
+import TenantAudit from "./components/TenantAudit";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
 
 type TabId = "analyst" | "portfolio" | "analytics" | "comps";
-type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string };
+type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "tenant-audit" };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
@@ -240,7 +241,26 @@ function AppInner() {
       {/* Analytics tab */}
       {tab === "analytics" && (
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>
-          <PortfolioAnalytics />
+          {view.type === "tenant-audit" ? (
+            <div>
+              <div style={{ padding: "14px 24px 0" }}>
+                <button onClick={() => setView({ type: "list" })} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+              </div>
+              <TenantAudit deals={deals} />
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "flex-end", padding: "14px 24px 0" }}>
+                <button
+                  onClick={() => setView({ type: "tenant-audit" })}
+                  style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "5px 11px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
+                >
+                  Tenant Audit
+                </button>
+              </div>
+              <PortfolioAnalytics />
+            </>
+          )}
         </div>
       )}
 
