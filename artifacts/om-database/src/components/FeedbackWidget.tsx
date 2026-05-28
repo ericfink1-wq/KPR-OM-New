@@ -197,16 +197,9 @@ export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
         onMouseEnter={e => (e.currentTarget.style.background = "#52554e")}
         onMouseLeave={e => (e.currentTarget.style.background = "#383a37")}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f6f2ea" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-          {/* Outer ring */}
-          <circle cx="12" cy="12" r="9" />
-          {/* Inner ring */}
-          <circle cx="12" cy="12" r="4.5" />
-          {/* Spokes at 45° */}
-          <line x1="7.05" y1="7.05" x2="9.18" y2="9.18" />
-          <line x1="16.95" y1="7.05" x2="14.82" y2="9.18" />
-          <line x1="16.95" y1="16.95" x2="14.82" y2="14.82" />
-          <line x1="7.05" y1="16.95" x2="9.18" y2="14.82" />
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f6f2ea" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+          <path d="M4 22v-7"/>
         </svg>
       </button>
     </div>
