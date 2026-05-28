@@ -44,7 +44,7 @@ export default function FeedbackWidget({ currentPage }: Props) {
   };
 
   return (
-    <div style={{ position: "fixed", bottom: 24, left: 24, zIndex: 9500, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
+    <div style={{ position: "fixed", bottom: 90, left: 24, zIndex: 9500, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
       {(phase === "open" || phase === "submitting" || phase === "error") && (
         <div style={{
           background: "#fff",
