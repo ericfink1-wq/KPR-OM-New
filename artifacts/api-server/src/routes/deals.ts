@@ -72,6 +72,7 @@ const USER_PRESERVED_KEYS = new Set([
   "marketDemographics", "demoChecked",
   "verified", "propertyGroupId", "editHistory",
   "trashedAt", "uploadedAt", "fileName", "pdfPages", "imageMeta", "dealScore",
+  "tenantSalesHistory",
 ]);
 
 // GET /api/deals — list all deals (excludes in-progress ingests)
