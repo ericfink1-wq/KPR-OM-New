@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiSubmitFeedback } from "../lib/api";
 
 interface Props {
@@ -10,7 +10,18 @@ type Phase = "idle" | "open" | "submitting" | "done" | "error";
 
 const TYPES: FeedbackType[] = ["Bug", "Idea", "Other"];
 
+function useBottomOffset() {
+  const [offset, setOffset] = useState(() => window.innerWidth < 640 ? 145 : 130);
+  useEffect(() => {
+    const update = () => setOffset(window.innerWidth < 640 ? 145 : 130);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return offset;
+}
+
 export default function FeedbackWidget({ currentPage }: Props) {
+  const bottomOffset = useBottomOffset();
   const [phase, setPhase] = useState<Phase>("idle");
   const [type, setType] = useState<FeedbackType>("Idea");
   const [message, setMessage] = useState("");
@@ -44,7 +55,7 @@ export default function FeedbackWidget({ currentPage }: Props) {
   };
 
   return (
-    <div style={{ position: "fixed", bottom: 90, left: 24, zIndex: 9500, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
+    <div style={{ position: "fixed", bottom: bottomOffset, left: 24, zIndex: 9500, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
       {(phase === "open" || phase === "submitting" || phase === "error") && (
         <div style={{
           background: "#fff",
