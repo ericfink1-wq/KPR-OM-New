@@ -310,7 +310,10 @@ function AppInner() {
                           <span style={{ flex: 1, fontSize: 12, color: "#a89f8f" }}>{d.propertyName || d.fileName || "Untitled"}</span>
                           <button onClick={() => handleUpdate(d.id, { trashedAt: undefined })}
                             style={{ fontSize: 10, color: "#6dba43", background: "transparent", border: "1px solid #6dba4340", padding: "2px 8px", borderRadius: 5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Restore</button>
-                          <button onClick={() => handleDelete(d.id)}
+                          <button onClick={() => {
+                              const name = d.propertyName || d.fileName || "this deal";
+                              if (window.confirm(`Permanently delete "${name}"? This removes the deal, its images, and its source text from the database and cannot be undone.`)) handleDelete(d.id);
+                            }}
                             style={{ fontSize: 10, color: "#dc2626", background: "transparent", border: "1px solid #dc262640", padding: "2px 8px", borderRadius: 5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Delete permanently</button>
                         </div>
                       ))}

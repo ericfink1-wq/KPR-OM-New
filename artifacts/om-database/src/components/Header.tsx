@@ -82,6 +82,19 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       return;
     }
 
+    const existingActive = deals.filter(d => !d.trashedAt);
+    const existingNames = new Set(existingActive.map(d => (d.propertyName || "").trim().toLowerCase()));
+    const willUpdate = allDeals.filter(d => existingNames.has((d.propertyName || "").trim().toLowerCase())).length;
+    const willAdd = allDeals.length - willUpdate;
+
+    if (allDeals.length > 10 || willUpdate > 0) {
+      const msg = `Import ${allDeals.length} deal(s)?\n\n${willUpdate > 0 ? `${willUpdate} will update existing deal(s).\n` : ""}${willAdd} will be added.\n\nContinue?`;
+      if (!window.confirm(msg)) {
+        setImportProgress(null);
+        return;
+      }
+    }
+
     const succeeded: Deal[] = [];
     const mergedNames: string[] = [];
     let failed = 0;
@@ -180,6 +193,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       const existingIds = new Set(deals.map(d => d.id));
       const added = incoming.filter(d => d.id && !existingIds.has(d.id)).length;
       const updated = incoming.filter(d => d.id && existingIds.has(d.id)).length;
+
+      const restoreMsg = `Restore ${incoming.length} deal(s) from this backup?\n\n${updated} will overwrite existing deals.\n${added} will be added.\nExisting deals are never deleted by a restore.\n\nContinue?`;
+      if (!window.confirm(restoreMsg)) {
+        setRestoreBusy(false);
+        return;
+      }
 
       await Promise.all(incoming.filter(d => !!d.id).map(d => apiSaveDeal(d).catch(() => {})));
 

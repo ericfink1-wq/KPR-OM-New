@@ -1,0 +1,28 @@
+Build an automatic snapshot/backup safety net so the deal data can always be rolled back, even after an accidental or catastrophic wipe/overwrite. This spans the database schema, the backend API server, and the frontend.
+
+DATABASE (lib/db):
+1. Create a new schema file lib/db/src/schema/snapshots.ts defining a Postgres table "snapshots" via drizzle-orm/pg-core with columns: id (serial primary key), createdAt (timestamp with timezone, notNull, defaultNow), reason (text, notNull, default "auto"), dealCount (integer, notNull, default 0), and data (jsonb, notNull) typed as { deals: { id: string; data: Record<string,unknown> }[]; sources: { id: string; sourceText: string | null }[] }.
+2. Export it from lib/db/src/schema/index.ts.
+3. Actually create the table in the database using this project's existing Drizzle push/migration workflow so the table exists at runtime.
+
+BACKEND (artifacts/api-server):
+4. Create artifacts/api-server/src/routes/snapshots.ts with all routes protected by requireAuth (same pattern as routes/deals.ts), and register it in routes/index.ts so it's served under /api.
+5. Add a helper createSnapshot(reason): select all rows from dealsTable and dealSourcesTable, build { deals: rows of {id, data}, sources: rows of {id, sourceText} }, insert one snapshots row with that data + reason + dealCount, then PRUNE so only the newest 30 snapshot rows remain (delete the rest). Throttling: if reason === "auto", skip creating when the newest existing "auto" snapshot is less than 12 hours old; if reason === "before-delete", skip when the newest snapshot of ANY reason is less than 5 minutes old; all other reasons always create.
+6. Routes:
+   - POST /snapshots  (body: { reason?: string }) -> createSnapshot(reason ?? "manual"); respond with { id, createdAt } (or {skipped:true} if throttled).
+   - GET /snapshots -> return all snapshots newest-first WITHOUT the large `data` field (only id, createdAt, reason, dealCount).
+   - POST /snapshots/:id/restore -> FIRST call createSnapshot("before-restore-rollback") so the restore is reversible; then load the target snapshot row; for each deal in its data.deals, UPSERT into dealsTable (insert if the id is missing, otherwise update its data and updatedAt); for each source, upsert into dealSourcesTable. Do NOT delete any deal that currently exists but isn't in the snapshot — restore must be additive/non-destructive. Respond with how many deals were restored/updated.
+
+FRONTEND API CLIENT (src/lib/api.ts):
+7. Add apiCreateSnapshot(reason: string), apiListSnapshots(), and apiRestoreSnapshot(id) calling the routes above, following the existing apiFetch patterns in that file.
+
+FRONTEND TRIGGERS (fire-and-forget, wrapped in try/catch so they never block the user):
+8. On app startup in src/App.tsx (in the existing effect that loads deals, after deals are loaded), call apiCreateSnapshot("auto").
+9. In src/components/Header.tsx handleJsonFiles, right before the import loop, await apiCreateSnapshot("before-import").
+10. In src/components/Header.tsx handleRestore, before applying the backup, call apiCreateSnapshot("before-restore").
+11. In src/App.tsx handleDelete (permanent delete), before apiDeleteDeal, call apiCreateSnapshot("before-delete").
+
+FRONTEND RESTORE UI:
+12. In the Header "Backup" dropdown menu, add a new item "Restore a snapshot…". Clicking it opens a modal/panel that loads apiListSnapshots() and lists each snapshot newest-first showing its date/time, a friendly label for the reason (e.g. "auto" -> "Automatic daily", "before-import" -> "Before an upload", "before-delete" -> "Before a delete", "before-restore" -> "Before a restore", "manual" -> "Manual"), and its deal count. Each row has a "Restore" button that shows a window.confirm warning, then calls apiRestoreSnapshot(id), and on success shows a brief success message and reloads the page (window.location.reload()).
+
+Snapshots intentionally store deal records and OM source text but NOT page images (to keep them small). Make, test, iterate until: an automatic snapshot is created on app load (throttled to ~once per 12h), snapshots are created before imports/restores/permanent-deletes, the Backup menu can list snapshots and restore one, restoring brings back deleted/overwritten deals without deleting newer ones, and a safety snapshot is taken before each restore.
