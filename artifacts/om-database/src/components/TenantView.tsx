@@ -61,9 +61,14 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
     return String(av).localeCompare(String(bv)) * dir;
   });
 
-  // Averages — ignore missing values
-  const sfVals       = rows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
-  const rentVals     = rows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
+  // Averages — ignore missing values; exclude NAP/shadow/vacant/ground-lease rows from rent metrics
+  const isRentable = (r: typeof rows[number]) => {
+    const name = (r.t.name || "").toLowerCase();
+    return !/\b(nap|shadow|vacant|ground.?lease|outparcel)\b/i.test(name);
+  };
+  const rentRows     = rows.filter(isRentable);
+  const sfVals       = rentRows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
+  const rentVals     = rentRows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
   const salesVals    = rows.map(r => num(r.t.salesPSF)).filter((v): v is number => v != null);
   const totalSFAll   = sfVals.reduce((s, v) => s + v, 0);
   const totalRentAll = rentVals.reduce((s, v) => s + v, 0);
