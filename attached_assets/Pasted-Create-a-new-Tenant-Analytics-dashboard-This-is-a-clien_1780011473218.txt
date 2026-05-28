@@ -1,0 +1,34 @@
+Create a new Tenant Analytics dashboard. This is a client-side component (computes everything from the deals array in memory — NO new backend endpoint).
+
+STEP 1 — Create a new file: artifacts/om-database/src/components/TenantAnalytics.tsx
+
+It should:
+- Import: useState, useMemo from "react"; type Deal from "../lib/idb"; tenantKey, isVacant from "../lib/utils"; isInvestmentGrade from "../lib/tenantCredit"
+- Props: { deals: Deal[]; onTenantClick?: (name: string) => void; onTenantAudit?: () => void }
+- Have an All/Owned toggle at the top (useState<"all"|"owned">("all")). "owned" filters deals to those where d.status === "Owned" || d.status === "Sold". Style the toggle buttons exactly like the existing toggle in PortfolioAnalytics.tsx (dark pill when active).
+
+Aggregate tenants across the filtered deals into a Map keyed by tenantKey(t.canonicalName || t.name), skipping vacant tenants (isVacant). For each unique tenant track: displayName (first proper-cased name seen), locationCount, totalAnnualRent (sum of Number(t.annualRent)), rentPSFvalues (for averaging), isAnchor (any), creditRating, isIG (isInvestmentGrade), bestSalesPSF (max Number(t.salesPSF)), salesYear.
+
+Build these dashboard sections, styled to match PortfolioAnalytics.tsx (white cards, Fraunces serif headings, #383a37 text, rounded corners, subtle shadows, the fmtRent helper that shows $X.XM / $Xk):
+
+1. FOUR STAT TILES at top: "Unique Tenants" (count), "Total Annual Rent" (sum), "Avg Rent PSF" (rent-weighted average), "Investment Grade" (count of IG tenants).
+
+2. TOP 10 BY ANNUAL RENT — ranked list, each row: tenant name (clickable via onTenantClick passing the displayName, underlined like TenantAudit), location count, total annual rent, and a horizontal bar showing relative rent. 
+
+3. TOP 10 BY LOCATION COUNT — ranked list, clickable names, showing # locations and total rent.
+
+4. CREDIT QUALITY — two-segment breakdown: Investment Grade vs Not Rated, shown as % of total annual rent with a horizontal stacked bar (IG in green #3f7a1f, not-rated in gray).
+
+5. ANCHOR vs INLINE — % of rent from anchors vs non-anchors, horizontal bar.
+
+6. TOP SALES PERFORMERS — top 10 tenants by bestSalesPSF (only those with sales data), clickable, showing $X PSF and the year.
+
+All tenant names clickable → call onTenantClick(displayName). Add a button at the top linking to the Tenant Name Audit (call onTenantAudit) styled like the existing "Tenant Name Audit" button in PortfolioAnalytics.
+
+STEP 2 — Wire it into App.tsx:
+- Import TenantAnalytics at top
+- Add a new View type: { type: "tenant-analytics" }
+- In the Analytics tab area where PortfolioAnalytics renders, add a button/tab to switch to tenant-analytics, OR add a "Tenant Analytics" button on the PortfolioAnalytics page. When clicked, setView({ type: "tenant-analytics" }).
+- Render TenantAnalytics when view.type === "tenant-analytics", passing deals={deals}, onTenantClick={handleOpenTenant}, onTenantAudit={() => setView({ type: "tenant-audit" })}, and an onBack to return to analytics.
+
+Make, test, iterate until saved and working. Match the visual style of the existing PortfolioAnalytics page closely.

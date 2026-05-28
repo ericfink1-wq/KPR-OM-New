@@ -18,13 +18,14 @@ import CompsSearch from "./components/CompsSearch";
 import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
 import TenantAudit from "./components/TenantAudit";
+import TenantAnalytics from "./components/TenantAnalytics";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
 
 type TabId = "analyst" | "portfolio" | "analytics" | "comps";
-type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "tenant-audit" } | { type: "lender"; lenderName: string };
+type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
@@ -264,8 +265,18 @@ function AppInner() {
               </div>
               <TenantAudit deals={deals} onTenantClick={handleOpenTenant} />
             </div>
+          ) : view.type === "tenant-analytics" ? (
+            <TenantAnalytics
+              deals={deals}
+              onTenantClick={handleOpenTenant}
+              onTenantAudit={() => setView({ type: "tenant-audit" })}
+              onBack={() => setView({ type: "list" })}
+            />
           ) : (
-            <PortfolioAnalytics onTenantAudit={() => setView({ type: "tenant-audit" })} />
+            <PortfolioAnalytics
+              onTenantAudit={() => setView({ type: "tenant-audit" })}
+              onTenantAnalytics={() => setView({ type: "tenant-analytics" })}
+            />
           )}
         </div>
       )}
