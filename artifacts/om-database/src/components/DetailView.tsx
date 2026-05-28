@@ -139,17 +139,17 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
   const items: { id: string; label: string }[] = [];
   items.push({ id: "section-cover", label: "Overview" });
   if (deal.notes) items.push({ id: "section-highlights", label: "Investment Highlights" });
-  items.push({ id: "section-financials", label: "Key Financials" });
-  items.push({ id: "section-demographics", label: "Demographics & Site" });
-  items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
-  items.push({ id: "section-closing-costs", label: "Closing Costs" });
+  if (deal.askingPrice || deal.capRate || deal.noi || deal.pricePerSF || deal.totalSF) items.push({ id: "section-financials", label: "Key Financials" });
   if (deal.tenants && deal.tenants.length > 0) {
     items.push({ id: "section-tenants", label: "Tenant Roster" });
     items.push({ id: "section-tenant-sales", label: "Tenant Sales" });
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
   }
   if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
-  if ((deal.upsideItems && deal.upsideItems.length > 0)) items.push({ id: "section-upside", label: "Upside Items" });
+  if (deal.trafficCountVPD || deal.population3mi || deal.medianHHIncome3mi || deal.avgHHIncome3mi || deal.proximityHighways) items.push({ id: "section-demographics", label: "Demographics & Site" });
+  if (deal.marketDemographics) items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
+  if (deal.acqNOIAtClose || deal.acqClosingCosts || deal.acqFee) items.push({ id: "section-closing-costs", label: "Closing Costs" });
+  if (deal.upsideItems && deal.upsideItems.length > 0) items.push({ id: "section-upside", label: "Upside Items" });
   if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
   if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
   items.push({ id: "section-notes", label: "Your Notes" });
