@@ -882,7 +882,7 @@ ${text.slice(0, 40000)}`;
             {reanalyzeBusy ? "ANALYZING…" : <>ANALYZE <span style={{ fontSize:8 }}>▾</span></>}
           </button>
           {analyzeOpen && !reanalyzeBusy && (
-            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:200 }}>
+            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:200 }}>
               <button onClick={handleReanalyze}
                 style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
                 onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
