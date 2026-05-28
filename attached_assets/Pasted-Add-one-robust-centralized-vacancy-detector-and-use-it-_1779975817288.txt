@@ -1,0 +1,25 @@
+Add one robust, centralized vacancy detector and use it everywhere, replacing the weak exact-match "vacant" checks that are scattered across the app. A vacant/empty space currently only registers if its name is exactly "Vacant" — so variants like "Available", "Vacant Suite", "Vacant - Suite 200", "Spec Space", "White Box", "Vacancy", or an empty name slip through and get wrongly treated as real tenants. Fix this.
+
+PART 1 — In src/lib/utils.ts, add and export a function isVacant:
+
+export function isVacant(name: unknown): boolean {
+  const s = String(name ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (!s || s === "-" || s === "–" || s === "—" || s === "n/a" || s === "na") return true;
+  const c = s.replace(/^[\s\-–—•·*"']+/, ""); // strip leading bullets/dashes/quotes
+  if (/^vacan/.test(c)) return true;                 // vacant, vacancy, vacancies
+  if (/^availab/.test(c)) return true;               // available, availability
+  if (/^spec\s+(suite|space|unit)/.test(c)) return true; // spec suite/space/unit
+  if (/white\s*box/.test(c)) return true;            // white box / whitebox
+  return false;
+}
+
+PART 2 — Replace the existing vacancy checks with isVacant in these files. In each case the existing logic is some variant of `t.name && !/^vacant$/i.test(String(t.name).trim())` (meaning "is an occupied tenant"), which should become `!isVacant(t.name)`, and import isVacant from "../lib/utils":
+- src/components/TenantAudit.tsx (the `if (!t.name || /^vacant$/i.test(...)) continue;` line → `if (isVacant(t.name)) continue;`) — this is the main fix the user asked for: vacancies must NOT form tenant groups or appear in "Possible Splits".
+- src/components/LeaseRollover.tsx (the `occupied` filter)
+- src/components/AnalystChat.tsx (the `allOccupied` filter)
+- src/components/DealSummaryPDF.tsx (both `occupied` filters)
+- src/components/TenantRoster.tsx: replace the local `isVacantRow` helper so it uses the shared isVacant (i.e. `const isVacantRow = (t: Tenant) => isVacant(t.name);`). Keep showing these rows as an italic "Vacant" label and keep them in the vacantCount — they should still display as vacant, just be recognized regardless of how the OM worded it.
+
+Do NOT change deal data, extraction, or anything else. The goal: every part of the app consistently treats any vacant/available/spec/white-box/blank space as vacant, vacancies never get grouped or flagged as tenants in the Tenant Audit, and occupancy/rent math no longer counts them as occupied tenants.
+
+Make, test, iterate until: the Tenant Audit no longer lists or flags any vacancy variants as tenants, the Tenant Roster still shows vacant suites as "Vacant" (including ones labeled "Available" or "Vacant Suite"), and nothing else regresses.

@@ -125,6 +125,62 @@ export function reconcileDeal(deal: Deal) {
   return { checks, errors: checks.filter(c => c.severity==="error").length, warns: checks.filter(c => c.severity==="warn").length, hadData };
 }
 
+// ── User-defined tenant merges ────────────────────────────────────────────────
+// Persisted to localStorage; checked BEFORE the hardcoded TENANT_ALIASES.
+
+const _USER_MERGES_KEY = "kpr_user_tenant_merges";
+
+export interface UserMerge {
+  id: string;
+  canonical: string;
+  variants: string[];
+}
+
+let _userMerges: UserMerge[] = (() => {
+  try {
+    const raw = localStorage.getItem(_USER_MERGES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+})();
+
+let _userAliases: Record<string, string> = {};
+
+function rebuildUserAliases() {
+  _userAliases = {};
+  for (const m of _userMerges) {
+    for (const v of m.variants) {
+      _userAliases[_normTenant(v)] = m.canonical;
+    }
+  }
+}
+
+// Bootstrap on load (relies on _normTenant defined below — hoisted at runtime)
+// We call this after _normTenant is defined; the initializer above runs lazily
+// since _normTenant is referenced via closure after module evaluation.
+// We schedule a microtask so _normTenant is guaranteed to be defined.
+Promise.resolve().then(rebuildUserAliases);
+
+export function addUserMerge(merge: UserMerge): void {
+  _userMerges = _userMerges.filter(m => m.id !== merge.id);
+  _userMerges.push(merge);
+  rebuildUserAliases();
+  try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
+}
+
+export function removeUserMerge(id: string): void {
+  _userMerges = _userMerges.filter(m => m.id !== id);
+  rebuildUserAliases();
+  try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
+}
+
+export function getUserMerges(): UserMerge[] {
+  return _userMerges;
+}
+
 // ── Tenant-name normalisation ─────────────────────────────────────────────────
 // These helpers ensure that spelling variants of the same brand (e.g. "T Mobile",
 // "T-Mobile", "TMobile") collapse to one key in every cross-deal grouping.
@@ -200,6 +256,7 @@ export function _normTenant(name: unknown): string {
 /** Stable grouping key — every spelling of one brand collapses to the same string. */
 export function tenantKey(name: unknown): string {
   const n = _normTenant(name);
+  if (_userAliases[n]) return _normTenant(_userAliases[n]);
   const alias = TENANT_ALIASES[n];
   return alias ? _normTenant(alias) : n;
 }
@@ -207,6 +264,7 @@ export function tenantKey(name: unknown): string {
 /** Clean, human-readable canonical name for labels and headers. */
 export function tenantLabel(name: unknown): string {
   const n = _normTenant(name);
+  if (_userAliases[n]) return _userAliases[n];
   if (TENANT_ALIASES[n]) return TENANT_ALIASES[n];
   return n.replace(/\b\w/g, c => c.toUpperCase()) || String(name || "");
 }

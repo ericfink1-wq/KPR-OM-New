@@ -1,0 +1,22 @@
+Update the Tenant Name Audit's "Possible Splits" section so the user can confirm or reject each suggested match, with decisions that persist and are undoable. This involves two files: src/lib/utils.ts and src/components/TenantAudit.tsx.
+
+PART 1 — In src/lib/utils.ts, add a user-defined tenant merge system (do NOT remove or alter the existing hardcoded TENANT_ALIASES — this is additive):
+
+- Add a module-level variable `_userAliases: Record<string,string> = {}` and a list `_userMerges` of objects shaped { id: string, canonical: string, variants: string[] }.
+- On load, read `_userMerges` synchronously from localStorage key "kpr_user_tenant_merges" (JSON.parse with try/catch, default []). localStorage is fine — this is the deployed web app, not a sandboxed artifact.
+- Add a helper `rebuildUserAliases()` that clears `_userAliases` and, for every merge in `_userMerges`, maps each variant (run through the existing _normTenant) to that merge's canonical name. Call it once after loading.
+- Export `addUserMerge(merge)` (pushes to `_userMerges`, calls rebuildUserAliases, writes `_userMerges` back to localStorage), `removeUserMerge(id)` (filters it out, rebuilds, persists), and `getUserMerges()` (returns `_userMerges`).
+- Update `tenantKey` so it checks `_userAliases[n]` FIRST, then falls back to the existing `TENANT_ALIASES[n]` — so user decisions take precedence. Update `tenantLabel` the same way (check `_userAliases` first). Keep all current behavior intact when there are no user merges.
+
+PART 2 — In src/components/TenantAudit.tsx:
+
+- Keep the existing "Incorrect" dismiss behavior but RENAME the deny button label to "✕ Incorrect — keep separate" (the existing dismissed-pairs localStorage key "kpr_dismissed_tenant_splits", filtering, restore/undo, and stat updates all stay as they are).
+- Add a SECOND button on each split pair labeled "✓ Correct — merge them", styled as a small positive/affirmative action (e.g. subtle green: text/border in a green like #3f7a1f, transparent or very light green background). Place the two buttons side by side on each split row.
+- When "Correct — merge them" is clicked: gather all raw tenant name variants from BOTH groups in that pair. Choose a canonical name = the raw name appearing in the most locations across both groups; tiebreak by shortest string, then alphabetical. Call addUserMerge({ id: pairId, canonical, variants: [all raw names from both groups] }) where pairId = [s.a.key, s.b.key].sort().join("||").
+- Force the audit's useMemo grouping to recompute after any merge or restore by adding a state counter (e.g. `aliasVersion`, incremented on every merge/restore) and including it in the useMemo dependency array alongside `deals`. After a merge, the two groups now share a key, so the pair should naturally disappear from "Possible Splits" and the two names should show as one grouped tenant in the list below.
+- Add a "Merged tenants" subsection (only shown if getUserMerges() is non-empty) listing each user merge as "Variant A + Variant B → Canonical" with a small "Restore" link that calls removeUserMerge(id), bumps aliasVersion, so the merge is fully reversible.
+- Update the "Possible splits" stat number to reflect only pairs that are neither dismissed nor merged.
+
+Do NOT change deal data, the upload/extraction flow, or anything outside these two files. The grouping logic elsewhere in the app (Analyst, tenant pages) should automatically respect user merges because they all call tenantKey.
+
+Make, test, iterate until: clicking "Correct — merge them" instantly groups the two tenants (pair disappears from splits, names combine in the list), the merge survives a page refresh, "Incorrect — keep separate" still works, both decisions appear in their respective undo lists, and Restore reverses either one.

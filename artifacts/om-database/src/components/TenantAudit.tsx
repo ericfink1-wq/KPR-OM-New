@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Deal } from "../lib/idb";
-import { tenantKey } from "../lib/utils";
+import { tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant } from "../lib/utils";
 
 interface Props {
   deals: Deal[];
@@ -29,17 +29,21 @@ function loadDismissed(): string[] {
 function saveDismissed(ids: string[]) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(ids));
-  } catch {
-    // ignore
-  }
+  } catch { /**/ }
 }
 
 export default function TenantAudit({ deals }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<string[]>(loadDismissed);
   const [showRestored, setShowRestored] = useState(false);
+  const [showMergeRestored, setShowMergeRestored] = useState(false);
+  // Incrementing this forces useMemo to recompute after user merges change
+  const [aliasVersion, setAliasVersion] = useState(0);
 
   const { groups, splits, stats } = useMemo(() => {
+    // aliasVersion in deps ensures recompute when user merges change
+    void aliasVersion;
+
     const map = new Map<string, Group>();
 
     for (const d of deals) {
@@ -63,9 +67,6 @@ export default function TenantAudit({ deals }: Props) {
 
     const groups = Array.from(map.values()).sort((a, b) => b.locationCount - a.locationCount);
 
-    // Detect potential splits: pairs of DIFFERENT keys that look like the same brand.
-    // Heuristic: one key is a prefix of the other ("gap" vs "gap factory"),
-    // or they share a significant (4+ char) first word.
     const splits: { a: Group; b: Group; reason: string }[] = [];
     for (let i = 0; i < groups.length; i++) {
       for (let j = i + 1; j < groups.length; j++) {
@@ -94,30 +95,68 @@ export default function TenantAudit({ deals }: Props) {
     };
 
     return { groups, splits, stats };
-  }, [deals]);
+  }, [deals, aliasVersion]);
 
   const getPairId = (s: { a: Group; b: Group }) =>
     [s.a.key, s.b.key].sort().join("||");
 
-  const visibleSplits = splits.filter((s) => !dismissed.includes(getPairId(s)));
-  const dismissedSplits = splits.filter((s) => dismissed.includes(getPairId(s)));
+  const mergedIds = new Set(getUserMerges().map(m => m.id));
 
+  const visibleSplits = splits.filter(s => {
+    const id = getPairId(s);
+    return !dismissed.includes(id) && !mergedIds.has(id);
+  });
+  const dismissedSplits = splits.filter(s => dismissed.includes(getPairId(s)));
+
+  // Dismiss (incorrect)
   const dismiss = (s: { a: Group; b: Group }) => {
     const id = getPairId(s);
     const next = dismissed.includes(id) ? dismissed : [...dismissed, id];
     setDismissed(next);
     saveDismissed(next);
   };
-
-  const restore = (s: { a: Group; b: Group }) => {
+  const restoreDismissed = (s: { a: Group; b: Group }) => {
     const id = getPairId(s);
-    const next = dismissed.filter((d) => d !== id);
+    const next = dismissed.filter(d => d !== id);
     setDismissed(next);
     saveDismissed(next);
   };
 
+  // Merge (correct)
+  const merge = (s: { a: Group; b: Group }) => {
+    const pairId = getPairId(s);
+    // Collect all raw names from both groups
+    const allVariants: string[] = [
+      ...Array.from(s.a.rawNames.keys()),
+      ...Array.from(s.b.rawNames.keys()),
+    ];
+    // Choose canonical = raw name with most locations; tiebreak shortest, then alpha
+    const locationsByName = new Map<string, number>();
+    for (const [raw, deals] of s.a.rawNames) locationsByName.set(raw, (locationsByName.get(raw) || 0) + deals.length);
+    for (const [raw, deals] of s.b.rawNames) locationsByName.set(raw, (locationsByName.get(raw) || 0) + deals.length);
+    const canonical = allVariants.slice().sort((a, b) => {
+      const da = locationsByName.get(a) || 0;
+      const db = locationsByName.get(b) || 0;
+      if (db !== da) return db - da;
+      if (a.length !== b.length) return a.length - b.length;
+      return a.localeCompare(b);
+    })[0];
+    addUserMerge({ id: pairId, canonical, variants: allVariants });
+    setAliasVersion(v => v + 1);
+  };
+
+  const restoreMerge = (id: string) => {
+    removeUserMerge(id);
+    setAliasVersion(v => v + 1);
+  };
+
+  const userMerges = getUserMerges();
   const multiLoc = groups.filter((g) => g.locationCount > 1);
   const displayedGroups = showAll ? groups : multiLoc;
+
+  // Stat: only non-dismissed, non-merged pairs
+  const activeSplitCount = visibleSplits.length;
+  const hasSplitSection = visibleSplits.length > 0 || dismissedSplits.length > 0 || mergedIds.size > 0;
 
   const card: React.CSSProperties = {
     background: "#fff",
@@ -144,7 +183,7 @@ export default function TenantAudit({ deals }: Props) {
           ["Unique tenants", stats.uniqueTenants],
           ["In 2+ deals", stats.multiLocation],
           ["Total placements", stats.totalPlacements],
-          ["Possible splits", visibleSplits.length],
+          ["Possible splits", activeSplitCount],
         ].map(([label, val]) => (
           <div key={label as string} style={{ flex: "1 1 130px", background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "13px 16px" }}>
             <div style={{ fontSize: 10, letterSpacing: "0.06em", color: "#a69e91", marginBottom: 6, fontWeight: 500, textTransform: "uppercase" }}>{label}</div>
@@ -154,7 +193,7 @@ export default function TenantAudit({ deals }: Props) {
       </div>
 
       {/* Possible splits — the actionable section */}
-      {(visibleSplits.length > 0 || dismissedSplits.length > 0) && (
+      {hasSplitSection && (
         <div style={{ ...card, borderLeft: "3px solid #d9890c" }}>
           <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#b45309", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
             Possible Splits — Review These
@@ -162,31 +201,48 @@ export default function TenantAudit({ deals }: Props) {
 
           {visibleSplits.length === 0 && (
             <div style={{ fontSize: 12, color: "#a69e91", padding: "4px 0 8px" }}>
-              All flagged pairs have been dismissed.
+              All flagged pairs have been reviewed.
             </div>
           )}
 
           {visibleSplits.map((s, i) => (
             <div key={getPairId(s)} style={{ padding: "10px 0", borderBottom: i < visibleSplits.length - 1 ? "1px solid #f5efe2" : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
                 <div style={{ fontSize: 10, color: "#a69e91" }}>Likely same tenant — {s.reason}:</div>
-                <button
-                  onClick={() => dismiss(s)}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid #ddd4c2",
-                    color: "#a69e91",
-                    padding: "2px 8px",
-                    borderRadius: 5,
-                    cursor: "pointer",
-                    fontSize: 10.5,
-                    fontFamily: "'Inter',sans-serif",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}
-                >
-                  Not the same — dismiss
-                </button>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={() => merge(s)}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid #3f7a1f",
+                      color: "#3f7a1f",
+                      padding: "2px 9px",
+                      borderRadius: 5,
+                      cursor: "pointer",
+                      fontSize: 10.5,
+                      fontFamily: "'Inter',sans-serif",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ✓ Correct — merge them
+                  </button>
+                  <button
+                    onClick={() => dismiss(s)}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid #ddd4c2",
+                      color: "#a69e91",
+                      padding: "2px 9px",
+                      borderRadius: 5,
+                      cursor: "pointer",
+                      fontSize: 10.5,
+                      fontFamily: "'Inter',sans-serif",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ✕ Incorrect — keep separate
+                  </button>
+                </div>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {[s.a, s.b].map((g) => (
@@ -205,19 +261,51 @@ export default function TenantAudit({ deals }: Props) {
 
           {visibleSplits.length > 0 && (
             <div style={{ fontSize: 10.5, color: "#7d766a", marginTop: 10, lineHeight: 1.5 }}>
-              To merge these: tell Claude the exact two names and they'll add a normalization rule, or rename the tenant in the source deal so both read identically.
+              To merge: click "✓ Correct — merge them" and the two names will group as one across the whole app. To separate a pair that shouldn't merge, click "✕ Incorrect — keep separate".
             </div>
           )}
 
-          {/* Dismissed pairs footer */}
-          {dismissedSplits.length > 0 && (
+          {/* Merged pairs */}
+          {userMerges.length > 0 && (
             <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #f5efe2" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10.5, color: "#3f7a1f", fontWeight: 600 }}>
+                  {userMerges.length} merged
+                </span>
+                <button
+                  onClick={() => setShowMergeRestored(v => !v)}
+                  style={{ background: "transparent", border: "none", color: "#a69e91", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
+                >
+                  {showMergeRestored ? "hide" : "show / restore"}
+                </button>
+              </div>
+              {showMergeRestored && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+                  {userMerges.map(m => (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#9a917f" }}>
+                      <span>{m.variants.join(" + ")} → <strong style={{ color: "#383a37" }}>{m.canonical}</strong></span>
+                      <button
+                        onClick={() => restoreMerge(m.id)}
+                        style={{ background: "transparent", border: "none", color: "#b45309", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline", flexShrink: 0 }}
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Dismissed pairs */}
+          {dismissedSplits.length > 0 && (
+            <div style={{ marginTop: userMerges.length > 0 ? 6 : 12, paddingTop: 10, borderTop: "1px solid #f5efe2" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 10.5, color: "#b3aa9b" }}>
                   {dismissedSplits.length} dismissed
                 </span>
                 <button
-                  onClick={() => setShowRestored((v) => !v)}
+                  onClick={() => setShowRestored(v => !v)}
                   style={{ background: "transparent", border: "none", color: "#a69e91", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
                 >
                   {showRestored ? "hide" : "show / restore"}
@@ -232,7 +320,7 @@ export default function TenantAudit({ deals }: Props) {
                       <div key={getPairId(s)} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#9a917f" }}>
                         <span>{aName} &amp; {bName}</span>
                         <button
-                          onClick={() => restore(s)}
+                          onClick={() => restoreDismissed(s)}
                           style={{ background: "transparent", border: "none", color: "#b45309", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
                         >
                           Restore
