@@ -1,0 +1,17 @@
+Update src/components/TenantView.tsx in two ways: make the summary boxes average-focused, and add an All / Owned scope filter.
+
+PART 1 — All / Owned filter:
+1. Add state: const [scope, setScope] = useState<"all"|"owned">("all").
+2. Derive a scoped row list: when scope === "owned", only include rows whose deal.status === "Owned"; when "all", include every row. ALL downstream calculations and the locations table must use this scoped list (so the toggle re-scopes the whole page).
+3. Add a small segmented two-button toggle labeled "All" and "Owned", placed near the top (e.g. just above the stat boxes or beside the "Across N properties" subtitle). Style it to match the app's cream/Inter aesthetic — the active option highlighted, the inactive muted. Update the subtitle to reflect scope: "Across N owned properties" when owned, "Across N properties in your database" when all.
+4. If scope === "owned" and there are zero owned rows for this tenant, show a gentle empty state for the stats/table area ("No owned locations for this tenant").
+
+PART 2 — Make the summary boxes about AVERAGES (keep the same 5-box layout/styling):
+Replace the current boxes with these, computed over the SCOPED rows, and each average computed only over rows where that field is present (non-null) so missing data doesn't drag it down; show "—" when there's nothing to average:
+- "Locations" — count of scoped rows (KEEP this; it's the data-scope indicator).
+- "Avg Size (SF)" — mean of t.sf across rows that have sf, rounded to a whole number with thousands separators. (Replaces "Total SF Leased".)
+- "Avg Rent / SF" — keep the existing SF-weighted blended figure (total annual rent ÷ total SF across scoped rows), formatted "$X.XX".
+- "Avg Annual Rent" — mean of t.annualRent across rows that have it, formatted "$" with thousands separators. (Replaces "Total Annual Rent".)
+- "Avg Sales / SF" — keep the existing average (mean of t.salesPSF), formatted "$" with thousands separators.
+
+Do not change the locations table columns or row-click behavior (it should just reflect the scoped rows). Make, test, iterate until: the toggle switches the page between all locations and owned-only and updates every box, the subtitle, and the table; the boxes show Locations (count) plus four averages (size, rent/SF, annual rent, sales/SF); and averages ignore missing values rather than counting them as zero.

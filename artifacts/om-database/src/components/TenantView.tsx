@@ -14,18 +14,23 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
   const target = tenantKey(tenantName);
   const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
-  const rows: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }[] = [];
+  const allRows: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }[] = [];
   (deals || []).forEach(d =>
     (d.tenants || []).forEach(t => {
       const matchByName = tenantKey(t.name) === target;
       const matchByCanonical = t.canonicalName && tenantKey(t.canonicalName) === target;
-      if (matchByName || matchByCanonical) rows.push({ deal: d, t });
+      if (matchByName || matchByCanonical) allRows.push({ deal: d, t });
     })
   );
 
   type SortKey = "property"|"market"|"sf"|"rentPSF"|"annualRent"|"expiry"|"salesPSF"|"reimbursement";
   const [sortKey, setSortKey] = useState<SortKey>("sf");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  const [scope, setScope] = useState<"all"|"owned">("all");
+
+  const rows = scope === "owned"
+    ? allRows.filter(r => r.deal.status === "Owned")
+    : allRows;
 
   const setSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
@@ -56,13 +61,20 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
     return String(av).localeCompare(String(bv)) * dir;
   });
 
-  const totalSF   = rows.reduce((s, r) => s + (num(r.t.sf) || 0), 0);
-  const totalRent = rows.reduce((s, r) => s + (num(r.t.annualRent) || 0), 0);
-  const avgPSF    = totalSF ? totalRent / totalSF : null;
-  const anchors   = rows.filter(r => r.t.isAnchor).length;
-  const credit    = rows.map(r => r.t.creditRating).find(Boolean);
-  const salesVals = rows.map(r => num(r.t.salesPSF)).filter((v): v is number => v != null);
-  const avgSales  = salesVals.length ? salesVals.reduce((a, b) => a + b, 0) / salesVals.length : null;
+  // Averages — ignore missing values
+  const sfVals       = rows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
+  const rentVals     = rows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
+  const salesVals    = rows.map(r => num(r.t.salesPSF)).filter((v): v is number => v != null);
+  const totalSFAll   = sfVals.reduce((s, v) => s + v, 0);
+  const totalRentAll = rentVals.reduce((s, v) => s + v, 0);
+
+  const avgSF        = sfVals.length ? Math.round(totalSFAll / sfVals.length) : null;
+  const avgRentPSF   = totalSFAll ? totalRentAll / totalSFAll : null;  // SF-weighted
+  const avgAnnRent   = rentVals.length ? totalRentAll / rentVals.length : null;
+  const avgSales     = salesVals.length ? salesVals.reduce((a, b) => a + b, 0) / salesVals.length : null;
+
+  const anchors = allRows.filter(r => r.t.isAnchor).length;
+  const credit  = allRows.map(r => r.t.creditRating).find(Boolean);
 
   const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
@@ -79,6 +91,10 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
     </div>
   );
 
+  const subtitle = scope === "owned"
+    ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}`
+    : `Across ${rows.length} ${rows.length === 1 ? "property" : "properties"} in your database`;
+
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
       <div style={{ marginBottom:16 }}>
@@ -90,54 +106,85 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
         {anchors > 0 && <span style={{ fontSize:10, color:"#1f2b16", background:"#6dba4322", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>ANCHOR · {anchors}</span>}
         {credit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Credit: {credit}</span>}
       </div>
-      <div style={{ fontSize:13, color:"#9a917f", marginBottom:18 }}>Across {rows.length} {rows.length === 1 ? "property" : "properties"} in your database</div>
 
-      <div style={{ display:"flex", gap:11, flexWrap:"wrap", marginBottom:22 }}>
-        <Stat label="Locations"       value={String(rows.length)} />
-        <Stat label="Total SF Leased" value={totalSF ? totalSF.toLocaleString() : "—"} />
-        <Stat label="Total Annual Rent" value={totalRent ? `$${totalRent.toLocaleString()}` : "—"} />
-        <Stat label="Avg Rent / SF"   value={avgPSF != null ? `$${avgPSF.toFixed(2)}` : "—"} />
-        <Stat label="Avg Sales / SF"  value={avgSales != null ? `$${Math.round(avgSales).toLocaleString()}` : "—"} />
-      </div>
-
-      <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:13 }}>Locations — click a row to open the property</div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
-            <thead>
-              <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
-                {cols.map(([k, label, right]) => (
-                  <th key={k} onClick={() => setSort(k)}
-                    style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>
-                    {label}{arrow(k)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r, i) => (
-                <tr key={i} onClick={() => onOpenDeal(r.deal)}
-                  style={{ borderTop:"1px solid #f1eadc", cursor:"pointer" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
-                    {r.deal.propertyName || "Untitled"}
-                    {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
-                  </td>
-                  <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{num(r.t.annualRent) != null ? `$${num(r.t.annualRent)!.toLocaleString()}` : "—"}</td>
-                  <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
-                  <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, flexWrap:"wrap" }}>
+        <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>
+        {/* Scope toggle */}
+        <div style={{ display:"flex", border:"1px solid #e7e0d2", borderRadius:7, overflow:"hidden", fontFamily:"'Inter',sans-serif", fontSize:12 }}>
+          {(["all","owned"] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => setScope(s)}
+              style={{
+                padding:"4px 13px",
+                background: scope === s ? "#383a37" : "#faf7f0",
+                color: scope === s ? "#f6f2ea" : "#7d766a",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: scope === s ? 600 : 400,
+                fontFamily: "inherit",
+                fontSize: "inherit",
+                transition: "background 0.12s, color 0.12s",
+              }}
+            >
+              {s === "all" ? "All" : "Owned"}
+            </button>
+          ))}
         </div>
-        {rows.length === 0 && <div style={{ fontSize:13, color:"#a69e91", padding:"10px 0" }}>No locations found for this tenant.</div>}
       </div>
+
+      {scope === "owned" && rows.length === 0 ? (
+        <div style={{ fontSize:14, color:"#a69e91", padding:"24px 0" }}>No owned locations for this tenant.</div>
+      ) : (
+        <>
+          <div style={{ display:"flex", gap:11, flexWrap:"wrap", marginBottom:22 }}>
+            <Stat label="Locations"       value={String(rows.length)} />
+            <Stat label="Avg Size (SF)"   value={avgSF != null ? avgSF.toLocaleString() : "—"} />
+            <Stat label="Avg Rent / SF"   value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"} />
+            <Stat label="Avg Annual Rent" value={avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—"} />
+            <Stat label="Avg Sales / SF"  value={avgSales != null ? `$${Math.round(avgSales).toLocaleString()}` : "—"} />
+          </div>
+
+          <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:13 }}>Locations — click a row to open the property</div>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
+                <thead>
+                  <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
+                    {cols.map(([k, label, right]) => (
+                      <th key={k} onClick={() => setSort(k)}
+                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>
+                        {label}{arrow(k)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((r, i) => (
+                    <tr key={i} onClick={() => onOpenDeal(r.deal)}
+                      style={{ borderTop:"1px solid #f1eadc", cursor:"pointer" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
+                        {r.deal.propertyName || "Untitled"}
+                        {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+                      </td>
+                      <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
+                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
+                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
+                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{num(r.t.annualRent) != null ? `$${num(r.t.annualRent)!.toLocaleString()}` : "—"}</td>
+                      <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
+                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
+                      <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {rows.length === 0 && <div style={{ fontSize:13, color:"#a69e91", padding:"10px 0" }}>No locations found for this tenant.</div>}
+          </div>
+        </>
+      )}
     </div>
   );
 }
