@@ -830,7 +830,7 @@ ${text.slice(0, 40000)}`;
         transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
         pointerEvents: titleScrolled ? "auto" : "none",
       }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ flex: "1 1 auto", minWidth: 0 }}>
             <div style={{
               fontFamily: "'Fraunces',serif",
@@ -856,7 +856,7 @@ ${text.slice(0, 40000)}`;
               </div>
             )}
           </div>
-          <SectionJump deal={d} scrollRef={scrollContainerRef} />
+          <div style={{ alignSelf: "flex-end" }}><SectionJump deal={d} scrollRef={scrollContainerRef} /></div>
         </div>
       </div>
       {/* Back */}
