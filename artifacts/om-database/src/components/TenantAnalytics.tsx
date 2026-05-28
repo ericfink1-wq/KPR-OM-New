@@ -13,15 +13,28 @@ function fmtRent(n: number): string {
   return `$${Math.round(n)}`;
 }
 
-function n(v: number | string | null | undefined): number | null {
+function num(v: number | string | null | undefined): number | null {
   if (v == null || v === "") return null;
   const x = Number(v);
   return isFinite(x) ? x : null;
 }
 
+function fmtPSF(v: number): string {
+  return `$${Math.round(v)} PSF`;
+}
+
 // ---------------------------------------------------------------------------
 // Aggregation types
 // ---------------------------------------------------------------------------
+
+interface SalesOccurrence {
+  tenantKey: string;
+  displayName: string;
+  dealName: string;
+  salesPSF: number;
+  grossSales: number | null;
+  salesYear: number | null;
+}
 
 interface TenantRow {
   key: string;
@@ -32,8 +45,7 @@ interface TenantRow {
   isAnchor: boolean;
   creditRating: string | null;
   isIG: boolean;
-  bestSalesPSF: number | null;
-  salesYear: number | null;
+  salesOccurrences: SalesOccurrence[];
 }
 
 // ---------------------------------------------------------------------------
@@ -78,7 +90,6 @@ function TenantLink({ name, onClick }: { name: string; onClick?: (name: string) 
   );
 }
 
-// Horizontal bar showing relative proportion of a value vs maxValue
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
@@ -88,7 +99,6 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
   );
 }
 
-// Two-segment stacked bar (IG green vs gray)
 function StackedBar({ igPct, notRatedPct }: { igPct: number; notRatedPct: number }) {
   return (
     <div style={{ display: "flex", height: 28, borderRadius: 8, overflow: "hidden", gap: 1.5, marginTop: 12 }}>
@@ -112,6 +122,38 @@ function StackedBar({ igPct, notRatedPct }: { igPct: number; notRatedPct: number
   );
 }
 
+// Shared pill toggle renderer
+function PillToggle<T extends string>({
+  options, value, onChange,
+}: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          style={{
+            padding: "6px 14px",
+            borderRadius: 7,
+            border: "none",
+            background: value === opt.value ? "#2a2c27" : "transparent",
+            color: value === opt.value ? "#f6f2ea" : "#8a8579",
+            fontSize: 12,
+            fontWeight: value === opt.value ? 600 : 500,
+            cursor: "pointer",
+            fontFamily: "'Inter',sans-serif",
+            letterSpacing: "-0.01em",
+            boxShadow: value === opt.value ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -125,9 +167,10 @@ interface Props {
 
 export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, onBack }: Props) {
   const [filter, setFilter] = useState<"all" | "owned">("all");
+  const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
 
   // Aggregate tenants from all filtered deals
-  const { rows, totalRent } = useMemo(() => {
+  const { rows, totalRent, allOccurrences } = useMemo(() => {
     const filtered = filter === "owned"
       ? deals.filter(d => d.status === "Owned" || d.status === "Sold")
       : deals;
@@ -136,13 +179,15 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
 
     for (const deal of filtered) {
       if (!deal.tenants) continue;
+      const dealName = deal.propertyName || deal.fileName || "Unnamed";
       for (const t of deal.tenants) {
         const rawName = t.canonicalName || t.name;
         if (!rawName || isVacant(rawName)) continue;
         const key = tenantKey(rawName);
-        const annualRent = n(t.annualRent) ?? 0;
-        const rentPSF = n(t.rentPerSF);
-        const salesPSF = n(t.salesPSF);
+        const annualRent = num(t.annualRent) ?? 0;
+        const rentPSF = num(t.rentPerSF);
+        const salesPSF = num(t.salesPSF);
+        const sf = num(t.sf);
         const ig = isInvestmentGrade(rawName, t.creditRating);
 
         if (!map.has(key)) {
@@ -155,8 +200,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
             isAnchor: false,
             creditRating: t.creditRating ?? null,
             isIG: ig,
-            bestSalesPSF: null,
-            salesYear: null,
+            salesOccurrences: [],
           });
         }
         const row = map.get(key)!;
@@ -165,23 +209,32 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
         if (rentPSF != null && rentPSF > 0) row.rentPSFValues.push(rentPSF);
         if (t.isAnchor) row.isAnchor = true;
         if (ig) row.isIG = true;
-        if (salesPSF != null && salesPSF > 0 && (row.bestSalesPSF == null || salesPSF > row.bestSalesPSF)) {
-          row.bestSalesPSF = salesPSF;
-          row.salesYear = t.salesYear ?? null;
+
+        if (salesPSF != null && salesPSF > 0) {
+          const grossSales = sf != null && sf > 0 ? salesPSF * sf : null;
+          row.salesOccurrences.push({
+            tenantKey: key,
+            displayName: rawName,
+            dealName,
+            salesPSF,
+            grossSales,
+            salesYear: t.salesYear ?? null,
+          });
         }
       }
     }
 
     const rows = Array.from(map.values());
     const totalRent = rows.reduce((s, r) => s + r.totalAnnualRent, 0);
-    return { rows, totalRent };
+    const allOccurrences = rows.flatMap(r => r.salesOccurrences);
+    return { rows, totalRent, allOccurrences };
   }, [deals, filter]);
 
-  // Derived lists
+  // Derived lists — rent / count
   const byRent = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
   const byCount = useMemo(() => [...rows].sort((a, b) => b.locationCount - a.locationCount || b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
-  const bySales = useMemo(() => rows.filter(r => r.bestSalesPSF != null).sort((a, b) => (b.bestSalesPSF ?? 0) - (a.bestSalesPSF ?? 0)).slice(0, 10), [rows]);
 
+  // Credit / anchor
   const igCount = useMemo(() => rows.filter(r => r.isIG).length, [rows]);
   const igRent = useMemo(() => rows.filter(r => r.isIG).reduce((s, r) => s + r.totalAnnualRent, 0), [rows]);
   const anchorRent = useMemo(() => rows.filter(r => r.isAnchor).reduce((s, r) => s + r.totalAnnualRent, 0), [rows]);
@@ -192,8 +245,6 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
   const inlinePct = 100 - anchorPct;
 
   const avgRentPSF = useMemo(() => {
-    // Weighted average: total rent / total SF implied by rent+psf pairs
-    // Simple approach: weight average PSF by rent
     let weightedSum = 0, weightSum = 0;
     for (const row of rows) {
       if (row.rentPSFValues.length > 0) {
@@ -205,30 +256,66 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
     return weightSum > 0 ? weightedSum / weightSum : null;
   }, [rows]);
 
+  // Sales — top individual stores
+  const topStores = useMemo(() => {
+    const valid = salesMetric === "psf"
+      ? allOccurrences
+      : allOccurrences.filter(o => o.grossSales != null);
+    return [...valid]
+      .sort((a, b) =>
+        salesMetric === "psf"
+          ? b.salesPSF - a.salesPSF
+          : (b.grossSales ?? 0) - (a.grossSales ?? 0)
+      )
+      .slice(0, 10);
+  }, [allOccurrences, salesMetric]);
+
+  // Sales — top chains (≥2 reporting stores) by average metric
+  const topChains = useMemo(() => {
+    type ChainStat = {
+      key: string;
+      displayName: string;
+      values: number[];
+    };
+    const chainMap = new Map<string, ChainStat>();
+
+    for (const occ of allOccurrences) {
+      const metricVal = salesMetric === "psf" ? occ.salesPSF : occ.grossSales;
+      if (metricVal == null) continue;
+      if (!chainMap.has(occ.tenantKey)) {
+        chainMap.set(occ.tenantKey, { key: occ.tenantKey, displayName: occ.displayName, values: [] });
+      }
+      chainMap.get(occ.tenantKey)!.values.push(metricVal);
+    }
+
+    return Array.from(chainMap.values())
+      .filter(c => c.values.length >= 2)
+      .map(c => {
+        const avg = c.values.reduce((a, b) => a + b, 0) / c.values.length;
+        const min = Math.min(...c.values);
+        const max = Math.max(...c.values);
+        return { ...c, avg, min, max };
+      })
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 10);
+  }, [allOccurrences, salesMetric]);
+
+  const hasSalesData = allOccurrences.length > 0;
   const maxRent = byRent[0]?.totalAnnualRent ?? 1;
   const maxCount = byCount[0]?.locationCount ?? 1;
+  const maxStoreVal = topStores.length > 0
+    ? (salesMetric === "psf" ? topStores[0].salesPSF : (topStores[0].grossSales ?? 1))
+    : 1;
+  const maxChainVal = topChains.length > 0 ? topChains[0].avg : 1;
 
-  // Toggle button renderer
-  const Btn = (f: "all" | "owned", label: string) => (
-    <button
-      onClick={() => setFilter(f)}
-      style={{
-        padding: "7px 16px",
-        borderRadius: 7,
-        border: "none",
-        background: filter === f ? "#2a2c27" : "transparent",
-        color: filter === f ? "#f6f2ea" : "#8a8579",
-        fontSize: 12.5,
-        fontWeight: filter === f ? 600 : 500,
-        cursor: "pointer",
-        fontFamily: "'Inter',sans-serif",
-        letterSpacing: "-0.01em",
-        boxShadow: filter === f ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
-      }}
-    >
-      {label}
-    </button>
-  );
+  const filterOpts = [
+    { value: "all" as const, label: "All Deals" },
+    { value: "owned" as const, label: "Owned" },
+  ];
+  const salesOpts = [
+    { value: "psf" as const, label: "Sales PSF" },
+    { value: "gross" as const, label: "Gross Sales" },
+  ];
 
   return (
     <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
@@ -252,10 +339,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
               Tenant Name Audit
             </button>
           )}
-          <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
-            {Btn("all", "All Deals")}
-            {Btn("owned", "Owned")}
-          </div>
+          <PillToggle options={filterOpts} value={filter} onChange={v => setFilter(v)} />
         </div>
       </div>
 
@@ -312,21 +396,17 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
             </div>
           </Card>
 
-          {/* Credit Quality + Anchor vs Inline — side by side */}
+          {/* Credit Quality + Anchor vs Inline */}
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <Card style={{ flex: 1, minWidth: 260 }}>
               <SectionLabel>Credit Quality</SectionLabel>
-              <div style={{ display: "flex", gap: 20 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: "#5c5850" }}>
-                    <span style={{ fontWeight: 600, color: "#3f7a1f" }}>Investment Grade</span>
-                    <span style={{ color: "#a89f8f", marginLeft: 8 }}>{igPct.toFixed(1)}% · {fmtRent(igRent)}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "#5c5850", marginTop: 4 }}>
-                    <span style={{ fontWeight: 600, color: "#8a8579" }}>Not Rated / Non-IG</span>
-                    <span style={{ color: "#a89f8f", marginLeft: 8 }}>{notRatedPct.toFixed(1)}% · {fmtRent(totalRent - igRent)}</span>
-                  </div>
-                </div>
+              <div style={{ fontSize: 11, color: "#5c5850" }}>
+                <span style={{ fontWeight: 600, color: "#3f7a1f" }}>Investment Grade</span>
+                <span style={{ color: "#a89f8f", marginLeft: 8 }}>{igPct.toFixed(1)}% · {fmtRent(igRent)}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "#5c5850", marginTop: 4 }}>
+                <span style={{ fontWeight: 600, color: "#8a8579" }}>Not Rated / Non-IG</span>
+                <span style={{ color: "#a89f8f", marginLeft: 8 }}>{notRatedPct.toFixed(1)}% · {fmtRent(totalRent - igRent)}</span>
               </div>
               <StackedBar igPct={igPct} notRatedPct={notRatedPct} />
             </Card>
@@ -356,28 +436,80 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
             </Card>
           </div>
 
-          {/* Top Sales Performers */}
-          {bySales.length > 0 && (
-            <Card>
-              <SectionLabel>Top Sales Performers</SectionLabel>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {bySales.map((row, i) => (
-                  <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
-                    <div style={{ flex: "0 0 220px", minWidth: 0 }}>
-                      <TenantLink name={row.displayName} onClick={onTenantClick} />
-                    </div>
-                    <MiniBar value={row.bestSalesPSF!} max={bySales[0].bestSalesPSF!} color="#e8a631" />
-                    <div style={{ width: 80, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>
-                      ${row.bestSalesPSF!.toFixed(0)} PSF
-                    </div>
-                    {row.salesYear && (
-                      <div style={{ width: 36, textAlign: "right", fontSize: 10, color: "#b8b0a3", flexShrink: 0 }}>{row.salesYear}</div>
-                    )}
-                  </div>
-                ))}
+          {/* Sales Performance — two boxes with shared PSF/Gross toggle */}
+          {hasSalesData && (
+            <>
+              {/* Toggle header row */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 }}>
+                  Sales Performance
+                </div>
+                <PillToggle options={salesOpts} value={salesMetric} onChange={v => setSalesMetric(v)} />
               </div>
-            </Card>
+
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                {/* Box 1 — Top Individual Stores */}
+                <Card style={{ flex: 1, minWidth: 300 }}>
+                  <SectionLabel>Top Individual Stores</SectionLabel>
+                  {topStores.length === 0 ? (
+                    <div style={{ fontSize: 12, color: "#a89f8f" }}>No {salesMetric === "gross" ? "gross sales" : "sales PSF"} data available.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                      {topStores.map((occ, i) => {
+                        const metricVal = salesMetric === "psf" ? occ.salesPSF : (occ.grossSales ?? 0);
+                        return (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
+                            <div style={{ flex: "0 0 190px", minWidth: 0 }}>
+                              <TenantLink name={occ.displayName} onClick={onTenantClick} />
+                              <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{occ.dealName}</div>
+                            </div>
+                            <MiniBar value={metricVal} max={maxStoreVal as number} color="#e8a631" />
+                            <div style={{ textAlign: "right", flexShrink: 0, minWidth: 80 }}>
+                              <div style={{ fontSize: 11, color: "#5c5850", fontWeight: 600 }}>
+                                {salesMetric === "psf" ? fmtPSF(occ.salesPSF) : fmtRent(occ.grossSales ?? 0)}
+                              </div>
+                              {occ.salesYear && <div style={{ fontSize: 9.5, color: "#b8b0a3" }}>{occ.salesYear}</div>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+
+                {/* Box 2 — Top Chains by Average (≥2 stores) */}
+                <Card style={{ flex: 1, minWidth: 300 }}>
+                  <SectionLabel>Top Chains by Average <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 9, color: "#c9c2b8" }}>· 2+ reporting stores</span></SectionLabel>
+                  {topChains.length === 0 ? (
+                    <div style={{ fontSize: 12, color: "#a89f8f" }}>No chains with 2+ reporting stores found.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                      {topChains.map((chain, i) => (
+                        <div key={chain.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
+                          <div style={{ flex: "0 0 190px", minWidth: 0 }}>
+                            <TenantLink name={chain.displayName} onClick={onTenantClick} />
+                            <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1 }}>{chain.values.length} stores</div>
+                          </div>
+                          <MiniBar value={chain.avg} max={maxChainVal as number} color="#6baed6" />
+                          <div style={{ textAlign: "right", flexShrink: 0, minWidth: 100 }}>
+                            <div style={{ fontSize: 11, color: "#5c5850", fontWeight: 600 }}>
+                              {salesMetric === "psf" ? fmtPSF(chain.avg) : fmtRent(chain.avg)}
+                            </div>
+                            <div style={{ fontSize: 9.5, color: "#b8b0a3" }}>
+                              {salesMetric === "psf"
+                                ? `$${Math.round(chain.min)}–$${Math.round(chain.max)}`
+                                : `${fmtRent(chain.min)}–${fmtRent(chain.max)}`}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </div>
+            </>
           )}
 
         </div>
