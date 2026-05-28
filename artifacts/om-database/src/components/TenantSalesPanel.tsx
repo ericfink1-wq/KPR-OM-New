@@ -1,8 +1,10 @@
-import React, { useState, useMemo, useRef } from "react";
-import type { TenantSalesYear, TenantSalesRecord } from "../lib/idb";
+import { useState, useMemo, useRef } from "react";
+import type { TenantSalesYear, TenantSalesRecord, Tenant } from "../lib/idb";
 
 interface Props {
   salesHistory: TenantSalesYear[];
+  omTenants?: Tenant[];         // existing roster tenants — used to seed OM sales data
+  omDate?: string | null;       // OM date — used to estimate the sales year
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploadBusy: boolean;
   uploadError: string | null;
@@ -20,20 +22,52 @@ function fmt$(v: number | null | undefined): string {
 
 function fmtPSF(v: number | null | undefined): string {
   if (v == null) return "—";
-  return `$${Math.round(v)} PSF`;
+  return `$${Math.round(Number(v))} PSF`;
 }
 
 function fmtOcc(v: number | null | undefined): string {
   if (v == null) return "—";
-  return `${v.toFixed(1)}%`;
+  return `${Number(v).toFixed(1)}%`;
 }
 
 function fmtNum(v: number | null | undefined): string {
   if (v == null) return "—";
-  return v.toLocaleString();
+  return Number(v).toLocaleString();
 }
 
-// Merge rows across years so each tenant has data for every year available
+// Derive a synthetic OM snapshot from the tenant roster
+function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): TenantSalesYear | null {
+  const reporting = tenants.filter(t =>
+    t.salesPSF != null && t.salesPSF !== "" && !isNaN(Number(t.salesPSF))
+  );
+  if (reporting.length === 0) return null;
+
+  // Best-guess year: omDate year minus 1 (sales in an OM are usually prior-year actuals)
+  // Fall back to just using omDate year if that's all we have
+  let year: number | null = null;
+  if (omDate) {
+    const parsed = new Date(omDate.includes("T") ? omDate : omDate + "T00:00:00");
+    if (!isNaN(parsed.getTime())) {
+      year = parsed.getFullYear() - 1;  // prior-year actuals
+    }
+  }
+
+  return {
+    year: year ?? 0,   // 0 = unknown, handled specially in display
+    uploadedAt: omDate ?? new Date().toISOString(),
+    source: "om",
+    tenants: reporting.map(t => ({
+      name: t.canonicalName || t.name || "",
+      salesPSF: t.salesPSF != null ? Number(t.salesPSF) : null,
+      annualSales: (t.salesPSF != null && t.sf != null)
+        ? Math.round(Number(t.salesPSF) * Number(t.sf))
+        : null,
+      sf: t.sf != null ? Number(t.sf) : null,
+      occupancyCost: t.occupancyCost != null ? Number(t.occupancyCost) : null,
+    })),
+  };
+}
+
 interface MergedRow {
   name: string;
   byYear: Record<number, TenantSalesRecord>;
@@ -43,7 +77,8 @@ function mergeRows(history: TenantSalesYear[]): MergedRow[] {
   const map: Record<string, MergedRow> = {};
   for (const snap of history) {
     for (const t of snap.tenants) {
-      const key = t.name.toLowerCase().trim();
+      const key = (t.name || "").toLowerCase().trim();
+      if (!key) continue;
       if (!map[key]) map[key] = { name: t.name, byYear: {} };
       map[key].byYear[snap.year] = t;
     }
@@ -51,7 +86,13 @@ function mergeRows(history: TenantSalesYear[]): MergedRow[] {
   return Object.values(map);
 }
 
-export default function TenantSalesPanel({ salesHistory, onUpload, uploadBusy, uploadError }: Props) {
+function yearLabel(year: number, source: "om" | "upload"): string {
+  if (year === 0) return source === "om" ? "OM (yr unknown)" : "Unknown";
+  if (source === "om") return `${year} est. (OM)`;
+  return String(year);
+}
+
+export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUpload, uploadBusy, uploadError }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedYear, setSelectedYear] = useState<number | "all">("all");
   const [filter, setFilter] = useState("");
@@ -59,32 +100,48 @@ export default function TenantSalesPanel({ salesHistory, onUpload, uploadBusy, u
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [collapsed, setCollapsed] = useState(false);
 
+  // Build OM snapshot if not already in history
+  const omSnapshot = useMemo(() => {
+    if (!omTenants?.length) return null;
+    const snap = buildOmSnapshot(omTenants, omDate);
+    if (!snap) return null;
+    // Don't synthesize if we already have an uploaded entry for that year
+    const alreadyHave = salesHistory.some(s => s.year === snap.year && s.source !== "om");
+    return alreadyHave ? null : snap;
+  }, [omTenants, omDate, salesHistory]);
+
+  // Full history = uploaded + OM seed (OM always goes first / lowest)
+  const fullHistory = useMemo(() => {
+    const all = omSnapshot ? [omSnapshot, ...salesHistory] : [...salesHistory];
+    return all.sort((a, b) => a.year - b.year);
+  }, [salesHistory, omSnapshot]);
+
+  const hasAnySales = fullHistory.length > 0;
+
   // Sorted unique years, most-recent first
   const years = useMemo(
-    () => [...new Set(salesHistory.map(s => s.year))].sort((a, b) => b - a),
-    [salesHistory]
+    () => [...new Set(fullHistory.map(s => s.year))].sort((a, b) => b - a),
+    [fullHistory]
   );
 
-  // Most recent upload timestamp
+  // Most recent uploaded entry (non-OM preferred)
   const lastUpload = useMemo(() => {
-    if (!salesHistory.length) return null;
-    return salesHistory.slice().sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))[0];
+    const uploaded = salesHistory.filter(s => s.source !== "om");
+    if (uploaded.length) return uploaded.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))[0];
+    return null;
   }, [salesHistory]);
 
-  // Rows for selected year(s)
   const allRows = useMemo(() => {
     if (selectedYear !== "all") {
-      const snap = salesHistory.find(s => s.year === selectedYear);
+      const snap = fullHistory.find(s => s.year === selectedYear);
       if (!snap) return [];
       return snap.tenants.map(t => ({ name: t.name, byYear: { [selectedYear]: t } as Record<number, TenantSalesRecord> }));
     }
-    return mergeRows(salesHistory);
-  }, [salesHistory, selectedYear]);
+    return mergeRows(fullHistory);
+  }, [fullHistory, selectedYear]);
 
-  // Which years to display as columns in "all" mode
-  const displayYears = selectedYear === "all" ? years : [selectedYear];
+  const displayYears = selectedYear === "all" ? years : [selectedYear as number];
 
-  // Filter + sort
   const rows = useMemo(() => {
     let r = allRows.filter(row =>
       !filter.trim() || row.name.toLowerCase().includes(filter.toLowerCase())
@@ -104,8 +161,7 @@ export default function TenantSalesPanel({ salesHistory, onUpload, uploadBusy, u
         const cmp = a.name.localeCompare(b.name);
         return sortDir === "asc" ? cmp : -cmp;
       }
-      const av = getVal(a);
-      const bv = getVal(b);
+      const av = getVal(a), bv = getVal(b);
       if (av == null && bv == null) return 0;
       if (av == null) return 1;
       if (bv == null) return -1;
@@ -126,163 +182,144 @@ export default function TenantSalesPanel({ salesHistory, onUpload, uploadBusy, u
   );
 
   const TH = ({ label, k, align = "right" }: { label: string; k: SortKey; align?: "left" | "right" }) => (
-    <th
-      onClick={() => toggleSort(k)}
-      style={{
-        padding: "7px 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
-        color: sortKey === k ? "#3f7a1f" : "#7d766a", textTransform: "uppercase",
-        cursor: "pointer", whiteSpace: "nowrap", textAlign: align,
-        background: "transparent", border: "none", userSelect: "none",
-        borderBottom: "1px solid #e8e2d6",
-      }}
-    >
+    <th onClick={() => toggleSort(k)} style={{
+      padding: "7px 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+      color: sortKey === k ? "#3f7a1f" : "#7d766a", textTransform: "uppercase",
+      cursor: "pointer", whiteSpace: "nowrap", textAlign: align,
+      background: "transparent", border: "none", userSelect: "none",
+      borderBottom: "1px solid #e8e2d6",
+    }}>
       {label}<SortArrow k={k} />
     </th>
   );
 
-  const tdStyle = (first?: boolean, leftBorder?: boolean): React.CSSProperties => ({
-    padding: "6px 10px",
-    fontSize: 12,
-    color: "#383a37",
-    textAlign: first ? "left" : "right",
-    borderBottom: "1px solid #f0ece3",
-    borderLeft: leftBorder ? "2px solid #c8ddb8" : undefined,
-    whiteSpace: "nowrap",
-  });
-
-  if (!salesHistory.length) {
+  // No sales data at all (no uploads, no OM sales)
+  if (!hasAnySales) {
     return (
-      <div style={{
-        background: "#fafaf7", border: "1px solid #e8e2d6", borderRadius: 10,
-        padding: "16px 18px", marginBottom: 16,
-      }}>
+      <div style={{ background: "#fafaf7", border: "1px solid #e8e2d6", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 15 }}>📊</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#383a37", fontFamily: "'Inter',sans-serif" }}>
-              Tenant Sales
-            </span>
-            <span style={{ fontSize: 11, color: "#958d80" }}>— no sales data uploaded yet</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#383a37", fontFamily: "'Inter',sans-serif" }}>Tenant Sales</span>
+            <span style={{ fontSize: 11, color: "#958d80" }}>— no sales data available</span>
           </div>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploadBusy}
-            style={{
-              background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6,
-              padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer",
-              opacity: uploadBusy ? 0.6 : 1, whiteSpace: "nowrap",
-            }}
-          >
+          <button onClick={() => fileRef.current?.click()} disabled={uploadBusy} style={{
+            background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6,
+            padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer",
+            opacity: uploadBusy ? 0.6 : 1, whiteSpace: "nowrap",
+          }}>
             {uploadBusy ? "Uploading…" : "⬆ Upload Sales PDF"}
           </button>
         </div>
-        {uploadError && (
-          <div style={{ marginTop: 8, fontSize: 11, color: "#dc2626" }}>⚠ {uploadError}</div>
-        )}
+        {uploadError && <div style={{ marginTop: 8, fontSize: 11, color: "#dc2626" }}>⚠ {uploadError}</div>}
         <input ref={fileRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={onUpload} />
         <div style={{ marginTop: 10, fontSize: 11, color: "#958d80", lineHeight: 1.55 }}>
-          Upload a tenant sales report PDF (from the broker or property manager) and the year will be automatically detected. Sales data is tracked by year so you always know how current the numbers are.
+          Upload a tenant sales report PDF and the year will be automatically detected. Sales data is tracked by year so you always know how current the numbers are.
         </div>
       </div>
     );
   }
 
+  // Determine the source label for the header
+  const hasUploadedData = salesHistory.length > 0;
+  const omOnly = !hasUploadedData && omSnapshot != null;
+
   return (
-    <div style={{
-      background: "#f5f9f2", border: "1.5px solid #b8d9a0", borderRadius: 10,
-      marginBottom: 16, overflow: "hidden",
-    }}>
-      {/* Header bar */}
+    <div style={{ background: "#f5f9f2", border: "1.5px solid #b8d9a0", borderRadius: 10, marginBottom: 16, overflow: "hidden" }}>
+      {/* Header */}
       <div
-        style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "11px 16px",
-          background: "#eef5e8", borderBottom: collapsed ? "none" : "1px solid #c8ddb8",
-          cursor: "pointer",
-        }}
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", background: "#eef5e8", borderBottom: collapsed ? "none" : "1px solid #c8ddb8", cursor: "pointer" }}
         onClick={() => setCollapsed(c => !c)}
       >
         <span style={{ fontSize: 15 }}>📊</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#2d5a0e", fontFamily: "'Inter',sans-serif", flexShrink: 0 }}>
           Tenant Sales
         </span>
+
         {/* Year pills */}
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {years.map(y => (
-            <span
-              key={y}
-              style={{
-                background: "#3f7a1f22", border: "1px solid #3f7a1f55",
+          {years.map(y => {
+            const snap = fullHistory.find(s => s.year === y);
+            const isOM = snap?.source === "om";
+            return (
+              <span key={y} style={{
+                background: isOM ? "#fff8e1" : "#3f7a1f22",
+                border: `1px solid ${isOM ? "#f5c842" : "#3f7a1f55"}`,
                 borderRadius: 10, padding: "1px 8px", fontSize: 10,
-                color: "#2d5a0e", fontWeight: 600,
-              }}
-            >
-              {y}
-            </span>
-          ))}
+                color: isOM ? "#7a5e00" : "#2d5a0e", fontWeight: 600,
+              }}>
+                {yearLabel(y, snap?.source ?? "upload")}
+              </span>
+            );
+          })}
         </div>
-        {lastUpload && (
+
+        {lastUpload ? (
           <span style={{ fontSize: 10, color: "#6f8a5a", marginLeft: "auto", flexShrink: 0 }}>
-            Last uploaded {new Date(lastUpload.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            Updated {new Date(lastUpload.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
           </span>
-        )}
-        <span style={{ fontSize: 10, color: "#6f8a5a", marginLeft: lastUpload ? 0 : "auto" }}>
+        ) : omOnly ? (
+          <span style={{ fontSize: 10, color: "#9a7a20", marginLeft: "auto", flexShrink: 0 }}>From OM — upload dedicated sales report for more detail</span>
+        ) : null}
+
+        <span style={{ fontSize: 10, color: "#6f8a5a", marginLeft: lastUpload || omOnly ? 0 : "auto" }}>
           {collapsed ? "SHOW ▾" : "HIDE ▴"}
         </span>
       </div>
 
       {!collapsed && (
         <div style={{ padding: "12px 16px" }}>
-          {/* Controls row */}
+          {/* OM data notice */}
+          {omSnapshot && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#fffbea", border: "1px solid #f5c842", borderRadius: 7, padding: "8px 12px", marginBottom: 10, fontSize: 11, color: "#7a5e00" }}>
+              <span style={{ flexShrink: 0 }}>⚠</span>
+              <span>
+                <b>OM data</b> — pulled from the tenant roster.{" "}
+                {omSnapshot.year > 0
+                  ? `Year estimated as ${omSnapshot.year} (prior year to OM date).`
+                  : "Sales year could not be determined from the OM date."}{" "}
+                Upload a dedicated tenant sales PDF to replace with verified annual figures.
+              </span>
+            </div>
+          )}
+
+          {/* Controls */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-            {/* Year selector */}
             <select
               value={String(selectedYear)}
               onChange={e => setSelectedYear(e.target.value === "all" ? "all" : Number(e.target.value))}
-              style={{
-                fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid #c8ddb8",
-                background: "#fff", color: "#383a37", cursor: "pointer",
-              }}
+              style={{ fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid #c8ddb8", background: "#fff", color: "#383a37", cursor: "pointer" }}
             >
               <option value="all">All Years</option>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
+              {years.map(y => {
+                const snap = fullHistory.find(s => s.year === y);
+                return <option key={y} value={y}>{yearLabel(y, snap?.source ?? "upload")}</option>;
+              })}
             </select>
 
-            {/* Search */}
             <input
               type="text"
               placeholder="Filter tenants…"
               value={filter}
               onChange={e => setFilter(e.target.value)}
-              style={{
-                fontSize: 11, padding: "5px 10px", borderRadius: 6, border: "1px solid #c8ddb8",
-                background: "#fff", color: "#383a37", flex: 1, minWidth: 120, maxWidth: 200,
-              }}
+              style={{ fontSize: 11, padding: "5px 10px", borderRadius: 6, border: "1px solid #c8ddb8", background: "#fff", color: "#383a37", flex: 1, minWidth: 120, maxWidth: 200 }}
             />
 
-            {/* Upload button */}
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploadBusy}
-              style={{
-                background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6,
-                padding: "5px 13px", fontSize: 11, fontWeight: 600, cursor: "pointer",
-                opacity: uploadBusy ? 0.6 : 1, marginLeft: "auto", whiteSpace: "nowrap",
-              }}
-            >
+            <button onClick={() => fileRef.current?.click()} disabled={uploadBusy} style={{
+              background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6,
+              padding: "5px 13px", fontSize: 11, fontWeight: 600, cursor: "pointer",
+              opacity: uploadBusy ? 0.6 : 1, marginLeft: "auto", whiteSpace: "nowrap",
+            }}>
               {uploadBusy ? "Uploading…" : "⬆ Update Sales"}
             </button>
             <input ref={fileRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={onUpload} />
           </div>
 
-          {uploadError && (
-            <div style={{ marginBottom: 8, fontSize: 11, color: "#dc2626" }}>⚠ {uploadError}</div>
-          )}
+          {uploadError && <div style={{ marginBottom: 8, fontSize: 11, color: "#dc2626" }}>⚠ {uploadError}</div>}
 
           {/* Table */}
           {rows.length === 0 ? (
-            <div style={{ fontSize: 12, color: "#958d80", textAlign: "center", padding: "16px 0" }}>
-              No tenants match your filter.
-            </div>
+            <div style={{ fontSize: 12, color: "#958d80", textAlign: "center", padding: "16px 0" }}>No tenants match your filter.</div>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -290,20 +327,21 @@ export default function TenantSalesPanel({ salesHistory, onUpload, uploadBusy, u
                   <tr style={{ background: "#eef5e8" }}>
                     <TH label="Tenant" k="name" align="left" />
                     {selectedYear === "all"
-                      ? displayYears.map(y => (
-                          <th
-                            key={y}
-                            colSpan={3}
-                            style={{
+                      ? displayYears.map(y => {
+                          const snap = fullHistory.find(s => s.year === y);
+                          const isOM = snap?.source === "om";
+                          return (
+                            <th key={y} colSpan={3} style={{
                               padding: "5px 10px", fontSize: 10, fontWeight: 700,
-                              color: "#2d5a0e", textTransform: "uppercase",
+                              color: isOM ? "#7a5e00" : "#2d5a0e", textTransform: "uppercase",
                               textAlign: "center", borderBottom: "1px solid #e8e2d6",
                               borderLeft: "2px solid #c8ddb8",
-                            }}
-                          >
-                            {y}
-                          </th>
-                        ))
+                              background: isOM ? "#fffbea" : undefined,
+                            }}>
+                              {yearLabel(y, snap?.source ?? "upload")}
+                            </th>
+                          );
+                        })
                       : (
                         <>
                           <TH label="Sales PSF" k="salesPSF" />
@@ -317,88 +355,40 @@ export default function TenantSalesPanel({ salesHistory, onUpload, uploadBusy, u
                     <tr style={{ background: "#f5f9f2" }}>
                       <th style={{ borderBottom: "1px solid #e8e2d6" }} />
                       {displayYears.map(y => (
-                        <React.Fragment key={y}>
-                          <th
-                            onClick={() => toggleSort("salesPSF")}
-                            style={{
-                              padding: "4px 10px", fontSize: 10, fontWeight: 600,
-                              color: sortKey === "salesPSF" ? "#3f7a1f" : "#6f8a5a",
-                              textAlign: "right", borderBottom: "1px solid #e8e2d6",
-                              borderLeft: "2px solid #c8ddb8", cursor: "pointer",
-                              whiteSpace: "nowrap", userSelect: "none",
-                            }}
-                          >
-                            Sales PSF<SortArrow k="salesPSF" />
-                          </th>
-                          <th
-                            onClick={() => toggleSort("annualSales")}
-                            style={{
-                              padding: "4px 10px", fontSize: 10, fontWeight: 600,
-                              color: sortKey === "annualSales" ? "#3f7a1f" : "#6f8a5a",
-                              textAlign: "right", borderBottom: "1px solid #e8e2d6",
-                              cursor: "pointer", whiteSpace: "nowrap", userSelect: "none",
-                            }}
-                          >
-                            Total Sales<SortArrow k="annualSales" />
-                          </th>
-                          <th
-                            onClick={() => toggleSort("occupancyCost")}
-                            style={{
-                              padding: "4px 10px", fontSize: 10, fontWeight: 600,
-                              color: sortKey === "occupancyCost" ? "#3f7a1f" : "#6f8a5a",
-                              textAlign: "right", borderBottom: "1px solid #e8e2d6",
-                              cursor: "pointer", whiteSpace: "nowrap", userSelect: "none",
-                            }}
-                          >
-                            Occ Cost %<SortArrow k="occupancyCost" />
-                          </th>
-                        </React.Fragment>
+                        <>
+                          <th key={`${y}-psf`} onClick={() => toggleSort("salesPSF")} style={{ padding: "4px 10px", fontSize: 10, color: "#7d766a", textAlign: "right", cursor: "pointer", borderLeft: "2px solid #c8ddb8", borderBottom: "1px solid #e8e2d6" }}>Sales PSF</th>
+                          <th key={`${y}-tot`} onClick={() => toggleSort("annualSales")} style={{ padding: "4px 10px", fontSize: 10, color: "#7d766a", textAlign: "right", cursor: "pointer", borderBottom: "1px solid #e8e2d6" }}>Total Sales</th>
+                          <th key={`${y}-occ`} onClick={() => toggleSort("occupancyCost")} style={{ padding: "4px 10px", fontSize: 10, color: "#7d766a", textAlign: "right", cursor: "pointer", borderBottom: "1px solid #e8e2d6" }}>Occ Cost %</th>
+                        </>
                       ))}
                     </tr>
                   )}
                 </thead>
                 <tbody>
                   {rows.map((row, i) => (
-                    <tr
-                      key={row.name}
-                      style={{ background: i % 2 === 0 ? "#fff" : "#f8fbf5" }}
-                    >
-                      <td style={tdStyle(true)}>
-                        <span style={{ fontWeight: 500 }}>{row.name}</span>
-                      </td>
+                    <tr key={row.name} style={{ background: i % 2 === 0 ? "#fff" : "#f8fbf5", borderBottom: "1px solid #eef0eb" }}>
+                      <td style={{ padding: "7px 10px", fontWeight: 600, color: "#262724", whiteSpace: "nowrap" }}>{row.name}</td>
                       {selectedYear === "all"
                         ? displayYears.map(y => {
                             const rec = row.byYear[y];
                             return (
-                              <React.Fragment key={y}>
-                                <td style={{ ...tdStyle(false, true), color: rec?.salesPSF != null ? "#2d5a0e" : "#c0b8ac", fontWeight: rec?.salesPSF != null ? 600 : 400 }}>
+                              <>
+                                <td key={`${y}-psf`} style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#2d5a0e" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400, borderLeft: "2px solid #c8ddb8" }}>
                                   {fmtPSF(rec?.salesPSF)}
                                 </td>
-                                <td style={tdStyle()}>
-                                  {fmt$(rec?.annualSales)}
-                                </td>
-                                <td style={{ ...tdStyle(), color: rec?.occupancyCost != null && rec.occupancyCost > 15 ? "#dc2626" : rec?.occupancyCost != null && rec.occupancyCost > 10 ? "#ea6000" : "#383a37" }}>
-                                  {fmtOcc(rec?.occupancyCost)}
-                                </td>
-                              </React.Fragment>
+                                <td key={`${y}-tot`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
+                                <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtOcc(rec?.occupancyCost)}</td>
+                              </>
                             );
                           })
                         : (() => {
                             const rec = row.byYear[selectedYear as number];
                             return (
                               <>
-                                <td style={{ ...tdStyle(), color: rec?.salesPSF != null ? "#2d5a0e" : "#c0b8ac", fontWeight: rec?.salesPSF != null ? 600 : 400 }}>
-                                  {fmtPSF(rec?.salesPSF)}
-                                </td>
-                                <td style={tdStyle()}>
-                                  {fmt$(rec?.annualSales)}
-                                </td>
-                                <td style={tdStyle()}>
-                                  {fmtNum(rec?.sf)}
-                                </td>
-                                <td style={{ ...tdStyle(), color: rec?.occupancyCost != null && rec.occupancyCost > 15 ? "#dc2626" : rec?.occupancyCost != null && rec.occupancyCost > 10 ? "#ea6000" : "#383a37" }}>
-                                  {fmtOcc(rec?.occupancyCost)}
-                                </td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#2d5a0e" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}</td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtNum(rec?.sf)}</td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtOcc(rec?.occupancyCost)}</td>
                               </>
                             );
                           })()
@@ -410,11 +400,27 @@ export default function TenantSalesPanel({ salesHistory, onUpload, uploadBusy, u
             </div>
           )}
 
-          <div style={{ marginTop: 8, fontSize: 10, color: "#958d80" }}>
-            {rows.length} tenant{rows.length !== 1 ? "s" : ""}
-            {selectedYear !== "all" && ` · ${selectedYear}`}
-            {" · "}Occ Cost % highlighted orange {">"}10%, red {">"}15%
+          <div style={{ marginTop: 8, fontSize: 10, color: "#8a9a7a", lineHeight: 1.5 }}>
+            {years.length > 1
+              ? `${years.length} years of sales data on file. Year is always shown so you know how current the numbers are.`
+              : omOnly
+                ? "Figures pulled from OM — year is estimated. Upload a dedicated sales report to lock in verified annual data."
+                : `Sales data for ${yearLabel(years[0], fullHistory.find(s => s.year === years[0])?.source ?? "upload")}. Upload additional years to track trends.`}
           </div>
+
+          {fullHistory.length > 1 && (
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ fontSize: 10, color: "#6f8a5a", cursor: "pointer" }}>Data sources</summary>
+              <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+                {[...fullHistory].sort((a, b) => b.year - a.year).map(s => (
+                  <div key={`${s.year}-${s.uploadedAt}`} style={{ fontSize: 10, color: "#8a9a7a" }}>
+                    <b style={{ color: "#2d5a0e" }}>{yearLabel(s.year, s.source)}</b> — {s.tenants.length} tenants
+                    {s.source === "om" ? " (from OM, estimated year)" : ` — uploaded ${new Date(s.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
       )}
     </div>

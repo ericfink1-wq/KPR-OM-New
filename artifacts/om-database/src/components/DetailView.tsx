@@ -1275,15 +1275,19 @@ ${text.slice(0, 40000)}`;
         /></div>
       )}
 
-      {/* Tenant Sales */}
-      <div id="section-tenant-sales">
-        <TenantSalesPanel
-          salesHistory={d.tenantSalesHistory || []}
-          onUpload={handleSalesUpload}
-          uploadBusy={salesBusy}
-          uploadError={salesError}
-        />
-      </div>
+      {/* Tenant Sales Panel */}
+      {(d.tenants||[]).length > 0 && (
+        <div id="section-tenant-sales">
+          <TenantSalesPanel
+            salesHistory={d.tenantSalesHistory || []}
+            omTenants={d.tenants}
+            omDate={d.omDate}
+            onUpload={handleSalesUpload}
+            uploadBusy={salesBusy}
+            uploadError={salesError}
+          />
+        </div>
+      )}
 
       {/* Lease Rollover & WALT */}
       {(d.tenants||[]).length > 0 && (
