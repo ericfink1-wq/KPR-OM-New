@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
 
 interface Props {
   tab: string;
@@ -27,7 +27,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
   const [backupRect, setBackupRect] = useState<DOMRect | null>(null);
-  const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number } | null>(null);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number; mergedNames?: string[] } | null>(null);
 
   const active = deals.filter(d => !d.trashedAt);
   const handleFiles = (fl: FileList | null) => {
@@ -83,12 +83,18 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     }
 
     const succeeded: Deal[] = [];
+    const mergedNames: string[] = [];
     let failed = 0;
     for (let i = 0; i < allDeals.length; i++) {
       setImportProgress({ current: i + 1, total: allDeals.length });
       try {
-        await apiSaveDeal(allDeals[i]);
-        succeeded.push(allDeals[i]);
+        const result = await apiImportDeal(allDeals[i]);
+        // For merged deals, update the local deal id to match the existing one
+        const deal = result.merged
+          ? { ...allDeals[i], id: result.id }
+          : allDeals[i];
+        succeeded.push(deal);
+        if (result.merged) mergedNames.push(result.propertyName || allDeals[i].propertyName || "");
       } catch {
         failed++;
       }
@@ -96,8 +102,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
     if (succeeded.length > 0 && onDealsAdded) onDealsAdded(succeeded);
 
-    setImportProgress({ current: allDeals.length, total: allDeals.length, done: succeeded.length, failed });
-    setTimeout(() => setImportProgress(null), 3500);
+    setImportProgress({ current: allDeals.length, total: allDeals.length, done: succeeded.length, failed, mergedNames });
+    setTimeout(() => setImportProgress(null), mergedNames.length > 0 ? 6000 : 3500);
   };
 
   const exportCSV = () => {
@@ -433,6 +439,15 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             </div>
             {importProgress.failed && importProgress.failed > 0 ? (
               <div style={{ fontSize: 11, color: "#a69e91" }}>Check console for details</div>
+            ) : null}
+            {importProgress.mergedNames && importProgress.mergedNames.length > 0 ? (
+              <div style={{ marginTop: 6, borderTop: "1px solid #f1eadc", paddingTop: 6 }}>
+                {importProgress.mergedNames.map(name => (
+                  <div key={name} style={{ fontSize: 11, color: "#3f7a1f", lineHeight: 1.45 }}>
+                    <strong>{name}</strong> updated — tenant roster, financials, and red flags refreshed. Your notes and deal info were preserved.
+                  </div>
+                ))}
+              </div>
             ) : null}
           </div>
         ) : (

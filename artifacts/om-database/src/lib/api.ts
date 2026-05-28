@@ -60,6 +60,22 @@ export async function apiSaveDeal(deal: Deal): Promise<void> {
   if (!resp.ok) throw new Error("Failed to save deal");
 }
 
+export interface ImportDealResult {
+  ok: boolean;
+  id: string;
+  merged: boolean;
+  propertyName: string;
+}
+
+export async function apiImportDeal(deal: Deal): Promise<ImportDealResult> {
+  const resp = await apiFetch("/deals/import", {
+    method: "POST",
+    body: JSON.stringify(deal),
+  });
+  if (!resp.ok) throw new Error("Failed to import deal");
+  return resp.json() as Promise<ImportDealResult>;
+}
+
 export async function apiSaveDeals(deals: Deal[]): Promise<void> {
   await Promise.all(deals.map(d => apiSaveDeal(d)));
 }

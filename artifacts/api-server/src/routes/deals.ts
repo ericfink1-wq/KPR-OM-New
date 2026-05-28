@@ -73,7 +73,6 @@ const USER_PRESERVED_KEYS = new Set([
   "verified", "propertyGroupId", "editHistory",
   "trashedAt", "uploadedAt", "fileName", "pdfPages", "imageMeta", "dealScore",
   "prefLender", "prefAmount", "prefRateCurrent", "prefRateAllIn", "prefReturnType", "prefOriginationDate", "prefMaturityDate", "prefTermYears", "prefRecourse", "prefNotes",
-  "prefLender", "prefAmount", "prefRate", "prefReturnType", "prefOriginationDate", "prefMaturityDate", "prefTermYears", "prefRecourse", "prefNotes",
   "tenantSalesHistory",
 ]);
 
@@ -94,6 +93,90 @@ router.get("/deals", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to load deals");
     res.status(500).json({ error: "Failed to load deals" });
+  }
+});
+
+// POST /api/deals/import — smart merge/upsert for JSON deal uploads
+// Matches on propertyName + address (case-insensitive); preserves USER_PRESERVED_KEYS on merge.
+router.post("/deals/import", requireAuth, async (req, res) => {
+  try {
+    const { id: uploadedId, ...uploadedData } = req.body as Record<string, unknown>;
+
+    const normName = typeof uploadedData.propertyName === "string"
+      ? uploadedData.propertyName.trim().toLowerCase() : null;
+    const normAddr = typeof uploadedData.address === "string"
+      ? uploadedData.address.trim().toLowerCase() : null;
+
+    // Scan for an existing deal with matching propertyName (required) + address (when both sides have one)
+    let existingRow: { id: string; data: Record<string, unknown> } | null = null;
+    if (normName) {
+      const allRows = await db.select().from(dealsTable);
+      for (const row of allRows) {
+        const d = row.data as Record<string, unknown>;
+        const eName = typeof d.propertyName === "string" ? d.propertyName.trim().toLowerCase() : null;
+        if (eName !== normName) continue;
+        const eAddr = typeof d.address === "string" ? d.address.trim().toLowerCase() : null;
+        // Address must match when both sides have one; ignored when either is absent
+        if (normAddr && eAddr && normAddr !== eAddr) continue;
+        existingRow = { id: row.id, data: d };
+        break;
+      }
+    }
+
+    if (existingRow) {
+      // MERGE — overlay extracted fields from upload, keep user-entered fields from DB
+      const merged: Record<string, unknown> = { ...uploadedData };
+      for (const [k, v] of Object.entries(existingRow.data)) {
+        if (USER_PRESERVED_KEYS.has(k) || k.startsWith("user_") || k.startsWith("custom_")) {
+          merged[k] = v;
+        }
+      }
+      // Always keep identity fields from the existing record
+      merged.propertyName = existingRow.data.propertyName ?? uploadedData.propertyName;
+      merged.address = existingRow.data.address ?? uploadedData.address;
+
+      const id = existingRow.id;
+      await db.update(dealsTable)
+        .set({ data: merged, updatedAt: new Date() })
+        .where(eq(dealsTable.id, id));
+      setImmediate(() => {
+        rebuildTenantIndex(id, merged).catch(() => {});
+        rebuildCompsIndex(id, merged).catch(() => {});
+      });
+      res.json({ ok: true, id, merged: true, propertyName: String(merged.propertyName ?? "") });
+    } else {
+      // NEW — insert as a fresh deal
+      const id = typeof uploadedId === "string" && uploadedId
+        ? uploadedId
+        : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      await db.insert(dealsTable).values({ id, data: uploadedData });
+      setImmediate(() => {
+        rebuildTenantIndex(id, uploadedData).catch(() => {});
+        rebuildCompsIndex(id, uploadedData).catch(() => {});
+        if (!uploadedData.marketDemographics && !uploadedData.demoChecked) {
+          (async () => {
+            const composed = composeAddressForGeocoder(uploadedData as { address?: string | null; city?: string | null; state?: string | null });
+            if (!composed) return;
+            try {
+              const demo = await fetchCensusDemographics(composed);
+              if (demo) {
+                const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+                if (rows.length) {
+                  const current = rows[0].data as Record<string, unknown>;
+                  await db.update(dealsTable)
+                    .set({ data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() }, updatedAt: new Date() })
+                    .where(eq(dealsTable.id, id));
+                }
+              }
+            } catch {}
+          })();
+        }
+      });
+      res.status(201).json({ ok: true, id, merged: false, propertyName: String(uploadedData.propertyName ?? "") });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Failed to import deal");
+    res.status(500).json({ error: "Failed to import deal" });
   }
 });
 
