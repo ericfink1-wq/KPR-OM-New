@@ -9,4 +9,6 @@ export const feedbackTable = pgTable("feedback", {
   page: text("page"),
   userAgent: text("user_agent"),
   resolved: boolean("resolved").notNull().default(false),
+  emailStatus: text("email_status"),
+  emailError: text("email_error"),
 });

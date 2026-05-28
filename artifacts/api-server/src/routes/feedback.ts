@@ -44,10 +44,15 @@ router.post("/feedback", requireAuth, async (req, res) => {
       })
       .returning();
 
-    // Best-effort email — never blocks the response
+    // Best-effort email — capture status, never block response
+    let emailStatus: string;
+    let emailError: string | null = null;
+
     try {
       const apiKey = process.env.RESEND_API_KEY;
-      if (apiKey) {
+      if (!apiKey) {
+        emailStatus = "skipped";
+      } else {
         const to = process.env.FEEDBACK_EMAIL_TO || "efink@kprcenters.com";
         const summary = [
           "New KPR feedback",
@@ -59,7 +64,7 @@ router.post("/feedback", requireAuth, async (req, res) => {
           row.message,
         ].join("\n");
 
-        await fetch("https://api.resend.com/emails", {
+        const emailResp = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -72,10 +77,27 @@ router.post("/feedback", requireAuth, async (req, res) => {
             text: summary,
           }),
         });
+
+        const respBody = await emailResp.text().catch(() => "");
+        req.log.info({ status: emailResp.status, body: respBody.slice(0, 200) }, "Resend response");
+
+        if (emailResp.ok) {
+          emailStatus = "sent";
+        } else {
+          emailStatus = "failed";
+          emailError = `HTTP ${emailResp.status}: ${respBody}`.slice(0, 300);
+        }
       }
     } catch (emailErr) {
-      req.log.warn({ err: emailErr }, "Feedback email send failed (non-fatal)");
+      emailStatus = "failed";
+      emailError = (emailErr instanceof Error ? emailErr.message : String(emailErr)).slice(0, 300);
+      req.log.warn({ err: emailErr }, "Feedback email threw (non-fatal)");
     }
+
+    await db
+      .update(feedbackTable)
+      .set({ emailStatus, emailError })
+      .where(eq(feedbackTable.id, row.id));
 
     res.json({ id: row.id, createdAt: row.createdAt });
   } catch (err) {

@@ -251,6 +251,8 @@ export interface FeedbackItem {
   page: string | null;
   userAgent: string | null;
   resolved: boolean;
+  emailStatus: string | null;
+  emailError: string | null;
 }
 
 export async function apiSubmitFeedback(payload: {

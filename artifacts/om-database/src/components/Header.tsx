@@ -622,6 +622,34 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                     </span>
                   </div>
                   <div style={{ fontSize: 13, color: "#383a37", lineHeight: 1.55, marginBottom: 8, whiteSpace: "pre-wrap" }}>{f.message}</div>
+                  {/* Email status chip */}
+                  {(() => {
+                    const es = f.emailStatus;
+                    if (!es) return null;
+                    if (es === "sent") return (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", borderRadius: 6, padding: "2px 8px", fontSize: 10.5, fontWeight: 600, marginBottom: 8 }}>
+                        ✓ emailed
+                      </div>
+                    );
+                    if (es === "skipped") return (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#f5f5f4", border: "1px solid #e7e5e4", color: "#78716c", borderRadius: 6, padding: "2px 8px", fontSize: 10.5, fontWeight: 600, marginBottom: 8 }}>
+                        email skipped
+                      </div>
+                    );
+                    if (es === "failed") return (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", borderRadius: 6, padding: "2px 8px", fontSize: 10.5, fontWeight: 600 }}>
+                          ✕ email failed
+                        </div>
+                        {f.emailError && (
+                          <div style={{ marginTop: 4, fontSize: 10.5, color: "#b91c1c", fontFamily: "'Inter',monospace", background: "#fef2f2", padding: "4px 8px", borderRadius: 4, wordBreak: "break-all" }}>
+                            {f.emailError}
+                          </div>
+                        )}
+                      </div>
+                    );
+                    return null;
+                  })()}
                   <button
                     onClick={() => handleToggleResolved(f.id, !f.resolved)}
                     style={{
