@@ -305,7 +305,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(input); } }}
             placeholder={active.length === 0 ? "Upload some OMs first, then ask me anything…" : "Ask anything about your deal library…"}
             disabled={loading}
-            rows={2}
+            rows={1}
             style={{
               flex: 1, resize: "none", fontFamily: "'Inter', sans-serif", fontSize: 13.5,
               padding: "10px 14px", border: "1px solid #e3dccd", borderRadius: 12,
