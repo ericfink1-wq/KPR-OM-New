@@ -74,6 +74,7 @@ REQUIRED SCHEMA:
   "retailCotenants": "string or null",
   "tenants": [
     {
+      "INCLUSION RULE — READ THIS FIRST": "Include a tenant HERE if and only if they are an actual occupant of THIS property with a lease, license, or occupancy agreement — i.e., they appear in the rent roll, tenant roster, or lease schedule of THIS OM with SF and/or rent data. DO NOT include: tenants only mentioned as competitors, tenants at comparable or shadow-anchored properties, tenants described in market-context paragraphs, tenants at off-site parcels, or any retailer name that appears only in a 'co-tenancy' or 'trade area' narrative without accompanying lease data for THIS property. When in doubt, require SF or rent evidence at this address before including.",
       "name": "string",
       "suite": "string or null",
       "sf": "number or null",
@@ -112,7 +113,7 @@ REQUIRED SCHEMA:
   "extraFields": {"any_other_notable_metric": "value"}
 }
 
-PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include vacant/availability rows as tenant entries with name "Vacant", their SF if stated, and null for all lease/rent fields — this ensures the roster reflects the actual vacancy picture.
+PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant roster scope: ONLY include tenants that are actual occupants of THIS property — i.e., they appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Exclude any tenant mentioned solely as: a competitor, a shadow anchor or co-tenant at another parcel, a comparable-sale occupant, a "trade area" or "co-tenancy" narrative reference, or market context. The test is: does this tenant have a lease at THIS property? If yes → include. If no → exclude. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include vacant/availability rows as tenant entries with name "Vacant", their SF if stated, and null for all lease/rent fields — this ensures the roster reflects the actual vacancy picture.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
@@ -272,7 +273,8 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     const contPrompt =
       "From the Offering Memorandum text below, extract ONLY the tenants NOT already in this list:\n" +
       haveNames.join(", ") +
-      "\n\nReturn ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
+      "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
+      "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
       "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRent, creditRating, salesPSF, isAnchor, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.\n\nOM TEXT:\n" + truncatedText;
     try {
