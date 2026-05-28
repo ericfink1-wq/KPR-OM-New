@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { Deal } from "../lib/idb";
-import { buildSystemPrompt, cityState, tenantKey, tenantLabel } from "../lib/utils";
+import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
 import { apiLoadImages } from "../lib/api";
@@ -153,7 +153,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     }, []);
     const totalValue = owned.reduce((s, d) => s + (num(d.txnPurchasePrice) || num(d.askingPrice)), 0);
     const totalSF = owned.reduce((s, d) => s + num(d.totalSF), 0);
-    const allOccupied = tenants.filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
+    const allOccupied = tenants.filter(t => !isVacant(t.name));
     const igTenants = allOccupied.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating));
     const totalRent = allOccupied.reduce((s, t) => s + num(t.annualRent), 0);
     const igRent = igTenants.reduce((s, t) => s + num(t.annualRent), 0);

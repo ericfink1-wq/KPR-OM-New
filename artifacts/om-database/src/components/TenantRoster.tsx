@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { Tenant } from "../lib/idb";
-import { fmtLeaseDate, fmtTenantSales } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 
 interface Props {
@@ -127,7 +127,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
     ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
   ];
 
-  const isVacantRow = (t: Tenant) => !t.name || /^vacant(y|ies|s)?$/i.test(String(t.name).trim());
+  const isVacantRow = (t: Tenant) => isVacant(t.name);
   const vacantCount = tenants.filter(isVacantRow).length;
   const occupiedCount = tenants.length - vacantCount;
 

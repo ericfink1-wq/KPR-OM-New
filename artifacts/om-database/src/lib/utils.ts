@@ -253,6 +253,18 @@ export function _normTenant(name: unknown): string {
   return parts.join(" ");
 }
 
+/** Returns true for any blank, vacant, available, spec, or white-box entry. */
+export function isVacant(name: unknown): boolean {
+  const s = String(name ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (!s || s === "-" || s === "–" || s === "—" || s === "n/a" || s === "na") return true;
+  const c = s.replace(/^[\s\-–—•·*"']+/, "");
+  if (/^vacan/.test(c)) return true;
+  if (/^availab/.test(c)) return true;
+  if (/^spec\s+(suite|space|unit)/.test(c)) return true;
+  if (/white\s*box/.test(c)) return true;
+  return false;
+}
+
 /** Stable grouping key — every spelling of one brand collapses to the same string. */
 export function tenantKey(name: unknown): string {
   const n = _normTenant(name);

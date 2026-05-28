@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { isInvestmentGrade } from "../lib/tenantCredit";
+import { isVacant } from "../lib/utils";
 
 const C = {
   ink: "#2a2c28", body: "#383a37", muted: "#6f6a5f",
@@ -29,7 +30,7 @@ const today = (): string =>
 function calcRollover(tenants: NonNullable<Deal["tenants"]>, tenantsAsOf?: string | null) {
   const ref = tenantsAsOf ? new Date(tenantsAsOf) : new Date();
   const refYear = ref.getFullYear();
-  const occupied = tenants.filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
+  const occupied = tenants.filter(t => !isVacant(t.name));
   const withExp = occupied.filter(t => t.leaseExpiry).map(t => {
     const exp = new Date(t.leaseExpiry!);
     const rem = Math.max(0, (exp.getTime() - ref.getTime()) / (365.25 * 86400000));
@@ -132,7 +133,7 @@ export interface DealSummaryPDFProps {
 
 export default function DealSummaryPDF({ deal: d, imgs, logoUrl }: DealSummaryPDFProps) {
   const tenants = d.tenants || [];
-  const occupied = tenants.filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
+  const occupied = tenants.filter(t => !isVacant(t.name));
   const isOwned = d.status === "Owned";
 
   // IG exposure

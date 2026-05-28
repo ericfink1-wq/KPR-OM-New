@@ -3,6 +3,7 @@ import {
   ResponsiveContainer, Tooltip, ReferenceLine,
 } from "recharts";
 import type { Tenant } from "../lib/idb";
+import { isVacant } from "../lib/utils";
 
 interface Props {
   tenants: Tenant[];
@@ -33,7 +34,7 @@ interface BucketDatum {
 
 export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
   const occupied = tenants.filter(
-    t => t.name && !/^vacant$/i.test(String(t.name).trim())
+    t => !isVacant(t.name)
   );
   if (occupied.length === 0) return null;
 

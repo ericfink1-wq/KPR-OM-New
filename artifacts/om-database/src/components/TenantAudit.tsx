@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant } from "../lib/utils";
+import { tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant, isVacant } from "../lib/utils";
 
 interface Props {
   deals: Deal[];
@@ -49,7 +49,7 @@ export default function TenantAudit({ deals }: Props) {
     for (const d of deals) {
       const label = d.propertyName || d.fileName || d.id || "Unknown deal";
       for (const t of d.tenants || []) {
-        if (!t.name || /^vacant$/i.test(String(t.name).trim())) continue;
+        if (!t.name || isVacant(t.name)) continue;
         const key = tenantKey(t.canonicalName || t.name);
         if (!key) continue;
         if (!map.has(key)) {
