@@ -65,7 +65,7 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
     });
     if (prefMatch) rows.push({
       deal: d, loanType: "Pref Equity", lender: d.prefLender!,
-      amount: num(d.prefAmount), rate: num(d.prefRate),
+      amount: num(d.prefAmount), rate: num(d.prefRateCurrent),
       rateType: d.prefReturnType ?? null, maturity: d.prefMaturityDate ?? null,
       ltv: null, notes: d.prefNotes ?? null,
     });

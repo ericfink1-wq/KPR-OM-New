@@ -1584,6 +1584,13 @@ ${text.slice(0, 40000)}`;
                   </button>
                 </div>
               )}
+              {d.debtLender && onTenantClick && (
+                <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
+                  <button onClick={() => onTenantClick("__lender__" + d.debtLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
+                    View all loans with {d.debtLender} ›
+                  </button>
+                </div>
+              )}
               {f({ label:"Loan Type", field:"debtType", options:["Senior / Acquisition","Permanent","Bridge","Construction","Mezzanine","CMBS","Agency (Fannie/Freddie)","Life Co","Bank","Other"] })}
               {f({ label:"Original Loan Amount", field:"debtLoanAmount", placeholder:"e.g. 30,000,000", prefix:"$" })}
               {f({ label:"Lender Contact", field:"debtContact", placeholder:"Name / email / phone", wide:true })}
@@ -1609,7 +1616,19 @@ ${text.slice(0, 40000)}`;
               <Group title="Preferred Equity (if applicable)"/>
               {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
               {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
-              {f({ label:"Pref Rate / Return", field:"prefRate", placeholder:"e.g. 12.0", suffix:"%" })}
+              {f({ label:"Current Pay Rate", field:"prefRateCurrent", placeholder:"e.g. 8.0", suffix:"%" })}
+              {f({ label:"All-In Rate (at sale/refi)", field:"prefRateAllIn", placeholder:"e.g. 9.25", suffix:"%" })}
+              {f({ label:"Return Type", field:"prefReturnType", options:["Current Pay","Accruing","Hybrid"] })}
+              {f({ label:"Origination Date", field:"prefOriginationDate", placeholder:"YYYY-MM-DD" })}
+              {f({ label:"Maturity / Redemption Date", field:"prefMaturityDate", placeholder:"YYYY-MM-DD" })}
+              {f({ label:"Term", field:"prefTermYears", placeholder:"e.g. 3", suffix:"yrs" })}
+              {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
+              {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
+              <Group title="Preferred Equity (if applicable)"/>
+              {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
+              {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
+              {f({ label:"Current Pay Rate", field:"prefRateCurrent", placeholder:"e.g. 8.0", suffix:"%" })}
+              {f({ label:"All-In Rate (at sale/refi)", field:"prefRateAllIn", placeholder:"e.g. 9.25", suffix:"%" })}
               {f({ label:"Return Type", field:"prefReturnType", options:["Current Pay","Accruing","Hybrid"] })}
               {f({ label:"Origination Date", field:"prefOriginationDate", placeholder:"YYYY-MM-DD" })}
               {f({ label:"Maturity / Redemption Date", field:"prefMaturityDate", placeholder:"YYYY-MM-DD" })}

@@ -362,7 +362,8 @@ export interface Deal {
   // Preferred equity (second tranche, acts like a second loan)
   prefLender?: string | null;
   prefAmount?: number | null;
-  prefRate?: number | null;
+  prefRateCurrent?: number | null;  // current pay rate e.g. 8.0
+  prefRateAllIn?: number | null;    // all-in / catch-up rate at sale/refi e.g. 9.25
   prefReturnType?: string | null;
   prefOriginationDate?: string | null;
   prefMaturityDate?: string | null;
