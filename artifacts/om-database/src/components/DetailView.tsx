@@ -1983,7 +1983,20 @@ function PropertyChat({ deal }: { deal: Deal }) {
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState<{ role: "user"|"assistant"; content: string }[]>([]);
   const [thinking, setThinking] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+    const handler = (e: MouseEvent) => {
+      if (inputWrapRef.current && !inputWrapRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSuggestions]);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
 
   useEffect(() => {
@@ -2073,12 +2086,26 @@ function PropertyChat({ deal }: { deal: Deal }) {
             <div ref={endRef}/>
           </div>
           {/* Input */}
-          <div style={{ borderTop:"1px solid #f1eadc", padding:"10px 12px", display:"flex", gap:7, flexShrink:0 }}>
-            <input value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); ask(input); } }}
+          <div ref={inputWrapRef} style={{ borderTop:"1px solid #f1eadc", padding:"10px 12px", display:"flex", gap:7, flexShrink:0, position:"relative" }}>
+            {showSuggestions && (
+              <div style={{ position:"absolute", bottom:"100%", left:12, right:12, background:"#fff", border:"1px solid #e3dccd", borderRadius:10, boxShadow:"0 4px 16px rgba(56,58,55,0.13)", overflow:"hidden", zIndex:10 }}>
+                {suggestions.map(s => (
+                  <button key={s}
+                    onMouseDown={e => { e.preventDefault(); setInput(s); setShowSuggestions(false); }}
+                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid #f1eadc", padding:"9px 12px", fontSize:12.5, color:"#5c5f57", cursor:"pointer", fontFamily:"'Inter',sans-serif", lineHeight:1.4 }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >{s}</button>
+                ))}
+              </div>
+            )}
+            <input value={input}
+              onChange={e => { setInput(e.target.value); if (e.target.value) setShowSuggestions(false); }}
+              onFocus={() => { if (!input) setShowSuggestions(true); }}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); setShowSuggestions(false); ask(input); } if (e.key === "Escape") setShowSuggestions(false); }}
               disabled={thinking} placeholder="Ask about this property…"
               style={{ flex:1, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:"9px 12px", fontSize:13, color:"#383a37", outline:"none", fontFamily:"'Inter',sans-serif" }}/>
-            <button onClick={() => ask(input)} disabled={thinking || !input.trim()}
+            <button onClick={() => { setShowSuggestions(false); ask(input); }} disabled={thinking || !input.trim()}
               style={{ background:(!thinking && input.trim()) ? "#6dba43" : "#efe8da", color:(!thinking && input.trim()) ? "#1f2b16" : "#b3aa9b", border:"none", borderRadius:9, padding:"0 15px", fontSize:15, fontWeight:700, cursor:(!thinking && input.trim()) ? "pointer" : "default" }}>↑</button>
           </div>
         </div>
