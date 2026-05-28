@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
-import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout } from "./lib/api";
+import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot } from "./lib/api";
 import { PROSPECT_STALE_DAYS } from "./lib/constants";
 import { ensureUploadAllowed } from "./lib/uploadAuth";
 import Header from "./components/Header";
@@ -70,6 +70,7 @@ function AppInner() {
           return deal;
         });
         setDeals(patched);
+        apiCreateSnapshot("auto").catch(() => {});
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -97,6 +98,7 @@ function AppInner() {
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {
+    await apiCreateSnapshot("before-delete").catch(() => {});
     await apiDeleteDeal(id).catch(() => {});
     setDeals(prev => prev.filter(d => d.id !== id));
     if (view.type === "detail" && view.dealId === id) setView({ type: "list" });

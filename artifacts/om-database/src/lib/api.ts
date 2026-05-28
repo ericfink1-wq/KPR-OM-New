@@ -213,3 +213,40 @@ export async function apiAiMessages(params: {
   }
   return resp.json() as Promise<{ content: { type: string; text?: string }[] }>;
 }
+
+// --- Snapshots ---
+
+export interface SnapshotMeta {
+  id: number;
+  createdAt: string;
+  reason: string;
+  dealCount: number;
+}
+
+export async function apiCreateSnapshot(
+  reason: string,
+): Promise<{ id: number; createdAt: string } | { skipped: boolean }> {
+  const resp = await apiFetch("/snapshots", {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+  if (!resp.ok) throw new Error("Snapshot request failed");
+  return resp.json() as Promise<{ id: number; createdAt: string } | { skipped: boolean }>;
+}
+
+export async function apiListSnapshots(): Promise<SnapshotMeta[]> {
+  const resp = await apiFetch("/snapshots");
+  if (!resp.ok) throw new Error("Failed to list snapshots");
+  return resp.json() as Promise<SnapshotMeta[]>;
+}
+
+export async function apiRestoreSnapshot(
+  id: number,
+): Promise<{ restored: number; updated: number }> {
+  const resp = await apiFetch(`/snapshots/${id}/restore`, { method: "POST" });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Restore failed");
+  }
+  return resp.json() as Promise<{ restored: number; updated: number }>;
+}

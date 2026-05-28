@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot } from "../lib/api";
+import type { SnapshotMeta } from "../lib/api";
 
 interface Props {
   tab: string;
@@ -28,6 +29,49 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
   const [backupRect, setBackupRect] = useState<DOMRect | null>(null);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number; mergedNames?: string[] } | null>(null);
+  const [snapshotModal, setSnapshotModal] = useState(false);
+  const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotRestoring, setSnapshotRestoring] = useState<number | null>(null);
+
+  const SNAPSHOT_LABELS: Record<string, string> = {
+    "auto": "Automatic backup",
+    "before-import": "Before an upload",
+    "before-delete": "Before a delete",
+    "before-restore": "Before a restore",
+    "before-restore-rollback": "Before snapshot restore",
+    "manual": "Manual backup",
+  };
+
+  const openSnapshotModal = async () => {
+    setBackupMenu(false);
+    setSnapshotModal(true);
+    setSnapshotLoading(true);
+    try {
+      const list = await apiListSnapshots();
+      setSnapshots(list);
+    } catch {
+      setSnapshots([]);
+    } finally {
+      setSnapshotLoading(false);
+    }
+  };
+
+  const handleSnapshotRestore = async (snap: SnapshotMeta) => {
+    const label = SNAPSHOT_LABELS[snap.reason] ?? snap.reason;
+    const date = new Date(snap.createdAt).toLocaleString();
+    if (!window.confirm(`Restore snapshot from ${date}?\n\nLabel: ${label}\nDeals: ${snap.dealCount}\n\nThis restores deleted/overwritten deals without removing newer ones. A safety snapshot will be taken first.\n\nContinue?`)) return;
+    setSnapshotRestoring(snap.id);
+    try {
+      const result = await apiRestoreSnapshot(snap.id);
+      const total = result.restored + result.updated;
+      alert(`Restored ${total} deal(s) (${result.restored} recovered, ${result.updated} updated). Reloading…`);
+      window.location.reload();
+    } catch (err) {
+      alert("Restore failed: " + (err instanceof Error ? err.message : "unknown error"));
+      setSnapshotRestoring(null);
+    }
+  };
 
   const active = deals.filter(d => !d.trashedAt);
   const handleFiles = (fl: FileList | null) => {
@@ -94,6 +138,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         return;
       }
     }
+
+    await apiCreateSnapshot("before-import").catch(() => {});
 
     const succeeded: Deal[] = [];
     const mergedNames: string[] = [];
@@ -199,6 +245,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         setRestoreBusy(false);
         return;
       }
+
+      await apiCreateSnapshot("before-restore").catch(() => {});
 
       await Promise.all(incoming.filter(d => !!d.id).map(d => apiSaveDeal(d).catch(() => {})));
 
@@ -404,7 +452,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             }}>
               {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
               {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
-              {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals", false)}
+              {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals")}
+              {menuBtn(openSnapshotModal, "Restore a snapshot…", "Auto-saved before imports, deletes & restores", false)}
             </div>
           </>,
           document.body
@@ -479,6 +528,80 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           </div>
         )}
       </div>,
+      document.body
+    )}
+
+    {snapshotModal && createPortal(
+      <>
+        <div
+          onClick={() => setSnapshotModal(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 9100, background: "rgba(38,40,31,0.38)" }}
+        />
+        <div style={{
+          position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          zIndex: 9101, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 14,
+          boxShadow: "0 16px 48px rgba(56,58,55,0.22)", width: 540, maxWidth: "90vw",
+          maxHeight: "72vh", display: "flex", flexDirection: "column", overflow: "hidden",
+        }}>
+          <div style={{ padding: "18px 22px 13px", borderBottom: "1px solid #f1eadc", flexShrink: 0 }}>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 500, color: "#26281f" }}>Restore a snapshot</div>
+            <div style={{ fontSize: 12, color: "#9a917f", marginTop: 4, lineHeight: 1.5 }}>
+              Snapshots are taken automatically before imports, deletes, and restores. Restoring is additive — it never removes existing deals.
+            </div>
+          </div>
+          <div style={{ overflowY: "auto", flex: 1 }}>
+            {snapshotLoading ? (
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>Loading…</div>
+            ) : snapshots.length === 0 ? (
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>
+                No snapshots yet. They are created automatically before major changes.
+              </div>
+            ) : snapshots.map((snap, i) => {
+              const label = SNAPSHOT_LABELS[snap.reason] ?? snap.reason;
+              const date = new Date(snap.createdAt).toLocaleString(undefined, {
+                month: "short", day: "numeric", year: "numeric",
+                hour: "numeric", minute: "2-digit",
+              });
+              const isRestoring = snapshotRestoring === snap.id;
+              return (
+                <div key={snap.id} style={{
+                  display: "flex", alignItems: "center", gap: 14,
+                  padding: "11px 22px",
+                  borderBottom: i < snapshots.length - 1 ? "1px solid #f5efe2" : "none",
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#383a37", fontFamily: "'Inter',sans-serif" }}>{label}</div>
+                    <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 2, fontFamily: "'Inter',sans-serif" }}>
+                      {date} · {snap.dealCount} deal{snap.dealCount !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleSnapshotRestore(snap)}
+                    disabled={snapshotRestoring !== null}
+                    style={{
+                      background: isRestoring ? "#f6f2ea" : "transparent",
+                      border: "1px solid #ddd4c2",
+                      color: isRestoring ? "#a89f8f" : "#52554e",
+                      padding: "5px 14px", borderRadius: 6,
+                      cursor: snapshotRestoring !== null ? (isRestoring ? "wait" : "default") : "pointer",
+                      fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600,
+                      whiteSpace: "nowrap", flexShrink: 0,
+                    }}
+                  >
+                    {isRestoring ? "Restoring…" : "Restore"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: "10px 22px", borderTop: "1px solid #f1eadc", flexShrink: 0 }}>
+            <button
+              onClick={() => setSnapshotModal(false)}
+              style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#7d766a", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}
+            >Close</button>
+          </div>
+        </div>
+      </>,
       document.body
     )}
     </>
