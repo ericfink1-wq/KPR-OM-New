@@ -98,9 +98,24 @@ router.get("/deals", requireAuth, async (req, res) => {
 
 // POST /api/deals/import — smart merge/upsert for JSON deal uploads
 // Matches on propertyName + address (case-insensitive); preserves USER_PRESERVED_KEYS on merge.
+// All deal fields are stored in the `data` jsonb column — no per-field schema constraints.
+// JSON-roundtrip sanitization strips any undefined/non-serializable values before every DB write.
 router.post("/deals/import", requireAuth, async (req, res) => {
   try {
-    const { id: uploadedId, ...uploadedData } = req.body as Record<string, unknown>;
+    // Sanitize helper — strips undefined and any non-JSON-safe values
+    function sanitize(obj: Record<string, unknown>): Record<string, unknown> {
+      try {
+        return JSON.parse(JSON.stringify(obj)) as Record<string, unknown>;
+      } catch (e) {
+        console.error("[import] sanitize failed:", e);
+        throw e;
+      }
+    }
+
+    const body = req.body as Record<string, unknown>;
+    req.log.info({ propertyName: body.propertyName, keys: Object.keys(body).length }, "import deal request");
+
+    const { id: uploadedId, ...uploadedData } = body;
 
     const normName = typeof uploadedData.propertyName === "string"
       ? uploadedData.propertyName.trim().toLowerCase() : null;
@@ -136,26 +151,42 @@ router.post("/deals/import", requireAuth, async (req, res) => {
       merged.address = existingRow.data.address ?? uploadedData.address;
 
       const id = existingRow.id;
-      await db.update(dealsTable)
-        .set({ data: merged, updatedAt: new Date() })
-        .where(eq(dealsTable.id, id));
+      const clean = sanitize(merged);
+      req.log.info({ id, fieldCount: Object.keys(clean).length }, "import merge: updating existing deal");
+      try {
+        await db.update(dealsTable)
+          .set({ data: clean, updatedAt: new Date() })
+          .where(eq(dealsTable.id, id));
+      } catch (dbErr) {
+        console.error("[import] DB update failed, id=", id, dbErr);
+        req.log.error({ err: dbErr, id }, "import DB update failed");
+        throw dbErr;
+      }
       setImmediate(() => {
-        rebuildTenantIndex(id, merged).catch(() => {});
-        rebuildCompsIndex(id, merged).catch(() => {});
+        rebuildTenantIndex(id, clean).catch(() => {});
+        rebuildCompsIndex(id, clean).catch(() => {});
       });
-      res.json({ ok: true, id, merged: true, propertyName: String(merged.propertyName ?? "") });
+      res.json({ ok: true, id, merged: true, propertyName: String(clean.propertyName ?? "") });
     } else {
       // NEW — insert as a fresh deal
       const id = typeof uploadedId === "string" && uploadedId
         ? uploadedId
         : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-      await db.insert(dealsTable).values({ id, data: uploadedData });
+      const clean = sanitize(uploadedData);
+      req.log.info({ id, fieldCount: Object.keys(clean).length }, "import new: inserting deal");
+      try {
+        await db.insert(dealsTable).values({ id, data: clean });
+      } catch (dbErr) {
+        console.error("[import] DB insert failed, id=", id, dbErr);
+        req.log.error({ err: dbErr, id }, "import DB insert failed");
+        throw dbErr;
+      }
       setImmediate(() => {
-        rebuildTenantIndex(id, uploadedData).catch(() => {});
-        rebuildCompsIndex(id, uploadedData).catch(() => {});
-        if (!uploadedData.marketDemographics && !uploadedData.demoChecked) {
+        rebuildTenantIndex(id, clean).catch(() => {});
+        rebuildCompsIndex(id, clean).catch(() => {});
+        if (!clean.marketDemographics && !clean.demoChecked) {
           (async () => {
-            const composed = composeAddressForGeocoder(uploadedData as { address?: string | null; city?: string | null; state?: string | null });
+            const composed = composeAddressForGeocoder(clean as { address?: string | null; city?: string | null; state?: string | null });
             if (!composed) return;
             try {
               const demo = await fetchCensusDemographics(composed);
@@ -172,11 +203,13 @@ router.post("/deals/import", requireAuth, async (req, res) => {
           })();
         }
       });
-      res.status(201).json({ ok: true, id, merged: false, propertyName: String(uploadedData.propertyName ?? "") });
+      res.status(201).json({ ok: true, id, merged: false, propertyName: String(clean.propertyName ?? "") });
     }
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[import] top-level error:", err);
     req.log.error({ err }, "Failed to import deal");
-    res.status(500).json({ error: "Failed to import deal" });
+    res.status(500).json({ error: msg });
   }
 });
 

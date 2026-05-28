@@ -72,7 +72,10 @@ export async function apiImportDeal(deal: Deal): Promise<ImportDealResult> {
     method: "POST",
     body: JSON.stringify(deal),
   });
-  if (!resp.ok) throw new Error("Failed to import deal");
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || `Import failed (HTTP ${resp.status})`);
+  }
   return resp.json() as Promise<ImportDealResult>;
 }
 

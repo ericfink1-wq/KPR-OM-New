@@ -95,7 +95,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           : allDeals[i];
         succeeded.push(deal);
         if (result.merged) mergedNames.push(result.propertyName || allDeals[i].propertyName || "");
-      } catch {
+      } catch (err) {
+        console.warn("[json import] failed:", allDeals[i].propertyName, err instanceof Error ? err.message : err);
         failed++;
       }
     }
