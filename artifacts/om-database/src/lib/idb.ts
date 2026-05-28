@@ -133,6 +133,7 @@ export interface TenantSalesRecord {
   annualSales?: number | null;
   sf?: number | null;
   occupancyCost?: number | null;
+  occIsEst?: boolean;
 }
 
 export interface TenantSalesYear {
@@ -149,6 +150,7 @@ export interface TenantSalesRecord {
   annualSales?: number | null;   // total $ volume
   sf?: number | null;
   occupancyCost?: number | null;
+  occIsEst?: boolean;            // true when occupancyCost is computed (annualRent ÷ sales), not sourced from OM
 }
 
 export interface TenantSalesYear {

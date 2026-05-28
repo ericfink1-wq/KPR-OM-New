@@ -236,7 +236,27 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                 <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{t.renewalOptions||"—"}</td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
                 <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(t.salesPSF, t.sf)}</td>
-                <td style={{ padding:"8px 10px", textAlign:"right", whiteSpace:"nowrap", color:n(t.occupancyCost)!=null&&n(t.occupancyCost)!>15?"#dc2626":n(t.occupancyCost)!=null?"#0f9d63":"#a69e91" }}>{n(t.occupancyCost)!=null?`${t.occupancyCost}%`:"—"}</td>
+                {(() => {
+                  const src = n(t.occupancyCost);
+                  const ar = t.annualRent != null && !isNaN(Number(t.annualRent)) ? Number(t.annualRent) : null;
+                  const sp = n(t.salesPSF);
+                  const sfn = n(t.sf);
+                  const computed = src == null && ar != null && sp != null && sfn != null && sp > 0 && sfn > 0
+                    ? (ar / (sp * sfn)) * 100
+                    : null;
+                  const occ = src ?? computed;
+                  const isEst = src == null && computed != null;
+                  const color = occ != null ? (occ > 15 ? "#dc2626" : "#0f9d63") : "#a69e91";
+                  return (
+                    <td style={{ padding:"8px 10px", textAlign:"right", whiteSpace:"nowrap", color }}>
+                      {occ != null ? (
+                        <span title={isEst ? "Estimated: annualRent ÷ (salesPSF × SF). Not sourced from OM." : undefined}>
+                          {occ.toFixed(1)}%{isEst && <sup style={{ fontSize:8, color:"#a69e91", marginLeft:1 }}>est</sup>}
+                        </span>
+                      ) : "—"}
+                    </td>
+                  );
+                })()}
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.creditRating==="Investment Grade"?"#0f9d63":"#837c6e" }}>{t.creditRating||"—"}</td>
               </tr>
             ))}

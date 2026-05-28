@@ -63,7 +63,23 @@ function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): 
         ? Math.round(Number(t.salesPSF) * Number(t.sf))
         : null,
       sf: t.sf != null ? Number(t.sf) : null,
-      occupancyCost: t.occupancyCost != null ? Number(t.occupancyCost) : null,
+      occupancyCost: (() => {
+        const src = t.occupancyCost != null ? Number(t.occupancyCost) : null;
+        if (src != null) return src;
+        const ar = t.annualRent != null && !isNaN(Number(t.annualRent)) ? Number(t.annualRent) : null;
+        const sp = t.salesPSF != null ? Number(t.salesPSF) : null;
+        const sfn = t.sf != null ? Number(t.sf) : null;
+        return (ar != null && sp != null && sfn != null && sp > 0 && sfn > 0)
+          ? (ar / (sp * sfn)) * 100
+          : null;
+      })(),
+      occIsEst: (() => {
+        if (t.occupancyCost != null) return false;
+        const ar = t.annualRent != null && !isNaN(Number(t.annualRent)) ? Number(t.annualRent) : null;
+        const sp = t.salesPSF != null ? Number(t.salesPSF) : null;
+        const sfn = t.sf != null ? Number(t.sf) : null;
+        return ar != null && sp != null && sfn != null && sp > 0 && sfn > 0;
+      })(),
     })),
   };
 }
@@ -377,7 +393,13 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
                                   {fmtPSF(rec?.salesPSF)}
                                 </td>
                                 <td key={`${y}-tot`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
-                                <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtOcc(rec?.occupancyCost)}</td>
+                                <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
+                                  {rec?.occupancyCost != null ? (
+                                    <span title={rec.occIsEst ? "Estimated: annualRent ÷ (salesPSF × SF). Not sourced from OM." : undefined}>
+                                      {fmtOcc(rec.occupancyCost)}{rec.occIsEst && <sup style={{ fontSize:8, color:"#a69e91", marginLeft:1 }}>est</sup>}
+                                    </span>
+                                  ) : "—"}
+                                </td>
                               </>
                             );
                           })
@@ -388,7 +410,13 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#2d5a0e" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtNum(rec?.sf)}</td>
-                                <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtOcc(rec?.occupancyCost)}</td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
+                                  {rec?.occupancyCost != null ? (
+                                    <span title={rec.occIsEst ? "Estimated: annualRent ÷ (salesPSF × SF). Not sourced from OM." : undefined}>
+                                      {fmtOcc(rec.occupancyCost)}{rec.occIsEst && <sup style={{ fontSize:8, color:"#a69e91", marginLeft:1 }}>est</sup>}
+                                    </span>
+                                  ) : "—"}
+                                </td>
                               </>
                             );
                           })()

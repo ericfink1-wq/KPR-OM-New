@@ -94,7 +94,7 @@ REQUIRED SCHEMA:
       "creditRating": "Investment Grade|Non-Investment Grade|null",
       "salesPSF": "number or null",
       "salesNotes": "string or null",
-      "occupancyCost": "number or null",
+      "occupancyCost": "number or null — total occupancy cost as a percentage of sales (base rent + CAM + taxes + insurance recoveries, all divided by gross sales). Often labeled 'Occ Cost %', 'OC%', or 'Occupancy Cost'. If the OM only states base rent ÷ sales, note that in salesNotes instead and leave this null.",
       "assumptionNote": "string or null — any footnote/assumption for this tenant",
       "isAnchor": "true|false",
       "originalLeaseDate": "string or null",
