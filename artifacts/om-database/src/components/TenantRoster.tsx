@@ -92,6 +92,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
   const [quick, setQuick] = useState("all");
   const [sortKey, setSortKey] = useState("sf");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  const [expandedRentStep, setExpandedRentStep] = useState<number | null>(null);
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
   let rows = tenants.slice();
@@ -200,8 +201,36 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                     );
                   })()}
                 </td>
-                <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }} title={[t.rentBumps,t.rentSchedule].filter(Boolean).join("   ·   ")||""}>
-                  {(() => { const s = t.rentSchedule || t.rentBumps; return s ? (s.length > 60 ? s.slice(0,60)+"…" : s) : "—"; })()}
+                <td
+                  onClick={() => setExpandedRentStep(expandedRentStep === i ? null : i)}
+                  style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedRentStep === i ? 340 : 220, minWidth: 120 }}
+                >
+                  {(() => {
+                    const s = t.rentSchedule || t.rentBumps;
+                    if (!s) return <span style={{ color:"#c4bbaa" }}>—</span>;
+                    if (expandedRentStep !== i) {
+                      return (
+                        <span title="Click to expand rent steps" style={{ display:"flex", alignItems:"center", gap:4 }}>
+                          <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:180, display:"inline-block" }}>
+                            {s.length > 60 ? s.slice(0,60)+"…" : s}
+                          </span>
+                          {s.length > 60 && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
+                        </span>
+                      );
+                    }
+                    const steps = s.split(";").map((p: string) => p.trim()).filter(Boolean);
+                    return (
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {steps.map((step: string, si: number) => (
+                          <div key={si} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"3px 0", borderBottom: si < steps.length-1 ? "1px solid #f1eadc" : "none" }}>
+                            <span style={{ color:"#c4bbaa", fontSize:9, marginTop:1, flexShrink:0 }}>▸</span>
+                            <span style={{ whiteSpace:"normal", lineHeight:1.5, fontSize:11 }}>{step}</span>
+                          </div>
+                        ))}
+                        <span style={{ fontSize:9, color:"#a69e91", marginTop:2 }}>▲ click to collapse</span>
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{t.renewalOptions||"—"}</td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
