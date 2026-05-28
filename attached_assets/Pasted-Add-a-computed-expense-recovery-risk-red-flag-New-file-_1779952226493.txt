@@ -1,0 +1,30 @@
+Add a computed "expense recovery risk" red flag. New file attached:
+- expenseRisk.ts → save to artifacts/om-database/src/lib/expenseRisk.ts
+
+This derives a red flag live from each deal's tenant lease structures (gross / fixed-CAM / capped-CAM exposure) — no re-extraction needed, works on all existing deals.
+
+In artifacts/om-database/src/components/DetailView.tsx:
+
+(a) Add import at the top:
+    import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
+
+(b) Find the red flags section (the block with id="section-redflags", around line 1205). It currently renders only when d.redFlags has entries and maps over d.redFlags. Change it to merge the derived expense-risk flag with the stored flags:
+
+    Just before the section renders, compute:
+       const expenseFlag = deriveExpenseRiskFlag(d);
+       const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(d.redFlags || [])];
+
+    Change the section's render condition so it shows when allRedFlags has ANY entries (not just d.redFlags):
+       {allRedFlags.length > 0 && ( ...section... )}
+
+    And map over allRedFlags instead of d.redFlags inside the section. The derived flag uses the same shape as stored flags ({ severity: "high"|"medium"|"low", description: string }), so the existing rendering (severity color, description text) works unchanged. The expense flag appears first since it's prepended.
+
+(c) In the SectionJump component (around line 147), update the red flags menu entry so it appears when there's a derived flag too. Change:
+       if (deal.redFlags && deal.redFlags.length > 0) items.push({ id: "section-redflags", label: "Red Flags" });
+    To:
+       if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
+    (Add the same import to the top of the file if SectionJump is in a separate file; if it's in DetailView.tsx the import from step (a) covers it.)
+
+VERIFICATION: Open Rockaway Centers, Markland Plaza, or Knightdale Marketplace → a HIGH-severity expense recovery flag should appear at the top of Red Flags (heavy fixed-CAM exposure). Open Powell Center, The Commons, or Springfield Crossing → a MEDIUM flag should appear (heavy capped-CAM). Open Pentagon Centre or Markland Mall → no expense flag (those are clean NNN).
+
+NO OTHER CHANGES.

@@ -17,6 +17,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import DealSummaryPDF from "./DealSummaryPDF";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import ClosingCostsCard from "./ClosingCostsCard";
+import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 
 interface Props {
   deal: Deal;
@@ -146,7 +147,7 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
   }
   if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
-  if (deal.redFlags && deal.redFlags.length > 0) items.push({ id: "section-redflags", label: "Red Flags" });
+  if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
   if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
   items.push({ id: "section-notes", label: "Your Notes" });
 
@@ -1206,20 +1207,24 @@ ${text.slice(0, 60000)}`;
       )}
 
       {/* Red flags */}
-      {((d.redFlags||[]).length > 0 || d.analysisStale) && (
-        <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
-            <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
-            {d.analysisStale && <StaleBadge />}
-          </div>
-          {(d.redFlags||[]).map((f,i) => (
-            <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<d.redFlags!.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
-              <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262620":f.severity==="medium"?"#383a3720":"#7d766a20", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#383a37":"#7d766a", flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
-              <span style={{ fontSize:11, color:"#5c5f57" }}>{f.description}</span>
+      {(() => {
+        const expenseFlag = deriveExpenseRiskFlag(d);
+        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(d.redFlags || [])];
+        return (allRedFlags.length > 0 || d.analysisStale) && (
+          <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
+            <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+              <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
+              {d.analysisStale && <StaleBadge />}
             </div>
-          ))}
-        </div>
-      )}
+            {allRedFlags.map((f,i) => (
+              <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<allRedFlags.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
+                <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262620":f.severity==="medium"?"#383a3720":"#7d766a20", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#383a37":"#7d766a", flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
+                <span style={{ fontSize:11, color:"#5c5f57" }}>{f.description}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Key assumptions */}
       <div id="section-assumptions"><KeyAssumptions deal={d} /></div>
