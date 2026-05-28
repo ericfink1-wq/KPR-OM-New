@@ -209,14 +209,14 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                     {portfolio.sf > 0 && <StatBox label="Square Footage" value={fmtSF(portfolio.sf)} />}
                     {portfolio.igRentPct != null && <StatBox label="Investment Grade Tenant Rent" value={`${portfolio.igRentPct}%`} accent="#3f7a1f" />}
                     {portfolio.anchors.length > 0 && (
-                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", flex: "3 1 0", minWidth: 160 }}>
+                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", flex: "3 1 0", minWidth: 160, gridColumn: "1 / -1" }}>
                         <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Key Anchors</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {portfolio.anchors.slice(0, 5).map(a => (
+                          {portfolio.anchors.slice(0, 12).map(a => (
                             <span key={a} onClick={() => onTenantClick?.(a)}
                               style={{ background: "#f0fae8", border: "1px solid #c6e6a0", color: "#3d7a1c", borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600, cursor: onTenantClick ? "pointer" : "default", textDecoration: onTenantClick ? "underline" : "none", textDecorationColor: "#c6e6a0", textUnderlineOffset: "2px" }}>{a}</span>
                           ))}
-                          {portfolio.anchors.length > 5 && <span style={{ fontSize: 10, color: "#a89f8f" }}>+{portfolio.anchors.length - 5}</span>}
+                          {portfolio.anchors.length > 12 && <span style={{ fontSize: 10, color: "#a89f8f" }}>+{portfolio.anchors.length - 12}</span>}
                         </div>
                       </div>
                     )}
