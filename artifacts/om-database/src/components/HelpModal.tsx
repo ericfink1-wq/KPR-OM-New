@@ -56,123 +56,172 @@ function BriefList({ items }: { items: React.ReactNode[] }) {
 const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: React.ReactNode }[] = [
   {
     id: 1,
-    title: "What you see on the home page",
+    title: "Uploading OMs",
     brief: (
       <>
-        <p style={{ margin:0 }}>Three things, top to bottom:</p>
+        <p style={{ margin:0 }}>Click <B>Upload OMs</B> in the top-right to add deals. Three paths:</p>
         <BriefList items={[
-          <><B>Stat rows.</B> Intelligence Library (everything we've ingested) and Owned Portfolio (properties we actually own, with key anchors).</>,
-          <><B>Deal cards.</B> Under Contract first, then Pipeline prospects. Click any card to open the deal.</>,
-          <><B>Ask anything.</B> The chat bar pinned at the bottom. That's the analyst — it can answer questions across every deal in the library.</>,
+          <><B>Upload files…</B> — pick one or more PDFs. The AI reads the full document and extracts tenants, financials, demographics, and cover images automatically (1–3 min per deal).</>,
+          <><B>Import a folder…</B> — scan a whole directory of OMs at once.</>,
+          <><B>Upload .json deal(s)</B> — import pre-extracted deals (e.g. from a Claude chat). No API tokens used.</>,
         ]} />
+        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}>A separate <B>upload password</B> (different from your sign-in) is required the first time you upload in a browser session — this limits API spend.</p>
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Intelligence Library</B> stats: OMs Read = how many offering memoranda the AI has processed. Tenant Brands = unique brands across the library (Target counts once even if it shows up at five centers). SF Analyzed = total gross leasable area.</>,
-        <><B>Owned Portfolio</B> only counts deals tagged Owned. If a deal is missing here that you'd expect, check its status flag on the deal page.</>,
-        <><B>Deal statuses</B> flow Prospect → Under Contract → Owned → Sold (or Passed). Status drives where the deal shows up on the home page.</>,
+        <><B>OM extraction flow:</B> drop PDFs, the queue shows progress per file. Cover photo and site plan are auto-selected from the PDF. If something looks off after extraction, use "Re-run extraction" on the deal page rather than re-uploading.</>,
+        <><B>Folder import</B> scans all PDFs in the chosen directory and queues them together — useful for batch-adding a tranche of new deals.</>,
+        <><B>JSON upload</B> is the zero-token path: open Claude, send it a rent roll or OM, ask for it in the app's schema, paste the JSON response and upload. Same result as full extraction, no API cost.</>,
+        <><B>Refresh a rent roll:</B> on any deal page, the roster panel has an "Upload new rent roll" option that re-runs just the tenant extraction — updates the roster without touching financials or other deal data.</>,
+        <><B>Re-run extraction</B> on the deal page re-reads the whole OM. Use this if the deal data looks incomplete or wrong after the first upload.</>,
       ]} />
     ),
   },
   {
     id: 2,
-    title: "Ask the analyst",
+    title: "Portfolio — deal library & deal pages",
     brief: (
       <>
-        <p style={{ margin:0 }}>Type a question in the bar at the bottom. It reads the whole deal library — tenants, rents, expirations, demographics, financials — so you can ask things you'd otherwise have to dig for. Follow-up questions work; it remembers the conversation.</p>
+        <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library. Cards are sorted by status: Under Contract first, then Pipeline prospects. Click any card to open its detail page.</p>
+        <BriefList items={[
+          <><B>Statuses</B> flow Prospect → Under Contract → Owned → Sold (or Passed). Set status on the deal page; it controls how cards are grouped.</>,
+          <><B>Deal detail page</B> — tenant roster (SF, rent, dates, anchor / IG flags), financials, trade-area demographics, closing cost estimator, red flags, and for owned deals: acquisition terms and financing.</>,
+          <><B>Jump to ▾</B> in the sticky header skips to any section on a long deal page.</>,
+          <><B>Tenant names are clickable</B> — tap one to see every location of that tenant across the library (total SF, blended rent, center list).</>,
+          <><B>Compare</B> up to four deals side-by-side from the Portfolio list.</>,
+        ]} />
+      </>
+    ),
+    detail: (
+      <DetailList items={[
+        <><B>Roster columns:</B> base rent (not gross), rent/SF, lease commencement and expiration, remaining term keyed to the rent-roll as-of date, and an anchor flag for tenants ≥ 10,000 SF. Vacant suites show as "Vacant" rows so occupancy math stays honest.</>,
+        <><B>Trade Area demographics</B> pull from the US Census ACS 5-Year estimates (1 / 3 / 5-mile rings). They auto-populate when a deal is created; hit <B>Re-Pull</B> on the deal page to refresh.</>,
+        <><B>Closing Costs</B> estimates title, transfer, and mortgage-recording taxes by state with buyer/seller splits. Defaults to 65% LTV; an entity-sale toggle adds controlling-interest taxes where applicable. Treat as a ballpark — confirm with the title company for live deals.</>,
+        <><B>Red Flags</B> surface deal risks automatically, including a flag when meaningful GLA sits on gross or fixed-CAM leases (landlord absorbs expense inflation).</>,
+        <><B>Cover photo or site plan wrong?</B> Use "Set cover from page #" on the deal page to pick a different page from the PDF.</>,
+        <><B>For owned deals,</B> Deal Terms (purchase price, going-in cap, seller, close date) and Financing (lender, loan, rate, maturity) are editable — click the pencil icon on any field.</>,
+        <><B>Trash:</B> moving a deal to Trash hides it from the library but doesn't delete it. Restore it from the Trash section at the bottom of the Portfolio list.</>,
+      ]} />
+    ),
+  },
+  {
+    id: 3,
+    title: "The Analyst — ask anything, anywhere",
+    brief: (
+      <>
+        <p style={{ margin:0 }}>The analyst reads your entire deal library and answers questions across tenants, rents, expirations, financials, and demographics. Three ways to reach it:</p>
+        <BriefList items={[
+          <><B>Ask bar at the bottom</B> — visible on Portfolio, Analytics, and Comps pages. Type and hit Enter; your question opens the Analyst tab with an answer.</>,
+          <><B>Analyst tab</B> — the full chat view with conversation history. Follow-ups work; it remembers the thread.</>,
+          <><B>Ask about this property</B> — on any individual deal page, this button sends the question pre-scoped to that deal.</>,
+        ]} />
         <div style={{ marginTop:10, background:"#eef3e6", border:"1px solid #b8d49a", borderRadius:8, padding:12 }}>
           <div style={{ fontSize:10, fontWeight:700, color:"#3f7a1f", letterSpacing:"0.1em", marginBottom:8, fontFamily:"'Inter',sans-serif" }}>TRY ASKING…</div>
           <div style={{ display:"flex", flexDirection:"column", gap:5, fontSize:13, color:"#383a37" }}>
             <span>— Which deals have a grocery anchor?</span>
-            <span>— Compare the Marshalls at University Hills vs Vestavia.</span>
             <span>— What leases roll in the next 24 months across the owned portfolio?</span>
-            <span>— Which prospect has the highest going-in cap rate?</span>
+            <span>— Compare Vestavia and University Hills on tenant mix and occupancy.</span>
+            <span>— Rank our prospects by going-in cap rate.</span>
           </div>
         </div>
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Be specific.</B> "WALT for our owned grocery-anchored centers" gets a real answer; "Tell me about the portfolio" gets a vague one.</>,
-        <><B>Ask for tables and ranked lists</B> — the analyst will format them. Try "Rank our prospects by cap rate" or "Top 10 tenants by total rent across the portfolio."</>,
-        <><B>Comparisons are a strong use case.</B> "Compare Vestavia and Pointe Plaza on tenant mix and occupancy" works well.</>,
-        <><B>It only knows what's been uploaded.</B> If you ask about a property that isn't in the library, it won't know — upload the OM first.</>,
-        <><B>If the numbers look off,</B> open the source deal — the rent roll might be stale and need a refresh.</>,
-      ]} />
-    ),
-  },
-  {
-    id: 3,
-    title: "Open a deal",
-    brief: (
-      <>
-        <p style={{ margin:0 }}>Clicking a card takes you to the deal page. The property name and address sit at the very top, with a <B>Jump to ▾</B> menu beside the name (and in the sticky header when you scroll) to skip straight to any section. Below: the tenant roster, financials, demographics, closing costs, red flags, and — for owned deals — the full acquisition and financing record.</p>
-        <BriefList items={[
-          <><B>Jump to ▾</B> jumps to any section without scrolling, and follows you in the floating header as you move down a long deal.</>,
-          <><B>Tenant roster</B> is the live rent roll — SF, rent, lease dates, NNN flags, credit and anchor flags. Click a tenant's name to see all its locations across the library. The <em>as of</em> date is at the top.</>,
-          <><B>Trade Area</B> auto-pulls 1/3/5-mile population and household income from the US Census. Hit <B>Re-Pull</B> to refresh it.</>,
-          <><B>Closing Costs</B> estimates title, transfer, and mortgage taxes by state with buyer/seller splits — the rates show even before you type a price.</>,
-          <><B>Red Flags</B> surface deal risks, including an automatic flag when a lot of the GLA sits on gross or fixed-CAM leases (where the landlord eats expense inflation).</>,
-          <><B>Key Assumptions</B> shows the top items from the OM with a "Show more" toggle.</>,
-        ]} />
-      </>
-    ),
-    detail: (
-      <DetailList items={[
-        <><B>Jump to ▾</B> next to the title (and in the sticky header) lists every section present on that deal — tap one to scroll there. Handy on deals with 40+ tenants.</>,
-        <><B>Tenant roster columns:</B> base rent (not gross), rent/SF, lease commencement and expiration, remaining term keyed to the as-of date, and an anchor flag for tenants ≥ 10,000 SF or branded as such.</>,
-        <><B>Trade Area demographics</B> come from the US Census ACS 5-Year estimates, aggregated across census tracts in each radius ring. A confidence tag and the source/vintage are shown. These pull automatically when a deal is created; <B>Re-Pull</B> refreshes them.</>,
-        <><B>Closing Costs</B> breaks out each tax (state/county/city transfer, mortgage recording, title) with the customary buyer/seller split. Loan defaults to 65% LTV; an entity-sale toggle adds controlling-interest taxes where they apply. Splits are sourced to Fidelity National Title's customs guide with a verify link — treat the dollars as a ballpark and confirm with the title company for a live deal.</>,
-        <><B>Expense-recovery red flag</B> fires automatically when a meaningful share of GLA is on gross or fixed-CAM leases — those shift operating-expense inflation onto ownership, so NOI can erode if real expenses run above the OM pro forma.</>,
-        <><B>Vacant suites</B> show up as "Vacant" rows with their square footage — they keep occupancy math honest.</>,
-        <><B>The "as of" date</B> at the top tells you how stale the data is. If it's months old, refresh the roster (see Section 5).</>,
-        <><B>For owned deals,</B> you'll also see Deal Terms (purchase price, going-in cap, closing date, seller, broker) and Financing (lender, loan amount, rate, maturity). Click the edit pencil to update any field.</>,
-        <><B>Cover photo wrong?</B> Use "Set cover from page #" to pick a different page from the OM. Same for the site plan.</>,
+        <><B>Be specific.</B> "WALT for owned grocery-anchored centers" gets a real answer; "Tell me about the portfolio" gets a vague one.</>,
+        <><B>Ask for tables and ranked lists</B> — the analyst formats them. "Top 10 tenants by total rent across the portfolio" works well.</>,
+        <><B>It only knows what's been uploaded.</B> If you ask about a property not in the library, it won't know — upload the OM first.</>,
+        <><B>If numbers look off,</B> check the deal page — the rent roll may be stale. Re-run extraction or upload a fresh rent roll to refresh.</>,
+        <><B>Shift+Enter</B> inserts a line break without sending. Enter alone sends.</>,
       ]} />
     ),
   },
   {
     id: 4,
-    title: "Track tenants across deals",
+    title: "Analytics & Tenant Name Audit",
     brief: (
       <>
-        <p style={{ margin:0 }}>Click any tenant's name in a rent roll to open a cross-deal view — every location of that tenant in the library, with total SF, blended rent, and which centers they're in. It's the fast way to gauge a tenant's footprint and credit exposure across the whole portfolio.</p>
+        <p style={{ margin:0 }}>The <B>Analytics</B> tab surfaces portfolio-wide patterns — tenant concentration, lease rollover, occupancy trends, and market exposure across all deals.</p>
         <BriefList items={[
-          <><B>Tenant Audit</B> — on the Portfolio view, the "Tenant Audit" button (top right) shows how tenant names group and flags possible duplicates that aren't merging (e.g. "Burlington" vs "Burlington Coat Factory").</>,
-          <><B>Investment-grade badges</B> now reflect real credit ratings — tenants marked Non-Investment Grade no longer carry the IG badge.</>,
+          <><B>Tenant Name Audit</B> — flags tenant names that may be the same brand but aren't grouping together (e.g. "Burlington" vs "Burlington Coat Factory"). Open it from the Analytics tab.</>,
+          <><B>Possible splits</B> are pairs the system thinks might be duplicates. Some are false alarms — eyeball them.</>,
+          <><B>Correct (merge)</B> — confirms they're the same tenant; the system will group them going forward.</>,
+          <><B>Incorrect (keep separate)</B> — confirms they're actually different tenants; suppresses the flag.</>,
+          <><B>Vacancies are automatically ignored</B> in the audit — only named tenants are evaluated.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Cross-deal tenant view:</B> clicking a tenant opens a page aggregating all their leases — location count, total leased SF, total and average rent/SF, and average sales/SF where reported. Great for "how exposed are we to this tenant across the book."</>,
-        <><B>Name variants group automatically</B> — "T-Mobile", "T Mobile", and "TMobile" collapse to one tenant, as do store-code and format suffixes ("#1234", "Factory", "Outlet"). The Tenant Audit view is where you catch variants that still slipped through.</>,
-        <><B>Possible splits</B> in the audit are pairs that look like the same brand but aren't grouping. Some are false alarms (different brands that share a first word, like Great Clips vs Great Greek) — eyeball them. To merge a real one, rename it in the source deal so both read identically.</>,
-        <><B>Credit ratings</B> drive the Investment Grade badge. If a badge looks wrong, open the deal and check the tenant's credit field on the roster.</>,
+        <><B>How name grouping works:</B> common variants collapse automatically — "T-Mobile", "T Mobile", "TMobile" become one tenant, as do store-code suffixes (#1234) and format words ("Factory", "Outlet"). The audit catches what didn't collapse automatically.</>,
+        <><B>Possible-split false alarms</B> are common when two different brands share a first word (e.g. "Great Clips" vs "Great Greek"). Use <em>Incorrect</em> to suppress those pairs permanently.</>,
+        <><B>Merging via Correct</B> trains the grouping for future uploads — it doesn't rename tenants in the database, it records a canonical pairing.</>,
+        <><B>Tenant cross-deal view:</B> from any rent roll, click a tenant name to see all their locations — total SF, blended rent/SF, and which centers they occupy. Good for gauging credit concentration.</>,
       ]} />
     ),
   },
   {
     id: 5,
-    title: "Refresh or add deals (admin)",
+    title: "Comps search",
     brief: (
       <>
-        <p style={{ margin:0 }}>These actions cost API tokens, so they're behind a separate <B>upload password</B> (different from your sign-in). The site asks for it the first time you use one in a browser session.</p>
+        <p style={{ margin:0 }}>The <B>Comps</B> tab lets you search and filter across every deal in the library to build a quick comp set — by market, asset type, cap rate, occupancy, SF, WALT, or any combination.</p>
         <BriefList items={[
-          <><B>Upload OMs</B> — drop one or more PDFs on the home page. The extractor reads the whole document and creates the deal.</>,
-          <><B>Refresh a rent roll (PDF)</B> — on the deal page, upload a new rent roll and the roster updates automatically.</>,
-          <><B>Refresh a rent roll (free)</B> — same deal page, the "Paste roster from Claude" toggle on the roster panel. Send the rent roll in a Claude chat, paste the JSON it gives back. No tokens.</>,
-          <><B>Backup</B> the database from the header before any big change. Costs nothing, saves you if something goes sideways.</>,
+          <>Filter results by market, asset type, and key financial metrics.</>,
+          <>Click any result to open the full deal page for that property.</>,
+          <>Use it to benchmark a live deal against similar properties already in the library.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Why the upload password exists:</B> OM extraction and rent-roll AI refresh hit the Anthropic API and cost real money per run. Keeping that password tight means everyone can browse the library and chat with the analyst freely, but only a couple of people can spend.</>,
-        <><B>OM upload flow:</B> drop a PDF on the home page, the extractor runs for 1–3 minutes, the deal appears with cover photo and site plan auto-picked. If data looks wrong, use "Re-run extraction" on the deal page rather than re-uploading.</>,
-        <><B>The free rent-roll path in detail:</B> open Claude (the regular chat app, not the API) and send the rent roll PDF. Ask for it in the site's roster schema — Claude returns a JSON block. Copy it, open the "Paste roster from Claude" toggle, paste, and click Apply. Same result as the PDF refresh, zero tokens spent.</>,
-        <><B>Backup vs Restore:</B> Backup downloads a full JSON snapshot. Restore <em>merges</em> deals back in by ID — it does NOT wipe what's there. Do a Backup before any big import or batch edit.</>,
+        <><B>Comp set building:</B> filters stack — you can narrow by market AND cap rate AND WALT simultaneously to find truly comparable deals.</>,
+        <><B>All deals in the library are searchable</B>, including Prospects and Passed deals, so historical comps are available even if you didn't pursue the deal.</>,
+      ]} />
+    ),
+  },
+  {
+    id: 6,
+    title: "Send Feedback (support button)",
+    brief: (
+      <>
+        <p style={{ margin:0 }}>The small <B>life-ring button</B> in the bottom-left corner opens a feedback form. Use it to report bugs, request features, or flag anything that looks wrong.</p>
+        <BriefList items={[
+          <>Choose a type — Bug, Idea, or Other — and describe what you saw.</>,
+          <>Your name is optional but helps with follow-up.</>,
+          <>Submissions go directly to the team. You don't need to email separately.</>,
+        ]} />
+      </>
+    ),
+    detail: (
+      <DetailList items={[
+        <><B>Screenshots help</B> — if you're reporting a display bug, describe which page and what you expected to see vs. what appeared.</>,
+        <><B>All submissions are logged</B> and visible to the team in the admin inbox. They're marked resolved once addressed.</>,
+      ]} />
+    ),
+  },
+  {
+    id: 7,
+    title: "Backups & data safety (admin)",
+    brief: (
+      <>
+        <p style={{ margin:0 }}>These features are available to the <B>app owner</B> via admin mode. Regular users can browse, search, and chat freely without them.</p>
+        <BriefList items={[
+          <><B>Automatic snapshots</B> — the app saves a snapshot of the database automatically before imports, deletes, and restores. No action required.</>,
+          <><B>Full backup (.json)</B> — downloads all deals, sources, and images as a single file. Do this before any large import or batch change.</>,
+          <><B>Export spreadsheet (.csv)</B> — exports key fields for Excel or Sheets.</>,
+          <><B>Restore a snapshot…</B> — rolls the database back to any recent auto-save. Restore merges by deal ID — it does not wipe deals that exist in the current database.</>,
+          <><B>Restore from backup (.json)</B> — re-imports a previously downloaded backup file. Same merge-by-ID behavior.</>,
+        ]} />
+      </>
+    ),
+    detail: (
+      <DetailList items={[
+        <><B>Snapshots are automatic</B> — you don't need to trigger them. Up to 30 are kept; oldest are pruned. Auto-snapshots run at most once every 12 hours; "before-delete" and "before-restore" snapshots run on demand.</>,
+        <><B>Restore is non-destructive:</B> it merges snapshot deals into the live database by ID. Deals in the live database that aren't in the snapshot are left untouched — nothing is wiped.</>,
+        <><B>Full backup</B> includes deal data, source text (the raw OM text), and images. Keep a local copy somewhere safe if you're about to make sweeping changes.</>,
+        <><B>Admin mode</B> also controls permanent deal deletion (via the Trash section in Portfolio) and access to the feedback inbox. Contact the app owner if you need admin access.</>,
       ]} />
     ),
   },
