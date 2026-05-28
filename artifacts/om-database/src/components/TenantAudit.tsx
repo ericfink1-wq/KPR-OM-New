@@ -406,7 +406,7 @@ export default function TenantAudit({ deals, onTenantClick }: Props) {
                 <div style={{ fontSize: 13, color: "#383a37", fontWeight: 600 }}>
                   {onTenantClick ? (
                     <span
-                      onClick={() => onTenantClick(g.key)}
+                      onClick={() => onTenantClick(variants[0])}
                       style={{ cursor: "pointer", textDecoration: "underline", color: "#383a37" }}
                     >
                       {variants[0]}

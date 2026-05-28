@@ -170,11 +170,11 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                   {isVacantRow(t) ? (
                     <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
                   ) : (
-                    <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", flexWrap:"nowrap", gap:4, minWidth:0 }}>
                       <span
                         onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
                         title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
-                        style={{ color:"#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px" }}>
+                        style={{ color:"#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px", whiteSpace:"nowrap" }}>
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
