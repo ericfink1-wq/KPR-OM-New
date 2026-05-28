@@ -1,0 +1,69 @@
+In artifacts/om-database/src/components/DetailView.tsx, fix the FIXED header (the one with position: "fixed" and top: 72 that appears when scrolling). The name is currently clipped and the Jump To button is wrongly stacked below the address. 
+
+Find this exact block inside the fixed header:
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+            <div style={{
+              fontFamily: "'Fraunces',serif",
+              fontSize: 17,
+              fontWeight: 600,
+              color: "#26281f",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.2,
+              whiteSpace: "normal",
+            }}>
+              {d.propertyName || d.fileName}
+            </div>
+            {fullAddress && (
+              <div style={{
+                fontSize: 11,
+                color: "#6f6a5f",
+                marginTop: 1,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {fullAddress}
+              </div>
+            )}
+          </div>
+          <div style={{ alignSelf: "flex-end" }}><SectionJump deal={d} scrollRef={scrollContainerRef} /></div>
+        </div>
+
+Replace the ENTIRE block above with this:
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+            <div style={{
+              fontFamily: "'Fraunces',serif",
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#26281f",
+              letterSpacing: "-0.01em",
+              lineHeight: 1.3,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}>
+              {d.propertyName || d.fileName}
+            </div>
+            {fullAddress && (
+              <div style={{
+                fontSize: 11,
+                color: "#6f6a5f",
+                marginTop: 1,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {fullAddress}
+              </div>
+            )}
+          </div>
+          <div style={{ flexShrink: 0 }}><SectionJump deal={d} scrollRef={scrollContainerRef} /></div>
+        </div>
+
+ALSO, in the same fixed header, change the outer padding from "10px 16px" to "12px 16px" so the name has vertical breathing room and its top isn't clipped.
+
+The result: property name on the left (truncating with "..." if too long), Jump To button on the right, both vertically centered on a single row — exactly like a normal app header. Make, test, iterate until saved.
