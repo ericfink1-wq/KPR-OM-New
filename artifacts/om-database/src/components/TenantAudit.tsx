@@ -67,15 +67,37 @@ export default function TenantAudit({ deals }: Props) {
 
     const groups = Array.from(map.values()).sort((a, b) => b.locationCount - a.locationCount);
 
+    const GENERIC_FIRST_WORDS = new Set([
+      "five","dollar","first","great","family","american","national","united",
+      "general","the","new","old","big","super","best","value","city","town",
+      "main","north","south","east","west","park","pizza","burger","coffee",
+      "nail","nails","hair","thai","china","golden","happy","star",
+    ]);
+
     const splits: { a: Group; b: Group; reason: string }[] = [];
     for (let i = 0; i < groups.length; i++) {
       for (let j = i + 1; j < groups.length; j++) {
         const ka = groups[i].key;
         const kb = groups[j].key;
         const prefix = ka.startsWith(kb + " ") || kb.startsWith(ka + " ");
-        const firstA = ka.split(" ")[0];
-        const firstB = kb.split(" ")[0];
-        const sameFirst = firstA === firstB && firstA.length >= 4;
+
+        const wordsA = ka.split(" ");
+        const wordsB = kb.split(" ");
+        const firstA = wordsA[0];
+        const firstB = wordsB[0];
+        let sameFirst = false;
+        if (firstA === firstB && firstA.length >= 4 && !GENERIC_FIRST_WORDS.has(firstA)) {
+          // Require a second signal: shared second word, OR one's significant words ⊆ the other's
+          const secondA = wordsA[1];
+          const secondB = wordsB[1];
+          const sharedSecond = secondA && secondB && secondA === secondB;
+          const setA = new Set(wordsA);
+          const setB = new Set(wordsB);
+          const aSubsetB = wordsA.every(w => setB.has(w));
+          const bSubsetA = wordsB.every(w => setA.has(w));
+          sameFirst = !!(sharedSecond || aSubsetB || bSubsetA);
+        }
+
         if (prefix || sameFirst) {
           splits.push({
             a: groups[i],
