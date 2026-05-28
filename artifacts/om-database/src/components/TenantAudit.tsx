@@ -13,8 +13,31 @@ interface Group {
   locationCount: number;
 }
 
+const LS_KEY = "kpr_dismissed_tenant_splits";
+
+function loadDismissed(): string[] {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDismissed(ids: string[]) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore
+  }
+}
+
 export default function TenantAudit({ deals }: Props) {
   const [showAll, setShowAll] = useState(false);
+  const [dismissed, setDismissed] = useState<string[]>(loadDismissed);
+  const [showRestored, setShowRestored] = useState(false);
 
   const { groups, splits, stats } = useMemo(() => {
     const map = new Map<string, Group>();
@@ -73,6 +96,26 @@ export default function TenantAudit({ deals }: Props) {
     return { groups, splits, stats };
   }, [deals]);
 
+  const getPairId = (s: { a: Group; b: Group }) =>
+    [s.a.key, s.b.key].sort().join("||");
+
+  const visibleSplits = splits.filter((s) => !dismissed.includes(getPairId(s)));
+  const dismissedSplits = splits.filter((s) => dismissed.includes(getPairId(s)));
+
+  const dismiss = (s: { a: Group; b: Group }) => {
+    const id = getPairId(s);
+    const next = dismissed.includes(id) ? dismissed : [...dismissed, id];
+    setDismissed(next);
+    saveDismissed(next);
+  };
+
+  const restore = (s: { a: Group; b: Group }) => {
+    const id = getPairId(s);
+    const next = dismissed.filter((d) => d !== id);
+    setDismissed(next);
+    saveDismissed(next);
+  };
+
   const multiLoc = groups.filter((g) => g.locationCount > 1);
   const displayedGroups = showAll ? groups : multiLoc;
 
@@ -101,7 +144,7 @@ export default function TenantAudit({ deals }: Props) {
           ["Unique tenants", stats.uniqueTenants],
           ["In 2+ deals", stats.multiLocation],
           ["Total placements", stats.totalPlacements],
-          ["Possible splits", stats.splitWarnings],
+          ["Possible splits", visibleSplits.length],
         ].map(([label, val]) => (
           <div key={label as string} style={{ flex: "1 1 130px", background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "13px 16px" }}>
             <div style={{ fontSize: 10, letterSpacing: "0.06em", color: "#a69e91", marginBottom: 6, fontWeight: 500, textTransform: "uppercase" }}>{label}</div>
@@ -111,14 +154,40 @@ export default function TenantAudit({ deals }: Props) {
       </div>
 
       {/* Possible splits — the actionable section */}
-      {splits.length > 0 && (
+      {(visibleSplits.length > 0 || dismissedSplits.length > 0) && (
         <div style={{ ...card, borderLeft: "3px solid #d9890c" }}>
           <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#b45309", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
             Possible Splits — Review These
           </div>
-          {splits.map((s, i) => (
-            <div key={i} style={{ padding: "10px 0", borderBottom: i < splits.length - 1 ? "1px solid #f5efe2" : "none" }}>
-              <div style={{ fontSize: 10, color: "#a69e91", marginBottom: 5 }}>Likely same tenant — {s.reason}:</div>
+
+          {visibleSplits.length === 0 && (
+            <div style={{ fontSize: 12, color: "#a69e91", padding: "4px 0 8px" }}>
+              All flagged pairs have been dismissed.
+            </div>
+          )}
+
+          {visibleSplits.map((s, i) => (
+            <div key={getPairId(s)} style={{ padding: "10px 0", borderBottom: i < visibleSplits.length - 1 ? "1px solid #f5efe2" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
+                <div style={{ fontSize: 10, color: "#a69e91" }}>Likely same tenant — {s.reason}:</div>
+                <button
+                  onClick={() => dismiss(s)}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid #ddd4c2",
+                    color: "#a69e91",
+                    padding: "2px 8px",
+                    borderRadius: 5,
+                    cursor: "pointer",
+                    fontSize: 10.5,
+                    fontFamily: "'Inter',sans-serif",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  Not the same — dismiss
+                </button>
+              </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {[s.a, s.b].map((g) => (
                   <div key={g.key} style={{ flex: "1 1 240px", background: "#faf7f0", borderRadius: 8, padding: "8px 12px", border: "1px solid #f0e8d6" }}>
@@ -133,9 +202,48 @@ export default function TenantAudit({ deals }: Props) {
               </div>
             </div>
           ))}
-          <div style={{ fontSize: 10.5, color: "#7d766a", marginTop: 10, lineHeight: 1.5 }}>
-            To merge these: tell Claude the exact two names and they'll add a normalization rule, or rename the tenant in the source deal so both read identically.
-          </div>
+
+          {visibleSplits.length > 0 && (
+            <div style={{ fontSize: 10.5, color: "#7d766a", marginTop: 10, lineHeight: 1.5 }}>
+              To merge these: tell Claude the exact two names and they'll add a normalization rule, or rename the tenant in the source deal so both read identically.
+            </div>
+          )}
+
+          {/* Dismissed pairs footer */}
+          {dismissedSplits.length > 0 && (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #f5efe2" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10.5, color: "#b3aa9b" }}>
+                  {dismissedSplits.length} dismissed
+                </span>
+                <button
+                  onClick={() => setShowRestored((v) => !v)}
+                  style={{ background: "transparent", border: "none", color: "#a69e91", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
+                >
+                  {showRestored ? "hide" : "show / restore"}
+                </button>
+              </div>
+              {showRestored && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+                  {dismissedSplits.map((s) => {
+                    const aName = Array.from(s.a.rawNames.keys())[0] ?? s.a.key;
+                    const bName = Array.from(s.b.rawNames.keys())[0] ?? s.b.key;
+                    return (
+                      <div key={getPairId(s)} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#9a917f" }}>
+                        <span>{aName} &amp; {bName}</span>
+                        <button
+                          onClick={() => restore(s)}
+                          style={{ background: "transparent", border: "none", color: "#b45309", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
