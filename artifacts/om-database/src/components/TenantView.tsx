@@ -107,10 +107,10 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
         {credit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Credit: {credit}</span>}
       </div>
 
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, flexWrap:"wrap" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
         <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>
         {/* Scope toggle */}
-        <div style={{ display:"flex", border:"1px solid #e7e0d2", borderRadius:7, overflow:"hidden", fontFamily:"'Inter',sans-serif", fontSize:12 }}>
+        <div style={{ display:"flex", border:"1px solid #e7e0d2", borderRadius:7, overflow:"hidden", fontFamily:"'Inter',sans-serif", fontSize:12, flexShrink:0 }}>
           {(["all","owned"] as const).map(s => (
             <button
               key={s}
