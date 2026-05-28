@@ -394,7 +394,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <div style={{ width: 8, height: 8, background: "#6dba43", borderRadius: "50%", boxShadow: "0 0 0 3px #6dba4326" }} />
           <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: "#2a2c27", letterSpacing: "-0.01em" }}>KPR Centers</span>
         </div>
-        <span style={{ fontSize: 9, color: "#958d80", letterSpacing: "0.22em", borderLeft: "1px solid #e3dccd", paddingLeft: 11, fontWeight: 600, textTransform: "uppercase" }}>Deal Intelligence</span>
+        <span className="deal-intel-label" style={{ fontSize: 9, color: "#958d80", letterSpacing: "0.22em", borderLeft: "1px solid #e3dccd", paddingLeft: 11, fontWeight: 600, textTransform: "uppercase" }}>Deal Intelligence</span>
+        <style>{`@media (max-width: 640px) { .deal-intel-label { display: none; } }`}</style>
       </div>
 
       {/* Scrollable zone: tabs + action buttons — swipeable on mobile */}
