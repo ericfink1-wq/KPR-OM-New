@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { Deal, ImageBundle } from "../lib/idb";
+import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON } from "../lib/utils";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
@@ -17,6 +17,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import DealSummaryPDF from "./DealSummaryPDF";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import ClosingCostsCard from "./ClosingCostsCard";
+import TenantSalesPanel from "./TenantSalesPanel";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 
 interface Props {
@@ -144,6 +145,7 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
   items.push({ id: "section-closing-costs", label: "Closing Costs" });
   if (deal.tenants && deal.tenants.length > 0) {
     items.push({ id: "section-tenants", label: "Tenant Roster" });
+    items.push({ id: "section-tenant-sales", label: "Tenant Sales" });
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
   }
   if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
@@ -250,6 +252,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [rrBusy, setRrBusy] = useState(false);
   const [rrError, setRrError] = useState<string | null>(null);
   const rrPdfRef = useRef<HTMLInputElement>(null);
+  const [salesBusy, setSalesBusy] = useState(false);
+  const [salesError, setSalesError] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesVal, setNotesVal] = useState(d.userNotes || "");
   const [fixPage, setFixPage] = useState("");
@@ -422,6 +426,71 @@ ${text.slice(0, 60000)}`;
       setRrError(err instanceof Error ? err.message : "Rent roll import failed.");
     }
     setRrBusy(false);
+  };
+
+  const handleSalesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!ensureUploadAllowed()) return;
+    setSalesBusy(true);
+    setSalesError(null);
+    try {
+      const { text } = await extractPdfText(await file.arrayBuffer());
+      const prompt = `You are a CRE data extraction engine. Extract tenant sales data from this retail sales report.
+Return ONLY valid JSON — no markdown fences, no explanation — with this exact shape:
+{
+  "year": <integer — the sales year this report covers, e.g. 2023>,
+  "tenants": [
+    {
+      "name": "string",
+      "salesPSF": number_or_null,
+      "annualSales": number_or_null,
+      "sf": number_or_null,
+      "occupancyCost": number_or_null
+    }
+  ]
+}
+
+RULES:
+- year: infer from the header or period label of the report (e.g. "2023 Sales Report" → 2023). If truly ambiguous, use the most recent full calendar year mentioned.
+- salesPSF: sales per square foot (dollars). Often labeled "Sales/SF", "$/SF", or "PSF".
+- annualSales: total annual sales volume in dollars (not PSF). If shown in thousands, convert to full dollars.
+- sf: tenant GLA / leased SF for use in sales calculations.
+- occupancyCost: occupancy cost percentage (rent ÷ sales). Often labeled "Occ Cost %", "OC%", or "Occupancy Cost".
+- Skip total/subtotal rows and blank rows.
+- Include all tenants that have any sales data, even if some fields are null.
+
+SALES REPORT TEXT:
+${text.slice(0, 40000)}`;
+
+      const res = await apiAiMessages({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 16000,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const raw = res.content.find((c: { type: string }) => c.type === "text")?.text ?? "";
+      let parsed: { year?: number; tenants?: unknown[] };
+      try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't parse the AI response — try again."); }
+
+      const year = typeof parsed.year === "number" ? parsed.year : new Date().getFullYear() - 1;
+      const tenants = Array.isArray(parsed.tenants) ? parsed.tenants as TenantSalesYear["tenants"] : [];
+      if (tenants.length === 0) throw new Error("No tenant sales data found in the PDF.");
+
+      const newSnap: TenantSalesYear = {
+        year,
+        uploadedAt: new Date().toISOString(),
+        source: "upload",
+        tenants,
+      };
+
+      // Replace any existing snapshot for the same year, append otherwise
+      const existing = (d.tenantSalesHistory || []).filter(s => s.year !== year);
+      onUpdate(d.id, { tenantSalesHistory: [...existing, newSnap] });
+    } catch (err: unknown) {
+      setSalesError(err instanceof Error ? err.message : "Sales upload failed.");
+    }
+    setSalesBusy(false);
   };
 
   const pollUntilDone = async (id: string) => {
@@ -1205,6 +1274,16 @@ ${text.slice(0, 60000)}`;
           omDate={d.omDate}
         /></div>
       )}
+
+      {/* Tenant Sales */}
+      <div id="section-tenant-sales">
+        <TenantSalesPanel
+          salesHistory={d.tenantSalesHistory || []}
+          onUpload={handleSalesUpload}
+          uploadBusy={salesBusy}
+          uploadError={salesError}
+        />
+      </div>
 
       {/* Lease Rollover & WALT */}
       {(d.tenants||[]).length > 0 && (
