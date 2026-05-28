@@ -41,7 +41,7 @@ function AppInner() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant">("portfolio");
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant">("tenant");
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
@@ -271,7 +271,7 @@ function AppInner() {
               {/* Segmented toggle */}
               <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 0" }}>
                 <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
-                  {(["portfolio", "tenant"] as const).map(v => (
+                  {(["tenant", "portfolio"] as const).map(v => (
                     <button
                       key={v}
                       onClick={() => setAnalyticsView(v)}

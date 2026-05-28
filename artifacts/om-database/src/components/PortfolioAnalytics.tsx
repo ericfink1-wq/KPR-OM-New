@@ -363,14 +363,6 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics }:
               Tenant Analytics
             </button>
           )}
-          {onTenantAudit && (
-            <button
-              onClick={onTenantAudit}
-              style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
-            >
-              Tenant Audit
-            </button>
-          )}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
             <button
               onClick={handleRebuildComps}

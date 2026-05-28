@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, isVacant } from "../lib/utils";
+import { tenantKey, isVacant, tenantLabel } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 
 // ---------------------------------------------------------------------------
@@ -368,7 +368,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
                 <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
                   <div style={{ flex: "0 0 220px", minWidth: 0 }}>
-                    <TenantLink name={row.displayName} onClick={onTenantClick} />
+                    <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                     <span style={{ fontSize: 10, color: "#b8b0a3", marginLeft: 6 }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
                   </div>
                   <MiniBar value={row.totalAnnualRent} max={maxRent} color="#6dba43" />
@@ -386,7 +386,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
                 <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
                   <div style={{ flex: "0 0 220px", minWidth: 0 }}>
-                    <TenantLink name={row.displayName} onClick={onTenantClick} />
+                    <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                   </div>
                   <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />
                   <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</div>
@@ -461,7 +461,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
                           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
                             <div style={{ flex: "0 0 190px", minWidth: 0 }}>
-                              <TenantLink name={occ.displayName} onClick={onTenantClick} />
+                              <TenantLink name={tenantLabel(occ.displayName)} onClick={onTenantClick} />
                               <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{occ.dealName}</div>
                             </div>
                             <MiniBar value={metricVal} max={maxStoreVal as number} color="#e8a631" />
@@ -489,7 +489,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
                         <div key={chain.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
                           <div style={{ flex: "0 0 190px", minWidth: 0 }}>
-                            <TenantLink name={chain.displayName} onClick={onTenantClick} />
+                            <TenantLink name={tenantLabel(chain.displayName)} onClick={onTenantClick} />
                             <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1 }}>{chain.values.length} stores</div>
                           </div>
                           <MiniBar value={chain.avg} max={maxChainVal as number} color="#6baed6" />

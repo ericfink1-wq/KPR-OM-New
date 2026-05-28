@@ -1,0 +1,33 @@
+In artifacts/om-database/src/components/TenantView.tsx, on the tenant detail page's "Locations" table, show each location's deal status (Owned, Prospect, etc.) and visually emphasize owned locations.
+
+CHANGE 1 — Import the StatusTag component at the top of the file (add this import):
+  import StatusTag from "./StatusTag";
+
+CHANGE 2 — In the locations table body, find the row's first <td> that shows the property name and ANCHOR badge:
+  <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
+    {r.deal.propertyName || "Untitled"}
+    {r.t.isAnchor && <span ...>ANCHOR</span>}
+  </td>
+
+Add a StatusTag right after the ANCHOR badge so the status shows inline. Replace that <td>'s inner content with:
+    {r.deal.propertyName || "Untitled"}
+    {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
+    {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+
+CHANGE 3 — Emphasize owned rows with a subtle left accent and tint. Find the <tr> in the sorted.map:
+  <tr key={i} onClick={() => onOpenDeal(r.deal)}
+    style={{ borderTop:"1px solid #f1eadc", cursor:"pointer" }}
+    onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+
+Replace with (owned/sold rows get a green left border and faint green tint; the hover handlers respect whether the row is owned):
+  {(() => { const owned = r.deal.status === "Owned" || r.deal.status === "Sold"; return (
+  <tr key={i} onClick={() => onOpenDeal(r.deal)}
+    style={{ borderTop:"1px solid #f1eadc", cursor:"pointer", background: owned ? "#f3faef" : "transparent", borderLeft: owned ? "3px solid #6dba43" : "3px solid transparent" }}
+    onMouseEnter={e => (e.currentTarget.style.background = owned ? "#eaf5e2" : "#faf7f0")}
+    onMouseLeave={e => (e.currentTarget.style.background = owned ? "#f3faef" : "transparent")}>
+  ); })()}
+
+IMPORTANT: the IIFE above wraps the <tr> — make sure the closing of the <tr> and the existing cells stay inside it correctly. If wrapping the <tr> in an IIFE is awkward, instead just compute "const owned = ..." inside the map before the return and apply the same conditional styles to the existing <tr> without an IIFE. The end result: owned/sold locations have a green left accent bar + faint green background so they stand out from prospects.
+
+Make, test, iterate until saved.
