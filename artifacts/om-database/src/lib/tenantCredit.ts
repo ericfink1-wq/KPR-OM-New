@@ -20,8 +20,10 @@ export const IG_TENANTS = [
 
 export function isInvestmentGrade(tenantName: string, creditRating?: string | null): boolean {
   if (creditRating && typeof creditRating === "string") {
-    // Explicit phrase, case-insensitive
-    if (creditRating.toLowerCase().includes("investment grade")) return true;
+    const r = creditRating.toLowerCase();
+    // Negated forms first — "Non-Investment Grade", "Not/Below/Sub Investment Grade"
+    if (/\b(non|not|below|sub)[\s-]*investment[\s-]*grade\b/.test(r) || r.includes("non-investment")) return false;
+    if (r.includes("investment grade")) return true;
     // S&P / Fitch scale, BBB- and above — case-SENSITIVE so prose "a"/"a " never matches
     if (/\b(AAA|AA[+-]?|A[+-]?|BBB[+-]?)\b/.test(creditRating)) return true;
     // Moody's scale, Baa3 and above

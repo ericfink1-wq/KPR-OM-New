@@ -1,0 +1,52 @@
+Three fixes to tenant logic.
+
+FIX 1 (CRITICAL) — isInvestmentGrade falsely flags "Non-Investment Grade" tenants as IG.
+In artifacts/om-database/src/lib/tenantCredit.ts, the creditRating check uses .includes("investment grade") which also matches "Non-Investment Grade". Replace the creditRating block:
+
+   if (creditRating && typeof creditRating === "string") {
+     const r = creditRating.toLowerCase();
+     if (
+       r.includes("investment grade") ||
+       /\b(aaa|aa[+-]?|a[+-]?|bbb[+-]?)\b/i.test(creditRating)
+     ) return true;
+   }
+
+With:
+
+   if (creditRating && typeof creditRating === "string") {
+     const r = creditRating.toLowerCase();
+     // Negated forms first — "Non-Investment Grade", "Not/Below/Sub Investment Grade"
+     if (/\b(non|not|below|sub)[\s-]*investment[\s-]*grade\b/.test(r) || r.includes("non-investment")) return false;
+     if (r.includes("investment grade")) return true;
+     // Rating notation — case-SENSITIVE so prose "a" can't trigger it
+     if (/\b(AAA|AA[+-]?|A[+-]?|BBB[+-]?)\b/.test(creditRating)) return true;
+     if (/\b(Aaa|Aa[123]?|A[123]?|Baa[123]?)\b/.test(creditRating)) return true;
+   }
+
+FIX 2 — Improve _normTenant in artifacts/om-database/src/lib/utils.ts to auto-resolve common splits.
+(a) Strip parenthetical content (handles "(ATM)", "(Wireless Connect)", "(Storage)", "(Shadow)", suite codes like "(B05)"). Add this as the FIRST transformation after lowercasing, BEFORE the existing .replace chains:
+      s = s.replace(/\([^)]*\)/g, " ");
+   The cleanest place: right after `s = s.toLowerCase()` begins the chain — insert `.replace(/\([^)]*\)/g, " ")` as the first .replace in that chain.
+(b) Broaden the store-code strip. Change:
+      .replace(/#\s*\d[\d-]*/g, " ")
+   To (catches letter-prefixed codes like #T0586):
+      .replace(/#\s*[a-z0-9][\w-]*/gi, " ")
+(c) Add "factory","factories" to the _TENANT_TRAIL set.
+
+FIX 3 — Add tenant aliases for splits normalization can't catch. In utils.ts, add these entries to TENANT_ALIASES:
+   "americas best": "America's Best Contacts & Eyecare",
+   "americas best contacts": "America's Best Contacts & Eyecare",
+   "at and t mobility": "AT&T",
+   "bank of america atm": "Bank of America",
+   "burlington coat": "Burlington",
+   "burlington coat factory": "Burlington",
+   "carters osh kosh": "Carter's",
+   "carters babies and kids": "Carter's",
+   "edward d jones": "Edward Jones",
+   "mens warehouse": "Men's Wearhouse",
+   "lets lose weight loss and wellness": "Let's Lose Weight",
+   "vestavia hill nutrition": "Vestavia Hills Nutrition",
+
+VERIFICATION: Reload any deal. Tenants labeled "Non-Investment Grade" should NO LONGER show the Investment Grade badge (e.g., The GAP, Best Buy, Academy Sports). Genuinely-IG tenants (TJ Maxx, Ross, Starbucks, AT&T) should still show it. Click AT&T → should now group AT&T, AT&T Mobility, and AT&T Wireless Connect together. Click Five Below → groups all three variants.
+
+NO OTHER CHANGES.

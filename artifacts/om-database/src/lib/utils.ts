@@ -152,6 +152,18 @@ export const TENANT_ALIASES: Record<string, string> = {
   "applebees": "Applebee's",
   "five guys": "Five Guys", "5 guys": "Five Guys",
   "ups": "The UPS Store", "ups store": "The UPS Store",
+  "americas best": "America's Best Contacts & Eyecare",
+  "americas best contacts": "America's Best Contacts & Eyecare",
+  "at and t mobility": "AT&T",
+  "bank of america atm": "Bank of America",
+  "burlington coat": "Burlington",
+  "burlington coat factory": "Burlington",
+  "carters osh kosh": "Carter's",
+  "carters babies and kids": "Carter's",
+  "edward d jones": "Edward Jones",
+  "mens warehouse": "Men's Wearhouse",
+  "lets lose weight loss and wellness": "Let's Lose Weight",
+  "vestavia hill nutrition": "Vestavia Hills Nutrition",
   // ── add your own variants here (one per line) ──────────────────────────────
 };
 
@@ -167,9 +179,10 @@ const _TENANT_TRAIL = new Set([
 export function _normTenant(name: unknown): string {
   let s = String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   s = s.toLowerCase()
+       .replace(/\([^)]*\)/g, " ")
        .replace(/['.]/g, "")
        .replace(/&/g, " and ")
-       .replace(/#\s*\d[\d-]*/g, " ")
+       .replace(/#\s*[a-z0-9][\w-]*/gi, " ")
        .replace(/[^a-z0-9]+/g, " ")
        .replace(/\s+/g, " ")
        .trim();
