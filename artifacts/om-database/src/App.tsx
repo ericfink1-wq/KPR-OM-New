@@ -405,7 +405,7 @@ function AppInner() {
           view.type === "compare" ? "compare" :
           tab
         }
-        liftAboveBar={tab !== "analyst" && view.type !== "detail"}
+        liftAboveBar={view.type !== "detail"}
       />
 
       {/* Global fixed-bottom upload queue — always rendered so it can track uploads from any tab */}
