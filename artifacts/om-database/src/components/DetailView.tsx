@@ -813,7 +813,7 @@ ${text.slice(0, 40000)}`;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+    <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"32px 24px 20px 24px" }}>
       <div style={{
         position: "fixed",
         top: 72,
@@ -865,9 +865,9 @@ ${text.slice(0, 40000)}`;
       </div>
 
       {/* Property name + jump */}
-      <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, margin:"0 0 4px 0" }}>
-        <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.08 }}>{d.propertyName||d.fileName}</h1>
-        <SectionJump deal={d} scrollRef={scrollContainerRef} />
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, margin:"0 0 4px 0" }}>
+        <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
+        <div style={{ flexShrink:0 }}><SectionJump deal={d} scrollRef={scrollContainerRef} /></div>
       </div>
       <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 12px 0" }}>{fullAddress || "—"}</p>
 
