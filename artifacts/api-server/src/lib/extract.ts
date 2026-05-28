@@ -3,6 +3,7 @@ import type { Logger } from "pino";
 import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { rebuildTenantIndex } from "./tenantIndex";
+import { augmentScoringWithBenchmarks } from "./tenantBenchmarks";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -305,7 +306,8 @@ export async function runBackgroundExtraction(
   extraGuidance = "",
 ): Promise<void> {
   try {
-    const { data: extracted } = await runOmExtraction(text, extraGuidance);
+    let { data: extracted } = await runOmExtraction(text, extraGuidance);
+    extracted = await augmentScoringWithBenchmarks(id, extracted, log);
     const dealData: Record<string, unknown> = {
       ...extracted,
       _processing: false,

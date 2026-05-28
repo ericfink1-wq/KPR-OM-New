@@ -4,6 +4,7 @@ import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable } fro
 import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
+import { augmentScoringWithBenchmarks } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
 
@@ -332,7 +333,8 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
     setImmediate(() => {
       (async () => {
         try {
-          const { data: extracted } = await runOmExtraction(sourceText);
+          let { data: extracted } = await runOmExtraction(sourceText);
+          extracted = await augmentScoringWithBenchmarks(id, extracted, req.log);
           const dealData: Record<string, unknown> = {
             ...extracted,
             ...userFields,
