@@ -49,7 +49,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   }, [open]);
 
   return (
-    <span ref={ref} style={{ position: "relative", display: "inline-block", marginLeft: 6 }}>
+    <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: 5, verticalAlign: "middle" }}>
       <span
         onMouseEnter={showSoon}
         onMouseLeave={cancelHover}
@@ -170,17 +170,17 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                   {isVacantRow(t) ? (
                     <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
                   ) : (
-                    <>
+                    <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:4 }}>
                       <span
                         onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
                         title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
                         style={{ color:"#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px" }}>
                         {t.name}
                       </span>
-                      {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
-                      {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>Investment Grade</span>}
+                      {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
+                      {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
-                    </>
+                    </div>
                   )}
                 </td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
