@@ -2046,9 +2046,11 @@ function PropertyChat({ deal }: { deal: Deal }) {
   };
 
   const suggestions = [
-    "What's the largest near-term rollover risk?",
-    "Which tenants pay below-market rent?",
-    "Summarize the lease and reimbursement profile",
+    "What are the biggest lease risks?",
+    "Which tenants are on watch?",
+    "Summarize the rent roll",
+    "What's the WALT?",
+    "What are the upside opportunities?",
   ];
 
   return (

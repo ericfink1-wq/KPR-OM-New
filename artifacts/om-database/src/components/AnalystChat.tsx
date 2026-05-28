@@ -61,8 +61,21 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+    const handler = (e: MouseEvent) => {
+      if (inputWrapRef.current && !inputWrapRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSuggestions]);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
   const active = deals.filter(d => !d.trashedAt);
 
@@ -298,11 +311,36 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             ← New conversation
           </button>
         )}
-        <div style={{ display: "flex", gap: 10 }}>
+        <div ref={inputWrapRef} style={{ display: "flex", gap: 10, position: "relative" }}>
+          {showSuggestions && (
+            <div style={{
+              position: "absolute", bottom: "calc(100% + 6px)", left: 0, right: 54,
+              background: "#fff", border: "1px solid #e3dccd", borderRadius: 12,
+              boxShadow: "0 4px 20px rgba(56,58,55,0.13)", overflow: "hidden", zIndex: 200,
+            }}>
+              {SUGGESTED.slice(0, 5).map((s, i) => (
+                <button key={s}
+                  onMouseDown={e => { e.preventDefault(); setInput(s); setShowSuggestions(false); }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", background: "transparent",
+                    border: "none", borderBottom: i < 4 ? "1px solid #f1eadc" : "none",
+                    padding: "10px 14px", fontSize: 13, color: "#5c5f57", cursor: "pointer",
+                    fontFamily: "'Inter',sans-serif", lineHeight: 1.4,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                >{s}</button>
+              ))}
+            </div>
+          )}
           <textarea
             value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(input); } }}
+            onChange={e => { setInput(e.target.value); if (e.target.value) setShowSuggestions(false); }}
+            onFocus={() => { if (!input.trim()) setShowSuggestions(true); }}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); setShowSuggestions(false); sendMsg(input); }
+              if (e.key === "Escape") setShowSuggestions(false);
+            }}
             placeholder={active.length === 0 ? "Upload some OMs first, then ask me anything…" : "Ask anything about your deal library…"}
             disabled={loading}
             rows={1}
@@ -313,7 +351,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               outline: "none", boxShadow: "0 1px 2px rgba(56,58,55,0.05)",
             }}
           />
-          <button onClick={() => sendMsg(input)} disabled={loading || !input.trim()}
+          <button onClick={() => { setShowSuggestions(false); sendMsg(input); }} disabled={loading || !input.trim()}
             style={{
               background: input.trim() && !loading ? "#26281f" : "#e3dccd",
               border: "none", color: input.trim() && !loading ? "#e8e0cf" : "#a89f8f",

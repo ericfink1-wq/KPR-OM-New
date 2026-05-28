@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { SUGGESTED } from "../lib/constants";
 
 interface Props {
   onAsk: (q: string) => void;
@@ -6,10 +7,24 @@ interface Props {
 
 export default function AnalystBar({ onAsk }: Props) {
   const [input, setInput] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSuggestions]);
 
   const send = () => {
     const q = input.trim();
     if (!q) return;
+    setShowSuggestions(false);
     onAsk(q);
     setInput("");
   };
@@ -22,15 +37,35 @@ export default function AnalystBar({ onAsk }: Props) {
       flexShrink: 0,
     }}>
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "14px 28px" }}>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div ref={wrapRef} style={{ display: "flex", gap: 10, position: "relative" }}>
+          {showSuggestions && (
+            <div style={{
+              position: "absolute", bottom: "calc(100% + 6px)", left: 0, right: 54,
+              background: "#fff", border: "1px solid #e3dccd", borderRadius: 12,
+              boxShadow: "0 4px 20px rgba(56,58,55,0.13)", overflow: "hidden", zIndex: 200,
+            }}>
+              {SUGGESTED.slice(0, 5).map((s, i) => (
+                <button key={s}
+                  onMouseDown={e => { e.preventDefault(); setInput(s); setShowSuggestions(false); }}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", background: "transparent",
+                    border: "none", borderBottom: i < 4 ? "1px solid #f1eadc" : "none",
+                    padding: "10px 14px", fontSize: 13, color: "#5c5f57", cursor: "pointer",
+                    fontFamily: "'Inter',sans-serif", lineHeight: 1.4,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                >{s}</button>
+              ))}
+            </div>
+          )}
           <textarea
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => { setInput(e.target.value); if (e.target.value) setShowSuggestions(false); }}
+            onFocus={() => { if (!input.trim()) setShowSuggestions(true); }}
             onKeyDown={e => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+              if (e.key === "Escape") setShowSuggestions(false);
             }}
             placeholder="Ask anything about your deal library…"
             rows={1}
