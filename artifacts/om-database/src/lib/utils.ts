@@ -158,7 +158,7 @@ export const TENANT_ALIASES: Record<string, string> = {
 // Redundant format/descriptor words safe to strip from the END of a name.
 const _TENANT_TRAIL = new Set([
   "salon","salons","beauty","supply","supplies","store","stores","shop","shops",
-  "outlet","outlets","cafe","grill","grille","restaurant","restaurants",
+  "outlet","outlets","factory","factories","cafe","grill","grille","restaurant","restaurants",
   "supercenter","pharmacy","wireless","bank","boutique","kitchen","bakery","bar",
   "inc","llc","corp","co","company","ltd","lp","plc","na","and",
 ]);

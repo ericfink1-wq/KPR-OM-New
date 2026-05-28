@@ -1,0 +1,52 @@
+Two tenant-data bugs to fix.
+
+BUG 1 — FALSE "INVESTMENT GRADE" BADGE.
+
+In artifacts/om-database/src/lib/tenantCredit.ts, the isInvestmentGrade function has a regex that false-positives. The pattern /\b(aaa|aa[+-]?|a[+-]?|bbb[+-]?)\b/i uses the case-insensitive flag, so the "a[+-]?" branch matches the lowercase indefinite article "a" anywhere in the creditRating text. Any tenant whose creditRating contains descriptive prose (which usually contains the word "a") gets falsely flagged investment grade.
+
+Replace the credit-rating check block:
+
+   if (creditRating && typeof creditRating === "string") {
+     const r = creditRating.toLowerCase();
+     if (
+       r.includes("investment grade") ||
+       /\b(aaa|aa[+-]?|a[+-]?|bbb[+-]?)\b/i.test(creditRating)
+     ) return true;
+   }
+
+With this (case-SENSITIVE rating match so the article "a" can't trigger it; real credit ratings are uppercase):
+
+   if (creditRating && typeof creditRating === "string") {
+     // Explicit phrase, case-insensitive
+     if (creditRating.toLowerCase().includes("investment grade")) return true;
+     // S&P / Fitch scale, BBB- and above — case-SENSITIVE so prose "a"/"a " never matches
+     if (/\b(AAA|AA[+-]?|A[+-]?|BBB[+-]?)\b/.test(creditRating)) return true;
+     // Moody's scale, Baa3 and above
+     if (/\b(Aaa|Aa[123]?|A[123]?|Baa[123]?)\b/.test(creditRating)) return true;
+     // Explicitly DO NOT treat BB+/BB/B (high-yield) as investment grade — they won't match the above
+   }
+
+This keeps real ratings working (BBB+, A-, AA, Baa1, etc. all still match) while killing the false positives from prose. Tenants like Gap (BB+ / high-yield) will correctly stop showing the IG badge, matching what the tenant summary page already shows.
+
+BUG 2 — TENANTS WITH "FACTORY" FORMAT SUFFIX NOT GROUPING.
+
+In artifacts/om-database/src/lib/utils.ts, the _normTenant function strips trailing format words (store, outlet, etc.) via the _TENANT_TRAIL set, but "factory" isn't in it — so "Gap Factory" doesn't normalize to "Gap" and won't group with the plain "Gap" tenant.
+
+Find the _TENANT_TRAIL set definition. Add "factory" and "factories" to it. The set currently looks like:
+   const _TENANT_TRAIL = new Set([
+     "salon","salons","beauty","supply","supplies","store","stores","shop","shops",
+     "outlet","outlets","cafe","grill","grille","restaurant","restaurants",
+     ...
+   ]);
+
+Add "factory","factories" to the list (anywhere in the set is fine):
+   "outlet","outlets","factory","factories","cafe","grill",...
+
+This makes "Gap Factory", "Gap Factory Store" (which already strips "store" then "factory"), "Nike Factory Store", "Banana Republic Factory", etc. all normalize to their base brand and group correctly in the tenant click-through.
+
+VERIFICATION:
+1. Open a deal with Gap. The Investment Grade badge should be GONE (Gap is BB+, high-yield). Confirm other genuinely-IG tenants (e.g., a Kroger or Walmart anchor) STILL show the badge.
+2. Click Gap → the tenant summary should now include both the Rockaway and Knightdale locations (assuming one was "Gap Factory" style).
+3. Spot-check a few other tenants you know appear in multiple deals to confirm they still group correctly.
+
+NO OTHER CHANGES.

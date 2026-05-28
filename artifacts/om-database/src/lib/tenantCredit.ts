@@ -20,11 +20,12 @@ export const IG_TENANTS = [
 
 export function isInvestmentGrade(tenantName: string, creditRating?: string | null): boolean {
   if (creditRating && typeof creditRating === "string") {
-    const r = creditRating.toLowerCase();
-    if (
-      r.includes("investment grade") ||
-      /\b(aaa|aa[+-]?|a[+-]?|bbb[+-]?)\b/i.test(creditRating)
-    ) return true;
+    // Explicit phrase, case-insensitive
+    if (creditRating.toLowerCase().includes("investment grade")) return true;
+    // S&P / Fitch scale, BBB- and above — case-SENSITIVE so prose "a"/"a " never matches
+    if (/\b(AAA|AA[+-]?|A[+-]?|BBB[+-]?)\b/.test(creditRating)) return true;
+    // Moody's scale, Baa3 and above
+    if (/\b(Aaa|Aa[123]?|A[123]?|Baa[123]?)\b/.test(creditRating)) return true;
   }
   if (!tenantName) return false;
   const cleaned = tenantName
