@@ -9,7 +9,7 @@
 // Non-fatal — if anything throws, the original extracted data is returned unchanged.
 
 import { db } from "@workspace/db";
-import { tenantIndexTable, tenantAliasesTable } from "@workspace/db";
+import { tenantIndexTable, tenantAliasesTable, dealsTable } from "@workspace/db";
 import { and, ne, inArray, isNotNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { Logger } from "pino";
@@ -130,6 +130,56 @@ RULES:
 
 Return ONLY valid JSON with no markdown or explanation:
 {"dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "string", "strengths": ["string"], "risks": ["string"]}, "redFlags": [{"severity": "high|medium|low", "description": "string"}]}`;
+}
+
+// ─── Deal count helper ────────────────────────────────────────────────────────
+
+export async function getTotalDealCount(): Promise<number> {
+  const result = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(dealsTable);
+  return result[0]?.count ?? 0;
+}
+
+// ─── Rescore: re-run benchmark augmentation, stripping stale benchmark flags ──
+//
+// Does NOT re-run the full extraction prompt — uses the existing dealScore and
+// redFlags from stored deal data, strips any prior benchmark-derived flags,
+// then re-queries tenant_index for fresh portfolio data.
+
+export async function rescoreDeal(
+  dealId: string,
+  dealData: Record<string, unknown>,
+  log: Logger,
+): Promise<{
+  dealScore?: unknown;
+  redFlags?: Array<Record<string, unknown>>;
+  lastScoredAt: string;
+  lastScoredDealCount: number;
+}> {
+  // Strip previously-injected benchmark flags so they don't accumulate
+  const existingFlags = Array.isArray(dealData.redFlags)
+    ? (dealData.redFlags as Array<Record<string, unknown>>)
+    : [];
+  const strippedFlags = existingFlags.filter((f) => {
+    const desc = typeof f.description === "string" ? f.description.toLowerCase() : "";
+    return !desc.includes("portfolio avg") && !desc.includes("benchmark");
+  });
+
+  const freshData: Record<string, unknown> = { ...dealData, redFlags: strippedFlags };
+
+  // Run augmentation and total count in parallel
+  const [augmented, totalCount] = await Promise.all([
+    augmentScoringWithBenchmarks(dealId, freshData, log),
+    getTotalDealCount(),
+  ]);
+
+  return {
+    dealScore: augmented.dealScore,
+    redFlags: augmented.redFlags as Array<Record<string, unknown>> | undefined,
+    lastScoredAt: new Date().toISOString(),
+    lastScoredDealCount: totalCount,
+  };
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────

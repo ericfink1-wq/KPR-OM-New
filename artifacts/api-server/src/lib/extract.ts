@@ -3,7 +3,7 @@ import type { Logger } from "pino";
 import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { rebuildTenantIndex } from "./tenantIndex";
-import { augmentScoringWithBenchmarks } from "./tenantBenchmarks";
+import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -306,15 +306,20 @@ export async function runBackgroundExtraction(
   extraGuidance = "",
 ): Promise<void> {
   try {
-    let { data: extracted } = await runOmExtraction(text, extraGuidance);
-    extracted = await augmentScoringWithBenchmarks(id, extracted, log);
+    const { data: rawExtracted } = await runOmExtraction(text, extraGuidance);
+    const [augmented, totalCount] = await Promise.all([
+      augmentScoringWithBenchmarks(id, rawExtracted, log),
+      getTotalDealCount(),
+    ]);
     const dealData: Record<string, unknown> = {
-      ...extracted,
+      ...augmented,
       _processing: false,
       fileName,
       uploadedAt: new Date().toISOString(),
       status: "Prospect",
       pdfPages: pageCount,
+      lastScoredAt: new Date().toISOString(),
+      lastScoredDealCount: totalCount,
     };
     await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })

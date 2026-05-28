@@ -328,6 +328,9 @@ export interface Deal {
   myUnderwriting?: MyUnderwritingInputs | null;
   // Trash
   trashedAt?: string | null;
+  // Benchmark scoring metadata
+  lastScoredAt?: string | null;
+  lastScoredDealCount?: number | null;
 }
 
 export interface MyUnderwritingInputs {

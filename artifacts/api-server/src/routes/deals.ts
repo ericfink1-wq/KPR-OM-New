@@ -4,7 +4,7 @@ import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable } fro
 import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
-import { augmentScoringWithBenchmarks } from "../lib/tenantBenchmarks";
+import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
 
@@ -261,6 +261,35 @@ router.put("/deals/:id/source", requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/deals/:id/rescore — re-run benchmark scoring against latest tenant_index, no PDF needed
+router.post("/deals/:id/rescore", requireAuth, async (req, res) => {
+  const id = req.params.id as string;
+  try {
+    const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    if (!rows.length) { res.status(404).json({ error: "Deal not found" }); return; }
+
+    const currentData = rows[0].data as Record<string, unknown>;
+    const patch = await rescoreDeal(id, currentData, req.log);
+
+    const updated: Record<string, unknown> = {
+      ...currentData,
+      ...(patch.dealScore !== undefined ? { dealScore: patch.dealScore } : {}),
+      ...(patch.redFlags !== undefined ? { redFlags: patch.redFlags } : {}),
+      lastScoredAt: patch.lastScoredAt,
+      lastScoredDealCount: patch.lastScoredDealCount,
+    };
+    await db.update(dealsTable)
+      .set({ data: updated, updatedAt: new Date() })
+      .where(eq(dealsTable.id, id));
+
+    req.log.info({ id, lastScoredDealCount: patch.lastScoredDealCount }, "Deal rescored");
+    res.json(patch);
+  } catch (err) {
+    req.log.error({ err, id }, "Rescore failed");
+    res.status(500).json({ error: "Rescore failed" });
+  }
+});
+
 // POST /api/deals/:id/refresh-demographics
 router.post("/deals/:id/refresh-demographics", requireAuth, async (req, res) => {
   try {
@@ -333,13 +362,18 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
     setImmediate(() => {
       (async () => {
         try {
-          let { data: extracted } = await runOmExtraction(sourceText);
-          extracted = await augmentScoringWithBenchmarks(id, extracted, req.log);
+          const { data: rawExtracted } = await runOmExtraction(sourceText);
+          const [augmented, totalCount] = await Promise.all([
+            augmentScoringWithBenchmarks(id, rawExtracted, req.log),
+            getTotalDealCount(),
+          ]);
           const dealData: Record<string, unknown> = {
-            ...extracted,
+            ...augmented,
             ...userFields,
             _processing: false,
             fileName: existing.fileName || "Unknown",
+            lastScoredAt: new Date().toISOString(),
+            lastScoredDealCount: totalCount,
           };
           await db.update(dealsTable)
             .set({ data: dealData, updatedAt: new Date() })

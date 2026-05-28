@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics } from "../lib/api";
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON } from "../lib/utils";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
@@ -268,6 +268,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [coverFinalized, setCoverFinalized] = useState(false);
   const [sitePlanFinalized, setSitePlanFinalized] = useState(false);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
+  const [rescoreBusy, setRescoreBusy] = useState(false);
+  const autoRescoreTriggered = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -277,6 +279,29 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     }
     return () => { alive = false; };
   }, [d.id]);
+
+  // Auto-rescore when ≥10 new deals have been added to the portfolio since this deal was last scored
+  useEffect(() => {
+    const lastCount = d.lastScoredDealCount ?? 0;
+    if (!autoRescoreTriggered.current && allDeals.length - lastCount >= 10) {
+      autoRescoreTriggered.current = true;
+      setRescoreBusy(true);
+      apiRescore(d.id)
+        .then(patch => onUpdate(d.id, patch as Partial<typeof d>))
+        .catch(() => {})
+        .finally(() => setRescoreBusy(false));
+    }
+  }, [d.id, allDeals.length]);
+
+  const handleRescore = async () => {
+    if (rescoreBusy) return;
+    setRescoreBusy(true);
+    try {
+      const patch = await apiRescore(d.id);
+      onUpdate(d.id, patch as Partial<typeof d>);
+    } catch {}
+    setRescoreBusy(false);
+  };
 
   useEffect(() => { setNotesVal(d.userNotes || ""); }, [d.id]);
 
@@ -810,6 +835,10 @@ ${text.slice(0, 60000)}`;
         </div>
         <button onClick={() => onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`)}
           style={{ background:"transparent", border:"1px solid #6dba43", color:"#6dba43", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>COMPS</button>
+        <button onClick={handleRescore} disabled={rescoreBusy} title={d.lastScoredAt ? `Last scored ${new Date(d.lastScoredAt).toLocaleDateString()}` : "Refresh score with latest portfolio benchmarks"}
+          style={{ background:"transparent", border:`1px solid ${rescoreBusy?"#c8b89a":"#b08968"}`, color:rescoreBusy?"#c8b89a":"#b08968", padding:"5px 10px", borderRadius:4, cursor:rescoreBusy?"default":"pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
+          {rescoreBusy ? <><span style={{ display:"inline-block", animation:"spin 1s linear infinite", fontSize:11 }}>↻</span> SCORING…</> : <>↻ SCORE</>}
+        </button>
         {((d.tenants||[]).length > 0 || (d.cashFlowProjection||[]).length > 0) && (
           <button onClick={() => exportDealToExcel(d)}
             style={{ background:"transparent", border:"1px solid #7c6f5e", color:"#7c6f5e", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>

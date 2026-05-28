@@ -149,6 +149,26 @@ export async function apiRefreshDemographics(dealId: string): Promise<import("./
   return data.marketDemographics ?? null;
 }
 
+// Refresh score using latest tenant benchmarks — no re-extraction, no PDF needed
+export async function apiRescore(id: string): Promise<{
+  dealScore?: unknown;
+  redFlags?: { severity: string; description: string }[];
+  lastScoredAt: string;
+  lastScoredDealCount: number;
+}> {
+  const resp = await apiFetch(`/deals/${id}/rescore`, { method: "POST" });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Rescore failed");
+  }
+  return resp.json() as Promise<{
+    dealScore?: unknown;
+    redFlags?: { severity: string; description: string }[];
+    lastScoredAt: string;
+    lastScoredDealCount: number;
+  }>;
+}
+
 // --- AI (web search / generic Claude proxy) ---
 
 export async function apiAiMessages(params: {
