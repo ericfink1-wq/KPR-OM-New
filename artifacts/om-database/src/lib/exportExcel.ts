@@ -141,3 +141,78 @@ export function exportDealToExcel(deal: Deal): void {
 
   XLSX.writeFile(wb, `${safeName}.xlsx`);
 }
+
+// ---------------------------------------------------------------------------
+// Export comps index to Excel
+// ---------------------------------------------------------------------------
+type CompExportRow = {
+  name: string | null; address: string | null; market: string | null; state: string | null;
+  saleDate: string | null; salePrice: number | null; capRate: number | null;
+  pricePerSf: number | null; sf: number | null; occupancy: number | null;
+  anchor: string | null; propertyType: string | null;
+  buyer: string | null; seller: string | null;
+  sourceNotes: string | null; sourceDealName: string | null;
+  isOwnTransaction: boolean; isManual: boolean;
+};
+
+export function exportCompsToExcel(comps: CompExportRow[]): void {
+  const headers = [
+    "Property", "Address", "Market", "State",
+    "Sale Date", "Sale Price", "Cap Rate (%)", "Price/SF",
+    "SF", "Occupancy (%)", "Anchor", "Property Type",
+    "Buyer", "Seller", "Source", "Notes",
+  ];
+
+  const dataRows = comps.map(c => [
+    c.name        ?? "",
+    c.address     ?? "",
+    c.market      ?? "",
+    c.state       ?? "",
+    c.saleDate    ?? "",
+    c.salePrice   != null ? c.salePrice   : "",
+    c.capRate     != null ? c.capRate     : "",
+    c.pricePerSf  != null ? c.pricePerSf  : "",
+    c.sf          != null ? c.sf          : "",
+    c.occupancy   != null ? c.occupancy   : "",
+    c.anchor      ?? "",
+    c.propertyType ?? "",
+    c.buyer       ?? "",
+    c.seller      ?? "",
+    c.isOwnTransaction ? "OWNED" : c.isManual ? "Manual" : "OM",
+    c.sourceNotes ?? (c.sourceDealName ?? ""),
+  ]);
+
+  const aoa = [headers, ...dataRows];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  ws["!cols"] = [
+    { wch: 34 }, // Property
+    { wch: 30 }, // Address
+    { wch: 22 }, // Market
+    { wch: 8  }, // State
+    { wch: 12 }, // Sale Date
+    { wch: 16 }, // Sale Price
+    { wch: 12 }, // Cap Rate
+    { wch: 12 }, // Price/SF
+    { wch: 12 }, // SF
+    { wch: 14 }, // Occupancy
+    { wch: 26 }, // Anchor
+    { wch: 22 }, // Property Type
+    { wch: 24 }, // Buyer
+    { wch: 24 }, // Seller
+    { wch: 8  }, // Source
+    { wch: 36 }, // Notes
+  ];
+
+  for (let row = 1; row < aoa.length; row++) {
+    applyFmt(ws, row, 5, "#,##0");        // Sale Price
+    applyFmt(ws, row, 6, "0.00");         // Cap Rate
+    applyFmt(ws, row, 7, "#,##0.00");     // Price/SF
+    applyFmt(ws, row, 8, "#,##0");        // SF
+    applyFmt(ws, row, 9, "0.0");          // Occupancy
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Comps");
+  XLSX.writeFile(wb, `KPR_Comps_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}

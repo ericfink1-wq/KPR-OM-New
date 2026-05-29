@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { exportCompsToExcel } from "../lib/exportExcel";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,6 +134,28 @@ function buildQuery(filters: Filters, sort: SortKey): string {
 }
 
 const EMPTY_FILTERS: Filters = { q: "", market: "", dateFrom: "", dateTo: "", capRateMin: "", capRateMax: "" };
+
+// ---------------------------------------------------------------------------
+// Duplicate-detection helpers (module-level, pure)
+// ---------------------------------------------------------------------------
+function normComp(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+}
+function daysBetween(a: string | null | undefined, b: string | null | undefined): number | null {
+  if (!a || !b) return null;
+  const da = Date.parse(a), db = Date.parse(b);
+  if (isNaN(da) || isNaN(db)) return null;
+  return Math.abs(da - db) / 86_400_000;
+}
+function withinPct(a: number | null, b: number | null, pct: number): boolean {
+  if (a == null || b == null || a === 0 || b === 0) return false;
+  return Math.abs(a - b) / Math.min(Math.abs(a), Math.abs(b)) <= pct / 100;
+}
+type DupInfo = {
+  clusterId: number; otherNames: string[]; reasons: string[];
+  betterSourceExists: boolean; bestTierName: string;
+};
 
 // ---------------------------------------------------------------------------
 // Sort header cell
@@ -440,6 +463,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
   const [pendingImport, setPendingImport] = useState<unknown[] | null>(null);
   const [editRow, setEditRow] = useState<CompRow | null>(null);
+  const [showDupsOnly, setShowDupsOnly] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -535,6 +559,92 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const colCount   = 9
     + (hasAnchor ? 1 : 0) + (hasType ? 1 : 0)
     + (hasState ? 1 : 0) + (hasBuyer ? 1 : 0) + (hasSeller ? 1 : 0);
+
+  const dupMap = useMemo<Map<number, DupInfo>>(() => {
+    const tierOf = (r: CompRow) => r.isOwnTransaction ? 2 : r.isManual ? 1 : 0;
+    const edges: { a: number; b: number; reasons: string[] }[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      for (let j = i + 1; j < rows.length; j++) {
+        const a = rows[i], b = rows[j];
+        const reasons: string[] = [];
+        const na = normComp(a.name), nb = normComp(b.name);
+        if (na && na === nb) {
+          const pOk = withinPct(a.salePrice, b.salePrice, 2);
+          const days = daysBetween(a.saleDate, b.saleDate);
+          const dOk = days != null && days <= 90;
+          if (pOk && dOk) reasons.push("same name, price & date");
+          else if (pOk)   reasons.push("same name & ~price");
+          else if (dOk)   reasons.push("same name & ~date");
+        }
+        if (reasons.length === 0 && a.state && b.state &&
+            a.state.toLowerCase() === b.state.toLowerCase() &&
+            withinPct(a.salePrice, b.salePrice, 1)) {
+          const days = daysBetween(a.saleDate, b.saleDate);
+          if (days != null && days <= 45) reasons.push("same price & date");
+        }
+        if (reasons.length === 0) {
+          const aa = normComp(a.address), ab = normComp(b.address);
+          if (aa && aa === ab) reasons.push("same address");
+        }
+        if (reasons.length > 0) edges.push({ a: a.id, b: b.id, reasons });
+      }
+    }
+    if (edges.length === 0) return new Map();
+
+    const par = new Map<number, number>();
+    const find = (x: number): number => {
+      if (!par.has(x)) par.set(x, x);
+      const p = par.get(x)!;
+      if (p === x) return x;
+      const root = find(p); par.set(x, root); return root;
+    };
+    for (const { a, b } of edges) par.set(find(a), find(b));
+
+    const rowById = new Map(rows.map(r => [r.id, r]));
+    const flagged = new Set(edges.flatMap(e => [e.a, e.b]));
+    const clusters = new Map<number, number[]>();
+    for (const id of flagged) {
+      const root = find(id);
+      if (!clusters.has(root)) clusters.set(root, []);
+      clusters.get(root)!.push(id);
+    }
+
+    const result = new Map<number, DupInfo>();
+    let cid = 0;
+    for (const [, members] of clusters) {
+      if (members.length < 2) continue;
+      const thisCid = cid++;
+      const mRows = members.map(id => rowById.get(id)).filter((r): r is CompRow => !!r);
+      const maxTier = Math.max(...mRows.map(tierOf));
+      const bestTierName = maxTier === 2 ? "OWNED" : "Manual";
+      for (const row of mRows) {
+        const others = mRows.filter(m => m.id !== row.id);
+        const myEdges = edges.filter(e => e.a === row.id || e.b === row.id);
+        const reasons = [...new Set(myEdges.flatMap(e => e.reasons))];
+        result.set(row.id, {
+          clusterId: thisCid,
+          otherNames: others.map(m => m.name || m.address || "Unknown"),
+          reasons,
+          betterSourceExists: maxTier > tierOf(row),
+          bestTierName,
+        });
+      }
+    }
+    return result;
+  }, [rows]);
+
+  const displayRows = useMemo(() => {
+    if (!showDupsOnly) return rows;
+    const tierOf = (r: CompRow) => r.isOwnTransaction ? 2 : r.isManual ? 1 : 0;
+    return rows
+      .filter(r => dupMap.has(r.id))
+      .sort((a, b) => {
+        const ca = dupMap.get(a.id)!.clusterId, cb = dupMap.get(b.id)!.clusterId;
+        if (ca !== cb) return ca - cb;
+        return tierOf(b) - tierOf(a);
+      });
+  }, [rows, dupMap, showDupsOnly]);
 
   const In = (placeholder: string, key: keyof Filters, type = "text", extra?: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input
@@ -639,6 +749,20 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           )}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {dupMap.size > 0 && (
+            <button
+              onClick={() => setShowDupsOnly(v => !v)}
+              style={{
+                background: showDupsOnly ? "#fff8ec" : "transparent",
+                border: `1px solid ${showDupsOnly ? "#d9890c" : "#e8d9a0"}`,
+                color: "#d9890c", padding: "6px 12px", borderRadius: 7,
+                cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif",
+                fontWeight: showDupsOnly ? 600 : 400,
+              }}
+            >
+              ⚠ Possible duplicates ({dupMap.size})
+            </button>
+          )}
           {hasFilters && (
             <button
               onClick={() => { setFilters(EMPTY_FILTERS); fetch_(EMPTY_FILTERS, sort); }}
@@ -647,6 +771,19 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
               Clear filters
             </button>
           )}
+          <button
+            onClick={() => exportCompsToExcel(rows)}
+            disabled={rows.length === 0}
+            style={{
+              background: "transparent", border: "1px solid #c8ddb5",
+              color: rows.length === 0 ? "#c9c2b8" : "#5a9c30",
+              padding: "7px 14px", borderRadius: 7, cursor: rows.length === 0 ? "default" : "pointer",
+              fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            ↓ Excel
+          </button>
           <button
             onClick={() => importRef.current?.click()}
             style={{
@@ -764,7 +901,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                     </td>
                   </tr>
                 )}
-                {!loading && rows.map((row, idx) => {
+                {!loading && displayRows.map((row, idx) => {
                   const label = row.name || row.address || "—";
                   const sub = row.name ? row.address : null;
                   return (
@@ -790,6 +927,16 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                               MANUAL
                             </span>
                           ) : null}
+                          {dupMap.has(row.id) && (() => {
+                            const info = dupMap.get(row.id)!;
+                            let tip = `Possible duplicate of: ${info.otherNames.join(", ")} — ${info.reasons.join(", ")}`;
+                            if (info.betterSourceExists) tip += `\nHigher-quality ${info.bestTierName} version exists — consider deleting the lower-quality one.`;
+                            return (
+                              <span title={tip} style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#d9890c", background: "#fff8ec", border: "1px solid #f5c842", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0, cursor: "default" }}>
+                                ⚠ dup?
+                              </span>
+                            );
+                          })()}
                         </div>
                         {sub && <div style={{ fontSize: 10.5, color: "#a89f8f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{sub}</div>}
                       </td>
