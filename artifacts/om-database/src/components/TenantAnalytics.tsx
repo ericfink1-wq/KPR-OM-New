@@ -170,6 +170,7 @@ interface Props {
 export default function TenantAnalytics({ deals, onTenantClick, onParentClick, onTenantAudit, onBack }: Props) {
   const [filter, setFilter] = useState<"all" | "owned">("all");
   const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
+  const [showAllParents, setShowAllParents] = useState(false);
 
   // Aggregate tenants from all filtered deals
   const { rows, totalRent, allOccurrences } = useMemo(() => {
@@ -429,7 +430,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
             <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
               <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:6 }}>Parent Company Exposure</div>
               <div style={{ fontSize:10, color:"#a69e91", marginBottom:12 }}>Combined portfolio exposure across brands sharing a parent corporation</div>
-              {parentRows.map(pr => (
+              {(showAllParents ? parentRows : parentRows.slice(0, 10)).map(pr => (
                 <div key={pr.parent} style={{ borderTop:"1px solid #f1ece1", padding:"10px 0" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
                     <button onClick={() => onParentClick?.(pr.parent)} style={{ background:"transparent", border:"none", padding:0, cursor:onParentClick?"pointer":"default", fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:600, color:"#383a37", textDecoration:onParentClick?"underline":"none" }}>
@@ -443,6 +444,14 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
                   </div>
                 </div>
               ))}
+              {parentRows.length > 10 && (
+                <div style={{ borderTop:"1px solid #f1ece1", paddingTop:10, textAlign:"center" }}>
+                  <button onClick={() => setShowAllParents(v => !v)}
+                    style={{ background:"transparent", border:"none", cursor:"pointer", fontSize:11, color:"#2d4ecf", fontFamily:"'Inter',sans-serif", textDecoration:"underline" }}>
+                    {showAllParents ? "Show less ↑" : `See all ${parentRows.length} parent companies →`}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
