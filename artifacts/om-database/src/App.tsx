@@ -33,7 +33,11 @@ function AppInner() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [tab, setTab] = useState<TabId>("analyst");
-  const [view, setView] = useState<View>({ type: "list" });
+  const [viewStack, setViewStack] = useState<View[]>([{ type: "list" }]);
+  const view = viewStack[viewStack.length - 1];
+  const navigate = useCallback((v: View) => setViewStack(prev => [...prev, v]), []);
+  const goBack = useCallback(() => setViewStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev), []);
+  const resetToList = useCallback(() => setViewStack([{ type: "list" }]), []);
   const [loaded, setLoaded] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | undefined>();
   const [dragging, setDragging] = useState(false);
@@ -111,34 +115,34 @@ function AppInner() {
     await apiCreateSnapshot("before-delete").catch(() => {});
     await apiDeleteDeal(id).catch(() => {});
     setDeals(prev => prev.filter(d => d.id !== id));
-    if (view.type === "detail" && view.dealId === id) setView({ type: "list" });
-  }, [view]);
+    if (view.type === "detail" && view.dealId === id) resetToList();
+  }, [view, resetToList]);
 
   const handleOpenDeal = useCallback((id: string) => {
-    setView({ type: "detail", dealId: id });
+    navigate({ type: "detail", dealId: id });
     setTab("portfolio");
-  }, []);
+  }, [navigate]);
 
   const handleQuery = useCallback((q: string) => {
     setPendingQuery(q);
     setTab("analyst");
-    setView({ type: "list" });
-  }, []);
+    resetToList();
+  }, [resetToList]);
 
   const handleCompare = useCallback((ids: string[]) => {
-    setView({ type: "compare", dealIds: ids });
+    navigate({ type: "compare", dealIds: ids });
     setTab("portfolio");
-  }, []);
+  }, [navigate]);
 
   const handleOpenTenant = useCallback((name: string) => {
     if (name.startsWith("__lender__")) {
-      setView({ type: "lender", lenderName: name.replace("__lender__", "") });
+      navigate({ type: "lender", lenderName: name.replace("__lender__", "") });
       setTab("portfolio");
     } else {
-      setView({ type: "tenant", tenantName: name });
+      navigate({ type: "tenant", tenantName: name });
       setTab("portfolio");
     }
-  }, []);
+  }, [navigate]);
 
   const handleLogout = async () => {
     await apiLogout();
@@ -226,7 +230,7 @@ function AppInner() {
 
       <Header
         tab={tab}
-        onTab={t => { setTab(t as TabId); setView({ type: "list" }); }}
+        onTab={t => { setTab(t as TabId); resetToList(); }}
         deals={deals}
         queueLen={processingCount}
         onLogout={handleLogout}
@@ -262,7 +266,7 @@ function AppInner() {
           {view.type === "tenant-audit" ? (
             <div>
               <div style={{ padding: "14px 24px 0" }}>
-                <button onClick={() => setView({ type: "list" })} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+                <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
               </div>
               <TenantAudit deals={deals} onTenantClick={handleOpenTenant} />
             </div>
@@ -296,12 +300,12 @@ function AppInner() {
                 </div>
               </div>
               {analyticsView === "portfolio" ? (
-                <PortfolioAnalytics onTenantAudit={() => setView({ type: "tenant-audit" })} />
+                <PortfolioAnalytics onTenantAudit={() => navigate({ type: "tenant-audit" })} />
               ) : (
                 <TenantAnalytics
                   deals={deals}
                   onTenantClick={handleOpenTenant}
-                  onTenantAudit={() => setView({ type: "tenant-audit" })}
+                  onTenantAudit={() => navigate({ type: "tenant-audit" })}
                 />
               )}
             </>
@@ -382,8 +386,8 @@ function AppInner() {
               <DetailView
                 deal={currentDeal}
                 allDeals={deals}
-                onBack={() => setView({ type: "list" })}
-                onDelete={id => { handleUpdate(id, { trashedAt: new Date().toISOString() }); setView({ type: "list" }); }}
+                onBack={goBack}
+                onDelete={id => { handleUpdate(id, { trashedAt: new Date().toISOString() }); resetToList(); }}
                 onUpdate={handleUpdate}
                 onQuery={handleQuery}
                 onCompare={handleCompare}
@@ -394,7 +398,7 @@ function AppInner() {
 
           {view.type === "detail" && !currentDeal && (
             <div style={{ padding: 28 }}>
-              <button onClick={() => setView({ type: "list" })} style={{ color: "#7d766a", background: "transparent", border: "1px solid #e7e0d2", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>← Back</button>
+              <button onClick={goBack} style={{ color: "#7d766a", background: "transparent", border: "1px solid #e7e0d2", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>← Back</button>
               <p style={{ color: "#a89f8f", marginTop: 16 }}>Deal not found.</p>
             </div>
           )}
@@ -402,7 +406,7 @@ function AppInner() {
           {view.type === "compare" && (
             <CompareView
               deals={deals.filter(d => view.type === "compare" && view.dealIds.includes(d.id))}
-              onBack={() => setView({ type: "list" })}
+              onBack={goBack}
               onOpen={handleOpenDeal}
             />
           )}
@@ -412,8 +416,8 @@ function AppInner() {
               <LenderView
                 lenderName={view.lenderName}
                 deals={activeDeals}
-                onBack={() => setView({ type: "list" })}
-                onOpenDeal={d => setView({ type: "detail", dealId: d.id })}
+                onBack={goBack}
+                onOpenDeal={d => navigate({ type: "detail", dealId: d.id })}
               />
             </div>
           )}
@@ -423,8 +427,8 @@ function AppInner() {
               <TenantView
                 tenantName={view.tenantName}
                 deals={activeDeals}
-                onBack={() => setView({ type: "list" })}
-                onOpenDeal={d => setView({ type: "detail", dealId: d.id })}
+                onBack={goBack}
+                onOpenDeal={d => navigate({ type: "detail", dealId: d.id })}
               />
             </div>
           )}
