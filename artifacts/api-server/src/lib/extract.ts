@@ -40,7 +40,7 @@ REQUIRED SCHEMA:
   "occupancy": "number or null",
   "totalSF": "number or null",
   "pricePerSF": "number or null",
-  "walt": "number or null",
+  "walt": "number or null — if not stated, CALCULATE from rent roll: sum(SF × remaining years to expiry) ÷ total occupied SF, using today's date as the base. Never leave null if lease expiry dates are available.",
   "weightedAvgRentPSF": "number or null",
   "yearBuilt": "number or null",
   "renovationYear": "number or null",
@@ -76,23 +76,24 @@ REQUIRED SCHEMA:
   "tenants": [
     {
       "INCLUSION RULE — READ THIS FIRST": "Include a tenant HERE if and only if they are an actual occupant of THIS property with a lease, license, or occupancy agreement — i.e., they appear in the rent roll, tenant roster, or lease schedule of THIS OM with SF and/or rent data. DO NOT include: tenants only mentioned as competitors, tenants at comparable or shadow-anchored properties, tenants described in market-context paragraphs, tenants at off-site parcels, or any retailer name that appears only in a 'co-tenancy' or 'trade area' narrative without accompanying lease data for THIS property. When in doubt, require SF or rent evidence at this address before including.",
-      "name": "string",
+      "name": "brand name only — no store numbers, no suite identifiers, no lease structure. 'TJ Maxx #T0586' → 'TJ Maxx'. 'Dollar Tree #4212' → 'Dollar Tree'. Store number goes in suite field only.",
       "suite": "string or null",
       "sf": "number or null",
       "rentPerSF": "number or null",
       "annualRent": "number or null",
       "leaseStart": "string or null",
-      "leaseExpiry": "string",
+      "leaseExpiry": "string — ISO format YYYY-MM-DD (e.g. 2029-01-31). Never return Mon-YYYY strings or slash formats.",
       "leaseType": "NNN|Gross|Modified Gross|null",
       "reimbursementMethod": "string or null",
       "percentOfNOI": "number or null",
       "rentBumps": "string — summarize pattern, e.g. '3%/yr'",
-      "rentSchedule": "string or null",
+      "rentSchedule": "string — REQUIRED for every tenant. List all dated rent steps with amounts e.g. '2024-09-01: $13.50 PSF ($345,384/yr); 2029-09-01: $15.50 PSF ($396,552/yr)'. Include option period bumps. If rent is flat, write 'Flat at $XX.XX PSF through YYYY-MM-DD.' Never leave null.",
       "renewalOptions": "string or null",
       "recentlyExercisedRenewal": "string or null",
       "percentageRent": "string or null",
       "creditRating": "Investment Grade|Non-Investment Grade|null",
       "salesPSF": "number or null",
+      "salesYear": "number or null — the calendar year the salesPSF figure is from (e.g. 2024). Infer from context ('2024 sales', 'trailing 12 months ending Dec-2024', etc.).",
       "salesNotes": "string or null",
       "occupancyCost": "number or null — total occupancy cost as a percentage of sales (base rent + CAM + taxes + insurance recoveries, all divided by gross sales). Often labeled 'Occ Cost %', 'OC%', or 'Occupancy Cost'. If the OM only states base rent ÷ sales, note that in salesNotes instead and leave this null.",
       "assumptionNote": "string or null — any footnote/assumption for this tenant",
@@ -115,7 +116,7 @@ REQUIRED SCHEMA:
   "extraFields": {"any_other_notable_metric": "value"}
 }
 
-PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant roster scope: ONLY include tenants that are actual occupants of THIS property — i.e., they appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Exclude any tenant mentioned solely as: a competitor, a shadow anchor or co-tenant at another parcel, a comparable-sale occupant, a "trade area" or "co-tenancy" narrative reference, or market context. The test is: does this tenant have a lease at THIS property? If yes → include. If no → exclude. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include vacant/availability rows as tenant entries with name "Vacant", their SF if stated, and null for all lease/rent fields — this ensures the roster reflects the actual vacancy picture.
+PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant roster scope: ONLY include tenants that are actual occupants of THIS property — i.e., they appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Exclude any tenant mentioned solely as: a competitor, a shadow anchor or co-tenant at another parcel, a comparable-sale occupant, a "trade area" or "co-tenancy" narrative reference, or market context. The test is: does this tenant have a lease at THIS property? If yes → include. If no → exclude. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include vacant/availability rows as tenant entries with name "Vacant", their SF if stated, and null for all lease/rent fields — this ensures the roster reflects the actual vacancy picture. Dates: always ISO YYYY-MM-DD. rentSchedule: required for every tenant, never null. WALT: calculate from lease dates if not stated. Tenant names: brand only, no store numbers.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
