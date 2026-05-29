@@ -347,14 +347,27 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics }:
   );
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
+    <div>
+      {/* Sticky All/Owned toggle — outside padded container so sticky works on iOS */}
+      <div style={{ position:"sticky", top:72, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
+          {filter === "owned" ? "Owned & sold only" : "All properties"}
+        </span>
+        <div style={{ display:"flex", background:"#f1eadc", borderRadius:10, padding:3, gap:2 }}>
+          {Btn("all", "All Deals")}
+          {Btn("owned", "Owned Only")}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      </div>
+
+      {/* Padded content */}
+      <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
+            <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {onTenantAnalytics && (
             <button
               onClick={onTenantAnalytics}
@@ -418,10 +431,6 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics }:
                 {rebuildMsg}
               </span>
             )}
-          </div>
-          <div style={{ display: "flex", background: "#f1eadc", borderRadius: 10, padding: 3, gap: 2 }}>
-            {Btn("all", "All Deals")}
-            {Btn("owned", "Owned Only")}
           </div>
         </div>
       </div>
@@ -554,6 +563,7 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics }:
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

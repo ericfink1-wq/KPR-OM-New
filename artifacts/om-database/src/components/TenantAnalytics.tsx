@@ -346,34 +346,36 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
   ];
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto", position: "relative" }}>
-      {/* Header */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, flexWrap:"wrap", gap:12 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          {onBack && (
-            <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← Back</button>
-          )}
-          <div>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:500, color:"#26281f", letterSpacing:"-0.02em" }}>Tenant Analytics</div>
-            <div style={{ fontSize:12, color:"#a89f8f", marginTop:3 }}>Aggregated from all deals in memory</div>
-          </div>
-        </div>
-        {onTenantAudit && (
-          <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
-            Tenant Name Audit
-          </button>
-        )}
-      </div>
-
-      {/* Sticky All / Owned toggle */}
-      <div style={{ position:"sticky", top:88, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", marginLeft:-32, marginRight:-32, paddingLeft:32, paddingRight:32, paddingTop:10, paddingBottom:10, marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+    <div>
+      {/* Sticky All/Owned toggle — outside padded container so sticky works on iOS */}
+      <div style={{ position:"sticky", top:72, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
-          {filter === "owned" ? "Showing owned & sold properties only" : "Showing all properties"}
+          {filter === "owned" ? "Owned & sold only" : "All properties"}
         </span>
         <PillToggle options={filterOpts} value={filter} onChange={v => setFilter(v)} />
       </div>
 
-      {rows.length === 0 ? (
+      {/* Padded content */}
+      <div style={{ padding:"20px 24px", maxWidth:1100, margin:"0 auto" }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            {onBack && (
+              <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← Back</button>
+            )}
+            <div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:500, color:"#26281f", letterSpacing:"-0.02em" }}>Tenant Analytics</div>
+              <div style={{ fontSize:12, color:"#a89f8f", marginTop:3 }}>Aggregated from all deals in memory</div>
+            </div>
+          </div>
+          {onTenantAudit && (
+            <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
+              Tenant Name Audit
+            </button>
+          )}
+        </div>
+
+        {rows.length === 0 ? (
         <div style={{ textAlign: "center", padding: "80px 0", color: "#a89f8f" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>🏢</div>
           <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, color: "#383a37", marginBottom: 6 }}>No tenants found</div>
@@ -648,6 +650,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
 
         </div>
       )}
+      </div>
     </div>
   );
 }

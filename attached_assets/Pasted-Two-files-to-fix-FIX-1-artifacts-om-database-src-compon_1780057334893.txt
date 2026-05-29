@@ -1,0 +1,60 @@
+Two files to fix.
+
+FIX 1 — artifacts/om-database/src/components/TenantAnalytics.tsx
+
+The sticky bar isn't pinning reliably because it's inside a div with position:relative. Restructure the return so the sticky bar sits OUTSIDE the padded content div, as a direct child of the outermost wrapper.
+
+Find the return statement and restructure it like this:
+
+  return (
+    <div>
+      {/* Sticky All/Owned toggle — outside padded container so sticky works on iOS */}
+      <div style={{ position:"sticky", top:72, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
+          {filter === "owned" ? "Owned & sold only" : "All properties"}
+        </span>
+        <PillToggle options={filterOpts} value={filter} onChange={v => setFilter(v)} />
+      </div>
+
+      {/* Padded content */}
+      <div style={{ padding:"20px 24px", maxWidth:1100, margin:"0 auto" }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            {onBack && (
+              <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← Back</button>
+            )}
+            <div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:500, color:"#26281f", letterSpacing:"-0.02em" }}>Tenant Analytics</div>
+              <div style={{ fontSize:12, color:"#a89f8f", marginTop:3 }}>Aggregated from all deals in memory</div>
+            </div>
+          </div>
+          {onTenantAudit && (
+            <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
+              Tenant Name Audit
+            </button>
+          )}
+        </div>
+
+        {/* rest of existing content — stat tiles, top 10 cards, etc. — unchanged */}
+        ...
+      </div>
+    </div>
+  );
+
+Remove the old sticky bar div that was between the header and stat tiles. Keep all other content exactly as-is.
+
+FIX 2 — artifacts/om-database/src/components/PortfolioAnalytics.tsx
+
+Add the same sticky All/Owned toggle bar at the top. Find the existing filter toggle (it's a PillToggle or segmented button near the top of the return). Move it into a sticky bar using the same pattern:
+
+Wrap the existing toggle in a sticky div as the FIRST element in the return, before any padded content:
+
+  <div style={{ position:"sticky", top:72, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+    <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
+      {filter === "owned" ? "Owned & sold only" : "All properties"}
+    </span>
+    {/* existing filter toggle buttons — keep exactly as-is */}
+  </div>
+
+Make, test, iterate until saved.
