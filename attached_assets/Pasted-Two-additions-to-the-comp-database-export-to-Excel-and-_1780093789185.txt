@@ -1,0 +1,41 @@
+Two additions to the comp database: export to Excel, and possible-duplicate detection.
+
+════════════════════════════════════════
+FEATURE 1 — Export comps to Excel
+File: artifacts/om-database/src/lib/exportExcel.ts (add a new function alongside exportDealToExcel; reuse the same XLSX/SheetJS import)
+
+Add: export function exportCompsToExcel(comps: CompRow[]): void
+- Build one worksheet "Comps" with a header row and one row per comp, columns in this order:
+  Property, Address, Market, State, Sale Date, Sale Price, Cap Rate (%), Price/SF, SF, Occupancy (%), Anchor, Property Type, Buyer, Seller, Source, Notes
+- "Source" = "OWNED" if isOwnTransaction, "Manual" if isManual, else "OM".
+- Format Sale Price as currency (#,##0), Cap Rate and Occupancy as numbers with 1–2 decimals, SF as #,##0, Price/SF as #,##0.00. Leave blanks for null values.
+- Auto-size-ish: set reasonable column widths (!cols).
+- Filename: `KPR_Comps_${new Date().toISOString().slice(0,10)}.xlsx` via XLSX.writeFile.
+
+File: src/components/CompsSearch.tsx
+- Add an "Export to Excel" button in the header next to Import JSON / Add Comp.
+- It exports the CURRENTLY DISPLAYED rows (the filtered/searched/sorted `rows` state) so the user can export a subset by filtering first. If rows is empty, disable the button.
+
+════════════════════════════════════════
+FEATURE 2 — Possible-duplicate detection (deterministic, client-side)
+File: src/components/CompsSearch.tsx
+
+Compute duplicate clusters over the loaded comps (in a useMemo). Two comps are POSSIBLE DUPLICATES if any of these hold:
+  (a) normalized name matches AND (sale prices within 2% of each other OR sale dates within 90 days);
+  (b) sale prices within 1% AND sale dates within 45 days AND same state (treats it as the same transaction even if names differ slightly);
+  (c) both have a non-empty address and the normalized addresses match.
+Normalize name/address = lowercase, strip non-alphanumeric, collapse whitespace.
+Group all mutually-matching comps into clusters; every comp in a cluster of size >= 2 is "flagged".
+IMPORTANT: do NOT flag the same property sold years apart at different prices — that's why name-only matches require price OR date proximity.
+
+UI:
+- On each flagged row, show a small amber badge "⚠ dup?" with a tooltip: "Possible duplicate of {other property name(s)} — {reason: 'same price & date' | 'same name & ~date' | 'same address'}". If the cluster spans source tiers, append: "Higher-quality {OWNED/Manual} version exists — consider deleting the OM-sourced one."
+- Add a filter toggle in the header: "Possible duplicates (N)" where N = count of flagged rows. When active, show only flagged rows, sorted so members of the same cluster are adjacent (sort by cluster, then by source tier OWNED > Manual > OM so the keeper is on top).
+- Do not auto-delete anything. The existing × delete on manual rows is how the user resolves them. (OWNED/OM rows still aren't directly deletable — note in the tooltip that those are fixed via the source deal.)
+- Use amber (#d9890c / #fff8ec), NOT red, since these are review items.
+
+════════════════════════════════════════
+TEST:
+1. Export to Excel → file downloads with all columns and correct formatting; exporting after a search exports only the filtered rows.
+2. Create two near-identical comps (same name, price, date) → both show the amber "dup?" badge and appear under the "Possible duplicates" toggle, grouped together.
+3. Two comps with the same name but sale dates 3 years apart and different prices → NOT flagged.

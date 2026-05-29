@@ -66,12 +66,16 @@ interface ManualForm {
   anchor: string;
   propertyType: string;
   sourceNotes: string;
+  state: string;
+  buyer: string;
+  seller: string;
 }
 
 const EMPTY_FORM: ManualForm = {
   name: "", market: "", saleDate: "", salePrice: "",
   address: "", sf: "", capRate: "", occupancy: "",
   anchor: "", propertyType: "", sourceNotes: "",
+  state: "", buyer: "", seller: "",
 };
 
 // ---------------------------------------------------------------------------
@@ -207,8 +211,31 @@ function TruncCell({ text, isExpanded, onToggle, maxWidth = 200, color = "#5c585
 // ---------------------------------------------------------------------------
 // Add Comp Modal
 // ---------------------------------------------------------------------------
-function AddCompModal({ onClose, onSaved }: { onClose: () => void; onSaved: (row: CompRow) => void }) {
-  const [form, setForm] = useState<ManualForm>(EMPTY_FORM);
+function AddCompModal({
+  onClose, onSaved, editRow, onUpdated,
+}: {
+  onClose: () => void;
+  onSaved: (row: CompRow) => void;
+  editRow?: CompRow;
+  onUpdated?: (row: CompRow) => void;
+}) {
+  const isEdit = !!editRow;
+  const [form, setForm] = useState<ManualForm>(isEdit ? {
+    name:         editRow.name         ?? "",
+    market:       editRow.market       ?? "",
+    saleDate:     editRow.saleDate     ?? "",
+    salePrice:    editRow.salePrice    != null ? String(editRow.salePrice) : "",
+    address:      editRow.address      ?? "",
+    sf:           editRow.sf           != null ? String(editRow.sf)        : "",
+    capRate:      editRow.capRate      != null ? String(editRow.capRate)   : "",
+    occupancy:    editRow.occupancy    != null ? String(editRow.occupancy) : "",
+    anchor:       editRow.anchor       ?? "",
+    propertyType: editRow.propertyType ?? "",
+    sourceNotes:  editRow.sourceNotes  ?? "",
+    state:        editRow.state        ?? "",
+    buyer:        editRow.buyer        ?? "",
+    seller:       editRow.seller       ?? "",
+  } : EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -223,31 +250,49 @@ function AddCompModal({ onClose, onSaved }: { onClose: () => void; onSaved: (row
     setErr(null);
     try {
       const body: Record<string, unknown> = {
-        name: form.name.trim(),
-        market: form.market.trim(),
-        saleDate: form.saleDate,
-        salePrice: parseFloat(form.salePrice.replace(/,/g, "")),
+        name:         form.name.trim(),
+        market:       form.market.trim(),
+        saleDate:     form.saleDate,
+        salePrice:    parseFloat(form.salePrice.replace(/,/g, "")),
+        address:      form.address.trim()      || null,
+        sf:           form.sf.trim()           ? parseFloat(form.sf.replace(/,/g, ""))  : null,
+        capRate:      form.capRate.trim()      ? parseFloat(form.capRate)               : null,
+        occupancy:    form.occupancy.trim()    ? parseFloat(form.occupancy)             : null,
+        anchor:       form.anchor.trim()       || null,
+        propertyType: form.propertyType.trim() || null,
+        sourceNotes:  form.sourceNotes.trim()  || null,
+        state:        form.state.trim()        || null,
+        buyer:        form.buyer.trim()        || null,
+        seller:       form.seller.trim()       || null,
       };
-      if (form.address.trim()) body.address = form.address.trim();
-      if (form.sf.trim()) body.sf = parseFloat(form.sf.replace(/,/g, ""));
-      if (form.capRate.trim()) body.capRate = parseFloat(form.capRate);
-      if (form.occupancy.trim()) body.occupancy = parseFloat(form.occupancy);
-      if (form.anchor.trim()) body.anchor = form.anchor.trim();
-      if (form.propertyType.trim()) body.propertyType = form.propertyType.trim();
-      if (form.sourceNotes.trim()) body.sourceNotes = form.sourceNotes.trim();
 
-      const r = await fetch("/api/comps/manual", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const e = await r.json().catch(() => ({})) as { error?: string };
-        throw new Error(e.error || `HTTP ${r.status}`);
+      if (isEdit) {
+        const r = await fetch(`/api/comps/manual/${editRow.id}`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(e.error || `HTTP ${r.status}`);
+        }
+        const updated = await r.json() as CompRow;
+        onUpdated?.(updated);
+      } else {
+        const r = await fetch("/api/comps/manual", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(e.error || `HTTP ${r.status}`);
+        }
+        const inserted = await r.json() as CompRow;
+        onSaved(inserted);
       }
-      const inserted = await r.json() as CompRow;
-      onSaved(inserted);
       onClose();
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Failed to save comp");
@@ -280,7 +325,7 @@ function AddCompModal({ onClose, onSaved }: { onClose: () => void; onSaved: (row
       }}>
         {/* Header */}
         <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #f0e9da", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>Add Manual Comp</div>
+          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>{isEdit ? "Edit Comp" : "Add Manual Comp"}</div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 18, color: "#a89f8f", lineHeight: 1, padding: 4 }}>×</button>
         </div>
 
@@ -338,6 +383,19 @@ function AddCompModal({ onClose, onSaved }: { onClose: () => void; onSaved: (row
               {label("Property Type")}
               <input style={inp} value={form.propertyType} onChange={e => set("propertyType", e.target.value)} placeholder="e.g. Grocery-Anchored" />
             </div>
+            <div>
+              {label("State (e.g. IL, TX)")}
+              <input style={inp} value={form.state} onChange={e => set("state", e.target.value)} placeholder="e.g. IL" />
+            </div>
+            <div>{/* spacer */}</div>
+            <div>
+              {label("Buyer")}
+              <input style={inp} value={form.buyer} onChange={e => set("buyer", e.target.value)} placeholder="e.g. Inland Real Estate" />
+            </div>
+            <div>
+              {label("Seller")}
+              <input style={inp} value={form.seller} onChange={e => set("seller", e.target.value)} placeholder="e.g. Regency Centers" />
+            </div>
             <div style={{ gridColumn: "1 / -1" }}>
               {label("Source / Notes")}
               <input style={inp} value={form.sourceNotes} onChange={e => set("sourceNotes", e.target.value)} placeholder="e.g. CoStar, Broker" />
@@ -359,7 +417,7 @@ function AddCompModal({ onClose, onSaved }: { onClose: () => void; onSaved: (row
             </button>
             <button onClick={handleSave} disabled={saving}
               style={{ padding: "8px 18px", borderRadius: 7, border: "none", background: saving ? "#a8d98a" : "#6dba43", color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: saving ? "default" : "pointer" }}>
-              {saving ? "Saving…" : "Save Comp"}
+              {saving ? "Saving…" : isEdit ? "Save Changes" : "Save Comp"}
             </button>
           </div>
         </div>
@@ -381,6 +439,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
   const [pendingImport, setPendingImport] = useState<unknown[] | null>(null);
+  const [editRow, setEditRow] = useState<CompRow | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -494,10 +553,12 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1280, margin: "0 auto" }}>
-      {addOpen && (
+      {(addOpen || editRow) && (
         <AddCompModal
-          onClose={() => setAddOpen(false)}
+          onClose={() => { setAddOpen(false); setEditRow(null); }}
           onSaved={row => setRows(prev => [row, ...prev])}
+          editRow={editRow ?? undefined}
+          onUpdated={updated => setRows(prev => prev.map(r => r.id === updated.id ? updated : r))}
         />
       )}
       {pendingImport && (
@@ -754,17 +815,28 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                       <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtPct(row.occupancy)}</td>
                       <td style={{ padding: "9px 10px", maxWidth: 180 }}>
                         {row.isManual ? (
-                          <div style={{ display: "flex", alignItems: "flex-start", gap: 5 }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
                             <TruncCell
                               text={row.sourceNotes || "Manual"}
                               isExpanded={expandedCells.has(`${row.id}:notes`)}
                               onToggle={() => toggleCell(row.id, "notes")}
-                              maxWidth={130}
+                              maxWidth={110}
                               color="#7d766a"
                             />
                             <button
+                              onClick={() => setEditRow(row)}
+                              title="Edit this comp"
+                              style={{
+                                background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
+                                cursor: "pointer", color: "#7d766a", fontSize: 10, padding: "1px 5px",
+                                fontFamily: "'Inter',sans-serif", lineHeight: 1.2, flexShrink: 0,
+                              }}
+                            >
+                              ✎
+                            </button>
+                            <button
                               onClick={() => handleDelete(row.id)}
-                              title="Delete this manual comp"
+                              title="Delete this comp"
                               style={{
                                 background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
                                 cursor: "pointer", color: "#b05050", fontSize: 11, padding: "1px 5px",

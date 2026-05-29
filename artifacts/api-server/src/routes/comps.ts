@@ -252,6 +252,70 @@ router.delete("/comps/manual/:id", requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PUT /api/comps/manual/:id — update a manually entered comp in place
+// ---------------------------------------------------------------------------
+router.put("/comps/manual/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const [existing] = await db.select().from(compsIndexTable).where(eq(compsIndexTable.id, id));
+    if (!existing || !existing.isManual) {
+      res.status(404).json({ error: "Not found or not a manual comp" });
+      return;
+    }
+
+    const {
+      name, address, market, state, saleDateRaw, saleDate,
+      salePrice, capRate, pricePerSf, sf, occupancy,
+      anchor, propertyType, sourceNotes, buyer, seller,
+    } = req.body as Record<string, unknown>;
+
+    const toFloat = (v: unknown): number | null => {
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      return isFinite(n) ? n : null;
+    };
+    const toStr = (v: unknown): string | null =>
+      typeof v === "string" && v.trim() ? v.trim() : null;
+
+    const parsedPrice = toFloat(salePrice);
+    const parsedSf    = toFloat(sf);
+    let parsedPsf     = toFloat(pricePerSf);
+    if (parsedPsf == null && parsedPrice != null && parsedSf != null && parsedSf > 0) {
+      parsedPsf = Math.round(parsedPrice / parsedSf);
+    }
+
+    const [updated] = await db.update(compsIndexTable)
+      .set({
+        name: toStr(name),
+        address: toStr(address),
+        market: toStr(market),
+        state: toStr(state),
+        saleDateRaw: toStr(saleDateRaw),
+        saleDate: toStr(saleDate),
+        salePrice: parsedPrice,
+        capRate: toFloat(capRate),
+        pricePerSf: parsedPsf,
+        sf: parsedSf,
+        occupancy: toFloat(occupancy),
+        anchor: toStr(anchor),
+        propertyType: toStr(propertyType),
+        sourceNotes: toStr(sourceNotes),
+        buyer: toStr(buyer),
+        seller: toStr(seller),
+        updatedAt: new Date(),
+      })
+      .where(eq(compsIndexTable.id, id))
+      .returning();
+
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update manual comp");
+    res.status(500).json({ error: "Failed to update manual comp" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/comps/benchmark — deterministic comp benchmark for a deal
 // ---------------------------------------------------------------------------
 router.post("/comps/benchmark", requireAuth, async (req, res) => {
