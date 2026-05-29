@@ -1,0 +1,81 @@
+Build a deterministic "Comp Benchmark" panel that compares a subject deal's pricing against the comp database. ALL statistics are computed in code — no AI. Always surface sample size, date range, and source mix so a thin or low-quality sample can't masquerade as a confident benchmark.
+
+────────────────────────────────────────
+PART 1 — Backend endpoint
+File: artifacts/api-server/src/routes/comps.ts (add route) + new helper file artifacts/api-server/src/lib/compBenchmark.ts
+
+Add an authenticated route: POST /api/comps/benchmark
+Body (subject attributes): { dealId, market, state, propertyType, sf, capRate, pricePerSf, excludeOmComps }
+
+Logic in compBenchmark.ts:
+
+1. Load all comps_index rows. Apply a VALIDITY FILTER first — drop any comp where:
+   - capRate is present but outside [3, 12]
+   - salePrice missing or <= 0
+   - saleDate missing or doesn't parse or is in the future
+   - pricePerSf present but <= 0 or > 2000
+   Count how many were dropped (return as `excludedInvalid`).
+   Also exclude: rows where source_deal_id === dealId (don't compare a deal to itself), and the subject's own OM comps.
+   If excludeOmComps is true, also drop rows that are neither isOwnTransaction nor isManual (i.e. OM-sourced).
+
+2. Classify each remaining comp's source: "owned" (isOwnTransaction), "broker/manual" (isManual), or "om" (neither).
+
+3. TIERED RELAXATION — define comp sets from tightest to loosest and pick the FIRST that reaches MIN_N = 4:
+   T1: same state AND same propertyType AND sf within [0.5x, 2x] of subject AND saleDate within last 24 months
+   T2: same state AND same propertyType AND saleDate within last 36 months   (drops size band)
+   T3: same propertyType AND saleDate within last 36 months                  (drops geography — label "national, same type")
+   T4: same state AND saleDate within last 36 months                         (drops type — label "same market, any type")
+   Record `tierLabel` (human description of the criteria used) and `relaxed` (list of dimensions dropped vs T1).
+   Matching notes: compare propertyType case-insensitively and treat "Community/Power Center" and "Power Center" as compatible with each other but NOT with "Grocery-Anchored". Match state exact (case-insensitive). If subject sf is missing, skip the size constraint in T1.
+   If NO tier reaches MIN_N, set insufficient = true and use the loosest non-empty set for display (but the UI must show the strong caveat).
+
+4. For the chosen comp set compute (use MEDIANS and percentiles, never means):
+   - n, dateRange { from, to }
+   - sourceMix { owned, broker, om }
+   - capRate: { median, p25, p75 }
+   - pricePerSf: { median, p25, p75 }
+   - last12: same medians computed on the subset within 12 months, or null if that subset has n < 3
+   - Versus subject: capDeltaBps = round((subject.capRate - capRate.median) * 100), psfDeltaPct = round((subject.pricePerSf - psf.median) / psf.median * 100)
+   - comps: the matched rows (name, market, saleDate, salePrice, capRate, pricePerSf, sf, source) sorted by saleDate desc, for drill-down
+
+5. Return all of the above plus `insufficient`, `tierLabel`, `relaxed`, `excludedInvalid`, and the subject values echoed back.
+
+Provide a percentile helper (linear interpolation) in the same file. Wrap the route in try/catch.
+
+────────────────────────────────────────
+PART 2 — Frontend panel
+File: src/components/DetailView.tsx — add a new "Comp Benchmark" card placed right after the Key Financials section. Also add a jump-to entry "Comp Benchmark" (id="section-comp-benchmark") in SectionJump, shown only when the subject deal has a capRate OR pricePerSF.
+
+On mount (and when the deal changes), POST the subject's attributes to /api/comps/benchmark:
+  dealId = deal.id, market = deal.market, state = deal.state, propertyType = deal.propertyType,
+  sf = deal.totalSF, capRate = deal.capRate,
+  pricePerSf = deal.pricePerSF ?? (deal.askingPrice && deal.totalSF ? deal.askingPrice/deal.totalSF : null),
+  excludeOmComps = (toggle state, default false)
+
+Render:
+- HEADER line, always visible and prominent: "Based on N comps · {tierLabel} · {dateRange.from}–{dateRange.to}". If relaxed.length > 0, append a muted note: "(relaxed: {relaxed.join(', ')})".
+- Source mix line: "N comps — X owned, Y broker, Z OM-sourced".
+- A toggle: "Exclude OM-sourced comps" → re-fetches with excludeOmComps=true.
+- CAP RATE row: subject {capRate}% vs comp median {median}% (range {p25}–{p75}%), plus a plain-language read derived from capDeltaBps:
+    if capDeltaBps <= -25: "~{abs}bps inside the comp median — priced richer than comps"
+    if capDeltaBps >= 25: "~{abs}bps above the comp median — priced cheaper than comps"
+    else: "in line with comps"
+- PRICE PSF row: subject vs median + range, with psfDeltaPct read (higher = more expensive).
+- If last12 is present, show a second small line: "Last 12 months (n={last12.n}): median cap {…}%, median PSF ${…}".
+- Expandable "Show comps" list of the matched rows with an OWNED/MANUAL/OM tag each.
+- IF insufficient === true: do NOT show the comparison verdicts. Instead show an amber note: "Only {n} comparable trade(s) on file — too few to benchmark reliably. Showing what's available; treat as directional only." Still show the comp list.
+- Style consistent with the existing cards (white card, #efe8da border, same type scale).
+
+────────────────────────────────────────
+GUARDRAILS (must all hold):
+- Never render a median without the n and date range next to it.
+- Use medians + p25/p75 only; no means.
+- Respect MIN_N — below it, suppress verdicts and show the insufficiency note.
+- The validity filter must run before any stat is computed.
+
+────────────────────────────────────────
+TEST:
+1. Open a grocery-anchored deal in a state with several comps → confirm the panel shows a tier label, n, date range, source mix, and cap/PSF medians with a sensible verdict.
+2. Toggle "Exclude OM-sourced comps" → confirm n drops and stats recompute.
+3. Open a deal in a market/type with <4 comps → confirm it shows the "too few to benchmark" note and no confident verdict.
+4. Confirm an obviously bad comp (e.g. a 1% cap data-entry error) is excluded and counted in excludedInvalid.

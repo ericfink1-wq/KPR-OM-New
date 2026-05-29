@@ -16,6 +16,8 @@ export const compsIndexTable = pgTable("comps_index", {
   sf: doublePrecision("sf"),
   occupancy: doublePrecision("occupancy"),
   isManual: boolean("is_manual").notNull().default(false),
+  isOwnTransaction: boolean("is_own_transaction").notNull().default(false),
+  txnKind: text("txn_kind"),
   anchor: text("anchor"),
   propertyType: text("property_type"),
   sourceNotes: text("source_notes"),

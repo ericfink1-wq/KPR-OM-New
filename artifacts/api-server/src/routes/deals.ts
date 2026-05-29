@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
-import { rebuildCompsIndex } from "../lib/compsIndex";
+import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
 
 function composeAddressForGeocoder(deal: {
@@ -247,6 +247,7 @@ router.post("/deals", requireAuth, async (req, res) => {
     }
     await db.insert(dealsTable).values({ id, data: rest });
     res.status(201).json({ ok: true, id });
+    setImmediate(() => { syncOwnTransactionComps(id, rest).catch(() => {}); });
   } catch (err) {
     req.log.error({ err }, "Failed to create deal");
     res.status(500).json({ error: "Failed to create deal" });

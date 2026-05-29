@@ -1,0 +1,63 @@
+Automatically add a deal to the comp database when it becomes a real transaction (KPR acquires or sells it). These are the highest-quality comps and must be tiered as such.
+
+────────────────────────────────────────
+PART 1 — Schema
+File: lib/db/src/schema/compsIndex.ts
+Add two columns (alongside existing isManual/anchor/propertyType/sourceNotes):
+  isOwnTransaction: boolean("is_own_transaction").notNull().default(false)
+  txnKind: text("txn_kind")   -- null | "acquisition" | "disposition"
+Run a Drizzle migration. Update the exported CompRow/CompsIndexRow type and the frontend CompRow interface in src/components/CompsSearch.tsx to include both.
+
+────────────────────────────────────────
+PART 2 — Sync own-transaction comps on deal save
+File: artifacts/api-server/src/lib/compsIndex.ts
+
+Add an exported async function syncOwnTransactionComps(dealId, data):
+- ACQUISITION comp should exist if: data.status === "Owned" OR data.status === "Sold" OR (data.txnPurchasePrice && data.txnCloseDate).
+  If yes, upsert a row keyed by (sourceDealId = dealId, txnKind = "acquisition"):
+    name = data.propertyName, address = data.address ?? null,
+    market = data.market ?? data.state ?? null,
+    saleDateRaw = data.txnCloseDate ?? null, saleDate = parseSaleDate(data.txnCloseDate),
+    salePrice = toFloat(data.txnPurchasePrice),
+    capRate = toFloat(data.acqCapRate) ?? toFloat(data.capRate),
+    sf = toFloat(data.totalSF), occupancy = toFloat(data.occupancy),
+    pricePerSf = (salePrice && sf) ? Math.round(salePrice/sf) : toFloat(data.pricePerSF),
+    anchor = top 3 tenant names if available else null,
+    propertyType = data.propertyType ?? null,
+    isOwnTransaction = true, isManual = false,
+    sourceNotes = "KPR acquisition" + (seller ? `, seller: ${data.txnSeller}` : "").
+  GUARDRAIL: only write if salePrice > 0 AND saleDate parses. Otherwise skip.
+- DISPOSITION comp should exist if: data.status === "Sold" OR (data.txnSalePrice && data.txnSaleDate).
+  If yes, upsert (sourceDealId = dealId, txnKind = "disposition") with:
+    saleDateRaw = data.txnSaleDate, saleDate = parseSaleDate(data.txnSaleDate),
+    salePrice = toFloat(data.txnSalePrice), capRate = toFloat(data.dispExitCap),
+    buyer in sourceNotes = "KPR disposition" + (data.txnBuyer ? `, buyer: ${data.txnBuyer}` : ""),
+    same name/market/sf/occupancy/anchor/propertyType mapping, isOwnTransaction = true.
+  Same guardrail (salePrice > 0 and saleDate parses).
+- CLEANUP: if a condition is no longer met (e.g. status reverted to Prospect, or the txn fields cleared), DELETE the corresponding own-transaction row so stale comps don't linger.
+- Upsert = update existing row matching (sourceDealId, txnKind) if present, else insert. Don't create duplicates on repeated saves.
+
+────────────────────────────────────────
+PART 3 — Don't let rebuilds wipe these
+File: artifacts/api-server/src/lib/compsIndex.ts
+- In rebuildCompsIndex(dealId, data): change the initial delete so it ONLY removes OM-derived rows:
+    DELETE FROM comps_index WHERE source_deal_id = dealId AND is_own_transaction = false AND is_manual = false
+  Then, after inserting the OM comps, call syncOwnTransactionComps(dealId, data) so the own-transaction rows are refreshed too.
+- In rebuildAllComps(): ensure manual (is_manual = true) and own-transaction (is_own_transaction = true) rows are preserved across the full rebuild.
+
+────────────────────────────────────────
+PART 4 — Call the sync on every deal write
+File: artifacts/api-server/src/routes/deals.ts
+In the deal update (PUT /deals/:id) and create/import handlers, after the deal is persisted, call syncOwnTransactionComps(id, data) fire-and-forget (catch and ignore errors so it never blocks the deal write). It is fine if rebuildCompsIndex already calls it — just don't double-insert; the upsert/delete logic must be idempotent.
+
+────────────────────────────────────────
+PART 5 — UI badge
+File: src/components/CompsSearch.tsx
+Show a small badge on comp rows: "OWNED" (green) when isOwnTransaction is true, "MANUAL" when isManual is true, otherwise no badge (OM-sourced). If both flags somehow set, prefer "OWNED".
+
+────────────────────────────────────────
+TEST:
+1. Mark a deal as "Owned" with a purchase price and close date → confirm an OWNED comp appears in the comp database with the right price/date/cap.
+2. Fill in sale price + sale date (or mark "Sold") → confirm a second OWNED disposition comp appears.
+3. Revert the deal to "Prospect" and clear txn fields → confirm the own-transaction comp(s) disappear.
+4. Run rebuild-all → confirm OWNED and MANUAL comps are NOT removed.

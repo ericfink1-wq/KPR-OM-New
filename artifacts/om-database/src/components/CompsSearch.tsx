@@ -20,6 +20,8 @@ interface CompRow {
   sf: number | null;
   occupancy: number | null;
   isManual: boolean;
+  isOwnTransaction: boolean;
+  txnKind: string | null;
   anchor: string | null;
   propertyType: string | null;
   sourceNotes: string | null;
@@ -555,19 +557,23 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                       style={{
                         borderTop: idx === 0 ? "none" : "1px solid #f5f1ea",
                         transition: "background 0.12s",
-                        background: row.isManual ? "#f8fbf5" : undefined,
+                        background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : undefined,
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = row.isManual ? "#eef7e8" : "#faf7f0")}
-                      onMouseLeave={e => (e.currentTarget.style.background = row.isManual ? "#f8fbf5" : "")}
+                      onMouseEnter={e => (e.currentTarget.style.background = row.isOwnTransaction ? "#e8f5e3" : row.isManual ? "#eef7e8" : "#faf7f0")}
+                      onMouseLeave={e => (e.currentTarget.style.background = row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "")}
                     >
                       <td style={{ padding: "9px 10px", maxWidth: 240 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-                          {row.isManual && (
+                          {row.isOwnTransaction ? (
+                            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                              OWNED
+                            </span>
+                          ) : row.isManual ? (
                             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#5a7c9e", background: "#e8f1f8", border: "1px solid #c3d9ec", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
                               MANUAL
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         {sub && <div style={{ fontSize: 10.5, color: "#a89f8f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{sub}</div>}
                       </td>

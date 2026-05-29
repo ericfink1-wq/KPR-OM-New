@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { compsIndexTable, dealsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { parseLeaseDate } from "./tenantIndex";
 
 // ---------------------------------------------------------------------------
@@ -32,6 +32,94 @@ function toFloat(v: unknown): number | null {
 }
 
 // ---------------------------------------------------------------------------
+// Sync own-transaction comps (acquisition / disposition) for one deal.
+// Idempotent — delete-then-insert pattern; safe to call fire-and-forget.
+// ---------------------------------------------------------------------------
+export async function syncOwnTransactionComps(
+  dealId: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const toStr = (v: unknown): string | null =>
+      typeof v === "string" && v.trim() ? v.trim() : null;
+
+    const status      = toStr(data.status);
+    const propertyName = toStr(data.propertyName);
+    const address     = toStr(data.address);
+    const market      = toStr(data.market) ?? toStr(data.state);
+    const sf          = toFloat(data.totalSF);
+    const occupancy   = toFloat(data.occupancy);
+    const propertyType = toStr(data.propertyType);
+
+    // Top-3 tenant names as anchor string
+    const tenantList = Array.isArray(data.tenants) ? (data.tenants as Record<string, unknown>[]) : [];
+    const anchorNames = tenantList
+      .slice(0, 3)
+      .map(t => toStr(t.name))
+      .filter((n): n is string => n !== null);
+    const anchor = anchorNames.length > 0 ? anchorNames.join(", ") : null;
+
+    // ── ACQUISITION ──
+    const acqCondition =
+      status === "Owned" || status === "Sold" ||
+      (data.txnPurchasePrice != null && data.txnCloseDate != null);
+
+    await db.delete(compsIndexTable).where(
+      and(eq(compsIndexTable.sourceDealId, dealId), eq(compsIndexTable.txnKind, "acquisition"))
+    );
+
+    if (acqCondition) {
+      const acqSalePrice = toFloat(data.txnPurchasePrice);
+      const acqSaleDate  = parseSaleDate(data.txnCloseDate);
+      if (acqSalePrice && acqSalePrice > 0 && acqSaleDate) {
+        const acqCapRate = toFloat(data.acqCapRate) ?? toFloat(data.capRate);
+        const acqPsf     = sf && sf > 0 ? Math.round(acqSalePrice / sf) : toFloat(data.pricePerSF);
+        const seller     = toStr(data.txnSeller);
+        await db.insert(compsIndexTable).values({
+          sourceDealId: dealId, sourceDealName: propertyName, sourceDealMarket: market,
+          name: propertyName, address, market,
+          saleDateRaw: toStr(data.txnCloseDate), saleDate: acqSaleDate,
+          salePrice: acqSalePrice, capRate: acqCapRate, pricePerSf: acqPsf,
+          sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "acquisition",
+          anchor, propertyType,
+          sourceNotes: "KPR acquisition" + (seller ? `, seller: ${seller}` : ""),
+        });
+      }
+    }
+
+    // ── DISPOSITION ──
+    const dispCondition =
+      status === "Sold" ||
+      (data.txnSalePrice != null && data.txnSaleDate != null);
+
+    await db.delete(compsIndexTable).where(
+      and(eq(compsIndexTable.sourceDealId, dealId), eq(compsIndexTable.txnKind, "disposition"))
+    );
+
+    if (dispCondition) {
+      const dispSalePrice = toFloat(data.txnSalePrice);
+      const dispSaleDate  = parseSaleDate(data.txnSaleDate);
+      if (dispSalePrice && dispSalePrice > 0 && dispSaleDate) {
+        const dispCapRate = toFloat(data.dispExitCap);
+        const dispPsf     = sf && sf > 0 ? Math.round(dispSalePrice / sf) : null;
+        const buyer       = toStr(data.txnBuyer);
+        await db.insert(compsIndexTable).values({
+          sourceDealId: dealId, sourceDealName: propertyName, sourceDealMarket: market,
+          name: propertyName, address, market,
+          saleDateRaw: toStr(data.txnSaleDate), saleDate: dispSaleDate,
+          salePrice: dispSalePrice, capRate: dispCapRate, pricePerSf: dispPsf,
+          sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "disposition",
+          anchor, propertyType,
+          sourceNotes: "KPR disposition" + (buyer ? `, buyer: ${buyer}` : ""),
+        });
+      }
+    }
+  } catch {
+    // Non-fatal
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Rebuild all comps_index rows for one deal.
 // Safe to call fire-and-forget — errors are caught internally.
 // ---------------------------------------------------------------------------
@@ -40,38 +128,47 @@ export async function rebuildCompsIndex(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await db.delete(compsIndexTable).where(eq(compsIndexTable.sourceDealId, dealId));
+    // Only wipe OM-derived rows; manual and own-transaction rows survive
+    await db.delete(compsIndexTable).where(
+      and(
+        eq(compsIndexTable.sourceDealId, dealId),
+        eq(compsIndexTable.isOwnTransaction, false),
+        eq(compsIndexTable.isManual, false),
+      )
+    );
 
     const comps = data.comparableSales as Array<Record<string, unknown>> | undefined;
-    if (!Array.isArray(comps) || comps.length === 0) return;
+    if (Array.isArray(comps) && comps.length > 0) {
+      const sourceDealName = typeof data.propertyName === "string" ? data.propertyName : null;
+      const sourceDealMarket = typeof data.market === "string" ? data.market : null;
 
-    const sourceDealName = typeof data.propertyName === "string" ? data.propertyName : null;
-    const sourceDealMarket = typeof data.market === "string" ? data.market : null;
+      const rows = comps.map((c) => {
+        const saleDateRaw = typeof c.saleDate === "string" && c.saleDate ? c.saleDate : null;
+        const market =
+          (typeof c.market === "string" && c.market.trim() ? c.market.trim() : null)
+          ?? sourceDealMarket;
+        return {
+          sourceDealId: dealId,
+          sourceDealName,
+          sourceDealMarket,
+          name: typeof c.name === "string" && c.name.trim() ? c.name.trim() : null,
+          address: typeof c.address === "string" && c.address.trim() ? c.address.trim() : null,
+          market,
+          saleDateRaw,
+          saleDate: parseSaleDate(saleDateRaw),
+          salePrice: toFloat(c.salePrice),
+          capRate: toFloat(c.capRate),
+          pricePerSf: toFloat(c.pricePerSF),
+          sf: toFloat(c.sf),
+          occupancy: toFloat(c.occupancy),
+        };
+      });
 
-    const rows = comps.map((c) => {
-      const saleDateRaw = typeof c.saleDate === "string" && c.saleDate ? c.saleDate : null;
-      // market: use comp's own market if present, else fall back to source deal's market
-      const market =
-        (typeof c.market === "string" && c.market.trim() ? c.market.trim() : null)
-        ?? sourceDealMarket;
-      return {
-        sourceDealId: dealId,
-        sourceDealName,
-        sourceDealMarket,
-        name: typeof c.name === "string" && c.name.trim() ? c.name.trim() : null,
-        address: typeof c.address === "string" && c.address.trim() ? c.address.trim() : null,
-        market,
-        saleDateRaw,
-        saleDate: parseSaleDate(saleDateRaw),
-        salePrice: toFloat(c.salePrice),
-        capRate: toFloat(c.capRate),
-        pricePerSf: toFloat(c.pricePerSF),
-        sf: toFloat(c.sf),
-        occupancy: toFloat(c.occupancy),
-      };
-    });
+      await db.insert(compsIndexTable).values(rows);
+    }
 
-    await db.insert(compsIndexTable).values(rows);
+    // Refresh own-transaction comps after OM comps are updated
+    await syncOwnTransactionComps(dealId, data);
   } catch {
     // Non-fatal — mirror table; don't break deal writes
   }
