@@ -1,3 +1,5 @@
+Rewrite artifacts/om-database/src/components/ParentCompanyView.tsx completely to match TenantView's visual style and layout. Replace the entire file with:
+
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
 import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTenantSales } from "../lib/utils";
@@ -74,6 +76,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     });
   }, [rows, sortKey, sortDir]);
 
+  // Summary stats
   const sfVals = rows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
   const rentVals = rows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
   const rentPSFVals = rows.map(r => num(r.t.rentPerSF)).filter((v): v is number => v != null);
@@ -182,3 +185,5 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     </div>
   );
 }
+
+Make, test, iterate until saved.
