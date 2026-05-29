@@ -131,8 +131,20 @@ router.post("/deals/import", requireAuth, async (req, res) => {
 
     const normName = typeof uploadedData.propertyName === "string"
       ? uploadedData.propertyName.trim().toLowerCase() : null;
-    const normAddr = typeof uploadedData.address === "string"
-      ? uploadedData.address.trim().toLowerCase() : null;
+
+    // Normalize an address string for fuzzy matching (abbreviates common suffixes)
+    function normalizeAddr(a: unknown): string | null {
+      if (typeof a !== "string") return null;
+      return a.trim().toLowerCase()
+        .replace(/[.,]/g, "")
+        .replace(/\broad\b/g, "rd").replace(/\bstreet\b/g, "st")
+        .replace(/\bavenue\b/g, "ave").replace(/\bboulevard\b/g, "blvd")
+        .replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln")
+        .replace(/\bparkway\b/g, "pkwy").replace(/\bsuite\b.*$/g, "")
+        .replace(/\s+/g, " ").trim() || null;
+    }
+
+    const normAddr = normalizeAddr(uploadedData.address);
 
     // Scan for an existing deal with matching propertyName (required) + address (when both sides have one)
     let existingRow: { id: string; data: Record<string, unknown> } | null = null;
@@ -142,7 +154,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
         const d = row.data as Record<string, unknown>;
         const eName = typeof d.propertyName === "string" ? d.propertyName.trim().toLowerCase() : null;
         if (eName !== normName) continue;
-        const eAddr = typeof d.address === "string" ? d.address.trim().toLowerCase() : null;
+        const eAddr = normalizeAddr(d.address);
         // Address must match when both sides have one; ignored when either is absent
         if (normAddr && eAddr && normAddr !== eAddr) continue;
         existingRow = { id: row.id, data: d };
