@@ -415,12 +415,17 @@ export function tenantKey(name: unknown): string {
 }
 
 /** Clean, human-readable canonical name for labels and headers. */
+/** Remove trailing store-number suffixes like "#371", "# 0111", "#560-A" from display labels. */
+function stripStoreNumber(s: string): string {
+  return s.replace(/\s*#\s*[a-z0-9][\w-]*\s*$/i, "").trim();
+}
+
 export function tenantLabel(name: unknown, canonicalName?: string | null): string {
-  if (canonicalName && canonicalName.trim()) return canonicalName.trim();
+  if (canonicalName && canonicalName.trim()) return stripStoreNumber(canonicalName.trim());
   const n = _normTenant(name);
-  if (_userAliases[n]) return _userAliases[n];
-  if (TENANT_ALIASES[n]) return TENANT_ALIASES[n];
-  return n.replace(/\b\w/g, c => c.toUpperCase()) || String(name || "");
+  if (_userAliases[n]) return stripStoreNumber(_userAliases[n]);
+  if (TENANT_ALIASES[n]) return stripStoreNumber(TENANT_ALIASES[n]);
+  return stripStoreNumber(n.replace(/\b\w/g, c => c.toUpperCase())) || stripStoreNumber(String(name || ""));
 }
 
 // ── Lender-name normalisation ─────────────────────────────────────────────────
