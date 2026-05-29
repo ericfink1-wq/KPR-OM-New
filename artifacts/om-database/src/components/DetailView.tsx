@@ -151,7 +151,7 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
   if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
   if (deal.trafficCountVPD || deal.population3mi || deal.medianHHIncome3mi || deal.avgHHIncome3mi || deal.proximityHighways) items.push({ id: "section-demographics", label: "Demographics & Site" });
   if (deal.marketDemographics) items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
-  if (deal.acqNOIAtClose || deal.acqClosingCosts || deal.acqFee) items.push({ id: "section-closing-costs", label: "Closing Costs" });
+  items.push({ id: "section-closing-costs", label: "Estimated Closing Costs" });
   items.push({ id: "section-notes", label: "Your Notes" });
 
   useEffect(() => {
@@ -2135,10 +2135,16 @@ function PropertyChat({ deal }: { deal: Deal }) {
 }
 
 function PriceCapEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
-  const [price, setPrice] = useState<string|number>(deal.askingPrice ?? "");
+  function commaFmt(v: string): string {
+    const stripped = v.replace(/,/g, "");
+    const num = parseFloat(stripped);
+    if (!stripped || isNaN(num)) return v;
+    return Math.round(num).toLocaleString("en-US");
+  }
+  const [price, setPrice] = useState<string>(deal.askingPrice != null ? Math.round(deal.askingPrice).toLocaleString("en-US") : "");
   const [cap, setCap] = useState<string|number>(deal.capRate ?? "");
-  useEffect(() => { setPrice(deal.askingPrice ?? ""); setCap(deal.capRate ?? ""); }, [deal.id]);
-  const saveP = () => { const v = price===""?null:Number(price); if (price===""?deal.askingPrice!=null:(!isNaN(Number(price))&&v!==(deal.askingPrice??null))) onUpdate(deal.id, { askingPrice:v }); };
+  useEffect(() => { setPrice(deal.askingPrice != null ? Math.round(deal.askingPrice).toLocaleString("en-US") : ""); setCap(deal.capRate ?? ""); }, [deal.id]);
+  const saveP = () => { const v = price===""?null:Number(String(price).replace(/,/g,"")); if (price===""?deal.askingPrice!=null:(!isNaN(Number(String(price).replace(/,/g,"")))&&v!==(deal.askingPrice??null))) onUpdate(deal.id, { askingPrice:v }); };
   const saveC = () => { const v = cap===""?null:Number(cap); if (cap===""?deal.capRate!=null:(!isNaN(Number(cap))&&v!==(deal.capRate??null))) onUpdate(deal.id, { capRate:v }); };
   const inp = { fontSize:12, padding:"5px 9px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", background:"#fff", width:"100%", fontFamily:"'Inter',sans-serif", boxSizing:"border-box" as const };
   return (
@@ -2147,7 +2153,7 @@ function PriceCapEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string,
       <div style={{ display:"flex", gap:8 }}>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:9, color:"#a69e91", marginBottom:3 }}>ASKING PRICE $</div>
-          <input value={price} onChange={e => setPrice(e.target.value)} onBlur={saveP} onKeyDown={e => e.key==="Enter"&&e.currentTarget.blur()} placeholder="—" inputMode="numeric" style={inp}/>
+          <input type="text" inputMode="numeric" value={price} onChange={e => setPrice(e.target.value)} onBlur={() => { setPrice(v => commaFmt(v)); saveP(); }} onFocus={() => setPrice(v => v.replace(/,/g, ""))} onKeyDown={e => e.key==="Enter"&&e.currentTarget.blur()} placeholder="—" style={inp}/>
         </div>
         <div style={{ width:92 }}>
           <div style={{ fontSize:9, color:"#a69e91", marginBottom:3 }}>CAP RATE %</div>

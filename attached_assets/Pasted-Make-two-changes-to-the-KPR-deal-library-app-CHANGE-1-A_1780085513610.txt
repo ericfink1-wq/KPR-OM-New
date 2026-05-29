@@ -1,0 +1,48 @@
+Make two changes to the KPR deal library app:
+
+────────────────────────────────────────
+CHANGE 1 — Add "Estimated Closing Costs" to the Jump To menu
+File: src/components/DetailView.tsx
+In the SectionJump component, find the items array around line 154:
+
+  if (deal.acqNOIAtClose || deal.acqClosingCosts || deal.acqFee) items.push({ id: "section-closing-costs", label: "Closing Costs" });
+
+Replace it with (always show, no condition, and update the label):
+
+  items.push({ id: "section-closing-costs", label: "Estimated Closing Costs" });
+
+Keep it in the same position in the list (just before the "Your Notes" entry).
+
+────────────────────────────────────────
+CHANGE 2 — Auto-format dollar inputs with commas on blur
+This applies to three inputs total across two files.
+
+File: src/components/ClosingCostsCard.tsx
+
+At the top of the component add this helper:
+  function commaFmt(v: string): string {
+    const stripped = v.replace(/,/g, "");
+    const num = parseFloat(stripped);
+    if (!stripped || isNaN(num)) return v;
+    return Math.round(num).toLocaleString("en-US");
+  }
+
+Update the two price/loan computations to strip commas before parsing:
+  const price = Number(priceInput.replace(/,/g, "")) || 0;
+  const loan  = Number(loanInput.replace(/,/g, ""))  || 0;
+
+Update both inputs (Purchase Price and Loan Amount):
+- Change type="number" to type="text" and add inputMode="numeric"
+- Add onBlur={() => setPriceInput(v => commaFmt(v))} to Purchase Price input
+- Add onBlur={() => setLoanInput(v => commaFmt(v))} to Loan Amount input
+- Add onFocus={() => setPriceInput(v => v.replace(/,/g, ""))} to Purchase Price
+- Add onFocus={() => setLoanInput(v => v.replace(/,/g, ""))} to Loan Amount
+
+Also update the default state initializations so they display with commas on load:
+  const [priceInput, setPriceInput] = useState<string>(defaultPrice ? Math.round(defaultPrice).toLocaleString("en-US") : "");
+  const [loanInput,  setLoanInput]  = useState<string>(defaultLoan  ? Math.round(defaultLoan).toLocaleString("en-US")  : "");
+
+File: src/components/DetailView.tsx
+In the PriceCapEditor component (around line 2137), find the Asking Price input. Apply the same treatment — change type to text with inputMode="numeric", and add onBlur/onFocus handlers using the same commaFmt pattern above (define it locally at the top of PriceCapEditor). Make sure the saveP function strips commas before calling Number(): const v = price === "" ? null : Number(String(price).replace(/,/g, "")). Do NOT add comma formatting to the Cap Rate input.
+
+Test: on a property page, type 28000000 into the Purchase Price box, tab out, and confirm it displays as 28,000,000.

@@ -10,17 +10,24 @@ interface Props { deal: Deal; }
 const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 const fmtPct = (r: number) => `${(r * 100).toFixed(2)}%`;
 
+function commaFmt(v: string): string {
+  const stripped = v.replace(/,/g, "");
+  const num = parseFloat(stripped);
+  if (!stripped || isNaN(num)) return v;
+  return Math.round(num).toLocaleString("en-US");
+}
+
 export default function ClosingCostsCard({ deal }: Props) {
   const defaultPrice = Number(deal.txnPurchasePrice ?? deal.askingPrice ?? 0) || 0;
   const knownLoan = Number(deal.loanBalance ?? 0) || 0;
   const defaultLoan = knownLoan || (defaultPrice ? Math.round(defaultPrice * DEFAULT_LTV) : 0);
 
-  const [priceInput, setPriceInput] = useState<string>(defaultPrice ? String(defaultPrice) : "");
-  const [loanInput, setLoanInput] = useState<string>(defaultLoan ? String(defaultLoan) : "");
+  const [priceInput, setPriceInput] = useState<string>(defaultPrice ? Math.round(defaultPrice).toLocaleString("en-US") : "");
+  const [loanInput, setLoanInput] = useState<string>(defaultLoan ? Math.round(defaultLoan).toLocaleString("en-US") : "");
   const [entitySale, setEntitySale] = useState(false);
 
-  const price = Number(priceInput) || 0;
-  const loan = Number(loanInput) || 0;
+  const price = Number(priceInput.replace(/,/g, "")) || 0;
+  const loan  = Number(loanInput.replace(/,/g, ""))  || 0;
   const jurisdiction = useMemo(() => getJurisdiction(deal.state), [deal.state]);
   const breakdown = useMemo(() => calculateClosingCosts(jurisdiction, price, loan, entitySale), [jurisdiction, price, loan, entitySale]);
 
@@ -55,11 +62,11 @@ export default function ClosingCostsCard({ deal }: Props) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 6 }}>
         <label style={{ display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
           Purchase Price
-          <input type="number" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} placeholder="optional" style={inputStyle} />
+          <input type="text" inputMode="numeric" value={priceInput} onChange={(e) => setPriceInput(e.target.value)} onBlur={() => setPriceInput(v => commaFmt(v))} onFocus={() => setPriceInput(v => v.replace(/,/g, ""))} placeholder="optional" style={inputStyle} />
         </label>
         <label style={{ display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
           Loan Amount
-          <input type="number" value={loanInput} onChange={(e) => setLoanInput(e.target.value)} placeholder="optional" style={inputStyle} />
+          <input type="text" inputMode="numeric" value={loanInput} onChange={(e) => setLoanInput(e.target.value)} onBlur={() => setLoanInput(v => commaFmt(v))} onFocus={() => setLoanInput(v => v.replace(/,/g, ""))} placeholder="optional" style={inputStyle} />
         </label>
       </div>
       <div style={{ fontSize: 10, color: "#a69e91", marginBottom: 10, minHeight: 14 }}>
