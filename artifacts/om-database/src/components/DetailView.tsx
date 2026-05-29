@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel } from "../lib/utils";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
 import StatusTag from "./StatusTag";
@@ -1580,7 +1580,7 @@ ${text.slice(0, 40000)}`;
               {d.debtLender && onTenantClick && (
                 <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
                   <button onClick={() => onTenantClick("__lender__" + d.debtLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
-                    View all loans with {d.debtLender} ›
+                    View all loans with {lenderLabel(d.debtLender)} ›
                   </button>
                 </div>
               )}

@@ -300,6 +300,27 @@ export function tenantLabel(name: unknown): string {
   return n.replace(/\b\w/g, c => c.toUpperCase()) || String(name || "");
 }
 
+// ── Lender-name normalisation ─────────────────────────────────────────────────
+// Mirrors the tenant canonical-name system so "BankUnited", "BankUnited, N.A.",
+// and "Bank United" all collapse to the same key in cross-deal groupings.
+
+/** Stable grouping key — strips entity suffixes and punctuation so spelling
+ *  variants of the same institution collapse to one string. */
+export function lenderKey(name: unknown): string {
+  if (!name || typeof name !== "string") return "";
+  return name.toLowerCase()
+    .replace(/,?\s*(n\.?a\.?|national association|llc|l\.l\.c\.|inc\.?|corp\.?|company|co\.?|bank|f\.?s\.?b\.?)\b/gi, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+/** Clean, human-readable display name — strips trailing legal suffixes (e.g.
+ *  ", N.A.", "National Association") while preserving the institution name. */
+export function lenderLabel(name: unknown): string {
+  if (!name || typeof name !== "string") return String(name || "");
+  return name.replace(/\s*,?\s*(N\.?A\.?|National Association)\s*$/i, "").trim() || String(name);
+}
+
 // Month abbreviations used in fmtLeaseDate.
 const _MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","June","July","Aug","Sept","Oct","Nov","Dec"];
 

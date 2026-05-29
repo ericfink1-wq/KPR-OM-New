@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
+import { lenderKey, lenderLabel } from "../lib/utils";
 
 interface Props {
   lenderName: string;
@@ -50,13 +51,13 @@ interface LoanRow {
 }
 
 export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Props) {
-  const norm = (s: unknown) => String(s || "").trim().toLowerCase();
   const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+  const normKey = lenderKey(lenderName);
 
   const rows: LoanRow[] = [];
   for (const d of deals) {
-    const seniorMatch = d.debtLender && norm(d.debtLender) === norm(lenderName);
-    const prefMatch   = d.prefLender  && norm(d.prefLender)  === norm(lenderName);
+    const seniorMatch = d.debtLender && lenderKey(d.debtLender) === normKey;
+    const prefMatch   = d.prefLender  && lenderKey(d.prefLender)  === normKey;
     if (seniorMatch) rows.push({
       deal: d, loanType: "Senior", lender: d.debtLender!,
       amount: num(d.debtLoanAmount), rate: num(d.debtRate),
@@ -83,7 +84,7 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
   const sorted = [...rows].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1;
     switch (sortKey) {
-      case "property": return norm(a.deal.propertyName).localeCompare(norm(b.deal.propertyName)) * dir;
+      case "property": return String(a.deal.propertyName || "").toLowerCase().localeCompare(String(b.deal.propertyName || "").toLowerCase()) * dir;
       case "type":     return a.loanType.localeCompare(b.loanType) * dir;
       case "amount":   { const av = a.amount ?? -Infinity, bv = b.amount ?? -Infinity; return (av - bv) * dir; }
       case "rate":     { const av = a.rate ?? -Infinity,   bv = b.rate ?? -Infinity;   return (av - bv) * dir; }
@@ -124,7 +125,7 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase", marginBottom: 4 }}>Lender Summary</div>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 28, fontWeight: 700, color: "#262724", marginBottom: 4 }}>{lenderName}</div>
+        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 28, fontWeight: 700, color: "#262724", marginBottom: 4 }}>{lenderLabel(lenderName)}</div>
         <div style={{ fontSize: 13, color: "#7d766a" }}>
           {rows.length} loan{rows.length !== 1 ? "s" : ""} across {new Set(rows.map(r => r.deal.id)).size} propert{new Set(rows.map(r => r.deal.id)).size !== 1 ? "ies" : "y"}
         </div>
