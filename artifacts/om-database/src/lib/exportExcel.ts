@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { Deal, CashFlowRow } from "./idb";
+import { filterFutureRentSteps } from "./utils";
 
 function safeNum(v: unknown): number | "" {
   if (v == null || v === "") return "";
@@ -57,9 +58,11 @@ export function exportDealToExcel(deal: Deal): void {
     safeNum(t.remainingTermYears),
     t.leaseType ?? "",
     t.renewalOptions ?? "",
-    t.rentSchedule
-      ? t.rentSchedule.split(";").map(s => s.trim()).filter(Boolean).join("\n")
-      : (t.rentBumps ?? ""),
+    (() => {
+      const raw = t.rentSchedule || t.rentBumps;
+      const filtered = filterFutureRentSteps(raw);
+      return filtered ? filtered.split(";").map(s => s.trim()).filter(Boolean).join("\n") : "";
+    })(),
     safeNum(t.salesPSF),
     t.assumptionNote ?? "",
   ]);

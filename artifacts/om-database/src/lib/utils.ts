@@ -654,3 +654,34 @@ export function tenantLogoDomain(name: unknown, canonicalName?: string | null): 
   const key = tenantKey(canonicalName || name);
   return TENANT_LOGO_DOMAINS[key] ?? null;
 }
+
+/**
+ * Filters a rentSchedule or rentBumps string (semicolon-delimited steps)
+ * to only include steps whose date is today or in the future.
+ * Steps with no parseable date are kept (can't determine if past).
+ */
+export function filterFutureRentSteps(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const steps = raw.split(";").map(s => s.trim()).filter(Boolean);
+  const future = steps.filter(step => {
+    const isoMatch = step.match(/(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) {
+      const d = new Date(isoMatch[1]);
+      return isNaN(d.getTime()) || d >= today;
+    }
+    const monYearMatch = step.match(/([A-Za-z]{3})[-\s](\d{4})/);
+    if (monYearMatch) {
+      const d = new Date(`${monYearMatch[1]} 1, ${monYearMatch[2]}`);
+      return isNaN(d.getTime()) || d >= today;
+    }
+    const slashMatch = step.match(/(\d{4})\/(\d{2})\/(\d{2})/);
+    if (slashMatch) {
+      const d = new Date(`${slashMatch[1]}-${slashMatch[2]}-${slashMatch[3]}`);
+      return isNaN(d.getTime()) || d >= today;
+    }
+    return true;
+  });
+  return future.join("; ");
+}

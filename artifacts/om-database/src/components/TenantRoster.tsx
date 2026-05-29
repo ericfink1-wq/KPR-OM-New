@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Info } from "lucide-react";
 import type { Tenant } from "../lib/idb";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, filterFutureRentSteps } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 
 interface Props {
@@ -211,7 +211,8 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                   style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedRentStep === i ? 340 : 220, minWidth: 120 }}
                 >
                   {(() => {
-                    const s = t.rentSchedule || t.rentBumps;
+                    const raw = t.rentSchedule || t.rentBumps;
+                    const s = filterFutureRentSteps(raw) || null;
                     if (!s) return <span style={{ color:"#c4bbaa" }}>—</span>;
                     const expiryDate = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
                     const filteredSteps = s.split(";").map((p: string) => p.trim()).filter(Boolean).filter((seg: string) => {

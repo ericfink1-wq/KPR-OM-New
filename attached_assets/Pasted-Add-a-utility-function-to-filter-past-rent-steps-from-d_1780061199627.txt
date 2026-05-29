@@ -1,0 +1,69 @@
+Add a utility function to filter past rent steps from display, and apply it in both TenantRoster and Excel export.
+
+**Step 1 — artifacts/om-database/src/lib/utils.ts**
+Add this function at the bottom of the file (before the final closing brace if any):
+
+/**
+ * Filters a rentSchedule or rentBumps string (semicolon-delimited steps)
+ * to only include steps whose date is today or in the future.
+ * Steps are expected to contain a date in formats like "2024-09-01", "Sep-2024", "Sep 2024", "2024/09/01".
+ * Steps with no parseable date are kept (can't determine if past).
+ */
+export function filterFutureRentSteps(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const steps = raw.split(";").map(s => s.trim()).filter(Boolean);
+  const future = steps.filter(step => {
+    // Try to extract a date from the step string
+    const isoMatch = step.match(/(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) {
+      const d = new Date(isoMatch[1]);
+      return isNaN(d.getTime()) || d >= today;
+    }
+    // Try Mon-YYYY or Mon YYYY formats
+    const monYearMatch = step.match(/([A-Za-z]{3})[-\s](\d{4})/);
+    if (monYearMatch) {
+      const d = new Date(`${monYearMatch[1]} 1, ${monYearMatch[2]}`);
+      return isNaN(d.getTime()) || d >= today;
+    }
+    // Try YYYY/MM/DD
+    const slashMatch = step.match(/(\d{4})\/(\d{2})\/(\d{2})/);
+    if (slashMatch) {
+      const d = new Date(`${slashMatch[1]}-${slashMatch[2]}-${slashMatch[3]}`);
+      return isNaN(d.getTime()) || d >= today;
+    }
+    // No date found — keep it
+    return true;
+  });
+  return future.join("; ");
+}
+
+**Step 2 — artifacts/om-database/src/components/TenantRoster.tsx**
+Import filterFutureRentSteps from "../lib/utils" (add to existing import from that file).
+
+Find this line (around line 213):
+  const s = t.rentSchedule || t.rentBumps;
+
+Replace with:
+  const raw = t.rentSchedule || t.rentBumps;
+  const s = filterFutureRentSteps(raw) || null;
+
+This ensures the collapsed preview and expanded steps list both only show future steps.
+
+**Step 3 — artifacts/om-database/src/lib/exportExcel.ts**
+Import filterFutureRentSteps from "./utils" (add to existing import or add new import).
+
+Find this block:
+    t.rentSchedule
+      ? t.rentSchedule.split(";").map(s => s.trim()).filter(Boolean).join("\n")
+      : (t.rentBumps ?? ""),
+
+Replace with:
+    (() => {
+      const raw = t.rentSchedule || t.rentBumps;
+      const filtered = filterFutureRentSteps(raw);
+      return filtered ? filtered.split(";").map(s => s.trim()).filter(Boolean).join("\n") : "";
+    })(),
+
+Test that the app builds without errors. No other changes.
