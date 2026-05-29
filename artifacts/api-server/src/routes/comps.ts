@@ -162,6 +162,7 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
   try {
+    const replace = req.query.replace === "true";
     const body = req.body;
     if (!Array.isArray(body) || body.length === 0) {
       res.status(400).json({ error: "Body must be a non-empty array of comp objects" });
@@ -210,10 +211,17 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
         buyer: toStr(item.buyer), seller: toStr(item.seller),
       });
     }
+    let replaced = 0;
+    if (replace) {
+      const deleted = await db.delete(compsIndexTable)
+        .where(eq(compsIndexTable.isManual, true))
+        .returning({ id: compsIndexTable.id });
+      replaced = deleted.length;
+    }
     if (insertRows.length > 0) {
       await db.insert(compsIndexTable).values(insertRows);
     }
-    res.json({ ok: true, inserted: insertRows.length, skipped });
+    res.json({ ok: true, inserted: insertRows.length, skipped, replaced });
   } catch (err) {
     req.log.error({ err }, "Failed to bulk-insert manual comps");
     res.status(500).json({ error: "Failed to bulk-insert manual comps" });

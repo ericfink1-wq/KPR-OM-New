@@ -380,6 +380,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [addOpen, setAddOpen] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
+  const [pendingImport, setPendingImport] = useState<unknown[] | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -435,15 +436,28 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       const parsed = JSON.parse(text);
       const arr: unknown[] = Array.isArray(parsed) ? parsed : (parsed?.comps ?? null);
       if (!Array.isArray(arr)) throw new Error("Expected an array or { comps: [...] }");
-      const r = await fetch("/api/comps/manual/bulk", {
+      setPendingImport(arr);
+    } catch (err) {
+      setImportMsg({ ok: false, text: err instanceof Error ? err.message : "Import failed" });
+    }
+  };
+
+  const doImport = async (arr: unknown[], replace: boolean) => {
+    setPendingImport(null);
+    try {
+      const url = replace ? "/api/comps/manual/bulk?replace=true" : "/api/comps/manual/bulk";
+      const r = await fetch(url, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(arr),
       });
-      const data = await r.json() as { ok?: boolean; inserted?: number; skipped?: number; error?: string };
+      const data = await r.json() as { ok?: boolean; inserted?: number; skipped?: number; replaced?: number; error?: string };
       if (!r.ok) throw new Error(data.error ?? "Server error");
-      setImportMsg({ ok: true, text: `Imported ${data.inserted} comp${data.inserted !== 1 ? "s" : ""}${data.skipped ? ` (${data.skipped} skipped)` : ""}` });
+      const parts: string[] = [`Imported ${data.inserted} comp${data.inserted !== 1 ? "s" : ""}`];
+      if (data.replaced) parts.push(`replaced ${data.replaced} existing`);
+      if (data.skipped) parts.push(`${data.skipped} skipped`);
+      setImportMsg({ ok: true, text: parts.join(", ") });
       setTimeout(() => setImportMsg(null), 5000);
       fetch_(filters, sort);
     } catch (err) {
@@ -485,6 +499,60 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           onClose={() => setAddOpen(false)}
           onSaved={row => setRows(prev => [row, ...prev])}
         />
+      )}
+      {pendingImport && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(36,35,30,0.45)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 14, padding: "28px 32px",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.18)", maxWidth: 380, width: "90%",
+            fontFamily: "'Inter',sans-serif",
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#26281f", marginBottom: 8 }}>
+              Import {pendingImport.length} comp{pendingImport.length !== 1 ? "s" : ""}
+            </div>
+            <div style={{ fontSize: 13, color: "#5c5850", marginBottom: 22, lineHeight: 1.5 }}>
+              Replace all existing imported comps with this file, or add these on top?
+              <div style={{ marginTop: 8, fontSize: 11.5, color: "#a89f8f" }}>
+                OWNED and OM-sourced comps are never affected.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => doImport(pendingImport, true)}
+                style={{
+                  flex: 1, padding: "9px 0", borderRadius: 8, border: "1px solid #e7ddd0",
+                  background: "#fff3ee", color: "#b05050", fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                }}
+              >
+                Replace
+              </button>
+              <button
+                onClick={() => doImport(pendingImport, false)}
+                style={{
+                  flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
+                  background: "#6dba43", color: "#fff", fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                }}
+              >
+                Add
+              </button>
+              <button
+                onClick={() => setPendingImport(null)}
+                style={{
+                  padding: "9px 14px", borderRadius: 8, border: "1px solid #e7e0d2",
+                  background: "transparent", color: "#a89f8f", fontSize: 13,
+                  cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       <input
         ref={importRef}
