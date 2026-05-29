@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
-import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain } from "../lib/utils";
+import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain, isNAPTenant } from "../lib/utils";
 import StatusTag from "./StatusTag";
 
 interface Props {
@@ -65,8 +65,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
 
   // Averages — ignore missing values; exclude NAP/shadow/vacant/ground-lease rows from rent metrics
   const isRentable = (r: typeof rows[number]) => {
+    if (isNAPTenant(r.t)) return false;
     const name = (r.t.name || "").toLowerCase();
-    return !/\b(nap|shadow|vacant|ground.?lease|outparcel)\b/i.test(name);
+    return !/\b(shadow|vacant|ground.?lease|outparcel)\b/i.test(name);
   };
   const rentRows     = rows.filter(isRentable);
   const sfVals       = rentRows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
@@ -98,9 +99,10 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     </div>
   );
 
+  const napCount = allRows.filter(r => isNAPTenant(r.t)).length;
   const subtitle = scope === "owned"
-    ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}`
-    : `Across ${rows.length} ${rows.length === 1 ? "property" : "properties"} in your database`;
+    ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}${napCount > 0 ? ` · ${napCount} NAP` : ""}`
+    : `Across ${rows.length} ${rows.length === 1 ? "property" : "properties"} in your database${napCount > 0 ? ` · ${napCount} NAP` : ""}`;
 
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
@@ -195,6 +197,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         {r.deal.propertyName || "Untitled"}
                         {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
                         {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+                        {isNAPTenant(r.t) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
                       </td>
                       <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
                       <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>

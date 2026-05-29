@@ -1,0 +1,57 @@
+Add NAP (Not A Part) flagging across three files. A tenant is NAP when they occupy space on the site plan but pay no rent because they own their own parcel — like Walmart at Pointe Plaza (132,695 SF, $0 rent). The signal is: non-vacant tenant with sf > 0 AND annualRent is 0 or null AND rentPerSF is 0 or null.
+
+CHANGE 1 — artifacts/om-database/src/lib/idb.ts
+Add to the Tenant interface after isAnchor:
+  isNAP?: boolean | null;
+
+CHANGE 2 — artifacts/om-database/src/lib/utils.ts
+Add and export a helper after the isVacant function:
+
+export function isNAPTenant(t: { name?: string | null; sf?: number | string | null; annualRent?: number | string | null; rentPerSF?: number | string | null; isNAP?: boolean | null }): boolean {
+  if (t.isNAP === true) return true;
+  if (isVacant(t.name)) return false;
+  const sf = t.sf == null || t.sf === "" ? null : Number(t.sf);
+  const rent = t.annualRent == null || t.annualRent === "" ? null : Number(t.annualRent);
+  const rentPSF = t.rentPerSF == null || t.rentPerSF === "" ? null : Number(t.rentPerSF);
+  return sf != null && sf > 0 && (rent == null || rent === 0) && (rentPSF == null || rentPSF === 0);
+}
+
+CHANGE 3 — artifacts/om-database/src/components/TenantRoster.tsx
+Import isNAPTenant from "../lib/utils".
+
+In the tenant name cell, find where ANCHOR and Investment Grade badges are shown and add a NAP badge after them:
+
+  {isNAPTenant(t) && (
+    <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="Not A Part — this tenant owns their parcel and pays no rent to the landlord">NAP</span>
+  )}
+
+Also in the row styling, dim NAP rows slightly so they're visually distinct — add to the <tr> style:
+  opacity: isNAPTenant(t) ? 0.7 : 1
+
+CHANGE 4 — artifacts/om-database/src/components/TenantView.tsx
+Import isNAPTenant from "../lib/utils".
+
+A) In the allRows aggregation, exclude NAP tenants from rent and sales stat calculations (they shouldn't pull down avg rent PSF with $0). Find where rentVals and rentPSFVals are built and filter to !isNAPTenant(r.t):
+  const rentVals = rentRows.filter(r => !isNAPTenant(r.t)).map(r => num(r.t.annualRent))...
+  const rentPSFVals = rentRows.filter(r => !isNAPTenant(r.t)).map(r => num(r.t.rentPerSF))...
+
+B) In the locations table rows, add a NAP badge in the property name cell when isNAPTenant(r.t) is true — same style as TenantRoster:
+  {isNAPTenant(r.t) && (
+    <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>
+  )}
+
+C) Show a note in the subtitle line if any locations are NAP:
+  const napCount = allRows.filter(r => isNAPTenant(r.t)).length;
+  // Add to subtitle string: napCount > 0 ? ` · ${napCount} NAP` : ""
+
+CHANGE 5 — artifacts/om-database/src/components/TenantAnalytics.tsx
+Import isNAPTenant from "../lib/utils".
+
+In the aggregation loop, skip NAP tenants entirely so they don't appear in the Top 10 rankings or skew metrics:
+  if (isNAPTenant(t)) continue;
+
+CHANGE 6 — artifacts/api-server/src/lib/extract.ts
+In the EXTRACTION_PROMPT tenant schema, add after isAnchor:
+  "isNAP": "true if this tenant is on an adjacent parcel NOT included in this sale (marked NAP, Not A Part, shadow anchor, or outparcel on site plan with $0 base rent). These are tenants who own their own building/pad within the shopping center. false or null otherwise.",
+
+Make, test, iterate until saved.

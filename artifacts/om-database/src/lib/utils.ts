@@ -397,6 +397,15 @@ export function isVacant(name: unknown): boolean {
   return false;
 }
 
+export function isNAPTenant(t: { name?: string | null; sf?: number | string | null; annualRent?: number | string | null; rentPerSF?: number | string | null; isNAP?: boolean | null }): boolean {
+  if (t.isNAP === true) return true;
+  if (isVacant(t.name)) return false;
+  const sf = t.sf == null || t.sf === "" ? null : Number(t.sf);
+  const rent = t.annualRent == null || t.annualRent === "" ? null : Number(t.annualRent);
+  const rentPSF = t.rentPerSF == null || t.rentPerSF === "" ? null : Number(t.rentPerSF);
+  return sf != null && sf > 0 && (rent == null || rent === 0) && (rentPSF == null || rentPSF === 0);
+}
+
 /** Stable grouping key — every spelling of one brand collapses to the same string. */
 export function tenantKey(name: unknown): string {
   const n = _normTenant(name);

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, isVacant, tenantLabel, parentCompany } from "../lib/utils";
+import { tenantKey, isVacant, isNAPTenant, tenantLabel, parentCompany } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 
 // ---------------------------------------------------------------------------
@@ -187,6 +187,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
       for (const t of deal.tenants) {
         const rawName = t.canonicalName || t.name;
         if (!rawName || isVacant(rawName)) continue;
+        if (isNAPTenant(t)) continue;
         const key = tenantKey(rawName);
         const annualRent = num(t.annualRent) ?? 0;
         const rentPSF = num(t.rentPerSF);

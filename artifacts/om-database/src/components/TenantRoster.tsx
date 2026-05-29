@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Info } from "lucide-react";
 import type { Tenant } from "../lib/idb";
-import { fmtLeaseDate, fmtTenantSales, isVacant } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 
 interface Props {
@@ -165,7 +165,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
           </thead>
           <tbody>
             {rows.map((t,i) => (
-              <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isVacantRow(t) ? 0.65 : 1 }}>
+              <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1 }}>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
                   {isVacantRow(t) ? (
                     <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
@@ -178,8 +178,8 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
-                      {(t.isNAP || (n(t.sf) === 0 && n(t.annualRent) === 0 && !isVacant(t.name))) && (
-                        <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="Not A Part — adjacent parcel, not included in ownership">NAP</span>
+                      {isNAPTenant(t) && (
+                        <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="Not A Part — this tenant owns their parcel and pays no rent to the landlord">NAP</span>
                       )}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
