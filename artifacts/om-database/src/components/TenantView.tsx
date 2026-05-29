@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
-import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales } from "../lib/utils";
+import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany } from "../lib/utils";
 import StatusTag from "./StatusTag";
 
 interface Props {
@@ -112,6 +112,11 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal }: Pr
         {anchors > 0 && <span style={{ fontSize:10, color:"#1f2b16", background:"#6dba4322", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>ANCHOR · {anchors}</span>}
         {credit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Credit: {credit}</span>}
       </div>
+      {(() => { const p = parentCompany(tenantName); return p ? (
+        <div style={{ fontSize:11, color:"#6f6a5f", marginTop:2, marginBottom:2 }}>
+          Part of <span style={{ fontWeight:600, color:"#383a37" }}>{p}</span>
+        </div>
+      ) : null; })()}
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
         <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>

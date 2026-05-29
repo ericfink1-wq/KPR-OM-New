@@ -308,6 +308,53 @@ export const TENANT_ALIASES: Record<string, string> = {
   // ── add your own variants here (one per line) ──────────────────────────────
 };
 
+export const PARENT_COMPANIES: Record<string, string> = {
+  "tj maxx": "TJX Companies", "tjmaxx": "TJX Companies",
+  "marshalls": "TJX Companies", "homegoods": "TJX Companies",
+  "home goods": "TJX Companies", "homesense": "TJX Companies",
+  "sierra": "TJX Companies",
+  "ross dress for less": "Ross Stores", "ross": "Ross Stores",
+  "dds discounts": "Ross Stores",
+  "dollar tree": "Dollar Tree Inc.", "family dollar": "Dollar Tree Inc.",
+  "gap": "Gap Inc.", "old navy": "Gap Inc.", "banana republic": "Gap Inc.", "athleta": "Gap Inc.",
+  "kay jewelers": "Signet Jewelers", "zales": "Signet Jewelers", "jared": "Signet Jewelers",
+  "lane bryant": "Authentic Brands Group", "justice": "Authentic Brands Group",
+  "foot locker": "Foot Locker Inc.", "kids foot locker": "Foot Locker Inc.", "champs sports": "Foot Locker Inc.",
+  "bath and body works": "Bath & Body Works Inc.", "victorias secret": "Victoria's Secret & Co.",
+  "coach": "Tapestry", "kate spade": "Tapestry",
+  "vans": "VF Corporation", "the north face": "VF Corporation", "timberland": "VF Corporation",
+  "stop and shop": "Ahold Delhaize", "stop shop": "Ahold Delhaize",
+  "giant food": "Ahold Delhaize", "giant": "Ahold Delhaize",
+  "food lion": "Ahold Delhaize", "hannaford": "Ahold Delhaize",
+  "safeway": "Albertsons Companies", "albertsons": "Albertsons Companies",
+  "jewel osco": "Albertsons Companies", "vons": "Albertsons Companies",
+  "taco bell": "Yum! Brands", "kfc": "Yum! Brands", "pizza hut": "Yum! Brands",
+  "burger king": "Restaurant Brands Intl.", "tim hortons": "Restaurant Brands Intl.",
+  "popeyes": "Restaurant Brands Intl.", "firehouse subs": "Restaurant Brands Intl.",
+  "arbys": "Inspire Brands", "buffalo wild wings": "Inspire Brands",
+  "sonic": "Inspire Brands", "dunkin": "Inspire Brands",
+  "olive garden": "Darden Restaurants", "longhorn steakhouse": "Darden Restaurants",
+  "the capital grille": "Darden Restaurants", "seasons 52": "Darden Restaurants",
+  "chilis": "Brinker International", "maggianos": "Brinker International",
+  "outback steakhouse": "Bloomin' Brands", "bonefish grill": "Bloomin' Brands",
+  "supercuts": "Regis Corporation", "hair cuttery": "Regis Corporation",
+  "anytime fitness": "Self Esteem Brands", "orangetheory": "Self Esteem Brands",
+  "orangetheory fitness": "Self Esteem Brands",
+  "cvs": "CVS Health", "cvs pharmacy": "CVS Health",
+  "walgreens": "Walgreens Boots Alliance",
+  "chase": "JPMorgan Chase", "jpmorgan chase": "JPMorgan Chase",
+  "att": "AT&T Inc.", "att mobility": "AT&T Inc.",
+  "t mobile": "T-Mobile US", "sprint": "T-Mobile US",
+  "nordstrom rack": "Nordstrom Inc.", "nordstrom": "Nordstrom Inc.",
+  "burlington": "Burlington Stores", "burlington coat factory": "Burlington Stores",
+};
+
+export function parentCompany(name: unknown, storedParent?: string | null): string | null {
+  if (storedParent && storedParent.trim()) return storedParent.trim();
+  const key = tenantKey(name);
+  return PARENT_COMPANIES[key] ?? null;
+}
+
 // Redundant format/descriptor words safe to strip from the END of a name.
 // Only pure legal/entity suffixes that never appear in real brand names.
 const _TENANT_TRAIL = new Set([

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, isVacant, tenantLabel } from "../lib/utils";
+import { tenantKey, isVacant, tenantLabel, parentCompany } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 
 // ---------------------------------------------------------------------------
@@ -46,6 +46,7 @@ interface TenantRow {
   creditRating: string | null;
   isIG: boolean;
   salesOccurrences: SalesOccurrence[];
+  parentCo?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,6 +202,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
             creditRating: t.creditRating ?? null,
             isIG: ig,
             salesOccurrences: [],
+            parentCo: parentCompany(rawName, t.parentCompany) ?? undefined,
           });
         }
         const row = map.get(key)!;
@@ -233,6 +235,21 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
   // Derived lists — rent / count
   const byRent = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
   const byCount = useMemo(() => [...rows].sort((a, b) => b.locationCount - a.locationCount || b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
+
+  // Parent company exposure
+  const parentRows = useMemo(() => {
+    const map = new Map<string, { parent: string; brands: Set<string>; totalAnnualRent: number; locationCount: number }>();
+    for (const row of rows) {
+      const p = row.parentCo;
+      if (!p) continue;
+      if (!map.has(p)) map.set(p, { parent: p, brands: new Set(), totalAnnualRent: 0, locationCount: 0 });
+      const pr = map.get(p)!;
+      pr.brands.add(row.displayName);
+      pr.totalAnnualRent += row.totalAnnualRent;
+      pr.locationCount += row.locationCount;
+    }
+    return [...map.values()].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent);
+  }, [rows]);
 
   // Credit / anchor
   const igCount = useMemo(() => rows.filter(r => r.isIG).length, [rows]);
@@ -370,6 +387,11 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
                   <div style={{ flex: "0 0 220px", minWidth: 0 }}>
                     <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                     <span style={{ fontSize: 10, color: "#b8b0a3", marginLeft: 6 }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
+                    {row.parentCo && (
+                      <span style={{ fontSize:9, color:"#a69e91", background:"#f1ece1", padding:"1px 5px", borderRadius:3, marginLeft:5, fontWeight:500, whiteSpace:"nowrap" }}>
+                        {row.parentCo}
+                      </span>
+                    )}
                   </div>
                   <MiniBar value={row.totalAnnualRent} max={maxRent} color="#6dba43" />
                   <div style={{ width: 70, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
@@ -387,6 +409,11 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
                   <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
                   <div style={{ flex: "0 0 220px", minWidth: 0 }}>
                     <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                    {row.parentCo && (
+                      <span style={{ fontSize:9, color:"#a69e91", background:"#f1ece1", padding:"1px 5px", borderRadius:3, marginLeft:5, fontWeight:500, whiteSpace:"nowrap" }}>
+                        {row.parentCo}
+                      </span>
+                    )}
                   </div>
                   <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />
                   <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</div>
@@ -395,6 +422,26 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
               ))}
             </div>
           </Card>
+
+          {/* Parent Company Exposure */}
+          {parentRows.length > 0 && (
+            <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:6 }}>Parent Company Exposure</div>
+              <div style={{ fontSize:10, color:"#a69e91", marginBottom:12 }}>Combined portfolio exposure across brands sharing a parent corporation</div>
+              {parentRows.map(pr => (
+                <div key={pr.parent} style={{ borderTop:"1px solid #f1ece1", padding:"10px 0" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:"#383a37" }}>{pr.parent}</span>
+                    <span style={{ fontSize:12, color:"#0f7a4e", fontWeight:600 }}>{fmtRent(pr.totalAnnualRent)}</span>
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:11, color:"#6f6a5f" }}>{[...pr.brands].join(" · ")}</span>
+                    <span style={{ fontSize:10, color:"#a89f8f", flexShrink:0, marginLeft:8 }}>{pr.locationCount} loc{pr.locationCount !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Credit Quality + Anchor vs Inline */}
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>

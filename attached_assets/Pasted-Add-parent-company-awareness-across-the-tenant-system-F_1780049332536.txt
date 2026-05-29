@@ -1,0 +1,120 @@
+Add parent company awareness across the tenant system. Four files to update.
+
+CHANGE 1 — artifacts/om-database/src/lib/idb.ts
+In the Tenant interface, add one new field after canonicalName:
+  parentCompany?: string | null;
+
+CHANGE 2 — artifacts/om-database/src/lib/utils.ts
+After the TENANT_ALIASES object, add this exported lookup and helper:
+
+export const PARENT_COMPANIES: Record<string, string> = {
+  "tj maxx": "TJX Companies", "tjmaxx": "TJX Companies",
+  "marshalls": "TJX Companies", "homegoods": "TJX Companies",
+  "home goods": "TJX Companies", "homesense": "TJX Companies",
+  "sierra": "TJX Companies",
+  "ross dress for less": "Ross Stores", "ross": "Ross Stores",
+  "dds discounts": "Ross Stores",
+  "dollar tree": "Dollar Tree Inc.", "family dollar": "Dollar Tree Inc.",
+  "gap": "Gap Inc.", "old navy": "Gap Inc.", "banana republic": "Gap Inc.", "athleta": "Gap Inc.",
+  "kay jewelers": "Signet Jewelers", "zales": "Signet Jewelers", "jared": "Signet Jewelers",
+  "lane bryant": "Authentic Brands Group", "justice": "Authentic Brands Group",
+  "foot locker": "Foot Locker Inc.", "kids foot locker": "Foot Locker Inc.", "champs sports": "Foot Locker Inc.",
+  "bath and body works": "Bath & Body Works Inc.", "victorias secret": "Victoria's Secret & Co.",
+  "coach": "Tapestry", "kate spade": "Tapestry",
+  "vans": "VF Corporation", "the north face": "VF Corporation", "timberland": "VF Corporation",
+  "stop and shop": "Ahold Delhaize", "stop shop": "Ahold Delhaize",
+  "giant food": "Ahold Delhaize", "giant": "Ahold Delhaize",
+  "food lion": "Ahold Delhaize", "hannaford": "Ahold Delhaize",
+  "safeway": "Albertsons Companies", "albertsons": "Albertsons Companies",
+  "jewel osco": "Albertsons Companies", "vons": "Albertsons Companies",
+  "taco bell": "Yum! Brands", "kfc": "Yum! Brands", "pizza hut": "Yum! Brands",
+  "burger king": "Restaurant Brands Intl.", "tim hortons": "Restaurant Brands Intl.",
+  "popeyes": "Restaurant Brands Intl.", "firehouse subs": "Restaurant Brands Intl.",
+  "arbys": "Inspire Brands", "buffalo wild wings": "Inspire Brands",
+  "sonic": "Inspire Brands", "dunkin": "Inspire Brands",
+  "olive garden": "Darden Restaurants", "longhorn steakhouse": "Darden Restaurants",
+  "the capital grille": "Darden Restaurants", "seasons 52": "Darden Restaurants",
+  "chilis": "Brinker International", "maggianos": "Brinker International",
+  "outback steakhouse": "Bloomin' Brands", "bonefish grill": "Bloomin' Brands",
+  "supercuts": "Regis Corporation", "hair cuttery": "Regis Corporation",
+  "anytime fitness": "Self Esteem Brands", "orangetheory": "Self Esteem Brands",
+  "orangetheory fitness": "Self Esteem Brands",
+  "cvs": "CVS Health", "cvs pharmacy": "CVS Health",
+  "walgreens": "Walgreens Boots Alliance",
+  "chase": "JPMorgan Chase", "jpmorgan chase": "JPMorgan Chase",
+  "att": "AT&T Inc.", "att mobility": "AT&T Inc.",
+  "t mobile": "T-Mobile US", "sprint": "T-Mobile US",
+  "nordstrom rack": "Nordstrom Inc.", "nordstrom": "Nordstrom Inc.",
+  "burlington": "Burlington Stores", "burlington coat factory": "Burlington Stores",
+};
+
+export function parentCompany(name: unknown, storedParent?: string | null): string | null {
+  if (storedParent && storedParent.trim()) return storedParent.trim();
+  const key = tenantKey(name);
+  return PARENT_COMPANIES[key] ?? null;
+}
+
+CHANGE 3 — artifacts/api-server/src/lib/extract.ts
+In the EXTRACTION_PROMPT tenant schema, after the canonicalName field, add:
+  "parentCompany": "parent or holding company that owns this brand, if well-known (e.g. TJ Maxx → 'TJX Companies', McDonald's → 'McDonald\\'s Corporation', Stop & Shop → 'Ahold Delhaize', Dollar Tree → 'Dollar Tree Inc.', Marshalls → 'TJX Companies'). null for independent/regional operators or if unknown.",
+
+CHANGE 4 — artifacts/om-database/src/components/TenantAnalytics.tsx
+Import parentCompany from "../lib/utils".
+
+A) In the rows aggregation, also capture parentCompany from the tenant. When building each row, store: parentCo: parentCompany(t.name, t.parentCompany) ?? undefined.
+
+B) Build a parentRows derived value from rows:
+  const parentRows = useMemo(() => {
+    const map = new Map<string, { parent: string; brands: Set<string>; totalAnnualRent: number; locationCount: number }>();
+    for (const row of rows) {
+      const p = row.parentCo;
+      if (!p) continue;
+      if (!map.has(p)) map.set(p, { parent: p, brands: new Set(), totalAnnualRent: 0, locationCount: 0 });
+      const pr = map.get(p)!;
+      pr.brands.add(row.displayName);
+      pr.totalAnnualRent += row.totalAnnualRent;
+      pr.locationCount += row.locationCount;
+    }
+    return [...map.values()].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent);
+  }, [rows]);
+
+C) Add a parent company tag inline on each tenant row in the Top 10 lists (small gray pill after the name):
+  {row.parentCo && (
+    <span style={{ fontSize:9, color:"#a69e91", background:"#f1ece1", padding:"1px 5px", borderRadius:3, marginLeft:5, fontWeight:500, whiteSpace:"nowrap" }}>
+      {row.parentCo}
+    </span>
+  )}
+
+D) Add a "Parent Company Exposure" card after the Top 10 by Location Count section, only when parentRows.length > 0:
+  {parentRows.length > 0 && (
+    <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:6 }}>Parent Company Exposure</div>
+      <div style={{ fontSize:10, color:"#a69e91", marginBottom:12 }}>Combined portfolio exposure across brands sharing a parent corporation</div>
+      {parentRows.map(pr => (
+        <div key={pr.parent} style={{ borderTop:"1px solid #f1ece1", padding:"10px 0" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
+            <span style={{ fontSize:13, fontWeight:600, color:"#383a37" }}>{pr.parent}</span>
+            <span style={{ fontSize:12, color:"#0f7a4e", fontWeight:600 }}>{fmtRent(pr.totalAnnualRent)}</span>
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:11, color:"#6f6a5f" }}>{[...pr.brands].join(" · ")}</span>
+            <span style={{ fontSize:10, color:"#a69e91", flexShrink:0, marginLeft:8 }}>{pr.locationCount} loc{pr.locationCount !== 1 ? "s" : ""}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+CHANGE 5 — artifacts/om-database/src/components/TenantView.tsx
+Import parentCompany from "../lib/utils".
+
+A) Near the top of the component where the tenant name is displayed, show the parent company if known. After the tenant name heading, add:
+  {(() => { const p = parentCompany(tenantName); return p ? (
+    <div style={{ fontSize:11, color:"#6f6a5f", marginTop:2 }}>
+      Part of <span style={{ fontWeight:600, color:"#383a37" }}>{p}</span>
+    </div>
+  ) : null; })()}
+
+B) In the locations table, find where each row renders (the sorted.map). Add a parentCompany field display alongside the tenant's assumptionNote or in the row — specifically, if a tenant row has t.parentCompany and it differs from what the static lookup returns, show the stored value. This ensures manually entered parent companies from the edit form are reflected.
+
+Make, test, iterate until saved.
