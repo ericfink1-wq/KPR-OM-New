@@ -1,0 +1,31 @@
+Add a batch JSON import to the manual comps feature so a user can upload many comps at once instead of entering them one at a time. This builds on the manual comp entry feature (POST /api/comps/manual, the "Add Comp" form in CompsSearch).
+
+────────────────────────────────────────
+PART 1 — Backend: bulk insert endpoint
+File: artifacts/api-server/src/routes/comps.ts
+
+Add an authenticated route POST /api/comps/manual/bulk that accepts a JSON array of comp objects (same fields as the existing POST /api/comps/manual: name, address, market, saleDateRaw, saleDate, salePrice, capRate, pricePerSf, sf, occupancy, anchor, propertyType, sourceNotes).
+
+For each object in the array:
+- Set sourceDealId = "__manual__", sourceDealName = null, sourceDealMarket = market, isManual = true.
+- If salePrice and sf are both present but pricePerSf is missing, compute pricePerSf = Math.round(salePrice / sf).
+- Coerce empty strings to null; skip any object that has no name AND no salePrice (treat as junk row).
+- Accept saleDate as either "YYYY-MM-DD" or null.
+
+Insert all valid rows. Return { ok: true, inserted: <count>, skipped: <count> }. Wrap in try/catch and return 400 if the body isn't a non-empty array.
+
+────────────────────────────────────────
+PART 2 — Frontend: "Import JSON" button + file picker
+File: src/components/CompsSearch.tsx
+
+Next to the existing "Add Comp" button in the header, add an "Import JSON" button. When clicked, open a hidden file input (accept=".json"). On file select:
+- Read the file as text, JSON.parse it.
+- Accept EITHER a raw array of comp objects, OR an object of the form { "comps": [...] } (use whichever is present).
+- POST the array to /api/comps/manual/bulk with credentials: "include" and Content-Type: application/json.
+- On success, show a brief confirmation (e.g. a toast or inline message) like "Imported 70 comps (0 skipped)" and refresh the comps list.
+- On parse error or HTTP error, show an inline error message and do not crash.
+
+Keep the existing one-at-a-time "Add Comp" form working as-is.
+
+────────────────────────────────────────
+TEST: Import a JSON file containing an array of ~70 comp objects (fields: name, market, saleDate, salePrice, capRate, pricePerSf, sf, occupancy, anchor, propertyType, sourceNotes). Confirm they all appear in the comps table with the MANUAL badge, and that rebuild-all does not remove them.
