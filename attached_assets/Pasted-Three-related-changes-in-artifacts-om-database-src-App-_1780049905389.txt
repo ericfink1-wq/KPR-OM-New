@@ -1,0 +1,75 @@
+Three related changes in artifacts/om-database/src/App.tsx, artifacts/om-database/src/lib/utils.ts, and artifacts/om-database/src/components/.
+
+CHANGE 1 — Fix back button returning to wrong page.
+The issue: when a user clicks a tenant from the Analytics tab, goBack() returns them to the Portfolio list instead of back to Analytics.
+
+In App.tsx, find handleOpenTenant:
+  const handleOpenTenant = useCallback((name: string) => {
+    if (name.startsWith("__lender__")) {
+      ...
+    } else {
+      setView({ type: "tenant", tenantName: name });
+      setTab("portfolio");
+    }
+  }, []);
+
+Change it so when the user is on the analytics tab, switching to tenant view remembers to go back to analytics:
+  const handleOpenTenant = useCallback((name: string) => {
+    if (name.startsWith("__lender__")) {
+      navigate({ type: "lender", lenderName: name.replace("__lender__", "") });
+      setTab("portfolio");
+    } else if (name.startsWith("__parent__")) {
+      navigate({ type: "parent", parentName: name.replace("__parent__", "") });
+    } else {
+      navigate({ type: "tenant", tenantName: name });
+      if (tab !== "analytics") setTab("portfolio");
+    }
+  }, [tab]);
+
+Also add "parent" to the View type union:
+  type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string };
+
+CHANGE 2 — Add a ParentCompanyView component.
+Create a new file artifacts/om-database/src/components/ParentCompanyView.tsx.
+
+It receives props: { parentName: string; deals: Deal[]; onBack: () => void; onTenantClick?: (name: string) => void; onOpenDeal: (d: Deal) => void }
+
+It should:
+- Show the parent company name as the heading (Fraunces serif, large)
+- Show stat tiles: Total Brands (unique tenantLabel values under this parent), Total Locations (count of tenant rows across all deals), Total Annual Rent (sum), Avg Rent PSF (rent-weighted)
+- Show a "Brands in Portfolio" section — list each unique brand under this parent with location count, total rent, and a clickable name that calls onTenantClick
+- Show a "Properties" section — list each deal that has at least one tenant under this parent, with property name (clickable via onOpenDeal), city/state, and the specific brands at that property
+- Use the same white card / Fraunces serif / Inter body style as TenantView
+- Include a ← Back button that calls onBack
+
+Use parentCompany() from "../lib/utils" to identify which tenants belong to this parent. A tenant belongs if parentCompany(t.name, t.parentCompany) === parentName.
+
+CHANGE 3 — Wire ParentCompanyView into App.tsx and make parent company names clickable.
+
+A) In App.tsx, import ParentCompanyView and add a render block for view.type === "parent":
+  {view.type === "parent" && (
+    <ParentCompanyView
+      parentName={view.parentName}
+      deals={deals}
+      onBack={goBack}
+      onTenantClick={handleOpenTenant}
+      onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+    />
+  )}
+
+B) In TenantAnalytics.tsx, make parent company names clickable. The component already receives onTenantClick. Add a new optional prop: onParentClick?: (parent: string) => void. Pass it through from App.tsx as: onParentClick={name => handleOpenTenant("__parent__" + name)}
+
+In the Parent Company Exposure card, wrap each parent name in a clickable button:
+  <button onClick={() => onParentClick?.(pr.parent)} style={{ background:"transparent", border:"none", padding:0, cursor:onParentClick?"pointer":"default", fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:600, color:"#383a37", textDecoration: onParentClick ? "underline" : "none" }}>
+    {pr.parent}
+  </button>
+
+Also make the parent company pill tags on each tenant row in the Top 10 lists clickable the same way.
+
+C) In TenantView.tsx, make the "Part of [parent]" line clickable too:
+  <button onClick={() => onParentClick?.(p)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontFamily:"'Inter',sans-serif", fontSize:11, color:"#6f6a5f" }}>
+    Part of <span style={{ fontWeight:600, color:"#2d4ecf", textDecoration:"underline" }}>{p}</span>
+  </button>
+Add onParentClick as an optional prop to TenantView and pass it from App.tsx the same way.
+
+Make, test, iterate until saved.

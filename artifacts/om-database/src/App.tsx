@@ -19,13 +19,14 @@ import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
 import TenantAudit from "./components/TenantAudit";
 import TenantAnalytics from "./components/TenantAnalytics";
+import ParentCompanyView from "./components/ParentCompanyView";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
 
 type TabId = "analyst" | "portfolio" | "analytics" | "comps";
-type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string };
+type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
@@ -138,11 +139,13 @@ function AppInner() {
     if (name.startsWith("__lender__")) {
       navigate({ type: "lender", lenderName: name.replace("__lender__", "") });
       setTab("portfolio");
+    } else if (name.startsWith("__parent__")) {
+      navigate({ type: "parent", parentName: name.replace("__parent__", "") });
     } else {
       navigate({ type: "tenant", tenantName: name });
-      setTab("portfolio");
+      if (tab !== "analytics") setTab("portfolio");
     }
-  }, [navigate]);
+  }, [navigate, tab]);
 
   const handleLogout = async () => {
     await apiLogout();
@@ -305,6 +308,7 @@ function AppInner() {
                 <TenantAnalytics
                   deals={deals}
                   onTenantClick={handleOpenTenant}
+                  onParentClick={name => handleOpenTenant("__parent__" + name)}
                   onTenantAudit={() => navigate({ type: "tenant-audit" })}
                 />
               )}
@@ -429,6 +433,19 @@ function AppInner() {
                 deals={activeDeals}
                 onBack={goBack}
                 onOpenDeal={d => navigate({ type: "detail", dealId: d.id })}
+                onParentClick={name => handleOpenTenant("__parent__" + name)}
+              />
+            </div>
+          )}
+
+          {view.type === "parent" && (
+            <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 160px)" }}>
+              <ParentCompanyView
+                parentName={view.parentName}
+                deals={deals}
+                onBack={goBack}
+                onTenantClick={handleOpenTenant}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
               />
             </div>
           )}
@@ -444,6 +461,7 @@ function AppInner() {
           view.type === "detail" ? `deal / ${tab}` :
           view.type === "tenant-audit" ? "tenant-audit" :
           view.type === "tenant" ? `tenant / ${view.tenantName}` :
+          view.type === "parent" ? `parent / ${view.parentName}` :
           view.type === "lender" ? `lender / ${view.lenderName}` :
           view.type === "compare" ? "compare" :
           tab

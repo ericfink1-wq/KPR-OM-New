@@ -162,11 +162,12 @@ function PillToggle<T extends string>({
 interface Props {
   deals: Deal[];
   onTenantClick?: (name: string) => void;
+  onParentClick?: (parent: string) => void;
   onTenantAudit?: () => void;
   onBack?: () => void;
 }
 
-export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, onBack }: Props) {
+export default function TenantAnalytics({ deals, onTenantClick, onParentClick, onTenantAudit, onBack }: Props) {
   const [filter, setFilter] = useState<"all" | "owned">("all");
   const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
 
@@ -388,9 +389,9 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
                     <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                     <span style={{ fontSize: 10, color: "#b8b0a3", marginLeft: 6 }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
                     {row.parentCo && (
-                      <span style={{ fontSize:9, color:"#a69e91", background:"#f1ece1", padding:"1px 5px", borderRadius:3, marginLeft:5, fontWeight:500, whiteSpace:"nowrap" }}>
+                      <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
                         {row.parentCo}
-                      </span>
+                      </button>
                     )}
                   </div>
                   <MiniBar value={row.totalAnnualRent} max={maxRent} color="#6dba43" />
@@ -431,7 +432,9 @@ export default function TenantAnalytics({ deals, onTenantClick, onTenantAudit, o
               {parentRows.map(pr => (
                 <div key={pr.parent} style={{ borderTop:"1px solid #f1ece1", padding:"10px 0" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
-                    <span style={{ fontSize:13, fontWeight:600, color:"#383a37" }}>{pr.parent}</span>
+                    <button onClick={() => onParentClick?.(pr.parent)} style={{ background:"transparent", border:"none", padding:0, cursor:onParentClick?"pointer":"default", fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:600, color:"#383a37", textDecoration:onParentClick?"underline":"none" }}>
+                      {pr.parent}
+                    </button>
                     <span style={{ fontSize:12, color:"#0f7a4e", fontWeight:600 }}>{fmtRent(pr.totalAnnualRent)}</span>
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
