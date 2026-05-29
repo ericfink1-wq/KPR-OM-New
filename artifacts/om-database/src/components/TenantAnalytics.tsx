@@ -412,9 +412,9 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
                   <div style={{ flex: "0 0 220px", minWidth: 0 }}>
                     <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                     {row.parentCo && (
-                      <span style={{ fontSize:9, color:"#a69e91", background:"#f1ece1", padding:"1px 5px", borderRadius:3, marginLeft:5, fontWeight:500, whiteSpace:"nowrap" }}>
+                      <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
                         {row.parentCo}
-                      </span>
+                      </button>
                     )}
                   </div>
                   <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />

@@ -27,8 +27,8 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
   const norm = (s: unknown) => String(s || "").trim().toLowerCase();
 
   const [scope, setScope] = useState<"all" | "owned">("all");
-  const [sortKey, setSortKey] = useState<SortKey>("annualRent");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [sortKey, setSortKey] = useState<SortKey>("brand");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const setSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
