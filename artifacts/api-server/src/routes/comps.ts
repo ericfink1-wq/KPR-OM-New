@@ -15,6 +15,25 @@ function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], nex
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/comps/stats — whole-table aggregates (unfiltered)
+// ---------------------------------------------------------------------------
+router.get("/comps/stats", requireAuth, async (req, res) => {
+  try {
+    const [result] = await db.select({
+      count:         sql<number>`count(*)::int`,
+      totalVolume:   sql<number>`coalesce(sum(sale_price) filter (where sale_price > 0), 0)`,
+      statesCovered: sql<number>`count(distinct state) filter (where state is not null)::int`,
+      earliestSale:  sql<string | null>`min(sale_date) filter (where sale_date is not null)`,
+      latestSale:    sql<string | null>`max(sale_date) filter (where sale_date is not null)`,
+    }).from(compsIndexTable);
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch comps stats");
+    res.status(500).json({ error: "Failed to fetch comps stats" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/comps
 // Filters (all optional, AND-combined):
 //   market         — case-insensitive partial match

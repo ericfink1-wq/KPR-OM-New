@@ -156,6 +156,15 @@ type DupInfo = {
   clusterId: number; otherNames: string[]; reasons: string[];
   betterSourceExists: boolean; bestTierName: string;
 };
+type CompStats = {
+  count: number; totalVolume: number; statesCovered: number;
+  earliestSale: string | null; latestSale: string | null;
+};
+function fmtVolume(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${Math.round(v / 1e6)}M`;
+  return `$${v.toLocaleString()}`;
+}
 
 // ---------------------------------------------------------------------------
 // Sort header cell
@@ -464,6 +473,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [pendingImport, setPendingImport] = useState<unknown[] | null>(null);
   const [editRow, setEditRow] = useState<CompRow | null>(null);
   const [showDupsOnly, setShowDupsOnly] = useState(false);
+  const [stats, setStats] = useState<CompStats | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -485,6 +495,13 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       .catch(e => { setError((e as Error).message); setLoading(false); });
   }, []);
 
+  const fetchStats = useCallback(() => {
+    fetch("/api/comps/stats", { credentials: "include" })
+      .then(r => r.json() as Promise<CompStats>)
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
   const handleFilter = useCallback((patch: Partial<Filters>) => {
     const next = { ...filters, ...patch };
     setFilters(next);
@@ -497,13 +514,14 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     fetch_(filters, s);
   }, [filters, fetch_]);
 
-  useEffect(() => { fetch_(filters, sort); }, []); // initial load
+  useEffect(() => { fetch_(filters, sort); fetchStats(); }, []); // initial load
 
   const handleDelete = async (id: number) => {
     try {
       const r = await fetch(`/api/comps/manual/${id}`, { method: "DELETE", credentials: "include" });
       if (!r.ok) throw new Error();
       setRows(prev => prev.filter(row => row.id !== id));
+      fetchStats();
     } catch {
       alert("Failed to delete comp.");
     }
@@ -543,6 +561,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       setImportMsg({ ok: true, text: parts.join(", ") });
       setTimeout(() => setImportMsg(null), 5000);
       fetch_(filters, sort);
+      fetchStats();
     } catch (err) {
       setImportMsg({ ok: false, text: err instanceof Error ? err.message : "Import failed" });
     }
@@ -666,9 +685,9 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       {(addOpen || editRow) && (
         <AddCompModal
           onClose={() => { setAddOpen(false); setEditRow(null); }}
-          onSaved={row => setRows(prev => [row, ...prev])}
+          onSaved={row => { setRows(prev => [row, ...prev]); fetchStats(); }}
           editRow={editRow ?? undefined}
-          onUpdated={updated => setRows(prev => prev.map(r => r.id === updated.id ? updated : r))}
+          onUpdated={updated => { setRows(prev => prev.map(r => r.id === updated.id ? updated : r)); fetchStats(); }}
         />
       )}
       {pendingImport && (
@@ -808,6 +827,42 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           </button>
         </div>
       </div>
+
+      {/* Stats banner */}
+      {stats && (() => {
+        const eyear = stats.earliestSale?.slice(0, 4) ?? null;
+        const lyear  = stats.latestSale?.slice(0, 4)  ?? null;
+        const span   = !eyear ? "—" : eyear === lyear ? eyear : `${eyear}–${lyear}`;
+        const items = [
+          { label: "Comps",        value: stats.count.toLocaleString(),              accent: false },
+          { label: "Total Volume", value: fmtVolume(Number(stats.totalVolume) || 0), accent: true  },
+          { label: "States",       value: String(stats.statesCovered),               accent: false },
+          { label: "Span",         value: span,                                      accent: false },
+        ] as const;
+        return (
+          <div style={{
+            background: "#fff", border: "1px solid #efe8da", borderRadius: 10,
+            padding: "11px 18px", marginBottom: 14,
+            display: "flex", flexWrap: "wrap", alignItems: "center",
+          }}>
+            {items.map((item, i) => (
+              <div key={i} style={{
+                flex: "1 1 40%", minWidth: 90,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                padding: "3px 8px",
+                borderRight: i < items.length - 1 ? "1px solid #f0e9da" : "none",
+              }}>
+                <span style={{ fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                  {item.label}
+                </span>
+                <span style={{ fontFamily: "'Fraunces',serif", fontSize: item.accent ? 22 : 18, fontWeight: 500, color: item.accent ? "#3f7a1f" : "#26281f", lineHeight: 1.1 }}>
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Search */}
       <div style={{ marginBottom: 10 }}>

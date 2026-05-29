@@ -1,0 +1,39 @@
+Add a slim stats banner to the top of the comp database page showing database scale. Keep it to FOUR stats in a thin horizontal strip (NOT a grid of big cards) so it reads as a header, not a second table. Stats reflect the ENTIRE comps table, not the current filter.
+
+════════════════════════════════════════
+PART 1 — Backend stats endpoint
+File: artifacts/api-server/src/routes/comps.ts
+Add an authenticated route GET /api/comps/stats returning SQL aggregates over comps_index:
+  {
+    count:         total number of comps,
+    totalVolume:   SUM(sale_price) where sale_price > 0,
+    statesCovered: COUNT(DISTINCT state) where state is not null,
+    earliestSale:  MIN(sale_date) where sale_date not null,
+    latestSale:    MAX(sale_date) where sale_date not null
+  }
+Use Drizzle sql`` for the aggregates. Wrap in try/catch; 500 on error.
+
+════════════════════════════════════════
+PART 2 — Frontend slim banner
+File: src/components/CompsSearch.tsx
+On mount, fetch GET /api/comps/stats (credentials: include). Re-fetch after any import, add, edit, or delete so it stays current.
+
+Render ONE thin horizontal strip above the search/filters with four stats separated by subtle vertical dividers (a single bordered bar, ~52–60px tall, not individual cards):
+  1. "Comps"        → count (comma-separated integer)
+  2. "Total Volume" → compact currency: >=1e9 → `$X.XB`, >=1e6 → `$XXXM`, else `$X,XXX`. This is the hero — accent it with the app green (#3f7a1f) and make its number slightly larger than the others.
+  3. "States"       → statesCovered integer
+  4. "Span"         → `${earliestYear}–${latestYear}` (e.g. "2021–2026"); single year shown once; "—" if none.
+
+STYLING — one container: white background, 1px #efe8da border, ~10px radius, padding ~12px 18px, marginBottom 14. Inside, a flex row, space-between, with thin vertical divider lines (1px #f0e9da) between the four items. Each item: tiny uppercase muted label (#a89f8f, ~9.5px) stacked above the value (serif 'Fraunces', ~18–20px, #26281f; Total Volume green + ~22px). This should feel like a quiet stat ribbon, not a dashboard.
+
+RESPONSIVE:
+  - Desktop/tablet: all four in the single strip.
+  - Mobile (narrow): show the strip as a 2x2 — first row Comps + Total Volume (the two that matter most), second row States + Span. Use flex-wrap so it reflows automatically; keep the compact currency formatter so "$2.4B" never overflows. Keep dividers only between same-row items (acceptable to drop dividers on wrap).
+
+Do NOT use large card boxes or add more than these four stats.
+
+════════════════════════════════════════
+TEST:
+1. Banner shows correct count, total volume, states, and year span over the whole DB even when a filter/search is active.
+2. Import or delete a comp → numbers update.
+3. Narrow width → reflows to 2x2 with Comps + Total Volume on top; nothing overflows.
