@@ -21,6 +21,9 @@ export const compsIndexTable = pgTable("comps_index", {
   anchor: text("anchor"),
   propertyType: text("property_type"),
   sourceNotes: text("source_notes"),
+  buyer: text("buyer"),
+  seller: text("seller"),
+  state: text("state"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -75,13 +75,15 @@ export async function syncOwnTransactionComps(
         const acqCapRate = toFloat(data.acqCapRate) ?? toFloat(data.capRate);
         const acqPsf     = sf && sf > 0 ? Math.round(acqSalePrice / sf) : toFloat(data.pricePerSF);
         const seller     = toStr(data.txnSeller);
+        const dealState = toStr(data.state);
         await db.insert(compsIndexTable).values({
           sourceDealId: dealId, sourceDealName: propertyName, sourceDealMarket: market,
-          name: propertyName, address, market,
+          name: propertyName, address, market, state: dealState,
           saleDateRaw: toStr(data.txnCloseDate), saleDate: acqSaleDate,
           salePrice: acqSalePrice, capRate: acqCapRate, pricePerSf: acqPsf,
           sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "acquisition",
           anchor, propertyType,
+          seller, buyer: null,
           sourceNotes: "KPR acquisition" + (seller ? `, seller: ${seller}` : ""),
         });
       }
@@ -103,13 +105,15 @@ export async function syncOwnTransactionComps(
         const dispCapRate = toFloat(data.dispExitCap);
         const dispPsf     = sf && sf > 0 ? Math.round(dispSalePrice / sf) : null;
         const buyer       = toStr(data.txnBuyer);
+        const dealState = toStr(data.state);
         await db.insert(compsIndexTable).values({
           sourceDealId: dealId, sourceDealName: propertyName, sourceDealMarket: market,
-          name: propertyName, address, market,
+          name: propertyName, address, market, state: dealState,
           saleDateRaw: toStr(data.txnSaleDate), saleDate: dispSaleDate,
           salePrice: dispSalePrice, capRate: dispCapRate, pricePerSf: dispPsf,
           sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "disposition",
           anchor, propertyType,
+          buyer, seller: null,
           sourceNotes: "KPR disposition" + (buyer ? `, buyer: ${buyer}` : ""),
         });
       }
@@ -147,6 +151,9 @@ export async function rebuildCompsIndex(
         const market =
           (typeof c.market === "string" && c.market.trim() ? c.market.trim() : null)
           ?? sourceDealMarket;
+        const compState =
+          (typeof c.state === "string" && c.state.trim() ? c.state.trim() : null)
+          ?? (market ? (/,\s*([A-Z]{2})\s*$/.exec(market)?.[1] ?? null) : null);
         return {
           sourceDealId: dealId,
           sourceDealName,
@@ -154,6 +161,7 @@ export async function rebuildCompsIndex(
           name: typeof c.name === "string" && c.name.trim() ? c.name.trim() : null,
           address: typeof c.address === "string" && c.address.trim() ? c.address.trim() : null,
           market,
+          state: compState,
           saleDateRaw,
           saleDate: parseSaleDate(saleDateRaw),
           salePrice: toFloat(c.salePrice),

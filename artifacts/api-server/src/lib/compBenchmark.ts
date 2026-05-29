@@ -117,6 +117,9 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   const stateOk = (r: Row) => {
     if (!req.state) return true;
     const s = req.state.toLowerCase();
+    // Prefer the dedicated state column when present
+    if (r.state) return r.state.toLowerCase() === s;
+    // Fallback: substring match on market/sourceDealMarket
     return (r.market ?? "").toLowerCase().includes(s) ||
            (r.sourceDealMarket ?? "").toLowerCase().includes(s);
   };

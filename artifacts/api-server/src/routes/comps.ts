@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { compsIndexTable } from "@workspace/db";
-import { and, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
+import { and, or, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
 import { rebuildAllComps } from "../lib/compsIndex";
 
 const router = Router();
@@ -29,9 +29,23 @@ function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], nex
 // ---------------------------------------------------------------------------
 router.get("/comps", requireAuth, async (req, res) => {
   try {
-    const { market, dateFrom, dateTo, capRateMin, capRateMax, sourceDealId, sort } = req.query as Record<string, string | undefined>;
+    const { q, market, dateFrom, dateTo, capRateMin, capRateMax, sourceDealId, sort } = req.query as Record<string, string | undefined>;
 
     const conditions = [];
+    if (q?.trim()) {
+      const term = `%${q.trim()}%`;
+      conditions.push(or(
+        ilike(compsIndexTable.name, term),
+        ilike(compsIndexTable.address, term),
+        ilike(compsIndexTable.market, term),
+        ilike(compsIndexTable.state, term),
+        ilike(compsIndexTable.anchor, term),
+        ilike(compsIndexTable.propertyType, term),
+        ilike(compsIndexTable.buyer, term),
+        ilike(compsIndexTable.seller, term),
+        ilike(compsIndexTable.sourceNotes, term),
+      )!);
+    }
     if (market?.trim()) conditions.push(ilike(compsIndexTable.market, `%${market.trim()}%`));
     if (dateFrom) conditions.push(gte(compsIndexTable.saleDate, dateFrom));
     if (dateTo) conditions.push(lte(compsIndexTable.saleDate, dateTo));
@@ -47,14 +61,32 @@ router.get("/comps", requireAuth, async (req, res) => {
 
     const orderBy = (() => {
       switch (sort) {
-        case "date_asc":        return [asc(compsIndexTable.saleDate),  asc(compsIndexTable.id)];
-        case "cap_rate_asc":    return [asc(compsIndexTable.capRate),   desc(compsIndexTable.saleDate)];
-        case "cap_rate_desc":   return [desc(compsIndexTable.capRate),  desc(compsIndexTable.saleDate)];
-        case "price_per_sf_asc":  return [asc(compsIndexTable.pricePerSf),  desc(compsIndexTable.saleDate)];
-        case "price_per_sf_desc": return [desc(compsIndexTable.pricePerSf), desc(compsIndexTable.saleDate)];
-        case "sale_price_asc":  return [asc(compsIndexTable.salePrice),  desc(compsIndexTable.saleDate)];
-        case "sale_price_desc": return [desc(compsIndexTable.salePrice), desc(compsIndexTable.saleDate)];
-        default:                return [desc(compsIndexTable.saleDate),  asc(compsIndexTable.id)]; // date_desc
+        case "date_asc":          return [asc(compsIndexTable.saleDate),      asc(compsIndexTable.id)];
+        case "cap_rate_asc":      return [asc(compsIndexTable.capRate),        desc(compsIndexTable.saleDate)];
+        case "cap_rate_desc":     return [desc(compsIndexTable.capRate),       desc(compsIndexTable.saleDate)];
+        case "price_per_sf_asc":  return [asc(compsIndexTable.pricePerSf),    desc(compsIndexTable.saleDate)];
+        case "price_per_sf_desc": return [desc(compsIndexTable.pricePerSf),   desc(compsIndexTable.saleDate)];
+        case "sale_price_asc":    return [asc(compsIndexTable.salePrice),     desc(compsIndexTable.saleDate)];
+        case "sale_price_desc":   return [desc(compsIndexTable.salePrice),    desc(compsIndexTable.saleDate)];
+        case "name_asc":          return [asc(compsIndexTable.name),          asc(compsIndexTable.id)];
+        case "name_desc":         return [desc(compsIndexTable.name),         asc(compsIndexTable.id)];
+        case "market_asc":        return [asc(compsIndexTable.market),        asc(compsIndexTable.id)];
+        case "market_desc":       return [desc(compsIndexTable.market),       asc(compsIndexTable.id)];
+        case "state_asc":         return [asc(compsIndexTable.state),         asc(compsIndexTable.id)];
+        case "state_desc":        return [desc(compsIndexTable.state),        asc(compsIndexTable.id)];
+        case "sf_asc":            return [asc(compsIndexTable.sf),            desc(compsIndexTable.saleDate)];
+        case "sf_desc":           return [desc(compsIndexTable.sf),           desc(compsIndexTable.saleDate)];
+        case "occ_asc":           return [asc(compsIndexTable.occupancy),     desc(compsIndexTable.saleDate)];
+        case "occ_desc":          return [desc(compsIndexTable.occupancy),    desc(compsIndexTable.saleDate)];
+        case "anchor_asc":        return [asc(compsIndexTable.anchor),        asc(compsIndexTable.id)];
+        case "anchor_desc":       return [desc(compsIndexTable.anchor),       asc(compsIndexTable.id)];
+        case "type_asc":          return [asc(compsIndexTable.propertyType),  asc(compsIndexTable.id)];
+        case "type_desc":         return [desc(compsIndexTable.propertyType), asc(compsIndexTable.id)];
+        case "buyer_asc":         return [asc(compsIndexTable.buyer),         asc(compsIndexTable.id)];
+        case "buyer_desc":        return [desc(compsIndexTable.buyer),        asc(compsIndexTable.id)];
+        case "seller_asc":        return [asc(compsIndexTable.seller),        asc(compsIndexTable.id)];
+        case "seller_desc":       return [desc(compsIndexTable.seller),       asc(compsIndexTable.id)];
+        default:                  return [desc(compsIndexTable.saleDate),     asc(compsIndexTable.id)]; // date_desc
       }
     })();
 
@@ -75,9 +107,9 @@ router.get("/comps", requireAuth, async (req, res) => {
 router.post("/comps/manual", requireAuth, async (req, res) => {
   try {
     const {
-      name, address, market, saleDateRaw, saleDate,
+      name, address, market, state, saleDateRaw, saleDate,
       salePrice, capRate, pricePerSf, sf, occupancy,
-      anchor, propertyType, sourceNotes,
+      anchor, propertyType, sourceNotes, buyer, seller,
     } = req.body as Record<string, unknown>;
 
     const toFloat = (v: unknown): number | null => {
@@ -102,6 +134,7 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
       name: toStr(name),
       address: toStr(address),
       market: toStr(market),
+      state: toStr(state),
       saleDateRaw: toStr(saleDateRaw),
       saleDate: toStr(saleDate),
       salePrice: parsedPrice,
@@ -113,6 +146,8 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
       anchor: toStr(anchor),
       propertyType: toStr(propertyType),
       sourceNotes: toStr(sourceNotes),
+      buyer: toStr(buyer),
+      seller: toStr(seller),
     }).returning();
 
     res.json(inserted);
@@ -143,11 +178,12 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
 
     const insertRows: {
       sourceDealId: string; sourceDealName: null; sourceDealMarket: string | null;
-      name: string | null; address: string | null; market: string | null;
+      name: string | null; address: string | null; market: string | null; state: string | null;
       saleDateRaw: string | null; saleDate: string | null;
       salePrice: number | null; capRate: number | null; pricePerSf: number | null;
       sf: number | null; occupancy: number | null;
       isManual: true; anchor: string | null; propertyType: string | null; sourceNotes: string | null;
+      buyer: string | null; seller: string | null;
     }[] = [];
 
     let skipped = 0;
@@ -164,13 +200,14 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
       const market = toStr(item.market);
       insertRows.push({
         sourceDealId: "__manual__", sourceDealName: null, sourceDealMarket: market,
-        name, address: toStr(item.address), market,
+        name, address: toStr(item.address), market, state: toStr(item.state),
         saleDateRaw: toStr(item.saleDateRaw),
         saleDate: toStr(item.saleDate),
         salePrice, capRate: toFloat(item.capRate), pricePerSf: parsedPsf,
         sf: parsedSf, occupancy: toFloat(item.occupancy),
         isManual: true,
         anchor: toStr(item.anchor), propertyType: toStr(item.propertyType), sourceNotes: toStr(item.sourceNotes),
+        buyer: toStr(item.buyer), seller: toStr(item.seller),
       });
     }
     if (insertRows.length > 0) {

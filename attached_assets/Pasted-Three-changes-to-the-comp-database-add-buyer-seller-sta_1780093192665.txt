@@ -1,0 +1,32 @@
+Three changes to the comp database: add buyer/seller/state columns, make the comp table single-row with expandable text, and make it fully sortable and searchable.
+
+────────────────────────────────────────
+PART 1 — New columns: buyer, seller, state
+File: lib/db/src/schema/compsIndex.ts
+Add three nullable text columns: buyer ("buyer"), seller ("seller"), state ("state"). Run a Drizzle migration so the live DB gets them. Update CompRow types here and in src/components/CompsSearch.tsx.
+
+Map them everywhere comps are written:
+- POST /api/comps/manual and POST /api/comps/manual/bulk (routes/comps.ts): accept and store buyer, seller, state from each incoming object.
+- syncOwnTransactionComps (lib/compsIndex.ts): for the acquisition comp set seller = data.txnSeller; for the disposition comp set buyer = data.txnBuyer; set state = data.state on both.
+- rebuildCompsIndex OM-comp mapping (lib/compsIndex.ts): populate state from the comp's own state field if present, else parse trailing state from market.
+Also make the benchmark's state matching (lib/compBenchmark.ts, the stateOk function) prefer the new dedicated state column when present, falling back to the market substring match only if state is null.
+
+────────────────────────────────────────
+PART 2 — Single-row rows with expandable long text
+File: src/components/CompsSearch.tsx
+Currently long Anchor and Source/notes text wraps and makes rows multiple lines tall. Fix so EVERY comp is exactly one row tall by default:
+- For the Anchor column and the Source/notes column, render the text truncated to a single line (white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width ~220px).
+- Add a small chevron/▸ toggle button at the end of any cell whose text is truncated. Clicking it expands ONLY that cell to show the full text (wrap allowed) and rotates the chevron to ▾; clicking again collapses it. Track expanded state per (rowId, column) so expanding one cell doesn't affect others.
+- Do not let any other column wrap — keep the whole row to one line unless the user explicitly expands a cell.
+
+────────────────────────────────────────
+PART 3 — Fully sortable and searchable
+File: src/components/CompsSearch.tsx (and routes/comps.ts for sort support)
+SORTING: Make every column header sortable, not just date/cap/price/psf. Add the missing sortable columns — Property name, Market, State, SF, Occupancy, Anchor, Type, Buyer, Seller — using the existing SortTh pattern (click toggles asc/desc). Extend the SortKey type and the backend orderBy switch in GET /api/comps to support these new sort keys (text columns sort alphabetically, numeric columns numerically, nulls last).
+SEARCH: Add a single free-text search box above the table (full width). It should match against ALL text fields — name, address, market, state, anchor, propertyType, buyer, seller, sourceNotes — case-insensitive, partial match. Wire it as a new query param (e.g. q) on GET /api/comps that ORs an ILIKE %q% across those columns. Debounce input ~280ms like the existing market filter. Keep the existing market/date/cap-rate filters working alongside it.
+
+────────────────────────────────────────
+TEST:
+1. Import a comp with buyer/seller/state populated → confirm they store and display.
+2. A comp with a long anchor list shows on ONE row with a chevron; clicking expands just that cell.
+3. Click each column header → sorts correctly both directions. Type a seller name in the search box → list filters to matching comps.

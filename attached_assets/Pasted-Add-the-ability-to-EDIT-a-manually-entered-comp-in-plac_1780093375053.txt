@@ -1,0 +1,31 @@
+Add the ability to EDIT a manually-entered comp in place (currently you can only add or delete). Only manual comps are editable; OWNED and OM-sourced comps are edited via their source deal.
+
+────────────────────────────────────────
+PART 1 — Backend: update endpoint
+File: artifacts/api-server/src/routes/comps.ts
+Add an authenticated route PUT /api/comps/manual/:id that:
+- Looks up the row by id. If it doesn't exist OR is_manual is false, return 404 { error: "Not found or not a manual comp" }.
+- Accepts the same fields as POST /api/comps/manual: name, address, market, state, saleDate, saleDateRaw, salePrice, capRate, pricePerSf, sf, occupancy, anchor, propertyType, buyer, seller, sourceNotes. Coerce empty strings to null; numbers via the same toFloat helper.
+- If salePrice and sf are present but pricePerSf is omitted/blank, recompute pricePerSf = Math.round(salePrice / sf).
+- Updates the row (keep is_manual = true, leave sourceDealId untouched), sets updatedAt = now, and returns the full updated row as JSON.
+
+────────────────────────────────────────
+PART 2 — Frontend: reuse the Add Comp modal for editing
+File: src/components/CompsSearch.tsx
+Generalize the existing AddCompModal so it handles both add and edit:
+- Add an optional prop editRow?: CompRow. When present:
+  - Pre-fill the form from editRow's values (all fields, including buyer, seller, state if those exist on the form).
+  - Change the modal title to "Edit Comp" and the save button to "Save Changes".
+  - On save, call PUT /api/comps/manual/${editRow.id} instead of POST, with the same body shape.
+  - Call a new onSaved/onUpdated handler that REPLACES the matching row in the table's state (match by id) instead of appending.
+- When editRow is absent, behavior is unchanged (add new via POST, append to list).
+Make sure the form includes editable fields for buyer, seller, and state (add them to ManualForm/EMPTY_FORM and the form layout if not already present from the prior change).
+
+PART 3 — Edit button on manual rows
+In the comp table, on rows where isManual is true, add a small pencil/"Edit" button next to the existing × delete button. Clicking it opens the modal in edit mode pre-filled with that row. Style it consistently with the × button (same size, subtle border). Do NOT show an edit button on OWNED or OM-sourced rows.
+
+────────────────────────────────────────
+TEST:
+1. Click Edit on a manual comp, change the cap rate, save → the row updates in place (no duplicate created) and persists after refresh.
+2. Edit a comp's buyer/seller/state → changes save and show.
+3. Confirm OWNED and OM-sourced rows have no Edit button.
