@@ -161,7 +161,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     const seenAnchors = new Set<string>();
     const anchors = tenants.filter(t => t.isAnchor && t.name).reduce<string[]>((acc, t) => {
       const k = tenantKey(t.canonicalName || t.name);
-      if (k && !seenAnchors.has(k)) { seenAnchors.add(k); acc.push(tenantLabel(t.name!)); }
+      if (k && !seenAnchors.has(k)) { seenAnchors.add(k); acc.push(tenantLabel(t.name!, t.canonicalName)); }
       return acc;
     }, []);
     const totalValue = owned.reduce((s, d) => s + (num(d.txnPurchasePrice) || num(d.askingPrice)), 0);

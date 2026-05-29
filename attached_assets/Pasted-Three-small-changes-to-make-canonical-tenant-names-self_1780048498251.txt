@@ -1,0 +1,32 @@
+Three small changes to make canonical tenant names self-improving on every new OM upload.
+
+CHANGE 1 — artifacts/api-server/src/lib/extract.ts
+In the EXTRACTION_PROMPT tenant schema, find the "name" field instruction. Add "canonicalName" directly after it:
+
+      "name": "raw tenant name exactly as it appears in the OM (may include store number, e.g. 'Stop & Shop #1234', 'TJ Maxx #T0586')",
+      "canonicalName": "clean brand name only — strip store numbers, suite identifiers, and entity suffixes. Preserve special characters and punctuation that are part of the brand: ampersands (Stop & Shop), apostrophes (McDonald's, Lowe's), hyphens (Chick-fil-A, T-Mobile), and stylized caps (ALDI, H-E-B, TJ Maxx). Examples: 'Stop & Shop #1234' → 'Stop & Shop', 'TJ Maxx #T0586' → 'TJ Maxx', 'McDonald\\'s #32499' → 'McDonald\\'s', 'Dollar Tree #4212' → 'Dollar Tree', 'Heartland Dental' → 'Heartland Dental'. If the name has no suffix, canonicalName equals name.",
+
+CHANGE 2 — artifacts/om-database/src/lib/utils.ts
+In the tenantLabel() function, add canonicalName as the first check before everything else. Find:
+
+export function tenantLabel(name: unknown): string {
+  const n = _normTenant(name);
+  if (_userAliases[n]) return _userAliases[n];
+  if (TENANT_ALIASES[n]) return TENANT_ALIASES[n];
+  return n.replace(/\b\w/g, c => c.toUpperCase()) || String(name || "");
+}
+
+Change the signature to accept an optional second argument and use it first:
+
+export function tenantLabel(name: unknown, canonicalName?: string | null): string {
+  if (canonicalName && canonicalName.trim()) return canonicalName.trim();
+  const n = _normTenant(name);
+  if (_userAliases[n]) return _userAliases[n];
+  if (TENANT_ALIASES[n]) return TENANT_ALIASES[n];
+  return n.replace(/\b\w/g, c => c.toUpperCase()) || String(name || "");
+}
+
+CHANGE 3 — artifacts/om-database/src/components/TenantRoster.tsx, TenantAnalytics.tsx, TenantAudit.tsx, TenantView.tsx
+Everywhere tenantLabel(t.name) or tenantLabel(name) is called with a tenant object that has a canonicalName field, pass it as the second argument: tenantLabel(t.name, t.canonicalName). Search for all calls to tenantLabel() that operate on a tenant and update them.
+
+Make, test, iterate until saved.

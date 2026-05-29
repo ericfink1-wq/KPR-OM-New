@@ -359,7 +359,8 @@ export function tenantKey(name: unknown): string {
 }
 
 /** Clean, human-readable canonical name for labels and headers. */
-export function tenantLabel(name: unknown): string {
+export function tenantLabel(name: unknown, canonicalName?: string | null): string {
+  if (canonicalName && canonicalName.trim()) return canonicalName.trim();
   const n = _normTenant(name);
   if (_userAliases[n]) return _userAliases[n];
   if (TENANT_ALIASES[n]) return TENANT_ALIASES[n];
