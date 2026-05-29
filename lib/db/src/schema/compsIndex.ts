@@ -1,4 +1,4 @@
-import { pgTable, serial, text, doublePrecision, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, doublePrecision, date, timestamp, boolean } from "drizzle-orm/pg-core";
 
 export const compsIndexTable = pgTable("comps_index", {
   id: serial("id").primaryKey(),
@@ -15,7 +15,18 @@ export const compsIndexTable = pgTable("comps_index", {
   pricePerSf: doublePrecision("price_per_sf"),
   sf: doublePrecision("sf"),
   occupancy: doublePrecision("occupancy"),
+  isManual: boolean("is_manual").notNull().default(false),
+  anchor: text("anchor"),
+  propertyType: text("property_type"),
+  sourceNotes: text("source_notes"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type CompsIndexRow = typeof compsIndexTable.$inferSelect;
+
+export type CompRow = CompsIndexRow & {
+  isManual: boolean;
+  anchor: string | null;
+  propertyType: string | null;
+  sourceNotes: string | null;
+};

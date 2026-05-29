@@ -1,0 +1,82 @@
+Build a manual comp entry feature for the KPR deal library. This involves a schema migration, two new API endpoints, and UI changes to CompsSearch. Follow these instructions exactly.
+
+────────────────────────────────────────
+PART 1 — DATABASE SCHEMA
+File: lib/db/src/schema/compsIndex.ts
+
+Add four new columns to compsIndexTable:
+  isManual:     boolean("is_manual").notNull().default(false)
+  anchor:       text("anchor")          -- main anchor tenant(s), nullable
+  propertyType: text("property_type")   -- e.g. "Grocery-Anchored", nullable
+  sourceNotes:  text("source_notes")    -- e.g. "CoStar", "Broker", free text, nullable
+
+After editing the schema file, run a Drizzle migration so the new columns are added to the live database.
+
+Also update the exported CompRow type to include these four fields (isManual: boolean, anchor, propertyType, sourceNotes all string | null).
+
+────────────────────────────────────────
+PART 2 — BACKEND ROUTES
+File: artifacts/api-server/src/routes/comps.ts
+
+Add two new authenticated routes:
+
+A) POST /api/comps/manual
+Accepts JSON body with these optional fields:
+  name, address, market, saleDateRaw, saleDate (YYYY-MM-DD),
+  salePrice, capRate, pricePerSf, sf, occupancy,
+  anchor, propertyType, sourceNotes
+Inserts a row into compsIndexTable with:
+  sourceDealId = "__manual__"
+  sourceDealName = null
+  sourceDealMarket = market (same as market field)
+  isManual = true
+  ...all other provided fields
+If salePrice and sf are both provided but pricePerSf is not, compute it as Math.round(salePrice / sf).
+Returns the inserted row as JSON.
+
+B) DELETE /api/comps/manual/:id
+Looks up the row by id. If it does not exist OR isManual is false, return 404 with { error: "Not found or not a manual comp" }. 
+If isManual is true, delete it and return { ok: true }.
+
+C) Update the existing POST /api/comps/rebuild-all route so that it preserves manual comp rows. Before rebuilding, it should fetch all rows where isManual = true, run the rebuild (which deletes and re-inserts from deals), then re-insert the manual rows back. This ensures a rebuild never wipes manually entered comps.
+
+────────────────────────────────────────
+PART 3 — FRONTEND
+File: src/components/CompsSearch.tsx
+
+A) Update the CompRow interface to add:
+  isManual: boolean;
+  anchor: string | null;
+  propertyType: string | null;
+  sourceNotes: string | null;
+
+B) Add an "Add Comp" button in the CompsSearch header bar (top right, next to any existing controls). Style it consistently with the app — small, green outline or filled green, matching the existing button aesthetic.
+
+C) Build an inline modal/panel (not a new page) that opens when "Add Comp" is clicked. The panel should be a centered overlay or slide-in with a white card containing a form with these fields:
+
+  Required section:
+  - Property Name (text)
+  - Market / City (text)
+  - Sale Date (date input, produces YYYY-MM-DD)
+  - Sale Price ($, numeric)
+
+  Optional section (label it "Optional" with a subtle separator):
+  - Address (text)
+  - GLA / SF (numeric)
+  - Cap Rate (%, numeric, e.g. 7.50)
+  - Occupancy at Sale (%, numeric)
+  - Anchor Tenant(s) (text)
+  - Property Type (text, placeholder "e.g. Grocery-Anchored")
+  - Source / Notes (text)
+
+  Buttons: "Save Comp" (green, primary) and "Cancel" (grey).
+
+  On Save: POST to /api/comps/manual with the form values. On success, close the panel and refresh the comps list. On error, show an inline error message.
+
+D) In the comps table, add a thin "MANUAL" badge (small, grey or blue outline, 9pt) on rows where isManual is true. Also add a small × delete button on those rows only. Clicking × should call DELETE /api/comps/manual/:id and remove the row from the list on success (no full reload needed — just filter it out of state).
+
+E) In the table, add two new optional columns: Anchor and Type, shown only when at least one row has a non-null value for those fields (to avoid cluttering the table when no manual comps exist). If no rows have anchor/type data, omit the columns entirely.
+
+────────────────────────────────────────
+TEST
+After building: open the Comps Search page, click "Add Comp", fill in a test comp (name, market, date, price), save it, confirm it appears in the table with the MANUAL badge, then click × and confirm it disappears. Also confirm that running rebuild-all does not remove the manual comp.

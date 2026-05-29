@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { compsIndexTable } from "@workspace/db";
-import { and, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
+import { and, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
 import { rebuildAllComps } from "../lib/compsIndex";
 
 const router = Router();
@@ -70,11 +70,103 @@ router.get("/comps", requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/comps/manual — insert a manually entered comp
+// ---------------------------------------------------------------------------
+router.post("/comps/manual", requireAuth, async (req, res) => {
+  try {
+    const {
+      name, address, market, saleDateRaw, saleDate,
+      salePrice, capRate, pricePerSf, sf, occupancy,
+      anchor, propertyType, sourceNotes,
+    } = req.body as Record<string, unknown>;
+
+    const toFloat = (v: unknown): number | null => {
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      return isFinite(n) ? n : null;
+    };
+    const toStr = (v: unknown): string | null =>
+      typeof v === "string" && v.trim() ? v.trim() : null;
+
+    const parsedPrice = toFloat(salePrice);
+    const parsedSf    = toFloat(sf);
+    let parsedPsf     = toFloat(pricePerSf);
+    if (parsedPsf == null && parsedPrice != null && parsedSf != null && parsedSf > 0) {
+      parsedPsf = Math.round(parsedPrice / parsedSf);
+    }
+
+    const [inserted] = await db.insert(compsIndexTable).values({
+      sourceDealId: "__manual__",
+      sourceDealName: null,
+      sourceDealMarket: toStr(market),
+      name: toStr(name),
+      address: toStr(address),
+      market: toStr(market),
+      saleDateRaw: toStr(saleDateRaw),
+      saleDate: toStr(saleDate),
+      salePrice: parsedPrice,
+      capRate: toFloat(capRate),
+      pricePerSf: parsedPsf,
+      sf: parsedSf,
+      occupancy: toFloat(occupancy),
+      isManual: true,
+      anchor: toStr(anchor),
+      propertyType: toStr(propertyType),
+      sourceNotes: toStr(sourceNotes),
+    }).returning();
+
+    res.json(inserted);
+  } catch (err) {
+    req.log.error({ err }, "Failed to insert manual comp");
+    res.status(500).json({ error: "Failed to insert manual comp" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/comps/manual/:id — delete a manual comp by id
+// ---------------------------------------------------------------------------
+router.delete("/comps/manual/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const [row] = await db.select().from(compsIndexTable).where(eq(compsIndexTable.id, id));
+    if (!row || !row.isManual) {
+      res.status(404).json({ error: "Not found or not a manual comp" });
+      return;
+    }
+    await db.delete(compsIndexTable).where(eq(compsIndexTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete manual comp");
+    res.status(500).json({ error: "Failed to delete manual comp" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/comps/rebuild-all — full backfill from all deals
+// Preserves manually entered comps.
 // ---------------------------------------------------------------------------
 router.post("/comps/rebuild-all", requireAuth, async (req, res) => {
   try {
+    // Save manual rows before rebuild wipes non-manual rows
+    const manualRows = await db.select().from(compsIndexTable).where(eq(compsIndexTable.isManual, true));
     const count = await rebuildAllComps();
+    // Re-insert manual rows if any were accidentally removed
+    if (manualRows.length > 0) {
+      // rebuildAllComps only deletes rows by sourceDealId = deal.id, so "__manual__" rows
+      // are inherently preserved; but re-insert any that were lost just in case
+      const surviving = await db.select({ id: compsIndexTable.id }).from(compsIndexTable).where(eq(compsIndexTable.isManual, true));
+      const survivingIds = new Set(surviving.map(r => r.id));
+      const toRestore = manualRows.filter(r => !survivingIds.has(r.id));
+      if (toRestore.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const restoreRows = toRestore.map(({ id: _id, updatedAt: _ts, ...rest }) => rest);
+        await db.insert(compsIndexTable).values(restoreRows);
+      }
+    }
     res.json({ ok: true, rebuilt: count });
   } catch (err) {
     req.log.error({ err }, "Failed to rebuild comps index");
