@@ -98,6 +98,10 @@ function AppInner() {
       .catch(() => setLoaded(true));
   }, [auth]);
 
+  const handleReloadDeals = useCallback(() => {
+    apiLoadDeals().then(d => setDeals(d)).catch(() => {});
+  }, []);
+
   const handleUpdate = useCallback((id: string, patch: Partial<Deal>) => {
     setDeals(prev => {
       const next = prev.map(d => d.id === id ? { ...d, ...patch } : d);
@@ -312,7 +316,7 @@ function AppInner() {
                 <div style={{ padding: "14px 24px 0" }}>
                   <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
                 </div>
-                <TenantAudit deals={activeDeals} onTenantClick={handleOpenTenant} />
+                <TenantAudit deals={activeDeals} onTenantClick={handleOpenTenant} onDealsChanged={handleReloadDeals} />
               </div>
             ) : (
               <>

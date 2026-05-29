@@ -187,13 +187,30 @@ export function addUserMerge(merge: UserMerge): void {
   rebuildUserAliases();
   try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
   saveTenantDecision({ id: merge.id, type: "merge", nameA: merge.canonical, nameB: "", variants: merge.variants }).catch(() => { /**/ });
+  const entries = merge.variants.map(v => ({
+    rawName: v,
+    canonicalName: merge.canonical,
+    notes: "user-confirmed-merge",
+  }));
+  fetch("/api/aliases", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entries),
+  }).catch(() => { /* non-fatal: local save already succeeded */ });
 }
 
 export function removeUserMerge(id: string): void {
+  const m = _userMerges.find(x => x.id === id);
   _userMerges = _userMerges.filter(m => m.id !== id);
   rebuildUserAliases();
   try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
   removeTenantDecision(id).catch(() => { /**/ });
+  if (m) {
+    for (const v of m.variants) {
+      fetch(`/api/aliases/${encodeURIComponent(v)}`, { method: "DELETE", credentials: "include" }).catch(() => {});
+    }
+  }
 }
 
 export function getUserMerges(): UserMerge[] {

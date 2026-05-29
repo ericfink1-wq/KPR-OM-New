@@ -6,6 +6,7 @@ import { tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant, i
 interface Props {
   deals: Deal[];
   onTenantClick?: (name: string) => void;
+  onDealsChanged?: () => void;
 }
 
 interface Group {
@@ -34,7 +35,7 @@ function saveDismissed(ids: string[]) {
   } catch { /**/ }
 }
 
-export default function TenantAudit({ deals, onTenantClick }: Props) {
+export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [dismissed, setDismissed] = useState<string[]>(loadDismissed);
   const [showRestored, setShowRestored] = useState(false);
@@ -191,11 +192,13 @@ export default function TenantAudit({ deals, onTenantClick }: Props) {
     })[0];
     addUserMerge({ id: pairId, canonical, variants: allVariants });
     setAliasVersion(v => v + 1);
+    onDealsChanged?.();
   };
 
   const restoreMerge = (id: string) => {
     removeUserMerge(id);
     setAliasVersion(v => v + 1);
+    onDealsChanged?.();
   };
 
   const userMerges = getUserMerges();

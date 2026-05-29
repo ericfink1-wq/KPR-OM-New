@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { tenantAliasesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -46,6 +47,18 @@ router.post("/aliases", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to upsert tenant aliases");
     res.status(500).json({ error: "Failed to upsert tenant aliases" });
+  }
+});
+
+// DELETE /api/aliases/:rawName — remove a single alias mapping
+router.delete("/aliases/:rawName", requireAuth, async (req, res) => {
+  try {
+    const rawName = decodeURIComponent(String(req.params.rawName));
+    await db.delete(tenantAliasesTable).where(eq(tenantAliasesTable.rawName, rawName));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete tenant alias");
+    res.status(500).json({ error: "Failed to delete tenant alias" });
   }
 });
 
