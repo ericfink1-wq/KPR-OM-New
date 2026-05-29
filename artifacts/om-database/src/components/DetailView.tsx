@@ -1608,6 +1608,13 @@ ${text.slice(0, 40000)}`;
               {f({ label:"Notes", field:"debtNotes", placeholder:"Anything else worth recording", wide:true })}
               <Group title="Preferred Equity (if applicable)"/>
               {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
+              {d.prefLender && onTenantClick && (
+                <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
+                  <button onClick={() => onTenantClick("__lender__" + d.prefLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
+                    View all loans with {lenderLabel(d.prefLender)} ›
+                  </button>
+                </div>
+              )}
               {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
               {f({ label:"Current Pay Rate", field:"prefRateCurrent", placeholder:"e.g. 8.0", suffix:"%" })}
               {f({ label:"All-In Rate (at sale/refi)", field:"prefRateAllIn", placeholder:"e.g. 9.25", suffix:"%" })}
