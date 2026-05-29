@@ -1,0 +1,53 @@
+In artifacts/om-database/src/components/TenantAnalytics.tsx, two changes:
+
+CHANGE 1 — Make the All/Owned toggle sticky so it stays visible while scrolling. Find the outer wrapper div (the one with padding:"28px 32px"). Change it to position:"relative" and add a new sticky bar that contains just the toggle, pinned below the KPR nav.
+
+Find this header div:
+  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
+
+Replace it with two separate divs — the existing header content, plus a new sticky toggle bar below it:
+
+  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, flexWrap:"wrap", gap:12 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+      {onBack && (
+        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← Back</button>
+      )}
+      <div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:500, color:"#26281f", letterSpacing:"-0.02em" }}>Tenant Analytics</div>
+        <div style={{ fontSize:12, color:"#a89f8f", marginTop:3 }}>Aggregated from all deals in memory</div>
+      </div>
+    </div>
+    {onTenantAudit && (
+      <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
+        Tenant Name Audit
+      </button>
+    )}
+  </div>
+
+  {/* Sticky All / Owned toggle */}
+  <div style={{ position:"sticky", top:88, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", marginLeft:-32, marginRight:-32, paddingLeft:32, paddingRight:32, paddingTop:10, paddingBottom:10, marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+    <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
+      {filter === "owned" ? "Showing owned & sold properties only" : "Showing all properties"}
+    </span>
+    <PillToggle options={filterOpts} value={filter} onChange={v => setFilter(v)} />
+  </div>
+
+CHANGE 2 — Fix mobile text wrapping in the Top 10 rows. The name column uses flex:"0 0 220px" which is too rigid on narrow screens. In all three Top 10 cards (by Annual Rent, by Location Count, by GLA), replace:
+
+  <div style={{ flex:"0 0 220px", minWidth:0 }}>
+
+with:
+
+  <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
+
+And inside that column, wrap the TenantLink in its own div with whiteSpace:"nowrap" overflow:"hidden" textOverflow:"ellipsis", and put the locs count + parent pill on a second line:
+
+  <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+    <TenantLink .../>
+  </div>
+  <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
+    <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}{filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}{filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}</span>
+    {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+  </div>
+
+Make, test, iterate until saved.

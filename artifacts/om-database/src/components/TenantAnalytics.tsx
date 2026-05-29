@@ -346,29 +346,31 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
   ];
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto", position: "relative" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, flexWrap:"wrap", gap:12 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           {onBack && (
-            <button onClick={onBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+            <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← Back</button>
           )}
           <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Tenant Analytics</div>
-            <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Aggregated from all deals in memory</div>
+            <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:500, color:"#26281f", letterSpacing:"-0.02em" }}>Tenant Analytics</div>
+            <div style={{ fontSize:12, color:"#a89f8f", marginTop:3 }}>Aggregated from all deals in memory</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {onTenantAudit && (
-            <button
-              onClick={onTenantAudit}
-              style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
-            >
-              Tenant Name Audit
-            </button>
-          )}
-          <PillToggle options={filterOpts} value={filter} onChange={v => setFilter(v)} />
-        </div>
+        {onTenantAudit && (
+          <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
+            Tenant Name Audit
+          </button>
+        )}
+      </div>
+
+      {/* Sticky All / Owned toggle */}
+      <div style={{ position:"sticky", top:88, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", marginLeft:-32, marginRight:-32, paddingLeft:32, paddingRight:32, paddingTop:10, paddingBottom:10, marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
+          {filter === "owned" ? "Showing owned & sold properties only" : "Showing all properties"}
+        </span>
+        <PillToggle options={filterOpts} value={filter} onChange={v => setFilter(v)} />
       </div>
 
       {rows.length === 0 ? (
@@ -406,22 +408,18 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
               {byRent.map((row, i) => (
                 <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ flex: "0 0 220px", minWidth: 0 }}>
-                    <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
-                    <span style={{ fontSize: 10, color: "#b8b0a3", marginLeft: 6 }}>
-                      {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                      {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
-                        <span style={{ color:"#6dba43", marginLeft:4 }}>({row.ownedCount} owned)</span>
-                      )}
-                      {filter === "all" && row.ownedCount === 0 && (
-                        <span style={{ color:"#a69e91", marginLeft:4, fontSize:9, fontStyle:"italic" }}>unowned</span>
-                      )}
-                    </span>
-                    {row.parentCo && (
-                      <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
-                        {row.parentCo}
-                      </button>
-                    )}
+                  <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
+                    <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                      <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
+                      <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                        {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                        {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                        {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                      </span>
+                      {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                    </div>
                   </div>
                   <MiniBar value={row.totalAnnualRent} max={maxRent} color="#6dba43" />
                   <div style={{ width: 70, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
@@ -437,13 +435,18 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
               {byCount.map((row, i) => (
                 <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ flex: "0 0 220px", minWidth: 0 }}>
-                    <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
-                    {row.parentCo && (
-                      <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
-                        {row.parentCo}
-                      </button>
-                    )}
+                  <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
+                    <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                      <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
+                      <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                        {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                        {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                        {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                      </span>
+                      {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                    </div>
                   </div>
                   <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />
                   <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>
@@ -469,13 +472,18 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
                 {bySF.map((row, i) => (
                   <div key={row.key} style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <span style={{ width:16, textAlign:"right", fontSize:11, color:"#c8b89a", flexShrink:0 }}>{i+1}</span>
-                    <div style={{ flex:"0 0 220px", minWidth:0 }}>
-                      <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
-                      {row.parentCo && (
-                        <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
-                          {row.parentCo}
-                        </button>
-                      )}
+                    <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
+                      <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
+                        <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                          {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                          {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                          {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                        </span>
+                        {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                      </div>
                     </div>
                     <div style={{ flex:1, background:"#f1ece1", borderRadius:4, height:6, overflow:"hidden" }}>
                       <div style={{ width:`${(row.totalSF/maxSF)*100}%`, background:"#b08968", height:"100%", borderRadius:4 }} />
