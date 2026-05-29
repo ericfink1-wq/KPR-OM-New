@@ -248,6 +248,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [saleBusy, setSaleBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [reanalyzeBusy, setReanalyzeBusy] = useState(false);
   const rerunPdfRef = useRef<HTMLInputElement>(null);
   const [rrBusy, setRrBusy] = useState(false);
@@ -284,6 +285,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     }
     return () => { alive = false; };
   }, [d.id]);
+
+  // Close Actions dropdown on any outside click
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const handler = () => setActionsOpen(false);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [actionsOpen]);
 
   // Auto-rescore when ≥10 new deals have been added to the portfolio since this deal was last scored
   useEffect(() => {
@@ -866,53 +875,76 @@ ${text.slice(0, 40000)}`;
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
       </div>
 
-      {/* Property name + jump */}
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, margin:"0 0 4px 0" }}>
+      {/* Property name + Actions + Jump To */}
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, margin:"0 0 4px 0" }}>
         <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
-        <div style={{ flexShrink:0 }}><SectionJump deal={d} scrollRef={scrollContainerRef} /></div>
+        <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <div style={{ position:"relative" }}>
+            <button onClick={() => setActionsOpen(o => !o)}
+              style={{ background:"#2a2c27", border:"none", color:"#fff", padding:"6px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5, fontWeight:500 }}>
+              Actions <span style={{ fontSize:9 }}>▾</span>
+            </button>
+            {actionsOpen && (
+              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210 }}>
+                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Analyze</div>
+                <button onClick={() => { setActionsOpen(false); handleReanalyze(); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ↺ Re-analyze (stored text)
+                </button>
+                <button onClick={() => { setActionsOpen(false); rerunPdfRef.current?.click(); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ↑ Re-run from PDF…
+                </button>
+                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Research</div>
+                <button onClick={() => { setActionsOpen(false); onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ⬡ Find Comps
+                </button>
+                <button onClick={() => { setActionsOpen(false); onLookupSale(d.id); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  🔍 Find Sale Record
+                </button>
+                <button onClick={() => { setActionsOpen(false); handleRescore(); }} disabled={rescoreBusy}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:rescoreBusy?"default":"pointer", fontSize:12, color:rescoreBusy?"#a69e91":"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => { if(!rescoreBusy) e.currentTarget.style.background="#f6f2ea"; }} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ↻ {rescoreBusy ? "Scoring…" : "Refresh Score"}
+                </button>
+                <button onClick={() => { setActionsOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ↗ Query Analyst
+                </button>
+                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+                {!confirmDel
+                  ? <button onClick={() => { setActionsOpen(false); setConfirmDel(true); }}
+                      style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#dc2626", fontFamily:"'Inter',sans-serif" }}
+                      onMouseEnter={e => e.currentTarget.style.background="#fff5f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                      🗑 Delete Deal
+                    </button>
+                  : <div style={{ padding:"6px 12px", display:"flex", gap:6 }}>
+                      <button onClick={() => onDelete(d.id)} style={{ flex:1, background:"#dc2626", border:"none", color:"#fff", padding:"6px 8px", borderRadius:5, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Confirm Delete</button>
+                      <button onClick={() => setConfirmDel(false)} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"6px 8px", borderRadius:5, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+                    </div>
+                }
+              </div>
+            )}
+          </div>
+          <SectionJump deal={d} scrollRef={scrollContainerRef} />
+        </div>
       </div>
       <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 12px 0" }}>{fullAddress || "—"}</p>
 
-      {/* Action buttons */}
-      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
-        {/* Analyze dropdown */}
-        <div style={{ position:"relative" }}>
-          <button onClick={() => setAnalyzeOpen(o => !o)} disabled={reanalyzeBusy}
-            style={{ background:"transparent", border:"1px solid #383a37", color: reanalyzeBusy ? "#a69e91" : "#383a37", padding:"5px 10px", borderRadius:4, cursor: reanalyzeBusy ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
-            {reanalyzeBusy ? "ANALYZING…" : <>ANALYZE <span style={{ fontSize:8 }}>▾</span></>}
-          </button>
-          {analyzeOpen && !reanalyzeBusy && (
-            <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:200, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:200 }}>
-              <button onClick={handleReanalyze}
-                style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                ↺ Re-analyze (stored text)
-              </button>
-              <button onClick={() => { setAnalyzeOpen(false); rerunPdfRef.current?.click(); }}
-                style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                ↑ Re-run from PDF…
-              </button>
-              <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
-              <button onClick={() => { setAnalyzeOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`); }}
-                style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"8px 12px", borderRadius:6, cursor:"pointer", fontSize:11.5, color:"#6f6a5f", fontFamily:"'Inter',sans-serif" }}
-                onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                ↗ Query Analyst
-              </button>
-            </div>
-          )}
-          <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
-        </div>
-        <button onClick={() => onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`)}
-          style={{ background:"transparent", border:"1px solid #6dba43", color:"#6dba43", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>COMPS</button>
-        <button onClick={handleRescore} disabled={rescoreBusy} title={d.lastScoredAt ? `Last scored ${new Date(d.lastScoredAt).toLocaleDateString()}` : "Refresh score with latest portfolio benchmarks"}
-          style={{ background:"transparent", border:`1px solid ${rescoreBusy?"#c8b89a":"#b08968"}`, color:rescoreBusy?"#c8b89a":"#b08968", padding:"5px 10px", borderRadius:4, cursor:rescoreBusy?"default":"pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
-          {rescoreBusy ? <><span style={{ display:"inline-block", animation:"spin 1s linear infinite", fontSize:11 }}>↻</span> SCORING…</> : <>↻ SCORE</>}
-        </button>
+      {/* Export buttons */}
+      <div style={{ display:"flex", gap:8, marginBottom:12 }}>
         {((d.tenants||[]).length > 0 || (d.cashFlowProjection||[]).length > 0) && (
           <button onClick={() => exportDealToExcel(d)}
-            style={{ background:"transparent", border:"1px solid #7c6f5e", color:"#7c6f5e", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4 }}>
-            <span style={{ fontSize:11, lineHeight:1 }}>⬇</span> EXCEL
+            style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"8px 16px", borderRadius:6, cursor:"pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
+            <span style={{ fontSize:13 }}>⬇</span> Excel
           </button>
         )}
         <PDFDownloadLink
@@ -921,21 +953,13 @@ ${text.slice(0, 40000)}`;
           style={{ textDecoration:"none" }}
         >
           {({ loading }: { loading: boolean }) => (
-            <button style={{ background:"transparent", border:"1px solid #4a7fb5", color: loading ? "#a69e91" : "#4a7fb5", padding:"5px 10px", borderRadius:4, cursor: loading ? "default" : "pointer", fontSize:10, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:4, opacity: loading ? 0.7 : 1 }}>
-              <span style={{ fontSize:11, lineHeight:1 }}>⬇</span>{loading ? "PDF…" : "SUMMARY"}
+            <button style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color: loading ? "#a69e91" : "#4a7fb5", padding:"8px 16px", borderRadius:6, cursor: loading ? "default" : "pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5, opacity: loading ? 0.7 : 1 }}>
+              <span style={{ fontSize:13 }}>⬇</span>{loading ? "PDF…" : "Summary PDF"}
             </button>
           )}
         </PDFDownloadLink>
-        <button onClick={() => onLookupSale(d.id)} disabled={saleBusy}
-          style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"5px 10px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"FIND SALE"}</button>
-        {!confirmDel
-          ? <button onClick={() => setConfirmDel(true)} style={{ background:"transparent", border:"1px solid #dc2626", color:"#dc2626", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>TRASH</button>
-          : <>
-              <button onClick={() => onDelete(d.id)} style={{ background:"#dc2626", border:"none", color:"#fff", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>CONFIRM DELETE</button>
-              <button onClick={() => setConfirmDel(false)} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:10, fontFamily:"'Inter',sans-serif" }}>CANCEL</button>
-            </>
-        }
       </div>
+      <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
 
       {/* Badges */}
       <div style={{ marginBottom:14 }}>

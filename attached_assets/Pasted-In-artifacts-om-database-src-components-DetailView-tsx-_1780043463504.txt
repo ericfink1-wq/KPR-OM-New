@@ -1,0 +1,103 @@
+In artifacts/om-database/src/components/DetailView.tsx, restructure the action buttons area into a clean layout:
+
+STEP 1 — Add a new state for the actions dropdown (near the existing analyzeOpen state):
+  const [actionsOpen, setActionsOpen] = useState(false);
+
+Also add a click-outside handler: a useEffect that calls setActionsOpen(false) on document click.
+
+STEP 2 — Replace the property name + Jump To row. Find this block:
+  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, margin:"0 0 4px 0" }}>
+    <h1 ref={titleRef} ...>{d.propertyName||d.fileName}</h1>
+    <div style={{ flexShrink:0 }}><SectionJump deal={d} scrollRef={scrollContainerRef} /></div>
+  </div>
+
+Replace with:
+  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, margin:"0 0 4px 0" }}>
+    <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
+    <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+      <div style={{ position:"relative" }}>
+        <button onClick={() => setActionsOpen(o => !o)}
+          style={{ background:"#2a2c27", border:"none", color:"#fff", padding:"6px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5, fontWeight:500 }}>
+          Actions <span style={{ fontSize:9 }}>▾</span>
+        </button>
+        {actionsOpen && (
+          <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210 }}>
+            <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Analyze</div>
+            <button onClick={() => { setActionsOpen(false); handleReanalyze(); }}
+              style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+              onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              ↺ Re-analyze (stored text)
+            </button>
+            <button onClick={() => { setActionsOpen(false); rerunPdfRef.current?.click(); }}
+              style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+              onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              ↑ Re-run from PDF…
+            </button>
+            <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+            <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Research</div>
+            <button onClick={() => { setActionsOpen(false); onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`); }}
+              style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+              onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              ⬡ Find Comps
+            </button>
+            <button onClick={() => { setActionsOpen(false); onLookupSale(d.id); }}
+              style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+              onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              🔍 Find Sale Record
+            </button>
+            <button onClick={() => { setActionsOpen(false); handleRescore(); }} disabled={rescoreBusy}
+              style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:rescoreBusy?"default":"pointer", fontSize:12, color:rescoreBusy?"#a69e91":"#383a37", fontFamily:"'Inter',sans-serif" }}
+              onMouseEnter={e => { if(!rescoreBusy) e.currentTarget.style.background="#f6f2ea"; }} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              ↻ {rescoreBusy ? "Scoring…" : "Refresh Score"}
+            </button>
+            <button onClick={() => { setActionsOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`); }}
+              style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+              onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              ↗ Query Analyst
+            </button>
+            <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+            {!confirmDel
+              ? <button onClick={() => { setActionsOpen(false); setConfirmDel(true); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#dc2626", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#fff5f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  🗑 Delete Deal
+                </button>
+              : <div style={{ padding:"6px 12px", display:"flex", gap:6 }}>
+                  <button onClick={() => onDelete(d.id)} style={{ flex:1, background:"#dc2626", border:"none", color:"#fff", padding:"6px 8px", borderRadius:5, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Confirm Delete</button>
+                  <button onClick={() => setConfirmDel(false)} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"6px 8px", borderRadius:5, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+                </div>
+            }
+          </div>
+        )}
+      </div>
+      <SectionJump deal={d} scrollRef={scrollContainerRef} />
+    </div>
+  </div>
+
+STEP 3 — Find the old action buttons div (display:"flex", gap:6, flexWrap:"wrap", marginBottom:10) that contains all the old buttons (Analyze dropdown, Comps, Score, Excel, Summary PDF, Find Sale, Trash). Replace the ENTIRE div with just these two prominent export buttons:
+
+  <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+    {((d.tenants||[]).length > 0 || (d.cashFlowProjection||[]).length > 0) && (
+      <button onClick={() => exportDealToExcel(d)}
+        style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"8px 16px", borderRadius:6, cursor:"pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
+        <span style={{ fontSize:13 }}>⬇</span> Excel
+      </button>
+    )}
+    <PDFDownloadLink
+      document={<DealSummaryPDF deal={d} imgs={imgs} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />}
+      fileName={`${(d.propertyName||d.fileName||"deal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}-summary.pdf`}
+      style={{ textDecoration:"none" }}
+    >
+      {({ loading }: { loading: boolean }) => (
+        <button style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color: loading ? "#a69e91" : "#4a7fb5", padding:"8px 16px", borderRadius:6, cursor: loading ? "default" : "pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5, opacity: loading ? 0.7 : 1 }}>
+          <span style={{ fontSize:13 }}>⬇</span>{loading ? "PDF…" : "Summary PDF"}
+        </button>
+      )}
+    </PDFDownloadLink>
+  </div>
+
+Keep the hidden file input: <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
+
+The Actions dropdown is in the scrollable page content only — it is NOT added to the sticky fixed header. The Jump To button stays in the sticky header exactly as it is now.
+
+Make, test, iterate until saved.
