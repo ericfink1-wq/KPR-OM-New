@@ -266,7 +266,23 @@ function AppInner() {
       {/* Analytics tab */}
       {tab === "analytics" && (
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
-          {view.type === "tenant-audit" ? (
+          {view.type === "tenant" ? (
+            <TenantView
+              tenantName={view.tenantName}
+              deals={deals}
+              onBack={goBack}
+              onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+              onParentClick={name => handleOpenTenant("__parent__" + name)}
+            />
+          ) : view.type === "parent" ? (
+            <ParentCompanyView
+              parentName={view.parentName}
+              deals={deals}
+              onBack={goBack}
+              onTenantClick={handleOpenTenant}
+              onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+            />
+          ) : view.type === "tenant-audit" ? (
             <div>
               <div style={{ padding: "14px 24px 0" }}>
                 <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
