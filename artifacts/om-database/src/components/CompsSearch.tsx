@@ -323,6 +323,8 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetch_ = useCallback((f: Filters, s: SortKey) => {
@@ -358,6 +360,32 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     }
   };
 
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImportMsg(null);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const arr: unknown[] = Array.isArray(parsed) ? parsed : (parsed?.comps ?? null);
+      if (!Array.isArray(arr)) throw new Error("Expected an array or { comps: [...] }");
+      const r = await fetch("/api/comps/manual/bulk", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(arr),
+      });
+      const data = await r.json() as { ok?: boolean; inserted?: number; skipped?: number; error?: string };
+      if (!r.ok) throw new Error(data.error ?? "Server error");
+      setImportMsg({ ok: true, text: `Imported ${data.inserted} comp${data.inserted !== 1 ? "s" : ""}${data.skipped ? ` (${data.skipped} skipped)` : ""}` });
+      setTimeout(() => setImportMsg(null), 5000);
+      fetch_(filters, sort);
+    } catch (err) {
+      setImportMsg({ ok: false, text: err instanceof Error ? err.message : "Import failed" });
+    }
+  };
+
   const hasFilters = Object.values(filters).some(v => v.trim() !== "");
 
   // Determine if optional anchor/type columns should show
@@ -388,6 +416,13 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           onSaved={row => setRows(prev => [row, ...prev])}
         />
       )}
+      <input
+        ref={importRef}
+        type="file"
+        accept=".json"
+        style={{ display: "none" }}
+        onChange={handleImportFile}
+      />
 
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16 }}>
@@ -398,6 +433,11 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>
             {loading ? "Loading…" : `${rows.length} comp${rows.length !== 1 ? "s" : ""}${hasFilters ? " matching filters" : " in index"}`}
           </div>
+          {importMsg && (
+            <div style={{ marginTop: 6, fontSize: 11.5, color: importMsg.ok ? "#6dba43" : "#c0392b", fontFamily: "'Inter',sans-serif" }}>
+              {importMsg.ok ? "✓ " : "⚠ "}{importMsg.text}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {hasFilters && (
@@ -408,6 +448,17 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
               Clear filters
             </button>
           )}
+          <button
+            onClick={() => importRef.current?.click()}
+            style={{
+              background: "transparent", border: "1px solid #6dba43", color: "#6dba43",
+              padding: "7px 14px", borderRadius: 7, cursor: "pointer",
+              fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            ↑ Import JSON
+          </button>
           <button
             onClick={() => setAddOpen(true)}
             style={{

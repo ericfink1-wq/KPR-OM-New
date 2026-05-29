@@ -123,6 +123,67 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/comps/manual/bulk — batch insert manually entered comps
+// ---------------------------------------------------------------------------
+router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
+  try {
+    const body = req.body;
+    if (!Array.isArray(body) || body.length === 0) {
+      res.status(400).json({ error: "Body must be a non-empty array of comp objects" });
+      return;
+    }
+
+    const toFloat = (v: unknown): number | null => {
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      return isFinite(n) ? n : null;
+    };
+    const toStr = (v: unknown): string | null =>
+      typeof v === "string" && v.trim() ? v.trim() : null;
+
+    const insertRows: {
+      sourceDealId: string; sourceDealName: null; sourceDealMarket: string | null;
+      name: string | null; address: string | null; market: string | null;
+      saleDateRaw: string | null; saleDate: string | null;
+      salePrice: number | null; capRate: number | null; pricePerSf: number | null;
+      sf: number | null; occupancy: number | null;
+      isManual: true; anchor: string | null; propertyType: string | null; sourceNotes: string | null;
+    }[] = [];
+
+    let skipped = 0;
+    for (const item of body as Record<string, unknown>[]) {
+      const name      = toStr(item.name);
+      const salePrice = toFloat(item.salePrice);
+      if (!name && salePrice == null) { skipped++; continue; }
+
+      const parsedSf  = toFloat(item.sf);
+      let parsedPsf   = toFloat(item.pricePerSf);
+      if (parsedPsf == null && salePrice != null && parsedSf != null && parsedSf > 0) {
+        parsedPsf = Math.round(salePrice / parsedSf);
+      }
+      const market = toStr(item.market);
+      insertRows.push({
+        sourceDealId: "__manual__", sourceDealName: null, sourceDealMarket: market,
+        name, address: toStr(item.address), market,
+        saleDateRaw: toStr(item.saleDateRaw),
+        saleDate: toStr(item.saleDate),
+        salePrice, capRate: toFloat(item.capRate), pricePerSf: parsedPsf,
+        sf: parsedSf, occupancy: toFloat(item.occupancy),
+        isManual: true,
+        anchor: toStr(item.anchor), propertyType: toStr(item.propertyType), sourceNotes: toStr(item.sourceNotes),
+      });
+    }
+    if (insertRows.length > 0) {
+      await db.insert(compsIndexTable).values(insertRows);
+    }
+    res.json({ ok: true, inserted: insertRows.length, skipped });
+  } catch (err) {
+    req.log.error({ err }, "Failed to bulk-insert manual comps");
+    res.status(500).json({ error: "Failed to bulk-insert manual comps" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // DELETE /api/comps/manual/:id — delete a manual comp by id
 // ---------------------------------------------------------------------------
 router.delete("/comps/manual/:id", requireAuth, async (req, res) => {
