@@ -94,6 +94,7 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
   const [sortKey, setSortKey] = useState("sf");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [expandedRentStep, setExpandedRentStep] = useState<number | null>(null);
+  const [expandedOption, setExpandedOption] = useState<number | null>(null);
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
   let rows = tenants.slice();
@@ -212,21 +213,35 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                   {(() => {
                     const s = t.rentSchedule || t.rentBumps;
                     if (!s) return <span style={{ color:"#c4bbaa" }}>—</span>;
+                    const expiryDate = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
+                    const filteredSteps = s.split(";").map((p: string) => p.trim()).filter(Boolean).filter((seg: string) => {
+                      if (/option/i.test(seg)) return false;
+                      if (expiryDate) {
+                        const m = seg.match(/^(\d{4})-(\d{2})/);
+                        if (m) {
+                          const sy = parseInt(m[1], 10), sm = parseInt(m[2], 10);
+                          const ey = expiryDate.getFullYear(), em = expiryDate.getMonth() + 1;
+                          if (sy > ey || (sy === ey && sm > em)) return false;
+                        }
+                      }
+                      return true;
+                    });
+                    if (filteredSteps.length === 0) return <span style={{ color:"#c4bbaa", fontStyle:"italic" }}>Flat</span>;
+                    const joined = filteredSteps.join("; ");
                     if (expandedRentStep !== i) {
                       return (
                         <span title="Click to expand rent steps" style={{ display:"flex", alignItems:"center", gap:4 }}>
                           <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:180, display:"inline-block" }}>
-                            {s.length > 60 ? s.slice(0,60)+"…" : s}
+                            {joined.length > 60 ? joined.slice(0,60)+"…" : joined}
                           </span>
-                          {s.length > 60 && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
+                          {joined.length > 60 && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
                         </span>
                       );
                     }
-                    const steps = s.split(";").map((p: string) => p.trim()).filter(Boolean);
                     return (
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        {steps.map((step: string, si: number) => (
-                          <div key={si} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"3px 0", borderBottom: si < steps.length-1 ? "1px solid #f1eadc" : "none" }}>
+                        {filteredSteps.map((step: string, si: number) => (
+                          <div key={si} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"3px 0", borderBottom: si < filteredSteps.length-1 ? "1px solid #f1eadc" : "none" }}>
                             <span style={{ color:"#c4bbaa", fontSize:9, marginTop:1, flexShrink:0 }}>▸</span>
                             <span style={{ whiteSpace:"normal", lineHeight:1.5, fontSize:11 }}>{step}</span>
                           </div>
@@ -236,7 +251,38 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                     );
                   })()}
                 </td>
-                <td style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{t.renewalOptions||"—"}</td>
+                <td
+                  onClick={() => setExpandedOption(expandedOption === i ? null : i)}
+                  style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedOption === i ? 340 : 220, minWidth: 120 }}
+                >
+                  {(() => {
+                    const s = t.renewalOptions;
+                    if (!s) return <span style={{ color:"#c4bbaa" }}>—</span>;
+                    const opts = s.split(";").map((p: string) => p.trim()).filter(Boolean);
+                    const joined = opts.join("; ");
+                    if (expandedOption !== i) {
+                      return (
+                        <span title="Click to expand options" style={{ display:"flex", alignItems:"center", gap:4 }}>
+                          <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:180, display:"inline-block" }}>
+                            {joined.length > 60 ? joined.slice(0,60)+"…" : joined}
+                          </span>
+                          {joined.length > 60 && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
+                        </span>
+                      );
+                    }
+                    return (
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {opts.map((opt: string, oi: number) => (
+                          <div key={oi} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"3px 0", borderBottom: oi < opts.length-1 ? "1px solid #f1eadc" : "none" }}>
+                            <span style={{ color:"#c4bbaa", fontSize:9, marginTop:1, flexShrink:0 }}>▸</span>
+                            <span style={{ whiteSpace:"normal", lineHeight:1.5, fontSize:11 }}>{opt}</span>
+                          </div>
+                        ))}
+                        <span style={{ fontSize:9, color:"#a69e91", marginTop:2 }}>▲ click to collapse</span>
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
                 <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(t.salesPSF, t.sf)}</td>
                 {(() => {

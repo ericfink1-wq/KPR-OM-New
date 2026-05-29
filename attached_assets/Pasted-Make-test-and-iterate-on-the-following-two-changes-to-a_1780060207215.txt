@@ -1,0 +1,31 @@
+Make, test, and iterate on the following two changes to artifacts/om-database/src/components/TenantRoster.tsx.
+
+────────────────────────────────────────
+CHANGE 1 — Filter rent steps to current lease term only
+────────────────────────────────────────
+The Rent Steps column currently shows the full rentSchedule string, which includes bumps during option periods. Option-period rates are already captured in the Options column, so they must not appear in Rent Steps.
+
+When rendering the Rent Steps cell, filter the step segments (after splitting the string on ";") so only current-term steps are shown. A step segment should be EXCLUDED if either of the following is true:
+  a) The segment contains the word "option" (case-insensitive). This catches text like "Option 1", "option term", "option period", etc.
+  b) The segment starts with a date prefix in the form "YYYY-MM" or "YYYY-MM-DD" (at the very beginning of the trimmed segment, e.g. "2031-10:" or "2029-08:") and that year-month is AFTER the tenant's leaseExpiry date. Parse leaseExpiry as a Date to get the comparison year/month.
+
+Apply this filtering in both the collapsed preview (the truncated text shown before clicking expand) AND the expanded multi-row view. The collapsed preview should be built from the already-filtered steps joined back with "; " before truncating to 60 chars.
+
+If after filtering all steps are removed (tenant has only a flat current rent), show "Flat" in muted text rather than "—" so it's clear the field exists but has no bumps.
+
+────────────────────────────────────────
+CHANGE 2 — Options column expand/collapse (mirror Rent Steps)
+────────────────────────────────────────
+The Options column currently renders t.renewalOptions as a plain whiteSpace:nowrap string. Replace it with the same expand/collapse pattern as the Rent Steps column.
+
+Specifically:
+1. Add a new state variable: const [expandedOption, setExpandedOption] = useState<number | null>(null); — right below the existing expandedRentStep state.
+2. Replace the Options <td> (currently: {t.renewalOptions||"—"}) with a clickable cell that mirrors the Rent Steps cell exactly:
+   - Collapsed: show truncated text (max 60 chars) with a "▼" indicator if there's more
+   - Expanded: split on ";" and render each option on its own row with a "▸" bullet, dividers between rows, and a "▲ click to collapse" footer
+   - onClick toggles expandedOption between i and null
+   - Cell style matches the Rent Steps cell (same fontSize, color, cursor, verticalAlign, maxWidth logic)
+3. The Options cell should also have verticalAlign:"top" and its maxWidth should expand to 340 when open, same as Rent Steps.
+
+Do NOT change _normTenant, tenantKey, rentBumps storage, or anything outside TenantRoster.tsx.
+After changes, verify in the running app: (1) a tenant with option bumps in their rentSchedule no longer shows those option-period entries in Rent Steps, (2) a tenant with multiple renewal options shows them collapsed/expandable in the Options column.
