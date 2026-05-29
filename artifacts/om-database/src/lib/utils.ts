@@ -585,3 +585,58 @@ function _repairTruncatedJSON(s: string): unknown {
 export function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
+
+export const TENANT_LOGO_DOMAINS: Record<string, string> = {
+  "home depot": "homedepot.com", "the home depot": "homedepot.com",
+  "target": "target.com", "walmart": "walmart.com", "costco": "costco.com",
+  "tj maxx": "tjmaxx.com", "marshalls": "marshalls.com",
+  "homegoods": "homegoods.com", "homesense": "homesense.com",
+  "ross dress for less": "rossstores.com",
+  "burlington": "burlington.com",
+  "nordstrom rack": "nordstromrack.com", "nordstrom": "nordstrom.com",
+  "best buy": "bestbuy.com",
+  "petsmart": "petsmart.com", "petco": "petco.com",
+  "five below": "fivebelow.com",
+  "dollar tree": "dollartree.com", "family dollar": "familydollar.com",
+  "dollar general": "dollargeneral.com",
+  "michaels": "michaels.com", "hobby lobby": "hobbylobby.com",
+  "ulta beauty": "ulta.com",
+  "old navy": "oldnavy.com", "gap": "gap.com", "banana republic": "bananarepublic.com",
+  "bath and body works": "bathandbodyworks.com",
+  "kay jewelers": "kay.com", "zales": "zales.com",
+  "foot locker": "footlocker.com",
+  "famous footwear": "famousfootwear.com",
+  "dsw": "dsw.com",
+  "cvs": "cvs.com", "walgreens": "walgreens.com", "rite aid": "riteaid.com",
+  "bank of america": "bankofamerica.com",
+  "chase": "chase.com", "wells fargo": "wellsfargo.com",
+  "td bank": "td.com",
+  "navy federal credit union": "navyfederal.org",
+  "fedex office": "fedex.com",
+  "att": "att.com", "t mobile": "t-mobile.com", "verizon": "verizon.com",
+  "amc theatres": "amctheatres.com",
+  "planet fitness": "planetfitness.com",
+  "orange theory fitness": "orangetheory.com", "orangetheory fitness": "orangetheory.com",
+  "massage envy": "massageenvy.com",
+  "great clips": "greatclips.com", "sport clips": "sportclips.com",
+  "mcdonalds": "mcdonalds.com", "starbucks": "starbucks.com",
+  "chick fil a": "chick-fil-a.com", "taco bell": "tacobell.com",
+  "chipotle": "chipotle.com", "panera bread": "panerabread.com",
+  "five guys": "fiveguys.com", "shake shack": "shakeshack.com",
+  "subway": "subway.com",
+  "publix": "publix.com", "kroger": "kroger.com",
+  "whole foods market": "wholefoodsmarket.com",
+  "trader joes": "traderjoes.com",
+  "aldi": "aldi.us", "lidl": "lidl.com",
+  "stop and shop": "stopandshop.com",
+  "food lion": "foodlion.com", "safeway": "safeway.com",
+  "giant eagle": "gianteagle.com",
+  "quest diagnostics": "questdiagnostics.com",
+  "heartland dental": "heartland.com",
+  "aspen dental": "aspendental.com",
+};
+
+export function tenantLogoDomain(name: unknown, canonicalName?: string | null): string | null {
+  const key = tenantKey(canonicalName || name);
+  return TENANT_LOGO_DOMAINS[key] ?? null;
+}

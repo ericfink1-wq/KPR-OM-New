@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
-import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany } from "../lib/utils";
+import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain } from "../lib/utils";
 import StatusTag from "./StatusTag";
 
 interface Props {
@@ -108,6 +108,18 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
       </div>
 
+      {(() => {
+        const domain = tenantLogoDomain(tenantName);
+        if (!domain) return null;
+        return (
+          <img
+            src={`https://logo.clearbit.com/${domain}`}
+            alt=""
+            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            style={{ width:48, height:48, objectFit:"contain", borderRadius:8, border:"1px solid #efe8da", background:"#fff", padding:4, marginBottom:10, display:"block" }}
+          />
+        );
+      })()}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4, flexWrap:"wrap" }}>
         <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:600, color:"#26281f", margin:0 }}>{tenantLabel(tenantName)}</h1>
         {anchors > 0 && <span style={{ fontSize:10, color:"#1f2b16", background:"#6dba4322", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>ANCHOR · {anchors}</span>}
