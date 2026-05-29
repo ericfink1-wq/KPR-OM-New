@@ -1,0 +1,61 @@
+In artifacts/om-database/src/components/TenantAnalytics.tsx, add GLA metrics without adding more than necessary.
+
+CHANGE 1 — Add totalSF to TenantRow interface:
+  totalSF: number;
+
+CHANGE 2 — In the aggregation loop, track total SF per tenant. Find where row.totalAnnualRent is incremented and add:
+  if (sf != null && sf > 0) row.totalSF += sf;
+
+Also initialize totalSF: 0 in the map.set() call.
+
+CHANGE 3 — Add two new stat tiles after the existing four. Find the StatBox grid and add:
+
+  {(() => {
+    const totalGLA = rows.reduce((s, r) => s + r.totalSF, 0);
+    const sfRows = rows.filter(r => r.totalSF > 0);
+    const avgSF = sfRows.length > 0 ? Math.round(sfRows.reduce((s, r) => s + r.totalSF, 0) / sfRows.reduce((s, r) => s + r.locationCount, 0)) : null;
+    return (
+      <>
+        {totalGLA > 0 && <StatBox label="Total GLA" value={totalGLA >= 1000000 ? `${(totalGLA/1000000).toFixed(1)}M SF` : `${(totalGLA/1000).toFixed(0)}K SF`} sub="across all tenants" />}
+        {avgSF != null && <StatBox label="Avg Tenant SF" value={avgSF.toLocaleString()} sub="per location" />}
+      </>
+    );
+  })()}
+
+CHANGE 4 — Add a "Top 10 by GLA" section after the Top 10 by Location Count card and before the Parent Company Exposure section.
+
+First compute it:
+  const bySF = useMemo(() => [...rows].filter(r => r.totalSF > 0).sort((a, b) => b.totalSF - a.totalSF).slice(0, 10), [rows]);
+  const maxSF = bySF[0]?.totalSF ?? 1;
+
+Then add the card in JSX (using the same row layout as Top 10 by Annual Rent — rank number, tenant name clickable, parent pill, mini bar, value on right):
+
+  <Card>
+    <SectionLabel>Top 10 by GLA</SectionLabel>
+    {bySF.map((row, i) => (
+      <div key={row.key} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+        <span style={{ width:16, textAlign:"right", fontSize:11, color:"#c8b89a", flexShrink:0 }}>{i+1}</span>
+        <div style={{ flex:"0 0 220px", minWidth:0 }}>
+          <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+          {row.parentCo && (
+            <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
+              {row.parentCo}
+            </button>
+          )}
+        </div>
+        <div style={{ flex:1, background:"#f1ece1", borderRadius:4, height:6, overflow:"hidden" }}>
+          <div style={{ width:`${(row.totalSF/maxSF)*100}%`, background:"#b08968", height:"100%", borderRadius:4 }} />
+        </div>
+        <span style={{ width:70, textAlign:"right", fontSize:11, color:"#5c5850", fontWeight:600, flexShrink:0 }}>
+          {row.totalSF >= 1000 ? `${(row.totalSF/1000).toFixed(0)}K SF` : `${row.totalSF.toLocaleString()} SF`}
+        </span>
+        <span style={{ width:40, textAlign:"right", fontSize:10, color:"#b8b0a3", flexShrink:0 }}>
+          {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+        </span>
+      </div>
+    ))}
+  </Card>
+
+Use a warm brown color (#b08968) for the GLA bars to visually distinguish them from the green rent bars and blue location bars.
+
+Make, test, iterate until saved.

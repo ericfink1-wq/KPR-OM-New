@@ -42,6 +42,7 @@ interface TenantRow {
   locationCount: number;
   ownedCount: number;
   totalAnnualRent: number;
+  totalSF: number;
   rentPSFValues: number[];
   isAnchor: boolean;
   creditRating: string | null;
@@ -202,6 +203,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
             locationCount: 0,
             ownedCount: 0,
             totalAnnualRent: 0,
+            totalSF: 0,
             rentPSFValues: [],
             isAnchor: false,
             creditRating: t.creditRating ?? null,
@@ -214,6 +216,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
         row.locationCount += 1;
         if (deal.status === "Owned" || deal.status === "Sold") row.ownedCount += 1;
         row.totalAnnualRent += annualRent;
+        if (sf != null && sf > 0) row.totalSF += sf;
         if (rentPSF != null && rentPSF > 0) row.rentPSFValues.push(rentPSF);
         if (t.isAnchor) row.isAnchor = true;
         if (ig) row.isIG = true;
@@ -238,9 +241,11 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
     return { rows, totalRent, allOccurrences };
   }, [deals, filter]);
 
-  // Derived lists — rent / count
-  const byRent = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
+  // Derived lists — rent / count / GLA
+  const byRent  = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
   const byCount = useMemo(() => [...rows].sort((a, b) => b.locationCount - a.locationCount || b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
+  const bySF    = useMemo(() => [...rows].filter(r => r.totalSF > 0).sort((a, b) => b.totalSF - a.totalSF).slice(0, 10), [rows]);
+  const maxSF   = bySF[0]?.totalSF ?? 1;
 
   // Parent company exposure
   const parentRows = useMemo(() => {
@@ -381,6 +386,17 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
             <StatBox label="Total Annual Rent" value={fmtRent(totalRent)} />
             <StatBox label="Avg Rent PSF" value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"} sub="rent-weighted" />
             <StatBox label="Investment Grade" value={igCount.toString()} sub={`${igPct.toFixed(0)}% of rent`} />
+            {(() => {
+              const totalGLA = rows.reduce((s, r) => s + r.totalSF, 0);
+              const sfRows = rows.filter(r => r.totalSF > 0);
+              const avgSF = sfRows.length > 0 ? Math.round(sfRows.reduce((s, r) => s + r.totalSF, 0) / sfRows.reduce((s, r) => s + r.locationCount, 0)) : null;
+              return (
+                <>
+                  {totalGLA > 0 && <StatBox label="Total GLA" value={totalGLA >= 1000000 ? `${(totalGLA/1000000).toFixed(1)}M SF` : `${(totalGLA/1000).toFixed(0)}K SF`} sub="across all tenants" />}
+                  {avgSF != null && <StatBox label="Avg Tenant SF" value={avgSF.toLocaleString()} sub="per location" />}
+                </>
+              );
+            })()}
           </div>
 
           {/* Top 10 by Annual Rent */}
@@ -444,6 +460,37 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
               ))}
             </div>
           </Card>
+
+          {/* Top 10 by GLA */}
+          {bySF.length > 0 && (
+            <Card>
+              <SectionLabel>Top 10 by GLA</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {bySF.map((row, i) => (
+                  <div key={row.key} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ width:16, textAlign:"right", fontSize:11, color:"#c8b89a", flexShrink:0 }}>{i+1}</span>
+                    <div style={{ flex:"0 0 220px", minWidth:0 }}>
+                      <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                      {row.parentCo && (
+                        <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
+                          {row.parentCo}
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ flex:1, background:"#f1ece1", borderRadius:4, height:6, overflow:"hidden" }}>
+                      <div style={{ width:`${(row.totalSF/maxSF)*100}%`, background:"#b08968", height:"100%", borderRadius:4 }} />
+                    </div>
+                    <span style={{ width:70, textAlign:"right", fontSize:11, color:"#5c5850", fontWeight:600, flexShrink:0 }}>
+                      {row.totalSF >= 1000 ? `${(row.totalSF/1000).toFixed(0)}K SF` : `${row.totalSF.toLocaleString()} SF`}
+                    </span>
+                    <span style={{ width:40, textAlign:"right", fontSize:10, color:"#b8b0a3", flexShrink:0 }}>
+                      {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Parent Company Exposure */}
           {parentRows.length > 0 && (
