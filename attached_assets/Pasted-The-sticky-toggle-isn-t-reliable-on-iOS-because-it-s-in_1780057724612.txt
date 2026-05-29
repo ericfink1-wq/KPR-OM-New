@@ -1,0 +1,70 @@
+The sticky toggle isn't reliable on iOS because it's inside a scrolling overflow container. Fix this properly by moving the toggle OUT of the scroll area entirely in App.tsx, and removing the sticky bar from TenantAnalytics and PortfolioAnalytics.
+
+CHANGE 1 — artifacts/om-database/src/App.tsx
+
+Find the analytics tab block:
+  {tab === "analytics" && (
+    <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
+
+Replace the entire analytics tab with a column layout where the toggle bar sits ABOVE the scroll container (not inside it). Add analyticsFilter state near the other analytics state:
+  const [analyticsFilter, setAnalyticsFilter] = useState<"all"|"owned">("all");
+
+Then restructure the analytics tab:
+
+  {tab === "analytics" && (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      {/* All/Owned bar — never scrolls, always visible. Only show on main dashboard views */}
+      {view.type !== "tenant" && view.type !== "parent" && view.type !== "tenant-audit" && (
+        <div style={{ background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+          <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
+            {analyticsFilter === "owned" ? "Owned & sold only" : "All properties"}
+          </span>
+          <div style={{ display:"flex", background:"#ece5d7", borderRadius:8, padding:2, gap:1 }}>
+            {(["all","owned"] as const).map(v => (
+              <button key={v} onClick={() => setAnalyticsFilter(v)}
+                style={{ padding:"5px 14px", borderRadius:6, border:"none", background: analyticsFilter===v ? "#2a2c27" : "transparent", color: analyticsFilter===v ? "#f6f2ea" : "#8a8579", fontSize:12, fontWeight: analyticsFilter===v ? 600 : 500, cursor:"pointer", fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap" }}>
+                {v === "all" ? "All Deals" : "Owned"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Scrollable content */}
+      <div style={{ flex:1, overflowY:"auto", paddingBottom:88 }}>
+        {view.type === "tenant" ? (
+          ... keep existing TenantView block exactly as-is ...
+        ) : view.type === "parent" ? (
+          ... keep existing ParentCompanyView block exactly as-is ...
+        ) : view.type === "tenant-audit" ? (
+          ... keep existing TenantAudit block exactly as-is ...
+        ) : (
+          <>
+            {/* Segmented toggle — keep exactly as-is */}
+            ...
+            {analyticsView === "portfolio" ? (
+              <PortfolioAnalytics filter={analyticsFilter} onTenantAudit={...} />
+            ) : (
+              <TenantAnalytics filter={analyticsFilter} deals={deals} onTenantClick={handleOpenTenant} onParentClick={...} onTenantAudit={...} />
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )}
+
+CHANGE 2 — artifacts/om-database/src/components/TenantAnalytics.tsx
+
+Add filter as an explicit prop instead of internal state. Find:
+  const [filter, setFilter] = useState<"all"|"owned">("all");
+
+Replace with accepting it as a prop:
+  Add filter to the Props interface: filter?: "all" | "owned";
+  In the component: const filter = props.filter ?? "all";
+
+Remove the sticky toggle bar div entirely (the one with position:"sticky"). Keep the PillToggle and filterOpts if they're used elsewhere in the component, otherwise remove them too.
+
+CHANGE 3 — artifacts/om-database/src/components/PortfolioAnalytics.tsx
+
+Same pattern — add filter as a prop, remove its internal filter toggle UI since the toggle is now handled in App.tsx. The filter prop controls what data is fetched/shown.
+
+Make, test, iterate until saved.

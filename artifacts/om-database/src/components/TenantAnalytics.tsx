@@ -163,14 +163,15 @@ function PillToggle<T extends string>({
 
 interface Props {
   deals: Deal[];
+  filter?: "all" | "owned";
   onTenantClick?: (name: string) => void;
   onParentClick?: (parent: string) => void;
   onTenantAudit?: () => void;
   onBack?: () => void;
 }
 
-export default function TenantAnalytics({ deals, onTenantClick, onParentClick, onTenantAudit, onBack }: Props) {
-  const [filter, setFilter] = useState<"all" | "owned">("all");
+export default function TenantAnalytics({ deals, filter: filterProp, onTenantClick, onParentClick, onTenantAudit, onBack }: Props) {
+  const filter = filterProp ?? "all";
   const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
   const [showAllParents, setShowAllParents] = useState(false);
 
@@ -336,27 +337,13 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
     : 1;
   const maxChainVal = topChains.length > 0 ? topChains[0].avg : 1;
 
-  const filterOpts = [
-    { value: "all" as const, label: "All Deals" },
-    { value: "owned" as const, label: "Owned" },
-  ];
   const salesOpts = [
     { value: "psf" as const, label: "Sales PSF" },
     { value: "gross" as const, label: "Gross Sales" },
   ];
 
   return (
-    <div>
-      {/* Sticky All/Owned toggle — outside padded container so sticky works on iOS */}
-      <div style={{ position:"sticky", top:72, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
-          {filter === "owned" ? "Owned & sold only" : "All properties"}
-        </span>
-        <PillToggle options={filterOpts} value={filter} onChange={v => setFilter(v)} />
-      </div>
-
-      {/* Padded content */}
-      <div style={{ padding:"20px 24px", maxWidth:1100, margin:"0 auto" }}>
+    <div style={{ padding:"20px 24px", maxWidth:1100, margin:"0 auto" }}>
         {/* Header */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -650,7 +637,6 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
 
         </div>
       )}
-      </div>
     </div>
   );
 }

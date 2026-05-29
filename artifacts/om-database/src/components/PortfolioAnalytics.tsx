@@ -273,8 +273,8 @@ function TopTenantsPanel({ data }: { data: TenantConcentration }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics }: { onTenantAudit?: () => void; onTenantAnalytics?: () => void }) {
-  const [filter, setFilter] = useState<"all" | "owned">("all");
+export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, filter: filterProp }: { onTenantAudit?: () => void; onTenantAnalytics?: () => void; filter?: "all" | "owned" }) {
+  const filter = filterProp ?? "all";
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -325,42 +325,8 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics }:
       .finally(() => setRebuildingComps(false));
   };
 
-  const Btn = (f: "all" | "owned", label: string) => (
-    <button
-      onClick={() => setFilter(f)}
-      style={{
-        padding: "7px 16px",
-        borderRadius: 7,
-        border: "none",
-        background: filter === f ? "#2a2c27" : "transparent",
-        color: filter === f ? "#f6f2ea" : "#8a8579",
-        fontSize: 12.5,
-        fontWeight: filter === f ? 600 : 500,
-        cursor: "pointer",
-        fontFamily: "'Inter',sans-serif",
-        letterSpacing: "-0.01em",
-        boxShadow: filter === f ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
-      }}
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div>
-      {/* Sticky All/Owned toggle — outside padded container so sticky works on iOS */}
-      <div style={{ position:"sticky", top:72, zIndex:50, background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
-          {filter === "owned" ? "Owned & sold only" : "All properties"}
-        </span>
-        <div style={{ display:"flex", background:"#f1eadc", borderRadius:10, padding:3, gap:2 }}>
-          {Btn("all", "All Deals")}
-          {Btn("owned", "Owned Only")}
-        </div>
-      </div>
-
-      {/* Padded content */}
-      <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <div>
@@ -563,7 +529,6 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics }:
           )}
         </>
       )}
-      </div>
     </div>
   );
 }

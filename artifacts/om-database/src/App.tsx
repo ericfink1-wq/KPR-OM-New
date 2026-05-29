@@ -47,6 +47,7 @@ function AppInner() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant">("tenant");
+  const [analyticsFilter, setAnalyticsFilter] = useState<"all" | "owned">("all");
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
@@ -265,71 +266,91 @@ function AppInner() {
 
       {/* Analytics tab */}
       {tab === "analytics" && (
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
-          {view.type === "tenant" ? (
-            <TenantView
-              tenantName={view.tenantName}
-              deals={deals}
-              onBack={goBack}
-              onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
-              onParentClick={name => handleOpenTenant("__parent__" + name)}
-            />
-          ) : view.type === "parent" ? (
-            <ParentCompanyView
-              parentName={view.parentName}
-              deals={deals}
-              onBack={goBack}
-              onTenantClick={handleOpenTenant}
-              onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
-            />
-          ) : view.type === "tenant-audit" ? (
-            <div>
-              <div style={{ padding: "14px 24px 0" }}>
-                <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+          {/* All/Owned bar — never scrolls. Hidden for tenant/parent/audit detail views */}
+          {view.type !== "tenant" && view.type !== "parent" && view.type !== "tenant-audit" && (
+            <div style={{ background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+              <span style={{ fontSize:11, color:"#a89f8f", fontFamily:"'Inter',sans-serif" }}>
+                {analyticsFilter === "owned" ? "Owned & sold only" : "All properties"}
+              </span>
+              <div style={{ display:"flex", background:"#ece5d7", borderRadius:8, padding:2, gap:1 }}>
+                {(["all", "owned"] as const).map(v => (
+                  <button key={v} onClick={() => setAnalyticsFilter(v)}
+                    style={{ padding:"5px 14px", borderRadius:6, border:"none", background: analyticsFilter===v ? "#2a2c27" : "transparent", color: analyticsFilter===v ? "#f6f2ea" : "#8a8579", fontSize:12, fontWeight: analyticsFilter===v ? 600 : 500, cursor:"pointer", fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap" }}>
+                    {v === "all" ? "All Deals" : "Owned"}
+                  </button>
+                ))}
               </div>
-              <TenantAudit deals={deals} onTenantClick={handleOpenTenant} />
             </div>
-          ) : (
-            <>
-              {/* Segmented toggle */}
-              <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 0" }}>
-                <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
-                  {(["tenant", "portfolio"] as const).map(v => (
-                    <button
-                      key={v}
-                      onClick={() => setAnalyticsView(v)}
-                      style={{
-                        padding: "7px 18px",
-                        borderRadius: 7,
-                        border: "none",
-                        background: analyticsView === v ? "#2a2c27" : "transparent",
-                        color: analyticsView === v ? "#f6f2ea" : "#8a8579",
-                        fontSize: 12.5,
-                        fontWeight: analyticsView === v ? 600 : 500,
-                        cursor: "pointer",
-                        fontFamily: "'Inter',sans-serif",
-                        letterSpacing: "-0.01em",
-                        boxShadow: analyticsView === v ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {v === "portfolio" ? "Portfolio Analytics" : "Tenant Analytics"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {analyticsView === "portfolio" ? (
-                <PortfolioAnalytics onTenantAudit={() => navigate({ type: "tenant-audit" })} />
-              ) : (
-                <TenantAnalytics
-                  deals={deals}
-                  onTenantClick={handleOpenTenant}
-                  onParentClick={name => handleOpenTenant("__parent__" + name)}
-                  onTenantAudit={() => navigate({ type: "tenant-audit" })}
-                />
-              )}
-            </>
           )}
+          {/* Scrollable content */}
+          <div style={{ flex:1, overflowY:"auto", paddingBottom:88 }}>
+            {view.type === "tenant" ? (
+              <TenantView
+                tenantName={view.tenantName}
+                deals={deals}
+                onBack={goBack}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+                onParentClick={name => handleOpenTenant("__parent__" + name)}
+              />
+            ) : view.type === "parent" ? (
+              <ParentCompanyView
+                parentName={view.parentName}
+                deals={deals}
+                onBack={goBack}
+                onTenantClick={handleOpenTenant}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+              />
+            ) : view.type === "tenant-audit" ? (
+              <div>
+                <div style={{ padding: "14px 24px 0" }}>
+                  <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+                </div>
+                <TenantAudit deals={deals} onTenantClick={handleOpenTenant} />
+              </div>
+            ) : (
+              <>
+                {/* Segmented toggle */}
+                <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 0" }}>
+                  <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
+                    {(["tenant", "portfolio"] as const).map(v => (
+                      <button
+                        key={v}
+                        onClick={() => setAnalyticsView(v)}
+                        style={{
+                          padding: "7px 18px",
+                          borderRadius: 7,
+                          border: "none",
+                          background: analyticsView === v ? "#2a2c27" : "transparent",
+                          color: analyticsView === v ? "#f6f2ea" : "#8a8579",
+                          fontSize: 12.5,
+                          fontWeight: analyticsView === v ? 600 : 500,
+                          cursor: "pointer",
+                          fontFamily: "'Inter',sans-serif",
+                          letterSpacing: "-0.01em",
+                          boxShadow: analyticsView === v ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {v === "portfolio" ? "Portfolio Analytics" : "Tenant Analytics"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {analyticsView === "portfolio" ? (
+                  <PortfolioAnalytics filter={analyticsFilter} onTenantAudit={() => navigate({ type: "tenant-audit" })} />
+                ) : (
+                  <TenantAnalytics
+                    filter={analyticsFilter}
+                    deals={deals}
+                    onTenantClick={handleOpenTenant}
+                    onParentClick={name => handleOpenTenant("__parent__" + name)}
+                    onTenantAudit={() => navigate({ type: "tenant-audit" })}
+                  />
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 
