@@ -40,6 +40,7 @@ interface TenantRow {
   key: string;
   displayName: string;
   locationCount: number;
+  ownedCount: number;
   totalAnnualRent: number;
   rentPSFValues: number[];
   isAnchor: boolean;
@@ -198,6 +199,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
             key,
             displayName: rawName,
             locationCount: 0,
+            ownedCount: 0,
             totalAnnualRent: 0,
             rentPSFValues: [],
             isAnchor: false,
@@ -209,6 +211,7 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
         }
         const row = map.get(key)!;
         row.locationCount += 1;
+        if (deal.status === "Owned" || deal.status === "Sold") row.ownedCount += 1;
         row.totalAnnualRent += annualRent;
         if (rentPSF != null && rentPSF > 0) row.rentPSFValues.push(rentPSF);
         if (t.isAnchor) row.isAnchor = true;
@@ -388,7 +391,15 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
                   <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
                   <div style={{ flex: "0 0 220px", minWidth: 0 }}>
                     <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
-                    <span style={{ fontSize: 10, color: "#b8b0a3", marginLeft: 6 }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
+                    <span style={{ fontSize: 10, color: "#b8b0a3", marginLeft: 6 }}>
+                      {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                      {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
+                        <span style={{ color:"#6dba43", marginLeft:4 }}>({row.ownedCount} owned)</span>
+                      )}
+                      {filter === "all" && row.ownedCount === 0 && (
+                        <span style={{ color:"#a69e91", marginLeft:4, fontSize:9, fontStyle:"italic" }}>unowned</span>
+                      )}
+                    </span>
                     {row.parentCo && (
                       <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, marginLeft:5, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>
                         {row.parentCo}
@@ -418,7 +429,15 @@ export default function TenantAnalytics({ deals, onTenantClick, onParentClick, o
                     )}
                   </div>
                   <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />
-                  <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</div>
+                  <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>
+                    {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                    {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
+                      <div style={{ color:"#6dba43", fontSize:9, fontWeight:400 }}>({row.ownedCount} owned)</div>
+                    )}
+                    {filter === "all" && row.ownedCount === 0 && (
+                      <div style={{ color:"#a69e91", fontSize:9, fontWeight:400, fontStyle:"italic" }}>unowned</div>
+                    )}
+                  </div>
                   <div style={{ width: 60, textAlign: "right", fontSize: 10.5, color: "#a89f8f", flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
                 </div>
               ))}
