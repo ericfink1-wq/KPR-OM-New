@@ -178,6 +178,9 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
+                      {(t.isNAP || (n(t.sf) === 0 && n(t.annualRent) === 0 && !isVacant(t.name))) && (
+                        <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="Not A Part — adjacent parcel, not included in ownership">NAP</span>
+                      )}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
                     </div>

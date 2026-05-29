@@ -163,6 +163,7 @@ export interface Tenant {
   occupancyCost?: number | string | null;
   creditRating?: string | null;
   isAnchor?: boolean;
+  isNAP?: boolean | null;
   assumptionNote?: string | null;
   salesNotes?: string | null;
 }
