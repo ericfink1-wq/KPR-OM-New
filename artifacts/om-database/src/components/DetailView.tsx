@@ -290,8 +290,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   useEffect(() => {
     if (!actionsOpen) return;
     const handler = () => setActionsOpen(false);
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
+    const t = window.setTimeout(() => {
+      document.addEventListener("click", handler);
+    }, 0);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("click", handler);
+    };
   }, [actionsOpen]);
 
   // Auto-rescore when ≥10 new deals have been added to the portfolio since this deal was last scored
