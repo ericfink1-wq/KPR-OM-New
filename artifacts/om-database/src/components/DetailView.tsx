@@ -132,6 +132,217 @@ function KeyAssumptions({ deal }: { deal: Deal }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Comp Benchmark card
+// ---------------------------------------------------------------------------
+interface BmStats { median: number; p25: number; p75: number }
+interface BmMatch {
+  id: number; name: string | null; market: string | null; saleDate: string | null;
+  salePrice: number | null; capRate: number | null; pricePerSf: number | null;
+  sf: number | null; source: "owned" | "broker" | "om";
+}
+interface BmResult {
+  insufficient: boolean; tierLabel: string; relaxed: string[]; excludedInvalid: number;
+  n: number; dateRange: { from: string; to: string } | null;
+  sourceMix: { owned: number; broker: number; om: number };
+  capRate: BmStats | null; pricePerSf: BmStats | null;
+  last12: { n: number; capRate: BmStats | null; pricePerSf: BmStats | null } | null;
+  capDeltaBps: number | null; psfDeltaPct: number | null;
+  comps: BmMatch[]; subject: { capRate: number | null; pricePerSf: number | null };
+}
+
+function CompBenchmarkCard({ deal }: { deal: Deal }) {
+  const [bm, setBm] = useState<BmResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [excludeOm, setExcludeOm] = useState(false);
+  const [showComps, setShowComps] = useState(false);
+
+  const subjectPsf = deal.pricePerSF != null ? deal.pricePerSF
+    : (deal.askingPrice && deal.totalSF ? Math.round((deal.askingPrice as number) / (deal.totalSF as number)) : null);
+
+  useEffect(() => {
+    setLoading(true); setErr(null); setBm(null);
+    fetch("/api/comps/benchmark", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dealId: deal.id, market: deal.market ?? null,
+        state: (deal as unknown as Record<string, unknown>).state ?? null,
+        propertyType: (deal as unknown as Record<string, unknown>).propertyType ?? null,
+        sf: deal.totalSF ?? null,
+        capRate: deal.capRate ?? null, pricePerSf: subjectPsf ?? null,
+        excludeOmComps: excludeOm,
+      }),
+    })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<BmResult>; })
+      .then(d => { setBm(d); setLoading(false); })
+      .catch(e => { setErr(e.message ?? "Failed"); setLoading(false); });
+  }, [deal.id, excludeOm]);
+
+  const fmtD = (s: string | null) => {
+    if (!s) return "—";
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? s : d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  };
+  const fmtPct2 = (v: number | null | undefined) => v != null ? `${(+v).toFixed(1)}%` : "—";
+  const fmtPsf  = (v: number | null | undefined) => v != null ? `$${Math.round(+v)}` : "—";
+  const fmtM    = (v: number | null | undefined) => v != null ? `$${(+v / 1e6).toFixed(1)}M` : "—";
+  const fmtSf   = (v: number | null | undefined) => v != null ? `${Number(v).toLocaleString()} SF` : "—";
+
+  const capVerdict = (bps: number | null) => {
+    if (bps == null) return null;
+    if (bps <= -25) return { text: `~${Math.abs(bps)}bps inside the comp median — priced richer than comps`, color: "#b45309" };
+    if (bps >= 25)  return { text: `~${Math.abs(bps)}bps above the comp median — priced cheaper than comps`, color: "#0f6b46" };
+    return { text: "in line with comps", color: "#6dba43" };
+  };
+  const psfVerdict = (pct: number | null) => {
+    if (pct == null) return null;
+    if (pct >= 5)  return { text: `${Math.abs(pct)}% above the comp median — priced higher`, color: "#b45309" };
+    if (pct <= -5) return { text: `${Math.abs(pct)}% below the comp median — priced lower`, color: "#0f6b46" };
+    return { text: "in line with comps", color: "#6dba43" };
+  };
+
+  const sourceBadge = (s: "owned" | "broker" | "om") =>
+    s === "owned" ? <span style={{ fontSize: 8, fontWeight: 700, color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 3, padding: "1px 4px" }}>OWNED</span>
+    : s === "broker" ? <span style={{ fontSize: 8, fontWeight: 700, color: "#5a7c9e", background: "#e8f1f8", border: "1px solid #c3d9ec", borderRadius: 3, padding: "1px 4px" }}>MANUAL</span>
+    : <span style={{ fontSize: 8, fontWeight: 700, color: "#8c7a62", background: "#f3ede2", border: "1px solid #e0d4c0", borderRadius: 3, padding: "1px 4px" }}>OM</span>;
+
+  const ROW_STYLE: React.CSSProperties = { display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", padding: "7px 0", borderBottom: "1px solid #f5f1ea" };
+  const LABEL: React.CSSProperties = { fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#a89f8f", minWidth: 72, flexShrink: 0 };
+  const VAL: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "#26281f" };
+  const MUTED: React.CSSProperties = { fontSize: 11, color: "#a89f8f" };
+
+  return (
+    <div id="section-comp-benchmark" style={{ background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#a89f8f" }}>Comp Benchmark</div>
+        <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 11, color: "#7d766a", fontFamily: "'Inter',sans-serif" }}>
+          <input type="checkbox" checked={excludeOm} onChange={e => setExcludeOm(e.target.checked)} style={{ accentColor: "#6dba43", width: 12, height: 12 }} />
+          Exclude OM-sourced comps
+        </label>
+      </div>
+
+      {loading && <div style={{ fontSize: 12, color: "#a89f8f", padding: "12px 0" }}>Computing benchmark…</div>}
+      {err && <div style={{ fontSize: 12, color: "#dc2626" }}>Could not load benchmark: {err}</div>}
+
+      {bm && (() => {
+        const cv = capVerdict(bm.capDeltaBps);
+        const pv = psfVerdict(bm.psfDeltaPct);
+        return (
+          <>
+            {/* Summary header */}
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f" }}>
+                Based on {bm.n} comp{bm.n !== 1 ? "s" : ""} · {bm.tierLabel}
+                {bm.dateRange ? ` · ${fmtD(bm.dateRange.from)}–${fmtD(bm.dateRange.to)}` : ""}
+              </span>
+              {bm.relaxed.length > 0 && (
+                <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>(relaxed: {bm.relaxed.join(", ")})</span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "#7d766a", marginBottom: bm.insufficient ? 4 : 12 }}>
+              {bm.n} comp{bm.n !== 1 ? "s" : ""} — {bm.sourceMix.owned} owned, {bm.sourceMix.broker} broker/manual, {bm.sourceMix.om} OM-sourced
+              {bm.excludedInvalid > 0 && <span style={{ color: "#a89f8f" }}> · {bm.excludedInvalid} excluded (invalid data)</span>}
+            </div>
+
+            {/* Insufficiency warning */}
+            {bm.insufficient && (
+              <div style={{ background: "#fef9ed", border: "1px solid #f5c842", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#92400e" }}>
+                Only {bm.n} comparable trade{bm.n !== 1 ? "s" : ""} on file — too few to benchmark reliably. Showing what's available; treat as directional only.
+              </div>
+            )}
+
+            {/* Cap rate row */}
+            {(bm.subject.capRate != null || bm.capRate != null) && (
+              <div style={ROW_STYLE}>
+                <span style={LABEL}>Cap Rate</span>
+                {bm.subject.capRate != null && <span style={VAL}>{fmtPct2(bm.subject.capRate)}</span>}
+                {bm.subject.capRate != null && bm.capRate != null && <span style={MUTED}>subject vs</span>}
+                {bm.capRate != null && (
+                  <span style={{ fontSize: 12, color: "#383a37" }}>
+                    median {fmtPct2(bm.capRate.median)}
+                    <span style={{ color: "#a89f8f" }}> ({fmtPct2(bm.capRate.p25)}–{fmtPct2(bm.capRate.p75)} range)</span>
+                  </span>
+                )}
+                {!bm.insufficient && cv && (
+                  <span style={{ fontSize: 11, color: cv.color, fontWeight: 500 }}>{cv.text}</span>
+                )}
+              </div>
+            )}
+
+            {/* Price PSF row */}
+            {(bm.subject.pricePerSf != null || bm.pricePerSf != null) && (
+              <div style={ROW_STYLE}>
+                <span style={LABEL}>Price / SF</span>
+                {bm.subject.pricePerSf != null && <span style={VAL}>{fmtPsf(bm.subject.pricePerSf)}</span>}
+                {bm.subject.pricePerSf != null && bm.pricePerSf != null && <span style={MUTED}>subject vs</span>}
+                {bm.pricePerSf != null && (
+                  <span style={{ fontSize: 12, color: "#383a37" }}>
+                    median {fmtPsf(bm.pricePerSf.median)}
+                    <span style={{ color: "#a89f8f" }}> ({fmtPsf(bm.pricePerSf.p25)}–{fmtPsf(bm.pricePerSf.p75)} range)</span>
+                  </span>
+                )}
+                {!bm.insufficient && pv && (
+                  <span style={{ fontSize: 11, color: pv.color, fontWeight: 500 }}>{pv.text}</span>
+                )}
+              </div>
+            )}
+
+            {/* Last 12 months */}
+            {bm.last12 && (
+              <div style={{ fontSize: 11, color: "#7d766a", padding: "6px 0", borderBottom: "1px solid #f5f1ea" }}>
+                Last 12 months (n={bm.last12.n}):
+                {bm.last12.capRate && <span> median cap {fmtPct2(bm.last12.capRate.median)}</span>}
+                {bm.last12.capRate && bm.last12.pricePerSf && <span>,</span>}
+                {bm.last12.pricePerSf && <span> median PSF {fmtPsf(bm.last12.pricePerSf.median)}</span>}
+              </div>
+            )}
+
+            {/* Show comps toggle */}
+            {bm.comps.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <button onClick={() => setShowComps(v => !v)}
+                  style={{ background: "transparent", border: "none", color: "#6dba43", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "'Inter',sans-serif" }}>
+                  {showComps ? `▼ Hide ${bm.comps.length} comp${bm.comps.length !== 1 ? "s" : ""}` : `▶ Show ${bm.comps.length} comp${bm.comps.length !== 1 ? "s" : ""}`}
+                </button>
+                {showComps && (
+                  <div style={{ marginTop: 8, overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #ece5d7" }}>
+                          {["Name", "Market", "Date", "Sale Price", "Cap %", "$/SF", "SF", "Source"].map(h => (
+                            <th key={h} style={{ textAlign: "left", padding: "4px 8px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bm.comps.map(c => (
+                          <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea" }}>
+                            <td style={{ padding: "6px 8px", color: "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || "—"}</td>
+                            <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
+                            <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
+                            <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(c.salePrice)}</td>
+                            <td style={{ padding: "6px 8px", color: c.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: c.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>{fmtPct2(c.capRate)}</td>
+                            <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtPsf(c.pricePerSf)}</td>
+                            <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(c.sf)}</td>
+                            <td style={{ padding: "6px 8px" }}>{sourceBadge(c.source)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        );
+      })()}
+    </div>
+  );
+}
+
 function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObject<HTMLDivElement | null> }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -140,6 +351,7 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
   items.push({ id: "section-cover", label: "Overview" });
   if (deal.notes) items.push({ id: "section-highlights", label: "Investment Highlights" });
   if (deal.askingPrice || deal.capRate || deal.noi || deal.pricePerSF || deal.totalSF) items.push({ id: "section-financials", label: "Key Financials" });
+  if (deal.capRate || deal.pricePerSF) items.push({ id: "section-comp-benchmark", label: "Comp Benchmark" });
   if (deal.tenants && deal.tenants.length > 0) {
     items.push({ id: "section-tenants", label: "Tenant Roster" });
     items.push({ id: "section-tenant-sales", label: "Tenant Sales" });
@@ -1139,6 +1351,9 @@ ${text.slice(0, 40000)}`;
           <Row l="# BUILDINGS" v={d.numberOfBuildings}/>
         </Card>
       </div>
+
+      {/* Comp Benchmark */}
+      {(d.capRate || d.pricePerSF) && <CompBenchmarkCard deal={d} />}
 
       {/* My Underwriting */}
       <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>

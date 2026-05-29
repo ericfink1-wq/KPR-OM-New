@@ -207,6 +207,31 @@ router.delete("/comps/manual/:id", requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/comps/benchmark — deterministic comp benchmark for a deal
+// ---------------------------------------------------------------------------
+router.post("/comps/benchmark", requireAuth, async (req, res) => {
+  try {
+    const { computeBenchmark } = await import("../lib/compBenchmark");
+    const body = req.body as {
+      dealId?: string; market?: string | null; state?: string | null;
+      propertyType?: string | null; sf?: number | null;
+      capRate?: number | null; pricePerSf?: number | null; excludeOmComps?: boolean;
+    };
+    if (!body.dealId) { res.status(400).json({ error: "dealId required" }); return; }
+    const result = await computeBenchmark({
+      dealId: body.dealId, market: body.market ?? null, state: body.state ?? null,
+      propertyType: body.propertyType ?? null, sf: body.sf ?? null,
+      capRate: body.capRate ?? null, pricePerSf: body.pricePerSf ?? null,
+      excludeOmComps: body.excludeOmComps ?? false,
+    });
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to compute comp benchmark");
+    res.status(500).json({ error: "Failed to compute comp benchmark" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/comps/rebuild-all — full backfill from all deals
 // Preserves manually entered comps.
 // ---------------------------------------------------------------------------
