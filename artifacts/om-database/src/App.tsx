@@ -288,7 +288,7 @@ function AppInner() {
             {view.type === "tenant" ? (
               <TenantView
                 tenantName={view.tenantName}
-                deals={deals}
+                deals={activeDeals}
                 onBack={goBack}
                 onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
                 onParentClick={name => handleOpenTenant("__parent__" + name)}
@@ -296,7 +296,7 @@ function AppInner() {
             ) : view.type === "parent" ? (
               <ParentCompanyView
                 parentName={view.parentName}
-                deals={deals}
+                deals={activeDeals}
                 onBack={goBack}
                 onTenantClick={handleOpenTenant}
                 onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
@@ -306,7 +306,7 @@ function AppInner() {
                 <div style={{ padding: "14px 24px 0" }}>
                   <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
                 </div>
-                <TenantAudit deals={deals} onTenantClick={handleOpenTenant} />
+                <TenantAudit deals={activeDeals} onTenantClick={handleOpenTenant} />
               </div>
             ) : (
               <>
@@ -342,7 +342,7 @@ function AppInner() {
                 ) : (
                   <TenantAnalytics
                     filter={analyticsFilter}
-                    deals={deals}
+                    deals={activeDeals}
                     onTenantClick={handleOpenTenant}
                     onParentClick={name => handleOpenTenant("__parent__" + name)}
                     onTenantAudit={() => navigate({ type: "tenant-audit" })}

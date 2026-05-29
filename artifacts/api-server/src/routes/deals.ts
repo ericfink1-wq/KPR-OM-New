@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable } from "@workspace/db";
+import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { runOmExtraction } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
@@ -300,6 +300,7 @@ router.delete("/deals/:id", requireAdmin, async (req, res) => {
     const id = req.params.id as string;
     await db.delete(dealImagesTable).where(eq(dealImagesTable.id, id));
     await db.delete(dealSourcesTable).where(eq(dealSourcesTable.id, id));
+    await db.delete(tenantIndexTable).where(eq(tenantIndexTable.dealId, id));
     await db.delete(dealsTable).where(eq(dealsTable.id, id));
     res.json({ ok: true });
   } catch (err) {
