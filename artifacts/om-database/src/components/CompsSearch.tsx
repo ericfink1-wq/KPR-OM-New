@@ -157,10 +157,6 @@ type DupInfo = {
   clusterId: number; otherNames: string[]; reasons: string[];
   betterSourceExists: boolean; bestTierName: string;
 };
-type CompStats = {
-  count: number; totalVolume: number; statesCovered: number;
-  earliestSale: string | null; latestSale: string | null;
-};
 function fmtVolume(v: number): string {
   if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
   if (v >= 1e6) return `$${Math.round(v / 1e6)}M`;
@@ -474,7 +470,6 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [pendingImport, setPendingImport] = useState<unknown[] | null>(null);
   const [editRow, setEditRow] = useState<CompRow | null>(null);
   const [showDupsOnly, setShowDupsOnly] = useState(false);
-  const [stats, setStats] = useState<CompStats | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -512,13 +507,6 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       .catch(e => { setError((e as Error).message); setLoading(false); });
   }, []);
 
-  const fetchStats = useCallback(() => {
-    fetch("/api/comps/stats", { credentials: "include" })
-      .then(r => r.json() as Promise<CompStats>)
-      .then(setStats)
-      .catch(() => {});
-  }, []);
-
   const handleFilter = useCallback((patch: Partial<Filters>) => {
     const next = { ...filters, ...patch };
     setFilters(next);
@@ -531,14 +519,13 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     fetch_(filters, s);
   }, [filters, fetch_]);
 
-  useEffect(() => { fetch_(filters, sort); fetchStats(); }, []); // initial load
+  useEffect(() => { fetch_(filters, sort); }, []); // initial load
 
   const handleDelete = async (id: number) => {
     try {
       const r = await fetch(`/api/comps/manual/${id}`, { method: "DELETE", credentials: "include" });
       if (!r.ok) throw new Error();
       setRows(prev => prev.filter(row => row.id !== id));
-      fetchStats();
     } catch {
       alert("Failed to delete comp.");
     }
@@ -578,7 +565,6 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       setImportMsg({ ok: true, text: parts.join(", ") });
       setTimeout(() => setImportMsg(null), 5000);
       fetch_(filters, sort);
-      fetchStats();
     } catch (err) {
       setImportMsg({ ok: false, text: err instanceof Error ? err.message : "Import failed" });
     }
@@ -682,6 +668,23 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       });
   }, [rows, dupMap, showDupsOnly]);
 
+  // Tile stats — derived from displayRows minus hidden rows (client-side, filter-aware)
+  const activeTileStats = useMemo(() => {
+    const active = displayRows.filter(r => !ignoredComps.has(r.id));
+    const hiddenCount = displayRows.filter(r => ignoredComps.has(r.id)).length;
+    const totalVolume = active.reduce((sum, r) => sum + (r.salePrice != null && r.salePrice > 0 ? r.salePrice : 0), 0);
+    const stateSet = new Set(active.map(r => r.state).filter((s): s is string => !!s));
+    const years = active
+      .map(r => r.saleDate?.slice(0, 4))
+      .filter((y): y is string => !!y)
+      .map(Number)
+      .filter(n => !isNaN(n));
+    const minY = years.length ? Math.min(...years) : null;
+    const maxY = years.length ? Math.max(...years) : null;
+    const span = minY == null ? "—" : minY === maxY ? String(minY) : `${minY}–${maxY}`;
+    return { count: active.length, totalVolume, states: stateSet.size, span, hiddenCount };
+  }, [displayRows, ignoredComps]);
+
   const In = (placeholder: string, key: keyof Filters, type = "text", extra?: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input
       type={type}
@@ -702,9 +705,9 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       {(addOpen || editRow) && (
         <AddCompModal
           onClose={() => { setAddOpen(false); setEditRow(null); }}
-          onSaved={row => { setRows(prev => [row, ...prev]); fetchStats(); }}
+          onSaved={row => { setRows(prev => [row, ...prev]); }}
           editRow={editRow ?? undefined}
-          onUpdated={updated => { setRows(prev => prev.map(r => r.id === updated.id ? updated : r)); fetchStats(); }}
+          onUpdated={updated => { setRows(prev => prev.map(r => r.id === updated.id ? updated : r)); }}
         />
       )}
       {pendingImport && (
@@ -845,17 +848,14 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
         </div>
       </div>
 
-      {/* Stats banner */}
-      {stats && (() => {
-        const eyear = stats.earliestSale?.slice(0, 4) ?? null;
-        const lyear  = stats.latestSale?.slice(0, 4)  ?? null;
-        const span   = !eyear ? "—" : eyear === lyear ? eyear : `${eyear}–${lyear}`;
+      {/* Stats banner — client-computed from active (filtered + visible) rows */}
+      {(() => {
         const items = [
-          { label: "Comps",        value: stats.count.toLocaleString(),              accent: false },
-          { label: "Total Volume", value: fmtVolume(Number(stats.totalVolume) || 0), accent: true  },
-          { label: "States",       value: String(stats.statesCovered),               accent: false },
-          { label: "Span",         value: span,                                      accent: false },
-        ] as const;
+          { label: "Comps",        value: activeTileStats.count.toLocaleString(),    sub: activeTileStats.hiddenCount > 0 ? `${activeTileStats.hiddenCount} hidden` : null, accent: false },
+          { label: "Total Volume", value: fmtVolume(activeTileStats.totalVolume),    sub: null, accent: true  },
+          { label: "States",       value: String(activeTileStats.states),            sub: null, accent: false },
+          { label: "Span",         value: activeTileStats.span,                      sub: null, accent: false },
+        ];
         return (
           <div style={{
             background: "#fff", border: "1px solid #efe8da", borderRadius: 10,
@@ -874,6 +874,11 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                 <span style={{ fontFamily: "'Fraunces',serif", fontSize: item.accent ? 22 : 18, fontWeight: 500, color: item.accent ? "#3f7a1f" : "#26281f", lineHeight: 1.1 }}>
                   {item.value}
                 </span>
+                {item.sub && (
+                  <span style={{ fontSize: 10, color: "#a89f8f", fontFamily: "'Inter',sans-serif", marginTop: 1 }}>
+                    {item.sub}
+                  </span>
+                )}
               </div>
             ))}
           </div>
