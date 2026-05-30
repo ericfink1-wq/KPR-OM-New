@@ -1352,6 +1352,8 @@ const CITY_LOCALITY: Record<string, Array<{ group: string; label: string; cities
     { group: "IL-city", label: "Chicago",  cities: ["chicago"] },
     { group: "IL-city", label: "Evanston", cities: ["evanston"] },
     { group: "IL-city", label: "Oak Park", cities: ["oak park"] },
+    // County tax: Chicago-area is Cook (the group default); flag clearly-downstate cities.
+    { group: "IL-county", label: "Downstate / Outside Cook County", cities: ["springfield", "peoria", "rockford", "champaign", "urbana", "bloomington", "normal", "decatur", "carbondale", "moline", "rock island", "quincy"] },
   ],
   CA: [
     { group: "CA-city", label: "Los Angeles",   cities: ["los angeles"] },
@@ -1385,6 +1387,21 @@ const CITY_LOCALITY: Record<string, Array<{ group: string; label: string; cities
     { group: "NC-county", label: "Orange County",     cities: ["chapel hill", "carrboro", "hillsborough"] },
     { group: "NC-county", label: "Chatham County",    cities: ["pittsboro", "siler city"] },
     { group: "NC-county", label: "Mecklenburg County", cities: ["charlotte", "matthews", "huntersville", "cornelius", "davidson", "mint hill", "pineville"] },
+  ],
+  DE: [
+    // New Castle County is the group default (Wilmington, Newark, Middletown, Bear, Hockessin).
+    { group: "DE-county", label: "Kent/Sussex County", cities: ["dover", "smyrna", "milford", "camden", "harrington", "lewes", "rehoboth beach", "seaford", "georgetown", "millsboro", "milton", "bridgeville", "selbyville", "laurel"] },
+  ],
+  MA: [
+    { group: "MA-region", label: "Cape/Islands", cities: ["barnstable", "hyannis", "falmouth", "sandwich", "bourne", "mashpee", "yarmouth", "dennis", "harwich", "brewster", "orleans", "chatham", "eastham", "wellfleet", "truro", "provincetown", "nantucket", "edgartown", "oak bluffs", "tisbury", "vineyard haven", "west tisbury"] },
+  ],
+  VA: [
+    { group: "VA-region", label: "NoVA/Hampton Roads", cities: ["arlington", "alexandria", "fairfax", "falls church", "reston", "mclean", "vienna", "herndon", "manassas", "leesburg", "ashburn", "sterling", "centreville", "chantilly", "woodbridge", "norfolk", "virginia beach", "chesapeake", "newport news", "hampton", "portsmouth", "suffolk"] },
+  ],
+  CO: [
+    // Front Range / non-resort is the group default. Only the named resort towns carry RETT.
+    { group: "CO-resort", label: "Aspen/Vail/Breckenridge tier", cities: ["aspen", "snowmass village", "vail", "breckenridge"] },
+    { group: "CO-resort", label: "Telluride/Crested Butte tier", cities: ["telluride", "mountain village", "crested butte", "mount crested butte"] },
   ],
 };
 
