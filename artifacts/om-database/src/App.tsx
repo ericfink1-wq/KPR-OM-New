@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot } from "./lib/api";
@@ -232,6 +232,7 @@ function AppInner() {
 
   const activeDeals = deals.filter(d => !d.trashedAt);
   const trashedDeals = deals.filter(d => d.trashedAt);
+  const ownedDealIds = useMemo(() => activeDeals.filter(d => d.status === "Owned" || d.status === "Sold").map(d => d.id), [activeDeals]);
   const currentDeal = view.type === "detail" ? deals.find(d => d.id === view.dealId) : null;
 
   return (
@@ -334,7 +335,7 @@ function AppInner() {
                   </div>
                 </div>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} />
+                  <PortfolioAnalytics onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} />
                 ) : (
                   <TenantAnalytics
                     deals={activeDeals}

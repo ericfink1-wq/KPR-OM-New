@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useIsMobile } from "../hooks/use-mobile";
 
 // ---------------------------------------------------------------------------
@@ -281,12 +281,13 @@ function TopTenantsPanel({ data }: { data: TenantConcentration }) {
 
 interface Props {
   filterDealIds?: string[];
+  ownedDealIds?: string[];
   onYearClick?: (year: string) => void;
   onTenantAudit?: () => void;
   onTenantAnalytics?: () => void;
 }
 
-export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenantAudit, onTenantAnalytics }: Props) {
+export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, onYearClick, onTenantAudit, onTenantAnalytics }: Props) {
   const isMobile = useIsMobile();
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -295,8 +296,22 @@ export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenan
   const [rebuildMsg, setRebuildMsg] = useState<string | null>(null);
   const [rebuildingComps, setRebuildingComps] = useState(false);
   const [rebuildCompsMsg, setRebuildCompsMsg] = useState<string | null>(null);
+  const [scope, setScope] = useState<"all" | "owned">("all");
 
-  const noDeals = filterDealIds !== undefined && filterDealIds.length === 0;
+  // Effective deal IDs: when Owned, use ownedDealIds intersected with any Deal Library filter
+  const effectiveDealIds = useMemo<string[] | undefined>(() => {
+    if (scope === "owned") {
+      const base = ownedDealIds ?? [];
+      if (filterDealIds && filterDealIds.length > 0) {
+        const s = new Set(filterDealIds);
+        return base.filter(id => s.has(id));
+      }
+      return base;
+    }
+    return filterDealIds;
+  }, [scope, ownedDealIds, filterDealIds]);
+
+  const noDeals = effectiveDealIds !== undefined && effectiveDealIds.length === 0;
 
   const load = useCallback((dealIds?: string[]) => {
     setLoading(true);
@@ -316,8 +331,8 @@ export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenan
 
   useEffect(() => {
     if (noDeals) { setLoading(false); setData(null); return; }
-    load(filterDealIds);
-  }, [filterDealIds, noDeals, load]);
+    load(effectiveDealIds);
+  }, [effectiveDealIds, noDeals, load]);
 
   const handleRebuild = () => {
     setRebuilding(true);
@@ -327,7 +342,7 @@ export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenan
       .then(d => {
         if (!d.ok) throw new Error(d.error || "Rebuild failed");
         setRebuildMsg(`✓ ${d.rebuilt ?? "?"} tenants indexed`);
-        load(filterDealIds);
+        load(effectiveDealIds);
       })
       .catch(e => setRebuildMsg(`⚠ ${e.message}`))
       .finally(() => setRebuilding(false));
@@ -341,7 +356,7 @@ export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenan
       .then(d => {
         if (!d.ok) throw new Error(d.error || "Rebuild failed");
         setRebuildCompsMsg(`✓ ${d.rebuilt ?? "?"} comps indexed`);
-        load(filterDealIds);
+        load(effectiveDealIds);
       })
       .catch(e => setRebuildCompsMsg(`⚠ ${e.message}`))
       .finally(() => setRebuildingComps(false));
@@ -358,6 +373,25 @@ export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenan
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {/* All / Owned scope toggle */}
+          <div style={{ display:"flex", background:"#ede8df", borderRadius:7, padding:2, flexShrink:0 }}>
+            {(["all", "owned"] as const).map(opt => (
+              <button
+                key={opt}
+                onClick={() => setScope(opt)}
+                style={{
+                  padding:"5px 12px", borderRadius:5, border:"none", cursor:"pointer",
+                  fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif",
+                  background:scope === opt ? "#383a37" : "transparent",
+                  color:scope === opt ? "#fff" : "#7d766a",
+                  transition:"background 0.15s, color 0.15s",
+                  whiteSpace:"nowrap",
+                }}
+              >
+                {opt === "all" ? "All" : "Owned"}
+              </button>
+            ))}
+          </div>
           {onTenantAnalytics && (
             <button onClick={onTenantAnalytics} style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
               Tenant Analytics

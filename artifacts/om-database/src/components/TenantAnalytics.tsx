@@ -200,7 +200,8 @@ interface Props {
 }
 
 export default function TenantAnalytics({ deals, filter: filterProp, onTenantClick, onParentClick, onTenantAudit, onBack }: Props) {
-  const filter = filterProp ?? "all";
+  const [scope, setScope] = useState<"all" | "owned">(filterProp ?? "all");
+  const filter = scope; // driven by local toggle; filterProp sets initial value only
   const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
   const [showAllParents, setShowAllParents] = useState(false);
   const [tenantSearch, setTenantSearch] = useState("");
@@ -422,6 +423,25 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
             </div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            {/* All / Owned scope toggle */}
+            <div style={{ display:"flex", background:"#ede8df", borderRadius:7, padding:2, flexShrink:0 }}>
+              {(["all", "owned"] as const).map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => setScope(opt)}
+                  style={{
+                    padding:"5px 12px", borderRadius:5, border:"none", cursor:"pointer",
+                    fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif",
+                    background:scope === opt ? "#383a37" : "transparent",
+                    color:scope === opt ? "#fff" : "#7d766a",
+                    transition:"background 0.15s, color 0.15s",
+                    whiteSpace:"nowrap",
+                  }}
+                >
+                  {opt === "all" ? "All" : "Owned"}
+                </button>
+              ))}
+            </div>
             {ignoredKeys.size > 0 && (
               <button
                 onClick={resetIgnored}
