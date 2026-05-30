@@ -32,6 +32,7 @@ export function exportDealToExcel(deal: Deal): void {
   const rrHeaders = [
     "Tenant",
     "Anchor?",
+    "Dark?",
     "Credit Rating",
     "SF",
     "Rent / SF",
@@ -49,6 +50,7 @@ export function exportDealToExcel(deal: Deal): void {
   const rrRows = tenants.map(t => [
     t.name ?? "",
     t.isAnchor ? "Yes" : "",
+    t.isDark ? "Yes" : "",
     t.creditRating ?? "",
     safeNum(t.sf),
     safeNum(t.rentPerSF),
@@ -73,6 +75,7 @@ export function exportDealToExcel(deal: Deal): void {
   rrWs["!cols"] = [
     { wch: 32 }, // Tenant
     { wch: 8 },  // Anchor
+    { wch: 7 },  // Dark
     { wch: 14 }, // Credit Rating
     { wch: 12 }, // SF
     { wch: 10 }, // Rent/SF
@@ -88,10 +91,10 @@ export function exportDealToExcel(deal: Deal): void {
   ];
 
   for (let row = 1; row < rrAoa.length; row++) {
-    applyFmt(rrWs, row, 3, "#,##0");         // SF
-    applyFmt(rrWs, row, 4, '$#,##0.00');     // Rent/SF
-    applyFmt(rrWs, row, 5, '$#,##0');        // Annual Rent
-    applyFmt(rrWs, row, 12, '$#,##0.00');    // Sales PSF
+    applyFmt(rrWs, row, 4, "#,##0");         // SF
+    applyFmt(rrWs, row, 5, '$#,##0.00');     // Rent/SF
+    applyFmt(rrWs, row, 6, '$#,##0');        // Annual Rent
+    applyFmt(rrWs, row, 13, '$#,##0.00');    // Sales PSF
   }
 
   if (deal.tenantsAsOf) {

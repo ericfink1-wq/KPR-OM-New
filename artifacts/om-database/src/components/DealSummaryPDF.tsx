@@ -7,6 +7,7 @@ const C = {
   ink: "#2a2c28", body: "#383a37", muted: "#6f6a5f",
   olive: "#3f7a1f", sage: "#eef3e6", border: "#b8d49a",
   rule: "#d8d2c1", nearTerm: "#8cbf63", track: "#f5f2ec",
+  dark: "#9a5b12",
 };
 
 const toN = (v: unknown): number => { const n = Number(v); return isNaN(n) ? 0 : n; };
@@ -259,6 +260,7 @@ export default function DealSummaryPDF({ deal: d, imgs, logoUrl }: DealSummaryPD
                 {t.name}
                 {toN(t.sf) > 0 ? ` — ${toN(t.sf).toLocaleString()} SF` : ""}
                 {t.leaseExpiry ? ` · lease through ${new Date(t.leaseExpiry).getFullYear()}` : ""}
+                {t.isDark ? <Text style={{ color: C.dark, fontFamily: "Helvetica-Bold" }}>{"  · DARK (closed, still paying)"}</Text> : ""}
               </Text>
             ))}
           </View>
@@ -313,8 +315,9 @@ export default function DealSummaryPDF({ deal: d, imgs, logoUrl }: DealSummaryPD
               return (
                 <View key={i} style={{ flexDirection: "row", paddingVertical: 2.5, borderBottomWidth: 0.5, borderBottomColor: "#f5f0e8", borderBottomStyle: "solid" }}>
                   <View style={{ flex: flexW[0], flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ fontSize: 9, color: C.ink }}>{t.name}</Text>
+                    <Text style={{ fontSize: 9, color: t.isDark ? C.dark : C.ink }}>{t.name}</Text>
                     {ig && <Text style={{ fontSize: 7, color: C.olive, fontFamily: "Helvetica-Bold", marginLeft: 2 }}> IG</Text>}
+                    {t.isDark && <Text style={{ fontSize: 7, color: C.dark, fontFamily: "Helvetica-Bold", marginLeft: 2 }}> DARK</Text>}
                   </View>
                   <Text style={{ flex: flexW[1], fontSize: 9, color: C.body, textAlign: "right" }}>{toN(t.sf) > 0 ? toN(t.sf).toLocaleString() : "—"}</Text>
                   <Text style={{ flex: flexW[2], fontSize: 9, color: C.body, textAlign: "right" }}>{`$${toN(t.annualRent).toLocaleString()}`}</Text>
