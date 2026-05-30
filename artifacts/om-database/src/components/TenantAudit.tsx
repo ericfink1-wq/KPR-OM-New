@@ -1,7 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
 import type { Deal } from "../lib/idb";
-import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "../lib/idb";
-import { tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant, isVacant } from "../lib/utils";
+import { saveTenantDecision, removeTenantDecision } from "../lib/idb";
+import {
+  tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant, isVacant,
+  fetchServerDecisions, saveServerDecision, deleteServerDecision, applyServerMerges,
+} from "../lib/utils";
 
 interface Props {
   deals: Deal[];
@@ -40,24 +43,25 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
   const [dismissed, setDismissed] = useState<string[]>(loadDismissed);
   const [showRestored, setShowRestored] = useState(false);
 
-  // On mount: load dismissed decisions from IndexedDB, merge with localStorage,
-  // and migrate any localStorage-only items into IDB for cross-device persistence.
+  // On mount: load decisions from the DATABASE (source of truth) so merges and
+  // dismisses persist across browsers/devices and never re-prompt. Migrate any
+  // legacy localStorage-only dismisses up to the server once.
   useEffect(() => {
-    getTenantDecisions().then(decisions => {
-      const idbDismissed = decisions.filter(d => d.type === "dismiss").map(d => d.id);
+    fetchServerDecisions().then(decisions => {
+      applyServerMerges(decisions); // hydrate confirmed merges into the alias map
+      const serverDismissed = decisions.filter(d => d.type === "dismiss").map(d => d.id);
       const lsItems = loadDismissed();
-      const merged = Array.from(new Set([...idbDismissed, ...lsItems]));
-      // Migrate localStorage-only entries into IDB
+      const all = Array.from(new Set([...serverDismissed, ...lsItems]));
+      // Push any local-only dismisses up to the DB.
       for (const id of lsItems) {
-        if (!idbDismissed.includes(id)) {
+        if (!serverDismissed.includes(id)) {
           const parts = id.split("||");
-          saveTenantDecision({ id, type: "dismiss", nameA: parts[0] ?? id, nameB: parts[1] ?? "" }).catch(() => { /**/ });
+          saveServerDecision({ id, type: "dismiss", nameA: parts[0] ?? id, nameB: parts[1] ?? "" });
         }
       }
-      if (merged.length !== lsItems.length || merged.some((v, i) => v !== lsItems[i])) {
-        setDismissed(merged);
-        saveDismissed(merged);
-      }
+      setDismissed(all);
+      saveDismissed(all);
+      setAliasVersion(v => v + 1); // reflect hydrated merges in the grouping
     }).catch(() => { /**/ });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -161,6 +165,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
     const next = dismissed.includes(id) ? dismissed : [...dismissed, id];
     setDismissed(next);
     saveDismissed(next);
+    saveServerDecision({ id, type: "dismiss", nameA: s.a.key, nameB: s.b.key }); // permanent
     saveTenantDecision({ id, type: "dismiss", nameA: s.a.key, nameB: s.b.key }).catch(() => { /**/ });
   };
   const restoreDismissed = (s: { a: Group; b: Group }) => {
@@ -168,6 +173,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
     const next = dismissed.filter(d => d !== id);
     setDismissed(next);
     saveDismissed(next);
+    deleteServerDecision(id); // permanent
     removeTenantDecision(id).catch(() => { /**/ });
   };
 

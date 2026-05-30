@@ -1,5 +1,6 @@
 export * from "./deals";
 export * from "./tenantAliases";
+export * from "./tenantDecisions";
 export * from "./tenantIndex";
 export * from "./compsIndex";
 export * from "./snapshots";

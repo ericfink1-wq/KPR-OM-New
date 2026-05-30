@@ -181,12 +181,63 @@ async function _seedFromIdb() {
 
 Promise.resolve().then(rebuildUserAliases).then(_seedFromIdb);
 
+// ── Server-persisted tenant decisions (source of truth, DB-backed) ────────────
+export interface TenantDecisionRecord {
+  id: string;
+  type: "merge" | "dismiss";
+  nameA?: string | null;
+  nameB?: string | null;
+  canonical?: string | null;
+  variants?: string[] | null;
+}
+
+export async function fetchServerDecisions(): Promise<TenantDecisionRecord[]> {
+  try {
+    const r = await fetch("/api/tenant-decisions", { credentials: "include" });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j) ? (j as TenantDecisionRecord[]) : [];
+  } catch { return []; }
+}
+
+export function saveServerDecision(d: TenantDecisionRecord): void {
+  fetch("/api/tenant-decisions", {
+    method: "POST", credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(d),
+  }).catch(() => { /* non-fatal */ });
+}
+
+export function deleteServerDecision(id: string): void {
+  fetch(`/api/tenant-decisions/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "include" }).catch(() => { /**/ });
+}
+
+// Hydrate in-memory merges from server decisions (called on app/audit load) so
+// confirmed merges apply across the app on any browser/device.
+export function applyServerMerges(decisions: TenantDecisionRecord[]): void {
+  let changed = false;
+  for (const d of decisions) {
+    if (d.type !== "merge") continue;
+    if (!_userMerges.find(m => m.id === d.id)) {
+      _userMerges.push({ id: d.id, canonical: d.canonical ?? d.nameA ?? "", variants: d.variants ?? [] });
+      changed = true;
+    }
+  }
+  if (changed) {
+    rebuildUserAliases();
+    try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
+  }
+}
+
 export function addUserMerge(merge: UserMerge): void {
   _userMerges = _userMerges.filter(m => m.id !== merge.id);
   _userMerges.push(merge);
   rebuildUserAliases();
   try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
   saveTenantDecision({ id: merge.id, type: "merge", nameA: merge.canonical, nameB: "", variants: merge.variants }).catch(() => { /**/ });
+  // Permanent DB record of the decision (loaded back on any device).
+  saveServerDecision({ id: merge.id, type: "merge", nameA: merge.canonical, canonical: merge.canonical, variants: merge.variants });
+  // Aliases drive backend canonicalisation of the tenant index (analytics).
   const entries = merge.variants.map(v => ({
     rawName: v,
     canonicalName: merge.canonical,
@@ -206,6 +257,7 @@ export function removeUserMerge(id: string): void {
   rebuildUserAliases();
   try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
   removeTenantDecision(id).catch(() => { /**/ });
+  deleteServerDecision(id);
   if (m) {
     for (const v of m.variants) {
       fetch(`/api/aliases/${encodeURIComponent(v)}`, { method: "DELETE", credentials: "include" }).catch(() => {});
