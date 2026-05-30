@@ -249,8 +249,14 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         {label}{arrow(k)}
                       </th>
                     ))}
-                    {/* Empty header for ignore button column */}
-                    <th style={{ width:40, padding:"6px 6px" }} />
+                    {/* Ignore button column — sticky right */}
+                    <th style={{
+                      width:40, padding:"6px 6px",
+                      position:"sticky", right:0, zIndex:3,
+                      background:"#fff",
+                      borderLeft:"1px solid #efe8da",
+                      boxShadow:"-6px 0 6px -6px rgba(0,0,0,0.12)",
+                    }} />
                   </tr>
                 </thead>
                 <tbody>
@@ -270,8 +276,16 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                           opacity: ignored ? 0.35 : 1,
                           transition: "opacity 0.15s",
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.background = owned ? "#eaf5e2" : "#faf7f0")}
-                        onMouseLeave={e => (e.currentTarget.style.background = ignored ? "transparent" : owned ? "#f3faef" : "transparent")}
+                        onMouseEnter={e => {
+                          const bg = owned ? "#eaf5e2" : "#faf7f0";
+                          e.currentTarget.style.background = bg;
+                          (e.currentTarget.lastElementChild as HTMLElement).style.background = bg;
+                        }}
+                        onMouseLeave={e => {
+                          const bg = ignored ? "transparent" : owned ? "#f3faef" : "transparent";
+                          e.currentTarget.style.background = bg;
+                          (e.currentTarget.lastElementChild as HTMLElement).style.background = bg || "#fff";
+                        }}
                       >
                         <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
                           {r.deal.propertyName || "Untitled"}
@@ -286,9 +300,15 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
                         <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
-                        {/* Ignore button — stopPropagation so it doesn't open the deal */}
+                        {/* Ignore button — sticky right, stopPropagation so it doesn't open the deal */}
                         <td
-                          style={{ padding:"4px 6px", width:40, textAlign:"center" }}
+                          style={{
+                            padding:"4px 6px", width:40, textAlign:"center",
+                            position:"sticky", right:0, zIndex:2,
+                            background: owned ? "#f3faef" : "#fff",
+                            borderLeft:"1px solid #efe8da",
+                            boxShadow:"-6px 0 6px -6px rgba(0,0,0,0.10)",
+                          }}
                           onClick={e => e.stopPropagation()}
                         >
                           <button
