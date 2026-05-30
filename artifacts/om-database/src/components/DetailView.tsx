@@ -76,6 +76,45 @@ function ReconBadge({ msg }: { msg: string }) {
   );
 }
 
+// Box that starts collapsed to about a normal card's height with a "click to
+// enlarge" hover hint; on click it expands to show everything, and the child
+// renders at a larger text size (it receives `expanded`).
+function CollapsibleBox({ collapsedHeight = 150, fadeColor = "#faf7f0", children }: {
+  collapsedHeight?: number;
+  fadeColor?: string;
+  children: (expanded: boolean) => React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={() => { if (!expanded) setExpanded(true); }}
+      style={{ position:"relative", marginBottom:12, cursor: expanded ? "default" : "zoom-in" }}
+    >
+      <div style={{ maxHeight: expanded ? undefined : collapsedHeight, overflow:"hidden", borderRadius:8 }}>
+        {children(expanded)}
+      </div>
+      {!expanded && (
+        <div style={{ position:"absolute", inset:0, borderRadius:8, display:"flex", alignItems:"flex-end", justifyContent:"center", paddingBottom:8, background:`linear-gradient(to bottom, rgba(0,0,0,0) 48%, ${fadeColor})` }}>
+          <span style={{ fontSize:10, fontWeight:700, letterSpacing:"0.06em", color:"#7d766a", background:"#fff", border:"1px solid #e7e0d2", borderRadius:20, padding:"3px 11px", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", opacity: hover ? 1 : 0.8 }}>
+            ⤢ Click to enlarge
+          </span>
+        </div>
+      )}
+      {expanded && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+          style={{ position:"absolute", top:10, right:12, background:"#fff", border:"1px solid #e7e0d2", borderRadius:6, fontSize:10, fontWeight:600, color:"#7d766a", cursor:"pointer", padding:"3px 9px", fontFamily:"'Inter',sans-serif" }}
+        >
+          Collapse ⤡
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Compact inline-editable text row (label left, value right) for free-text deal
 // fields like Seller. Module-level so its edit state survives parent re-renders.
 function EditableTextRow({ label, value, placeholder, onSave }: {
@@ -1762,26 +1801,30 @@ ${text.slice(0, 40000)}`;
 
       {/* Deal score */}
       {(d.dealScore || d.analysisStale) && (
-        <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
-            <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
-            {d.dealScore && <ScoreBadge score={d.dealScore}/>}
-            {d.analysisStale && <StaleBadge />}
-          </div>
-          {d.dealScore && <>
-            <p style={{ fontSize:12, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{d.dealScore.rationale}</p>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <div>
-                <div style={{ fontSize:8, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
-                {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {s}</div>)}
-              </div>
-              <div>
-                <div style={{ fontSize:8, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
-                {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11, color:"#7d766a", marginBottom:2 }}>› {r}</div>)}
-              </div>
+        <CollapsibleBox collapsedHeight={150} fadeColor="#faf7f0">
+          {(expanded) => { const fs = expanded ? 1.35 : 1; return (
+          <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
+            <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+              <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
+              {d.dealScore && <ScoreBadge score={d.dealScore}/>}
+              {d.analysisStale && <StaleBadge />}
             </div>
-          </>}
-        </div>
+            {d.dealScore && <>
+              <p style={{ fontSize:12*fs, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{d.dealScore.rationale}</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div>
+                  <div style={{ fontSize:8*fs, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
+                  {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› {s}</div>)}
+                </div>
+                <div>
+                  <div style={{ fontSize:8*fs, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
+                  {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› {r}</div>)}
+                </div>
+              </div>
+            </>}
+          </div>
+          ); }}
+        </CollapsibleBox>
       )}
 
 
@@ -1815,18 +1858,22 @@ ${text.slice(0, 40000)}`;
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return (allRedFlags.length > 0 || d.analysisStale) && (
-          <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-            <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
-              <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
-              {d.analysisStale && <StaleBadge />}
-            </div>
-            {allRedFlags.map((f,i) => (
-              <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<allRedFlags.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
-                <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262615":f.severity==="medium"?"#f9731615":"#eab30815", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#ea6000":"#b08000", fontWeight:600, flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
-                <span style={{ fontSize:11, color:"#5c5f57" }}>{f.description}</span>
+          <CollapsibleBox collapsedHeight={150} fadeColor="#faf7f0">
+            {(expanded) => { const fs = expanded ? 1.35 : 1; return (
+            <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px" }}>
+              <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+                <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
+                {d.analysisStale && <StaleBadge />}
               </div>
-            ))}
-          </div>
+              {allRedFlags.map((f,i) => (
+                <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<allRedFlags.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
+                  <span style={{ fontSize:9*fs, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262615":f.severity==="medium"?"#f9731615":"#eab30815", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#ea6000":"#b08000", fontWeight:600, flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
+                  <span style={{ fontSize:11*fs, color:"#5c5f57" }}>{f.description}</span>
+                </div>
+              ))}
+            </div>
+            ); }}
+          </CollapsibleBox>
         );
       })()}
 
@@ -1885,6 +1932,9 @@ ${text.slice(0, 40000)}`;
         );
       })()}
 
+      {/* Key assumptions — above My Underwriting */}
+      <div id="section-assumptions"><KeyAssumptions deal={d} /></div>
+
       {/* My Underwriting */}
       <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
 
@@ -1892,9 +1942,6 @@ ${text.slice(0, 40000)}`;
       <CompBenchmarkCard deal={d} />
 
       <ClosingCostsCard deal={d} />
-
-      {/* Key assumptions */}
-      <div id="section-assumptions"><KeyAssumptions deal={d} /></div>
 
       {/* Cash flow */}
       {(d.cashFlowProjection||[]).length > 0 && (
@@ -1982,8 +2029,6 @@ ${text.slice(0, 40000)}`;
                 </div>
               );
             })()}
-
-            {owned && <TermSheetImport deal={d} onUpdate={onUpdate}/>}
 
             {/* Acquisition */}
             <div style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
@@ -2102,6 +2147,7 @@ ${text.slice(0, 40000)}`;
         return (
           <div style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Financing & Debt</div>
+            <TermSheetImport deal={d} onUpdate={onUpdate}/>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
               <Group title="Lender & Loan"/>
               {f({ label:"Lender / Servicer", field:"debtLender", placeholder:"e.g. JPMorgan, Fannie Mae" })}
