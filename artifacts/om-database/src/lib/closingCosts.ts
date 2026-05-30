@@ -1326,6 +1326,81 @@ export function getLocalityGroups(jurisdiction: JurisdictionRates): LocalityGrou
   return Array.from(groups.entries()).map(([group, options]) => ({ group, options }));
 }
 
+// ---------------------------------------------------------------------------
+// Auto-select the local transfer-tax locality from the property's city/state.
+//
+// Local RTT is set by the municipality (and, for a few states, the county) the
+// property sits in — a fixed jurisdictional fact, not a guess. We map the city
+// to the matching dropdown option (altGroup → altLabel) ONLY where the city
+// unambiguously determines the answer (the named city IS the jurisdiction, or
+// is the unmistakable principal city of the named county). Anything not listed
+// falls back to the group's default and the user picks it. Keys are lowercased.
+// ---------------------------------------------------------------------------
+const CITY_LOCALITY: Record<string, Array<{ group: string; label: string; cities: string[] }>> = {
+  PA: [
+    { group: "PA-local", label: "Philadelphia",        cities: ["philadelphia"] },
+    { group: "PA-local", label: "Pittsburgh/Allegheny", cities: ["pittsburgh"] },
+    { group: "PA-local", label: "Scranton/Lackawanna",  cities: ["scranton"] },
+    { group: "PA-local", label: "Harrisburg/Dauphin",   cities: ["harrisburg"] },
+    { group: "PA-local", label: "Allentown/Lehigh",     cities: ["allentown"] },
+  ],
+  NY: [
+    { group: "NY-local", label: "NYC",     cities: ["new york", "new york city", "manhattan", "brooklyn", "bronx", "queens", "staten island"] },
+    { group: "NY-local", label: "Yonkers", cities: ["yonkers"] },
+  ],
+  IL: [
+    { group: "IL-city", label: "Chicago",  cities: ["chicago"] },
+    { group: "IL-city", label: "Evanston", cities: ["evanston"] },
+    { group: "IL-city", label: "Oak Park", cities: ["oak park"] },
+  ],
+  CA: [
+    { group: "CA-city", label: "Los Angeles",   cities: ["los angeles"] },
+    { group: "CA-city", label: "San Francisco", cities: ["san francisco"] },
+    { group: "CA-city", label: "Oakland",        cities: ["oakland"] },
+    { group: "CA-city", label: "Berkeley",       cities: ["berkeley"] },
+    { group: "CA-city", label: "Santa Monica",   cities: ["santa monica"] },
+    { group: "CA-city", label: "Culver City",    cities: ["culver city"] },
+    { group: "CA-city", label: "West Hollywood", cities: ["west hollywood"] },
+    { group: "CA-city", label: "San Jose",       cities: ["san jose"] },
+    { group: "CA-city", label: "Palo Alto",      cities: ["palo alto"] },
+    { group: "CA-city", label: "Mountain View",  cities: ["mountain view"] },
+    { group: "CA-city", label: "Richmond",       cities: ["richmond"] },
+    { group: "CA-city", label: "Stockton",       cities: ["stockton"] },
+  ],
+  MD: [
+    { group: "MD-county", label: "Baltimore City",              cities: ["baltimore"] },
+    { group: "MD-county", label: "Baltimore Co./Howard Co.",    cities: ["towson", "dundalk", "columbia", "ellicott city"] },
+    { group: "MD-county", label: "Prince George's County",      cities: ["upper marlboro", "bowie", "hyattsville", "college park", "greenbelt", "laurel"] },
+    { group: "MD-county", label: "Anne Arundel/Montgomery/etc.", cities: ["annapolis", "rockville", "bethesda", "silver spring", "gaithersburg", "germantown"] },
+  ],
+  NV: [
+    { group: "NV-county", label: "Clark County (Las Vegas)", cities: ["las vegas", "north las vegas", "henderson", "paradise", "spring valley", "enterprise", "summerlin"] },
+    { group: "NV-county", label: "Washoe County (Reno)",     cities: ["reno", "sparks"] },
+  ],
+  WA: [
+    { group: "WA-county", label: "King County (Seattle)",      cities: ["seattle", "bellevue", "redmond", "kirkland", "renton", "kent", "federal way", "auburn", "sammamish", "shoreline"] },
+    { group: "WA-county", label: "Pierce/Snohomish/Spokane",   cities: ["tacoma", "everett", "spokane", "lakewood", "puyallup", "marysville", "edmonds", "lynnwood"] },
+  ],
+  NC: [
+    { group: "NC-county", label: "Orange County",     cities: ["chapel hill", "carrboro", "hillsborough"] },
+    { group: "NC-county", label: "Chatham County",    cities: ["pittsboro", "siler city"] },
+    { group: "NC-county", label: "Mecklenburg County", cities: ["charlotte", "matthews", "huntersville", "cornelius", "davidson", "mint hill", "pineville"] },
+  ],
+};
+
+/** Auto-detected locality selections ({ altGroup: altLabel }) for a property's city/state. */
+export function autoLocalities(stateAbbr?: string | null, city?: string | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!stateAbbr || !city) return out;
+  const st = stateAbbr.trim().toUpperCase();
+  const c = city.split(",")[0].trim().toLowerCase();
+  if (!c) return out;
+  for (const e of CITY_LOCALITY[st] ?? []) {
+    if (e.cities.includes(c)) out[e.group] = e.label;
+  }
+  return out;
+}
+
 export function calculateClosingCosts(jurisdiction: JurisdictionRates, price: number, loan: number, opts: CalcOptions | boolean = {}): ClosingCostBreakdown {
   const resolvedOpts: CalcOptions = typeof opts === "boolean" ? { includeEntityTaxes: opts } : opts;
   const { includeEntityTaxes = false, localities = {}, residential = false } = resolvedOpts;

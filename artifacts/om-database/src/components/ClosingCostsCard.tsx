@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Deal } from "../lib/idb";
 import {
-  getJurisdiction, calculateClosingCosts, formatRate, getLocalityGroups,
+  getJurisdiction, calculateClosingCosts, formatRate, getLocalityGroups, autoLocalities,
   DEFAULT_LTV, SPLITS_SOURCE, FIDELITY_SOURCE_URL,
 } from "../lib/closingCosts";
 
@@ -25,7 +25,11 @@ export default function ClosingCostsCard({ deal }: Props) {
   const [priceInput, setPriceInput] = useState<string>(defaultPrice ? Math.round(defaultPrice).toLocaleString("en-US") : "");
   const [loanInput, setLoanInput] = useState<string>(defaultLoan ? Math.round(defaultLoan).toLocaleString("en-US") : "");
   const [entitySale, setEntitySale] = useState(false);
-  const [localities, setLocalities] = useState<Record<string, string>>({});
+  // Auto-pick the local transfer-tax locality from the property's city/state.
+  const autoPicked = useMemo(() => autoLocalities(deal.state, deal.city), [deal.state, deal.city]);
+  const [localities, setLocalities] = useState<Record<string, string>>(autoPicked);
+  // Re-detect when switching to a different property.
+  useEffect(() => { setLocalities(autoLocalities(deal.state, deal.city)); }, [deal.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const price = Number(priceInput.replace(/,/g, "")) || 0;
   const loan  = Number(loanInput.replace(/,/g, ""))  || 0;
@@ -85,6 +89,9 @@ export default function ClosingCostsCard({ deal }: Props) {
       {/* Locality picker(s) — for states with county/city transfer-tax options */}
       {localityGroups.map((g) => {
         const current = localities[g.group] ?? g.options.find((o) => o.isDefault)?.label ?? g.options[0]?.label ?? "";
+        const autoLabel = autoPicked[g.group];
+        const isAuto = !!autoLabel && current === autoLabel;
+        const cityState = [deal.city, deal.state].filter(Boolean).join(", ");
         return (
           <label key={g.group} style={{ display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
             County / City (local transfer tax)
@@ -92,8 +99,12 @@ export default function ClosingCostsCard({ deal }: Props) {
               style={{ display: "block", width: "100%", fontSize: 13, padding: "7px 10px", border: "1px solid #e3dccd", borderRadius: 6, color: "#383a37", background: "#fafaf8", marginTop: 4, fontFamily: "'Inter',sans-serif", boxSizing: "border-box" }}>
               {g.options.map((o) => <option key={o.label} value={o.label}>{o.label}{o.isDefault ? " (default)" : ""}</option>)}
             </select>
-            <span style={{ display: "block", fontSize: 9.5, color: "#a69e91", fontWeight: 400, textTransform: "none", letterSpacing: 0, marginTop: 3 }}>
-              Only the selected locality's local tax is applied — pick the property's county/city.
+            <span style={{ display: "block", fontSize: 9.5, color: isAuto ? "#3f7a1f" : "#a69e91", fontWeight: 400, textTransform: "none", letterSpacing: 0, marginTop: 3 }}>
+              {isAuto
+                ? `✓ Auto-selected from the property address (${cityState}). Change it if the property sits in a different taxing jurisdiction.`
+                : autoLabel
+                  ? `Auto-detected ${autoLabel} from ${cityState}, but you've overridden it.`
+                  : `Couldn't determine the locality from the address${cityState ? ` (${cityState})` : ""} — pick the property's county/city. Only the selected locality's local tax is applied.`}
             </span>
           </label>
         );
