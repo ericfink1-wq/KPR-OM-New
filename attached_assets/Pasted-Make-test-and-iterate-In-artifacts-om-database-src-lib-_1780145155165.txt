@@ -1,0 +1,39 @@
+Make, test, and iterate. In artifacts/om-database/src/lib/closingCosts.ts, add the Western title schedules and apply them to the remaining states (this completes all 50 states + DC).
+
+1) Immediately BEFORE the line "export const CLOSING_COSTS_BY_STATE", add these two constants:
+
+const REP_TITLE_WEST_COMPETITIVE: TitleSchedule = {
+  source: "Representative regressive schedule — competitive (file-and-use) Western/Mountain state with no single filed rate (region is heterogeneous; HI runs higher, SD/ND lower). Confirm underwriter quote for live deals.",
+  promulgated: false,
+  minPremium: 175,
+  brackets: [
+    { over: 0,        base: 0,     per1000: 5.50 },
+    { over: 100000,   base: 550,   per1000: 4.00 },
+    { over: 500000,   base: 2150,  per1000: 3.25 },
+    { over: 1000000,  base: 3775,  per1000: 2.75 },
+    { over: 5000000,  base: 14775, per1000: 2.40 },
+    { over: 10000000, base: 26775, per1000: 2.10 },
+  ],
+};
+
+const REP_TITLE_NM: TitleSchedule = {
+  source: "New Mexico OSI promulgated single statewide rate (historically high). Representative curve calibrated to NM's promulgated level — confirm exact OSI Appendix A basic-premium brackets for live deals.",
+  promulgated: false,
+  minPremium: 200,
+  brackets: [
+    { over: 0,        base: 0,     per1000: 6.00 },
+    { over: 100000,   base: 600,   per1000: 4.40 },
+    { over: 500000,   base: 2360,  per1000: 3.50 },
+    { over: 1000000,  base: 4110,  per1000: 3.00 },
+    { over: 5000000,  base: 16110, per1000: 2.60 },
+    { over: 10000000, base: 29110, per1000: 2.30 },
+  ],
+};
+
+2) Add `titleSchedule: REP_TITLE_WEST_COMPETITIVE,` after the titleInsuranceParty line in each of: CA, OR, NV, AZ, UT, CO, ID, MT, WY, AK, HI, SD, ND, OK, WA.
+
+3) Add `titleSchedule: REP_TITLE_NM,` after the titleInsuranceParty line in the NM block.
+
+Don't change anything else in those blocks; don't touch the six exact states (NJ/NY/PA/TX/FL/OH) or any already-done state.
+
+TEST: a CA or AZ deal computes ~$3,775 title on $1M and ~$14,775 on $5M (tagged representative); an NM deal computes ~$4,110 on $1M (slightly higher); a WA deal now shows a title schedule too. Every state in the dropdown now shows a sliding/regressive title rate — none on flat 0.5%. Card works desktop + mobile; PDF builds; the six exact states unchanged.
