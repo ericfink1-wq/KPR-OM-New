@@ -167,6 +167,7 @@ export interface Tenant {
   creditRating?: string | null;
   isAnchor?: boolean;
   isNAP?: boolean | null;
+  isDark?: boolean | null;                 // "dark" store — closed/not operating but still paying rent under the lease
   assumptionNote?: string | null;
   salesNotes?: string | null;
 }

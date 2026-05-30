@@ -104,6 +104,7 @@ REQUIRED SCHEMA:
       "assumptionNote": "string or null — any footnote/assumption for this tenant",
       "isAnchor": "true|false",
       "isNAP": "true if this tenant is on an adjacent parcel NOT part of this sale/ownership (marked NAP, Not A Part, or outparcel on the site plan). false or null otherwise.",
+      "isDark": "true if this tenant is a 'dark' store — they still hold the lease and are paying rent, but the store is closed / no longer operating (look for words like 'dark', 'closed but paying', 'gone dark', 'not operating', 'vacated but obligated', 'lease in place, store closed'). false or null otherwise. Do NOT mark a unit dark just because it is vacant with no tenant — dark specifically means a paying tenant whose store is closed.",
       "originalLeaseDate": "string or null",
       "remainingTermYears": "number or null"
     }
@@ -284,7 +285,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
-      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, remainingTermYears}. " +
+      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.\n\nOM TEXT:\n" + truncatedText;
     try {
       const cont = await callExtract(contPrompt);
@@ -335,7 +336,7 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>): Prom
     tenants: t.map((x) => ({
       name: x.name, sf: x.sf, rentPerSF: x.rentPerSF, annualRent: x.annualRent,
       leaseExpiry: x.leaseExpiry, remainingTermYears: x.remainingTermYears,
-      isAnchor: x.isAnchor, isNAP: x.isNAP, creditRating: x.creditRating,
+      isAnchor: x.isAnchor, isNAP: x.isNAP, isDark: x.isDark, creditRating: x.creditRating,
       leaseType: x.leaseType, rentSchedule: x.rentSchedule,
     })),
   };

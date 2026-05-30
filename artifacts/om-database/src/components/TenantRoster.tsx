@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Info } from "lucide-react";
+import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown } from "../lib/idb";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
@@ -240,6 +240,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
 
   let rows = tenants.slice();
   if (quick==="anchors") rows = rows.filter(t => t.isAnchor);
+  else if (quick==="dark") rows = rows.filter(t => t.isDark);
   else if (quick==="expiring") rows = rows.filter(t => n(t.remainingTermYears) != null && n(t.remainingTermYears)! < 2);
   else if (quick==="footnotes") rows = rows.filter(t => t.assumptionNote);
   if (q.trim()) { const s = q.toLowerCase(); rows = rows.filter(t => (t.name||"").toLowerCase().includes(s)); }
@@ -291,6 +292,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
         </div>
         <div style={{ display:"flex", gap:7, alignItems:"center", flexWrap:"wrap" }}>
           {chip("all","All")}{chip("anchors","Anchors")}{chip("expiring","Expiring ≤2yr")}
+          {tenants.some(t => t.isDark) && chip("dark","Dark")}
           {tenants.some(t => t.assumptionNote) && chip("footnotes","Has footnote")}
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Filter tenants…"
             style={{ fontSize:12, padding:"5px 10px", border:"1px solid #e3dccd", borderRadius:7, color:"#383a37", background:"#fff", width:150, fontFamily:"'Inter',sans-serif" }}/>
@@ -307,7 +309,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           </thead>
           <tbody>
             {rows.map((t,i) => (
-              <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1 }}>
+              <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1, background: t.isDark && !isVacantRow(t) ? "#fbf1e4" : undefined }}>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
                   {isVacantRow(t) ? (
                     <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
@@ -316,15 +318,31 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       <span
                         onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
                         title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
-                        style={{ color:"#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px", whiteSpace:"nowrap" }}>
+                        style={{ color: t.isDark ? "#9a5b12" : "#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px", whiteSpace:"nowrap" }}>
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
                       {isNAPTenant(t) && (
                         <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="Not A Part — this tenant owns their parcel and pays no rent to the landlord">NAP</span>
                       )}
+                      {t.isDark && (
+                        <button
+                          onClick={onUpdateTenant ? (e) => { e.stopPropagation(); onUpdateTenant(tenants.indexOf(t), { isDark: false }); } : undefined}
+                          title={onUpdateTenant ? "Dark store — closed/not operating but still paying rent. Click to unmark." : "Dark store — closed/not operating but still paying rent."}
+                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#fff", background:"#3a342b", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.04em", border:"none", cursor:onUpdateTenant?"pointer":"default" }}>
+                          <Moon size={9} strokeWidth={2.25} /> DARK
+                        </button>
+                      )}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
+                      {!t.isDark && onUpdateTenant && !isVacantRow(t) && !isNAPTenant(t) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onUpdateTenant(tenants.indexOf(t), { isDark: true }); }}
+                          title="Mark as a dark store (closed but still paying rent)"
+                          style={{ display:"inline-flex", alignItems:"center", background:"transparent", border:"none", cursor:"pointer", color:"#cabfa9", padding:"1px 2px", flexShrink:0 }}>
+                          <Moon size={12} strokeWidth={1.75} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </td>
