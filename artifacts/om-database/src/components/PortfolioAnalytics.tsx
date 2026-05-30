@@ -319,7 +319,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     setError(null);
     let url = "/api/analytics/portfolio";
     if (dealIds && dealIds.length > 0) {
-      url += "?" + dealIds.map(id => `dealId[]=${encodeURIComponent(id)}`).join("&");
+      // Send repeated dealId= (no brackets) so it parses to an array under both
+      // Express 5's default "simple" query parser and the "extended" (qs) parser.
+      url += "?" + dealIds.map(id => `dealId=${encodeURIComponent(id)}`).join("&");
     }
     fetch(url, { credentials: "include" })
       .then(r => {

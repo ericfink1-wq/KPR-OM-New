@@ -94,7 +94,8 @@ export default function RolloverYearView({ year, filterDealIds, onBack }: Props)
     setError(null);
     let url = `/api/analytics/rollover-detail?year=${encodeURIComponent(year)}`;
     if (filterDealIds && filterDealIds.length > 0) {
-      url += "&" + filterDealIds.map(id => `dealId[]=${encodeURIComponent(id)}`).join("&");
+      // No brackets: parses to an array under both the "simple" and "extended" query parsers.
+      url += "&" + filterDealIds.map(id => `dealId=${encodeURIComponent(id)}`).join("&");
     }
     fetch(url, { credentials: "include" })
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<RolloverDetail>; })
