@@ -166,6 +166,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [addQ, setAddQ] = useState("");
   const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string; market: string | null; saleDate: string | null }>>([]);
   const [sugsLoading, setSugsLoading] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds })); } catch { /* ignore */ }
@@ -200,25 +201,50 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     : (deal.askingPrice && deal.totalSF ? Math.round((deal.askingPrice as number) / (deal.totalSF as number)) : null);
 
   useEffect(() => {
+    let cancelled = false;
+    const payload = JSON.stringify({
+      dealId: deal.id, market: deal.market ?? null,
+      state: (deal as unknown as Record<string, unknown>).state ?? null,
+      propertyType: (deal as unknown as Record<string, unknown>).propertyType ?? null,
+      sf: deal.totalSF ?? null,
+      capRate: deal.capRate ?? null, pricePerSf: subjectPsf ?? null,
+      excludeOmComps: excludeOm,
+      excludeCompIds: excludeIds,
+      includeCompIds: includeIds,
+    });
     setLoading(true); setErr(null); setBm(null);
-    fetch("/api/comps/benchmark", {
-      method: "POST", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        dealId: deal.id, market: deal.market ?? null,
-        state: (deal as unknown as Record<string, unknown>).state ?? null,
-        propertyType: (deal as unknown as Record<string, unknown>).propertyType ?? null,
-        sf: deal.totalSF ?? null,
-        capRate: deal.capRate ?? null, pricePerSf: subjectPsf ?? null,
-        excludeOmComps: excludeOm,
-        excludeCompIds: excludeIds,
-        includeCompIds: includeIds,
-      }),
-    })
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<BmResult>; })
-      .then(d => { setBm(d); setLoading(false); })
-      .catch(e => { setErr(e.message ?? "Failed"); setLoading(false); });
-  }, [deal.id, excludeOm, excludeIds, includeIds]);
+
+    async function run(attempt: number): Promise<void> {
+      try {
+        const r = await fetch("/api/comps/benchmark", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+        if (cancelled) return;
+        const transient = r.status === 502 || r.status === 503 || r.status === 504;
+        if (transient && attempt === 0) {
+          await new Promise(res => setTimeout(res, 1200));
+          return run(1);
+        }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = await r.json() as BmResult;
+        if (cancelled) return;
+        setBm(d); setLoading(false);
+      } catch (e) {
+        if (cancelled) return;
+        if (attempt === 0) {
+          await new Promise(res => setTimeout(res, 1200));
+          return run(1);
+        }
+        setErr((e instanceof Error ? e.message : String(e)) || "Failed");
+        setLoading(false);
+      }
+    }
+
+    run(0);
+    return () => { cancelled = true; };
+  }, [deal.id, excludeOm, excludeIds, includeIds, retryKey]);
 
   const fmtD = (s: string | null) => {
     if (!s) return "—";
@@ -304,7 +330,15 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       </div>
 
       {loading && <div style={{ fontSize: 12, color: "#a89f8f", padding: "12px 0" }}>Computing benchmark…</div>}
-      {err && <div style={{ fontSize: 12, color: "#dc2626" }}>Could not load benchmark: {err}</div>}
+      {err && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12, color: "#dc2626" }}>
+          <span>Could not load benchmark: {err}</span>
+          <button onClick={() => setRetryKey(k => k + 1)}
+            style={{ background: "transparent", border: "1px solid #dc2626", color: "#dc2626", padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", flexShrink: 0 }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {bm && (() => {
         const cv = capVerdict(bm.capDeltaBps);
