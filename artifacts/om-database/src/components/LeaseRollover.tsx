@@ -32,10 +32,67 @@ interface BucketDatum {
   nearTerm: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Robust date parser — handles:
+//   YYYY-MM-DD  (ISO)
+//   YYYY-MM     (end of that month)
+//   MM/DD/YYYY  M/D/YY  M/D/YYYY
+//   Mon-YYYY    Mon YYYY  (e.g. "Jan-2030", "January 2030") → end of month
+//   YYYY        (bare year → Dec 31)
+// ---------------------------------------------------------------------------
+const MONTH_MAP: Record<string, number> = {
+  jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
+  jul:6, aug:7, sep:8, oct:9, nov:10, dec:11,
+};
+
+function parseLeaseDate(raw: string | null | undefined): Date | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  if (!s) return null;
+
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = new Date(s + "T12:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // YYYY-MM → end of that month
+  if (/^\d{4}-\d{2}$/.test(s)) {
+    const [y, m] = s.split("-").map(Number);
+    return new Date(y, m, 0, 12, 0, 0); // day 0 = last day of month m
+  }
+
+  // MM/DD/YYYY or M/D/YY or M/D/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) {
+    const [mo, d, y] = s.split("/").map(Number);
+    const fullY = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+    const dt = new Date(fullY, mo - 1, d, 12, 0, 0);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  // Mon-YYYY or Mon YYYY (e.g. "Jan-2030", "January 2030")
+  const monYear = s.match(/^([A-Za-z]{3,9})[-\s](\d{4})$/);
+  if (monYear) {
+    const key = monYear[1].toLowerCase().slice(0, 3);
+    const mon = MONTH_MAP[key];
+    const yr = parseInt(monYear[2], 10);
+    if (mon !== undefined && !isNaN(yr)) {
+      return new Date(yr, mon + 1, 0, 12, 0, 0); // last day of that month
+    }
+  }
+
+  // Bare YYYY → Dec 31
+  if (/^\d{4}$/.test(s)) {
+    return new Date(parseInt(s, 10), 11, 31, 12, 0, 0);
+  }
+
+  // Native fallback
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
-  const occupied = tenants.filter(
-    t => !isVacant(t.name)
-  );
+  const occupied = tenants.filter(t => !isVacant(t.name));
   if (occupied.length === 0) return null;
 
   const refDate = tenantsAsOf ? new Date(tenantsAsOf) : new Date();
@@ -44,8 +101,8 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
   const withExpiry = occupied
     .filter(t => t.leaseExpiry)
     .map(t => {
-      const exp = new Date(t.leaseExpiry!);
-      if (isNaN(exp.getTime())) return null;
+      const exp = parseLeaseDate(t.leaseExpiry);
+      if (!exp) return null;
       const remainingYears = Math.max(
         0,
         (exp.getTime() - refDate.getTime()) / (365.25 * 86_400_000)
@@ -142,9 +199,7 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
                 axisLine={false}
                 tickLine={false}
               />
-              {/* Hidden left axis — just for bar scale */}
               <YAxis yAxisId="bar" hide domain={[0, "auto"]} />
-              {/* Right axis — cumulative %, 0–100 */}
               <YAxis
                 yAxisId="cum"
                 orientation="right"

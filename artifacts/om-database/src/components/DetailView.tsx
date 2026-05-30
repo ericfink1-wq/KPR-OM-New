@@ -139,7 +139,7 @@ interface BmStats { median: number; p25: number; p75: number }
 interface BmMatch {
   id: number; name: string | null; market: string | null; saleDate: string | null;
   salePrice: number | null; capRate: number | null; pricePerSf: number | null;
-  sf: number | null; source: "owned" | "broker" | "om";
+  sf: number | null; source: "owned" | "broker" | "om"; excluded: boolean;
 }
 interface BmResult {
   insufficient: boolean; tierLabel: string; relaxed: string[]; excludedInvalid: number;
@@ -152,11 +152,49 @@ interface BmResult {
 }
 
 function CompBenchmarkCard({ deal }: { deal: Deal }) {
+  const lsKey = `bm-overrides-${deal.id}`;
+  const readLs = (): { excludeIds?: number[]; includeIds?: number[] } => {
+    try { return JSON.parse(localStorage.getItem(lsKey) ?? "{}"); } catch { return {}; }
+  };
+
   const [bm, setBm] = useState<BmResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [excludeOm, setExcludeOm] = useState(false);
-  const [showComps, setShowComps] = useState(false);
+  const [excludeIds, setExcludeIds] = useState<number[]>(() => readLs().excludeIds ?? []);
+  const [includeIds, setIncludeIds] = useState<number[]>(() => readLs().includeIds ?? []);
+  const [addQ, setAddQ] = useState("");
+  const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string; market: string | null; saleDate: string | null }>>([]);
+  const [sugsLoading, setSugsLoading] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds })); } catch { /* ignore */ }
+  }, [lsKey, excludeIds, includeIds]);
+
+  const toggleExclude = (id: number) =>
+    setExcludeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const addInclude = (id: number) => {
+    setIncludeIds(prev => prev.includes(id) ? prev : [...prev, id]);
+    setAddQ(""); setSuggestions([]);
+  };
+
+  useEffect(() => {
+    if (!addQ.trim()) { setSuggestions([]); return; }
+    setSugsLoading(true);
+    const t = setTimeout(() => {
+      fetch(`/api/comps?q=${encodeURIComponent(addQ.trim())}`, { credentials: "include" })
+        .then(r => r.json())
+        .then((rows: Array<{ id: number; name: string | null; market: string | null; saleDate: string | null }>) => {
+          const inBm = new Set((bm?.comps ?? []).map(c => c.id));
+          setSuggestions(rows.filter(r => !inBm.has(r.id)).slice(0, 8)
+            .map(r => ({ id: r.id, name: r.name ?? "—", market: r.market, saleDate: r.saleDate })));
+          setSugsLoading(false);
+        })
+        .catch(() => setSugsLoading(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [addQ, bm?.comps]);
 
   const subjectPsf = deal.pricePerSF != null ? deal.pricePerSF
     : (deal.askingPrice && deal.totalSF ? Math.round((deal.askingPrice as number) / (deal.totalSF as number)) : null);
@@ -173,12 +211,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
         sf: deal.totalSF ?? null,
         capRate: deal.capRate ?? null, pricePerSf: subjectPsf ?? null,
         excludeOmComps: excludeOm,
+        excludeCompIds: excludeIds,
+        includeCompIds: includeIds,
       }),
     })
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<BmResult>; })
       .then(d => { setBm(d); setLoading(false); })
       .catch(e => { setErr(e.message ?? "Failed"); setLoading(false); });
-  }, [deal.id, excludeOm]);
+  }, [deal.id, excludeOm, excludeIds, includeIds]);
 
   const fmtD = (s: string | null) => {
     if (!s) return "—";
@@ -213,9 +253,48 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const VAL: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "#26281f" };
   const MUTED: React.CSSProperties = { fontSize: 11, color: "#a89f8f" };
 
+  const EyeBtn = ({ id, isExcluded }: { id: number; isExcluded: boolean }) => (
+    <button onClick={() => toggleExclude(id)}
+      title={isExcluded ? "Re-include in benchmark" : "Exclude from benchmark"}
+      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: isExcluded ? "#c0b8ab" : "#6dba43", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+      {isExcluded ? (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      ) : (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      )}
+    </button>
+  );
+
+  const AddCompSection = () => (
+    <div style={{ marginTop: 10, position: "relative" }}>
+      <div style={{ fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Add a comp</div>
+      <input value={addQ} onChange={e => setAddQ(e.target.value)}
+        placeholder="Search by property name, market…"
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e7e0d2", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontFamily: "'Inter',sans-serif", outline: "none", background: "#fdfaf6" }} />
+      {sugsLoading && <div style={{ fontSize: 11, color: "#a89f8f", padding: "4px 0" }}>Searching…</div>}
+      {suggestions.length > 0 && (
+        <div style={{ position: "absolute", zIndex: 20, top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e7e0d2", borderRadius: 7, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", maxHeight: 260, overflowY: "auto" }}>
+          {suggestions.map(s => (
+            <button key={s.id} onClick={() => addInclude(s.id)}
+              style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f5f1ea", padding: "8px 12px", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#26281f" }}>{s.name}</span>
+              {s.market && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{s.market}</span>}
+              {s.saleDate && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{fmtD(s.saleDate)}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div id="section-comp-benchmark" style={{ background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
         <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#a89f8f" }}>Comp Benchmark</div>
         <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 11, color: "#7d766a", fontFamily: "'Inter',sans-serif" }}>
@@ -230,9 +309,23 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       {bm && (() => {
         const cv = capVerdict(bm.capDeltaBps);
         const pv = psfVerdict(bm.psfDeltaPct);
+        const activeComps = bm.comps.filter(c => !c.excluded);
+        const excludedCount = bm.comps.filter(c => c.excluded).length;
+
+        if (bm.n === 0 && bm.comps.length === 0) {
+          return (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#26281f", marginBottom: 8 }}>Based on 0 comps · no matching comps</div>
+              <div style={{ background: "#f9f6f0", border: "1px solid #ece5d7", borderRadius: 8, padding: "14px 16px", marginBottom: 10, fontSize: 12, color: "#a89f8f", fontStyle: "italic" }}>
+                No comparable trades on file yet.
+              </div>
+              <AddCompSection />
+            </>
+          );
+        }
+
         return (
           <>
-            {/* Summary header */}
             <div style={{ marginBottom: 6 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f" }}>
                 Based on {bm.n} comp{bm.n !== 1 ? "s" : ""} · {bm.tierLabel}
@@ -247,14 +340,12 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
               {bm.excludedInvalid > 0 && <span style={{ color: "#a89f8f" }}> · {bm.excludedInvalid} excluded (invalid data)</span>}
             </div>
 
-            {/* Insufficiency warning */}
             {bm.insufficient && (
               <div style={{ background: "#fef9ed", border: "1px solid #f5c842", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#92400e" }}>
                 Only {bm.n} comparable trade{bm.n !== 1 ? "s" : ""} on file — too few to benchmark reliably. Showing what's available; treat as directional only.
               </div>
             )}
 
-            {/* Cap rate row */}
             {(bm.subject.capRate != null || bm.capRate != null) && (
               <div style={ROW_STYLE}>
                 <span style={LABEL}>Cap Rate</span>
@@ -266,13 +357,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                     <span style={{ color: "#a89f8f" }}> ({fmtPct2(bm.capRate.p25)}–{fmtPct2(bm.capRate.p75)} range)</span>
                   </span>
                 )}
-                {!bm.insufficient && cv && (
-                  <span style={{ fontSize: 11, color: cv.color, fontWeight: 500 }}>{cv.text}</span>
-                )}
+                {!bm.insufficient && cv && <span style={{ fontSize: 11, color: cv.color, fontWeight: 500 }}>{cv.text}</span>}
               </div>
             )}
 
-            {/* Price PSF row */}
             {(bm.subject.pricePerSf != null || bm.pricePerSf != null) && (
               <div style={ROW_STYLE}>
                 <span style={LABEL}>Price / SF</span>
@@ -284,13 +372,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                     <span style={{ color: "#a89f8f" }}> ({fmtPsf(bm.pricePerSf.p25)}–{fmtPsf(bm.pricePerSf.p75)} range)</span>
                   </span>
                 )}
-                {!bm.insufficient && pv && (
-                  <span style={{ fontSize: 11, color: pv.color, fontWeight: 500 }}>{pv.text}</span>
-                )}
+                {!bm.insufficient && pv && <span style={{ fontSize: 11, color: pv.color, fontWeight: 500 }}>{pv.text}</span>}
               </div>
             )}
 
-            {/* Last 12 months */}
             {bm.last12 && (
               <div style={{ fontSize: 11, color: "#7d766a", padding: "6px 0", borderBottom: "1px solid #f5f1ea" }}>
                 Last 12 months (n={bm.last12.n}):
@@ -300,42 +385,44 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
               </div>
             )}
 
-            {/* Show comps toggle */}
-            {bm.comps.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <button onClick={() => setShowComps(v => !v)}
-                  style={{ background: "transparent", border: "none", color: "#6dba43", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "'Inter',sans-serif" }}>
-                  {showComps ? `▼ Hide ${bm.comps.length} comp${bm.comps.length !== 1 ? "s" : ""}` : `▶ Show ${bm.comps.length} comp${bm.comps.length !== 1 ? "s" : ""}`}
-                </button>
-                {showComps && (
-                  <div style={{ marginTop: 8, overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
-                      <thead>
-                        <tr style={{ borderBottom: "2px solid #ece5d7" }}>
-                          {["Name", "Market", "Date", "Sale Price", "Cap %", "$/SF", "SF", "Source"].map(h => (
-                            <th key={h} style={{ textAlign: "left", padding: "4px 8px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {bm.comps.map(c => (
-                          <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea" }}>
-                            <td style={{ padding: "6px 8px", color: "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || "—"}</td>
-                            <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
-                            <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
-                            <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(c.salePrice)}</td>
-                            <td style={{ padding: "6px 8px", color: c.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: c.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>{fmtPct2(c.capRate)}</td>
-                            <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtPsf(c.pricePerSf)}</td>
-                            <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(c.sf)}</td>
-                            <td style={{ padding: "6px 8px" }}>{sourceBadge(c.source)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+            {/* Comps list — always shown, no toggle */}
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 11, color: "#7d766a", marginBottom: 6 }}>
+                <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length} comp{activeComps.length !== 1 ? "s" : ""}</span> in benchmark
+                {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} manually excluded</span>}
+                <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— click eye to exclude/re-include</span>
               </div>
-            )}
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid #ece5d7" }}>
+                      <th style={{ width: 26 }} />
+                      {["Name", "Market", "Date", "Sale Price", "Cap %", "$/SF", "SF", "Source"].map(h => (
+                        <th key={h} style={{ textAlign: "left", padding: "4px 8px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bm.comps.map(c => (
+                      <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1 }}>
+                        <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle" }}>
+                          <EyeBtn id={c.id} isExcluded={c.excluded} />
+                        </td>
+                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
+                        <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(c.salePrice)}</td>
+                        <td style={{ padding: "6px 8px", color: c.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: c.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>{fmtPct2(c.capRate)}</td>
+                        <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtPsf(c.pricePerSf)}</td>
+                        <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(c.sf)}</td>
+                        <td style={{ padding: "6px 8px" }}>{sourceBadge(c.source)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <AddCompSection />
+            </div>
           </>
         );
       })()}
@@ -1352,8 +1439,8 @@ ${text.slice(0, 40000)}`;
         </Card>
       </div>
 
-      {/* Comp Benchmark */}
-      {(d.capRate || d.pricePerSF) && <CompBenchmarkCard deal={d} />}
+      {/* Comp Benchmark — always rendered; shows n=0 empty state when no comps match */}
+      <CompBenchmarkCard deal={d} />
 
       {/* My Underwriting */}
       <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>

@@ -46,6 +46,10 @@ export interface BenchmarkRequest {
   capRate?: number | null;
   pricePerSf?: number | null;
   excludeOmComps?: boolean;
+  /** Remove these comp IDs from the benchmark math (still shown dulled in UI) */
+  excludeCompIds?: number[];
+  /** Force-add these comp IDs into the benchmark set (bypass tier filtering) */
+  includeCompIds?: number[];
 }
 
 export interface CompMatch {
@@ -58,6 +62,8 @@ export interface CompMatch {
   pricePerSf: number | null;
   sf: number | null;
   source: "owned" | "broker" | "om";
+  /** True when manually excluded — still returned for display but not counted in stats */
+  excluded: boolean;
 }
 
 export interface BenchmarkResult {
@@ -117,9 +123,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   const stateOk = (r: Row) => {
     if (!req.state) return true;
     const s = req.state.toLowerCase();
-    // Prefer the dedicated state column when present
     if (r.state) return r.state.toLowerCase() === s;
-    // Fallback: substring match on market/sourceDealMarket
     return (r.market ?? "").toLowerCase().includes(s) ||
            (r.sourceDealMarket ?? "").toLowerCase().includes(s);
   };
@@ -154,32 +158,49 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   }
 
   if (chosen.length === 0) {
+    // Show directional data if < MIN_N found — but do NOT fall back to the full unfiltered pool
     for (let i = TIERS.length - 1; i >= 0; i--) {
       const c = pool.filter(TIERS[i].fn);
       if (c.length > 0) { chosen = c; tierLabel = TIERS[i].label; relaxed = TIERS[i].relaxed; break; }
     }
-    if (chosen.length === 0) chosen = pool;
+    // If still empty, n=0 empty state is returned (no pool fallback)
     insufficient = true;
   } else if (chosen.length < MIN_N) {
     insufficient = true;
   }
 
-  const capRates = chosen.map(r => r.capRate).filter((v): v is number => v != null);
-  const psfs     = chosen.map(r => r.pricePerSf).filter((v): v is number => v != null);
+  // Force-add specific comps from allRows (bypass tier logic)
+  const incSet = new Set(req.includeCompIds ?? []);
+  if (incSet.size > 0) {
+    const alreadyIds = new Set(chosen.map(r => r.id));
+    const extra = allRows.filter(r =>
+      incSet.has(r.id) &&
+      !alreadyIds.has(r.id) &&
+      r.sourceDealId !== req.dealId
+    );
+    chosen = [...chosen, ...extra];
+  }
+
+  // Separate active vs excluded for stats — excluded comps are still returned for display
+  const excSet = new Set(req.excludeCompIds ?? []);
+  const activeForStats = chosen.filter(r => !excSet.has(r.id));
+
+  const capRates = activeForStats.map(r => r.capRate).filter((v): v is number => v != null);
+  const psfs     = activeForStats.map(r => r.pricePerSf).filter((v): v is number => v != null);
 
   const capRateStats = triStats(capRates);
   const psfStats     = triStats(psfs);
 
-  const cut12   = mAgo(12);
-  const l12     = chosen.filter(r => inDate(r, cut12));
-  const l12cap  = l12.map(r => r.capRate).filter((v): v is number => v != null);
-  const l12psf  = l12.map(r => r.pricePerSf).filter((v): v is number => v != null);
-  const last12  = l12.length >= 3 ? { n: l12.length, capRate: triStats(l12cap), pricePerSf: triStats(l12psf) } : null;
+  const cut12  = mAgo(12);
+  const l12    = activeForStats.filter(r => inDate(r, cut12));
+  const l12cap = l12.map(r => r.capRate).filter((v): v is number => v != null);
+  const l12psf = l12.map(r => r.pricePerSf).filter((v): v is number => v != null);
+  const last12 = l12.length >= 3 ? { n: l12.length, capRate: triStats(l12cap), pricePerSf: triStats(l12psf) } : null;
 
   const sourceMix = { owned: 0, broker: 0, om: 0 };
-  for (const r of chosen) sourceMix[getSource(r)]++;
+  for (const r of activeForStats) sourceMix[getSource(r)]++;
 
-  const dates     = chosen.map(r => r.saleDate).filter((d): d is string => d != null).sort();
+  const dates     = activeForStats.map(r => r.saleDate).filter((d): d is string => d != null).sort();
   const dateRange = dates.length > 0
     ? { from: dates[0], to: dates[dates.length - 1] }
     : null;
@@ -189,17 +210,20 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   const psfDeltaPct = req.pricePerSf != null && psfStats != null && psfStats.median > 0
     ? Math.round((req.pricePerSf - psfStats.median) / psfStats.median * 100) : null;
 
+  // Return all comps (including excluded ones, tagged with excluded: true)
   const comps: CompMatch[] = [...chosen]
     .sort((a, b) => (b.saleDate ?? "").localeCompare(a.saleDate ?? ""))
     .map(r => ({
       id: r.id, name: r.name, market: r.market, saleDate: r.saleDate,
       salePrice: r.salePrice, capRate: r.capRate, pricePerSf: r.pricePerSf, sf: r.sf,
       source: getSource(r),
+      excluded: excSet.has(r.id),
     }));
 
   return {
     insufficient, tierLabel, relaxed, excludedInvalid,
-    n: chosen.length, dateRange, sourceMix,
+    n: activeForStats.length,   // n = active (non-excluded) count
+    dateRange, sourceMix,
     capRate: capRateStats, pricePerSf: psfStats, last12,
     capDeltaBps, psfDeltaPct, comps,
     subject: { capRate: req.capRate ?? null, pricePerSf: req.pricePerSf ?? null },
