@@ -31,6 +31,45 @@ interface Props {
   onTenantClick?: (name: string) => void;
 }
 
+// Downscale/recompress an uploaded image before we store it as a data URL.
+// Cover photos straight off a phone can be 10MB+ and slow to load; this caps the
+// longest edge and re-encodes to JPEG, falling back to the original on anything
+// it can't safely shrink (small images keep their original bytes/format).
+async function downscaleImageFile(file: File, maxDim = 1600, quality = 0.82): Promise<string> {
+  const readAsDataUrl = (f: File) => new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = () => reject(new Error("read failed"));
+    r.readAsDataURL(f);
+  });
+  const dataUrl = await readAsDataUrl(file);
+  if (!file.type.startsWith("image/")) return dataUrl;
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error("decode failed"));
+      im.src = dataUrl;
+    });
+    const longest = Math.max(img.width, img.height);
+    const tooBig = longest > maxDim;
+    const heavy = dataUrl.length > 600_000; // already-lean images keep their original bytes
+    if (!tooBig && !heavy) return dataUrl;
+    const scale = Math.min(1, maxDim / longest);
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0, w, h);
+    const out = canvas.toDataURL("image/jpeg", quality);
+    return out.length > 0 && out.length < dataUrl.length ? out : dataUrl;
+  } catch {
+    return dataUrl;
+  }
+}
+
 function ReconBadge({ msg }: { msg: string }) {
   return (
     <span title={msg} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:15, height:15, borderRadius:3, background:"#fef3c7", border:"1px solid #f59e0b", color:"#92400e", fontSize:9, cursor:"help", flexShrink:0, lineHeight:1 }}>!</span>
@@ -483,12 +522,12 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
 
   const items: { id: string; label: string }[] = [];
   items.push({ id: "section-cover", label: "Overview" });
+  if (deal.notes || deal.analysisStale) items.push({ id: "section-highlights", label: "Investment Highlights" });
   if (deal.tenants && deal.tenants.length > 0) {
     items.push({ id: "section-tenants", label: "Tenant Roster" });
     items.push({ id: "section-tenant-sales", label: "Tenant Sales" });
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
   }
-  if (deal.notes || deal.analysisStale) items.push({ id: "section-highlights", label: "Investment Highlights" });
   if (deal.upsideItems && deal.upsideItems.length > 0) items.push({ id: "section-upside", label: "Upside Items" });
   if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
   if (deal.askingPrice || deal.capRate || deal.noi || deal.pricePerSF || deal.totalSF) items.push({ id: "section-financials", label: "Key Financials" });
@@ -1050,20 +1089,16 @@ ${text.slice(0, 40000)}`;
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: 1, needsSitePlanPick: false } });
   };
 
-  const handleCoverImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (e.target) e.target.value = "";
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      const current: ImageBundle = imgs || {};
-      const next: ImageBundle = { ...current, cover: dataUrl };
-      setImgs(next);
-      await apiSaveImages(d.id, next);
-      onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await downscaleImageFile(file);
+    const current: ImageBundle = imgs || {};
+    const next: ImageBundle = { ...current, cover: dataUrl };
+    setImgs(next);
+    await apiSaveImages(d.id, next);
+    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
   };
 
   const handleSitePlanImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1461,6 +1496,17 @@ ${text.slice(0, 40000)}`;
         </div>
       )}
 
+      {/* AI highlights — surfaced near the top, just below the cover photo */}
+      {(d.notes || d.analysisStale) && (
+        <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
+            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
+            {d.analysisStale && <StaleBadge />}
+          </div>
+          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}>{d.notes}</p>}
+        </div>
+      )}
+
       <ExtractionQuality deal={d}/>
       <DataIntegrity deal={d}/>
 
@@ -1690,17 +1736,6 @@ ${text.slice(0, 40000)}`;
         </div>
       )}
 
-
-      {/* AI highlights */}
-      {(d.notes || d.analysisStale) && (
-        <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
-            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
-            {d.analysisStale && <StaleBadge />}
-          </div>
-          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}>{d.notes}</p>}
-        </div>
-      )}
 
       {/* Upside items */}
       {(d.upsideItems && d.upsideItems.length > 0) && (() => {
