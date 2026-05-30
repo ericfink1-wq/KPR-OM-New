@@ -4,15 +4,9 @@ import { compsIndexTable, dealsTable } from "@workspace/db";
 import { and, or, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
 import { rebuildAllComps, rebuildCompsIndex } from "../lib/compsIndex";
 
-const router = Router();
+import { requireAuth } from "../middleware/auth";
 
-function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], next: Parameters<Router>[2]) {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  next();
-}
+const router = Router();
 
 // ---------------------------------------------------------------------------
 // GET /api/comps/stats — whole-table aggregates (unfiltered)

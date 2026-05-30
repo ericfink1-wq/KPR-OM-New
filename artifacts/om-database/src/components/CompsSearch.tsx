@@ -626,7 +626,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const hasState   = rows.some(r => r.state);
   const hasBuyer   = rows.some(r => r.buyer);
   const hasSeller  = rows.some(r => r.seller);
-  const colCount   = 8  // Property, City, Price, Cap, SF, Price PSF, Occupancy, Actions
+  const colCount   = 9  // Property, City, Sale Date, Price, Cap, SF, Price PSF, Occupancy, Actions
     + (hasAnchor ? 1 : 0) + (hasType ? 1 : 0)
     + (hasState ? 1 : 0) + (hasBuyer ? 1 : 0) + (hasSeller ? 1 : 0);
 
@@ -986,6 +986,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                   <SortTh label="Property" sortKey="name_asc"   current={sort} onSort={handleSort} style={{ minWidth: 180 }} />
                   <SortTh label="City"     sortKey="market_asc" current={sort} onSort={handleSort} style={{ minWidth: 100 }} />
                   {hasState   && <SortTh label="State"  sortKey="state_asc"  current={sort} onSort={handleSort} style={{ minWidth: 50 }} />}
+                  <SortTh label="Sale Date"  sortKey="date_desc"          current={sort} onSort={handleSort} />
                   <SortTh label="Price"      sortKey="sale_price_desc"    current={sort} onSort={handleSort} />
                   <SortTh label="Cap Rate"   sortKey="cap_rate_asc"       current={sort} onSort={handleSort} />
                   {hasBuyer   && <SortTh label="Buyer"  sortKey="buyer_asc"  current={sort} onSort={handleSort} style={{ minWidth: 120 }} />}
@@ -1071,6 +1072,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                       </td>
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#5c5850", whiteSpace: "nowrap" }}>{row.market || "—"}</td>
                       {hasState  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#7d766a", whiteSpace: "nowrap" }}>{row.state || "—"}</td>}
+                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", fontWeight: 500, whiteSpace: "nowrap" }}>{fmtDate(row.saleDate)}</td>
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(row.salePrice)}</td>
                       <td style={{ padding: "9px 10px", fontSize: 12, color: row.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: row.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>
                         {fmtCapRate(row.capRate)}

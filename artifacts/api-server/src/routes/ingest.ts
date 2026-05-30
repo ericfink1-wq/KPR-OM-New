@@ -3,15 +3,9 @@ import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { runBackgroundExtraction } from "../lib/extract";
 
-const router = Router();
+import { requireAuth } from "../middleware/auth";
 
-function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], next: Parameters<Router>[2]) {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  next();
-}
+const router = Router();
 
 // POST /api/deals/ingest
 // Immediately creates a "processing" deal row and returns the id.

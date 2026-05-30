@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { compsIndexTable, dealsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { parseLeaseDate } from "./tenantIndex";
+import { toFloat, toStr } from "./parsers";
 
 // ---------------------------------------------------------------------------
 // Sale-date parser — extends parseLeaseDate with year-only and quarter formats
@@ -25,12 +26,6 @@ export function parseSaleDate(raw: unknown): string | null {
   return parseLeaseDate(s);
 }
 
-function toFloat(v: unknown): number | null {
-  if (v == null || v === "") return null;
-  const n = Number(v);
-  return isFinite(n) ? n : null;
-}
-
 // ---------------------------------------------------------------------------
 // Sync own-transaction comps (acquisition / disposition) for one deal.
 // Idempotent — delete-then-insert pattern; safe to call fire-and-forget.
@@ -40,8 +35,6 @@ export async function syncOwnTransactionComps(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const toStr = (v: unknown): string | null =>
-      typeof v === "string" && v.trim() ? v.trim() : null;
 
     const status      = toStr(data.status);
     const propertyName = toStr(data.propertyName);

@@ -3,35 +3,9 @@ import { db } from "@workspace/db";
 import { dealsTable, dealSourcesTable, snapshotsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 
+import { requireAuth, requireAdmin } from "../middleware/auth";
+
 const router = Router();
-
-function requireAuth(
-  req: Parameters<Router>[0],
-  res: Parameters<Router>[1],
-  next: Parameters<Router>[2],
-) {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  next();
-}
-
-function requireAdmin(
-  req: Parameters<Router>[0],
-  res: Parameters<Router>[1],
-  next: Parameters<Router>[2],
-) {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  if (!req.session.isAdmin) {
-    res.status(403).json({ error: "Admin access required" });
-    return;
-  }
-  next();
-}
 
 async function createSnapshot(
   reason: string,

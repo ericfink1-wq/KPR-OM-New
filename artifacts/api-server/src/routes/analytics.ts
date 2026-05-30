@@ -3,16 +3,9 @@ import { db } from "@workspace/db";
 import { tenantIndexTable } from "@workspace/db";
 import { inArray } from "drizzle-orm";
 import type { TenantIndexRow } from "@workspace/db";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
-
-function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], next: Parameters<Router>[2]) {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  next();
-}
 
 // ---------------------------------------------------------------------------
 // Helpers

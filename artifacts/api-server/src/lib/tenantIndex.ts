@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
 import { tenantIndexTable, tenantAliasesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { toFloat } from "./parsers";
 
 // ---------------------------------------------------------------------------
 // Lease date parser — returns "YYYY-MM-DD" for storage, null if unparseable
@@ -50,12 +51,6 @@ export function parseLeaseDate(raw: unknown): string | null {
   }
 
   return null;
-}
-
-function toFloat(v: unknown): number | null {
-  if (v == null || v === "") return null;
-  const n = Number(v);
-  return isFinite(n) ? n : null;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 // fetchCensusDemographics — free US Census Bureau APIs, no key required.
+import { fetchWithTimeout } from "./http";
 
 export interface MarketDemographics {
   pop1mi?: number | null;
@@ -13,18 +14,6 @@ export interface MarketDemographics {
   note?: string | null;
   sources?: { url: string; title?: string }[];
   lookedUpAt?: string;
-}
-
-const TIMEOUT_MS = 10_000;
-
-async function fetchWithTimeout(url: string): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    return await fetch(url, { signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 interface TractFeature {

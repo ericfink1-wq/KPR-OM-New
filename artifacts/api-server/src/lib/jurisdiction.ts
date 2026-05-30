@@ -7,6 +7,7 @@
 // locations -> coordinates -> geographies/coordinates path (the same locations
 // endpoint the demographics feature uses successfully). Every failure path
 // returns { matched: false } so callers degrade gracefully.
+import { fetchWithTimeout } from "./http";
 
 export interface ResolvedJurisdiction {
   matched: boolean;
@@ -25,17 +26,13 @@ const TIMEOUT_MS = 12_000;
 const BASE = "https://geocoding.geo.census.gov/geocoder";
 
 async function fetchJson(url: string): Promise<Record<string, unknown> | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const resp = await fetch(url, { signal: controller.signal });
+    const resp = await fetchWithTimeout(url, TIMEOUT_MS);
     if (!resp.ok) return null;
     const text = await resp.text();
     try { return JSON.parse(text) as Record<string, unknown>; } catch { return null; }
   } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 

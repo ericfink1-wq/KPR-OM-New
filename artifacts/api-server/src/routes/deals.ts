@@ -7,6 +7,7 @@ import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 
 function composeAddressForGeocoder(deal: {
   address?: string | null;
@@ -49,26 +50,6 @@ function enrichTenants(
 }
 
 const router = Router();
-
-function requireAuth(req: Parameters<Router>[0], res: Parameters<Router>[1], next: Parameters<Router>[2]) {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  next();
-}
-
-function requireAdmin(req: Parameters<Router>[0], res: Parameters<Router>[1], next: Parameters<Router>[2]) {
-  if (!req.session.authenticated) {
-    res.status(401).json({ error: "Not authenticated" });
-    return;
-  }
-  if (!req.session.isAdmin) {
-    res.status(403).json({ error: "Admin access required" });
-    return;
-  }
-  next();
-}
 
 // Fields entered by humans — preserved across re-analysis so user data is never overwritten
 const USER_PRESERVED_KEYS = new Set([
