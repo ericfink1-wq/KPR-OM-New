@@ -38,7 +38,7 @@ cd ../api-server && npx tsc --noEmit | grep -v TS6305 | grep "error TS"
 ## Cardinal rules
 1. **Every UI/site change must work on desktop AND mobile** — by default, unprompted. Layouts reflow for narrow screens (grids/strips/tables collapse sensibly, not just shrink), finger-friendly tap targets, compact formatting, working touch interactions (modals, dropdowns, toggles). Wide tables (comps/tenants) break most easily on phones — test them.
 2. **Verify field names against `artifacts/om-database/src/lib/idb.ts`** before writing or reading any Deal/Tenant JSON. Wrong field names = silent import failure. Never rely on memory for field names.
-3. **Prefer pull requests over committing to main**, since Eric does not read the code himself. Let the type-check gate catch regressions.
+3. **Commit and push directly to `main` automatically** after each change — don't wait to be asked, and don't park work on side branches. Eric syncs Replit by pulling `main`, so the workflow is: make the change → run the build/verify type-checks → if clean, commit + push to `main` → tell Eric "ready, Pull in Replit." **Never push code that introduces new type errors.** Pause and confirm first ONLY for risky changes: DB schema/migrations, destructive actions (deletes, index rebuilds, restores), or anything ambiguous. Eric does not read the code himself, so the type-check gate is the safety net.
 4. **Most past regressions came from stacking changes on shared files.** Make one change, verify, then the next.
 
 ## Data model — verified field names (confirm in idb.ts)
