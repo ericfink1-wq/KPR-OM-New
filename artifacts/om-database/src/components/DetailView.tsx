@@ -76,6 +76,43 @@ function ReconBadge({ msg }: { msg: string }) {
   );
 }
 
+// Compact inline-editable text row (label left, value right) for free-text deal
+// fields like Seller. Module-level so its edit state survives parent re-renders.
+function EditableTextRow({ label, value, placeholder, onSave }: {
+  label: string;
+  value?: string | null;
+  placeholder?: string;
+  onSave: (v: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const commit = () => { const t = draft.trim(); onSave(t === "" ? null : t); setEditing(false); };
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e7e0d2", gap:10 }}>
+      <span style={{ fontSize:10, color:"#6f6a5f", letterSpacing:"0.05em", flexShrink:0 }}>{label}</span>
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === "Enter") commit(); else if (e.key === "Escape") setEditing(false); }}
+          placeholder={placeholder}
+          style={{ fontSize:11, padding:"3px 7px", border:"1px solid #6dba43", borderRadius:5, color:"#383a37", background:"#fafaf8", maxWidth:200, width:"100%", fontFamily:"'Inter',sans-serif", textAlign:"right", boxSizing:"border-box" }}
+        />
+      ) : (
+        <button
+          onClick={() => { setDraft(value ?? ""); setEditing(true); }}
+          title="Click to edit"
+          style={{ display:"flex", alignItems:"center", gap:6, background:"transparent", border:"none", cursor:"pointer", padding:0, minWidth:0 }}>
+          <span style={{ fontSize:11, color: value ? "#383a37" : "#958d80", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value || "—"}</span>
+          <span style={{ fontSize:10, color:"#c4bba7", flexShrink:0 }}>✎</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 function StaleBadge() {
   return (
     <span style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fffbeb", border:"1px solid #f59e0b", borderRadius:5, padding:"2px 8px", fontSize:10, color:"#92400e", fontWeight:500, fontFamily:"'Inter',sans-serif", lineHeight:1.4 }}>
@@ -2121,7 +2158,7 @@ ${text.slice(0, 40000)}`;
           <Row l="MARKET" v={d.market}/>
           <Row l="SUBMARKET" v={d.submarket}/>
           <Row l="BROKER" v={d.broker}/>
-          <Row l="SELLER" v={d.seller}/>
+          <EditableTextRow label="SELLER" value={d.seller} placeholder="Seller / current owner" onSave={v => onUpdate(d.id, { seller: v })} />
           <Row l="LAST SALE DATE" v={d.lastSaleDate}/>
           <Row l="LAST SALE PRICE" v={d.lastSalePrice?`$${Number(d.lastSalePrice).toLocaleString()}`:null}/>
         </Card>
