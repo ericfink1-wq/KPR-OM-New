@@ -1,0 +1,16 @@
+Fix the Comp Sales Database page (CompsSearch.tsx) for mobile. The filter row and table's last column run off the right edge on phones, and the Source column's expand chevron is blocked by the edit/delete buttons. Use the existing useIsMobile() hook in src/hooks/use-mobile.tsx. Desktop stays as-is; mobile gets a responsive layout.
+
+PART 1 — Filters + search must not overflow on mobile
+- The filter row is a fixed 5-column grid that overflows narrow screens. Change it to reflow: on mobile, stack to 1–2 columns via gridTemplateColumns: repeat(auto-fit, minmax(150px, 1fr)), width:100%, box-sizing:border-box. Search input and filter container must be width:100%/border-box and never exceed the viewport. No element may cause horizontal page scroll on mobile.
+
+PART 2 — Mobile: replace the wide table with stacked cards
+- The table is wrapped in overflow-x:auto with a 900px min-width. On mobile (useIsMobile()===true), do NOT render that table — render each comp as a full-width vertical CARD (no horizontal scroll). Card contents:
+  • Header: Property name (bold) + source badge (OWNED/MANUAL/OM) + amber "⚠ dup?" badge if flagged.
+  • Label/value list: Market, State, Sale Date, Sale Price, Cap Rate, Price/SF, SF, Occupancy, Anchor, Type, Buyer, Seller, Source/Notes. Skip null rows. Long fields wrap fully.
+  • Footer (manual comps only): Edit + Delete buttons, min 36px tap targets.
+- Keep desktop table unchanged except Part 3.
+
+PART 3 — Desktop: separate actions so they stop blocking the Source chevron
+- On desktop, move Edit (pencil) and Delete (×) into their OWN trailing column (add a blank header). The Source column then holds only the source label/notes + its expand chevron, never overlapped by buttons. Verify Anchor and Source/Notes expand chevrons toggle only that cell.
+
+TEST: at 390px width — no horizontal scroll; filters stack with Cap Rate fully visible; comps render as full cards with Edit/Delete reachable. Desktop — table as before but actions in their own column and chevrons work.

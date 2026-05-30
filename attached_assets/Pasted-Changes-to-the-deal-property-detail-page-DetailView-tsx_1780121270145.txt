@@ -1,0 +1,19 @@
+Changes to the deal/property detail page (DetailView.tsx, CompBenchmark card, LeaseRollover.tsx). Optimize for desktop AND mobile.
+
+ITEM 6 — Fix Lease Rollover & WALT not populating (e.g. Damascus)
+- LeaseRollover.tsx drops any tenant whose leaseExpiry doesn't parse via new Date(), which silently empties the chart and nulls WALT when dates aren't ISO.
+- Add a robust date parser that accepts: "YYYY-MM-DD", "MM/DD/YYYY", "M/D/YY", "Mon-YYYY"/"Mon YYYY" (e.g. Jan-2030), and bare "YYYY". Use it everywhere LeaseRollover and WALT read leaseExpiry. If a year-only or Mon-YYYY value is given, assume end of that month/year.
+- Confirm WALT (by SF and by rent) and the rollover buckets now populate whenever tenants have any parseable expiry.
+
+ITEM 10 — When no comps match, show 0 (don't fall back to "all"), keep box visible
+- In the Comp Benchmark card: if no comps match the relevance criteria, display n = 0 with an empty state ("No comparable trades on file yet"), and DO NOT fall back to applying the full unfiltered comp set. Never hide the card — always render it, even at 0.
+
+ITEM 7 — Show applied comps with manual include/exclude
+- Always show the list of comps currently feeding the benchmark (don't hide it).
+- On each listed comp, add an "eye with diagonal slash" toggle to manually EXCLUDE it from the benchmark; excluded comps dull out and are removed from all benchmark math (medians, n, deltas), which must recompute.
+- Add an "Add a comp" control in the box: an input where the user types and it live-filters the comp database by name (query /api/comps?q=) showing suggestions; clicking a suggestion ADDS that comp to the benchmark set (manual include) and recomputes. Do not show a giant list — only typed-ahead suggestions.
+- Implement by extending POST /api/comps/benchmark to accept excludeCompIds[] and includeCompIds[]; the card maintains these arrays and re-fetches. Persist the per-deal include/exclude choices (localStorage keyed by dealId is fine).
+
+(Skip the jump-to item — the next prompt handles the Jump-To menu.)
+
+TEST: Damascus rollover/WALT now populate; comps box always visible (even at 0); excluding a comp recomputes the benchmark; typing in "Add a comp" suggests properties and adding one updates the math.

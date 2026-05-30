@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { exportCompsToExcel } from "../lib/exportExcel";
+import { useIsMobile } from "../hooks/use-mobile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -474,6 +475,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [editRow, setEditRow] = useState<CompRow | null>(null);
   const [showDupsOnly, setShowDupsOnly] = useState(false);
   const [stats, setStats] = useState<CompStats | null>(null);
+  const isMobile = useIsMobile();
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -575,7 +577,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const hasState   = rows.some(r => r.state);
   const hasBuyer   = rows.some(r => r.buyer);
   const hasSeller  = rows.some(r => r.seller);
-  const colCount   = 9
+  const colCount   = 10  // +1 for separate Actions column
     + (hasAnchor ? 1 : 0) + (hasType ? 1 : 0)
     + (hasState ? 1 : 0) + (hasBuyer ? 1 : 0) + (hasSeller ? 1 : 0);
 
@@ -884,7 +886,8 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       <div style={{
         background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 16px",
         marginBottom: 16, display: "grid",
-        gridTemplateColumns: "1fr 140px 140px 110px 110px",
+        gridTemplateColumns: isMobile ? "repeat(auto-fit, minmax(150px, 1fr))" : "1fr 140px 140px 110px 110px",
+        width: "100%", boxSizing: "border-box",
         gap: 10, alignItems: "end",
       }}>
         <div>
@@ -916,8 +919,82 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
         </div>
       )}
 
-      {/* Table */}
-      {!error && (
+      {/* Table / Cards */}
+      {!error && (isMobile ? (
+        /* ── Mobile: stacked cards ── */
+        <div>
+          {loading && (
+            <div style={{ textAlign: "center", color: "#a89f8f", fontSize: 13, padding: "40px 0" }}>Loading…</div>
+          )}
+          {!loading && displayRows.length === 0 && (
+            <div style={{ textAlign: "center", color: "#a89f8f", fontSize: 13, padding: "40px 0" }}>
+              {showDupsOnly ? "No possible duplicates detected." : hasFilters ? "No comps match these filters." : "No comps in the index yet."}
+            </div>
+          )}
+          {!loading && displayRows.map(row => {
+            const cardLabel = row.name || row.address || "—";
+            const cardSub   = row.name ? row.address : null;
+            const fields: { label: string; value: string }[] = [
+              { label: "Market",        value: row.market || "" },
+              { label: "State",         value: row.state  || "" },
+              { label: "Sale Date",     value: fmtDate(row.saleDate) },
+              { label: "Sale Price",    value: fmtM(row.salePrice) },
+              { label: "Cap Rate",      value: fmtCapRate(row.capRate) },
+              { label: "Price/SF",      value: fmtPsf(row.pricePerSf) },
+              { label: "SF",            value: fmtSf(row.sf) },
+              { label: "Occupancy",     value: fmtPct(row.occupancy) },
+              { label: "Anchor",        value: row.anchor || "" },
+              { label: "Type",          value: row.propertyType || "" },
+              { label: "Buyer",         value: row.buyer  || "" },
+              { label: "Seller",        value: row.seller || "" },
+              { label: "Source / Notes",value: row.sourceNotes || row.sourceDealName || "" },
+            ].filter(f => f.value && f.value !== "—");
+            const dupInfo = dupMap.get(row.id);
+            return (
+              <div key={row.id} style={{
+                background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff",
+                border: "1px solid #ece5d7", borderRadius: 10, marginBottom: 10, overflow: "hidden",
+              }}>
+                <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #f0e9da" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#26281f" }}>{cardLabel}</span>
+                    {row.isOwnTransaction ? (
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 4, padding: "1px 5px" }}>OWNED</span>
+                    ) : row.isManual ? (
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#5a7c9e", background: "#e8f1f8", border: "1px solid #c3d9ec", borderRadius: 4, padding: "1px 5px" }}>MANUAL</span>
+                    ) : null}
+                    {dupInfo && (() => {
+                      let tip = `Possible duplicate of: ${dupInfo.otherNames.join(", ")} — ${dupInfo.reasons.join(", ")}`;
+                      if (dupInfo.betterSourceExists) tip += `\nHigher-quality ${dupInfo.bestTierName} version exists.`;
+                      return <span title={tip} style={{ fontSize: 9, fontWeight: 700, color: "#d9890c", background: "#fff8ec", border: "1px solid #f5c842", borderRadius: 4, padding: "1px 5px" }}>⚠ dup?</span>;
+                    })()}
+                  </div>
+                  {cardSub && <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 2 }}>{cardSub}</div>}
+                </div>
+                <div style={{ padding: "8px 14px 10px", display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 12, rowGap: 5 }}>
+                  {fields.map(f => (
+                    <Fragment key={f.label}>
+                      <span style={{ fontSize: 10, color: "#a89f8f", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", paddingTop: 2, whiteSpace: "nowrap" }}>{f.label}</span>
+                      <span style={{ fontSize: 12, color: "#383a37", wordBreak: "break-word" }}>{f.value}</span>
+                    </Fragment>
+                  ))}
+                </div>
+                {row.isManual && (
+                  <div style={{ padding: "8px 14px", borderTop: "1px solid #f0e9da", display: "flex", gap: 8 }}>
+                    <button onClick={() => setEditRow(row)} style={{ flex: 1, minHeight: 36, background: "#fff", border: "1px solid #e7ddd0", borderRadius: 6, cursor: "pointer", color: "#5a5048", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>
+                      ✎ Edit
+                    </button>
+                    <button onClick={() => handleDelete(row.id)} style={{ flex: 1, minHeight: 36, background: "#fff", border: "1px solid #f5c5c5", borderRadius: 6, cursor: "pointer", color: "#b05050", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>
+                      × Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* ── Desktop: sortable table ── */
         <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
@@ -936,7 +1013,8 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                   <SortTh label="Sale Price" sortKey="sale_price_desc"    current={sort} onSort={handleSort} />
                   <SortTh label="SF"         sortKey="sf_desc"            current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
                   <SortTh label="Occ"        sortKey="occ_desc"           current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
-                  <th style={{ padding: "9px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", minWidth: 120 }}>Source</th>
+                  <th style={{ padding: "9px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", minWidth: 130 }}>Source</th>
+                  <th style={{ padding: "9px 6px", width: 62 }} />
                 </tr>
               </thead>
               <tbody>
@@ -947,11 +1025,11 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                     </td>
                   </tr>
                 )}
-                {!loading && rows.length === 0 && (
+                {!loading && displayRows.length === 0 && (
                   <tr>
                     <td colSpan={colCount} style={{ padding: "48px 0", textAlign: "center" }}>
                       <div style={{ color: "#a89f8f", fontSize: 13 }}>
-                        {hasFilters ? "No comps match these filters." : "No comps in the index yet. Comps are extracted automatically from OM PDFs."}
+                        {showDupsOnly ? "No possible duplicates detected." : hasFilters ? "No comps match these filters." : "No comps in the index yet. Comps are extracted automatically from OM PDFs."}
                       </div>
                     </td>
                   </tr>
@@ -1015,41 +1093,17 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(row.salePrice)}</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(row.sf)}</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtPct(row.occupancy)}</td>
-                      <td style={{ padding: "9px 10px", maxWidth: 180 }}>
+                      <td style={{ padding: "9px 10px", maxWidth: 160 }}>
                         {row.isManual ? (
-                          <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
-                            <TruncCell
-                              text={row.sourceNotes || "Manual"}
-                              isExpanded={expandedCells.has(`${row.id}:notes`)}
-                              onToggle={() => toggleCell(row.id, "notes")}
-                              maxWidth={110}
-                              color="#7d766a"
-                            />
-                            <button
-                              onClick={() => setEditRow(row)}
-                              title="Edit this comp"
-                              style={{
-                                background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
-                                cursor: "pointer", color: "#7d766a", fontSize: 10, padding: "1px 5px",
-                                fontFamily: "'Inter',sans-serif", lineHeight: 1.2, flexShrink: 0,
-                              }}
-                            >
-                              ✎
-                            </button>
-                            <button
-                              onClick={() => handleDelete(row.id)}
-                              title="Delete this comp"
-                              style={{
-                                background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
-                                cursor: "pointer", color: "#b05050", fontSize: 11, padding: "1px 5px",
-                                fontFamily: "'Inter',sans-serif", lineHeight: 1.2, flexShrink: 0,
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
+                          <TruncCell
+                            text={row.sourceNotes || "Manual"}
+                            isExpanded={expandedCells.has(`${row.id}:notes`)}
+                            onToggle={() => toggleCell(row.id, "notes")}
+                            maxWidth={140}
+                            color="#7d766a"
+                          />
                         ) : row.sourceDealName ? (
-                          <div style={{ maxWidth: 160 }}>
+                          <div style={{ maxWidth: 150 }}>
                             {onOpenDeal ? (
                               <button
                                 onClick={() => onOpenDeal(row.sourceDealId)}
@@ -1059,7 +1113,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                                   text={row.sourceDealName}
                                   isExpanded={expandedCells.has(`${row.id}:notes`)}
                                   onToggle={() => toggleCell(row.id, "notes")}
-                                  maxWidth={150}
+                                  maxWidth={140}
                                   color="#6dba43"
                                   fontSize={11}
                                 />
@@ -1069,7 +1123,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                                 text={row.sourceDealName}
                                 isExpanded={expandedCells.has(`${row.id}:notes`)}
                                 onToggle={() => toggleCell(row.id, "notes")}
-                                maxWidth={150}
+                                maxWidth={140}
                                 color="#7d766a"
                                 fontSize={11}
                               />
@@ -1079,6 +1133,34 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                           <div style={{ fontSize: 11, color: "#c9c2b8" }}>—</div>
                         )}
                       </td>
+                      <td style={{ padding: "9px 6px", whiteSpace: "nowrap" }}>
+                        {row.isManual && (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button
+                              onClick={() => setEditRow(row)}
+                              title="Edit this comp"
+                              style={{
+                                background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
+                                cursor: "pointer", color: "#7d766a", fontSize: 10, padding: "2px 6px",
+                                fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
+                              }}
+                            >
+                              ✎
+                            </button>
+                            <button
+                              onClick={() => handleDelete(row.id)}
+                              title="Delete this comp"
+                              style={{
+                                background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
+                                cursor: "pointer", color: "#b05050", fontSize: 11, padding: "2px 6px",
+                                fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -1086,7 +1168,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             </table>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
