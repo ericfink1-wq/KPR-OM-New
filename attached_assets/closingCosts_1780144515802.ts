@@ -29,17 +29,23 @@ export interface TaxTier {
   rate: number;   // rate applied to the ENTIRE price at this tier
 }
 
+// ── Title insurance MARGINAL schedule ────────────────────────────────────────
+// Title premiums are regressive and computed on the INCREMENT, not the whole
+// price (unlike TaxTier, which is a cliff applied to the entire price). Each
+// bracket says: once price passes `over`, premium = `base` + `per1000` per
+// $1,000 of price ABOVE `over`. This matches how promulgated/filed-rate manuals
+// (NJ, NY/TIRSA, PA/TIRBOP, TX, FL) actually publish their schedules.
 export interface TitleBracket {
-  over: number;     // bracket starts when price exceeds this amount
-  base: number;     // flat premium accrued up to this bracket
-  per1000: number;  // rate (dollars per $1,000 of price above `over`)
+  over: number;     // threshold; bracket applies when price > over
+  base: number;     // cumulative premium AT the threshold
+  per1000: number;  // $ per $1,000 of price above the threshold (marginal)
 }
 
 export interface TitleSchedule {
-  source: string;
-  promulgated: boolean;
-  minPremium?: number;
-  brackets: TitleBracket[];
+  source: string;          // citation for the schedule
+  promulgated: boolean;    // true = state-set / filed-rate official schedule; false = representative
+  minPremium?: number;     // floor (e.g. NJ $200)
+  brackets: TitleBracket[]; // ascending by `over`; first bracket should have over: 0
 }
 
 export interface TaxLineItem {
@@ -47,8 +53,8 @@ export interface TaxLineItem {
   rate: number;             // representative/flat rate (0.004 = 0.4%); for tiered items, the top-tier rate
   rateMin?: number;         // sliding/tiered low end (for display)
   rateMax?: number;         // sliding/tiered high end (for display)
-  tiers?: TaxTier[];        // CLIFF method: rate chosen by tier, applied to the ENTIRE price (e.g. NJ mansion tax)
-  marginalTiers?: TaxTier[]; // GRADUATED method: each rate applies only to the PORTION of price within that bracket (takes precedence over tiers)
+  tiers?: TaxTier[];        // CLIFF method: rate chosen by price tier, applied to the ENTIRE price (e.g. NJ mansion tax)
+  marginalTiers?: TaxTier[];// MARGINAL method: each rate applies only to the PORTION of price within that bracket (e.g. WA REET, CT conveyance, NJ RTF). Takes precedence over `tiers`.
   base: "price" | "loan";
   party: Party;
   entitySaleOnly?: boolean; // e.g. controlling-interest transfer tax — only on entity sales, not deed sales
@@ -59,9 +65,9 @@ export interface JurisdictionRates {
   state: string;
   stateName: string;
   ratesAsOf: string;             // e.g. "2026-05" — when the RATES were last verified
-  titleInsuranceRate: number;    // owner's policy, % of price (approximate) — fallback when no titleSchedule
+  titleInsuranceRate: number;    // owner's policy, % of price (FLAT fallback when no titleSchedule)
   titleInsuranceParty: Party;
-  titleSchedule?: TitleSchedule; // if present, overrides flat titleInsuranceRate calculation
+  titleSchedule?: TitleSchedule; // when present, used INSTEAD of the flat titleInsuranceRate (regressive)
   transferTaxes: TaxLineItem[];
   mortgageRecordingTax?: TaxLineItem;
   recordingFeesFlat: number;
@@ -71,20 +77,22 @@ export interface JurisdictionRates {
 // ── Representative title schedule for COMPETITIVE (file-and-use) states ──────────
 // These states have no single promulgated/filed-bureau rate — each underwriter
 // files its own. This is a REPRESENTATIVE regressive curve (promulgated: false),
-// anchored to published competitive-Northeast commercial rates and the standard
-// regressive shape underwriters use. Directionally accurate but NOT a sourced
-// per-state filed rate — confirm an underwriter quote for any live deal.
+// anchored to published competitive-Northeast commercial rates (~$3.5/$1,000 in
+// the $200K–$500K band) and the standard regressive shape underwriters use.
+// Directionally accurate (~0.22%–0.35% at commercial sizes) and far better than a
+// flat %, but NOT a sourced per-state filed rate — confirm an underwriter quote
+// for any live deal. Shared so it's clear this is one regional estimate, not many.
 const REP_TITLE_NE_COMPETITIVE: TitleSchedule = {
   source: "Representative regressive schedule — competitive (file-and-use) state with no single filed rate; anchored to published NE commercial title rates. Confirm underwriter quote for live deals.",
   promulgated: false,
   minPremium: 175,
   brackets: [
-    { over: 0,        base: 0,     per1000: 5.00 },
-    { over: 100000,   base: 500,   per1000: 3.75 },
-    { over: 500000,   base: 2000,  per1000: 3.00 },
-    { over: 1000000,  base: 3500,  per1000: 2.50 },
-    { over: 5000000,  base: 13500, per1000: 2.25 },
-    { over: 10000000, base: 24750, per1000: 2.00 },
+    { over: 0,         base: 0,     per1000: 5.00 },
+    { over: 100000,    base: 500,   per1000: 3.75 },
+    { over: 500000,    base: 2000,  per1000: 3.00 },
+    { over: 1000000,   base: 3500,  per1000: 2.50 },
+    { over: 5000000,   base: 13500, per1000: 2.25 },
+    { over: 10000000,  base: 24750, per1000: 2.00 },
   ],
 };
 
@@ -179,23 +187,23 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
 
   NJ: {
     state: "NJ", stateName: "New Jersey", ratesAsOf: "2026-05",
-    titleInsuranceRate: 0.00525, titleInsuranceParty: "buyer",
+    titleInsuranceRate: 0.005, titleInsuranceParty: "buyer",
     titleSchedule: {
-      source: "NJ Land Title Insurance Rating Bureau — standard owner's rate (DOBI-approved Rate Manual eff. 2023-11-01)",
+      source: "NJ Land Title Insurance Rating Bureau — standard owner's rate schedule (NJ DOBI-approved; Rate Manual eff. 2023-11-01)",
       promulgated: true,
       minPremium: 200,
       brackets: [
-        { over: 0,       base: 0,    per1000: 5.25 },
-        { over: 100000,  base: 525,  per1000: 4.25 },
-        { over: 500000,  base: 2225, per1000: 2.75 },
-        { over: 2000000, base: 6350, per1000: 2.00 },
+        { over: 0,        base: 0,    per1000: 5.25 },
+        { over: 100000,   base: 525,  per1000: 4.25 },
+        { over: 500000,   base: 2225, per1000: 2.75 },
+        { over: 2000000,  base: 6350, per1000: 2.00 },
       ],
     },
     transferTaxes: [
       { name: "Realty Transfer Fee (RTF) — Graduated", rate: 0.0121, rateMin: 0.004, rateMax: 0.0121,
         base: "price", party: "seller",
         marginalTiers: [
-          { over: 0,      rate: 0.004  },
+          { over: 0,      rate: 0.004 },
           { over: 150000, rate: 0.0067 },
           { over: 200000, rate: 0.0085 },
           { over: 350000, rate: 0.0105 },
@@ -227,19 +235,19 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     state: "NY", stateName: "New York", ratesAsOf: "2026-05",
     titleInsuranceRate: 0.005, titleInsuranceParty: "buyer",
     titleSchedule: {
-      source: "TIRSA filed Owner's Rate, Zone 2 — NYC metro/downstate. Standard schedule; upstate Zone 1 differs slightly.",
+      source: "TIRSA (Title Insurance Rate Service Assoc.) filed Owner's Rate, Zone 2 — NYC metro/downstate (Albany, Bronx, Kings, Nassau, NY, Queens, Richmond, Rockland, Suffolk, Westchester, etc.). Standard schedule; upstate Zone 1 differs slightly.",
       promulgated: true,
       minPremium: 402,
       brackets: [
-        { over: 0,        base: 402,      per1000: 0    },
-        { over: 35000,    base: 402,      per1000: 6.67 },
-        { over: 50000,    base: 502.05,   per1000: 5.43 },
-        { over: 100000,   base: 773.55,   per1000: 4.36 },
-        { over: 500000,   base: 2517.55,  per1000: 3.98 },
-        { over: 1000000,  base: 4507.55,  per1000: 3.66 },
-        { over: 5000000,  base: 19147.55, per1000: 3.25 },
-        { over: 10000000, base: 35397.55, per1000: 3.07 },
-        { over: 15000000, base: 50747.55, per1000: 2.76 },
+        { over: 0,         base: 402,      per1000: 0 },
+        { over: 35000,     base: 402,      per1000: 6.67 },
+        { over: 50000,     base: 502.05,   per1000: 5.43 },
+        { over: 100000,    base: 773.55,   per1000: 4.36 },
+        { over: 500000,    base: 2517.55,  per1000: 3.98 },
+        { over: 1000000,   base: 4507.55,  per1000: 3.66 },
+        { over: 5000000,   base: 19147.55, per1000: 3.25 },
+        { over: 10000000,  base: 35397.55, per1000: 3.07 },
+        { over: 15000000,  base: 50747.55, per1000: 2.76 },
       ],
     },
     transferTaxes: [
@@ -348,19 +356,19 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     state: "PA", stateName: "Pennsylvania", ratesAsOf: "2026-05",
     titleInsuranceRate: 0.0055, titleInsuranceParty: "buyer",
     titleSchedule: {
-      source: "Title Insurance Rating Bureau of Pennsylvania (TIRBOP) — filed all-inclusive Sale Rate (statewide, no zones)",
+      source: "Title Insurance Rating Bureau of Pennsylvania (TIRBOP) — filed all-inclusive Sale Rate (applies to all PA purchases statewide; one schedule, no zones)",
       promulgated: true,
       minPremium: 569,
       brackets: [
-        { over: 0,        base: 569,   per1000: 0    },
-        { over: 30000,    base: 569,   per1000: 7.41 },
-        { over: 45000,    base: 680.15, per1000: 6.27 },
-        { over: 100000,   base: 1025,  per1000: 5.70 },
-        { over: 500000,   base: 3305,  per1000: 4.56 },
-        { over: 1000000,  base: 5585,  per1000: 3.42 },
-        { over: 2000000,  base: 9005,  per1000: 2.28 },
-        { over: 7000000,  base: 20405, per1000: 1.71 },
-        { over: 30000000, base: 59735, per1000: 1.42 },
+        { over: 0,         base: 569,    per1000: 0 },
+        { over: 30000,     base: 569,    per1000: 7.41 },
+        { over: 45000,     base: 680.15, per1000: 6.27 },
+        { over: 100000,    base: 1025,   per1000: 5.70 },
+        { over: 500000,    base: 3305,   per1000: 4.56 },
+        { over: 1000000,   base: 5585,   per1000: 3.42 },
+        { over: 2000000,   base: 9005,   per1000: 2.28 },
+        { over: 7000000,   base: 20405,  per1000: 1.71 },
+        { over: 30000000,  base: 59735,  per1000: 1.42 },
       ],
     },
     transferTaxes: [
@@ -456,15 +464,15 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     state: "FL", stateName: "Florida", ratesAsOf: "2026-05",
     titleInsuranceRate: 0.00575, titleInsuranceParty: "seller",
     titleSchedule: {
-      source: "Florida Admin. Code R. 69O-186.003 — state-promulgated original owner's premium",
+      source: "Florida Admin. Code R. 69O-186.003 — state-promulgated original owner's title premium (current as of 2025)",
       promulgated: true,
       minPremium: 100,
       brackets: [
-        { over: 0,        base: 0,     per1000: 5.75 },
-        { over: 100000,   base: 575,   per1000: 5.00 },
-        { over: 1000000,  base: 5075,  per1000: 2.50 },
-        { over: 5000000,  base: 15075, per1000: 2.25 },
-        { over: 10000000, base: 26325, per1000: 2.00 },
+        { over: 0,         base: 0,     per1000: 5.75 },
+        { over: 100000,    base: 575,   per1000: 5.00 },
+        { over: 1000000,   base: 5075,  per1000: 2.50 },
+        { over: 5000000,   base: 15075, per1000: 2.25 },
+        { over: 10000000,  base: 26325, per1000: 2.00 },
       ],
     },
     transferTaxes: [
@@ -584,15 +592,15 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     state: "TX", stateName: "Texas", ratesAsOf: "2026-05",
     titleInsuranceRate: 0.0055, titleInsuranceParty: "seller",
     titleSchedule: {
-      source: "Texas Dept. of Insurance — promulgated Basic Premium, Order 2025-9697, eff. 2026-03-01",
+      source: "Texas Dept. of Insurance — promulgated Basic Premium Rate schedule, Commissioner Order 2025-9697, eff. 2026-03-01 (after −6.2% rate reduction)",
       promulgated: true,
       minPremium: 328,
       brackets: [
-        { over: 0,         base: 0,     per1000: 7.80 },
-        { over: 100000,    base: 780,   per1000: 4.94 },
-        { over: 1000000,   base: 5226,  per1000: 4.06 },
-        { over: 5000000,   base: 21466, per1000: 3.35 },
-        { over: 15000000,  base: 54966, per1000: 2.38 },
+        { over: 0,         base: 0,      per1000: 7.80 },  // up-to-$100K table approximated linearly to $780 @ $100K
+        { over: 100000,    base: 780,    per1000: 4.94 },
+        { over: 1000000,   base: 5226,   per1000: 4.06 },
+        { over: 5000000,   base: 21466,  per1000: 3.35 },
+        { over: 15000000,  base: 54966,  per1000: 2.38 },  // schedule published through $25M; rate declines further above $25M
       ],
     },
     transferTaxes: [],
@@ -949,7 +957,7 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
           { over: 1525000, rate: 0.0275 },
           { over: 3025000, rate: 0.03   },
         ],
-        notes: "State REET per RCW 82.45 (graduated/marginal): 1.1% on first $525K; 1.28% on $525K–$1.525M; 2.75% on $1.525M–$3.025M; 3.0% above $3.025M. Each rate applies only to the portion in that band. Seller pays. These are commercial thresholds; residential thresholds differ slightly." },
+        notes: "State REET per RCW 82.45 is GRADUATED — each rate applies only to the portion in that band: 1.1% (≤$525K); 1.28% ($525K–$1.525M); 2.75% ($1.525M–$3.025M); 3.0% (>$3.025M). Seller pays. (Thresholds are the 2025 figures.)" },
       { name: "Local REET — King County (Seattle metro)",
         rate: 0.005, rateMin: 0, rateMax: 0.005, base: "price", party: "seller",
         notes: "King County (Seattle, Bellevue, Kirkland, Redmond, etc.) ONLY: 0.5% additional local REET per RCW 82.46.035. Seller pays. Combined King County total: 1.6% (small deals) up to 3.5% (deals >$3M)." },
@@ -996,23 +1004,10 @@ export function resolveTierRate(tiers: TaxTier[], price: number): number {
   return rate;
 }
 
-/**
- * Resolve a marginal-bracket title insurance premium.
- * Each bracket's rate applies only to the amount above its `over` threshold;
- * `base` is the cumulative premium already accrued from lower brackets.
- */
-export function resolveTitlePremium(schedule: TitleSchedule, price: number): number {
-  if (price <= 0) return 0;
-  let bracket = schedule.brackets[0];
-  for (const b of schedule.brackets) if (price > b.over) bracket = b;
-  const premium = bracket.base + ((price - bracket.over) / 1000) * bracket.per1000;
-  return Math.max(premium, schedule.minPremium ?? 0);
-}
-
-/**
- * Resolve a graduated (marginal-bracket) transfer tax.
- * Each tier's rate applies only to the portion of the base within that bracket.
- */
+/** Resolve a MARGINAL/graduated tax: each tier's rate applies only to the portion
+ *  of the base between that tier's `over` and the next tier's `over`. Returns a
+ *  dollar amount. Used by genuinely-graduated taxes (WA REET, CT conveyance, NJ RTF)
+ *  — as opposed to cliff taxes (resolveTierRate), which hit the entire price. */
 export function resolveMarginalTax(tiers: TaxTier[], base: number): number {
   if (base <= 0) return 0;
   let tax = 0;
@@ -1022,6 +1017,17 @@ export function resolveMarginalTax(tiers: TaxTier[], base: number): number {
     if (base > lo) tax += (Math.min(base, hi) - lo) * tiers[i].rate;
   }
   return tax;
+}
+
+/** Resolve a title premium (MARGINAL/incremental method): base at the highest
+ *  bracket the price clears, plus per-$1,000 on the increment above it. Floored
+ *  at the schedule minimum. This is the regressive schedule real title manuals use. */
+export function resolveTitlePremium(schedule: TitleSchedule, price: number): number {
+  if (price <= 0) return 0;
+  let b = schedule.brackets[0];
+  for (const br of schedule.brackets) if (price > br.over) b = br;
+  const premium = b.base + ((price - b.over) / 1000) * b.per1000;
+  return Math.max(premium, schedule.minPremium ?? 0);
 }
 
 /** Format a rate for display: single %, sliding/tiered range, or flat fee. */
@@ -1059,51 +1065,48 @@ export function calculateClosingCosts(jurisdiction: JurisdictionRates, price: nu
   const sched = jurisdiction.titleSchedule;
   const titleAmt = sched ? resolveTitlePremium(sched, price) : price * jurisdiction.titleInsuranceRate;
   const ts = splitOf(titleAmt, jurisdiction.titleInsuranceParty);
-  const titleLine: ClosingCostLine = sched
-    ? {
-        name: "Title Insurance (Owner's Policy)",
-        rate: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
-        rateMin: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
-        rateMax: sched.brackets[0].per1000 / 1000,
-        base: "price",
-        party: jurisdiction.titleInsuranceParty,
-        amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
-        notes: `Regressive filed schedule (${sched.source}). Rate shown is the sliding range at this price.${sched.minPremium ? ` Min premium $${sched.minPremium.toLocaleString()}.` : ""}`,
-      }
-    : {
-        name: "Title Insurance (Owner's Policy)",
-        rate: jurisdiction.titleInsuranceRate,
-        base: "price",
-        party: jurisdiction.titleInsuranceParty,
-        amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
-        notes: jurisdiction.titleInsuranceParty === "split" ? "Customarily split per local practice" : undefined,
-      };
-  lines.push(titleLine);
+  // For a regressive schedule, expose the marginal-rate range so the rate column
+  // shows e.g. "0.2%-0.53% (sliding)"; the $ columns carry the exact premium.
+  const titleRate = price > 0 && sched ? titleAmt / price : jurisdiction.titleInsuranceRate;
+  const titleMin = sched ? sched.brackets[sched.brackets.length - 1].per1000 / 1000 : undefined;
+  const titleMax = sched ? sched.brackets[0].per1000 / 1000 : undefined;
+  lines.push({ name: "Title Insurance (Owner's Policy)", rate: titleRate, rateMin: titleMin, rateMax: titleMax, base: "price",
+    party: jurisdiction.titleInsuranceParty, amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
+    notes: sched
+      ? `Regressive ${sched.promulgated ? "filed-rate" : "representative"} schedule — premium % declines as price rises. ${sched.source}`
+      : (jurisdiction.titleInsuranceParty === "split" ? "Customarily split per local practice" : undefined) });
 
   for (const tx of jurisdiction.transferTaxes) {
     if (tx.entitySaleOnly && !includeEntityTaxes) {
+      // Show the line (rate visible) but zero $ for a standard asset/deed sale.
       lines.push({ ...tx, amount: 0, buyer: 0, seller: 0 });
       continue;
     }
-    const txBase = tx.base === "loan" ? loan : price;
-    const amt = tx.marginalTiers
-      ? resolveMarginalTax(tx.marginalTiers, txBase)
-      : tx.tiers
-        ? txBase * resolveTierRate(tx.tiers, txBase)
-        : txBase * tx.rate;
+    const base = tx.base === "loan" ? loan : price;
+    let amt: number;
+    if (tx.marginalTiers) {
+      amt = resolveMarginalTax(tx.marginalTiers, base);                // graduated: portion-by-portion
+    } else if (tx.tiers) {
+      amt = base * resolveTierRate(tx.tiers, base);                    // cliff: top tier rate × entire base
+    } else {
+      amt = base * tx.rate;                                            // flat
+    }
     const sp = splitOf(amt, tx.party);
     lines.push({ ...tx, amount: amt, buyer: sp.buyer, seller: sp.seller });
   }
 
   if (jurisdiction.mortgageRecordingTax) {
     const mt = jurisdiction.mortgageRecordingTax;
-    const amt = loan > 0
-      ? mt.marginalTiers
-        ? resolveMarginalTax(mt.marginalTiers, loan)
-        : mt.tiers
-          ? loan * resolveTierRate(mt.tiers, loan)
-          : loan * mt.rate
-      : 0;
+    let amt: number;
+    if (loan <= 0) {
+      amt = 0;
+    } else if (mt.marginalTiers) {
+      amt = resolveMarginalTax(mt.marginalTiers, loan);
+    } else if (mt.tiers) {
+      amt = loan * resolveTierRate(mt.tiers, loan);
+    } else {
+      amt = loan * mt.rate;
+    }
     const sp = splitOf(amt, mt.party);
     lines.push({ ...mt, amount: amt, buyer: sp.buyer, seller: sp.seller });
   }
