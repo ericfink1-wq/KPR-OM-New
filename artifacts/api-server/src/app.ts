@@ -7,6 +7,13 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Express 5 defaults the query parser to "simple", which leaves bracketed
+// array params under the literal key "dealId[]" instead of "dealId". The
+// analytics routes (and their dealId[]= filters used by the All/Owned scope
+// toggle) rely on the Express 4 "extended" (qs) behavior, so restore it.
+app.set("query parser", "extended");
+
+
 app.use(
   pinoHttp({
     logger,
