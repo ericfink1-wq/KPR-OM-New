@@ -182,7 +182,6 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
   try {
-    const replace = req.query.replace === "true";
     const body = req.body;
     if (!Array.isArray(body) || body.length === 0) {
       res.status(400).json({ error: "Body must be a non-empty array of comp objects" });
@@ -197,7 +196,7 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
     const toStr = (v: unknown): string | null =>
       typeof v === "string" && v.trim() ? v.trim() : null;
 
-    const insertRows: {
+    type CompInsert = {
       sourceDealId: string; sourceDealName: null; sourceDealMarket: string | null;
       name: string | null; address: string | null; market: string | null; state: string | null;
       saleDateRaw: string | null; saleDate: string | null;
@@ -205,8 +204,9 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
       sf: number | null; occupancy: number | null;
       isManual: true; anchor: string | null; propertyType: string | null; sourceNotes: string | null;
       buyer: string | null; seller: string | null;
-    }[] = [];
+    };
 
+    const candidates: CompInsert[] = [];
     let skipped = 0;
     for (const item of body as Record<string, unknown>[]) {
       const name      = toStr(item.name);
@@ -219,7 +219,7 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
         parsedPsf = Math.round(salePrice / parsedSf);
       }
       const market = toStr(item.market);
-      insertRows.push({
+      candidates.push({
         sourceDealId: "__manual__", sourceDealName: null, sourceDealMarket: market,
         name, address: toStr(item.address), market, state: toStr(item.state),
         saleDateRaw: toStr(item.saleDateRaw),
@@ -231,17 +231,33 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
         buyer: toStr(item.buyer), seller: toStr(item.seller),
       });
     }
-    let replaced = 0;
-    if (replace) {
-      const deleted = await db.delete(compsIndexTable)
-        .where(eq(compsIndexTable.isManual, true))
-        .returning({ id: compsIndexTable.id });
-      replaced = deleted.length;
+
+    // Smart import: never replace/delete. Skip any comp that duplicates one
+    // already in the database OR an earlier row in this same upload.
+    const norm = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const sigOf = (r: { name: string | null; address: string | null; salePrice: number | null; saleDate: string | null; saleDateRaw: string | null; sf: number | null }) =>
+      [norm(r.name || r.address), r.salePrice != null ? Math.round(r.salePrice) : "", (r.saleDate || r.saleDateRaw || ""), r.sf != null ? Math.round(r.sf) : ""].join("|");
+
+    const existing = await db.select({
+      name: compsIndexTable.name, address: compsIndexTable.address,
+      salePrice: compsIndexTable.salePrice, saleDate: compsIndexTable.saleDate,
+      saleDateRaw: compsIndexTable.saleDateRaw, sf: compsIndexTable.sf,
+    }).from(compsIndexTable);
+    const seen = new Set<string>(existing.map(sigOf));
+
+    const insertRows: CompInsert[] = [];
+    let duplicates = 0;
+    for (const r of candidates) {
+      const s = sigOf(r);
+      if (seen.has(s)) { duplicates++; continue; }
+      seen.add(s);
+      insertRows.push(r);
     }
+
     if (insertRows.length > 0) {
       await db.insert(compsIndexTable).values(insertRows);
     }
-    res.json({ ok: true, inserted: insertRows.length, skipped, replaced });
+    res.json({ ok: true, inserted: insertRows.length, skipped, duplicates });
   } catch (err) {
     req.log.error({ err }, "Failed to bulk-insert manual comps");
     res.status(500).json({ error: "Failed to bulk-insert manual comps" });

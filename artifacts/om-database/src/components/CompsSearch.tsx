@@ -596,20 +596,19 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     }
   };
 
-  const doImport = async (arr: unknown[], replace: boolean) => {
+  const doImport = async (arr: unknown[]) => {
     setPendingImport(null);
     try {
-      const url = replace ? "/api/comps/manual/bulk?replace=true" : "/api/comps/manual/bulk";
-      const r = await fetch(url, {
+      const r = await fetch("/api/comps/manual/bulk", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(arr),
       });
-      const data = await r.json() as { ok?: boolean; inserted?: number; skipped?: number; replaced?: number; error?: string };
+      const data = await r.json() as { ok?: boolean; inserted?: number; skipped?: number; duplicates?: number; error?: string };
       if (!r.ok) throw new Error(data.error ?? "Server error");
       const parts: string[] = [`Imported ${data.inserted} comp${data.inserted !== 1 ? "s" : ""}`];
-      if (data.replaced) parts.push(`replaced ${data.replaced} existing`);
+      if (data.duplicates) parts.push(`${data.duplicates} duplicate${data.duplicates !== 1 ? "s" : ""} skipped`);
       if (data.skipped) parts.push(`${data.skipped} skipped`);
       setImportMsg({ ok: true, text: parts.join(", ") });
       setTimeout(() => setImportMsg(null), 5000);
@@ -627,7 +626,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const hasState   = rows.some(r => r.state);
   const hasBuyer   = rows.some(r => r.buyer);
   const hasSeller  = rows.some(r => r.seller);
-  const colCount   = 10  // +1 for separate Actions column
+  const colCount   = 8  // Property, City, Price, Cap, SF, Price PSF, Occupancy, Actions
     + (hasAnchor ? 1 : 0) + (hasType ? 1 : 0)
     + (hasState ? 1 : 0) + (hasBuyer ? 1 : 0) + (hasSeller ? 1 : 0);
 
@@ -774,31 +773,20 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
               Import {pendingImport.length} comp{pendingImport.length !== 1 ? "s" : ""}
             </div>
             <div style={{ fontSize: 13, color: "#5c5850", marginBottom: 22, lineHeight: 1.5 }}>
-              Replace all existing imported comps with this file, or add these on top?
-              <div style={{ marginTop: 8, fontSize: 11.5, color: "#a89f8f" }}>
-                OWNED and OM-sourced comps are never affected.
-              </div>
+              These will be added to your comp database. Any that duplicate a comp already
+              in the database (or each other) are skipped automatically — nothing is ever
+              replaced or deleted.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button
-                onClick={() => doImport(pendingImport, true)}
-                style={{
-                  flex: 1, padding: "9px 0", borderRadius: 8, border: "1px solid #e7ddd0",
-                  background: "#fff3ee", color: "#b05050", fontSize: 13, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "'Inter',sans-serif",
-                }}
-              >
-                Replace
-              </button>
-              <button
-                onClick={() => doImport(pendingImport, false)}
+                onClick={() => doImport(pendingImport)}
                 style={{
                   flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
                   background: "#6dba43", color: "#fff", fontSize: 13, fontWeight: 600,
                   cursor: "pointer", fontFamily: "'Inter',sans-serif",
                 }}
               >
-                Add
+                Import {pendingImport.length} comp{pendingImport.length !== 1 ? "s" : ""}
               </button>
               <button
                 onClick={() => setPendingImport(null)}
@@ -995,20 +983,18 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f1eadc" }}>
-                  <SortTh label="Property" sortKey="name_asc" current={sort} onSort={handleSort} style={{ minWidth: 180 }} />
-                  <SortTh label="Market"   sortKey="market_asc" current={sort} onSort={handleSort} style={{ minWidth: 100 }} />
+                  <SortTh label="Property" sortKey="name_asc"   current={sort} onSort={handleSort} style={{ minWidth: 180 }} />
+                  <SortTh label="City"     sortKey="market_asc" current={sort} onSort={handleSort} style={{ minWidth: 100 }} />
                   {hasState   && <SortTh label="State"  sortKey="state_asc"  current={sort} onSort={handleSort} style={{ minWidth: 50 }} />}
-                  {hasAnchor  && <SortTh label="Anchor" sortKey="anchor_asc" current={sort} onSort={handleSort} style={{ maxWidth: 220 }} />}
-                  {hasType    && <SortTh label="Type"   sortKey="type_asc"   current={sort} onSort={handleSort} />}
+                  <SortTh label="Price"      sortKey="sale_price_desc"    current={sort} onSort={handleSort} />
+                  <SortTh label="Cap Rate"   sortKey="cap_rate_asc"       current={sort} onSort={handleSort} />
                   {hasBuyer   && <SortTh label="Buyer"  sortKey="buyer_asc"  current={sort} onSort={handleSort} style={{ minWidth: 120 }} />}
                   {hasSeller  && <SortTh label="Seller" sortKey="seller_asc" current={sort} onSort={handleSort} style={{ minWidth: 120 }} />}
-                  <SortTh label="Sale Date"  sortKey="date_desc"          current={sort} onSort={handleSort} />
-                  <SortTh label="Cap Rate"   sortKey="cap_rate_asc"       current={sort} onSort={handleSort} />
-                  <SortTh label="Price/SF"   sortKey="price_per_sf_asc"   current={sort} onSort={handleSort} />
-                  <SortTh label="Sale Price" sortKey="sale_price_desc"    current={sort} onSort={handleSort} />
                   <SortTh label="SF"         sortKey="sf_desc"            current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
-                  <SortTh label="Occ"        sortKey="occ_desc"           current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
-                  <th style={{ padding: "9px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", minWidth: 130 }}>Source</th>
+                  <SortTh label="Price PSF"  sortKey="price_per_sf_asc"   current={sort} onSort={handleSort} />
+                  <SortTh label="Occupancy"  sortKey="occ_desc"           current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
+                  {hasAnchor  && <SortTh label="Anchor" sortKey="anchor_asc" current={sort} onSort={handleSort} style={{ maxWidth: 220 }} />}
+                  {hasType    && <SortTh label="Type"   sortKey="type_asc"   current={sort} onSort={handleSort} />}
                   <th style={{
                     padding: "9px 6px", width: 72,
                     position: "sticky", right: 0, zIndex: 3,
@@ -1085,6 +1071,15 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                       </td>
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#5c5850", whiteSpace: "nowrap" }}>{row.market || "—"}</td>
                       {hasState  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#7d766a", whiteSpace: "nowrap" }}>{row.state || "—"}</td>}
+                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(row.salePrice)}</td>
+                      <td style={{ padding: "9px 10px", fontSize: 12, color: row.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: row.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>
+                        {fmtCapRate(row.capRate)}
+                      </td>
+                      {hasBuyer  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.buyer || "—"}</td>}
+                      {hasSeller && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.seller || "—"}</td>}
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(row.sf)}</td>
+                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPsf(row.pricePerSf)}</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtPct(row.occupancy)}</td>
                       {hasAnchor && (
                         <td style={{ padding: "9px 10px", maxWidth: 230 }}>
                           {row.anchor
@@ -1093,56 +1088,6 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                         </td>
                       )}
                       {hasType   && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.propertyType || "—"}</td>}
-                      {hasBuyer  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.buyer || "—"}</td>}
-                      {hasSeller && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.seller || "—"}</td>}
-                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", fontWeight: 500, whiteSpace: "nowrap" }}>{fmtDate(row.saleDate)}</td>
-                      <td style={{ padding: "9px 10px", fontSize: 12, color: row.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: row.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>
-                        {fmtCapRate(row.capRate)}
-                      </td>
-                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPsf(row.pricePerSf)}</td>
-                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(row.salePrice)}</td>
-                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(row.sf)}</td>
-                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtPct(row.occupancy)}</td>
-                      <td style={{ padding: "9px 10px", maxWidth: 160 }}>
-                        {row.isManual ? (
-                          <TruncCell
-                            text={row.sourceNotes || "Manual"}
-                            isExpanded={expandedCells.has(`${row.id}:notes`)}
-                            onToggle={() => toggleCell(row.id, "notes")}
-                            maxWidth={140}
-                            color="#7d766a"
-                          />
-                        ) : row.sourceDealName ? (
-                          <div style={{ maxWidth: 150 }}>
-                            {onOpenDeal ? (
-                              <button
-                                onClick={() => onOpenDeal(row.sourceDealId)}
-                                style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
-                              >
-                                <TruncCell
-                                  text={row.sourceDealName}
-                                  isExpanded={expandedCells.has(`${row.id}:notes`)}
-                                  onToggle={() => toggleCell(row.id, "notes")}
-                                  maxWidth={140}
-                                  color="#6dba43"
-                                  fontSize={11}
-                                />
-                              </button>
-                            ) : (
-                              <TruncCell
-                                text={row.sourceDealName}
-                                isExpanded={expandedCells.has(`${row.id}:notes`)}
-                                onToggle={() => toggleCell(row.id, "notes")}
-                                maxWidth={140}
-                                color="#7d766a"
-                                fontSize={11}
-                              />
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 11, color: "#c9c2b8" }}>—</div>
-                        )}
-                      </td>
                       <td style={{
                         padding: "9px 8px", whiteSpace: "nowrap",
                         position: "sticky", right: 0, zIndex: 2,
