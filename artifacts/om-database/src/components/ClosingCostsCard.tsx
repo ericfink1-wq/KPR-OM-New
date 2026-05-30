@@ -67,7 +67,8 @@ export default function ClosingCostsCard({ deal }: Props) {
 
   // User dropdown picks win over auto-detection; cleared when switching deals.
   const [override, setOverride] = useState<Record<string, string>>({});
-  useEffect(() => { setOverride({}); }, [deal.id]);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  useEffect(() => { setOverride({}); setOpenGroups(new Set()); }, [deal.id]);
   const localities = useMemo(() => ({ ...detected, ...override }), [detected, override]);
 
   const price = Number(priceInput.replace(/,/g, "")) || 0;
@@ -138,28 +139,47 @@ export default function ClosingCostsCard({ deal }: Props) {
         </div>
       )}
 
-      {/* Locality picker(s) — for states with county/city transfer-tax options */}
+      {/* Local transfer-tax locality — resolved automatically; dropdown only on "Change". */}
       {localityGroups.map((g) => {
         const fallbackDefault = g.options.find((o) => o.isDefault)?.label ?? g.options[0]?.label ?? "";
         const autoLabel = detected[g.group];
         const current = localities[g.group] ?? fallbackDefault;
         const isOverridden = override[g.group] != null;
         const isAuto = !!autoLabel && !isOverridden;
+        const open = openGroups.has(g.group);
+        const setOpen = (v: boolean) => setOpenGroups((prev) => { const n = new Set(prev); if (v) n.add(g.group); else n.delete(g.group); return n; });
         return (
-          <label key={g.group} style={{ display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
-            County / City (local transfer tax)
-            <select value={current} onChange={(e) => setOverride((prev) => ({ ...prev, [g.group]: e.target.value }))}
-              style={{ display: "block", width: "100%", fontSize: 13, padding: "7px 10px", border: "1px solid #e3dccd", borderRadius: 6, color: "#383a37", background: "#fafaf8", marginTop: 4, fontFamily: "'Inter',sans-serif", boxSizing: "border-box" }}>
-              {g.options.map((o) => <option key={o.label} value={o.label}>{o.label}{o.isDefault ? " (default)" : ""}</option>)}
-            </select>
-            <span style={{ display: "block", fontSize: 9.5, color: isAuto ? "#3f7a1f" : "#a69e91", fontWeight: 400, textTransform: "none", letterSpacing: 0, marginTop: 3 }}>
+          <div key={g.group} style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+              County / City (local transfer tax)
+            </div>
+            {open ? (
+              <select autoFocus value={current}
+                onChange={(e) => { setOverride((prev) => ({ ...prev, [g.group]: e.target.value })); setOpen(false); }}
+                onBlur={() => setOpen(false)}
+                style={{ display: "block", width: "100%", fontSize: 13, padding: "7px 10px", border: "1px solid #6dba43", borderRadius: 6, color: "#383a37", background: "#fafaf8", fontFamily: "'Inter',sans-serif", boxSizing: "border-box" }}>
+                {g.options.map((o) => <option key={o.label} value={o.label}>{o.label}{o.isDefault ? " (default)" : ""}</option>)}
+              </select>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "#fafaf8", border: "1px solid #e3dccd", borderRadius: 6, padding: "7px 10px" }}>
+                <span style={{ fontSize: 13, color: "#383a37" }}>
+                  {isAuto && <span style={{ color: "#3f7a1f", marginRight: 5 }}>✓</span>}
+                  {current}
+                </span>
+                <button type="button" onClick={() => setOpen(true)}
+                  style={{ background: "transparent", border: "none", color: "#6dba43", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "2px 4px", flexShrink: 0 }}>
+                  Change
+                </button>
+              </div>
+            )}
+            <span style={{ display: "block", fontSize: 9.5, color: isAuto ? "#3f7a1f" : "#a69e91", fontWeight: 400, marginTop: 3 }}>
               {isAuto
-                ? `✓ Auto-selected from the property address. Change it if the parcel sits in a different taxing jurisdiction.`
+                ? `✓ Auto-detected from the property address.`
                 : isOverridden
-                  ? `Manually selected — overriding the auto-detected locality.`
-                  : `Pick the property's county/city. Only the selected locality's local tax is applied.`}
+                  ? `Manually selected.`
+                  : `Best estimate for this state — click Change if the parcel is in a special taxing jurisdiction.`}
             </span>
-          </label>
+          </div>
         );
       })}
 
