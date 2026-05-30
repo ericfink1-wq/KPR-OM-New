@@ -323,7 +323,7 @@ export interface Deal {
   tenants?: Tenant[];
   tenantsAsOf?: string | null;
   tenantsSource?: "om" | "rent-roll" | null;
-  tenantsManual?: boolean;
+  tenantsManual?: boolean;  // true when the roster was set by a manual paste/rent-roll (protects it from OM re-extraction)
   // Tenant sales history (uploaded year-by-year snapshots)
   tenantSalesHistory?: TenantSalesYear[];
   // Cash flow

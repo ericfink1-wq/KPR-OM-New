@@ -137,7 +137,7 @@ function KeyAssumptions({ deal }: { deal: Deal }) {
 // ---------------------------------------------------------------------------
 interface BmStats { median: number; p25: number; p75: number }
 interface BmMatch {
-  id: number; name: string | null; sourceDealName: string | null; market: string | null; saleDate: string | null;
+  id: number; name: string | null; market: string | null; saleDate: string | null;
   salePrice: number | null; capRate: number | null; pricePerSf: number | null;
   sf: number | null; source: "owned" | "broker" | "om"; excluded: boolean;
 }
@@ -164,7 +164,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [excludeIds, setExcludeIds] = useState<number[]>(() => readLs().excludeIds ?? []);
   const [includeIds, setIncludeIds] = useState<number[]>(() => readLs().includeIds ?? []);
   const [addQ, setAddQ] = useState("");
-  const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string | null; sourceDealName: string | null; salePrice: number | null; market: string | null; saleDate: string | null }>>([]);
+  const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string; market: string | null; saleDate: string | null }>>([]);
   const [sugsLoading, setSugsLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -179,8 +179,6 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     setIncludeIds(prev => prev.includes(id) ? prev : [...prev, id]);
     setAddQ(""); setSuggestions([]);
   };
-  const removeInclude = (id: number) =>
-    setIncludeIds(prev => prev.filter(x => x !== id));
 
   useEffect(() => {
     if (!addQ.trim()) { setSuggestions([]); return; }
@@ -188,14 +186,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     const t = setTimeout(() => {
       fetch(`/api/comps?q=${encodeURIComponent(addQ.trim())}`, { credentials: "include" })
         .then(r => r.json())
-        .then((rows: Array<{ id: number; name: string | null; sourceDealName: string | null; salePrice: number | null; market: string | null; saleDate: string | null }>) => {
+        .then((rows: Array<{ id: number; name: string | null; market: string | null; saleDate: string | null }>) => {
           const inBm = new Set((bm?.comps ?? []).map(c => c.id));
-          setSuggestions(
-            rows
-              .filter(r => !inBm.has(r.id) && r.salePrice != null && r.salePrice > 0)
-              .slice(0, 8)
-              .map(r => ({ id: r.id, name: r.name, sourceDealName: r.sourceDealName, salePrice: r.salePrice, market: r.market, saleDate: r.saleDate }))
-          );
+          setSuggestions(rows.filter(r => !inBm.has(r.id)).slice(0, 8)
+            .map(r => ({ id: r.id, name: r.name ?? "—", market: r.market, saleDate: r.saleDate })));
           setSugsLoading(false);
         })
         .catch(() => setSugsLoading(false));
@@ -312,17 +306,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       {sugsLoading && <div style={{ fontSize: 11, color: "#a89f8f", padding: "4px 0" }}>Searching…</div>}
       {suggestions.length > 0 && (
         <div style={{ position: "absolute", zIndex: 20, top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e7e0d2", borderRadius: 7, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", maxHeight: 260, overflowY: "auto" }}>
-          {suggestions.map(s => {
-            const label = s.name || s.sourceDealName || s.market || "Unnamed comp";
-            return (
-              <button key={s.id} onClick={() => addInclude(s.id)}
-                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f5f1ea", padding: "10px 12px", cursor: "pointer", fontFamily: "'Inter',sans-serif", touchAction: "manipulation" }}>
-                <span style={{ fontSize: 12, fontWeight: 500, color: "#26281f" }}>{label}</span>
-                {s.market && s.name && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{s.market}</span>}
-                {s.saleDate && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{fmtD(s.saleDate)}</span>}
-              </button>
-            );
-          })}
+          {suggestions.map(s => (
+            <button key={s.id} onClick={() => addInclude(s.id)}
+              style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f5f1ea", padding: "8px 12px", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#26281f" }}>{s.name}</span>
+              {s.market && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{s.market}</span>}
+              {s.saleDate && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{fmtD(s.saleDate)}</span>}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -362,7 +353,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
               <div style={{ background: "#f9f6f0", border: "1px solid #ece5d7", borderRadius: 8, padding: "14px 16px", marginBottom: 10, fontSize: 12, color: "#a89f8f", fontStyle: "italic" }}>
                 No comparable trades on file yet.
               </div>
-              {AddCompSection()}
+              <AddCompSection />
             </>
           );
         }
@@ -433,7 +424,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
               <div style={{ fontSize: 11, color: "#7d766a", marginBottom: 6 }}>
                 <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length} comp{activeComps.length !== 1 ? "s" : ""}</span> in benchmark
                 {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} manually excluded</span>}
-                <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— × removes added comps · eye excludes/re-includes others</span>
+                <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— click eye to exclude/re-include</span>
               </div>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
@@ -449,13 +440,9 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                     {bm.comps.map(c => (
                       <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1 }}>
                         <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle" }}>
-                          {includeIds.includes(c.id)
-                            ? <button onClick={() => removeInclude(c.id)}
-                                title="Remove from benchmark"
-                                style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: "#dc2626", fontSize: 16, lineHeight: 1, display: "inline-flex", alignItems: "center", flexShrink: 0, fontFamily: "sans-serif" }}>×</button>
-                            : <EyeBtn id={c.id} isExcluded={c.excluded} />}
+                          <EyeBtn id={c.id} isExcluded={c.excluded} />
                         </td>
-                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || c.sourceDealName || c.market || "Unnamed comp"}</td>
+                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || "—"}</td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
                         <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(c.salePrice)}</td>
@@ -468,7 +455,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                   </tbody>
                 </table>
               </div>
-              {AddCompSection()}
+              <AddCompSection />
             </div>
           </>
         );
@@ -865,22 +852,23 @@ ${text.slice(0, 40000)}`;
 
   const handleReanalyze = async () => {
     if (!ensureUploadAllowed()) return;
+    setAnalyzeOpen(false);
+    // Protect a manually-updated roster: re-reading the stored OM would replace it with older tenants.
     let overwriteRoster = false;
     if (d.tenantsManual) {
-      const confirmed = window.confirm(
-        "This deal's roster was manually updated (via rent roll paste).\n\n" +
-        "Re-analyzing from the stored OM will REPLACE the current roster with the OM's older tenants.\n\n" +
-        "For a safe refresh that keeps the current roster, cancel and use \"✨ Refresh Analysis (current roster)\" from the Actions menu.\n\n" +
-        "Press OK only to confirm that you want to overwrite the manual roster with the OM's tenants."
+      const ok = window.confirm(
+        `⚠️ This roster was manually updated${d.tenantsAsOf ? ` (as of ${d.tenantsAsOf})` : ""}.\n\n` +
+        `"Re-analyze" re-reads the original OM and will REPLACE your updated roster with the OM's older tenants — and the regenerated summary will describe those old tenants.\n\n` +
+        `To refresh the grade & summary against your CURRENT roster instead, cancel and use "Refresh Analysis (current roster)".\n\n` +
+        `Overwrite the manual roster with the OM's tenants anyway?`
       );
-      if (!confirmed) return;
+      if (!ok) return;
       overwriteRoster = true;
     }
-    setAnalyzeOpen(false);
     setReanalyzeBusy(true);
     try {
-      const result = await apiReanalyzeDeal(d.id, { overwriteRoster });
-      if (result.rosterManual) { setReanalyzeBusy(false); return; }
+      const r = await apiReanalyzeDeal(d.id, { overwriteRoster });
+      if (r.rosterManual) { setReanalyzeBusy(false); return; } // server guard (shouldn't hit after confirm)
       await pollUntilDone(d.id);
       onUpdate(d.id, { analysisStale: false });
     } catch {}
@@ -892,16 +880,15 @@ ${text.slice(0, 40000)}`;
     setActionsOpen(false);
     setReanalyzeBusy(true);
     try {
-      const result = await apiRefreshAnalysis(d.id);
-      onUpdate(d.id, {
-        notes: result.notes as string | undefined,
-        dealScore: result.dealScore as import("../lib/idb").DealScore | undefined,
-        upsideItems: result.upsideItems as import("../lib/idb").Deal["upsideItems"],
-        redFlags: result.redFlags,
-        analysisStale: false,
-      });
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Refresh analysis failed");
+      const r = await apiRefreshAnalysis(d.id);
+      const patch: Partial<Deal> = { analysisStale: false };
+      if (r.notes !== undefined) patch.notes = r.notes as Deal["notes"];
+      if (r.dealScore !== undefined) patch.dealScore = r.dealScore as Deal["dealScore"];
+      if (r.upsideItems !== undefined) patch.upsideItems = r.upsideItems as Deal["upsideItems"];
+      if (r.redFlags !== undefined) patch.redFlags = r.redFlags as Deal["redFlags"];
+      onUpdate(d.id, patch);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Refresh analysis failed");
     }
     setReanalyzeBusy(false);
   };
@@ -1273,10 +1260,10 @@ ${text.slice(0, 40000)}`;
             {actionsOpen && (
               <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210 }}>
                 <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Analyze</div>
-                <button onClick={() => handleRefreshAnalysis()} disabled={reanalyzeBusy}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:reanalyzeBusy?"default":"pointer", fontSize:12, color:reanalyzeBusy?"#a69e91":"#3f7a1f", fontFamily:"'Inter',sans-serif", fontWeight:600 }}
-                  onMouseEnter={e => { if (!reanalyzeBusy) e.currentTarget.style.background="#f0f7e8"; }} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  {reanalyzeBusy ? "Refreshing…" : "✨ Refresh Analysis (current roster)"}
+                <button onClick={() => { setActionsOpen(false); handleRefreshAnalysis(); }} disabled={reanalyzeBusy}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor: reanalyzeBusy ? "default" : "pointer", fontSize:12, color:"#3f7a1f", fontWeight:600, fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => { if(!reanalyzeBusy) e.currentTarget.style.background="#f6f2ea"; }} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  ✨ {reanalyzeBusy ? "Refreshing…" : "Refresh Analysis (current roster)"}
                 </button>
                 <button onClick={() => { setActionsOpen(false); handleReanalyze(); }}
                   style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}

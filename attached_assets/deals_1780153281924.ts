@@ -480,7 +480,8 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
     const existing = dealRows[0].data as Record<string, unknown>;
     const sourceText = srcRows[0]?.sourceText ?? null;
 
-    // Guard: if the roster was manually updated, refuse to overwrite unless explicitly confirmed.
+    // Guard: if the roster was manually updated (e.g. a pasted rent roll), re-reading the
+    // stored OM would replace it with the OM's older tenants. Refuse unless explicitly overridden.
     const overwriteRoster = (req.body as Record<string, unknown> | undefined)?.overwriteRoster === true;
     if (existing.tenantsManual === true && !overwriteRoster) {
       res.status(409).json({

@@ -1,0 +1,25 @@
+Make, test, and iterate. Fix the bug where "Re-analyze" silently overwrites a manually-updated tenant roster, and add a safe "Refresh Analysis" that regenerates the summary/grade/red flags from the CURRENT roster instead of the stale OM. Five files. Use the reference files I provided as the source of truth; the changes are:
+
+1) artifacts/api-server/src/lib/extract.ts
+   Add a new exported function `runRosterAnalysis(dealData)` (and a ROSTER_ANALYSIS_PROMPT constant) that calls the LLM (reuse callAnthropicOnce + robustParseJSON, model "claude-haiku-4-5-20251001", max_tokens 4000) on a COMPACT JSON snapshot of the deal's CURRENT data (propertyName, address, city, state, assetType/centerType, totalSF, occupancy, walt, askingPrice, capRate, noi, weightedAvgRentPSF, grossPotentialRent, tenantsAsOf/Source, marketDemographics, and a trimmed tenants array). It returns ONLY the analytical fields: notes, dealScore, upsideItems, redFlags. It must base everything strictly on the data provided and never re-read OM text or touch tenants.
+
+2) artifacts/api-server/src/routes/deals.ts
+   a. Import runRosterAnalysis: `import { runOmExtraction, runRosterAnalysis } from "../lib/extract";`
+   b. In POST /deals/:id/reanalyze, after loading `existing`, add a guard: read `overwriteRoster = req.body?.overwriteRoster === true`. If `existing.tenantsManual === true && !overwriteRoster`, return HTTP 409 `{ error: "roster_manual", message: "...manually updated... use Refresh Analysis or confirm overwrite", tenantsAsOf }` and stop. (When overwriteRoster is true, proceed as before.)
+   c. Add a new route POST /deals/:id/refresh-analysis (requireAuth): load the deal; if it has 0 tenants return 422; else call runRosterAnalysis(current), merge the returned {notes,dealScore,upsideItems,redFlags} onto the deal with analysisStale:false, then run the existing rescoreDeal(id, updated) and overlay its dealScore/redFlags/lastScoredAt/lastScoredDealCount (non-fatal on error), JSON-sanitize, db.update, rebuildTenantIndex in setImmediate, and return { ok:true, notes, dealScore, upsideItems, redFlags, analysisStale:false }.
+
+3) artifacts/om-database/src/lib/api.ts
+   a. Change apiReanalyzeDeal to accept `opts?: { overwriteRoster?: boolean }`, send `{ overwriteRoster }` in the POST body, and on HTTP 409 return `{ rosterManual: true, message, tenantsAsOf }` instead of throwing.
+   b. Add `apiRefreshAnalysis(id)` → POST /deals/:id/refresh-analysis, returns { ok, notes, dealScore, upsideItems, redFlags, analysisStale }.
+
+4) artifacts/om-database/src/lib/idb.ts
+   Add `tenantsManual?: boolean;` to the Deal interface (next to tenantsSource).
+
+5) artifacts/om-database/src/components/DetailView.tsx
+   a. Import apiRefreshAnalysis alongside the other api imports.
+   b. In BOTH places that paste/apply a rent-roll roster (the onUpdate calls with tenantsSource:"rent-roll"), add `tenantsManual: true` to the patch.
+   c. In handleReanalyze: if `d.tenantsManual`, window.confirm a clear warning that re-analyze will replace the manual roster with the OM's older tenants and that "Refresh Analysis (current roster)" is the safe alternative; cancel aborts, confirm sets overwriteRoster=true. Call `apiReanalyzeDeal(d.id, { overwriteRoster })`; if the result has `rosterManual`, stop quietly.
+   d. Add `handleRefreshAnalysis`: calls apiRefreshAnalysis(d.id), then onUpdate(d.id, { notes, dealScore, upsideItems, redFlags, analysisStale:false }) from the response; alert on error.
+   e. In the Actions menu, under the "Analyze" header, add as the FIRST item a button "✨ Refresh Analysis (current roster)" (green, color #3f7a1f, bold) that calls handleRefreshAnalysis, disabled while reanalyzeBusy ("Refreshing…").
+
+TEST (desktop + mobile): On a deal whose roster was pasted (tenantsManual), tapping Actions → "✨ Refresh Analysis (current roster)" regenerates the summary/grade/strengths/risks/red flags to match the CURRENT tenants, clears the orange "Roster updated" banner, and leaves the roster untouched. Tapping the old "Re-analyze (stored text)" now pops a confirm warning first and does NOT overwrite the roster unless confirmed. A deal with an OM-extracted (non-manual) roster behaves exactly as before. PDF export still builds.
