@@ -5,6 +5,7 @@ import { and, or, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
 import { rebuildAllComps, rebuildCompsIndex } from "../lib/compsIndex";
 
 import { requireAuth } from "../middleware/auth";
+import { toFloat, toStr } from "../lib/parsers";
 
 const router = Router();
 
@@ -126,13 +127,6 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
       anchor, propertyType, sourceNotes, buyer, seller,
     } = req.body as Record<string, unknown>;
 
-    const toFloat = (v: unknown): number | null => {
-      if (v == null || v === "") return null;
-      const n = Number(v);
-      return isFinite(n) ? n : null;
-    };
-    const toStr = (v: unknown): string | null =>
-      typeof v === "string" && v.trim() ? v.trim() : null;
 
     const parsedPrice = toFloat(salePrice);
     const parsedSf    = toFloat(sf);
@@ -182,13 +176,6 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
       return;
     }
 
-    const toFloat = (v: unknown): number | null => {
-      if (v == null || v === "") return null;
-      const n = Number(v);
-      return isFinite(n) ? n : null;
-    };
-    const toStr = (v: unknown): string | null =>
-      typeof v === "string" && v.trim() ? v.trim() : null;
 
     type CompInsert = {
       sourceDealId: string; sourceDealName: null; sourceDealMarket: string | null;
@@ -300,13 +287,6 @@ router.put("/comps/manual/:id", requireAuth, async (req, res) => {
       anchor, propertyType, sourceNotes, buyer, seller,
     } = req.body as Record<string, unknown>;
 
-    const toFloat = (v: unknown): number | null => {
-      if (v == null || v === "") return null;
-      const n = Number(v);
-      return isFinite(n) ? n : null;
-    };
-    const toStr = (v: unknown): string | null =>
-      typeof v === "string" && v.trim() ? v.trim() : null;
 
     const parsedPrice = toFloat(salePrice);
     const parsedSf    = toFloat(sf);
@@ -354,14 +334,6 @@ router.put("/comps/manual/:id", requireAuth, async (req, res) => {
 // deal's comparableSales entry) and rebuild that deal's rows, which makes the
 // change durable and also keeps the deal page in sync.
 // ---------------------------------------------------------------------------
-const _toFloat = (v: unknown): number | null => {
-  if (v == null || v === "") return null;
-  const n = Number(v);
-  return isFinite(n) ? n : null;
-};
-const _toStr = (v: unknown): string | null =>
-  typeof v === "string" && v.trim() ? v.trim() : null;
-
 // Signature built from a comp's identifying fields, using the same
 // normalisation rebuildCompsIndex applies, so an index row can be matched back
 // to the comparableSales entry that produced it.
@@ -370,9 +342,9 @@ function compSignature(p: {
   pricePerSf: number | null; sf: number | null; occupancy: number | null; saleDateRaw: unknown;
 }): string {
   return JSON.stringify([
-    _toStr(p.name), _toStr(p.address),
+    toStr(p.name), toStr(p.address),
     p.salePrice, p.capRate, p.pricePerSf, p.sf, p.occupancy,
-    _toStr(p.saleDateRaw),
+    toStr(p.saleDateRaw),
   ]);
 }
 
@@ -387,8 +359,8 @@ function findComparableIndex(
     pricePerSf: row.pricePerSf, sf: row.sf, occupancy: row.occupancy, saleDateRaw: row.saleDateRaw,
   });
   return comps.findIndex(c => compSignature({
-    name: c.name, address: c.address, salePrice: _toFloat(c.salePrice), capRate: _toFloat(c.capRate),
-    pricePerSf: _toFloat(c.pricePerSF), sf: _toFloat(c.sf), occupancy: _toFloat(c.occupancy),
+    name: c.name, address: c.address, salePrice: toFloat(c.salePrice), capRate: toFloat(c.capRate),
+    pricePerSf: toFloat(c.pricePerSF), sf: toFloat(c.sf), occupancy: toFloat(c.occupancy),
     saleDateRaw: c.saleDate,
   }) === rowSig);
 }
@@ -470,24 +442,24 @@ router.put("/comps/om/:id", requireAuth, async (req, res) => {
     }
 
     const b = req.body as Record<string, unknown>;
-    const salePrice = _toFloat(b.salePrice);
-    const sf = _toFloat(b.sf);
-    let psf = _toFloat(b.pricePerSf);
+    const salePrice = toFloat(b.salePrice);
+    const sf = toFloat(b.sf);
+    let psf = toFloat(b.pricePerSf);
     if (psf == null && salePrice != null && sf != null && sf > 0) psf = Math.round(salePrice / sf);
 
     // Only the fields carried by a comparableSales entry; preserve any others.
     const updatedEntry: Record<string, unknown> = {
       ...comps[idx],
-      name: _toStr(b.name),
-      address: _toStr(b.address),
-      market: _toStr(b.market),
-      state: _toStr(b.state),
-      saleDate: _toStr(b.saleDate),
+      name: toStr(b.name),
+      address: toStr(b.address),
+      market: toStr(b.market),
+      state: toStr(b.state),
+      saleDate: toStr(b.saleDate),
       salePrice,
-      capRate: _toFloat(b.capRate),
+      capRate: toFloat(b.capRate),
       pricePerSF: psf,
       sf,
-      occupancy: _toFloat(b.occupancy),
+      occupancy: toFloat(b.occupancy),
     };
     const nextComps = comps.slice();
     nextComps[idx] = updatedEntry;
