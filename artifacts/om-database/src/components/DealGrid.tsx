@@ -85,9 +85,98 @@ const darkBtnDanger: React.CSSProperties = {
   background: "#7a2020",
 };
 
+function MultiSelectDropdown({ label, options, selected, onChange }: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const btnLabel = selected.length === 0
+    ? `All ${label}`
+    : selected.length === 1
+    ? selected[0]
+    : `${selected.length} ${label}`;
+
+  const toggle = (opt: string) =>
+    onChange(selected.includes(opt) ? selected.filter(s => s !== opt) : [...selected, opt]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          fontSize: 12, padding: "6px 10px",
+          border: `1px solid ${selected.length > 0 ? "#6dba43" : "#e3dccd"}`,
+          borderRadius: 8, cursor: "pointer", fontFamily: "'Inter',sans-serif",
+          background: selected.length > 0 ? "#f0fae8" : "#fff",
+          color: selected.length > 0 ? "#3f7a1f" : "#383a37",
+          fontWeight: selected.length > 0 ? 600 : 400,
+          display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+        }}
+      >
+        {btnLabel}
+        <span style={{ fontSize: 8, opacity: 0.5, marginTop: 1 }}>▾</span>
+      </button>
+      {open && options.length > 0 && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 200,
+          background: "#fff", border: "1px solid #e3dccd", borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: "6px 0",
+          minWidth: 165, maxWidth: "calc(100vw - 24px)", maxHeight: 300, overflowY: "auto",
+        }}>
+          {options.map(opt => (
+            <label
+              key={opt}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 14px", cursor: "pointer", userSelect: "none",
+                fontSize: 12.5, color: "#383a37",
+                background: selected.includes(opt) ? "#f0fae8" : "transparent",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => toggle(opt)}
+                style={{ width: 15, height: 15, accentColor: "#6dba43", cursor: "pointer", flexShrink: 0 }}
+              />
+              {opt}
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <div style={{ padding: "7px 14px", borderTop: "1px solid #f1eadc", marginTop: 2 }}>
+              <button
+                onClick={() => { onChange([]); setOpen(false); }}
+                style={{ fontSize: 11, color: "#a89f8f", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Inter',sans-serif" }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFiles }: Props) {
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterType, setFilterType] = useState("all");
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+  const [filterStates, setFilterStates] = useState<string[]>([]);
+  const [filterTypes, setFilterTypes] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState("status");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
   const [q, setQ] = useState("");
@@ -138,11 +227,13 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
   };
 
   const types = Array.from(new Set(deals.map(d => d.assetType).filter(Boolean))) as string[];
+  const states = Array.from(new Set(deals.map(d => d.state as unknown as string | null | undefined).filter((s): s is string => Boolean(s)))).sort();
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
   let rows = deals.slice();
-  if (filterStatus !== "all") rows = rows.filter(d => d.status === filterStatus);
-  if (filterType !== "all") rows = rows.filter(d => d.assetType === filterType);
+  if (filterStatuses.length > 0) rows = rows.filter(d => d.status != null && filterStatuses.includes(d.status));
+  if (filterStates.length > 0) rows = rows.filter(d => { const s = d.state as unknown as string | null; return s != null && filterStates.includes(s); });
+  if (filterTypes.length > 0) rows = rows.filter(d => d.assetType != null && filterTypes.includes(d.assetType));
   if (q.trim()) {
     const s = q.toLowerCase();
     rows = rows.filter(d => [d.propertyName, d.fileName, d.market, d.address, d.assetType].some(v => v?.toLowerCase().includes(s)));
@@ -773,18 +864,28 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search deals…"
-          style={{ fontSize: 12, padding: "6px 12px", border: "1px solid #e3dccd", borderRadius: 8, color: "#383a37", background: "#fff", width: 200, fontFamily: "'Inter',sans-serif" }} />
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          style={{ fontSize: 12, padding: "6px 10px", border: "1px solid #e3dccd", borderRadius: 8, color: "#383a37", background: "#fff", fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
-          <option value="all">All statuses</option>
-          {STATUS_OPTS.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+          style={{ fontSize: 12, padding: "6px 12px", border: "1px solid #e3dccd", borderRadius: 8, color: "#383a37", background: "#fff", width: 180, minWidth: 0, fontFamily: "'Inter',sans-serif" }} />
+        <MultiSelectDropdown
+          label="statuses"
+          options={STATUS_OPTS}
+          selected={filterStatuses}
+          onChange={setFilterStatuses}
+        />
+        {states.length > 0 && (
+          <MultiSelectDropdown
+            label="states"
+            options={states}
+            selected={filterStates}
+            onChange={setFilterStates}
+          />
+        )}
         {types.length > 1 && (
-          <select value={filterType} onChange={e => setFilterType(e.target.value)}
-            style={{ fontSize: 12, padding: "6px 10px", border: "1px solid #e3dccd", borderRadius: 8, color: "#383a37", background: "#fff", fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
-            <option value="all">All types</option>
-            {types.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <MultiSelectDropdown
+            label="types"
+            options={types}
+            selected={filterTypes}
+            onChange={setFilterTypes}
+          />
         )}
         <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
         <button onClick={() => setViewMode(v => v === "table" ? "grid" : "table")}

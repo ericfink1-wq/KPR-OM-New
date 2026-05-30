@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot } from "./lib/api";
@@ -49,36 +49,6 @@ function AppInner() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant">("tenant");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [stateFilter, setStateFilter] = useState<string[]>([]);
-
-  const toggleStatus = useCallback((s: string) => {
-    setStatusFilter(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
-  }, []);
-  const toggleState = useCallback((s: string) => {
-    setStateFilter(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
-  }, []);
-  const clearFilters = useCallback(() => { setStatusFilter([]); setStateFilter([]); }, []);
-
-  const availableStatuses = useMemo(() =>
-    [...new Set(deals.filter(d => !d.trashedAt).map(d => d.status).filter((s): s is string => Boolean(s)))].sort()
-  , [deals]);
-
-  const availableStates = useMemo(() =>
-    [...new Set(deals.filter(d => !d.trashedAt).map(d => d.state).filter((s): s is string => Boolean(s)))].sort()
-  , [deals]);
-
-  const activeDealsForAnalytics = useMemo(() => {
-    let filtered = deals.filter(d => !d.trashedAt);
-    if (statusFilter.length > 0) filtered = filtered.filter(d => d.status != null && statusFilter.includes(d.status));
-    if (stateFilter.length > 0) filtered = filtered.filter(d => d.state != null && stateFilter.includes(d.state));
-    return filtered;
-  }, [deals, statusFilter, stateFilter]);
-
-  const filteredDealIds = useMemo(() => {
-    if (statusFilter.length === 0 && stateFilter.length === 0) return undefined;
-    return activeDealsForAnalytics.map(d => d.id);
-  }, [statusFilter, stateFilter, activeDealsForAnalytics]);
 
   // Scroll analytics content to top whenever the view changes
   useEffect(() => {
@@ -307,38 +277,6 @@ function AppInner() {
       {/* Analytics tab */}
       {tab === "analytics" && (
         <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-          {/* Multi-select filter bar — hidden for detail views */}
-          {view.type !== "tenant" && view.type !== "parent" && view.type !== "tenant-audit" && view.type !== "rollover-year" && (
-            <div style={{ background:"#f6f2ea", borderBottom:"1px solid #ece5d7", padding:"8px 16px", flexShrink:0, boxSizing:"border-box" }}>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 10px", alignItems:"center" }}>
-                {availableStatuses.length > 0 && (
-                  <>
-                    <span style={{ fontSize:10, color:"#a89f8f", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", flexShrink:0 }}>Status</span>
-                    {availableStatuses.map(s => (
-                      <button key={s} onClick={() => toggleStatus(s)} style={{ padding:"3px 10px", borderRadius:20, border:"1px solid", borderColor: statusFilter.includes(s) ? "#3f7a1f" : "#ddd4c2", background: statusFilter.includes(s) ? "#e6f4d5" : "transparent", color: statusFilter.includes(s) ? "#3f7a1f" : "#6f6a5f", fontSize:11, fontWeight: statusFilter.includes(s) ? 600 : 400, cursor:"pointer", fontFamily:"'Inter',sans-serif", minHeight:28, whiteSpace:"nowrap" }}>{s}</button>
-                    ))}
-                  </>
-                )}
-                {availableStates.length > 0 && (
-                  <>
-                    <span style={{ fontSize:10, color:"#a89f8f", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", flexShrink:0 }}>State</span>
-                    {availableStates.map(s => (
-                      <button key={s} onClick={() => toggleState(s)} style={{ padding:"3px 10px", borderRadius:20, border:"1px solid", borderColor: stateFilter.includes(s) ? "#2d4ecf" : "#ddd4c2", background: stateFilter.includes(s) ? "#dbe4ff" : "transparent", color: stateFilter.includes(s) ? "#2d4ecf" : "#6f6a5f", fontSize:11, fontWeight: stateFilter.includes(s) ? 600 : 400, cursor:"pointer", fontFamily:"'Inter',sans-serif", minHeight:28, whiteSpace:"nowrap" }}>{s}</button>
-                    ))}
-                  </>
-                )}
-                {(statusFilter.length > 0 || stateFilter.length > 0) && (
-                  <>
-                    <span style={{ fontSize:10, color:"#a89f8f" }}>{activeDealsForAnalytics.length} deal{activeDealsForAnalytics.length !== 1 ? "s" : ""}</span>
-                    <button onClick={clearFilters} style={{ fontSize:10, color:"#a89f8f", textDecoration:"underline", background:"transparent", border:"none", cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, minHeight:28 }}>Clear</button>
-                  </>
-                )}
-                {availableStatuses.length === 0 && availableStates.length === 0 && (
-                  <span style={{ fontSize:11, color:"#a89f8f" }}>All deals</span>
-                )}
-              </div>
-            </div>
-          )}
           {/* Scrollable content */}
           <div ref={analyticsScrollRef} style={{ flex:1, overflowY:"auto", paddingBottom:88 }}>
             {view.type === "tenant" ? (
@@ -365,7 +303,7 @@ function AppInner() {
                 <TenantAudit deals={activeDeals} onTenantClick={handleOpenTenant} onDealsChanged={handleReloadDeals} />
               </div>
             ) : view.type === "rollover-year" ? (
-              <RolloverYearView year={view.year} filterDealIds={filteredDealIds} onBack={goBack} />
+              <RolloverYearView year={view.year} onBack={goBack} />
             ) : (
               <>
                 {/* Segmented toggle */}
@@ -396,10 +334,10 @@ function AppInner() {
                   </div>
                 </div>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics filterDealIds={filteredDealIds} onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} />
+                  <PortfolioAnalytics onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} />
                 ) : (
                   <TenantAnalytics
-                    deals={activeDealsForAnalytics}
+                    deals={activeDeals}
                     onTenantClick={handleOpenTenant}
                     onParentClick={name => handleOpenTenant("__parent__" + name)}
                     onTenantAudit={() => navigate({ type: "tenant-audit" })}
