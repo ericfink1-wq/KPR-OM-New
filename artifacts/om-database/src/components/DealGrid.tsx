@@ -16,6 +16,23 @@ interface Props {
   onAddFiles?: (files: File[]) => void;
 }
 
+// Largest anchor tenant's name — used for the portfolio "Anchor" column and sort.
+function leadAnchorName(d: Deal): string {
+  const anchors = (d.tenants || []).filter(t => t.isAnchor);
+  if (anchors.length === 0) return "";
+  const best = anchors.reduce((a, b) => (Number(b.sf) || 0) > (Number(a.sf) || 0) ? b : a);
+  return (best.canonicalName || best.name || "").trim();
+}
+
+// Compact price for a narrow column, e.g. "$28.0M", "$930K".
+function fmtPriceShort(v: number | null | undefined): string {
+  const n = Number(v);
+  if (v == null || !isFinite(n) || n <= 0) return "—";
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
+  return `$${Math.round(n)}`;
+}
+
 function RowThumb({ deal }: { deal: Deal }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
@@ -250,6 +267,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
       const an = (a.propertyName || a.fileName || "").toLowerCase();
       const bn = (b.propertyName || b.fileName || "").toLowerCase();
       return an.localeCompare(bn);
+    }
+    if (sortKey === "anchor") {
+      const av = leadAnchorName(a).toLowerCase();
+      const bv = leadAnchorName(b).toLowerCase();
+      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     const numKeys = ["capRate","noi","askingPrice","totalSF","occupancy","walt"];
     if (numKeys.includes(sortKey)) {
@@ -929,9 +951,29 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                     style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "market" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     MSA{arrow("market")}
                   </th>
+                  <th onClick={() => toggleSort("anchor")} className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "anchor" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Anchor{arrow("anchor")}
+                  </th>
+                  <th onClick={() => toggleSort("seller")} className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "seller" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Seller{arrow("seller")}
+                  </th>
                   <th onClick={() => toggleSort("totalSF")}
-                    style={{ padding: "10px 14px 10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "totalSF" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "totalSF" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     SF{arrow("totalSF")}
+                  </th>
+                  <th onClick={() => toggleSort("occupancy")} className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "occupancy" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Occ{arrow("occupancy")}
+                  </th>
+                  <th onClick={() => toggleSort("capRate")} className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "capRate" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Cap{arrow("capRate")}
+                  </th>
+                  <th onClick={() => toggleSort("askingPrice")} className="hidden lg:table-cell"
+                    style={{ padding: "10px 14px 10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "askingPrice" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Price{arrow("askingPrice")}
                   </th>
                 </tr>
               </thead>
@@ -939,6 +981,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                 {rows.map((d, i) => {
                   const { quality } = assessExtraction(d);
                   const busyRow = reanalyzeBusy.has(d.id) || lookingUp.has(d.id) || gettingDemo.has(d.id);
+                  const anchor = leadAnchorName(d);
                   return (
                     <tr key={d.id}
                       style={{ borderBottom: "1px solid #f4f0e8", background: selected.has(d.id) ? "#6dba4309" : busyRow ? "#fffbf0" : i % 2 === 1 ? "#fdf9f3" : "#fff", cursor: "pointer" }}
@@ -965,7 +1008,12 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.city || "—"}</td>
                       <td className="hidden lg:table-cell" style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: d.market ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{d.market || "—"}</td>
-                      <td style={{ padding: "8px 14px 8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.totalSF ? Number(d.totalSF).toLocaleString() : "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: anchor ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{anchor || "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: d.seller ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{d.seller || "—"}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.totalSF ? Number(d.totalSF).toLocaleString() : "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.occupancy != null ? `${d.occupancy}%` : "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#0f9d63", whiteSpace: "nowrap" }}>{d.capRate != null ? `${d.capRate}%` : "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 14px 8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.askingPrice)}</td>
                     </tr>
                   );
                 })}
