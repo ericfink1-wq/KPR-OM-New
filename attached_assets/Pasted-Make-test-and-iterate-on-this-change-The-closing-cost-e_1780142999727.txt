@@ -1,0 +1,20 @@
+Make, test, and iterate on this change. The closing-cost estimator currently computes title insurance as a FLAT percentage of price (titleInsuranceRate × price), which overstates commercial title cost because real title schedules are regressive. Add a marginal-bracket title-insurance engine and wire in New Jersey's real schedule.
+
+In artifacts/om-database/src/lib/closingCosts.ts:
+
+1. Add two new exported interfaces (near TaxTier):
+   - TitleBracket: { over: number; base: number; per1000: number }  // marginal: once price > over, premium = base + per1000 per $1,000 above over
+   - TitleSchedule: { source: string; promulgated: boolean; minPremium?: number; brackets: TitleBracket[] }
+
+2. Add optional `titleSchedule?: TitleSchedule` to the JurisdictionRates interface (keep the existing flat titleInsuranceRate as the fallback for states without a schedule).
+
+3. Add an exported function resolveTitlePremium(schedule, price): if price <= 0 return 0; pick the highest bracket where price > over; premium = base + ((price - over)/1000) * per1000; return Math.max(premium, minPremium ?? 0).
+
+4. In calculateClosingCosts, replace the flat title calculation: if jurisdiction.titleSchedule exists, use resolveTitlePremium(schedule, price) for the title amount; otherwise keep price * titleInsuranceRate. For the title line's display, when a schedule exists set rateMin = (last bracket per1000)/1000 and rateMax = (first bracket per1000)/1000 so the rate column shows the sliding range, and set the note to flag it as a regressive filed-rate/representative schedule citing schedule.source. The $ columns must carry the exact computed premium.
+
+5. Populate NJ with its real promulgated schedule (NJ Land Title Insurance Rating Bureau standard owner's rate, min premium $200):
+   brackets: [ {over:0,base:0,per1000:5.25}, {over:100000,base:525,per1000:4.25}, {over:500000,base:2225,per1000:2.75}, {over:2000000,base:6350,per1000:2.00} ]
+
+Do NOT change any transfer-tax logic, the cliff-method resolveTierRate, or any other state. Only title insurance + the NJ block.
+
+TEST: open a NJ deal's closing-cost card. Title insurance should now read as a sliding range (~0.2%–0.53%) and compute roughly: $5M deal → ~$12,350 title (not $25,000); $20M deal → ~$42,350 (not $100,000). Verify the card still renders on both desktop and mobile (rate table scrolls horizontally on narrow screens), the summary tiles and totals recompute correctly, and a non-NJ state (e.g. NY) still shows its flat title rate unchanged. Confirm the deal PDF export still builds.

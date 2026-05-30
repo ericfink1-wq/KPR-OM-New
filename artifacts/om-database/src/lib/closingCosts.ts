@@ -29,6 +29,19 @@ export interface TaxTier {
   rate: number;   // rate applied to the ENTIRE price at this tier
 }
 
+export interface TitleBracket {
+  over: number;     // bracket starts when price exceeds this amount
+  base: number;     // flat premium accrued up to this bracket
+  per1000: number;  // rate (dollars per $1,000 of price above `over`)
+}
+
+export interface TitleSchedule {
+  source: string;
+  promulgated: boolean;
+  minPremium?: number;
+  brackets: TitleBracket[];
+}
+
 export interface TaxLineItem {
   name: string;
   rate: number;             // representative/flat rate (0.004 = 0.4%); for tiered items, the top-tier rate
@@ -45,8 +58,9 @@ export interface JurisdictionRates {
   state: string;
   stateName: string;
   ratesAsOf: string;             // e.g. "2026-05" — when the RATES were last verified
-  titleInsuranceRate: number;    // owner's policy, % of price (approximate)
+  titleInsuranceRate: number;    // owner's policy, % of price (approximate) — fallback when no titleSchedule
   titleInsuranceParty: Party;
+  titleSchedule?: TitleSchedule; // if present, overrides flat titleInsuranceRate calculation
   transferTaxes: TaxLineItem[];
   mortgageRecordingTax?: TaxLineItem;
   recordingFeesFlat: number;
@@ -139,7 +153,18 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
 
   NJ: {
     state: "NJ", stateName: "New Jersey", ratesAsOf: "2026-05",
-    titleInsuranceRate: 0.005, titleInsuranceParty: "buyer",
+    titleInsuranceRate: 0.00525, titleInsuranceParty: "buyer",
+    titleSchedule: {
+      source: "NJ Land Title Insurance Rating Bureau — Standard Owner's Rate",
+      promulgated: true,
+      minPremium: 200,
+      brackets: [
+        { over: 0,       base: 0,    per1000: 5.25 },
+        { over: 100000,  base: 525,  per1000: 4.25 },
+        { over: 500000,  base: 2225, per1000: 2.75 },
+        { over: 2000000, base: 6350, per1000: 2.00 },
+      ],
+    },
     transferTaxes: [
       { name: "Realty Transfer Fee (RTF) — Graduated", rate: 0.0121, rateMin: 0.004, rateMax: 0.0121,
         base: "price", party: "seller",
@@ -877,6 +902,19 @@ export function resolveTierRate(tiers: TaxTier[], price: number): number {
   return rate;
 }
 
+/**
+ * Resolve a marginal-bracket title insurance premium.
+ * Each bracket's rate applies only to the amount above its `over` threshold;
+ * `base` is the cumulative premium already accrued from lower brackets.
+ */
+export function resolveTitlePremium(schedule: TitleSchedule, price: number): number {
+  if (price <= 0) return 0;
+  let bracket = schedule.brackets[0];
+  for (const b of schedule.brackets) if (price > b.over) bracket = b;
+  const premium = bracket.base + ((price - bracket.over) / 1000) * bracket.per1000;
+  return Math.max(premium, schedule.minPremium ?? 0);
+}
+
 /** Format a rate for display: single %, sliding/tiered range, or flat fee. */
 export function formatRate(item: { rate: number; rateMin?: number; rateMax?: number; tiers?: TaxTier[]; base?: "price" | "loan" }): string {
   const pct = (r: number) => `${(r * 100).toFixed(r > 0 && r < 0.001 ? 4 : r < 0.01 ? 3 : 2).replace(/\.?0+$/, "")}%`;
@@ -909,11 +947,29 @@ export function calculateClosingCosts(jurisdiction: JurisdictionRates, price: nu
     : party === "seller" ? { buyer: 0, seller: amt }
     : { buyer: amt / 2, seller: amt / 2 };
 
-  const titleAmt = price * jurisdiction.titleInsuranceRate;
+  const sched = jurisdiction.titleSchedule;
+  const titleAmt = sched ? resolveTitlePremium(sched, price) : price * jurisdiction.titleInsuranceRate;
   const ts = splitOf(titleAmt, jurisdiction.titleInsuranceParty);
-  lines.push({ name: "Title Insurance (Owner's Policy)", rate: jurisdiction.titleInsuranceRate, base: "price",
-    party: jurisdiction.titleInsuranceParty, amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
-    notes: jurisdiction.titleInsuranceParty === "split" ? "Customarily split per local practice" : undefined });
+  const titleLine: ClosingCostLine = sched
+    ? {
+        name: "Title Insurance (Owner's Policy)",
+        rate: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
+        rateMin: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
+        rateMax: sched.brackets[0].per1000 / 1000,
+        base: "price",
+        party: jurisdiction.titleInsuranceParty,
+        amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
+        notes: `Regressive filed schedule (${sched.source}). Rate shown is the sliding range at this price.${sched.minPremium ? ` Min premium $${sched.minPremium.toLocaleString()}.` : ""}`,
+      }
+    : {
+        name: "Title Insurance (Owner's Policy)",
+        rate: jurisdiction.titleInsuranceRate,
+        base: "price",
+        party: jurisdiction.titleInsuranceParty,
+        amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
+        notes: jurisdiction.titleInsuranceParty === "split" ? "Customarily split per local practice" : undefined,
+      };
+  lines.push(titleLine);
 
   for (const tx of jurisdiction.transferTaxes) {
     if (tx.entitySaleOnly && !includeEntityTaxes) {
