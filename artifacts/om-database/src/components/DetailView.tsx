@@ -617,8 +617,20 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [pastePanelOpen, setPastePanelOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteError, setPasteError] = useState<string | null>(null);
-  const [coverFinalized, setCoverFinalized] = useState(false);
-  const [sitePlanFinalized, setSitePlanFinalized] = useState(false);
+  // Start hidden if the user already confirmed this property's image (persisted
+  // on the deal so the box doesn't reappear every time they reopen it).
+  const [coverFinalized, setCoverFinalized] = useState(!!d.imageMeta?.coverConfirmed);
+  const [sitePlanFinalized, setSitePlanFinalized] = useState(!!d.imageMeta?.sitePlanConfirmed);
+
+  // Persist the confirmation onto the deal so it survives remounts / reopens.
+  const finalizeCover = (v: boolean) => {
+    setCoverFinalized(v);
+    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), coverConfirmed: v } });
+  };
+  const finalizeSitePlan = (v: boolean) => {
+    setSitePlanFinalized(v);
+    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlanConfirmed: v } });
+  };
   const { mutateAsync: sendMessage } = useCreateAiMessage();
   const [rescoreBusy, setRescoreBusy] = useState(false);
   const autoRescoreTriggered = useRef(false);
@@ -631,6 +643,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     }
     return () => { alive = false; };
   }, [d.id]);
+
+  // Resync confirmation boxes to the persisted flags when switching properties.
+  useEffect(() => {
+    setCoverFinalized(!!d.imageMeta?.coverConfirmed);
+    setSitePlanFinalized(!!d.imageMeta?.sitePlanConfirmed);
+  }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close Actions dropdown on any outside click
   useEffect(() => {
@@ -1396,7 +1414,7 @@ ${text.slice(0, 40000)}`;
       {imgs != null && (
         coverFinalized ? (
           <div style={{ marginBottom:16, textAlign:"right" }}>
-            <button onClick={() => setCoverFinalized(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit cover photo</button>
+            <button onClick={() => finalizeCover(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit cover photo</button>
           </div>
         ) : (
           <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
@@ -1427,7 +1445,7 @@ ${text.slice(0, 40000)}`;
             </div>
             {imgs.cover && (
               <div style={{ marginTop:10, borderTop:"1px solid #f1eadc", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
-                <input type="checkbox" id="coverFinalChk" onChange={e => { if (e.target.checked) setCoverFinalized(true); }} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
+                <input type="checkbox" id="coverFinalChk" checked={coverFinalized} onChange={e => finalizeCover(e.target.checked)} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
                 <label htmlFor="coverFinalChk" style={{ fontSize:11, color:"#7d766a", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
               </div>
             )}
@@ -1478,7 +1496,7 @@ ${text.slice(0, 40000)}`;
       {imgs != null && imgs.sitePlan && imgs.sitePlan.length > 0 && (
         sitePlanFinalized ? (
           <div style={{ marginBottom:12, textAlign:"right" }}>
-            <button onClick={() => setSitePlanFinalized(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+            <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
           </div>
         ) : (
           <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
@@ -1508,7 +1526,7 @@ ${text.slice(0, 40000)}`;
               <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
             </div>
             <div style={{ marginTop:10, borderTop:"1px solid #f1eadc", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
-              <input type="checkbox" id="sitePlanFinalChk" onChange={e => { if (e.target.checked) setSitePlanFinalized(true); }} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
+              <input type="checkbox" id="sitePlanFinalChk" checked={sitePlanFinalized} onChange={e => finalizeSitePlan(e.target.checked)} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
               <label htmlFor="sitePlanFinalChk" style={{ fontSize:11, color:"#7d766a", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
             </div>
           </div>
@@ -1519,7 +1537,7 @@ ${text.slice(0, 40000)}`;
       {imgs != null && (!imgs.sitePlan || imgs.sitePlan.length === 0) && (!imgs.pagePicks || imgs.pagePicks.length === 0) && (
         sitePlanFinalized ? (
           <div style={{ marginBottom:12, textAlign:"right" }}>
-            <button onClick={() => setSitePlanFinalized(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+            <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
           </div>
         ) : (
         <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>

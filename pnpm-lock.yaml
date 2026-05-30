@@ -157,6 +157,9 @@ importers:
 
   .:
     dependencies:
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.100.9(react@19.1.0)
       connect-pg-simple:
         specifier: ^10.0.0
         version: 10.0.0

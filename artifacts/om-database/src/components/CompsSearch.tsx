@@ -241,14 +241,18 @@ function TruncCell({ text, isExpanded, onToggle, maxWidth = 200, color = "#5c585
 // Add Comp Modal
 // ---------------------------------------------------------------------------
 function AddCompModal({
-  onClose, onSaved, editRow, onUpdated,
+  onClose, onSaved, editRow, onUpdated, onOmUpdated,
 }: {
   onClose: () => void;
   onSaved: (row: CompRow) => void;
   editRow?: CompRow;
   onUpdated?: (row: CompRow) => void;
+  onOmUpdated?: () => void;
 }) {
   const isEdit = !!editRow;
+  // OM-sourced comp (not manual, not an own KPR transaction): edits flow to the
+  // parent deal's comparableSales via the /api/comps/om endpoint.
+  const isOm = isEdit && !editRow.isManual && !editRow.isOwnTransaction;
   const [form, setForm] = useState<ManualForm>(isEdit ? {
     name:         editRow.name         ?? "",
     market:       editRow.market       ?? "",
@@ -271,9 +275,10 @@ function AddCompModal({
   const set = (k: keyof ManualForm, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
-    if (!form.name.trim()) { setErr("Property Name is required."); return; }
-    if (!form.market.trim()) { setErr("Market / City is required."); return; }
-    if (!form.saleDate) { setErr("Sale Date is required."); return; }
+    // OM comps can legitimately have a blank name/market/date — only price is required.
+    if (!isOm && !form.name.trim()) { setErr("Property Name is required."); return; }
+    if (!isOm && !form.market.trim()) { setErr("Market / City is required."); return; }
+    if (!isOm && !form.saleDate) { setErr("Sale Date is required."); return; }
     if (!form.salePrice.trim()) { setErr("Sale Price is required."); return; }
     setSaving(true);
     setErr(null);
@@ -295,7 +300,20 @@ function AddCompModal({
         seller:       form.seller.trim()       || null,
       };
 
-      if (isEdit) {
+      if (isOm) {
+        const r = await fetch(`/api/comps/om/${editRow.id}`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(e.error || `HTTP ${r.status}`);
+        }
+        // Rebuild reassigns row ids for the source deal — refetch the full list.
+        onOmUpdated?.();
+      } else if (isEdit) {
         const r = await fetch(`/api/comps/manual/${editRow.id}`, {
           method: "PUT",
           credentials: "include",
@@ -354,12 +372,21 @@ function AddCompModal({
       }}>
         {/* Header */}
         <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #f0e9da", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>{isEdit ? "Edit Comp" : "Add Manual Comp"}</div>
+          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>{isOm ? "Edit OM-Sourced Comp" : isEdit ? "Edit Comp" : "Add Manual Comp"}</div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 18, color: "#a89f8f", lineHeight: 1, padding: 4 }}>×</button>
         </div>
 
         {/* Body */}
         <div style={{ overflowY: "auto", padding: "18px 22px", flex: 1 }}>
+          {isOm && (
+            <div style={{
+              fontSize: 11.5, color: "#7d6a3a", background: "#fdf8ec", border: "1px solid #f0e3c4",
+              borderRadius: 6, padding: "8px 11px", marginBottom: 16, lineHeight: 1.45,
+            }}>
+              This comp was extracted from an OM. Your edits update the source deal’s
+              comparable-sales data, so they’ll stick through future rebuilds.
+            </div>
+          )}
           {/* Required */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
@@ -404,31 +431,42 @@ function AddCompModal({
               {label("Occupancy at Sale (%)")}
               <input style={inp} inputMode="decimal" value={form.occupancy} onChange={e => set("occupancy", e.target.value)} placeholder="e.g. 95" />
             </div>
-            <div>
-              {label("Anchor Tenant(s)")}
-              <input style={inp} value={form.anchor} onChange={e => set("anchor", e.target.value)} placeholder="e.g. Kroger" />
-            </div>
-            <div>
-              {label("Property Type")}
-              <input style={inp} value={form.propertyType} onChange={e => set("propertyType", e.target.value)} placeholder="e.g. Grocery-Anchored" />
-            </div>
+            {/* Fields below aren't carried on OM-sourced comps — hide them when editing one. */}
+            {!isOm && (
+              <div>
+                {label("Anchor Tenant(s)")}
+                <input style={inp} value={form.anchor} onChange={e => set("anchor", e.target.value)} placeholder="e.g. Kroger" />
+              </div>
+            )}
+            {!isOm && (
+              <div>
+                {label("Property Type")}
+                <input style={inp} value={form.propertyType} onChange={e => set("propertyType", e.target.value)} placeholder="e.g. Grocery-Anchored" />
+              </div>
+            )}
             <div>
               {label("State (e.g. IL, TX)")}
               <input style={inp} value={form.state} onChange={e => set("state", e.target.value)} placeholder="e.g. IL" />
             </div>
-            <div>{/* spacer */}</div>
-            <div>
-              {label("Buyer")}
-              <input style={inp} value={form.buyer} onChange={e => set("buyer", e.target.value)} placeholder="e.g. Inland Real Estate" />
-            </div>
-            <div>
-              {label("Seller")}
-              <input style={inp} value={form.seller} onChange={e => set("seller", e.target.value)} placeholder="e.g. Regency Centers" />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              {label("Source / Notes")}
-              <input style={inp} value={form.sourceNotes} onChange={e => set("sourceNotes", e.target.value)} placeholder="e.g. CoStar, Broker" />
-            </div>
+            {!isOm && <div>{/* spacer */}</div>}
+            {!isOm && (
+              <div>
+                {label("Buyer")}
+                <input style={inp} value={form.buyer} onChange={e => set("buyer", e.target.value)} placeholder="e.g. Inland Real Estate" />
+              </div>
+            )}
+            {!isOm && (
+              <div>
+                {label("Seller")}
+                <input style={inp} value={form.seller} onChange={e => set("seller", e.target.value)} placeholder="e.g. Regency Centers" />
+              </div>
+            )}
+            {!isOm && (
+              <div style={{ gridColumn: "1 / -1" }}>
+                {label("Source / Notes")}
+                <input style={inp} value={form.sourceNotes} onChange={e => set("sourceNotes", e.target.value)} placeholder="e.g. CoStar, Broker" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -521,13 +559,24 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
 
   useEffect(() => { fetch_(filters, sort); }, []); // initial load
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (row: CompRow) => {
+    const isOm = !row.isManual && !row.isOwnTransaction;
+    if (isOm && !window.confirm("Delete this OM-sourced comp? It will be removed from the deal's comparable-sales data.")) return;
     try {
-      const r = await fetch(`/api/comps/manual/${id}`, { method: "DELETE", credentials: "include" });
-      if (!r.ok) throw new Error();
-      setRows(prev => prev.filter(row => row.id !== id));
-    } catch {
-      alert("Failed to delete comp.");
+      const endpoint = isOm ? `/api/comps/om/${row.id}` : `/api/comps/manual/${row.id}`;
+      const r = await fetch(endpoint, { method: "DELETE", credentials: "include" });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({})) as { error?: string };
+        throw new Error(e.error || `HTTP ${r.status}`);
+      }
+      if (isOm) {
+        // Rebuild reassigns row ids for the source deal — refetch the full list.
+        fetch_(filters, sort);
+      } else {
+        setRows(prev => prev.filter(rw => rw.id !== row.id));
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to delete comp.");
     }
   };
 
@@ -708,6 +757,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           onSaved={row => { setRows(prev => [row, ...prev]); }}
           editRow={editRow ?? undefined}
           onUpdated={updated => { setRows(prev => prev.map(r => r.id === updated.id ? updated : r)); }}
+          onOmUpdated={() => { fetch_(filters, sort); }}
         />
       )}
       {pendingImport && (
@@ -1112,11 +1162,13 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                           >
                             <EyeOff size={12} strokeWidth={1.75} />
                           </button>
-                          {row.isManual && (
+                          {/* Own-transaction (OWNED) comps come from KPR underwriting — read-only.
+                              Manual and OM-sourced comps can both be edited/deleted. */}
+                          {!row.isOwnTransaction && (
                             <>
                               <button
                                 onClick={() => setEditRow(row)}
-                                title="Edit this comp"
+                                title={row.isManual ? "Edit this comp" : "Edit this OM-sourced comp"}
                                 style={{
                                   background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
                                   cursor: "pointer", color: "#7d766a", fontSize: 10, padding: "2px 6px",
@@ -1126,8 +1178,8 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                                 ✎
                               </button>
                               <button
-                                onClick={() => handleDelete(row.id)}
-                                title="Delete this comp"
+                                onClick={() => handleDelete(row)}
+                                title={row.isManual ? "Delete this comp" : "Delete this OM-sourced comp"}
                                 style={{
                                   background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
                                   cursor: "pointer", color: "#b05050", fontSize: 11, padding: "2px 6px",

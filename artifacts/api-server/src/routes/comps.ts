@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { compsIndexTable } from "@workspace/db";
+import { compsIndexTable, dealsTable } from "@workspace/db";
 import { and, or, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
-import { rebuildAllComps } from "../lib/compsIndex";
+import { rebuildAllComps, rebuildCompsIndex } from "../lib/compsIndex";
 
 const router = Router();
 
@@ -332,6 +332,162 @@ router.put("/comps/manual/:id", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to update manual comp");
     res.status(500).json({ error: "Failed to update manual comp" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// OM-sourced comp edits.
+//
+// OM comps are not stored independently — they are regenerated from each deal's
+// comparableSales array on every rebuild. So editing/deleting one in the index
+// alone would silently reappear. Instead we mutate the *source* (the parent
+// deal's comparableSales entry) and rebuild that deal's rows, which makes the
+// change durable and also keeps the deal page in sync.
+// ---------------------------------------------------------------------------
+const _toFloat = (v: unknown): number | null => {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return isFinite(n) ? n : null;
+};
+const _toStr = (v: unknown): string | null =>
+  typeof v === "string" && v.trim() ? v.trim() : null;
+
+// Signature built from a comp's identifying fields, using the same
+// normalisation rebuildCompsIndex applies, so an index row can be matched back
+// to the comparableSales entry that produced it.
+function compSignature(p: {
+  name: unknown; address: unknown; salePrice: number | null; capRate: number | null;
+  pricePerSf: number | null; sf: number | null; occupancy: number | null; saleDateRaw: unknown;
+}): string {
+  return JSON.stringify([
+    _toStr(p.name), _toStr(p.address),
+    p.salePrice, p.capRate, p.pricePerSf, p.sf, p.occupancy,
+    _toStr(p.saleDateRaw),
+  ]);
+}
+
+// Locate the comparableSales entry that produced a given index row. Returns the
+// array index, or -1 if no confident match.
+function findComparableIndex(
+  comps: Array<Record<string, unknown>>,
+  row: typeof compsIndexTable.$inferSelect,
+): number {
+  const rowSig = compSignature({
+    name: row.name, address: row.address, salePrice: row.salePrice, capRate: row.capRate,
+    pricePerSf: row.pricePerSf, sf: row.sf, occupancy: row.occupancy, saleDateRaw: row.saleDateRaw,
+  });
+  return comps.findIndex(c => compSignature({
+    name: c.name, address: c.address, salePrice: _toFloat(c.salePrice), capRate: _toFloat(c.capRate),
+    pricePerSf: _toFloat(c.pricePerSF), sf: _toFloat(c.sf), occupancy: _toFloat(c.occupancy),
+    saleDateRaw: c.saleDate,
+  }) === rowSig);
+}
+
+type OmCompCtx =
+  | { error: number; message: string }
+  | { row: typeof compsIndexTable.$inferSelect; deal: { id: string; data: unknown } | null };
+
+// Load an OM-sourced comp row + its parent deal, guarding against manual and
+// own-transaction comps (which are edited through other paths).
+async function loadOmCompContext(id: number): Promise<OmCompCtx> {
+  const [row] = await db.select().from(compsIndexTable).where(eq(compsIndexTable.id, id));
+  if (!row) return { error: 404, message: "Comp not found" };
+  if (row.isManual) return { error: 400, message: "This is a manual comp — use the manual comp endpoint" };
+  if (row.isOwnTransaction) {
+    return { error: 400, message: "Own-transaction comps come from this deal's KPR underwriting and can't be edited here" };
+  }
+  const [deal] = await db.select().from(dealsTable).where(eq(dealsTable.id, row.sourceDealId));
+  return { row, deal: deal ?? null };
+}
+
+// ---------------------------------------------------------------------------
+// DELETE /api/comps/om/:id — remove an OM-sourced comp
+// ---------------------------------------------------------------------------
+router.delete("/comps/om/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const ctx = await loadOmCompContext(id);
+    if ("error" in ctx) { res.status(ctx.error).json({ error: ctx.message }); return; }
+    const { row, deal } = ctx;
+
+    // Source deal is gone — the row is orphaned, so just drop it from the index.
+    if (!deal) {
+      await db.delete(compsIndexTable).where(eq(compsIndexTable.id, id));
+      res.json({ ok: true });
+      return;
+    }
+
+    const data = deal.data as Record<string, unknown>;
+    const comps = Array.isArray(data.comparableSales)
+      ? (data.comparableSales as Array<Record<string, unknown>>) : [];
+    const idx = findComparableIndex(comps, row);
+    if (idx === -1) {
+      res.status(409).json({ error: "Could not locate this comp in the source deal. Try rebuilding the comp index, then retry." });
+      return;
+    }
+
+    const nextComps = comps.slice(0, idx).concat(comps.slice(idx + 1));
+    const nextData = { ...data, comparableSales: nextComps };
+    await db.update(dealsTable).set({ data: nextData, updatedAt: new Date() }).where(eq(dealsTable.id, deal.id));
+    await rebuildCompsIndex(deal.id, nextData);
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete OM comp");
+    res.status(500).json({ error: "Failed to delete OM comp" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/comps/om/:id — edit an OM-sourced comp in place
+// ---------------------------------------------------------------------------
+router.put("/comps/om/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const ctx = await loadOmCompContext(id);
+    if ("error" in ctx) { res.status(ctx.error).json({ error: ctx.message }); return; }
+    const { row, deal } = ctx;
+    if (!deal) { res.status(404).json({ error: "Source deal not found" }); return; }
+
+    const data = deal.data as Record<string, unknown>;
+    const comps = Array.isArray(data.comparableSales)
+      ? (data.comparableSales as Array<Record<string, unknown>>) : [];
+    const idx = findComparableIndex(comps, row);
+    if (idx === -1) {
+      res.status(409).json({ error: "Could not locate this comp in the source deal. Try rebuilding the comp index, then retry." });
+      return;
+    }
+
+    const b = req.body as Record<string, unknown>;
+    const salePrice = _toFloat(b.salePrice);
+    const sf = _toFloat(b.sf);
+    let psf = _toFloat(b.pricePerSf);
+    if (psf == null && salePrice != null && sf != null && sf > 0) psf = Math.round(salePrice / sf);
+
+    // Only the fields carried by a comparableSales entry; preserve any others.
+    const updatedEntry: Record<string, unknown> = {
+      ...comps[idx],
+      name: _toStr(b.name),
+      address: _toStr(b.address),
+      market: _toStr(b.market),
+      state: _toStr(b.state),
+      saleDate: _toStr(b.saleDate),
+      salePrice,
+      capRate: _toFloat(b.capRate),
+      pricePerSF: psf,
+      sf,
+      occupancy: _toFloat(b.occupancy),
+    };
+    const nextComps = comps.slice();
+    nextComps[idx] = updatedEntry;
+    const nextData = { ...data, comparableSales: nextComps };
+    await db.update(dealsTable).set({ data: nextData, updatedAt: new Date() }).where(eq(dealsTable.id, deal.id));
+    await rebuildCompsIndex(deal.id, nextData);
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update OM comp");
+    res.status(500).json({ error: "Failed to update OM comp" });
   }
 });
 

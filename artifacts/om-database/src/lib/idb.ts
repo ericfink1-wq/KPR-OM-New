@@ -333,8 +333,9 @@ export interface Deal {
   expenseBreakdown?: Record<string, number | null>;
   // Roof
   roofData?: RoofData | null;
-  // Images meta
-  imageMeta?: { cover?: boolean; sitePlan?: number; needsSitePlanPick?: boolean } | null;
+  // Images meta. coverConfirmed / sitePlanConfirmed remember that the user has
+  // verified the image so the confirmation box stays hidden on future opens.
+  imageMeta?: { cover?: boolean; sitePlan?: number; needsSitePlanPick?: boolean; coverConfirmed?: boolean; sitePlanConfirmed?: boolean } | null;
   // Staleness
   analysisStale?: boolean;
   // User data
