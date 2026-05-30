@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
 import { tenantKey, isVacant, isNAPTenant, tenantLabel, parentCompany } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
@@ -125,7 +126,6 @@ function StackedBar({ igPct, notRatedPct }: { igPct: number; notRatedPct: number
   );
 }
 
-// Shared pill toggle renderer
 function PillToggle<T extends string>({
   options, value, onChange,
 }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
@@ -158,6 +158,35 @@ function PillToggle<T extends string>({
 }
 
 // ---------------------------------------------------------------------------
+// Ignore-toggle button
+// ---------------------------------------------------------------------------
+
+function IgnoreBtn({ ignored, onToggle }: { ignored: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); onToggle(); }}
+      title={ignored ? "Excluded from totals — click to re-include" : "Click to exclude from totals"}
+      style={{
+        background: "transparent",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: 32,
+        minHeight: 32,
+        flexShrink: 0,
+        color: ignored ? "#d9890c" : "#d4cdc4",
+        transition: "color 0.15s",
+      }}
+    >
+      <EyeOff size={13} strokeWidth={1.75} />
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -175,8 +204,31 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
   const [showAllParents, setShowAllParents] = useState(false);
 
+  // Ignored tenants — persisted across refreshes
+  const [ignoredKeys, setIgnoredKeys] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("ta-ignored-tenants");
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+
+  const toggleIgnore = useCallback((key: string) => {
+    setIgnoredKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try { localStorage.setItem("ta-ignored-tenants", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
+
+  const resetIgnored = useCallback(() => {
+    setIgnoredKeys(new Set<string>());
+    try { localStorage.removeItem("ta-ignored-tenants"); } catch {}
+  }, []);
+
   // Aggregate tenants from all filtered deals
-  const { rows, totalRent, allOccurrences } = useMemo(() => {
+  const { rows, allOccurrences } = useMemo(() => {
     const filtered = filter === "owned"
       ? deals.filter(d => d.status === "Owned" || d.status === "Sold")
       : deals;
@@ -237,21 +289,26 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     }
 
     const rows = Array.from(map.values());
-    const totalRent = rows.reduce((s, r) => s + r.totalAnnualRent, 0);
     const allOccurrences = rows.flatMap(r => r.salesOccurrences);
-    return { rows, totalRent, allOccurrences };
+    return { rows, allOccurrences };
   }, [deals, filter]);
 
-  // Derived lists — rent / count / GLA
+  // Active rows = all rows minus ignored
+  const activeRows = useMemo(() => rows.filter(r => !ignoredKeys.has(r.key)), [rows, ignoredKeys]);
+
+  // Totals derived from activeRows (so ignored tenants are excluded from stat boxes)
+  const totalRent = useMemo(() => activeRows.reduce((s, r) => s + r.totalAnnualRent, 0), [activeRows]);
+
+  // Derived lists — full rows so ignored appear dimmed but still in list
   const byRent  = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
   const byCount = useMemo(() => [...rows].sort((a, b) => b.locationCount - a.locationCount || b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
   const bySF    = useMemo(() => [...rows].filter(r => r.totalSF > 0).sort((a, b) => b.totalSF - a.totalSF).slice(0, 10), [rows]);
   const maxSF   = bySF[0]?.totalSF ?? 1;
 
-  // Parent company exposure
+  // Parent company exposure (excludes ignored tenants)
   const parentRows = useMemo(() => {
     const map = new Map<string, { parent: string; brands: Set<string>; totalAnnualRent: number; locationCount: number }>();
-    for (const row of rows) {
+    for (const row of activeRows) {
       const p = row.parentCo;
       if (!p) continue;
       if (!map.has(p)) map.set(p, { parent: p, brands: new Set(), totalAnnualRent: 0, locationCount: 0 });
@@ -261,12 +318,12 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
       pr.locationCount += row.locationCount;
     }
     return [...map.values()].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent);
-  }, [rows]);
+  }, [activeRows]);
 
-  // Credit / anchor
-  const igCount = useMemo(() => rows.filter(r => r.isIG).length, [rows]);
-  const igRent = useMemo(() => rows.filter(r => r.isIG).reduce((s, r) => s + r.totalAnnualRent, 0), [rows]);
-  const anchorRent = useMemo(() => rows.filter(r => r.isAnchor).reduce((s, r) => s + r.totalAnnualRent, 0), [rows]);
+  // Credit / anchor — derived from activeRows
+  const igCount = useMemo(() => activeRows.filter(r => r.isIG).length, [activeRows]);
+  const igRent = useMemo(() => activeRows.filter(r => r.isIG).reduce((s, r) => s + r.totalAnnualRent, 0), [activeRows]);
+  const anchorRent = useMemo(() => activeRows.filter(r => r.isAnchor).reduce((s, r) => s + r.totalAnnualRent, 0), [activeRows]);
 
   const igPct = totalRent > 0 ? (igRent / totalRent) * 100 : 0;
   const notRatedPct = 100 - igPct;
@@ -275,7 +332,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
   const avgRentPSF = useMemo(() => {
     let weightedSum = 0, weightSum = 0;
-    for (const row of rows) {
+    for (const row of activeRows) {
       if (row.rentPSFValues.length > 0) {
         const avg = row.rentPSFValues.reduce((a, b) => a + b, 0) / row.rentPSFValues.length;
         weightedSum += avg * row.totalAnnualRent;
@@ -283,7 +340,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
       }
     }
     return weightSum > 0 ? weightedSum / weightSum : null;
-  }, [rows]);
+  }, [activeRows]);
 
   // Sales — top individual stores
   const topStores = useMemo(() => {
@@ -355,11 +412,21 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
               <div style={{ fontSize:12, color:"#a89f8f", marginTop:3 }}>Aggregated from all deals in memory</div>
             </div>
           </div>
-          {onTenantAudit && (
-            <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
-              Tenant Name Audit
-            </button>
-          )}
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            {ignoredKeys.size > 0 && (
+              <button
+                onClick={resetIgnored}
+                style={{ background:"transparent", border:"none", padding:"0 4px", cursor:"pointer", fontSize:11, color:"#a89f8f", textDecoration:"underline", fontFamily:"'Inter',sans-serif" }}
+              >
+                Reset ignored ({ignoredKeys.size})
+              </button>
+            )}
+            {onTenantAudit && (
+              <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
+                Tenant Name Audit
+              </button>
+            )}
+          </div>
         </div>
 
         {rows.length === 0 ? (
@@ -371,19 +438,19 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-          {/* Stat tiles */}
+          {/* Stat tiles — computed from activeRows, so ignored tenants are excluded */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-            <StatBox label="Unique Tenants" value={rows.length.toLocaleString()} />
+            <StatBox label="Unique Tenants" value={activeRows.length.toLocaleString()} sub={ignoredKeys.size > 0 ? `${ignoredKeys.size} ignored` : undefined} />
             <StatBox label="Total Annual Rent" value={fmtRent(totalRent)} />
             <StatBox label="Avg Rent PSF" value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"} sub="rent-weighted" />
             <StatBox label="Investment Grade" value={igCount.toString()} sub={`${igPct.toFixed(0)}% of rent`} />
             {(() => {
-              const totalGLA = rows.reduce((s, r) => s + r.totalSF, 0);
-              const sfRows = rows.filter(r => r.totalSF > 0);
+              const totalGLA = activeRows.reduce((s, r) => s + r.totalSF, 0);
+              const sfRows = activeRows.filter(r => r.totalSF > 0);
               const avgSF = sfRows.length > 0 ? Math.round(sfRows.reduce((s, r) => s + r.totalSF, 0) / sfRows.reduce((s, r) => s + r.locationCount, 0)) : null;
               return (
                 <>
-                  {totalGLA > 0 && <StatBox label="Total GLA" value={totalGLA >= 1000000 ? `${(totalGLA/1000000).toFixed(1)}M SF` : `${(totalGLA/1000).toFixed(0)}K SF`} sub="across all tenants" />}
+                  {totalGLA > 0 && <StatBox label="Total GLA" value={totalGLA >= 1000000 ? `${(totalGLA/1000000).toFixed(1)}M SF` : `${(totalGLA/1000).toFixed(0)}K SF`} sub="across active tenants" />}
                   {avgSF != null && <StatBox label="Avg Tenant SF" value={avgSF.toLocaleString()} sub="per location" />}
                 </>
               );
@@ -394,73 +461,11 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
           <Card>
             <SectionLabel>Top 10 by Annual Rent</SectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {byRent.map((row, i) => (
-                <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
-                    <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                      <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
-                    </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
-                      <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
-                        {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                        {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
-                        {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
-                      </span>
-                      {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
-                    </div>
-                  </div>
-                  <MiniBar value={row.totalAnnualRent} max={maxRent} color="#6dba43" />
-                  <div style={{ width: 70, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Top 10 by Location Count */}
-          <Card>
-            <SectionLabel>Top 10 by Location Count</SectionLabel>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {byCount.map((row, i) => (
-                <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
-                    <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                      <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
-                    </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
-                      <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
-                        {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                        {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
-                        {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
-                      </span>
-                      {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
-                    </div>
-                  </div>
-                  <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />
-                  <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>
-                    {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                    {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
-                      <div style={{ color:"#6dba43", fontSize:9, fontWeight:400 }}>({row.ownedCount} owned)</div>
-                    )}
-                    {filter === "all" && row.ownedCount === 0 && (
-                      <div style={{ color:"#a69e91", fontSize:9, fontWeight:400, fontStyle:"italic" }}>unowned</div>
-                    )}
-                  </div>
-                  <div style={{ width: 60, textAlign: "right", fontSize: 10.5, color: "#a89f8f", flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Top 10 by GLA */}
-          {bySF.length > 0 && (
-            <Card>
-              <SectionLabel>Top 10 by GLA</SectionLabel>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {bySF.map((row, i) => (
-                  <div key={row.key} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <span style={{ width:16, textAlign:"right", fontSize:11, color:"#c8b89a", flexShrink:0 }}>{i+1}</span>
+              {byRent.map((row, i) => {
+                const ignored = ignoredKeys.has(row.key);
+                return (
+                  <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10, opacity: ignored ? 0.35 : 1, transition: "opacity 0.15s" }}>
+                    <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
                     <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
                       <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
@@ -474,17 +479,91 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                         {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
                       </div>
                     </div>
-                    <div style={{ flex:1, background:"#f1ece1", borderRadius:4, height:6, overflow:"hidden" }}>
-                      <div style={{ width:`${(row.totalSF/maxSF)*100}%`, background:"#b08968", height:"100%", borderRadius:4 }} />
-                    </div>
-                    <span style={{ width:70, textAlign:"right", fontSize:11, color:"#5c5850", fontWeight:600, flexShrink:0 }}>
-                      {row.totalSF >= 1000 ? `${(row.totalSF/1000).toFixed(0)}K SF` : `${row.totalSF.toLocaleString()} SF`}
-                    </span>
-                    <span style={{ width:40, textAlign:"right", fontSize:10, color:"#b8b0a3", flexShrink:0 }}>
-                      {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                    </span>
+                    <MiniBar value={row.totalAnnualRent} max={maxRent} color="#6dba43" />
+                    <div style={{ width: 70, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
+                    <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Top 10 by Location Count */}
+          <Card>
+            <SectionLabel>Top 10 by Location Count</SectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {byCount.map((row, i) => {
+                const ignored = ignoredKeys.has(row.key);
+                return (
+                  <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10, opacity: ignored ? 0.35 : 1, transition: "opacity 0.15s" }}>
+                    <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
+                    <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
+                      <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
+                        <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                          {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                          {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                          {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                        </span>
+                        {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                      </div>
+                    </div>
+                    <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />
+                    <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>
+                      {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                      {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
+                        <div style={{ color:"#6dba43", fontSize:9, fontWeight:400 }}>({row.ownedCount} owned)</div>
+                      )}
+                      {filter === "all" && row.ownedCount === 0 && (
+                        <div style={{ color:"#a69e91", fontSize:9, fontWeight:400, fontStyle:"italic" }}>unowned</div>
+                      )}
+                    </div>
+                    <div style={{ width: 60, textAlign: "right", fontSize: 10.5, color: "#a89f8f", flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
+                    <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Top 10 by GLA */}
+          {bySF.length > 0 && (
+            <Card>
+              <SectionLabel>Top 10 by GLA</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {bySF.map((row, i) => {
+                  const ignored = ignoredKeys.has(row.key);
+                  return (
+                    <div key={row.key} style={{ display:"flex", alignItems:"center", gap:8, opacity: ignored ? 0.35 : 1, transition: "opacity 0.15s" }}>
+                      <span style={{ width:16, textAlign:"right", fontSize:11, color:"#c8b89a", flexShrink:0 }}>{i+1}</span>
+                      <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
+                        <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
+                          <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                            {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                            {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                            {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                          </span>
+                          {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                        </div>
+                      </div>
+                      <div style={{ flex:1, background:"#f1ece1", borderRadius:4, height:6, overflow:"hidden" }}>
+                        <div style={{ width:`${(row.totalSF/maxSF)*100}%`, background:"#b08968", height:"100%", borderRadius:4 }} />
+                      </div>
+                      <span style={{ width:70, textAlign:"right", fontSize:11, color:"#5c5850", fontWeight:600, flexShrink:0 }}>
+                        {row.totalSF >= 1000 ? `${(row.totalSF/1000).toFixed(0)}K SF` : `${row.totalSF.toLocaleString()} SF`}
+                      </span>
+                      <span style={{ width:40, textAlign:"right", fontSize:10, color:"#b8b0a3", flexShrink:0 }}>
+                        {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
+                      </span>
+                      <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           )}
@@ -562,7 +641,6 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
           {/* Sales Performance — two boxes with shared PSF/Gross toggle */}
           {hasSalesData && (
             <>
-              {/* Toggle header row */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 }}>
                   Sales Performance
@@ -571,7 +649,6 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
               </div>
 
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                {/* Box 1 — Top Individual Stores */}
                 <Card style={{ flex: 1, minWidth: 300 }}>
                   <SectionLabel>Top Individual Stores</SectionLabel>
                   {topStores.length === 0 ? (
@@ -601,7 +678,6 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   )}
                 </Card>
 
-                {/* Box 2 — Top Chains by Average (≥2 stores) */}
                 <Card style={{ flex: 1, minWidth: 300 }}>
                   <SectionLabel>Top Chains by Average <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 9, color: "#c9c2b8" }}>· 2+ reporting stores</span></SectionLabel>
                   {topChains.length === 0 ? (

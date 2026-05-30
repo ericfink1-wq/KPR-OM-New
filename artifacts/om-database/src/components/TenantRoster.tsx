@@ -3,6 +3,7 @@ import { Info } from "lucide-react";
 import type { Tenant } from "../lib/idb";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
+import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
   tenants: Tenant[];
@@ -22,6 +23,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   const [open, setOpen] = useState(false);
   const showTimer = useRef<number | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
+  const isMobile = useIsMobile();
 
   const showSoon = () => {
     if (showTimer.current) window.clearTimeout(showTimer.current);
@@ -36,7 +38,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   };
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isMobile) return;
     const handler = (e: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
@@ -46,13 +48,13 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("touchstart", handler);
     };
-  }, [open]);
+  }, [open, isMobile]);
 
   return (
     <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: 5, verticalAlign: "middle" }}>
       <span
-        onMouseEnter={showSoon}
-        onMouseLeave={cancelHover}
+        onMouseEnter={isMobile ? undefined : showSoon}
+        onMouseLeave={isMobile ? undefined : cancelHover}
         onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
         style={{ color, cursor: "pointer", userSelect: "none" }}
         aria-label={content}
@@ -61,7 +63,9 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
       >
         {children}
       </span>
-      {open && (
+
+      {/* Desktop: right-of-icon popover */}
+      {open && !isMobile && (
         <span
           onClick={(e) => e.stopPropagation()}
           style={{
@@ -83,6 +87,62 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
         >
           {content}
         </span>
+      )}
+
+      {/* Mobile: centered fixed modal */}
+      {open && isMobile && (
+        <>
+          <span
+            onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.38)",
+              zIndex: 9998,
+            }}
+          />
+          <span
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 9999,
+              background: "#26281f",
+              color: "#f6f2ea",
+              padding: "20px 20px 16px",
+              borderRadius: 12,
+              fontSize: 13,
+              lineHeight: 1.65,
+              whiteSpace: "normal",
+              width: "min(360px, 90vw)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.45)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <span style={{ display: "block" }}>{content}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+              style={{
+                background: "#3c3f35",
+                border: "none",
+                color: "#f6f2ea",
+                padding: "10px 16px",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 13,
+                fontFamily: "'Inter',sans-serif",
+                fontWeight: 500,
+                width: "100%",
+              }}
+            >
+              Close
+            </button>
+          </span>
+        </>
       )}
     </span>
   );
