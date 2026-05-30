@@ -70,12 +70,22 @@ function parseLeaseDate(raw: string | null | undefined): Date | null {
     return isNaN(dt.getTime()) ? null : dt;
   }
 
-  // Mon-YYYY or Mon YYYY (e.g. "Jan-2030", "January 2030")
-  const monYear = s.match(/^([A-Za-z]{3,9})[-\s](\d{4})$/);
+  // M/YY or MM/YY or MM/YYYY (month/year, no day) → end of that month
+  if (/^\d{1,2}\/\d{2,4}$/.test(s)) {
+    const [mo, y] = s.split("/").map(Number);
+    const fullY = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+    if (mo >= 1 && mo <= 12) {
+      return new Date(fullY, mo, 0, 12, 0, 0); // day 0 = last day of month mo
+    }
+  }
+
+  // Mon-YYYY/Mon-YY or Mon YYYY/Mon YY (e.g. "Jan-2030", "Sep-34", "January 2030")
+  const monYear = s.match(/^([A-Za-z]{3,9})[-\s](\d{2}|\d{4})$/);
   if (monYear) {
     const key = monYear[1].toLowerCase().slice(0, 3);
     const mon = MONTH_MAP[key];
-    const yr = parseInt(monYear[2], 10);
+    const rawYr = parseInt(monYear[2], 10);
+    const yr = rawYr < 100 ? (rawYr < 50 ? 2000 + rawYr : 1900 + rawYr) : rawYr;
     if (mon !== undefined && !isNaN(yr)) {
       return new Date(yr, mon + 1, 0, 12, 0, 0); // last day of that month
     }
@@ -140,6 +150,11 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
   }
 
   const totalOccupiedRent = occupied.reduce((acc, t) => acc + toNum(t.annualRent), 0);
+
+  // Coverage: % of occupied base rent with a successfully parsed expiry
+  const coveredRent = withExpiry.reduce((acc, t) => acc + toNum(t.annualRent), 0);
+  const coveragePct = totalOccupiedRent > 0 ? Math.round((coveredRent / totalOccupiedRent) * 100) : 100;
+  const showCoverageWarning = totalOccupiedRent > 0 && coveragePct < 90;
 
   // Build chart data with cumulative %
   let running = 0;
@@ -270,6 +285,12 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
           <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 2, fontFamily: "'Inter',sans-serif" }}>
             <strong style={{ color: "#383a37", fontWeight: 600 }}>{pct24mo}%</strong> of base rent rolls in the next 24 months.
           </div>
+
+          {showCoverageWarning && (
+            <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff8ee", border: "1px solid #f0c97a", borderRadius: 7, fontSize: 11, color: "#7a5200", fontFamily: "'Inter',sans-serif", lineHeight: 1.45 }}>
+              ⚠ Lease-expiry data incomplete — WALT/rollover reflect only <strong>{coveragePct}%</strong> of base rent.
+            </div>
+          )}
         </>
       )}
     </div>
