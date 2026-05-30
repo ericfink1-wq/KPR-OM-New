@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { EyeOff } from "lucide-react";
 import { exportCompsToExcel } from "../lib/exportExcel";
 
 // ---------------------------------------------------------------------------
@@ -477,6 +478,22 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Per-row hide/ignore — persisted to localStorage
+  const [ignoredComps, setIgnoredComps] = useState<Set<number>>(() => {
+    try {
+      const s = localStorage.getItem("cs-ignored-comps");
+      return s ? new Set<number>(JSON.parse(s) as number[]) : new Set<number>();
+    } catch { return new Set<number>(); }
+  });
+  const toggleIgnoreComp = useCallback((id: number) => {
+    setIgnoredComps(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem("cs-ignored-comps", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
+
   const toggleCell = useCallback((rowId: number, col: string) => {
     setExpandedCells(prev => {
       const next = new Set(prev);
@@ -937,7 +954,13 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                   <SortTh label="SF"         sortKey="sf_desc"            current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
                   <SortTh label="Occ"        sortKey="occ_desc"           current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
                   <th style={{ padding: "9px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", minWidth: 130 }}>Source</th>
-                  <th style={{ padding: "9px 6px", width: 62 }} />
+                  <th style={{
+                    padding: "9px 6px", width: 72,
+                    position: "sticky", right: 0, zIndex: 3,
+                    background: "#faf7f0",
+                    borderLeft: "1px solid #efe8da",
+                    boxShadow: "-6px 0 6px -6px rgba(0,0,0,0.12)",
+                  }} />
                 </tr>
               </thead>
               <tbody>
@@ -965,11 +988,20 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                       key={row.id}
                       style={{
                         borderTop: idx === 0 ? "none" : "1px solid #f5f1ea",
-                        transition: "background 0.12s",
                         background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : undefined,
+                        opacity: ignoredComps.has(row.id) ? 0.35 : 1,
+                        transition: "background 0.12s, opacity 0.15s",
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = row.isOwnTransaction ? "#e8f5e3" : row.isManual ? "#eef7e8" : "#faf7f0")}
-                      onMouseLeave={e => (e.currentTarget.style.background = row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "")}
+                      onMouseEnter={e => {
+                        const bg = row.isOwnTransaction ? "#e8f5e3" : row.isManual ? "#eef7e8" : "#faf7f0";
+                        e.currentTarget.style.background = bg;
+                        (e.currentTarget.lastElementChild as HTMLElement).style.background = bg;
+                      }}
+                      onMouseLeave={e => {
+                        const bg = row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "";
+                        e.currentTarget.style.background = bg;
+                        (e.currentTarget.lastElementChild as HTMLElement).style.background = bg || "#fff";
+                      }}
                     >
                       <td style={{ padding: "9px 10px", maxWidth: 240 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
@@ -1056,33 +1088,52 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                           <div style={{ fontSize: 11, color: "#c9c2b8" }}>—</div>
                         )}
                       </td>
-                      <td style={{ padding: "9px 6px", whiteSpace: "nowrap" }}>
-                        {row.isManual && (
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button
-                              onClick={() => setEditRow(row)}
-                              title="Edit this comp"
-                              style={{
-                                background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
-                                cursor: "pointer", color: "#7d766a", fontSize: 10, padding: "2px 6px",
-                                fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
-                              }}
-                            >
-                              ✎
-                            </button>
-                            <button
-                              onClick={() => handleDelete(row.id)}
-                              title="Delete this comp"
-                              style={{
-                                background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
-                                cursor: "pointer", color: "#b05050", fontSize: 11, padding: "2px 6px",
-                                fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        )}
+                      <td style={{
+                        padding: "9px 8px", whiteSpace: "nowrap",
+                        position: "sticky", right: 0, zIndex: 2,
+                        background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff",
+                        borderLeft: "1px solid #efe8da",
+                        boxShadow: "-6px 0 6px -6px rgba(0,0,0,0.10)",
+                      }}>
+                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          <button
+                            onClick={() => toggleIgnoreComp(row.id)}
+                            title={ignoredComps.has(row.id) ? "Re-include in list" : "Hide from list"}
+                            style={{
+                              background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
+                              cursor: "pointer", padding: "3px 5px", display: "flex", alignItems: "center",
+                              color: ignoredComps.has(row.id) ? "#d9890c" : "#c9c2b8",
+                            }}
+                          >
+                            <EyeOff size={12} strokeWidth={1.75} />
+                          </button>
+                          {row.isManual && (
+                            <>
+                              <button
+                                onClick={() => setEditRow(row)}
+                                title="Edit this comp"
+                                style={{
+                                  background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
+                                  cursor: "pointer", color: "#7d766a", fontSize: 10, padding: "2px 6px",
+                                  fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
+                                }}
+                              >
+                                ✎
+                              </button>
+                              <button
+                                onClick={() => handleDelete(row.id)}
+                                title="Delete this comp"
+                                style={{
+                                  background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
+                                  cursor: "pointer", color: "#b05050", fontSize: 11, padding: "2px 6px",
+                                  fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
+                                }}
+                              >
+                                ×
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
