@@ -1,0 +1,58 @@
+Make, test, and iterate. Upgrade the closing-cost estimator in artifacts/om-database/src/lib/closingCosts.ts to compute title insurance, transfer taxes, and mortgage recording taxes on regressive/graduated schedules instead of flat rates. All edits are in that ONE file. Make exactly these changes:
+
+1) After the TaxTier interface, ADD two interfaces:
+   export interface TitleBracket { over: number; base: number; per1000: number }
+   export interface TitleSchedule { source: string; promulgated: boolean; minPremium?: number; brackets: TitleBracket[] }
+
+2) In the JurisdictionRates interface, ADD an optional field: titleSchedule?: TitleSchedule
+   (keep the existing flat titleInsuranceRate as a fallback)
+
+3) In the TaxLineItem interface, ADD an optional field: marginalTiers?: TaxTier[]
+   (graduated: each rate applies only to the PORTION of price within that bracket — takes precedence over `tiers`, which is the cliff method)
+
+4) In the ClosingCostLine interface, ADD marginalTiers?: TaxTier[] to its field list.
+
+5) ADD this function (next to resolveTierRate):
+   export function resolveTitlePremium(schedule: TitleSchedule, price: number): number {
+     if (price <= 0) return 0;
+     let b = schedule.brackets[0];
+     for (const br of schedule.brackets) if (price > br.over) b = br;
+     const premium = b.base + ((price - b.over) / 1000) * b.per1000;
+     return Math.max(premium, schedule.minPremium ?? 0);
+   }
+
+6) ADD this function:
+   export function resolveMarginalTax(tiers: TaxTier[], base: number): number {
+     if (base <= 0) return 0;
+     let tax = 0;
+     for (let i = 0; i < tiers.length; i++) {
+       const lo = tiers[i].over;
+       const hi = i + 1 < tiers.length ? tiers[i + 1].over : Infinity;
+       if (base > lo) tax += (Math.min(base, hi) - lo) * tiers[i].rate;
+     }
+     return tax;
+   }
+
+7) In formatRate, change the tier tag line so it reads:
+   const tag = item.marginalTiers ? " (graduated)" : item.tiers ? " (tiered)" : " (sliding)";
+   and add marginalTiers?: TaxTier[] to formatRate's parameter type.
+
+8) In calculateClosingCosts, REPLACE the title-insurance line calculation so that when jurisdiction.titleSchedule exists it uses resolveTitlePremium(schedule, price) for the amount; otherwise price * titleInsuranceRate. When a schedule exists, set the line's rateMin = (last bracket per1000)/1000 and rateMax = (first bracket per1000)/1000 so the rate column shows the sliding range, and put the schedule.source in the note. The buyer/seller $ must use the exact computed premium.
+
+9) In calculateClosingCosts, REPLACE the transfer-tax loop and the mortgage-recording-tax block so the amount is computed as: if marginalTiers present → resolveMarginalTax(marginalTiers, base); else if tiers present → base * resolveTierRate(tiers, base) (existing cliff behavior); else → base * rate. Apply the same logic to mortgageRecordingTax against the loan amount (0 if loan <= 0).
+
+10) Populate these THREE states with real promulgated title schedules (add a titleSchedule to each existing block):
+
+NJ: { source: "NJ Land Title Insurance Rating Bureau — standard owner's rate (DOBI-approved Rate Manual eff. 2023-11-01)", promulgated: true, minPremium: 200, brackets: [ {over:0,base:0,per1000:5.25}, {over:100000,base:525,per1000:4.25}, {over:500000,base:2225,per1000:2.75}, {over:2000000,base:6350,per1000:2.00} ] }
+
+TX: { source: "Texas Dept. of Insurance — promulgated Basic Premium, Order 2025-9697, eff. 2026-03-01", promulgated: true, minPremium: 328, brackets: [ {over:0,base:0,per1000:7.80}, {over:100000,base:780,per1000:4.94}, {over:1000000,base:5226,per1000:4.06}, {over:5000000,base:21466,per1000:3.35}, {over:15000000,base:54966,per1000:2.38} ] }
+
+FL: { source: "Florida Admin. Code R. 69O-186.003 — state-promulgated original owner's premium", promulgated: true, minPremium: 100, brackets: [ {over:0,base:0,per1000:5.75}, {over:100000,base:575,per1000:5.00}, {over:1000000,base:5075,per1000:2.50}, {over:5000000,base:15075,per1000:2.25}, {over:10000000,base:26325,per1000:2.00} ] }
+
+11) Convert NJ's "Realty Transfer Fee (RTF)" transfer-tax line to graduated by adding marginalTiers: [ {over:0,rate:0.004}, {over:150000,rate:0.0067}, {over:200000,rate:0.0085}, {over:350000,rate:0.0105}, {over:550000,rate:0.0121} ]
+
+12) Convert WA's state REET transfer-tax line from `tiers` to `marginalTiers` with the SAME four entries it already has ( {over:0,rate:0.011}, {over:525000,rate:0.0128}, {over:1525000,rate:0.0275}, {over:3025000,rate:0.03} ). Leave NJ's mansion tax as cliff `tiers` — do NOT convert it.
+
+Do NOT change any other state. Do NOT alter NJ mansion tax, the cliff resolveTierRate, or who-pays splits.
+
+TEST on both desktop and mobile (the rate table must still scroll horizontally on narrow screens, summary tiles + totals recompute): a NJ deal shows title as a sliding range and computes ~$12,350 title on $5M (not $25,000); a TX deal computes $5,226 title on $1M, $21,466 on $5M, $54,966 on $15M; a FL deal computes $1,575 on $300k and $5,075 on $1M; a WA $5M deal's state REET shows $119,075 (graduated), not $150,000. Confirm the deal PDF export still builds and a state with no titleSchedule (e.g. NY) still shows its flat title rate unchanged.
