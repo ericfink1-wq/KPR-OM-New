@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain, isNAPTenant } from "../lib/utils";
 import StatusTag from "./StatusTag";
@@ -9,6 +10,16 @@ interface Props {
   onBack: () => void;
   onOpenDeal: (deal: Deal) => void;
   onParentClick?: (parent: string) => void;
+}
+
+// Stable id for a location row — unique enough within one tenant's list
+function rowId(r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }): string {
+  return [
+    r.deal.id || r.deal.fileName || "?",
+    tenantKey(r.t.canonicalName || r.t.name || ""),
+    r.t.sf ?? "",
+    r.t.leaseExpiry ?? "",
+  ].join("__");
 }
 
 export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onParentClick }: Props) {
@@ -30,9 +41,36 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [scope, setScope] = useState<"all"|"owned">("all");
 
+  // Per-tenant location ignore state — keyed so tenants don't bleed into each other
+  const storageKey = `tv-ignored-locs:${tenantKey(tenantName)}`;
+  const [ignoredIds, setIgnoredIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+
+  const toggleIgnore = useCallback((id: string) => {
+    setIgnoredIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(storageKey, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, [storageKey]);
+
+  const resetIgnored = useCallback(() => {
+    setIgnoredIds(new Set<string>());
+    try { localStorage.removeItem(storageKey); } catch {}
+  }, [storageKey]);
+
   const rows = scope === "owned"
     ? allRows.filter(r => r.deal.status === "Owned")
     : allRows;
+
+  // Active rows = rows minus explicitly ignored locations
+  const activeRows = rows.filter(r => !ignoredIds.has(rowId(r)));
+  const ignoredCount = rows.length - activeRows.length;
 
   const setSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
@@ -63,16 +101,16 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     return String(av).localeCompare(String(bv)) * dir;
   });
 
-  // Averages — ignore missing values; exclude NAP/shadow/vacant/ground-lease rows from rent metrics
+  // Averages — derive from ACTIVE rows (excludes ignored locations)
   const isRentable = (r: typeof rows[number]) => {
     if (isNAPTenant(r.t)) return false;
     const name = (r.t.name || "").toLowerCase();
     return !/\b(shadow|vacant|ground.?lease|outparcel)\b/i.test(name);
   };
-  const rentRows     = rows.filter(isRentable);
+  const rentRows     = activeRows.filter(isRentable);
   const sfVals       = rentRows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
   const rentVals     = rentRows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
-  const salesVals    = rows.map(r => num(r.t.salesPSF)).filter((v): v is number => v != null);
+  const salesVals    = activeRows.map(r => num(r.t.salesPSF)).filter((v): v is number => v != null);
   const totalSFAll   = sfVals.reduce((s, v) => s + v, 0);
   const totalRentAll = rentVals.reduce((s, v) => s + v, 0);
 
@@ -92,10 +130,11 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     ["expiry","Expiry",false], ["salesPSF","Sales",true], ["reimbursement","Reimb.",false],
   ];
 
-  const Stat = ({ label, value }: { label: string; value: string }) => (
+  const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
     <div style={{ flex:"1 1 130px", background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"13px 16px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ fontSize:10, letterSpacing:"0.06em", color:"#a69e91", marginBottom:6, fontWeight:500, textTransform:"uppercase" }}>{label}</div>
       <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:"#383a37", lineHeight:1 }}>{value}</div>
+      {sub && <div style={{ fontSize:9, color:"#b8b0a3", marginTop:3 }}>{sub}</div>}
     </div>
   );
 
@@ -167,8 +206,13 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
         <div style={{ fontSize:14, color:"#a69e91", padding:"24px 0" }}>No owned locations for this tenant.</div>
       ) : (
         <>
+          {/* Stat boxes — recomputed from activeRows (ignoring excluded locations) */}
           <div style={{ display:"flex", gap:11, flexWrap:"wrap", marginBottom:22 }}>
-            <Stat label="Locations"       value={String(rows.length)} />
+            <Stat
+              label="Locations"
+              value={String(activeRows.length)}
+              sub={ignoredCount > 0 ? `${ignoredCount} ignored` : undefined}
+            />
             <Stat label="Avg Size (SF)"   value={avgSF != null ? avgSF.toLocaleString() : "—"} />
             <Stat label="Avg Rent / SF"   value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"} />
             <Stat label="Avg Annual Rent" value={avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—"} />
@@ -176,7 +220,25 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
           </div>
 
           <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:13 }}>Locations — click a row to open the property</div>
+            {/* Locations header with ignored count + reset */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:13, flexWrap:"wrap", gap:6 }}>
+              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
+                Locations — click a row to open the property
+              </div>
+              {ignoredCount > 0 && (
+                <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:11, color:"#a89f8f" }}>
+                  <EyeOff size={11} strokeWidth={1.75} style={{ color:"#d9890c" }} />
+                  <span>{ignoredCount} ignored</span>
+                  <button
+                    onClick={resetIgnored}
+                    style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#a89f8f", textDecoration:"underline", fontFamily:"'Inter',sans-serif" }}
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div style={{ overflowX:"auto" }}>
               <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
                 <thead>
@@ -187,31 +249,70 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         {label}{arrow(k)}
                       </th>
                     ))}
+                    {/* Empty header for ignore button column */}
+                    <th style={{ width:40, padding:"6px 6px" }} />
                   </tr>
                 </thead>
                 <tbody>
                   {sorted.map((r, i) => {
+                    const id = rowId(r);
+                    const ignored = ignoredIds.has(id);
                     const owned = r.deal.status === "Owned" || r.deal.status === "Sold";
                     return (
-                    <tr key={i} onClick={() => onOpenDeal(r.deal)}
-                      style={{ borderTop:"1px solid #f1eadc", cursor:"pointer", background: owned ? "#f3faef" : "transparent", borderLeft: owned ? "3px solid #6dba43" : "3px solid transparent" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = owned ? "#eaf5e2" : "#faf7f0")}
-                      onMouseLeave={e => (e.currentTarget.style.background = owned ? "#f3faef" : "transparent")}>
-                      <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
-                        {r.deal.propertyName || "Untitled"}
-                        {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
-                        {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
-                        {isNAPTenant(r.t) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
-                      </td>
-                      <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
-                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
-                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
-                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{num(r.t.annualRent) != null ? `$${num(r.t.annualRent)!.toLocaleString()}` : "—"}</td>
-                      <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
-                      <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
-                      <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
-                    </tr>
-                  );
+                      <tr
+                        key={i}
+                        onClick={() => onOpenDeal(r.deal)}
+                        style={{
+                          borderTop:"1px solid #f1eadc",
+                          cursor:"pointer",
+                          background: owned ? "#f3faef" : "transparent",
+                          borderLeft: owned ? "3px solid #6dba43" : "3px solid transparent",
+                          opacity: ignored ? 0.35 : 1,
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = owned ? "#eaf5e2" : "#faf7f0")}
+                        onMouseLeave={e => (e.currentTarget.style.background = ignored ? "transparent" : owned ? "#f3faef" : "transparent")}
+                      >
+                        <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
+                          {r.deal.propertyName || "Untitled"}
+                          {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
+                          {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+                          {isNAPTenant(r.t) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
+                        </td>
+                        <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{num(r.t.annualRent) != null ? `$${num(r.t.annualRent)!.toLocaleString()}` : "—"}</td>
+                        <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
+                        <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
+                        {/* Ignore button — stopPropagation so it doesn't open the deal */}
+                        <td
+                          style={{ padding:"4px 6px", width:40, textAlign:"center" }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => toggleIgnore(id)}
+                            title={ignored ? "Re-include in averages" : "Exclude from averages"}
+                            style={{
+                              background:"transparent",
+                              border:"none",
+                              cursor:"pointer",
+                              padding:0,
+                              display:"inline-flex",
+                              alignItems:"center",
+                              justifyContent:"center",
+                              minWidth:32,
+                              minHeight:32,
+                              color: ignored ? "#d9890c" : "#d4cdc4",
+                              transition:"color 0.15s",
+                            }}
+                          >
+                            <EyeOff size={13} strokeWidth={1.75} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
                   })}
                 </tbody>
               </table>
