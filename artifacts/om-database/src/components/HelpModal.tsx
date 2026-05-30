@@ -119,11 +119,12 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     title: "Deal pages — everything about one property",
     brief: (
       <>
-        <p style={{ margin:0 }}>Click any deal card to open its detail page. This is the full picture for a single property.</p>
+        <p style={{ margin:0 }}>Click any deal card to open its detail page. The page follows an analyst flow: Overview → Tenants/Sales/Rollover → Highlights/Upside/Red Flags → Financials/Comp Benchmark/Closing Costs → Assumptions/Cash Flow → Demographics → Notes.</p>
         <BriefList items={[
           <><B>Tenant roster</B> — every lease with SF, rent/SF, commencement, expiration, remaining term, options, lease type, and anchor/credit flags. Click any tenant name to see all their locations across the library.</>,
           <><B>AI Investment Highlights</B> — institutional-grade narrative covering the asset, anchor quality, inline mix, key metrics, investment thesis, and top risk. Generated from the OM.</>,
           <><B>Financials</B> — NOI, cap rate, occupancy, WALT, and cash flow summary from the OM proforma.</>,
+          <><B>Comp Benchmark</B> — the deal is benchmarked against comparable trades: median cap rate and price/SF, with sample size and date range shown. You can exclude a comp you find irrelevant or type-ahead to add a missing one, and the medians recompute.</>,
           <><B>Trade Area demographics</B> — 1/3/5-mile population, households, and average household income from US Census data.</>,
           <><B>Red Flags & Upside Items</B> — AI-surfaced risks and value-creation opportunities specific to this deal.</>,
           <><B>Jump to ▾</B> in the sticky header navigates instantly to any section on the page.</>,
@@ -140,6 +141,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <><B>Summary button</B> generates a one-page investment summary you can copy or share.</>,
         <><B>Excel button</B> exports the deal's full rent roll and financials as a spreadsheet.</>,
         <><B>Find Sale button</B> searches public records and market sources for comparable sales.</>,
+        <><B>Comp Benchmark methodology:</B> uses medians (not averages), shows how many comps and over what date window, and tiers comps by relevance — same state + type + size range within 24 months first, widening only if needed and labeling how far it reached. Below a minimum sample it shows the comps but withholds a verdict rather than guess from thin data. It never falls back to the full unfiltered comp pool.</>,
         <><B>Closing Costs estimator</B> calculates title, transfer, and mortgage-recording taxes by state with buyer/seller splits. Defaults to 65% LTV; an entity-sale toggle adds controlling-interest taxes. Treat as a ballpark — confirm with your title company.</>,
         <><B>Deal Terms & Financing (owned deals):</B> purchase price, going-in cap, seller, close date, lender, loan amount, rate, and maturity — all editable. These feed the portfolio analytics.</>,
         <><B>Trash:</B> moves the deal out of the library but doesn't delete it permanently. Restore from the Trash section at the bottom of Portfolio.</>,
@@ -186,7 +188,9 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <p style={{ margin:0 }}>The <B>Analytics</B> tab surfaces patterns across your entire deal library — tenant concentration, lease rollover timelines, occupancy trends, market exposure, and credit distribution.</p>
         <BriefList items={[
           <><B>Lease rollover chart</B> — shows how much GLA and rent expires by year across all deals. Immediately reveals rollover concentration risk.</>,
+          <><B>Rollover years are clickable</B> — tap any year bar to drill into exactly which tenants roll that year across the portfolio.</>,
           <><B>Tenant concentration</B> — top tenants by total SF and total rent across the portfolio. See where you're over-indexed on a single brand or category.</>,
+          <><B>Ignore outliers</B> — on the tenant lists, an eye-slash toggle excludes a skewing tenant from all the stat boxes, which recompute live.</>,
           <><B>Market & asset type breakdowns</B> — how your library splits across geographies and property types.</>,
           <><B>Credit distribution</B> — what percentage of rent comes from investment-grade vs. non-rated tenants.</>,
           <><B>Tenant Name Audit</B> — flags tenant names that may be the same brand but aren't grouping together in analytics. Fix them here.</>,
@@ -198,28 +202,30 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <><B>Tenant Name Audit</B> catches cases like "Burlington" vs "Burlington Coat Factory" or "T Mobile" vs "T-Mobile." The system auto-normalizes common variants, but the audit surfaces what it missed. Mark pairs as <em>Correct (merge)</em> or <em>Incorrect (keep separate)</em> — these corrections apply going forward.</>,
         <><B>Analytics update in real time</B> as you add or update deals. There's no refresh needed — the charts always reflect the current state of the library.</>,
         <><B>All deal statuses are included</B> in analytics by default — Owned, Prospect, Passed. This gives you the full picture including historical deals you didn't pursue.</>,
+        <><B>Status and state filters are multi-select</B> — they live on the Deal Library (Portfolio) page and let you pick several values at once. On an individual tenant's detail page you can also ignore specific locations to clean an outlier out of that brand's blended averages; choices persist across sessions.</>,
       ]} />
     ),
   },
   {
     id: 6,
-    title: "Comps — find comparable deals",
+    title: "Comps — your sale-comp database & benchmarking",
     brief: (
       <>
-        <p style={{ margin:0 }}>The <B>Comps</B> tab lets you filter across every deal in the library to build a comp set quickly — by market, asset type, cap rate, occupancy, SF, WALT, anchor type, or any combination.</p>
+        <p style={{ margin:0 }}>The <B>Comps</B> tab is a dedicated database of verified SALE comps — separate from your deal library. The banner shows total comps, total transaction volume, states covered, and the date span.</p>
         <BriefList items={[
-          <>Stack filters to narrow down to truly comparable deals.</>,
-          <>Results show key metrics side-by-side — SF, NOI, cap rate, occupancy, WALT, anchor.</>,
-          <>Click any result to open the full deal page.</>,
-          <>All deals are searchable — Owned, Prospects, and Passed deals — so historical context is always available.</>,
+          <>Every comp is tagged by source quality: <B>OWNED</B> (your own verified trades, highest), <B>MANUAL</B> (broker/comp-sheet entries), and <B>OM</B> (pulled from offering memoranda — weakest, since the seller selected them).</>,
+          <>Add comps manually, bulk-import JSON (Replace or Add), edit or delete any manual comp, and export the filtered set to Excel.</>,
+          <>The table is fully sortable and searchable across name, market, state, anchor, buyer, and seller. Possible duplicate trades are flagged for review.</>,
+          <>The actions column (hide/edit/delete) stays pinned to the right edge while you scroll.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Filters stack:</B> you can narrow by market AND cap rate AND WALT AND anchor type simultaneously. The result set updates as you adjust.</>,
-        <><B>Passed deals are your best comps</B> — they have full OM data and represent real market datapoints even if you didn't buy them. Don't exclude them from comp searches.</>,
-        <><B>Use Comps before an IC meeting</B> to quickly pull 3–5 deals with similar profiles to benchmark pricing and structure for a live deal.</>,
+        <><B>Source tiers matter:</B> the Comp Benchmark on deal pages prefers OWNED &gt; MANUAL &gt; OM comps, so your own trades carry the most weight in the benchmark calculation.</>,
+        <><B>Import JSON with "Replace"</B> wipes the existing imported set first (no duplicates); "Add" appends. Use Replace when refreshing a comp sheet, Add when combining multiple sources.</>,
+        <><B>Duplicate detection</B> flags two comps as possible dupes when they share a name and a close price/date, or a near-identical price+date in the same state — it won't flag the same property genuinely sold years apart.</>,
+        <><B>Use the Excel export</B> to hand a comp set to someone without app access, or to build your own pricing model outside the app.</>,
       ]} />
     ),
   },

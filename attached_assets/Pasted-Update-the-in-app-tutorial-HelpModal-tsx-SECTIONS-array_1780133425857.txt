@@ -1,0 +1,28 @@
+Update the in-app tutorial (HelpModal.tsx SECTIONS array) to reflect the current app. Keep the existing structure (each section has a short "brief" and a longer "detail"), and reuse the existing B, BriefList, DetailList, and TryAsking components and the same writing voice. Brief bullets must stay punchy (short attention spans); detail can go deeper.
+
+CHANGE 1 — Replace the "Comps — find comparable deals" section (id 6) with a rewritten section titled "Comps — your sale-comp database & benchmarking":
+brief bullets:
+- The Comps tab is a dedicated database of verified SALE comps — separate from your deal library. The banner shows total comps, total transaction volume, states covered, and the date span.
+- Every comp is tagged by source quality: OWNED (your own verified trades, highest), MANUAL (broker/comp-sheet entries), and OM (pulled from offering memoranda — weakest, since the seller selected them).
+- Add comps manually, bulk-import JSON (Replace or Add), edit or delete any manual comp, and export the filtered set to Excel.
+- The table is fully sortable and searchable across name, market, state, anchor, buyer, and seller. Possible duplicate trades are flagged for review.
+- The actions column (hide/edit/delete) stays pinned to the right edge while you scroll.
+detail bullets:
+- Source tiers matter: the benchmark prefers OWNED > MANUAL > OM comps, so your own trades carry the most weight.
+- Import JSON with "Replace" wipes the existing imported set first (no duplicates); "Add" appends.
+- Duplicate detection flags two comps as possible dupes when they share a name and a close price/date, or an near-identical price+date in the same state — it won't flag the same property genuinely sold years apart.
+- Use the Excel export to hand a comp set to someone without app access, or to build your own model.
+
+CHANGE 2 — In the "Deal pages" section (id 3), ADD coverage of the Comp Benchmark card:
+- brief: add a bullet — "Comp Benchmark — the deal is benchmarked against comparable trades: median cap rate and price/SF, with sample size and date range shown. You can exclude a comp you find irrelevant or type-ahead to add a missing one, and the medians recompute."
+- detail: add a bullet — "The benchmark uses medians (not averages), shows how many comps and over what window, and tiers comps by relevance (same state + type + size in 24 months first, widening only if needed and labeling how far it reached). Below a minimum sample it shows the comps but withholds a verdict rather than guess. It never falls back to the full unfiltered comp pool."
+- Also update the section to note the page is ordered in an analyst flow: Overview → Tenants/Sales/Rollover → Highlights/Upside/Red Flags → Financials/Comp Benchmark/Closing Costs → Assumptions/Cash Flow → Demographics → Notes.
+
+CHANGE 3 — In the "Analytics" section (id 5), ADD:
+- brief: "Ignore outliers — on the tenant lists, an eye-slash toggle excludes a skewing tenant from all the stat boxes, which recompute live."
+- brief: "Lease rollover years are clickable — tap a year to drill into exactly which tenants roll that year across the portfolio."
+- detail: "Filtering by status and state is multi-select and lives on the Deal Library (Portfolio) page — pick several at once. On an individual tenant's detail page you can also ignore specific locations to clean an outlier out of that brand's blended averages; choices persist."
+
+Keep all other sections as-is. Verify the modal still renders and the section list still expands/collapses on mobile and desktop.
+
+TEST: open the in-app Help/tutorial → the Comps section now describes the sale-comp database and benchmarking; the Deal pages and Analytics sections mention the benchmark card, tenant-ignore, and multi-select filters; brief views stay short, detail views expand.
