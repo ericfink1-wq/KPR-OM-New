@@ -1,5 +1,6 @@
-import { useState, useMemo, useRef } from "react";
-import type { TenantSalesYear, TenantSalesRecord, Tenant } from "../lib/idb";
+import { useState, useMemo, useRef, useEffect } from "react";
+import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
+import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
   salesHistory: TenantSalesYear[];
@@ -43,30 +44,138 @@ function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): 
   if (reporting.length === 0) return null;
 
   // Best-guess year: omDate year minus 1 (sales in an OM are usually prior-year actuals)
-  // Fall back to just using omDate year if that's all we have
   let year: number | null = null;
   if (omDate) {
     const parsed = new Date(omDate.includes("T") ? omDate : omDate + "T00:00:00");
     if (!isNaN(parsed.getTime())) {
-      year = parsed.getFullYear() - 1;  // prior-year actuals
+      year = parsed.getFullYear() - 1;
     }
   }
 
   return {
-    year: year ?? 0,   // 0 = unknown, handled specially in display
+    year: year ?? 0,
     uploadedAt: omDate ?? new Date().toISOString(),
     source: "om",
-    tenants: reporting.map(t => ({
-      name: t.canonicalName || t.name || "",
-      salesPSF: t.salesPSF != null ? Number(t.salesPSF) : null,
-      annualSales: (t.salesPSF != null && t.sf != null)
-        ? Math.round(Number(t.salesPSF) * Number(t.sf))
-        : null,
-      sf: t.sf != null ? Number(t.sf) : null,
-      occupancyCost: t.occupancyCost != null ? Number(t.occupancyCost) : null,
-      occIsEst: false,
-    })),
+    tenants: reporting.map(t => {
+      const sp = t.salesPSF != null ? Number(t.salesPSF) : null;
+      const sfn = t.sf != null ? Number(t.sf) : null;
+      const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
+
+      // Occupancy cost precedence:
+      // 1. OM-stated occupancyCost (already a total %)
+      // 2. Computed if base rent AND reimbursements are both present AND sales > 0
+      // 3. Otherwise null — never estimate from base rent alone
+      const stated = t.occupancyCost != null && !isNaN(Number(t.occupancyCost))
+        ? Number(t.occupancyCost) : null;
+      const base = t.annualRent != null && !isNaN(Number(t.annualRent))
+        ? Number(t.annualRent) : null;
+      const reimb = t.expenseReimbursements != null ? Number(t.expenseReimbursements) : null;
+      const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number")
+        ? t.percentageRent : 0;
+      const other = t.otherRent != null ? Number(t.otherRent) : 0;
+
+      let occupancyCost: number | null = null;
+      let occSource: "stated" | "computed" | undefined;
+      let occBreakdown: OccBreakdown | null = null;
+
+      if (stated != null) {
+        occupancyCost = stated;
+        occSource = "stated";
+      } else if (base != null && reimb != null && sales != null && sales > 0) {
+        const total = base + reimb + pctRent + other;
+        occupancyCost = (total / sales) * 100;
+        occSource = "computed";
+        occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales };
+      }
+
+      return {
+        name: t.canonicalName || t.name || "",
+        salesPSF: sp,
+        annualSales: (sp != null && sfn != null) ? Math.round(sp * sfn) : null,
+        sf: sfn,
+        occupancyCost,
+        occIsEst: false,
+        occSource,
+        occBreakdown,
+      };
+    }),
   };
+}
+
+function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    document.addEventListener("touchstart", h);
+    return () => { document.removeEventListener("mousedown", h); document.removeEventListener("touchstart", h); };
+  }, [open]);
+
+  const fmt$ = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v).toLocaleString()}`;
+  const isStated = source === "stated";
+
+  return (
+    <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 3 }}>
+      <span
+        onMouseEnter={isMobile ? undefined : () => setOpen(true)}
+        onMouseLeave={isMobile ? undefined : () => setOpen(false)}
+        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
+      >
+        {val.toFixed(1)}%
+        <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#7d766a", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+          {source}
+        </span>
+      </span>
+      {open && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 6px)", right: 0,
+          background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
+          zIndex: 9999, minWidth: 200, maxWidth: "min(280px, calc(100vw - 32px))",
+          fontSize: 11, fontFamily: "'Inter',sans-serif",
+        }}>
+          {breakdown ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                <span style={{ color: "#a89f8f" }}>+ Recoveries</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+              </div>
+              {breakdown.percentRent > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                  <span style={{ color: "#a89f8f" }}>+ % Rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
+                </div>
+              )}
+              {breakdown.other > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                  <span style={{ color: "#a89f8f" }}>+ Other rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.other)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3, borderTop: "1px solid #f1eadc", paddingTop: 4, marginTop: 2 }}>
+                <span style={{ color: "#a89f8f" }}>= Total</span><span style={{ fontWeight: 700 }}>{fmt$(breakdown.total)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
+                <span style={{ color: "#a89f8f" }}>÷ Sales</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.sales)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, borderTop: "1px solid #f1eadc", paddingTop: 4 }}>
+                <span style={{ fontWeight: 600, color: "#383a37" }}>Occ Cost</span><span style={{ fontWeight: 700, color: "#383a37" }}>{val.toFixed(1)}%</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
+          )}
+        </div>
+      )}
+    </span>
+  );
 }
 
 interface MergedRow {
@@ -379,7 +488,9 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
                                 </td>
                                 <td key={`${y}-tot`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
-                                  {rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
+                                  {rec?.occupancyCost != null && rec.occSource
+                                    ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} />
+                                    : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
                                 </td>
                               </>
                             );
@@ -392,7 +503,9 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtNum(rec?.sf)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
-                                  {rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
+                                  {rec?.occupancyCost != null && rec.occSource
+                                    ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} />
+                                    : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
                                 </td>
                               </>
                             );

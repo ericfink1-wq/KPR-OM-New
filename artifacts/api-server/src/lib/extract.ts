@@ -82,7 +82,7 @@ REQUIRED SCHEMA:
       "suite": "string or null",
       "sf": "number or null",
       "rentPerSF": "number or null",
-      "annualRent": "number or null",
+      "annualRent": "number or null — BASE rent only; do not fold in recoveries, percentage rent, or any other charges",
       "leaseStart": "string or null",
       "leaseExpiry": "string — ISO format YYYY-MM-DD (e.g. 2029-01-31). Never return Mon-YYYY strings or slash formats.",
       "leaseType": "NNN|Gross|Modified Gross|null",
@@ -92,7 +92,10 @@ REQUIRED SCHEMA:
       "rentSchedule": "string — REQUIRED for every tenant. List all dated rent steps with amounts e.g. '2024-09-01: $13.50 PSF ($345,384/yr); 2029-09-01: $15.50 PSF ($396,552/yr)'. Include option period bumps. If rent is flat, write 'Flat at $XX.XX PSF through YYYY-MM-DD.' Never leave null.",
       "renewalOptions": "string or null",
       "recentlyExercisedRenewal": "string or null",
-      "percentageRent": "string or null",
+      "percentageRentClause": "string or null — text describing the percentage rent clause (e.g. '7% of gross sales above $500/SF natural breakpoint'). Null if no clause.",
+      "expenseReimbursements": "number or null — Populate ONLY when the OM explicitly discloses the annual CAM + real-estate-tax + insurance recoveries paid by this specific tenant in dollars. Never estimate, derive, or guess. If not disclosed, leave null.",
+      "percentageRent": "number or null — Populate ONLY when the OM explicitly discloses the annual overage/percentage rent paid by this tenant in dollars. Never estimate. If not disclosed, leave null.",
+      "otherRent": "number or null — Populate ONLY when the OM explicitly discloses annual marketing/promo fund, storage, specialty, or other rent paid by this tenant in dollars. Never estimate. If not disclosed, leave null.",
       "creditRating": "Investment Grade|Non-Investment Grade|null",
       "salesPSF": "number or null",
       "salesYear": "number or null — the calendar year the salesPSF figure is from (e.g. 2024). Infer from context ('2024 sales', 'trailing 12 months ending Dec-2024', etc.).",
@@ -281,7 +284,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
-      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRent, creditRating, salesPSF, isAnchor, remainingTermYears}. " +
+      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.\n\nOM TEXT:\n" + truncatedText;
     try {
       const cont = await callExtract(contPrompt);

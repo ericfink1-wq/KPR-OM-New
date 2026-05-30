@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Info } from "lucide-react";
-import type { Tenant } from "../lib/idb";
+import type { Tenant, OccBreakdown } from "../lib/idb";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -8,9 +9,86 @@ import { useIsMobile } from "../hooks/use-mobile";
 interface Props {
   tenants: Tenant[];
   onTenantClick?: (name: string) => void;
+  onUpdateTenant?: (index: number, patch: Partial<Tenant>) => void;
   tenantsAsOf?: string | null;
   tenantsSource?: string | null;
   omDate?: string | null;
+}
+
+function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    document.addEventListener("touchstart", h);
+    return () => { document.removeEventListener("mousedown", h); document.removeEventListener("touchstart", h); };
+  }, [open]);
+
+  const fmt$ = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v).toLocaleString()}`;
+  const isStated = source === "stated";
+
+  return (
+    <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 3 }}>
+      <span
+        onMouseEnter={isMobile ? undefined : () => setOpen(true)}
+        onMouseLeave={isMobile ? undefined : () => setOpen(false)}
+        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
+      >
+        {val.toFixed(1)}%
+        <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#7d766a", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+          {source}
+        </span>
+      </span>
+      {open && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 6px)", right: 0,
+          background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
+          zIndex: 9999, minWidth: 200, maxWidth: "min(280px, calc(100vw - 32px))",
+          fontSize: 11, fontFamily: "'Inter',sans-serif",
+        }}>
+          {breakdown ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                <span style={{ color: "#a89f8f" }}>+ Recoveries</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+              </div>
+              {breakdown.percentRent > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                  <span style={{ color: "#a89f8f" }}>+ % Rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
+                </div>
+              )}
+              {breakdown.other > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
+                  <span style={{ color: "#a89f8f" }}>+ Other rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.other)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3, borderTop: "1px solid #f1eadc", paddingTop: 4, marginTop: 2 }}>
+                <span style={{ color: "#a89f8f" }}>= Total</span><span style={{ fontWeight: 700 }}>{fmt$(breakdown.total)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
+                <span style={{ color: "#a89f8f" }}>÷ Sales</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.sales)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, borderTop: "1px solid #f1eadc", paddingTop: 4 }}>
+                <span style={{ fontWeight: 600, color: "#383a37" }}>Occ Cost</span><span style={{ fontWeight: 700, color: "#383a37" }}>{val.toFixed(1)}%</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
+          )}
+        </div>
+      )}
+    </span>
+  );
 }
 
 function fmtAsOf(raw: string): string {
@@ -148,7 +226,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tenantsSource, omDate }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate }: Props) {
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
   const [sortKey, setSortKey] = useState("sf");
@@ -156,6 +234,8 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
   const [expandedRentStep, setExpandedRentStep] = useState<number | null>(null);
   const [expandedOption, setExpandedOption] = useState<number | null>(null);
   const [expandedReimb, setExpandedReimb] = useState<number | null>(null);
+  const [editingOcc, setEditingOcc] = useState<number | null>(null);
+  const [editVals, setEditVals] = useState<{ reimb: string; pctRent: string; other: string }>({ reimb: "", pctRent: "", other: "" });
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
   let rows = tenants.slice();
@@ -396,11 +476,53 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
                 <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(t.salesPSF, t.sf)}</td>
                 {(() => {
-                  const occ = n(t.occupancyCost);
+                  const stated = n(t.occupancyCost);
+                  const base = n(t.annualRent);
+                  const reimb = n(t.expenseReimbursements);
+                  const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
+                  const other = n(t.otherRent) ?? 0;
+                  const sp = n(t.salesPSF);
+                  const sfn = n(t.sf);
+                  const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
+
+                  let occ: number | null = null;
+                  let occSource: "stated" | "computed" | null = null;
+                  let occBreakdown: { base: number; reimbursements: number; percentRent: number; other: number; total: number; sales: number } | null = null;
+
+                  if (stated != null) {
+                    occ = stated; occSource = "stated";
+                  } else if (base != null && reimb != null && sales != null && sales > 0) {
+                    const total = base + reimb + pctRent + other;
+                    occ = (total / sales) * 100;
+                    occSource = "computed";
+                    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales };
+                  }
+
                   const color = occ != null ? (occ > 15 ? "#dc2626" : "#0f9d63") : "#a69e91";
+                  const canEdit = !!onUpdateTenant && !isVacant(t) && !isNAPTenant(t);
                   return (
-                    <td style={{ padding:"8px 10px", textAlign:"right", whiteSpace:"nowrap", color }}>
-                      {occ != null ? `${occ.toFixed(1)}%` : "—"}
+                    <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {occ != null && occSource
+                          ? <OccTip val={occ} source={occSource} breakdown={occBreakdown} />
+                          : <span>{occ != null ? `${occ.toFixed(1)}%` : "—"}</span>}
+                        {canEdit && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              const idx = tenants.indexOf(t);
+                              setEditVals({
+                                reimb: t.expenseReimbursements != null ? String(t.expenseReimbursements) : "",
+                                pctRent: (t.percentageRent != null && typeof t.percentageRent === "number") ? String(t.percentageRent) : "",
+                                other: t.otherRent != null ? String(t.otherRent) : "",
+                              });
+                              setEditingOcc(editingOcc === idx ? null : idx);
+                            }}
+                            style={{ background: "transparent", border: "none", cursor: "pointer", color: "#c4bbaa", fontSize: 10, padding: "1px 2px", lineHeight: 1, flexShrink: 0 }}
+                            title="Edit occupancy cost components"
+                          >✏</button>
+                        )}
+                      </span>
                     </td>
                   );
                 })()}
@@ -411,6 +533,93 @@ export default function TenantRoster({ tenants, onTenantClick, tenantsAsOf, tena
         </table>
       </div>
       <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover the ⓘ icon for tenant notes.</div>
+      {editingOcc != null && onUpdateTenant && createPortal(
+        <>
+          <div
+            onClick={() => setEditingOcc(null)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.32)", zIndex: 9998 }}
+          />
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "fixed", top: "50%", left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 9999, background: "#fff", borderRadius: 14,
+              boxShadow: "0 24px 60px rgba(0,0,0,0.22)",
+              padding: "20px 22px 18px",
+              width: "min(340px, 92vw)",
+              fontFamily: "'Inter',sans-serif",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#383a37", marginBottom: 4 }}>
+              Edit Occupancy Cost Components
+            </div>
+            <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 14, lineHeight: 1.5 }}>
+              {tenants[editingOcc]?.canonicalName || tenants[editingOcc]?.name || "Tenant"}<br />
+              Enter OM-disclosed annual dollar amounts. Base rent is already captured above.
+              Occ cost = (Base + Recoveries + % Rent + Other) ÷ Sales.
+            </div>
+            {[
+              { label: "Recoveries (CAM + taxes + insurance)", key: "reimb" as const, placeholder: "e.g. 125000" },
+              { label: "% Rent / Overage rent (annual $)", key: "pctRent" as const, placeholder: "e.g. 48000" },
+              { label: "Other rent (marketing, storage, etc.)", key: "other" as const, placeholder: "e.g. 12000" },
+            ].map(({ label, key, placeholder }) => (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>{label}</div>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder={placeholder}
+                  value={editVals[key]}
+                  onChange={e => setEditVals(prev => ({ ...prev, [key]: e.target.value }))}
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    border: "1px solid #e6dfd0", borderRadius: 8,
+                    padding: "8px 10px", fontSize: 13, color: "#383a37",
+                    fontFamily: "'Inter',sans-serif", outline: "none",
+                    background: "#faf8f4",
+                  }}
+                />
+              </div>
+            ))}
+            <div style={{ fontSize: 10, color: "#c4bbaa", marginBottom: 14 }}>
+              Leave a field blank to clear it. Occupancy cost will show "—" unless both Base rent and Recoveries are present.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => {
+                  const parseOrNull = (s: string) => s.trim() === "" ? null : (isNaN(Number(s)) ? null : Number(s));
+                  onUpdateTenant!(editingOcc!, {
+                    expenseReimbursements: parseOrNull(editVals.reimb),
+                    percentageRent: parseOrNull(editVals.pctRent),
+                    otherRent: parseOrNull(editVals.other),
+                  });
+                  setEditingOcc(null);
+                }}
+                style={{
+                  flex: 1, background: "#3f7a1f", color: "#fff",
+                  border: "none", borderRadius: 8, padding: "10px 0",
+                  fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingOcc(null)}
+                style={{
+                  flex: 1, background: "#f3f4f6", color: "#383a37",
+                  border: "none", borderRadius: 8, padding: "10px 0",
+                  fontFamily: "'Inter',sans-serif", fontWeight: 500, fontSize: 13, cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }

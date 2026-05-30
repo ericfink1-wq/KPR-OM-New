@@ -1566,6 +1566,10 @@ ${text.slice(0, 40000)}`;
         <div id="section-tenants"><TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
+          onUpdateTenant={(idx, patch) => {
+            const newTenants = (d.tenants || []).map((t, i) => i === idx ? { ...t, ...patch } : t);
+            onUpdate(d.id, { tenants: newTenants });
+          }}
           tenantsAsOf={d.tenantsAsOf}
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}

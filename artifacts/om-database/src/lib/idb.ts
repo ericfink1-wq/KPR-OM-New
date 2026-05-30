@@ -161,6 +161,9 @@ export interface Tenant {
   salesPSF?: number | string | null;
   salesYear?: number | null;        // year the salesPSF figure is from (from OM extraction)
   occupancyCost?: number | string | null;
+  expenseReimbursements?: number | null;  // annual CAM + RE-tax + insurance recoveries (OM-stated dollars)
+  percentageRent?: number | null;         // annual overage/percentage rent (OM-stated dollars)
+  otherRent?: number | null;              // annual marketing fund, storage, specialty, other (OM-stated dollars)
   creditRating?: string | null;
   isAnchor?: boolean;
   isNAP?: boolean | null;
@@ -168,32 +171,28 @@ export interface Tenant {
   salesNotes?: string | null;
 }
 
-export interface TenantSalesRecord {
-  name: string;
-  salesPSF?: number | null;
-  annualSales?: number | null;
-  sf?: number | null;
-  occupancyCost?: number | null;
-  occIsEst?: boolean;
+export interface OccBreakdown {
+  base: number;
+  reimbursements: number;
+  percentRent: number;
+  other: number;
+  total: number;
+  sales: number;
 }
 
-export interface TenantSalesYear {
-  year: number;
-  uploadedAt: string;
-  source: "om" | "upload";
-  tenants: TenantSalesRecord[];
-}
-
-// One uploaded tenant-sales snapshot (one year of data)
+// One tenant's data within a TenantSalesYear snapshot
 export interface TenantSalesRecord {
   name: string;
   salesPSF?: number | null;
   annualSales?: number | null;   // total $ volume
   sf?: number | null;
   occupancyCost?: number | null;
-  occIsEst?: boolean;            // true when occupancyCost is computed (annualRent ÷ sales), not sourced from OM
+  occIsEst?: boolean;            // legacy — kept for type compat; no longer set to true
+  occSource?: "stated" | "computed"; // how occupancyCost was resolved
+  occBreakdown?: OccBreakdown | null; // breakdown for computed values
 }
 
+// A year's worth of per-tenant sales data for a deal
 export interface TenantSalesYear {
   year: number;                  // the reporting year the sales belong to (e.g. 2023)
   uploadedAt: string;            // ISO timestamp of upload

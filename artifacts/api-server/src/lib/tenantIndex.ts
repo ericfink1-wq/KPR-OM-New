@@ -101,6 +101,9 @@ export async function rebuildTenantIndex(
         creditRating: typeof t.creditRating === "string" ? t.creditRating : null,
         isAnchor: typeof t.isAnchor === "boolean" ? t.isAnchor : null,
         dealStatus,
+        expenseReimbursements: toFloat(t.expenseReimbursements),
+        percentageRent: toFloat(t.percentageRent),
+        otherRent: toFloat(t.otherRent),
       };
     });
 

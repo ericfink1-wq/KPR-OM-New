@@ -15,6 +15,9 @@ export const tenantIndexTable = pgTable("tenant_index", {
   creditRating: text("credit_rating"),
   isAnchor: boolean("is_anchor"),
   dealStatus: text("deal_status"),
+  expenseReimbursements: doublePrecision("expense_reimbursements"),
+  percentageRent: doublePrecision("percentage_rent"),
+  otherRent: doublePrecision("other_rent"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

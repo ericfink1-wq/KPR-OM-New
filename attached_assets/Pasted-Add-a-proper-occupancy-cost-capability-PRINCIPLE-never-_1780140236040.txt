@@ -1,0 +1,26 @@
+Add a proper occupancy-cost capability. PRINCIPLE: never guess or estimate — only ever show OM-stated values or a computation from explicitly disclosed components. Optimize for desktop AND mobile.
+
+PART 1 — Schema (three new nullable numeric per-tenant fields, annual dollars)
+Add everywhere the Tenant shape is defined and persisted:
+- expenseReimbursements  (annual CAM + RE-tax + insurance recoveries paid by tenant)
+- percentageRent         (annual overage/percentage rent)
+- otherRent              (annual marketing/promo fund, storage, specialty, etc.)
+Locations: artifacts/om-database/src/lib/idb.ts (Tenant interfaces); lib/db tenant-index schema (3 nullable numeric columns + Drizzle migration); server read/write paths; and the JSON import path so re-uploaded deals carry them. Keep annualRent = BASE rent only — never fold recoveries into it. Do NOT touch the existing OM-stated occupancyCost or salesPSF fields.
+
+PART 2 — Extraction prompt (artifacts/api-server/src/lib/extract.ts AND the schema text in DetailView.tsx)
+Add the three component fields with descriptions, each marked: "Populate ONLY when the OM or rent roll explicitly discloses this annual dollar amount for the tenant. Never estimate, derive, or guess — if not disclosed, leave null." Keep capturing OM-stated occupancyCost (% of sales, total-rent definition) and salesPSF exactly as today. Reinforce: annualRent is BASE rent only; do not include recoveries.
+
+PART 3 — Computation + display (TenantSalesPanel.tsx, and any deal-page occupancy-cost display e.g. TenantRoster.tsx)
+For each tenant, resolve occupancy cost in this precedence:
+1. If OM-stated occupancyCost is present → show it, labeled "stated".
+2. Else if base annualRent AND expenseReimbursements are both present AND sales (salesPSF × SF) > 0 → compute:
+   occCost% = (annualRent + expenseReimbursements + (percentageRent||0) + (otherRent||0)) / (salesPSF × SF) × 100
+   Show it labeled "computed", with a small completeness tag of what's included (e.g. "base + recoveries", "+ % rent").
+3. Else → show "—". NEVER compute from base rent alone (no recoveries = no number).
+Add a tap/hover breakdown showing the numerator components (Base / Recoveries / % Rent / Other = Total) over Sales, so the analyst always sees what's in the figure.
+Make expenseReimbursements, percentageRent, otherRent editable like other tenant fields (pencil-edit), so verified values can be entered manually.
+The breakdown popover must work on touch and not overflow on mobile.
+
+PART 4 — Do NOT mass re-extract existing deals. Existing tenants keep showing their OM-stated occupancyCost (or "—"); the new computation only adds value where components exist (future extractions or manual entry).
+
+TEST: a tenant with an OM-stated occupancyCost still shows it ("stated"); a tenant with base + reimbursements + sales but no stated % now shows a computed occ cost ("computed", "base + recoveries"); a tenant with only base rent + sales shows "—"; the breakdown popover lists the components and works on mobile; the three fields are editable and persist.
