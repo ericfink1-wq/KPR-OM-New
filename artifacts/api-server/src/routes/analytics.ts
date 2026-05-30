@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { tenantIndexTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import type { TenantIndexRow } from "@workspace/db";
 
 const router = Router();
@@ -26,7 +26,14 @@ function pct(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 1000) / 10 : 0;
 }
 
-function computeAnalytics(rows: TenantIndexRow[], filter: "all" | "owned") {
+/** Parse dealId or dealId[] query param into a string array, or null if absent. */
+function parseDealIds(raw: unknown): string[] | null {
+  if (Array.isArray(raw)) return (raw as string[]).filter(Boolean);
+  if (typeof raw === "string" && raw) return [raw];
+  return null;
+}
+
+function computeAnalytics(rows: TenantIndexRow[]) {
   // Exclude vacant and rows with no name
   const tenantRows = rows.filter(
     r => r.rawName && !/^vacant/i.test(r.rawName.trim())
@@ -42,7 +49,6 @@ function computeAnalytics(rows: TenantIndexRow[], filter: "all" | "owned") {
   for (const r of withRent) {
     let year = "Unknown";
     if (r.leaseExpiryDate) {
-      // leaseExpiryDate is a string "YYYY-MM-DD" from Drizzle date column
       const y = String(r.leaseExpiryDate).slice(0, 4);
       if (/^\d{4}$/.test(y)) year = y;
     }
@@ -100,25 +106,7 @@ function computeAnalytics(rows: TenantIndexRow[], filter: "all" | "owned") {
       count: creditMap.get(l)!.count,
     }));
 
-  // ---- Lease Type Mix -----------------------------------------------------
-  const ltMap = new Map<string, { annualRent: number; count: number }>();
-  for (const r of withRent) {
-    const raw = (r.leaseType ?? "").trim();
-    const label = raw || "Unknown";
-    const e = ltMap.get(label) ?? { annualRent: 0, count: 0 };
-    ltMap.set(label, { annualRent: e.annualRent + (r.annualRent ?? 0), count: e.count + 1 });
-  }
-  const leaseTypeMix = [...ltMap.entries()]
-    .sort(([, a], [, b]) => b.annualRent - a.annualRent)
-    .map(([label, v]) => ({
-      label,
-      annualRent: v.annualRent,
-      pct: pct(v.annualRent, totalRent),
-      count: v.count,
-    }));
-
   return {
-    filter,
     summary: {
       totalAnnualRent: totalRent,
       rentedTenantCount: withRent.length,
@@ -135,28 +123,78 @@ function computeAnalytics(rows: TenantIndexRow[], filter: "all" | "owned") {
       anchorCount: anchorNames.size,
     },
     creditMix,
-    leaseTypeMix,
   };
 }
 
 // ---------------------------------------------------------------------------
 // GET /api/analytics/portfolio
 // Query params:
-//   filter=owned   — only status='Owned' rows
-//   (default)      — all statuses
+//   dealId[]=<id>  — one or more deal IDs to restrict the dataset
+//   (no dealId)   — all deals
 // ---------------------------------------------------------------------------
 router.get("/analytics/portfolio", requireAuth, async (req, res) => {
   try {
-    const filter = req.query.filter === "owned" ? "owned" : "all";
+    const dealIds = parseDealIds(req.query.dealId);
 
-    const rows = filter === "owned"
-      ? await db.select().from(tenantIndexTable).where(eq(tenantIndexTable.dealStatus, "Owned"))
+    if (dealIds && dealIds.length === 0) {
+      res.json(computeAnalytics([]));
+      return;
+    }
+
+    const rows = dealIds
+      ? await db.select().from(tenantIndexTable).where(inArray(tenantIndexTable.dealId, dealIds))
       : await db.select().from(tenantIndexTable);
 
-    res.json(computeAnalytics(rows, filter));
+    res.json(computeAnalytics(rows));
   } catch (err) {
     req.log.error({ err }, "Failed to compute portfolio analytics");
     res.status(500).json({ error: "Failed to compute portfolio analytics" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/analytics/rollover-detail
+// Query params:
+//   year=2027       — expiry year to drill into, or "Unknown"
+//   dealId[]=<id>   — optional deal filter (same as /portfolio)
+// ---------------------------------------------------------------------------
+router.get("/analytics/rollover-detail", requireAuth, async (req, res) => {
+  try {
+    const year = typeof req.query.year === "string" ? req.query.year : null;
+    if (!year) {
+      res.status(400).json({ error: "year query param is required" });
+      return;
+    }
+
+    const dealIds = parseDealIds(req.query.dealId);
+
+    const baseRows = dealIds && dealIds.length > 0
+      ? await db.select().from(tenantIndexTable).where(inArray(tenantIndexTable.dealId, dealIds))
+      : await db.select().from(tenantIndexTable);
+
+    const tenants = baseRows
+      .filter(r => {
+        // Exclude vacant / no-name
+        if (!r.rawName || /^vacant/i.test(r.rawName.trim())) return false;
+        if (year === "Unknown") return !r.leaseExpiryDate;
+        if (!r.leaseExpiryDate) return false;
+        const y = String(r.leaseExpiryDate).slice(0, 4);
+        return y === year;
+      })
+      .map(r => ({
+        name: r.canonicalName || r.rawName || "Unknown",
+        dealName: r.dealName || "",
+        sf: r.sf ?? null,
+        annualRent: r.annualRent ?? null,
+        expiryDate: r.leaseExpiryDate ? String(r.leaseExpiryDate) : null,
+        dealStatus: r.dealStatus ?? null,
+      }))
+      .sort((a, b) => (b.annualRent ?? 0) - (a.annualRent ?? 0));
+
+    res.json({ year, tenants });
+  } catch (err) {
+    req.log.error({ err }, "Failed to compute rollover detail");
+    res.status(500).json({ error: "Failed to compute rollover detail" });
   }
 });
 

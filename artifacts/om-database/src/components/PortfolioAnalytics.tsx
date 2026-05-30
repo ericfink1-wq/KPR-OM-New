@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useIsMobile } from "../hooks/use-mobile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,12 +36,10 @@ interface MixItem {
 }
 
 interface PortfolioAnalyticsData {
-  filter: "all" | "owned";
   summary: AnalyticsSummary;
   leaseExpiration: ExpirationBucket[];
   tenantConcentration: TenantConcentration;
   creditMix: MixItem[];
-  leaseTypeMix: MixItem[];
 }
 
 // ---------------------------------------------------------------------------
@@ -60,10 +59,10 @@ function barColor(year: string): string {
   const y = parseInt(year);
   if (y <= NOW_YEAR) return "#b0a898";
   const delta = y - NOW_YEAR;
-  if (delta <= 2) return "#dc6347";   // near-term risk — warm red
-  if (delta <= 4) return "#e8a631";   // medium — amber
-  if (delta <= 6) return "#a3c45a";   // medium-stable — yellow-green
-  return "#6dba43";                    // long-term stable — KPR green
+  if (delta <= 2) return "#dc6347";
+  if (delta <= 4) return "#e8a631";
+  if (delta <= 6) return "#a3c45a";
+  return "#6dba43";
 }
 
 const CREDIT_COLORS: Record<string, string> = {
@@ -71,8 +70,6 @@ const CREDIT_COLORS: Record<string, string> = {
   "Non-Investment Grade": "#e8a631",
   "Unrated": "#c9c2b8",
 };
-
-const LEASE_TYPE_COLORS = ["#6dba43", "#e8a631", "#6baed6", "#c9c2b8", "#a89f8f", "#b8b0a3"];
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -88,7 +85,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: "20px 22px", ...style }}>
+    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: "20px 22px", boxSizing: "border-box", ...style }}>
       {children}
     </div>
   );
@@ -96,15 +93,14 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
 
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 18px", flex: 1 }}>
+    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 18px", flex: "1 1 140px", minWidth: 0, boxSizing: "border-box" }}>
       <div style={{ fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#26281f", lineHeight: 1 }}>{value}</div>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#26281f", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
 
-// Horizontal proportional segment bar
 function SegmentBar({ items, colorMap }: {
   items: MixItem[];
   colorMap: (label: string, idx: number) => string;
@@ -159,16 +155,22 @@ function SegmentLegend({ items, colorMap }: {
 }
 
 // ---------------------------------------------------------------------------
-// Expiration Waterfall
+// Expiration Waterfall — rows are clickable
 // ---------------------------------------------------------------------------
 
-function ExpirationWaterfall({ data }: { data: ExpirationBucket[] }) {
+function ExpirationWaterfall({ data, onYearClick }: { data: ExpirationBucket[]; onYearClick?: (year: string) => void }) {
   const maxPct = Math.max(...data.map(d => d.pct), 1);
+  const clickable = !!onYearClick;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       {data.map(d => (
-        <div key={d.year} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 40, textAlign: "right", fontSize: 11, fontWeight: 600, color: d.year === "Unknown" ? "#a89f8f" : "#383a37", flexShrink: 0 }}>
+        <div
+          key={d.year}
+          onClick={() => onYearClick?.(d.year)}
+          style={{ display: "flex", alignItems: "center", gap: 10, cursor: clickable ? "pointer" : "default", borderRadius: 6, padding: clickable ? "0 0" : undefined }}
+          title={clickable ? `View ${d.year === "Unknown" ? "unknown expiry" : d.year} rollover detail` : undefined}
+        >
+          <div style={{ width: 40, textAlign: "right", fontSize: 11, fontWeight: 600, color: d.year === "Unknown" ? "#a89f8f" : (clickable ? "#2d4ecf" : "#383a37"), flexShrink: 0, textDecoration: clickable ? "underline" : "none", textDecorationColor: "#a8b8f0", textUnderlineOffset: 2 }}>
             {d.year}
           </div>
           <div style={{ flex: 1, position: "relative", height: 22, background: "#f5f1ea", borderRadius: 5, overflow: "hidden" }}>
@@ -194,13 +196,16 @@ function ExpirationWaterfall({ data }: { data: ExpirationBucket[] }) {
           <div style={{ width: 28, textAlign: "right", fontSize: 10, color: "#b8b0a3", flexShrink: 0 }}>
             {d.tenantCount}
           </div>
+          {clickable && (
+            <div style={{ width: 14, textAlign: "center", fontSize: 10, color: "#c9c2b8", flexShrink: 0 }}>›</div>
+          )}
         </div>
       ))}
       {data.length > 0 && (
         <div style={{ display: "flex", gap: 10, marginTop: 4, paddingTop: 8, borderTop: "1px solid #f1eadc" }}>
           <div style={{ width: 40 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", gap: 14 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
               {[
                 { color: "#dc6347", label: "≤2 yrs" },
                 { color: "#e8a631", label: "3-4 yrs" },
@@ -217,6 +222,7 @@ function ExpirationWaterfall({ data }: { data: ExpirationBucket[] }) {
           </div>
           <div style={{ width: 62, textAlign: "right", fontSize: 9.5, color: "#b8b0a3" }}>Rent</div>
           <div style={{ width: 28, textAlign: "right", fontSize: 9.5, color: "#b8b0a3" }}>#</div>
+          {clickable && <div style={{ width: 14 }} />}
         </div>
       )}
     </div>
@@ -273,8 +279,15 @@ function TopTenantsPanel({ data }: { data: TenantConcentration }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, filter: filterProp }: { onTenantAudit?: () => void; onTenantAnalytics?: () => void; filter?: "all" | "owned" }) {
-  const filter = filterProp ?? "all";
+interface Props {
+  filterDealIds?: string[];
+  onYearClick?: (year: string) => void;
+  onTenantAudit?: () => void;
+  onTenantAnalytics?: () => void;
+}
+
+export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenantAudit, onTenantAnalytics }: Props) {
+  const isMobile = useIsMobile();
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,10 +296,16 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, f
   const [rebuildingComps, setRebuildingComps] = useState(false);
   const [rebuildCompsMsg, setRebuildCompsMsg] = useState<string | null>(null);
 
-  const load = useCallback((f: "all" | "owned") => {
+  const noDeals = filterDealIds !== undefined && filterDealIds.length === 0;
+
+  const load = useCallback((dealIds?: string[]) => {
     setLoading(true);
     setError(null);
-    fetch(`/api/analytics/portfolio?filter=${f}`, { credentials: "include" })
+    let url = "/api/analytics/portfolio";
+    if (dealIds && dealIds.length > 0) {
+      url += "?" + dealIds.map(id => `dealId[]=${encodeURIComponent(id)}`).join("&");
+    }
+    fetch(url, { credentials: "include" })
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<PortfolioAnalyticsData>;
@@ -295,7 +314,10 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, f
       .catch(e => { setError(e.message); setLoading(false); });
   }, []);
 
-  useEffect(() => { load(filter); }, [filter, load]);
+  useEffect(() => {
+    if (noDeals) { setLoading(false); setData(null); return; }
+    load(filterDealIds);
+  }, [filterDealIds, noDeals, load]);
 
   const handleRebuild = () => {
     setRebuilding(true);
@@ -305,7 +327,7 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, f
       .then(d => {
         if (!d.ok) throw new Error(d.error || "Rebuild failed");
         setRebuildMsg(`✓ ${d.rebuilt ?? "?"} tenants indexed`);
-        load(filter);
+        load(filterDealIds);
       })
       .catch(e => setRebuildMsg(`⚠ ${e.message}`))
       .finally(() => setRebuilding(false));
@@ -319,104 +341,68 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, f
       .then(d => {
         if (!d.ok) throw new Error(d.error || "Rebuild failed");
         setRebuildCompsMsg(`✓ ${d.rebuilt ?? "?"} comps indexed`);
-        load(filter);
+        load(filterDealIds);
       })
       .catch(e => setRebuildCompsMsg(`⚠ ${e.message}`))
       .finally(() => setRebuildingComps(false));
   };
 
+  const pad = isMobile ? "16px" : "28px 32px";
+
   return (
-    <div style={{ padding: "28px 32px", maxWidth: 1100, margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
-            <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ padding: pad, maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
+          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {onTenantAnalytics && (
-            <button
-              onClick={onTenantAnalytics}
-              style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
-            >
+            <button onClick={onTenantAnalytics} style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
               Tenant Analytics
             </button>
           )}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <button
-              onClick={handleRebuildComps}
-              disabled={rebuildingComps}
-              style={{
-                background: rebuildingComps ? "#f1eadc" : "transparent",
-                border: "1px solid #c9c2b8",
-                color: rebuildingComps ? "#a89f8f" : "#6f6a5f",
-                padding: "6px 12px",
-                borderRadius: 7,
-                cursor: rebuildingComps ? "default" : "pointer",
-                fontSize: 11,
-                fontFamily: "'Inter',sans-serif",
-                fontWeight: 500,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
+            <button onClick={handleRebuildComps} disabled={rebuildingComps} style={{ background: rebuildingComps ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuildingComps ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuildingComps ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ fontSize: 12 }}>↺</span>
               {rebuildingComps ? "Rebuilding…" : "Rebuild comps index"}
             </button>
-            {rebuildCompsMsg && (
-              <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>
-                {rebuildCompsMsg}
-              </span>
-            )}
+            {rebuildCompsMsg && <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildCompsMsg}</span>}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <button
-              onClick={handleRebuild}
-              disabled={rebuilding}
-              style={{
-                background: rebuilding ? "#f1eadc" : "transparent",
-                border: "1px solid #c9c2b8",
-                color: rebuilding ? "#a89f8f" : "#6f6a5f",
-                padding: "6px 12px",
-                borderRadius: 7,
-                cursor: rebuilding ? "default" : "pointer",
-                fontSize: 11,
-                fontFamily: "'Inter',sans-serif",
-                fontWeight: 500,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
+            <button onClick={handleRebuild} disabled={rebuilding} style={{ background: rebuilding ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuilding ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuilding ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ fontSize: 12 }}>↺</span>
               {rebuilding ? "Rebuilding…" : "Rebuild index"}
             </button>
-            {rebuildMsg && (
-              <span style={{ fontSize: 10.5, color: rebuildMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>
-                {rebuildMsg}
-              </span>
-            )}
+            {rebuildMsg && <span style={{ fontSize: 10.5, color: rebuildMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildMsg}</span>}
           </div>
         </div>
       </div>
 
-      {loading && (
+      {/* No deals match filter */}
+      {noDeals && (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#a89f8f", fontSize: 13 }}>
+          No deals match the selected filters.
+        </div>
+      )}
+
+      {!noDeals && loading && (
         <div style={{ textAlign: "center", padding: "80px 0", color: "#a89f8f" }}>
           <div style={{ fontSize: 13 }}>Computing…</div>
         </div>
       )}
 
-      {error && (
+      {!noDeals && error && (
         <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "14px 18px", color: "#b91c1c", fontSize: 13 }}>
           Failed to load analytics: {error}
         </div>
       )}
 
-      {!loading && !error && data && (
+      {!noDeals && !loading && !error && data && (
         <>
-          {/* Summary row */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          {/* Summary stat boxes */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
             <StatBox
               label="Total Annual Rent"
               value={fmtRent(data.summary.totalAnnualRent)}
@@ -439,14 +425,20 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, f
             />
           </div>
 
-          {/* Waterfall + Tenant Concentration */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14, marginBottom: 14 }}>
+          {/* Waterfall + Tenant Concentration — stack on mobile */}
+          <div style={{
+            display: isMobile ? "flex" : "grid",
+            flexDirection: "column",
+            gridTemplateColumns: "1fr 340px",
+            gap: 14,
+            marginBottom: 14,
+          }}>
             <Card>
               <SectionLabel>Lease Expiration Waterfall — % of Rent by Year</SectionLabel>
               {data.leaseExpiration.length === 0 ? (
                 <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No lease expiry data available.</div>
               ) : (
-                <ExpirationWaterfall data={data.leaseExpiration} />
+                <ExpirationWaterfall data={data.leaseExpiration} onYearClick={onYearClick} />
               )}
             </Card>
 
@@ -460,71 +452,38 @@ export default function PortfolioAnalytics({ onTenantAudit, onTenantAnalytics, f
             </Card>
           </div>
 
-          {/* Credit Mix + Lease Type Mix */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Card>
-              <SectionLabel>Credit Mix — % of Rent</SectionLabel>
-              {data.creditMix.length === 0 ? (
-                <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No credit rating data available.</div>
-              ) : (
-                <>
-                  <SegmentBar
-                    items={data.creditMix}
-                    colorMap={(label) => CREDIT_COLORS[label] ?? "#c9c2b8"}
-                  />
-                  <SegmentLegend
-                    items={data.creditMix}
-                    colorMap={(label) => CREDIT_COLORS[label] ?? "#c9c2b8"}
-                  />
-                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #f1eadc" }}>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      {data.creditMix.map(item => (
-                        <div key={item.label} style={{ flex: 1, textAlign: "center", background: "#faf7f0", borderRadius: 8, padding: "10px 6px" }}>
-                          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, color: "#26281f", fontWeight: 500 }}>{item.pct}%</div>
-                          <div style={{ fontSize: 9.5, color: "#a89f8f", marginTop: 2 }}>{item.count} tenants</div>
-                        </div>
-                      ))}
-                    </div>
+          {/* Credit Mix — full width (Lease Type Mix removed) */}
+          <Card style={{ width: "100%" }}>
+            <SectionLabel>Credit Mix — % of Rent</SectionLabel>
+            {data.creditMix.length === 0 ? (
+              <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No credit rating data available.</div>
+            ) : (
+              <>
+                <SegmentBar
+                  items={data.creditMix}
+                  colorMap={(label) => CREDIT_COLORS[label] ?? "#c9c2b8"}
+                />
+                <SegmentLegend
+                  items={data.creditMix}
+                  colorMap={(label) => CREDIT_COLORS[label] ?? "#c9c2b8"}
+                />
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #f1eadc" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {data.creditMix.map(item => (
+                      <div key={item.label} style={{ flex: "1 1 120px", textAlign: "center", background: "#faf7f0", borderRadius: 8, padding: "10px 6px" }}>
+                        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, color: "#26281f", fontWeight: 500 }}>{item.pct}%</div>
+                        <div style={{ fontSize: 9.5, color: "#a89f8f", marginTop: 2 }}>{item.count} tenants</div>
+                      </div>
+                    ))}
                   </div>
-                </>
-              )}
-            </Card>
-
-            <Card>
-              <SectionLabel>Lease Type Mix — % of Rent</SectionLabel>
-              {data.leaseTypeMix.length === 0 ? (
-                <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No lease type data available.</div>
-              ) : (
-                <>
-                  <SegmentBar
-                    items={data.leaseTypeMix}
-                    colorMap={(_, idx) => LEASE_TYPE_COLORS[idx % LEASE_TYPE_COLORS.length]}
-                  />
-                  <SegmentLegend
-                    items={data.leaseTypeMix}
-                    colorMap={(_, idx) => LEASE_TYPE_COLORS[idx % LEASE_TYPE_COLORS.length]}
-                  />
-                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #f1eadc" }}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {data.leaseTypeMix.map((item, idx) => (
-                        <div key={item.label} style={{ flex: "1 0 calc(33% - 8px)", minWidth: 80, textAlign: "center", background: "#faf7f0", borderRadius: 8, padding: "10px 6px" }}>
-                          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, color: "#26281f", fontWeight: 500 }}>{item.pct}%</div>
-                          <div style={{ fontSize: 9.5, color: "#a89f8f", marginTop: 2 }}>{item.label}</div>
-                          <div style={{ fontSize: 9, color: "#c9c2b8", marginTop: 1 }}>{item.count} tenants</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </Card>
-          </div>
+                </div>
+              </>
+            )}
+          </Card>
 
           {data.summary.totalAnnualRent === 0 && (
             <div style={{ marginTop: 20, padding: "16px 20px", background: "#faf7f0", border: "1px solid #ece5d7", borderRadius: 10, fontSize: 13, color: "#a89f8f" }}>
-              {filter === "owned"
-                ? "No Owned deals found in the tenant index. Switch to \u201cAll Deals\u201d or change some deal statuses to Owned."
-                : "The tenant index is empty. Try uploading some deals or run POST /api/tenant-index/rebuild-all to backfill."}
+              The tenant index is empty. Try uploading some deals or run Rebuild Index to backfill.
             </div>
           )}
         </>
