@@ -1,0 +1,39 @@
+Make, test, and iterate. In artifacts/om-database/src/lib/closingCosts.ts, add two title schedules for the Southeast and apply them to 10 states.
+
+1) Immediately BEFORE the line "export const CLOSING_COSTS_BY_STATE", add these two constants:
+
+const REP_TITLE_SE_COMPETITIVE: TitleSchedule = {
+  source: "Representative regressive schedule — competitive (file-and-use) Southeast state; anchored to published GA commercial title rates (~$3.65/$1,000). Confirm underwriter quote for live deals.",
+  promulgated: false,
+  minPremium: 150,
+  brackets: [
+    { over: 0,        base: 0,     per1000: 5.00 },
+    { over: 100000,   base: 500,   per1000: 3.65 },
+    { over: 500000,   base: 1960,  per1000: 3.00 },
+    { over: 1000000,  base: 3460,  per1000: 2.50 },
+    { over: 5000000,  base: 13460, per1000: 2.25 },
+    { over: 10000000, base: 24710, per1000: 2.00 },
+  ],
+};
+
+const REP_TITLE_NC: TitleSchedule = {
+  source: "NC Title Insurance Rating Bureau (NCTIRB) state-regulated rate — representative curve calibrated to the ~$2.17/$1,000 NC level. Confirm exact NCTIRB premium for live deals.",
+  promulgated: false,
+  minPremium: 120,
+  brackets: [
+    { over: 0,        base: 0,     per1000: 2.40 },
+    { over: 100000,   base: 240,   per1000: 2.10 },
+    { over: 500000,   base: 1080,  per1000: 1.90 },
+    { over: 1000000,  base: 2030,  per1000: 1.75 },
+    { over: 5000000,  base: 9030,  per1000: 1.60 },
+    { over: 10000000, base: 17030, per1000: 1.50 },
+  ],
+};
+
+2) Add `titleSchedule: REP_TITLE_SE_COMPETITIVE,` after the titleInsuranceParty line in each of these 9 blocks: GA, SC, TN, AL, MS, KY, WV, AR, LA.
+
+3) Add `titleSchedule: REP_TITLE_NC,` after the titleInsuranceParty line in the NC block.
+
+Don't change anything else in those blocks, and don't touch any state outside the 10 listed.
+
+TEST: a GA or TN deal computes ~$3,460 title on $1M and ~$13,460 on $5M (tagged representative); an NC deal computes ~$2,030 on $1M and ~$9,030 on $5M (noticeably cheaper, NCTIRB-based). Card works desktop + mobile; PDF builds; the promulgated five (NJ/NY/PA/TX/FL) unchanged.
