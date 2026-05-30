@@ -1,0 +1,52 @@
+Make, test, and iterate. In artifacts/om-database/src/lib/closingCosts.ts, add the Midwest title schedules and apply to 10 states. Ohio is exact (rating bureau); Iowa is a special low state-program; the rest are representative.
+
+1) Immediately BEFORE the line "export const CLOSING_COSTS_BY_STATE", add these two constants:
+
+const REP_TITLE_MW_COMPETITIVE: TitleSchedule = {
+  source: "Representative regressive schedule — competitive (file-and-use) Midwest state with no single filed rate. Confirm underwriter quote for live deals.",
+  promulgated: false,
+  minPremium: 150,
+  brackets: [
+    { over: 0,        base: 0,     per1000: 5.00 },
+    { over: 100000,   base: 500,   per1000: 3.50 },
+    { over: 500000,   base: 1900,  per1000: 2.90 },
+    { over: 1000000,  base: 3350,  per1000: 2.50 },
+    { over: 5000000,  base: 13350, per1000: 2.25 },
+    { over: 10000000, base: 24600, per1000: 2.00 },
+  ],
+};
+
+const REP_TITLE_IA: TitleSchedule = {
+  source: "Iowa Title Guaranty (state program; private title insurance barred in IA) — representative low fee schedule, well below private-market rates. Confirm exact ITG commercial fee for live deals.",
+  promulgated: false,
+  minPremium: 175,
+  brackets: [
+    { over: 0,        base: 0,    per1000: 1.00 },
+    { over: 1000000,  base: 1000, per1000: 0.90 },
+    { over: 5000000,  base: 4600, per1000: 0.75 },
+    { over: 10000000, base: 8350, per1000: 0.65 },
+  ],
+};
+
+2) Add this titleSchedule to the OH (Ohio) block (it's an exact rating-bureau rate):
+titleSchedule: {
+  source: "Ohio Title Insurance Rating Bureau (OTIRB) — filed/approved owner's risk premium, effective 2026-01-01 (first increase since 2002). Statewide, same for all agencies.",
+  promulgated: true,
+  minPremium: 225,
+  brackets: [
+    { over: 0,        base: 0,     per1000: 5.80 },
+    { over: 250000,   base: 1450,  per1000: 4.10 },
+    { over: 500000,   base: 2475,  per1000: 3.20 },
+    { over: 1000000,  base: 4075,  per1000: 3.10 },
+    { over: 5000000,  base: 16475, per1000: 2.90 },
+    { over: 10000000, base: 30975, per1000: 2.60 },
+  ],
+}
+
+3) Add `titleSchedule: REP_TITLE_MW_COMPETITIVE,` after the titleInsuranceParty line in each of: IL, IN, MI, WI, MN, MO, KS, NE.
+
+4) Add `titleSchedule: REP_TITLE_IA,` after the titleInsuranceParty line in the IA block.
+
+Don't change anything else in those blocks; don't touch any state outside these 10.
+
+TEST: an OH deal computes exactly $4,075 title on $1M, $16,475 on $5M, $30,975 on $10M (tagged filed-rate); an IL/MI deal computes ~$3,350 on $1M (representative); an IA deal computes ~$1,000 on $1M (much cheaper, state-program note). Card works desktop + mobile; PDF builds; the now-six exact states (NJ/NY/PA/TX/FL/OH) unchanged.
