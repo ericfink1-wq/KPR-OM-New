@@ -335,7 +335,7 @@ function AppInner() {
                   </div>
                 </div>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} />
+                  <PortfolioAnalytics onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
                 ) : (
                   <TenantAnalytics
                     deals={activeDeals}
