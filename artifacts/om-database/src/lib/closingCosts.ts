@@ -1418,6 +1418,100 @@ export function autoLocalities(stateAbbr?: string | null, city?: string | null):
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Geocoded-jurisdiction → locality resolution (authoritative).
+//
+// The server resolves a street address to its exact county / municipality /
+// place via the US Census geocoder; this maps that to the dropdown options. The
+// county IS the jurisdiction for county-based groups, so this removes the
+// guesswork of matching a mailing-city string.
+// ---------------------------------------------------------------------------
+export interface ResolvedJurisdiction {
+  matched: boolean;
+  matchedAddress?: string | null;
+  state?: string | null;
+  county?: string | null;
+  municipality?: string | null;
+  place?: string | null;
+  schoolDistrict?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  source?: string;
+}
+
+// County NAME (Census form, lowercased) -> locality option, for county-based groups.
+const COUNTY_LOCALITY: Record<string, Array<{ group: string; label: string; counties: string[] }>> = {
+  NY: [
+    { group: "NY-local", label: "NYC", counties: ["new york county", "kings county", "queens county", "bronx county", "richmond county"] },
+  ],
+  MD: [
+    { group: "MD-county", label: "Baltimore City",               counties: ["baltimore city"] },
+    { group: "MD-county", label: "Baltimore Co./Howard Co.",     counties: ["baltimore county", "howard county"] },
+    { group: "MD-county", label: "Prince George's County",       counties: ["prince george's county"] },
+    { group: "MD-county", label: "Anne Arundel/Montgomery/etc.", counties: ["anne arundel county", "montgomery county"] },
+  ],
+  DE: [
+    { group: "DE-county", label: "Kent/Sussex County", counties: ["kent county", "sussex county"] },
+  ],
+  MA: [
+    { group: "MA-region", label: "Cape/Islands", counties: ["barnstable county", "dukes county", "nantucket county"] },
+  ],
+  NC: [
+    { group: "NC-county", label: "Orange County",      counties: ["orange county"] },
+    { group: "NC-county", label: "Chatham County",     counties: ["chatham county"] },
+    { group: "NC-county", label: "Mecklenburg County", counties: ["mecklenburg county"] },
+  ],
+  VA: [
+    { group: "VA-region", label: "NoVA/Hampton Roads", counties: [
+      "arlington county", "fairfax county", "loudoun county", "prince william county",
+      "alexandria city", "fairfax city", "falls church city", "manassas city", "manassas park city",
+      "norfolk city", "virginia beach city", "chesapeake city", "newport news city",
+      "hampton city", "portsmouth city", "suffolk city",
+    ] },
+  ],
+  NV: [
+    { group: "NV-county", label: "Washoe County (Reno)", counties: ["washoe county"] },
+  ],
+  WA: [
+    { group: "WA-county", label: "King County (Seattle)",    counties: ["king county"] },
+    { group: "WA-county", label: "Pierce/Snohomish/Spokane", counties: ["pierce county", "snohomish county", "spokane county"] },
+  ],
+  OR: [
+    { group: "OR-county", label: "Washington County (Portland West)", counties: ["washington county"] },
+  ],
+};
+
+function normPlace(s?: string | null): string {
+  if (!s) return "";
+  return s.trim().toLowerCase().replace(/\s+(city|town|village|borough|township|cdp|municipality)$/i, "").trim();
+}
+
+/** Map a geocoded jurisdiction to locality selections ({ altGroup: altLabel }). */
+export function localitiesFromJurisdiction(stateAbbr: string | null | undefined, geo: ResolvedJurisdiction): Record<string, string> {
+  const out: Record<string, string> = {};
+  const st = (stateAbbr || geo.state || "").trim().toUpperCase();
+  if (!st || !geo.matched) return out;
+
+  // Place-based groups (PA cities, NY Yonkers, IL cities, CA cities, CO resorts).
+  const placeNames = [normPlace(geo.place), normPlace(geo.municipality)].filter(Boolean);
+  for (const e of CITY_LOCALITY[st] ?? []) {
+    if (placeNames.some((p) => e.cities.includes(p))) out[e.group] = e.label;
+  }
+
+  // County-based groups (the county IS the jurisdiction).
+  const county = (geo.county || "").trim().toLowerCase();
+  for (const e of COUNTY_LOCALITY[st] ?? []) {
+    if (e.counties.includes(county)) out[e.group] = e.label;
+  }
+
+  // Illinois county tax: default option is Cook; any other county is "outside Cook".
+  if (st === "IL" && county && county !== "cook county") {
+    out["IL-county"] = "Downstate / Outside Cook County";
+  }
+
+  return out;
+}
+
 export function calculateClosingCosts(jurisdiction: JurisdictionRates, price: number, loan: number, opts: CalcOptions | boolean = {}): ClosingCostBreakdown {
   const resolvedOpts: CalcOptions = typeof opts === "boolean" ? { includeEntityTaxes: opts } : opts;
   const { includeEntityTaxes = false, localities = {}, residential = false } = resolvedOpts;

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import type { Deal } from "../lib/idb";
 import {
   getJurisdiction, calculateClosingCosts, formatRate, getLocalityGroups, autoLocalities,
+  localitiesFromJurisdiction, type ResolvedJurisdiction,
   DEFAULT_LTV, SPLITS_SOURCE, FIDELITY_SOURCE_URL,
 } from "../lib/closingCosts";
 
@@ -25,11 +26,49 @@ export default function ClosingCostsCard({ deal }: Props) {
   const [priceInput, setPriceInput] = useState<string>(defaultPrice ? Math.round(defaultPrice).toLocaleString("en-US") : "");
   const [loanInput, setLoanInput] = useState<string>(defaultLoan ? Math.round(defaultLoan).toLocaleString("en-US") : "");
   const [entitySale, setEntitySale] = useState(false);
-  // Auto-pick the local transfer-tax locality from the property's city/state.
-  const autoPicked = useMemo(() => autoLocalities(deal.state, deal.city), [deal.state, deal.city]);
-  const [localities, setLocalities] = useState<Record<string, string>>(autoPicked);
-  // Re-detect when switching to a different property.
-  useEffect(() => { setLocalities(autoLocalities(deal.state, deal.city)); }, [deal.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resolve the EXACT taxing jurisdiction from the street address (US Census),
+  // cached per deal+address. Degrades gracefully to the city match on any failure.
+  const fullAddress = useMemo(
+    () => [deal.address, deal.city, deal.state].map((s) => (s || "").trim()).filter(Boolean).join(", "),
+    [deal.address, deal.city, deal.state],
+  );
+  const hasStreet = !!(deal.address && deal.address.trim());
+  const [geo, setGeo] = useState<ResolvedJurisdiction | null>(null);
+  const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "done" | "failed">("idle");
+
+  useEffect(() => {
+    setGeo(null); setGeoStatus("idle");
+    if (!hasStreet) return;
+    const cacheKey = `cc-geo:${deal.id}:${fullAddress}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) { setGeo(JSON.parse(cached) as ResolvedJurisdiction); setGeoStatus("done"); return; }
+    } catch { /* ignore */ }
+    let alive = true;
+    setGeoStatus("loading");
+    fetch(`/api/closing/resolve?address=${encodeURIComponent(fullAddress)}`, { credentials: "include" })
+      .then((r) => r.json() as Promise<ResolvedJurisdiction>)
+      .then((j) => {
+        if (!alive) return;
+        setGeo(j); setGeoStatus("done");
+        if (j && j.matched) { try { localStorage.setItem(cacheKey, JSON.stringify(j)); } catch { /* ignore */ } }
+      })
+      .catch(() => { if (alive) { setGeo(null); setGeoStatus("failed"); } });
+    return () => { alive = false; };
+  }, [deal.id, fullAddress, hasStreet]);
+
+  // Auto-detected locality: geocoded jurisdiction first, then the city-string fallback.
+  const detected = useMemo(() => {
+    const fromGeo = geo?.matched ? localitiesFromJurisdiction(deal.state, geo) : {};
+    const fromCity = autoLocalities(deal.state, deal.city);
+    return { ...fromCity, ...fromGeo };
+  }, [geo, deal.state, deal.city]);
+
+  // User dropdown picks win over auto-detection; cleared when switching deals.
+  const [override, setOverride] = useState<Record<string, string>>({});
+  useEffect(() => { setOverride({}); }, [deal.id]);
+  const localities = useMemo(() => ({ ...detected, ...override }), [detected, override]);
 
   const price = Number(priceInput.replace(/,/g, "")) || 0;
   const loan  = Number(loanInput.replace(/,/g, ""))  || 0;
@@ -86,25 +125,39 @@ export default function ClosingCostsCard({ deal }: Props) {
         </label>
       )}
 
+      {/* Resolved jurisdiction status (from the property address, via US Census) */}
+      {localityGroups.length > 0 && (
+        <div style={{ fontSize: 10, color: geo?.matched ? "#3f7a1f" : "#a69e91", marginBottom: 8, lineHeight: 1.5 }}>
+          {geoStatus === "loading" && <>📍 Resolving the exact jurisdiction from the property address…</>}
+          {geoStatus === "done" && geo?.matched && (
+            <>📍 {[geo.place, geo.municipality].filter(Boolean)[0] || geo.county}{geo.county ? ` · ${geo.county}` : ""}{geo.state ? `, ${geo.state}` : ""} — resolved from the address ({geo.source || "US Census"}).</>
+          )}
+          {geoStatus === "done" && !geo?.matched && <>Couldn't pin the exact jurisdiction from the address — using the city match. Verify the county/city below.</>}
+          {geoStatus === "failed" && <>Address lookup unavailable right now — using the city match. Verify the county/city below.</>}
+          {geoStatus === "idle" && !hasStreet && <>No street address on this deal — pick the county/city below, or add the address to auto-resolve it.</>}
+        </div>
+      )}
+
       {/* Locality picker(s) — for states with county/city transfer-tax options */}
       {localityGroups.map((g) => {
-        const current = localities[g.group] ?? g.options.find((o) => o.isDefault)?.label ?? g.options[0]?.label ?? "";
-        const autoLabel = autoPicked[g.group];
-        const isAuto = !!autoLabel && current === autoLabel;
-        const cityState = [deal.city, deal.state].filter(Boolean).join(", ");
+        const fallbackDefault = g.options.find((o) => o.isDefault)?.label ?? g.options[0]?.label ?? "";
+        const autoLabel = detected[g.group];
+        const current = localities[g.group] ?? fallbackDefault;
+        const isOverridden = override[g.group] != null;
+        const isAuto = !!autoLabel && !isOverridden;
         return (
           <label key={g.group} style={{ display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
             County / City (local transfer tax)
-            <select value={current} onChange={(e) => setLocalities((prev) => ({ ...prev, [g.group]: e.target.value }))}
+            <select value={current} onChange={(e) => setOverride((prev) => ({ ...prev, [g.group]: e.target.value }))}
               style={{ display: "block", width: "100%", fontSize: 13, padding: "7px 10px", border: "1px solid #e3dccd", borderRadius: 6, color: "#383a37", background: "#fafaf8", marginTop: 4, fontFamily: "'Inter',sans-serif", boxSizing: "border-box" }}>
               {g.options.map((o) => <option key={o.label} value={o.label}>{o.label}{o.isDefault ? " (default)" : ""}</option>)}
             </select>
             <span style={{ display: "block", fontSize: 9.5, color: isAuto ? "#3f7a1f" : "#a69e91", fontWeight: 400, textTransform: "none", letterSpacing: 0, marginTop: 3 }}>
               {isAuto
-                ? `✓ Auto-selected from the property address (${cityState}). Change it if the property sits in a different taxing jurisdiction.`
-                : autoLabel
-                  ? `Auto-detected ${autoLabel} from ${cityState}, but you've overridden it.`
-                  : `Couldn't determine the locality from the address${cityState ? ` (${cityState})` : ""} — pick the property's county/city. Only the selected locality's local tax is applied.`}
+                ? `✓ Auto-selected from the property address. Change it if the parcel sits in a different taxing jurisdiction.`
+                : isOverridden
+                  ? `Manually selected — overriding the auto-detected locality.`
+                  : `Pick the property's county/city. Only the selected locality's local tax is applied.`}
             </span>
           </label>
         );
