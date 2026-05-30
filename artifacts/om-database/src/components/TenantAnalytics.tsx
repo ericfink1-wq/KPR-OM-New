@@ -203,6 +203,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const filter = filterProp ?? "all";
   const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
   const [showAllParents, setShowAllParents] = useState(false);
+  const [tenantSearch, setTenantSearch] = useState("");
 
   // Ignored tenants — persisted across refreshes
   const [ignoredKeys, setIgnoredKeys] = useState<Set<string>>(() => {
@@ -303,6 +304,14 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const byRent  = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
   const byCount = useMemo(() => [...rows].sort((a, b) => b.locationCount - a.locationCount || b.totalAnnualRent - a.totalAnnualRent).slice(0, 10), [rows]);
   const bySF    = useMemo(() => [...rows].filter(r => r.totalSF > 0).sort((a, b) => b.totalSF - a.totalSF).slice(0, 10), [rows]);
+
+  // All tenants sorted by rent desc — searchable full list
+  const allTenantsSorted = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent), [rows]);
+  const filteredAllTenants = useMemo(() => {
+    const q = tenantSearch.trim().toLowerCase();
+    if (!q) return allTenantsSorted;
+    return allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q));
+  }, [allTenantsSorted, tenantSearch]);
   const maxSF   = bySF[0]?.totalSF ?? 1;
 
   // Parent company exposure (excludes ignored tenants)
@@ -567,6 +576,66 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
               </div>
             </Card>
           )}
+
+          {/* All Tenants — searchable full list */}
+          <Card>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 }}>
+                All Tenants ({rows.length})
+              </div>
+              <input
+                value={tenantSearch}
+                onChange={e => setTenantSearch(e.target.value)}
+                placeholder="Search tenants…"
+                style={{ fontSize: 12, padding: "5px 10px", border: "1px solid #e3dccd", borderRadius: 7, color: "#383a37", background: "#f9f6f0", fontFamily: "'Inter',sans-serif", maxWidth: 220, width: "100%", minWidth: 0, boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ maxHeight: 420, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              {filteredAllTenants.length === 0 ? (
+                <div style={{ padding: "20px 0", textAlign: "center", color: "#a89f8f", fontSize: 12 }}>
+                  No tenants match &ldquo;{tenantSearch}&rdquo;
+                </div>
+              ) : (
+                filteredAllTenants.map((row, i) => {
+                  const ignored = ignoredKeys.has(row.key);
+                  return (
+                    <div
+                      key={row.key}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "7px 2px",
+                        borderBottom: i < filteredAllTenants.length - 1 ? "1px solid #f5f1ea" : "none",
+                        opacity: ignored ? 0.35 : 1,
+                        transition: "opacity 0.15s",
+                      }}
+                    >
+                      <div style={{ width: 32, textAlign: "right", fontSize: 10, color: "#c8b8a3", flexShrink: 0 }}>
+                        {i + 1}
+                      </div>
+                      <div style={{ flex: "1 1 0", minWidth: 0, overflow: "hidden" }}>
+                        <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                        </div>
+                        <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
+                          <span>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
+                          {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
+                            <span style={{ color: "#6dba43" }}>({row.ownedCount} owned)</span>
+                          )}
+                          {filter === "all" && row.ownedCount === 0 && (
+                            <span style={{ color: "#c8b89a", fontStyle: "italic" }}>unowned</span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0, minWidth: 54, textAlign: "right" }}>
+                        {fmtRent(row.totalAnnualRent)}
+                      </div>
+                      <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Card>
 
           {/* Parent Company Exposure */}
           {parentRows.length > 0 && (
