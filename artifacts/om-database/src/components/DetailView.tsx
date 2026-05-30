@@ -79,13 +79,14 @@ function ReconBadge({ msg }: { msg: string }) {
 // Box that starts collapsed to about a normal card's height with a "click to
 // enlarge" hover hint; on click it expands to show everything, and the child
 // renders at a larger text size (it receives `expanded`).
-function CollapsibleBox({ collapsedHeight = 150, fadeColor = "#faf7f0", children }: {
+function CollapsibleBox({ collapsedHeight = 300, fadeColor = "#faf7f0", children }: {
   collapsedHeight?: number;
   fadeColor?: string;
   children: (expanded: boolean) => React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [hover, setHover] = useState(false);
+  const collapseBtn: React.CSSProperties = { background:"#fff", border:"1px solid #e7e0d2", borderRadius:6, fontSize:10, fontWeight:600, color:"#7d766a", cursor:"pointer", padding:"3px 9px", fontFamily:"'Inter',sans-serif" };
   return (
     <div
       onMouseEnter={() => setHover(true)}
@@ -104,12 +105,16 @@ function CollapsibleBox({ collapsedHeight = 150, fadeColor = "#faf7f0", children
         </div>
       )}
       {expanded && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-          style={{ position:"absolute", top:10, right:12, background:"#fff", border:"1px solid #e7e0d2", borderRadius:6, fontSize:10, fontWeight:600, color:"#7d766a", cursor:"pointer", padding:"3px 9px", fontFamily:"'Inter',sans-serif" }}
-        >
-          Collapse ⤡
-        </button>
+        <>
+          <button onClick={(e) => { e.stopPropagation(); setExpanded(false); }} style={{ ...collapseBtn, position:"absolute", top:10, right:12 }}>
+            Collapse ⤡
+          </button>
+          <div style={{ display:"flex", justifyContent:"center", marginTop:8 }}>
+            <button onClick={(e) => { e.stopPropagation(); setExpanded(false); }} style={collapseBtn}>
+              ⤡ Collapse
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1801,7 +1806,7 @@ ${text.slice(0, 40000)}`;
 
       {/* Deal score */}
       {(d.dealScore || d.analysisStale) && (
-        <CollapsibleBox collapsedHeight={150} fadeColor="#faf7f0">
+        <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
           {(expanded) => { const fs = expanded ? 1.35 : 1; return (
           <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
             <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
@@ -1833,21 +1838,25 @@ ${text.slice(0, 40000)}`;
         const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const sorted = [...d.upsideItems!].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
         return (
-          <div id="section-upside" style={{ background:"#f2faf0", border:"1px solid #3f7a1f40", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-              <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#2d7a0e", fontWeight:700 }}>&#10024; UPSIDE ITEMS</div>
-              {d.analysisStale && <StaleBadge />}
-            </div>
-            {sorted.map((u,i) => (
-              <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<sorted.length-1?"1px solid #d4edca":"none", alignItems:"flex-start" }}>
-                <span style={{ fontSize:9, padding:"2px 6px", borderRadius:3, background:u.priority==="high"?"#22c55e20":u.priority==="medium"?"#86efac20":"#bbf7d020", color:u.priority==="high"?"#166534":u.priority==="medium"?"#15803d":"#166534", fontWeight:600, flexShrink:0 }}>{u.priority?.toUpperCase()}</span>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:700, color:"#1a3d12", marginBottom:2 }}>{u.item}</div>
-                  <div style={{ fontSize:11, color:"#3d5c35", lineHeight:1.55 }}>{u.detail}</div>
-                </div>
+          <CollapsibleBox collapsedHeight={300} fadeColor="#f2faf0">
+            {(expanded) => { const fs = expanded ? 1.35 : 1; return (
+            <div id="section-upside" style={{ background:"#f2faf0", border:"1px solid #3f7a1f40", borderRadius:8, padding:"14px 16px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#2d7a0e", fontWeight:700 }}>&#10024; UPSIDE ITEMS</div>
+                {d.analysisStale && <StaleBadge />}
               </div>
-            ))}
-          </div>
+              {sorted.map((u,i) => (
+                <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<sorted.length-1?"1px solid #d4edca":"none", alignItems:"flex-start" }}>
+                  <span style={{ fontSize:9*fs, padding:"2px 6px", borderRadius:3, background:u.priority==="high"?"#22c55e20":u.priority==="medium"?"#86efac20":"#bbf7d020", color:u.priority==="high"?"#166534":u.priority==="medium"?"#15803d":"#166534", fontWeight:600, flexShrink:0 }}>{u.priority?.toUpperCase()}</span>
+                  <div>
+                    <div style={{ fontSize:11*fs, fontWeight:700, color:"#1a3d12", marginBottom:2 }}>{u.item}</div>
+                    <div style={{ fontSize:11*fs, color:"#3d5c35", lineHeight:1.55 }}>{u.detail}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            ); }}
+          </CollapsibleBox>
         );
       })()}
 
@@ -1858,7 +1867,7 @@ ${text.slice(0, 40000)}`;
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return (allRedFlags.length > 0 || d.analysisStale) && (
-          <CollapsibleBox collapsedHeight={150} fadeColor="#faf7f0">
+          <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
             {(expanded) => { const fs = expanded ? 1.35 : 1; return (
             <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px" }}>
               <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
@@ -1971,7 +1980,7 @@ ${text.slice(0, 40000)}`;
       )}
 
       {/* TRANSACTION DETAILS — acquisition record (LOI → close) and disposition */}
-      {(d.status === "Under Contract" || d.status === "Owned" || d.status === "Sold") && (() => {
+      {(() => {
         const owned = d.status === "Owned" || d.status === "Sold";
         const sold  = d.status === "Sold";
         const tf = (p: Omit<TxnFieldProps,"dealId"|"onUpdate">) =>
