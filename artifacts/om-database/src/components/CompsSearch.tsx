@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { exportCompsToExcel } from "../lib/exportExcel";
-import { useIsMobile } from "../hooks/use-mobile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -475,7 +474,6 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [editRow, setEditRow] = useState<CompRow | null>(null);
   const [showDupsOnly, setShowDupsOnly] = useState(false);
   const [stats, setStats] = useState<CompStats | null>(null);
-  const isMobile = useIsMobile();
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -845,11 +843,10 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           <div style={{
             background: "#fff", border: "1px solid #efe8da", borderRadius: 10,
             padding: "11px 18px", marginBottom: 14,
-            display: "flex", flexWrap: "wrap", alignItems: "center",
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", alignItems: "center",
           }}>
             {items.map((item, i) => (
               <div key={i} style={{
-                flex: "1 1 40%", minWidth: 90,
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                 padding: "3px 8px",
                 borderRight: i < items.length - 1 ? "1px solid #f0e9da" : "none",
@@ -886,7 +883,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       <div style={{
         background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 16px",
         marginBottom: 16, display: "grid",
-        gridTemplateColumns: isMobile ? "repeat(auto-fit, minmax(150px, 1fr))" : "1fr 140px 140px 110px 110px",
+        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
         width: "100%", boxSizing: "border-box",
         gap: 10, alignItems: "end",
       }}>
@@ -919,84 +916,10 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
         </div>
       )}
 
-      {/* Table / Cards */}
-      {!error && (isMobile ? (
-        /* ── Mobile: stacked cards ── */
-        <div>
-          {loading && (
-            <div style={{ textAlign: "center", color: "#a89f8f", fontSize: 13, padding: "40px 0" }}>Loading…</div>
-          )}
-          {!loading && displayRows.length === 0 && (
-            <div style={{ textAlign: "center", color: "#a89f8f", fontSize: 13, padding: "40px 0" }}>
-              {showDupsOnly ? "No possible duplicates detected." : hasFilters ? "No comps match these filters." : "No comps in the index yet."}
-            </div>
-          )}
-          {!loading && displayRows.map(row => {
-            const cardLabel = row.name || row.address || "—";
-            const cardSub   = row.name ? row.address : null;
-            const fields: { label: string; value: string }[] = [
-              { label: "Market",        value: row.market || "" },
-              { label: "State",         value: row.state  || "" },
-              { label: "Sale Date",     value: fmtDate(row.saleDate) },
-              { label: "Sale Price",    value: fmtM(row.salePrice) },
-              { label: "Cap Rate",      value: fmtCapRate(row.capRate) },
-              { label: "Price/SF",      value: fmtPsf(row.pricePerSf) },
-              { label: "SF",            value: fmtSf(row.sf) },
-              { label: "Occupancy",     value: fmtPct(row.occupancy) },
-              { label: "Anchor",        value: row.anchor || "" },
-              { label: "Type",          value: row.propertyType || "" },
-              { label: "Buyer",         value: row.buyer  || "" },
-              { label: "Seller",        value: row.seller || "" },
-              { label: "Source / Notes",value: row.sourceNotes || row.sourceDealName || "" },
-            ].filter(f => f.value && f.value !== "—");
-            const dupInfo = dupMap.get(row.id);
-            return (
-              <div key={row.id} style={{
-                background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff",
-                border: "1px solid #ece5d7", borderRadius: 10, marginBottom: 10, overflow: "hidden",
-              }}>
-                <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #f0e9da" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#26281f" }}>{cardLabel}</span>
-                    {row.isOwnTransaction ? (
-                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 4, padding: "1px 5px" }}>OWNED</span>
-                    ) : row.isManual ? (
-                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#5a7c9e", background: "#e8f1f8", border: "1px solid #c3d9ec", borderRadius: 4, padding: "1px 5px" }}>MANUAL</span>
-                    ) : null}
-                    {dupInfo && (() => {
-                      let tip = `Possible duplicate of: ${dupInfo.otherNames.join(", ")} — ${dupInfo.reasons.join(", ")}`;
-                      if (dupInfo.betterSourceExists) tip += `\nHigher-quality ${dupInfo.bestTierName} version exists.`;
-                      return <span title={tip} style={{ fontSize: 9, fontWeight: 700, color: "#d9890c", background: "#fff8ec", border: "1px solid #f5c842", borderRadius: 4, padding: "1px 5px" }}>⚠ dup?</span>;
-                    })()}
-                  </div>
-                  {cardSub && <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 2 }}>{cardSub}</div>}
-                </div>
-                <div style={{ padding: "8px 14px 10px", display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 12, rowGap: 5 }}>
-                  {fields.map(f => (
-                    <Fragment key={f.label}>
-                      <span style={{ fontSize: 10, color: "#a89f8f", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", paddingTop: 2, whiteSpace: "nowrap" }}>{f.label}</span>
-                      <span style={{ fontSize: 12, color: "#383a37", wordBreak: "break-word" }}>{f.value}</span>
-                    </Fragment>
-                  ))}
-                </div>
-                {row.isManual && (
-                  <div style={{ padding: "8px 14px", borderTop: "1px solid #f0e9da", display: "flex", gap: 8 }}>
-                    <button onClick={() => setEditRow(row)} style={{ flex: 1, minHeight: 36, background: "#fff", border: "1px solid #e7ddd0", borderRadius: 6, cursor: "pointer", color: "#5a5048", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>
-                      ✎ Edit
-                    </button>
-                    <button onClick={() => handleDelete(row.id)} style={{ flex: 1, minHeight: 36, background: "#fff", border: "1px solid #f5c5c5", borderRadius: 6, cursor: "pointer", color: "#b05050", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>
-                      × Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* ── Desktop: sortable table ── */
+      {/* Table — swipeable on all screen sizes */}
+      {!error && (
         <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ overflowX: "auto" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f1eadc" }}>
@@ -1168,7 +1091,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             </table>
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }

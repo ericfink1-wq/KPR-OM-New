@@ -402,7 +402,7 @@ export default function PortfolioAnalytics({ filterDealIds, onYearClick, onTenan
       {!noDeals && !loading && !error && data && (
         <>
           {/* Summary stat boxes */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
             <StatBox
               label="Total Annual Rent"
               value={fmtRent(data.summary.totalAnnualRent)}

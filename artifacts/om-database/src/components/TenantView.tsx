@@ -207,7 +207,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
       ) : (
         <>
           {/* Stat boxes — recomputed from activeRows (ignoring excluded locations) */}
-          <div style={{ display:"flex", gap:11, flexWrap:"wrap", marginBottom:22 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))", gap:11, marginBottom:22 }}>
             <Stat
               label="Locations"
               value={String(activeRows.length)}

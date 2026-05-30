@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useIsMobile } from "../hooks/use-mobile";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,7 +85,6 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export default function RolloverYearView({ year, filterDealIds, onBack }: Props) {
-  const isMobile = useIsMobile();
   const [data, setData] = useState<RolloverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +106,7 @@ export default function RolloverYearView({ year, filterDealIds, onBack }: Props)
   const totalSF   = data?.tenants.reduce((s, t) => s + (t.sf ?? 0), 0) ?? 0;
 
   return (
-    <div style={{ padding: isMobile ? "16px" : "28px 32px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
+    <div style={{ padding: "20px 24px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 22, flexWrap: "wrap" }}>
         <button
@@ -118,7 +116,7 @@ export default function RolloverYearView({ year, filterDealIds, onBack }: Props)
           ← Back
         </button>
         <div>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 20 : 24, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
             {year === "Unknown" ? "Unknown Expiry" : `${year} Lease Rollovers`}
           </div>
           {data && (
@@ -147,41 +145,9 @@ export default function RolloverYearView({ year, filterDealIds, onBack }: Props)
       )}
 
       {!loading && !error && data && data.tenants.length > 0 && (
-        isMobile ? (
-          // Mobile: stacked cards
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {data.tenants.map((t, i) => (
-              <div key={i} style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: "#26281f", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
-                    {t.name}
-                  </div>
-                  <StatusBadge status={t.dealStatus} />
-                </div>
-                <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {t.dealName || "—"}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px" }}>
-                  <div>
-                    <div style={{ fontSize: 9, color: "#b8b0a3", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>Annual Rent</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#383a37" }}>{fmtRent(t.annualRent)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: "#b8b0a3", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>SF</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#383a37" }}>{fmtSF(t.sf)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: "#b8b0a3", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>Expiry</div>
-                    <div style={{ fontSize: 12, color: "#5c5850" }}>{fmtDate(t.expiryDate)}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          // Desktop: table
-          <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+        <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
               <colgroup>
                 <col style={{ width: 32 }} />
                 <col />
@@ -233,7 +199,7 @@ export default function RolloverYearView({ year, filterDealIds, onBack }: Props)
               </tfoot>
             </table>
           </div>
-        )
+        </div>
       )}
     </div>
   );
