@@ -1472,6 +1472,9 @@ ${text.slice(0, 40000)}`;
         })()}
       </div>
 
+      {/* Data check — surfaced above the cover photo */}
+      <DataIntegrity deal={d}/>
+
       {/* Cover hero */}
       {imgs?.cover && (
         <div id="section-cover" onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge"
@@ -1545,7 +1548,6 @@ ${text.slice(0, 40000)}`;
       )}
 
       <ExtractionQuality deal={d}/>
-      <DataIntegrity deal={d}/>
 
       {/* Market sale */}
       {d.marketSale && (
@@ -1573,13 +1575,22 @@ ${text.slice(0, 40000)}`;
         </div>
       )}
 
-      <MetricsEditor deal={d} onUpdate={onUpdate}/>
-
       {/* Site plan */}
       {imgs != null && imgs.sitePlan && imgs.sitePlan.length > 0 && (
         sitePlanFinalized ? (
-          <div style={{ marginBottom:12, textAlign:"right" }}>
-            <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+          // Finalized: keep showing the site plan images; only the upload/confirm controls collapse.
+          <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Site Plan</div>
+              <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+            </div>
+            <div style={{ display:"grid", gap:10 }}>
+              {imgs.sitePlan.map((src, i) => (
+                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7" }}>
+                  <img src={src} alt={`Site plan ${i+1}`} style={{ width:"100%", display:"block" }}/>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
@@ -1819,6 +1830,9 @@ ${text.slice(0, 40000)}`;
         );
       })()}
 
+      {/* Edit metrics — below red flags */}
+      <MetricsEditor deal={d} onUpdate={onUpdate}/>
+
       {/* Financial grid */}
       <div id="section-financials" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
         <Card title="KEY FINANCIALS">
@@ -1860,13 +1874,7 @@ ${text.slice(0, 40000)}`;
         </Card>
       </div>
 
-      {/* Comp Benchmark — always rendered; shows n=0 empty state when no comps match */}
-      <CompBenchmarkCard deal={d} />
-
-      {/* My Underwriting */}
-      <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
-
-      {/* Verified hint */}
+      {/* Verified hint — under lease/financial metrics */}
       {(() => {
         const vcount = Object.keys(d.verified || {}).length;
         return (
@@ -1876,6 +1884,12 @@ ${text.slice(0, 40000)}`;
           </div>
         );
       })()}
+
+      {/* My Underwriting */}
+      <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
+
+      {/* Comp Benchmark — below My Underwriting */}
+      <CompBenchmarkCard deal={d} />
 
       <ClosingCostsCard deal={d} />
 
