@@ -943,7 +943,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                     style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "city" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     City{arrow("city")}
                   </th>
-                  <th onClick={() => toggleSort("state")} className="hidden lg:table-cell"
+                  <th onClick={() => toggleSort("state")}
                     style={{ width: 70, padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "state" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     State{arrow("state")}
                   </th>
@@ -1006,7 +1006,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                         <StatusTag status={d.status} size="sm" />
                       </td>
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.city || "—"}</td>
-                      <td className="hidden lg:table-cell" style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>
+                      <td style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: d.market ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{d.market || "—"}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: anchor ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{anchor || "—"}</td>
                       <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.totalSF ? Number(d.totalSF).toLocaleString() : "—"}</td>
