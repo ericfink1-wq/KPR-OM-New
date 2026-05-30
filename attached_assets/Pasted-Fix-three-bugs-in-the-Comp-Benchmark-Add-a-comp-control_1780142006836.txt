@@ -1,0 +1,18 @@
+Fix three bugs in the Comp Benchmark "Add a comp" control on the deal page (DetailView.tsx). Optimize for desktop AND mobile.
+
+BUG 1 — Input loses focus/cursor after one character.
+Cause: AddCompSection is defined as a nested component (const AddCompSection = () => (...)) and rendered as <AddCompSection /> (or similar), so it remounts on every parent render and the <input> loses focus on each keystroke.
+Fix: stop rendering it as a nested component instance. Either inline its JSX directly where it's used, or render it by calling the function ({AddCompSection()}) rather than as <AddCompSection />, so the input is reconciled in place and keeps focus. The user must be able to type multiple characters continuously without losing the cursor. (It does not call hooks internally, so calling it as a function is safe.)
+
+BUG 2 — Cannot remove a manually-added comp.
+A comp added via "Add a comp" goes into includeIds. Currently the eye toggle only adds to excludeIds (exclude from stats), so an accidentally-added comp can't be removed.
+Fix: in the benchmark comp list, for any row whose id is in includeIds (a manually-added comp), the action button should REMOVE it from includeIds entirely (un-add it) — show it as a delete/×, not an exclude-eye. For comps that matched naturally (not in includeIds), keep the existing exclude/re-include eye behavior. So: manually-added → removable; naturally-matched → exclude/include.
+
+BUG 3 — Comps with no name show "—" and empty/unusable comps are suggested.
+- Display label fallback: wherever a comp name is shown (the suggestion dropdown AND the benchmark comp rows), use name → else sourceDealName → else market → else "Unnamed comp". Never show a bare "—" for the name when any identifying field exists.
+- Filter the "Add a comp" suggestions to exclude comps that have no salePrice (a comp with no price can't contribute to a benchmark, so it shouldn't be addable). Ensure the /api/comps?q= results include salePrice (and sourceDealName) so the frontend can apply this filter and the label fallback.
+- The q search should match the label the user sees; verify typing a property name returns the expected comps.
+
+Keep the suggestion dropdown touch-friendly and within the viewport on mobile.
+
+TEST: typing several letters in "Add a comp" keeps focus and filters suggestions; suggestions show a real name/market (never bare "—") and don't list price-less empty comps; adding a comp then clicking its remove/× takes it back out of the benchmark and the medians recompute; naturally-matched comps still exclude/re-include via the eye.

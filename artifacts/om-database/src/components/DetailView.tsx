@@ -137,7 +137,7 @@ function KeyAssumptions({ deal }: { deal: Deal }) {
 // ---------------------------------------------------------------------------
 interface BmStats { median: number; p25: number; p75: number }
 interface BmMatch {
-  id: number; name: string | null; market: string | null; saleDate: string | null;
+  id: number; name: string | null; sourceDealName: string | null; market: string | null; saleDate: string | null;
   salePrice: number | null; capRate: number | null; pricePerSf: number | null;
   sf: number | null; source: "owned" | "broker" | "om"; excluded: boolean;
 }
@@ -164,7 +164,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [excludeIds, setExcludeIds] = useState<number[]>(() => readLs().excludeIds ?? []);
   const [includeIds, setIncludeIds] = useState<number[]>(() => readLs().includeIds ?? []);
   const [addQ, setAddQ] = useState("");
-  const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string; market: string | null; saleDate: string | null }>>([]);
+  const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string | null; sourceDealName: string | null; salePrice: number | null; market: string | null; saleDate: string | null }>>([]);
   const [sugsLoading, setSugsLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -179,6 +179,8 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     setIncludeIds(prev => prev.includes(id) ? prev : [...prev, id]);
     setAddQ(""); setSuggestions([]);
   };
+  const removeInclude = (id: number) =>
+    setIncludeIds(prev => prev.filter(x => x !== id));
 
   useEffect(() => {
     if (!addQ.trim()) { setSuggestions([]); return; }
@@ -186,10 +188,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     const t = setTimeout(() => {
       fetch(`/api/comps?q=${encodeURIComponent(addQ.trim())}`, { credentials: "include" })
         .then(r => r.json())
-        .then((rows: Array<{ id: number; name: string | null; market: string | null; saleDate: string | null }>) => {
+        .then((rows: Array<{ id: number; name: string | null; sourceDealName: string | null; salePrice: number | null; market: string | null; saleDate: string | null }>) => {
           const inBm = new Set((bm?.comps ?? []).map(c => c.id));
-          setSuggestions(rows.filter(r => !inBm.has(r.id)).slice(0, 8)
-            .map(r => ({ id: r.id, name: r.name ?? "—", market: r.market, saleDate: r.saleDate })));
+          setSuggestions(
+            rows
+              .filter(r => !inBm.has(r.id) && r.salePrice != null && r.salePrice > 0)
+              .slice(0, 8)
+              .map(r => ({ id: r.id, name: r.name, sourceDealName: r.sourceDealName, salePrice: r.salePrice, market: r.market, saleDate: r.saleDate }))
+          );
           setSugsLoading(false);
         })
         .catch(() => setSugsLoading(false));
@@ -306,14 +312,17 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       {sugsLoading && <div style={{ fontSize: 11, color: "#a89f8f", padding: "4px 0" }}>Searching…</div>}
       {suggestions.length > 0 && (
         <div style={{ position: "absolute", zIndex: 20, top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e7e0d2", borderRadius: 7, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", maxHeight: 260, overflowY: "auto" }}>
-          {suggestions.map(s => (
-            <button key={s.id} onClick={() => addInclude(s.id)}
-              style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f5f1ea", padding: "8px 12px", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: "#26281f" }}>{s.name}</span>
-              {s.market && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{s.market}</span>}
-              {s.saleDate && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{fmtD(s.saleDate)}</span>}
-            </button>
-          ))}
+          {suggestions.map(s => {
+            const label = s.name || s.sourceDealName || s.market || "Unnamed comp";
+            return (
+              <button key={s.id} onClick={() => addInclude(s.id)}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f5f1ea", padding: "10px 12px", cursor: "pointer", fontFamily: "'Inter',sans-serif", touchAction: "manipulation" }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "#26281f" }}>{label}</span>
+                {s.market && s.name && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{s.market}</span>}
+                {s.saleDate && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{fmtD(s.saleDate)}</span>}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -353,7 +362,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
               <div style={{ background: "#f9f6f0", border: "1px solid #ece5d7", borderRadius: 8, padding: "14px 16px", marginBottom: 10, fontSize: 12, color: "#a89f8f", fontStyle: "italic" }}>
                 No comparable trades on file yet.
               </div>
-              <AddCompSection />
+              {AddCompSection()}
             </>
           );
         }
@@ -424,7 +433,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
               <div style={{ fontSize: 11, color: "#7d766a", marginBottom: 6 }}>
                 <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length} comp{activeComps.length !== 1 ? "s" : ""}</span> in benchmark
                 {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} manually excluded</span>}
-                <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— click eye to exclude/re-include</span>
+                <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— × removes added comps · eye excludes/re-includes others</span>
               </div>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
@@ -440,9 +449,13 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                     {bm.comps.map(c => (
                       <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1 }}>
                         <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle" }}>
-                          <EyeBtn id={c.id} isExcluded={c.excluded} />
+                          {includeIds.includes(c.id)
+                            ? <button onClick={() => removeInclude(c.id)}
+                                title="Remove from benchmark"
+                                style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: "#dc2626", fontSize: 16, lineHeight: 1, display: "inline-flex", alignItems: "center", flexShrink: 0, fontFamily: "sans-serif" }}>×</button>
+                            : <EyeBtn id={c.id} isExcluded={c.excluded} />}
                         </td>
-                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || c.sourceDealName || c.market || "Unnamed comp"}</td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
                         <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(c.salePrice)}</td>
@@ -455,7 +468,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                   </tbody>
                 </table>
               </div>
-              <AddCompSection />
+              {AddCompSection()}
             </div>
           </>
         );

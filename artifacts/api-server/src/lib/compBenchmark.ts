@@ -55,6 +55,7 @@ export interface BenchmarkRequest {
 export interface CompMatch {
   id: number;
   name: string | null;
+  sourceDealName: string | null;
   market: string | null;
   saleDate: string | null;
   salePrice: number | null;
@@ -214,7 +215,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   const comps: CompMatch[] = [...chosen]
     .sort((a, b) => (b.saleDate ?? "").localeCompare(a.saleDate ?? ""))
     .map(r => ({
-      id: r.id, name: r.name, market: r.market, saleDate: r.saleDate,
+      id: r.id, name: r.name, sourceDealName: r.sourceDealName, market: r.market, saleDate: r.saleDate,
       salePrice: r.salePrice, capRate: r.capRate, pricePerSf: r.pricePerSf, sf: r.sf,
       source: getSource(r),
       excluded: excSet.has(r.id),

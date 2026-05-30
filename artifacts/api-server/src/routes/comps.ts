@@ -55,6 +55,7 @@ router.get("/comps", requireAuth, async (req, res) => {
       const term = `%${q.trim()}%`;
       conditions.push(or(
         ilike(compsIndexTable.name, term),
+        ilike(compsIndexTable.sourceDealName, term),
         ilike(compsIndexTable.address, term),
         ilike(compsIndexTable.market, term),
         ilike(compsIndexTable.state, term),
