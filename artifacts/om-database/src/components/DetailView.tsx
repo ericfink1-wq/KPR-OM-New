@@ -436,21 +436,21 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
 
   const items: { id: string; label: string }[] = [];
   items.push({ id: "section-cover", label: "Overview" });
-  if (deal.notes) items.push({ id: "section-highlights", label: "Investment Highlights" });
-  if (deal.askingPrice || deal.capRate || deal.noi || deal.pricePerSF || deal.totalSF) items.push({ id: "section-financials", label: "Key Financials" });
-  if (deal.capRate || deal.pricePerSF) items.push({ id: "section-comp-benchmark", label: "Comp Benchmark" });
   if (deal.tenants && deal.tenants.length > 0) {
     items.push({ id: "section-tenants", label: "Tenant Roster" });
     items.push({ id: "section-tenant-sales", label: "Tenant Sales" });
     items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
   }
+  if (deal.notes || deal.analysisStale) items.push({ id: "section-highlights", label: "Investment Highlights" });
   if (deal.upsideItems && deal.upsideItems.length > 0) items.push({ id: "section-upside", label: "Upside Items" });
   if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
+  if (deal.askingPrice || deal.capRate || deal.noi || deal.pricePerSF || deal.totalSF) items.push({ id: "section-financials", label: "Key Financials" });
+  items.push({ id: "section-comp-benchmark", label: "Comp Benchmark" });
+  items.push({ id: "section-closing-costs", label: "Estimated Closing Costs" });
   if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
   if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
   if (deal.trafficCountVPD || deal.population3mi || deal.medianHHIncome3mi || deal.avgHHIncome3mi || deal.proximityHighways) items.push({ id: "section-demographics", label: "Demographics & Site" });
   if (deal.marketDemographics) items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
-  items.push({ id: "section-closing-costs", label: "Estimated Closing Costs" });
   items.push({ id: "section-notes", label: "Your Notes" });
 
   useEffect(() => {
@@ -1385,76 +1385,7 @@ ${text.slice(0, 40000)}`;
         </div>
       )}
 
-      {/* AI highlights */}
-      {(d.notes || d.analysisStale) && (
-        <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
-            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
-            {d.analysisStale && <StaleBadge />}
-          </div>
-          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}>{d.notes}</p>}
-        </div>
-      )}
-
       <MetricsEditor deal={d} onUpdate={onUpdate}/>
-
-      {/* Financial grid */}
-      <div id="section-financials" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
-        <Card title="KEY FINANCIALS">
-          <Row l="ASKING PRICE" v={d.askingPrice?`$${Number(d.askingPrice).toLocaleString()}`:null} c="#6dba43" field="askingPrice"/>
-          <Row l="CAP RATE" v={d.capRate?`${d.capRate}%`:null} c="#0f9d63" field="capRate"/>
-          <Row l="NOI" v={d.noi?`$${Number(d.noi).toLocaleString()}`:null} c="#0f9d63" field="noi"/>
-          <Row l="PRICE / SF" v={d.pricePerSF?`$${d.pricePerSF}`:null} field="pricePerSF"/>
-          <Row l="TOTAL SF" v={d.totalSF?`${Number(d.totalSF).toLocaleString()} SF`:null} field="totalSF"/>
-          <Row l="OCCUPANCY" v={d.occupancy?`${d.occupancy}%`:null} c="#383a37" field="occupancy" warn={reconWarns.occupancy}/>
-          <PriceCapEditor deal={d} onUpdate={onUpdate}/>
-        </Card>
-        <Card title="INCOME & EXPENSES">
-          <Row l="GROSS POTENTIAL RENT" v={d.grossPotentialRent?`$${Number(d.grossPotentialRent).toLocaleString()}`:null} field="grossPotentialRent" warn={reconWarns.grossPotentialRent}/>
-          <Row l="EFF. GROSS INCOME" v={d.effectiveGrossIncome?`$${Number(d.effectiveGrossIncome).toLocaleString()}`:null} field="effectiveGrossIncome"/>
-          <Row l="OPERATING EXPENSES" v={d.operatingExpenses?`$${Number(d.operatingExpenses).toLocaleString()}`:null} field="operatingExpenses"/>
-          <Row l="NNN RECOVERIES" v={d.nnnRecoveries?`$${Number(d.nnnRecoveries).toLocaleString()}`:null}/>
-          <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null} warn={reconWarns.weightedAvgRentPSF}/>
-        </Card>
-        <Card title="LEASE METRICS">
-          <Row l="WALT" v={d.walt?`${d.walt} yrs`:null} c={d.walt && Number(d.walt)<3?"#dc2626":Number(d.walt)<6?"#383a37":"#0f9d63"} field="walt"/>
-          {(d.tenants||[]).length > 0 && (() => {
-            const toN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
-            const occ = (d.tenants||[]).filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
-            const ig = occ.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating));
-            const totalR = occ.reduce((s, t) => s + toN(t.annualRent), 0);
-            const igR = ig.reduce((s, t) => s + toN(t.annualRent), 0);
-            const totalS = occ.reduce((s, t) => s + toN(t.sf), 0);
-            const igS = ig.reduce((s, t) => s + toN(t.sf), 0);
-            const pR = totalR > 0 ? Math.round(igR / totalR * 100) : null;
-            const pS = totalS > 0 ? Math.round(igS / totalS * 100) : null;
-            const v = [pR != null ? `${pR}% rent` : null, pS != null ? `${pS}% GLA` : null].filter(Boolean).join(" · ");
-            return v ? <Row l="INVESTMENT GRADE EXPOSURE" v={v} /> : null;
-          })()}
-          <Row l="YEAR BUILT" v={d.yearBuilt}/>
-          <Row l="RENOVATION YEAR" v={d.renovationYear}/>
-          <Row l="LOT SIZE" v={d.lotSizeAcres?`${d.lotSizeAcres} ac`:null}/>
-          <Row l="PARKING RATIO" v={d.parkingRatio?`${d.parkingRatio}/1k SF`:null}/>
-          <Row l="# BUILDINGS" v={d.numberOfBuildings}/>
-        </Card>
-      </div>
-
-      {/* Comp Benchmark — always rendered; shows n=0 empty state when no comps match */}
-      <CompBenchmarkCard deal={d} />
-
-      {/* My Underwriting */}
-      <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
-
-      {/* Verified hint */}
-      {(() => {
-        const vcount = Object.keys(d.verified || {}).length;
-        return (
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, fontSize:11, color:vcount?"#0f6b46":"#a69e91" }}>
-            <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:15, height:15, borderRadius:4, border:`1px solid ${vcount?"#0f9d63":"#cfd6dd"}`, background:vcount?"#0f9d63":"transparent", color:"#fff", fontSize:9, flexShrink:0 }}>{vcount?"✓":""}</span>
-            {vcount ? `${vcount} figure${vcount>1?"s":""} verified — locked against re-analyze.` : "Tip: click ☐ beside a figure to verify/lock it."}
-          </div>
-        );
-      })()}
 
       {/* Site plan */}
       {imgs != null && imgs.sitePlan && imgs.sitePlan.length > 0 && (
@@ -1651,6 +1582,17 @@ ${text.slice(0, 40000)}`;
       )}
 
 
+      {/* AI highlights */}
+      {(d.notes || d.analysisStale) && (
+        <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
+            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
+            {d.analysisStale && <StaleBadge />}
+          </div>
+          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}>{d.notes}</p>}
+        </div>
+      )}
+
       {/* Upside items */}
       {(d.upsideItems && d.upsideItems.length > 0) && (() => {
         const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -1695,6 +1637,66 @@ ${text.slice(0, 40000)}`;
           </div>
         );
       })()}
+
+      {/* Financial grid */}
+      <div id="section-financials" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
+        <Card title="KEY FINANCIALS">
+          <Row l="ASKING PRICE" v={d.askingPrice?`$${Number(d.askingPrice).toLocaleString()}`:null} c="#6dba43" field="askingPrice"/>
+          <Row l="CAP RATE" v={d.capRate?`${d.capRate}%`:null} c="#0f9d63" field="capRate"/>
+          <Row l="NOI" v={d.noi?`$${Number(d.noi).toLocaleString()}`:null} c="#0f9d63" field="noi"/>
+          <Row l="PRICE / SF" v={d.pricePerSF?`$${d.pricePerSF}`:null} field="pricePerSF"/>
+          <Row l="TOTAL SF" v={d.totalSF?`${Number(d.totalSF).toLocaleString()} SF`:null} field="totalSF"/>
+          <Row l="OCCUPANCY" v={d.occupancy?`${d.occupancy}%`:null} c="#383a37" field="occupancy" warn={reconWarns.occupancy}/>
+          <PriceCapEditor deal={d} onUpdate={onUpdate}/>
+        </Card>
+        <Card title="INCOME & EXPENSES">
+          <Row l="GROSS POTENTIAL RENT" v={d.grossPotentialRent?`$${Number(d.grossPotentialRent).toLocaleString()}`:null} field="grossPotentialRent" warn={reconWarns.grossPotentialRent}/>
+          <Row l="EFF. GROSS INCOME" v={d.effectiveGrossIncome?`$${Number(d.effectiveGrossIncome).toLocaleString()}`:null} field="effectiveGrossIncome"/>
+          <Row l="OPERATING EXPENSES" v={d.operatingExpenses?`$${Number(d.operatingExpenses).toLocaleString()}`:null} field="operatingExpenses"/>
+          <Row l="NNN RECOVERIES" v={d.nnnRecoveries?`$${Number(d.nnnRecoveries).toLocaleString()}`:null}/>
+          <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null} warn={reconWarns.weightedAvgRentPSF}/>
+        </Card>
+        <Card title="LEASE METRICS">
+          <Row l="WALT" v={d.walt?`${d.walt} yrs`:null} c={d.walt && Number(d.walt)<3?"#dc2626":Number(d.walt)<6?"#383a37":"#0f9d63"} field="walt"/>
+          {(d.tenants||[]).length > 0 && (() => {
+            const toN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
+            const occ = (d.tenants||[]).filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
+            const ig = occ.filter(t => t.name && isInvestmentGrade(t.name, t.creditRating));
+            const totalR = occ.reduce((s, t) => s + toN(t.annualRent), 0);
+            const igR = ig.reduce((s, t) => s + toN(t.annualRent), 0);
+            const totalS = occ.reduce((s, t) => s + toN(t.sf), 0);
+            const igS = ig.reduce((s, t) => s + toN(t.sf), 0);
+            const pR = totalR > 0 ? Math.round(igR / totalR * 100) : null;
+            const pS = totalS > 0 ? Math.round(igS / totalS * 100) : null;
+            const v = [pR != null ? `${pR}% rent` : null, pS != null ? `${pS}% GLA` : null].filter(Boolean).join(" · ");
+            return v ? <Row l="INVESTMENT GRADE EXPOSURE" v={v} /> : null;
+          })()}
+          <Row l="YEAR BUILT" v={d.yearBuilt}/>
+          <Row l="RENOVATION YEAR" v={d.renovationYear}/>
+          <Row l="LOT SIZE" v={d.lotSizeAcres?`${d.lotSizeAcres} ac`:null}/>
+          <Row l="PARKING RATIO" v={d.parkingRatio?`${d.parkingRatio}/1k SF`:null}/>
+          <Row l="# BUILDINGS" v={d.numberOfBuildings}/>
+        </Card>
+      </div>
+
+      {/* Comp Benchmark — always rendered; shows n=0 empty state when no comps match */}
+      <CompBenchmarkCard deal={d} />
+
+      {/* My Underwriting */}
+      <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
+
+      {/* Verified hint */}
+      {(() => {
+        const vcount = Object.keys(d.verified || {}).length;
+        return (
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, fontSize:11, color:vcount?"#0f6b46":"#a69e91" }}>
+            <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:15, height:15, borderRadius:4, border:`1px solid ${vcount?"#0f9d63":"#cfd6dd"}`, background:vcount?"#0f9d63":"transparent", color:"#fff", fontSize:9, flexShrink:0 }}>{vcount?"✓":""}</span>
+            {vcount ? `${vcount} figure${vcount>1?"s":""} verified — locked against re-analyze.` : "Tip: click ☐ beside a figure to verify/lock it."}
+          </div>
+        );
+      })()}
+
+      <ClosingCostsCard deal={d} />
 
       {/* Key assumptions */}
       <div id="section-assumptions"><KeyAssumptions deal={d} /></div>
@@ -1980,8 +1982,6 @@ ${text.slice(0, 40000)}`;
           <Row l="LAST SALE PRICE" v={d.lastSalePrice?`$${Number(d.lastSalePrice).toLocaleString()}`:null}/>
         </Card>
       </div>
-
-      <ClosingCostsCard deal={d} />
 
       {/* Demographics from OM */}
       {(d.trafficCountVPD || d.population3mi || d.medianHHIncome3mi) && (
