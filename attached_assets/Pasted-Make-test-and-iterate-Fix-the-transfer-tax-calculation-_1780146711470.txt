@@ -1,0 +1,33 @@
+Make, test, and iterate. Fix the transfer-tax calculation so mutually-exclusive county/city options don't stack and residential-only taxes don't hit commercial deals. Touches two files.
+
+FILE 1 — artifacts/om-database/src/lib/closingCosts.ts:
+
+1) On the TaxLineItem interface, add four optional fields: altGroup?: string; altLabel?: string; altDefault?: boolean; residentialOnly?: boolean.
+
+2) On the ClosingCostLine interface, add: altGroup?: string; altLabel?: string; residentialOnly?: boolean; inactive?: boolean.
+
+3) Add an exported interface and helper:
+   export interface LocalityGroup { group: string; options: { label: string; isDefault: boolean }[] }
+   export function getLocalityGroups(j): LocalityGroup[] — collect each transferTax line that has an altGroup, grouping by altGroup, each option = { label: altLabel||name, isDefault: !!altDefault }.
+
+4) Add: export interface CalcOptions { includeEntityTaxes?: boolean; localities?: Record<string,string> }
+
+5) Change calculateClosingCosts's 4th param from "includeEntityTaxes = false" to "opts: CalcOptions | boolean = {}". At the top, normalize: if opts is boolean treat as { includeEntityTaxes: opts }; read includeEntityTaxes and localities. Before the transfer-tax loop, compute the active locality per altGroup = localities[group] if set, else the line marked altDefault, else the first. In the transfer-tax loop, BEFORE computing an amount: if line.residentialOnly → push it with amount/buyer/seller 0 and inactive:true, continue; if entitySaleOnly && !includeEntityTaxes → push 0 + inactive:true, continue; if line.altGroup and (altLabel||name) !== the active locality for that group → push 0 + inactive:true, continue. Otherwise compute as today.
+
+6) Apply these data changes to the state blocks (I've verified all of these):
+   - CT "State Conveyance Tax": REMOVE its tiers/rateMin/rateMax; make it flat rate: 0.0125 with a note that commercial CT is a flat 1.25% (the graduated 0.75/1.25/2.25 is residential-only). CT "Municipal Conveyance Tax": set rate: 0.0025 (0.25% base, most common).
+   - NY: add residentialOnly: true to "NYC Real Property Transfer Tax — Class 1 & 2 Residential" and to "NYS Additional Transfer Tax (residential COOP/condo >$2M)".
+   - Tag these lines with altGroup/altLabel (and altDefault:true on the one marked *), exactly per the file I'm providing as reference (closingCosts.ts in outputs). Groups: NY-local (NYC commercial, Yonkers, + synthetic "Outside NYC/Yonkers"* default rate 0), DE-county (New Castle*, Kent/Sussex), MA-region (Mainland*, Cape/Islands), MD-county (5 counties, "All Other"*), PA-local (5 cities, "Suburban/Standard"*), VA-region (NoVA/Hampton Roads + synthetic "Rest of VA"* rate 0), NC-county (Orange, Chatham, Mecklenburg + synthetic "Other NC"* rate 0), NV-county (Clark, Washoe + synthetic "Other NV"* rate 0), CO-resort (two resort tiers + synthetic "Other CO"* rate 0), WA-county (King, Pierce/Snoh/Spokane, "Most Other"*), CA-city (all city lines; the 3 LA lines share altLabel "Los Angeles (incl. ULA)"; "All Other CA Cities" is default* AND its rate set to 0 so it doesn't double-count the county base), IL-local (Cook + 2 Chicago lines share "Chicago (incl. Cook County)"; Evanston; Oak Park; + synthetic "Other IL"* rate 0).
+
+   Use the provided closingCosts.ts file in outputs as the exact source of truth for every tag and synthetic line — match it verbatim.
+
+FILE 2 — artifacts/om-database/src/components/ClosingCostsCard.tsx (match the provided ClosingCostsCard.tsx in outputs):
+   - Import getLocalityGroups. Add state: const [localities, setLocalities] = useState<Record<string,string>>({}). Compute localityGroups = getLocalityGroups(jurisdiction). Pass { includeEntityTaxes: entitySale, localities } as the 4th arg to calculateClosingCosts.
+   - Render one dropdown per locality group (labeled "County / City (local transfer tax)") with each option; onChange updates localities[group]. Default the select to the isDefault option.
+   - In the rate table, treat any line with inactive===true as dormant: 0.45 opacity, append " · not applied" to the name, show "—" for rate/buyer/seller.
+
+TEST (desktop + mobile): 
+- A CT $5M deal: State Conveyance Tax = $62,500 (flat 1.25%), not $112,500.
+- A NY $5M deal defaults to "Outside NYC/Yonkers" (~2.6% combined); selecting "NYC (commercial)" jumps to ~5.2%; the residential RPTT and coop lines show greyed "not applied".
+- A WA, MD, PA, CA, etc. deal shows a County/City dropdown; changing it changes only the local line; no two locality lines are ever both active.
+- The card reflows on mobile; PDF export still builds.
