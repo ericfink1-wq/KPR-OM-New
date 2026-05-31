@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
-import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTenantSales } from "../lib/utils";
+import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTenantSales, isNAPTenant } from "../lib/utils";
+import { isInvestmentGrade } from "../lib/tenantCredit";
+import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import StatusTag from "./StatusTag";
 
 interface Props {
@@ -17,6 +19,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
   const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
   const norm = (s: unknown) => String(s || "").trim().toLowerCase();
 
+  const watchMap = useWatchlist();
   const [scope, setScope] = useState<"all" | "owned">("all");
   const [sortKey, setSortKey] = useState<SortKey>("brand");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -42,6 +45,20 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
   const rows = scope === "owned"
     ? allRows.filter(r => r.deal.status === "Owned" || r.deal.status === "Sold")
     : allRows;
+
+  // Header badge aggregates (across the in-scope rows)
+  const anchorCount = rows.filter(r => r.t.isAnchor).length;
+  const headerCredit = rows.map(r => r.t.creditRating).find(Boolean) || null;
+  const distinctBrands = new Set(rows.map(r => tenantKey(r.t.canonicalName || r.t.name || "")));
+  const igBrands = new Set(rows.filter(r => (r.t.name || "") && isInvestmentGrade(r.t.name || "", r.t.creditRating))
+    .map(r => tenantKey(r.t.canonicalName || r.t.name || "")));
+  const allBrandsIG = distinctBrands.size > 0 && igBrands.size === distinctBrands.size;
+  // Worst watchlist status among this parent's brands (for the header chip)
+  const WATCH_RANK: Record<string, number> = { liquidating: 4, bankruptcy: 3, distressed: 2, watch: 1 };
+  const headerWatch = rows
+    .map(r => lookupWatch(watchMap, r.t.name))
+    .filter((w): w is NonNullable<typeof w> => !!w)
+    .sort((a, b) => (WATCH_RANK[b.status] || 0) - (WATCH_RANK[a.status] || 0))[0] || null;
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
