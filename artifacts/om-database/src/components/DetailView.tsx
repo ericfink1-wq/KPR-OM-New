@@ -13,7 +13,6 @@ import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
 import RentRollPDF from "./RentRollPDF";
 import { extractAnyFile } from "../lib/fileExtract";
-import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
 import { PDFDownloadLink } from "@react-pdf/renderer";
@@ -826,7 +825,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     setRrBusy(true);
     setRrError(null);
     try {
-      const { text } = await extractPdfText(await file.arrayBuffer());
+      const { text } = await extractAnyFile(file);
       const prompt = `You are a CRE data extraction engine. Extract every occupied tenant from this rent roll.
 Return ONLY valid JSON — no markdown fences, no explanation — with this exact shape:
 {

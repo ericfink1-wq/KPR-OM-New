@@ -181,8 +181,8 @@ function AppInner() {
 
   const handleFiles = useCallback((fl: FileList) => {
     if (!ensureUploadAllowed()) return;
-    const pdfs = Array.from(fl).filter(f => f.name.toLowerCase().endsWith(".pdf"));
-    if (pdfs.length) setPendingFiles(pdfs);
+    const supported = Array.from(fl).filter(isSupportedUpload);
+    if (supported.length) setPendingFiles(supported);
   }, []);
 
   // Drag and drop on entire app — use a counter so child dragenter/dragleave

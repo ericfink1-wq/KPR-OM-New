@@ -425,7 +425,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         )}
 
         {/* Hidden inputs */}
-        <input ref={fileRef} type="file" accept=".pdf" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
+        <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
         <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
@@ -435,7 +435,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <button
             onClick={() => fileRef.current?.click()}
             style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
-            Upload OMs
+            Upload
           </button>
           <button
             onClick={() => {
