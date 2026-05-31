@@ -720,6 +720,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [demoBusy, setDemoBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
   const [reanalyzeBusy, setReanalyzeBusy] = useState(false);
   const rerunPdfRef = useRef<HTMLInputElement>(null);
   const [rrBusy, setRrBusy] = useState(false);
@@ -793,7 +794,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // Close Actions dropdown on any outside click
   useEffect(() => {
     if (!actionsOpen) return;
-    const handler = () => setActionsOpen(false);
+    const handler = () => { setActionsOpen(false); setActionsHelpOpen(false); };
     const t = window.setTimeout(() => {
       document.addEventListener("click", handler);
     }, 0);
@@ -1463,13 +1464,42 @@ ${text.slice(0, 40000)}`;
         <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
         <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
           <div style={{ position:"relative" }}>
-            <button onClick={() => setActionsOpen(o => !o)}
+            <button onClick={() => setActionsOpen(o => { if (o) setActionsHelpOpen(false); return !o; })}
               style={{ background:"#2a2c27", border:"none", color:"#fff", padding:"6px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5, fontWeight:500 }}>
               Actions <span style={{ fontSize:9 }}>▾</span>
             </button>
             {actionsOpen && (
               <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210 }}>
-                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Analyze</div>
+                {actionsHelpOpen ? (
+                  <div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"4px 8px 6px 12px" }}>
+                      <span style={{ fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>What these do</span>
+                      <button onClick={() => setActionsHelpOpen(false)} style={{ background:"transparent", border:"none", color:"#7d766a", cursor:"pointer", fontSize:12, fontWeight:600, padding:"2px 6px" }}>✕ Close</button>
+                    </div>
+                    <div style={{ maxHeight:380, overflowY:"auto", padding:"0 12px 6px" }}>
+                      {([
+                        ["✨ Refresh Analysis (current roster)", "Re-grades the deal and rewrites the summary, strengths, risks and red flags from the CURRENT tenant roster — use this after you paste a new rent roll. It does NOT re-read the OM, so a manually-entered roster stays safe."],
+                        ["↺ Re-analyze (stored text)", "Re-runs the full AI extraction from the OM text already saved for this deal, overwriting the OM-stated fields. It refuses to wipe a manual roster unless you confirm."],
+                        ["↑ Re-run from PDF…", "Upload the OM PDF again to re-extract everything from scratch — tenants, financials and narrative."],
+                        ["⬡ Find Comps", "Asks the analyst to pull the 3 closest comparable sales and compare cap rate, WALT and price/SF."],
+                        ["🔍 Find Sale Record", "Looks up the property's actual last/known sale — price, date, buyer and seller — from public sources."],
+                        ["↻ Refresh Score", "Recomputes just the deal score and red flags from portfolio benchmarks. Deterministic — it does not rewrite the AI narrative."],
+                        ["↗ Query Analyst", "Opens the AI analyst with a full buy / pass / watch investment question about this deal pre-filled."],
+                        ["🗑 Delete Deal", "Permanently removes this deal from the database."],
+                      ] as [string, string][]).map(([title, desc]) => (
+                        <div key={title} style={{ padding:"7px 0", borderBottom:"1px solid #f4efe6" }}>
+                          <div style={{ fontSize:11.5, fontWeight:700, color:"#383a37", marginBottom:2 }}>{title}</div>
+                          <div style={{ fontSize:11, color:"#7d766a", lineHeight:1.5 }}>{desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (<>
+                <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 12px 2px" }}>
+                  <span style={{ fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Analyze</span>
+                  <button onClick={() => setActionsHelpOpen(true)} title="What do these actions do?"
+                    style={{ width:16, height:16, borderRadius:"50%", border:"1px solid #d8cfbd", background:"#f6f2ea", color:"#7d766a", fontSize:10, fontWeight:700, lineHeight:1, cursor:"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", padding:0, flexShrink:0 }}>?</button>
+                </div>
                 <button onClick={() => handleRefreshAnalysis()} disabled={reanalyzeBusy}
                   style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:reanalyzeBusy?"default":"pointer", fontSize:12, color:reanalyzeBusy?"#a69e91":"#3f7a1f", fontFamily:"'Inter',sans-serif", fontWeight:600 }}
                   onMouseEnter={e => { if (!reanalyzeBusy) e.currentTarget.style.background="#f0f7e8"; }} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
@@ -1519,6 +1549,7 @@ ${text.slice(0, 40000)}`;
                       <button onClick={() => setConfirmDel(false)} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"6px 8px", borderRadius:5, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
                     </div>
                 }
+                </>)}
               </div>
             )}
           </div>
