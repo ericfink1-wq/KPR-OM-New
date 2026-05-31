@@ -1800,7 +1800,7 @@ ${text.slice(0, 40000)}`;
             <span style={{ fontSize:12, color: rrError ? "#dc2626" : (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? "#3f7a1f" : "#6f6a5f") }}>
               {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf
                 ? `✓ Last refreshed from rent roll — ${d.tenantsAsOf}`
-                : "Replaces the roster with the current rent roll and stamps its date.")}
+                : "")}
             </span>
           </div>
           {rrBusy && (
