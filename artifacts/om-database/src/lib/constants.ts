@@ -1,3 +1,8 @@
+// Mirror of the server's ANALYSIS_VERSION (artifacts/api-server/src/lib/analysisVersion.ts).
+// A deal whose analysisVersion is below this has saved AI analysis produced under
+// older scoring logic — the deal page shows an "outdated" refresh badge. Keep in sync.
+export const ANALYSIS_VERSION = 2;
+
 export const ASSET_TYPES = [
   "Neighborhood Center","Community Center","Power Center","Lifestyle Center",
   "Regional Mall","Super Regional Mall","Strip Center","Mixed-Use",

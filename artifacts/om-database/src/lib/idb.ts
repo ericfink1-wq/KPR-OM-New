@@ -339,6 +339,7 @@ export interface Deal {
   imageMeta?: { cover?: boolean; sitePlan?: number; needsSitePlanPick?: boolean; coverConfirmed?: boolean; sitePlanConfirmed?: boolean } | null;
   // Staleness
   analysisStale?: boolean;
+  analysisVersion?: number | null;  // scoring-logic version this deal's saved AI analysis was produced under
   // User data
   userNotes?: string | null;
   verified?: Record<string, { by?: string; ts?: number }>;

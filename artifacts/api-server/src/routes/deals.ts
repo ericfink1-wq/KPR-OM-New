@@ -7,6 +7,7 @@ import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
+import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
 
@@ -538,6 +539,7 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
             fileName: existing.fileName || "Unknown",
             lastScoredAt: new Date().toISOString(),
             lastScoredDealCount: totalCount,
+            analysisVersion: ANALYSIS_VERSION,
           };
           await db.update(dealsTable)
             .set({ data: dealData, updatedAt: new Date() })
@@ -577,7 +579,7 @@ router.post("/deals/:id/refresh-analysis", requireAuth, async (req, res) => {
 
     // 1) Regenerate narrative from the live roster
     const analysis = await runRosterAnalysis(current);
-    const updated: Record<string, unknown> = { ...current, ...analysis, analysisStale: false };
+    const updated: Record<string, unknown> = { ...current, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
 
     // 2) Layer the portfolio-benchmark pass (augments dealScore + red flags; keeps qualitative flags)
     try {
@@ -622,7 +624,7 @@ router.post("/deals/score-unscored", requireAuth, async (req, res) => {
       try {
         const analysis = await runRosterAnalysis(data);
         await db.update(dealsTable)
-          .set({ data: { ...data, ...analysis }, updatedAt: new Date() })
+          .set({ data: { ...data, ...analysis, analysisVersion: ANALYSIS_VERSION }, updatedAt: new Date() })
           .where(eq(dealsTable.id, r.id));
         scored++;
       } catch (err) {
@@ -634,6 +636,73 @@ router.post("/deals/score-unscored", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to score unscored deals");
     res.status(500).json({ error: "Failed to score unscored deals" });
+  }
+});
+
+// GET /api/deals/stale-analysis-count — how many active, scored deals are behind
+// the current ANALYSIS_VERSION (i.e. their saved narrative predates the latest
+// scoring logic). Cheap, no tokens. Used to show/size the refresh badge + button.
+router.get("/deals/stale-analysis-count", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    const stale = rows.filter((r) => {
+      const d = r.data as Record<string, unknown>;
+      if (d.trashedAt || d._processing || d._processingError) return false;
+      if (!d.dealScore) return false; // nothing to refresh yet
+      const v = typeof d.analysisVersion === "number" ? d.analysisVersion : 0;
+      return v < ANALYSIS_VERSION;
+    });
+    res.json({ count: stale.length, currentVersion: ANALYSIS_VERSION });
+  } catch (err) {
+    req.log.error({ err }, "Failed to count stale analysis");
+    res.status(500).json({ error: "Failed to count stale analysis" });
+  }
+});
+
+// POST /api/deals/refresh-stale-analysis — bulk-refresh the AI narrative for every
+// active, scored deal whose analysisVersion is behind the current logic. Idempotent:
+// deals already at the current version are skipped, so re-running spends tokens only
+// on what's actually stale. Uses the cheap roster-analysis (Haiku) pass per deal.
+router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    const targets = rows.filter((r) => {
+      const d = r.data as Record<string, unknown>;
+      if (d.trashedAt || d._processing || d._processingError) return false;
+      if (!d.dealScore) return false;
+      const tenantCount = Array.isArray(d.tenants) ? (d.tenants as unknown[]).length : 0;
+      if (tenantCount === 0) return false; // nothing to analyze from
+      const v = typeof d.analysisVersion === "number" ? d.analysisVersion : 0;
+      return v < ANALYSIS_VERSION;
+    });
+
+    let refreshed = 0, failed = 0;
+    for (const r of targets) {
+      const data = r.data as Record<string, unknown>;
+      try {
+        const analysis = await runRosterAnalysis(data);
+        const updated: Record<string, unknown> = { ...data, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
+        try {
+          const patch = await rescoreDeal(r.id, updated, req.log);
+          if (patch.dealScore !== undefined) updated.dealScore = patch.dealScore;
+          if (patch.redFlags !== undefined) updated.redFlags = patch.redFlags;
+          updated.lastScoredAt = patch.lastScoredAt;
+          updated.lastScoredDealCount = patch.lastScoredDealCount;
+        } catch { /* benchmark layer non-fatal */ }
+        const clean = JSON.parse(JSON.stringify(updated)) as Record<string, unknown>;
+        await db.update(dealsTable).set({ data: clean, updatedAt: new Date() }).where(eq(dealsTable.id, r.id));
+        rebuildTenantIndex(r.id, clean).catch(() => {});
+        refreshed++;
+      } catch (err) {
+        req.log.error({ err, id: r.id }, "refresh-stale-analysis: failed for deal");
+        failed++;
+      }
+    }
+    req.log.info({ refreshed, failed, total: targets.length }, "Bulk stale-analysis refresh complete");
+    res.json({ ok: true, refreshed, failed, total: targets.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to refresh stale analysis");
+    res.status(500).json({ error: "Failed to refresh stale analysis" });
   }
 });
 

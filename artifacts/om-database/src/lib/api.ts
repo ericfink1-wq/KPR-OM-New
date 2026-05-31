@@ -218,6 +218,21 @@ export async function apiRescore(id: string): Promise<{
   }>;
 }
 
+export async function apiStaleAnalysisCount(): Promise<{ count: number; currentVersion: number }> {
+  const resp = await apiFetch(`/deals/stale-analysis-count`);
+  if (!resp.ok) return { count: 0, currentVersion: 0 };
+  return resp.json() as Promise<{ count: number; currentVersion: number }>;
+}
+
+export async function apiRefreshStaleAnalysis(): Promise<{ ok: boolean; refreshed: number; failed: number; total: number }> {
+  const resp = await apiFetch(`/deals/refresh-stale-analysis`, { method: "POST" });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Bulk refresh failed");
+  }
+  return resp.json() as Promise<{ ok: boolean; refreshed: number; failed: number; total: number }>;
+}
+
 // --- AI (web search / generic Claude proxy) ---
 
 export async function apiAiMessages(params: {

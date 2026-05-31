@@ -301,6 +301,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [scoreMsg, setScoreMsg] = useState<string | null>(null);
   const [retagging, setRetagging] = useState(false);
   const [retagMsg, setRetagMsg] = useState<string | null>(null);
+  const [staleCount, setStaleCount] = useState(0);
+  const [refreshingStale, setRefreshingStale] = useState(false);
+  const [staleMsg, setStaleMsg] = useState<string | null>(null);
   const [scope, setScope] = useState<"all" | "owned">("all");
 
   // Effective deal IDs: when Owned, use ownedDealIds intersected with any Deal Library filter
@@ -353,6 +356,30 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       })
       .catch(e => setRebuildMsg(`⚠ ${e.message}`))
       .finally(() => setRebuilding(false));
+  };
+
+  useEffect(() => {
+    fetch("/api/deals/stale-analysis-count", { credentials: "include" })
+      .then(r => r.json() as Promise<{ count?: number }>)
+      .then(d => setStaleCount(d.count ?? 0))
+      .catch(() => {});
+  }, []);
+
+  const handleRefreshStale = () => {
+    if (!window.confirm(`Refresh the written analysis for ${staleCount} deal${staleCount === 1 ? "" : "s"} that predate the latest scoring logic? This runs the cheap AI roster-analysis pass on each and may take a bit. (Your badges and score adjustments are already current — this only updates the written narrative and benchmark notes.)`)) return;
+    setRefreshingStale(true);
+    setStaleMsg(null);
+    fetch("/api/deals/refresh-stale-analysis", { method: "POST", credentials: "include" })
+      .then(r => r.json() as Promise<{ ok: boolean; refreshed?: number; failed?: number; error?: string }>)
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || "Refresh failed");
+        const n = d.refreshed ?? 0;
+        setStaleMsg(`✓ Refreshed ${n} deal${n === 1 ? "" : "s"}${d.failed ? `, ${d.failed} failed` : ""} — reloading…`);
+        setStaleCount(0);
+        setTimeout(() => window.location.reload(), 1200);
+      })
+      .catch(e => setStaleMsg(`⚠ ${e.message}`))
+      .finally(() => setRefreshingStale(false));
   };
 
   const handleScoreUnscored = () => {
@@ -441,6 +468,15 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             </button>
             {scoreMsg && <span style={{ fontSize: 10.5, color: scoreMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{scoreMsg}</span>}
           </div>
+          {staleCount > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <button onClick={handleRefreshStale} disabled={refreshingStale} title="These deals' written analysis was produced under older scoring logic. Refreshing re-runs the cheap AI roster pass to bring the narrative + benchmark notes up to date." style={{ background: refreshingStale ? "#fff7e6" : "transparent", border: "1px solid #f59e0b", color: refreshingStale ? "#a89f8f" : "#92400e", padding: "6px 12px", borderRadius: 7, cursor: refreshingStale ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 12 }}>⚠</span>
+                {refreshingStale ? "Refreshing…" : `Refresh ${staleCount} outdated analysis${staleCount === 1 ? "" : "es"}`}
+              </button>
+              {staleMsg && <span style={{ fontSize: 10.5, color: staleMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{staleMsg}</span>}
+            </div>
+          )}
           {isAdmin && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
               <button onClick={handleRebuildComps} disabled={rebuildingComps} style={{ background: rebuildingComps ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuildingComps ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuildingComps ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>

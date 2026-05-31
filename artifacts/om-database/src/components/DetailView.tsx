@@ -3,7 +3,7 @@ import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel } from "../lib/utils";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
-import { STATUS_COLORS, GRADE_COLORS } from "../lib/constants";
+import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
 import RecencyBadge from "./RecencyBadge";
@@ -1886,6 +1886,13 @@ ${text.slice(0, 40000)}`;
                 </span>
               )}
               {d.analysisStale && <StaleBadge />}
+              {!d.analysisStale && d.dealScore && (d.analysisVersion ?? 0) < ANALYSIS_VERSION && (
+                <button onClick={() => handleRefreshAnalysis()} disabled={reanalyzeBusy}
+                  title="This deal's written analysis predates the latest scoring logic. Click to refresh it (uses the cheap roster-analysis pass). Your badges and score adjustments are already up to date."
+                  style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fffbeb", border:"1px solid #f59e0b", borderRadius:5, padding:"2px 8px", fontSize:9*fs, color:"#92400e", fontWeight:600, fontFamily:"'Inter',sans-serif", lineHeight:1.4, cursor:reanalyzeBusy?"default":"pointer" }}>
+                  {reanalyzeBusy ? "Refreshing…" : "⚠ Analysis may be outdated — refresh"}
+                </button>
+              )}
             </div>
             {d.dealScore && <>
               <p style={{ fontSize:12*fs, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{(adjustedScore || d.dealScore).rationale}</p>

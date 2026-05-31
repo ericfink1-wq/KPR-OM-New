@@ -4,6 +4,7 @@ import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { rebuildTenantIndex } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
+import { ANALYSIS_VERSION } from "./analysisVersion";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -399,6 +400,7 @@ export async function runBackgroundExtraction(
       pdfPages: pageCount,
       lastScoredAt: new Date().toISOString(),
       lastScoredDealCount: totalCount,
+      analysisVersion: ANALYSIS_VERSION,
     };
     await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })
