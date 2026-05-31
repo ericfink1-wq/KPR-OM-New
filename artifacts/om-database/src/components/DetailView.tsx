@@ -817,20 +817,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     }
   }, [d.id, allDeals.length]);
 
-  const handleRescore = async () => {
-    if (rescoreBusy) return;
-    setRescoreBusy(true);
-    setScoreStatus({ label: "Refreshing score against portfolio benchmarks…", phase: "running" });
-    try {
-      const patch = await apiRescore(d.id);
-      onUpdate(d.id, patch as Partial<typeof d>);
-      setScoreStatus({ label: "Score refreshed", phase: "done" });
-    } catch (err) {
-      setScoreStatus({ label: err instanceof Error ? err.message : "Score refresh failed", phase: "error" });
-    }
-    setRescoreBusy(false);
-  };
-
   useEffect(() => { setNotesVal(d.userNotes || ""); }, [d.id]);
 
   const LOCKABLE: Record<string, boolean> = { askingPrice:true, capRate:true, noi:true, pricePerSF:true, totalSF:true, occupancy:true, grossPotentialRent:true, effectiveGrossIncome:true, operatingExpenses:true, walt:true };
@@ -1478,13 +1464,10 @@ ${text.slice(0, 40000)}`;
                     </div>
                     <div style={{ maxHeight:380, overflowY:"auto", padding:"0 12px 6px" }}>
                       {([
-                        ["✨ Refresh Analysis (current roster)", "Re-grades the deal and rewrites the summary, strengths, risks and red flags from the CURRENT tenant roster — use this after you paste a new rent roll. It does NOT re-read the OM, so a manually-entered roster stays safe."],
-                        ["↺ Re-analyze (stored text)", "Re-runs the full AI extraction from the OM text already saved for this deal, overwriting the OM-stated fields. It refuses to wipe a manual roster unless you confirm."],
-                        ["↑ Re-run from PDF…", "Upload the OM PDF again to re-extract everything from scratch — tenants, financials and narrative."],
-                        ["⬡ Find Comps", "Asks the analyst to pull the 3 closest comparable sales and compare cap rate, WALT and price/SF."],
+                        ["✨ Refresh Analysis (current roster)", "Your everyday button. Re-grades the deal and rewrites the summary, strengths, risks and red flags from the CURRENT tenant roster — use it after you paste a new rent roll. It does NOT re-read the OM, so a manually-entered roster stays safe."],
+                        ["↺ Rebuild from OM", "Starts over from the OM: re-runs the full AI extraction from the saved OM text, regenerating tenants, financials and narrative (and picking up any newer analysis the app has added). It refuses to wipe a manual roster unless you confirm. Use the small 'Re-run from PDF' link underneath only if the saved OM text came out garbled."],
+                        ["↗ Ask the Analyst", "Opens the AI analyst with a full buy / pass / watch question (cap rate, WALT, tenant credit, rollover, comps) pre-filled — then ask it anything else, including for comparable sales."],
                         ["🔍 Find Sale Record", "Looks up the property's actual last/known sale — price, date, buyer and seller — from public sources."],
-                        ["↻ Refresh Score", "Recomputes just the deal score and red flags from portfolio benchmarks. Deterministic — it does not rewrite the AI narrative."],
-                        ["↗ Query Analyst", "Opens the AI analyst with a full buy / pass / watch investment question about this deal pre-filled."],
                         ["🗑 Delete Deal", "Permanently removes this deal from the database."],
                       ] as [string, string][]).map(([title, desc]) => (
                         <div key={title} style={{ padding:"7px 0", borderBottom:"1px solid #f4efe6" }}>
@@ -1506,36 +1489,26 @@ ${text.slice(0, 40000)}`;
                   {reanalyzeBusy ? "Refreshing…" : "✨ Refresh Analysis (current roster)"}
                 </button>
                 <button onClick={() => { setActionsOpen(false); handleReanalyze(); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px 2px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
                   onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ↺ Re-analyze (stored text)
+                  ↺ Rebuild from OM
                 </button>
                 <button onClick={() => { setActionsOpen(false); rerunPdfRef.current?.click(); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ↑ Re-run from PDF…
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"0 12px 7px 30px", borderRadius:6, cursor:"pointer", fontSize:10.5, color:"#a69e91", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.color="#7d766a"} onMouseLeave={e => e.currentTarget.style.color="#a69e91"}>
+                  ↑ OM text looks wrong? Re-run from PDF…
                 </button>
                 <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
                 <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Research</div>
-                <button onClick={() => { setActionsOpen(false); onQuery(`Find the 3 closest comps to "${d.propertyName}" (${d.assetType}, ${d.market}, ${d.totalSF?d.totalSF+" SF":"unknown size"}). Compare cap rates, WALT, and price/SF.`); }}
+                <button onClick={() => { setActionsOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk, and comparable sales. Give a buy/pass/watch recommendation.`); }}
                   style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
                   onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ⬡ Find Comps
+                  ↗ Ask the Analyst
                 </button>
                 <button onClick={() => { setActionsOpen(false); onLookupSale(d.id); }}
                   style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
                   onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   🔍 Find Sale Record
-                </button>
-                <button onClick={() => { setActionsOpen(false); handleRescore(); }} disabled={rescoreBusy}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:rescoreBusy?"default":"pointer", fontSize:12, color:rescoreBusy?"#a69e91":"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => { if(!rescoreBusy) e.currentTarget.style.background="#f6f2ea"; }} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ↻ {rescoreBusy ? "Scoring…" : "Refresh Score"}
-                </button>
-                <button onClick={() => { setActionsOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk. Give a buy/pass/watch recommendation.`); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                  ↗ Query Analyst
                 </button>
                 <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
                 {!confirmDel
