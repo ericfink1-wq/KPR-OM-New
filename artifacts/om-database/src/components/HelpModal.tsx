@@ -67,26 +67,27 @@ function TryAsking({ items }: { items: string[] }) {
 const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: React.ReactNode }[] = [
   {
     id: 1,
-    title: "Uploading OMs & deals",
+    title: "Uploading OMs, rent rolls & sales reports",
     brief: (
       <>
-        <p style={{ margin:0 }}>Click <B>Upload OMs</B> in the top-right to add deals. Three paths:</p>
+        <p style={{ margin:0 }}>Everything starts with a PDF — just drop in the document and the AI reads it for you. There are three kinds of PDF you'll upload:</p>
         <BriefList items={[
-          <><B>Upload PDF(s)</B> — the AI reads the full document and extracts tenants, financials, lease data, demographics, and cover images automatically. Takes 1–3 min per deal.</>,
-          <><B>Import a folder</B> — scan a whole directory of OMs and queue them all at once. Good for bulk onboarding.</>,
-          <><B>Upload JSON</B> — import a pre-extracted deal file directly. No AI tokens used. This is how Claude-extracted deals get loaded in.</>,
+          <><B>Offering Memorandum (OM)</B> — click the green <B>Upload OMs</B> button (top-right) and pick one or more PDFs. The AI reads the whole document and fills in tenants, financials, lease terms, demographics, and the cover photo automatically. About 1–3 minutes per deal.</>,
+          <><B>Rent roll</B> — open a deal and use <B>"⬆ Refresh tenants from a current rent roll (PDF)"</B> in the tenant section. This updates just the tenant list/leases to the current rent roll and stamps it with that roll's date — your financials and everything else stay put.</>,
+          <><B>Tenant sales report</B> — open a deal, find the <B>Tenant Sales</B> panel, and hit <B>"⬆ Upload Sales PDF."</B> The AI reads the sales figures and auto-detects the year, so your sales data is tracked by vintage.</>,
         ]} />
-        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}>An <B>upload password</B> is required the first time you upload in each browser session — this limits API spend to authorized users.</p>
+        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}>The first time you upload in a browser session you'll be asked for the <B>upload password</B> — this keeps uploads limited to your team.</p>
+        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>Heads up — these AI reads cost money.</B> Every PDF you upload is read by the AI, which uses paid tokens. A full OM is the biggest single cost (a long document); rent rolls and sales reports are smaller. It's not expensive per file, but avoid re-uploading the same PDF repeatedly. Browsing, editing, and exporting are always free — see the cost breakdown in the detail below.</p>
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>After upload:</B> the deal lands in your Portfolio as a Prospect. A green "Fresh" badge means it was just extracted. Check the tenant roster and financials — if anything looks off, use <B>Analyze → Re-run extraction</B> on the deal page before editing manually.</>,
-        <><B>Partial or thin extraction?</B> This happens when the PDF is low-quality, scanned, or missing key pages. Try "Re-run extraction" first. If it still looks sparse, you can fill in fields manually by clicking the pencil icon on any field, or upload a JSON with corrected data — it merges by address.</>,
-        <><B>JSON upload</B> is the zero-token path: send Claude an OM or rent roll PDF, ask it to extract in the app's schema, download the .json, and upload here. Identical result to full AI extraction, no API cost. The JSON always merges by address — uploading an updated file overwrites the existing deal, it doesn't create a duplicate.</>,
-        <><B>Imported deals now self-score.</B> When a JSON import includes a grade, the app automatically benchmarks the deal against your portfolio in the background a few seconds after upload — refreshing its red flags and score with no extra step. Nothing to click.</>,
-        <><B>Updating a rent roll only:</B> on any deal page, the tenant roster panel has an "Upload new rent roll" option. This re-runs just the tenant extraction — updates leases without touching financials or other deal-level data.</>,
-        <><B>Cover photo wrong?</B> Use "Set cover from page #" to pick any page from the PDF, with left/right/full spread options.</>,
+        <><B>After an OM upload:</B> the deal lands in your Portfolio as a Prospect with a green "Fresh" badge. Skim the tenant roster and financials — if something looks off, open the deal and use <B>Analyze → Re-run extraction</B> to have the AI read the PDF again before you edit anything by hand.</>,
+        <><B>Thin or partial extraction?</B> Usually means the PDF was scanned, low-quality, or missing pages. Try "Re-run extraction" first. You can also fix any single value by clicking the pencil icon next to it.</>,
+        <><B>Rent roll vs. OM tenants:</B> uploading a rent roll replaces the roster with the current leases and marks it as rent-roll-sourced (you'll see a teal "RENT ROLL" tag and the as-of date). Because that's now your hand-verified roster, a later OM "Re-run extraction" won't quietly overwrite it — and after a rent-roll update, use <B>Actions → ✨ Refresh Analysis (current roster)</B> to refresh the grade/narrative from the new tenants.</>,
+        <><B>Tenant sales reports stack by year:</B> upload one each year and the panel keeps the history, so you can see sales trends over time. A dedicated sales report is richer than the sales figures pulled from the OM, and the panel will prompt you to upload one for more detail.</>,
+        <><B>Cover photo wrong?</B> On the deal page use "Set cover from page #" to pick any page from the OM, with left/right/full-spread options.</>,
+        <><B>Advanced (you may never need this):</B> the ▾ next to "Upload OMs" also offers <em>Import a folder</em> (queue many OMs at once) and <em>Upload .json</em> (load a pre-extracted deal, e.g. one prepared for you outside the app). Both merge by address so they update an existing deal rather than duplicating it; JSON-imported deals also auto-score against your portfolio in the background. For day-to-day use, the three PDF uploads above are all you need.</>,
       ]} />
     ),
   },
@@ -277,8 +278,24 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
+        <><B>What costs money (uses AI tokens) vs. what's free.</B> A handful of actions send data to the AI and cost money each time you run them — everything else is free to use as much as you like.
+          <div style={{ marginTop:6 }}><B>Costs tokens — use deliberately:</B></div>
+          <BriefList items={[
+            <><B>Uploading an OM PDF</B> — the largest single cost, since the AI reads the whole document. Roughly proportional to length; a big OM costs more than a short one.</>,
+            <><B>Uploading a rent roll or tenant sales PDF</B> — smaller than a full OM, but still a paid AI read each time.</>,
+            <><B>Re-run extraction</B> and <B>Re-run from PDF</B> — these read the document again, so they cost about the same as the original upload. Don't run them repeatedly out of habit.</>,
+            <><B>Asking the Analyst / "Ask about this property"</B> — each question is a paid AI call. Bigger libraries and longer questions cost a little more.</>,
+            <><B>Refresh Analysis, Find Comps, Find Sale Record</B> — each uses the AI once per run.</>,
+          ]} />
+          <div style={{ marginTop:6 }}><B>Free — no AI, use freely:</B></div>
+          <BriefList items={[
+            <>Browsing the portfolio, opening deals, sorting/filtering/searching, and editing fields by hand.</>,
+            <>All of the Analytics charts, Comp Benchmark, the Closing-Cost estimator, and Trade Area demographics ("Re-Pull" uses the free Census API, not AI).</>,
+            <>"Refresh Score" / "Score unscored deals" (math against your own data, no AI), and all exports, backups, and Excel/CSV downloads.</>,
+          ]} />
+          <div style={{ marginTop:6 }}>Bottom line: <B>uploading PDFs and talking to the Analyst are where the cost is.</B> Avoid re-uploading the same document, and you'll keep spend low.</div>
+        </>,
         <><B>Upload on the live site, not the Replit preview.</B> The preview and live site have separate databases — anything uploaded in the preview won't appear on the live site after a publish.</>,
-        <><B>Always upload full JSON files</B> when correcting deal data — never a partial patch. The app merges by address, so a full file updates all fields cleanly.</>,
         <><B>Shift+Enter</B> in the Analyst chat inserts a line break. Enter alone sends.</>,
         <><B>Occupancy cost</B> displayed on deal pages is total occupancy cost (base rent + CAM + taxes + recoveries) ÷ gross sales — not just base rent ÷ sales. If only base rent is available, the field shows as estimated.</>,
         <><B>Demographics auto-populate</B> when a deal is created from a PDF. Hit "Re-Pull" on the deal page to refresh them if the property location changed or data looks stale. The rings are estimated from US Census block-group data apportioned by centroid — close to an Esri/CoStar report but not identical (Census is historical 5-year data, not forward projections), so treat it as a solid cross-check.</>,
