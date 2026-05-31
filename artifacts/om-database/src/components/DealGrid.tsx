@@ -33,6 +33,19 @@ function fmtPriceShort(v: number | null | undefined): string {
   return `$${Math.round(n)}`;
 }
 
+// City display that won't repeat the separate State column: strips a trailing
+// state (matching d.state, or any trailing 2-letter code) from the city string.
+function cityOnly(city: string | null | undefined, state: string | null | undefined): string {
+  const c = (city || "").trim();
+  if (!c) return "—";
+  const st = (state || "").trim();
+  if (st) {
+    const stripped = c.replace(new RegExp(`,\\s*${st.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.?$`, "i"), "").trim();
+    return stripped || c;
+  }
+  return c.replace(/,\s*[A-Za-z]{2}\.?$/, "").trim() || c;
+}
+
 function RowThumb({ deal }: { deal: Deal }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
@@ -1005,7 +1018,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                       <td style={{ padding: "8px 10px" }}>
                         <StatusTag status={d.status} size="sm" />
                       </td>
-                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.city || "—"}</td>
+                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{cityOnly(d.city, d.state)}</td>
                       <td style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: d.market ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{d.market || "—"}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: anchor ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{anchor || "—"}</td>

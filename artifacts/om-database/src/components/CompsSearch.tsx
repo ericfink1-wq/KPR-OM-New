@@ -122,6 +122,21 @@ function fmtPsf(n: number | null): string {
   return `$${n.toFixed(2)}/sf`;
 }
 
+// Strip a trailing state from a "City, ST" market string so the City column
+// doesn't repeat the separate State column (e.g. "Kokomo, IN" + state "IN" -> "Kokomo").
+function cityOnly(market: string | null, state: string | null): string {
+  if (!market) return "—";
+  const m = market.trim();
+  if (!state) {
+    // No separate state value — still trim a trailing 2-letter state code.
+    return m.replace(/,\s*[A-Za-z]{2}\.?$/, "").trim() || m;
+  }
+  const st = state.trim();
+  const re = new RegExp(`,\\s*${st.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.?$`, "i");
+  const stripped = m.replace(re, "").trim();
+  return stripped || m;
+}
+
 function buildQuery(filters: Filters, sort: SortKey): string {
   const p = new URLSearchParams();
   if (filters.q.trim()) p.set("q", filters.q.trim());
@@ -1070,7 +1085,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                         </div>
                         {sub && <div style={{ fontSize: 10.5, color: "#a89f8f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{sub}</div>}
                       </td>
-                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#5c5850", whiteSpace: "nowrap" }}>{row.market || "—"}</td>
+                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#5c5850", whiteSpace: "nowrap" }}>{hasState ? cityOnly(row.market, row.state) : (row.market || "—")}</td>
                       {hasState  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#7d766a", whiteSpace: "nowrap" }}>{row.state || "—"}</td>}
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", fontWeight: 500, whiteSpace: "nowrap" }}>{fmtDate(row.saleDate)}</td>
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(row.salePrice)}</td>
