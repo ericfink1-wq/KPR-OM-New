@@ -66,7 +66,12 @@ cd ../api-server && npx tsc --noEmit | grep -v TS6305 | grep "error TS"
 - `tenantsManual: true` marks a manually-pasted roster.
 - `POST /deals/:id/reanalyze` re-reads the stored OM and would overwrite the roster; it now **refuses if `tenantsManual` unless `overwriteRoster:true`**.
 - `POST /deals/:id/refresh-analysis` (and `runRosterAnalysis` in extract.ts) regenerates summary/grade/strengths/risks/red flags from the **current roster**, not the OM — this is the safe refresh after a roster paste. UI: Actions → "✨ Refresh Analysis (current roster)".
-- `POST /deals/:id/rescore` (rescoreDeal) is deterministic — refreshes dealScore + red flags from portfolio benchmarks, augments (doesn't replace) qualitative red flags.
+- `POST /deals/:id/rescore` (rescoreDeal) refreshes dealScore + red flags from portfolio benchmarks, augmenting (not replacing) qualitative red flags. NOTE: it runs an LLM pass (Haiku, via `augmentScoringWithBenchmarks`) — it is NOT token-free. The benchmark **math** (recency-weighted by lease commencement date) is deterministic, but the score/flag rewrite uses the model.
+
+## Analysis freshness & token policy (built this — keep it)
+- Two kinds of "recent change": (1) **live, token-free** badges/score adjustments computed in the client (watchlist flags + grade ding, IG/anchor/NAP/watchlist badges, lease-commencement benchmark math after a free index rebuild) — these always reflect the latest logic, no refresh needed; (2) **AI-written output** (narrative, grade rationale, strengths/risks, benchmark red-flag wording) — frozen in stored data until a deal is re-analyzed, which costs tokens (Haiku roster pass).
+- `ANALYSIS_VERSION` (`artifacts/api-server/src/lib/analysisVersion.ts`, mirrored in `artifacts/om-database/src/lib/constants.ts` — keep in sync) stamps every narrative-producing write. Deals below it show a "⚠ Analysis may be outdated — refresh" badge on the deal page and feed the "Refresh N outdated analyses" button in Portfolio Analytics. `GET /deals/stale-analysis-count` + `POST /deals/refresh-stale-analysis` (idempotent; only refreshes deals behind the version).
+- **VERSION-BUMP POLICY (Eric's standing instruction):** bump `ANALYSIS_VERSION` ONLY for larger batches or major scoring-logic changes — never for minor prompt tweaks. Bumping lights up the refresh badge on every deal and invites a token spend, so accumulate small changes and bump once per meaningful batch. When in doubt, leave the version alone and just ship the logic (new uploads/refreshes pick it up naturally).
 
 ## Comp database
 - `comps_index` table (schema `lib/db/src/schema/compsIndex.ts`; route `routes/comps.ts`; builder `lib/compsIndex.ts`; UI `CompsSearch.tsx`).
