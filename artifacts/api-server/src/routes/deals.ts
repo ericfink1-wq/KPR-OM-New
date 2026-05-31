@@ -8,6 +8,34 @@ import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "..
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
 import { requireAuth, requireAdmin } from "../middleware/auth";
+import type { Logger } from "pino";
+
+// Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
+// imported deal and persist the result, mirroring POST /deals/:id/rescore. The
+// JSON's grade is the baseline; benchmarks only adjust it when they materially
+// differ, and benchmark red flags are layered in. Non-fatal.
+async function autoRescoreOnImport(id: string, data: Record<string, unknown>, log: Logger): Promise<void> {
+  try {
+    const patch = await rescoreDeal(id, data, log);
+    const [row] = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    if (!row) return;
+    const cur = row.data as Record<string, unknown>;
+    await db.update(dealsTable)
+      .set({
+        data: {
+          ...cur,
+          ...(patch.dealScore !== undefined ? { dealScore: patch.dealScore } : {}),
+          ...(patch.redFlags !== undefined ? { redFlags: patch.redFlags } : {}),
+          lastScoredAt: patch.lastScoredAt,
+          lastScoredDealCount: patch.lastScoredDealCount,
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(dealsTable.id, id));
+  } catch (err) {
+    log.error({ err, id }, "Import auto-rescore failed (non-fatal)");
+  }
+}
 
 function composeAddressForGeocoder(deal: {
   address?: string | null;
@@ -168,8 +196,11 @@ router.post("/deals/import", requireAuth, async (req, res) => {
         throw dbErr;
       }
       setImmediate(() => {
-        rebuildTenantIndex(id, clean).catch(() => {});
-        rebuildCompsIndex(id, clean).catch(() => {});
+        void (async () => {
+          try { await rebuildTenantIndex(id, clean); } catch { /* non-fatal */ }
+          try { await rebuildCompsIndex(id, clean); } catch { /* non-fatal */ }
+          await autoRescoreOnImport(id, clean, req.log);
+        })();
       });
       res.json({ ok: true, id, merged: true, propertyName: String(clean.propertyName ?? "") });
     } else {
@@ -187,26 +218,28 @@ router.post("/deals/import", requireAuth, async (req, res) => {
         throw dbErr;
       }
       setImmediate(() => {
-        rebuildTenantIndex(id, clean).catch(() => {});
-        rebuildCompsIndex(id, clean).catch(() => {});
-        if (!clean.marketDemographics && !clean.demoChecked) {
-          (async () => {
+        void (async () => {
+          try { await rebuildTenantIndex(id, clean); } catch { /* non-fatal */ }
+          try { await rebuildCompsIndex(id, clean); } catch { /* non-fatal */ }
+          await autoRescoreOnImport(id, clean, req.log);
+          if (!clean.marketDemographics && !clean.demoChecked) {
             const composed = composeAddressForGeocoder(clean as { address?: string | null; city?: string | null; state?: string | null });
-            if (!composed) return;
-            try {
-              const demo = await fetchCensusDemographics(composed);
-              if (demo) {
-                const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
-                if (rows.length) {
-                  const current = rows[0].data as Record<string, unknown>;
-                  await db.update(dealsTable)
-                    .set({ data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() }, updatedAt: new Date() })
-                    .where(eq(dealsTable.id, id));
+            if (composed) {
+              try {
+                const demo = await fetchCensusDemographics(composed);
+                if (demo) {
+                  const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+                  if (rows.length) {
+                    const current = rows[0].data as Record<string, unknown>;
+                    await db.update(dealsTable)
+                      .set({ data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() }, updatedAt: new Date() })
+                      .where(eq(dealsTable.id, id));
+                  }
                 }
-              }
-            } catch {}
-          })();
-        }
+              } catch {}
+            }
+          }
+        })();
       });
       res.status(201).json({ ok: true, id, merged: false, propertyName: String(clean.propertyName ?? "") });
     }
