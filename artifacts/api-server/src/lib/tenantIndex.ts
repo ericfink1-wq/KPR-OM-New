@@ -1,7 +1,21 @@
 import { db } from "@workspace/db";
 import { tenantIndexTable, tenantAliasesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { toFloat } from "./parsers";
+
+// Self-provision the lease-commencement columns on databases created before they
+// existed, so Eric never has to run a manual migration (he pulls + restarts).
+// Idempotent; runs once per process.
+let columnsReady: Promise<void> | null = null;
+function ensureLeaseStartColumns(): Promise<void> {
+  if (!columnsReady) {
+    columnsReady = (async () => {
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS lease_start text`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS lease_start_date date`);
+    })().catch((err) => { columnsReady = null; throw err; });
+  }
+  return columnsReady;
+}
 
 // ---------------------------------------------------------------------------
 // Lease date parser — returns "YYYY-MM-DD" for storage, null if unparseable
@@ -64,6 +78,7 @@ export async function rebuildTenantIndex(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
+    await ensureLeaseStartColumns();
     const [, aliasRows] = await Promise.all([
       db.delete(tenantIndexTable).where(eq(tenantIndexTable.dealId, dealId)),
       db.select().from(tenantAliasesTable),
@@ -82,6 +97,7 @@ export async function rebuildTenantIndex(
       const rawName = typeof t.name === "string" ? t.name.trim() || null : null;
       const canonicalName = rawName ? (aliasMap[rawName] ?? rawName) : null;
       const leaseExpiry = typeof t.leaseExpiry === "string" && t.leaseExpiry ? t.leaseExpiry : null;
+      const leaseStart = typeof t.leaseStart === "string" && t.leaseStart ? t.leaseStart : null;
       return {
         dealId,
         dealName,
@@ -90,6 +106,8 @@ export async function rebuildTenantIndex(
         sf: toFloat(t.sf),
         rentPerSf: toFloat(t.rentPerSF),
         annualRent: toFloat(t.annualRent),
+        leaseStart,
+        leaseStartDate: parseLeaseDate(leaseStart),
         leaseExpiry,
         leaseExpiryDate: parseLeaseDate(leaseExpiry),
         leaseType: typeof t.leaseType === "string" ? t.leaseType : null,

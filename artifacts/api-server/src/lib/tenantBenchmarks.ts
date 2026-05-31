@@ -36,10 +36,13 @@ interface TenantBenchmark {
 
 // ─── Recency weight ───────────────────────────────────────────────────────────
 
-function recencyWeight(uploadedAt: string | null): number {
-  if (!uploadedAt) return 0.5; // unknown vintage — conservative middle weight
+// Weight a comparable by its vintage — ideally the lease COMMENCEMENT date (when
+// the rent was actually set), falling back to OM upload date. A more recently
+// signed lease is fresher market evidence and counts more.
+function recencyWeight(vintage: string | null): number {
+  if (!vintage) return 0.5; // unknown vintage — conservative middle weight
   const yearsAgo =
-    (Date.now() - new Date(uploadedAt).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    (Date.now() - new Date(vintage).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
   if (yearsAgo <= 3) return 1.0;
   if (yearsAgo <= 7) return 0.5;
   return 0.25;
@@ -82,12 +85,17 @@ async function queryBenchmarks(
 ): Promise<Map<string, TenantBenchmark>> {
   if (canonicalNames.length === 0) return new Map();
 
-  // Fetch individual rows joined with deals to get uploadedAt for recency weighting
+  // Fetch individual rows. Recency weighting prefers each lease's COMMENCEMENT
+  // date (when it was actually signed/repriced) over the OM's upload date — a
+  // freshly uploaded OM can still contain a 10-year-old lease, which is staler
+  // market evidence than a recently signed one. Falls back to upload date when a
+  // lease-start date isn't available.
   const rows = await db
     .select({
       canonicalName: tenantIndexTable.canonicalName,
       rentPerSf: tenantIndexTable.rentPerSf,
       sf: tenantIndexTable.sf,
+      leaseStartDate: sql<string | null>`${tenantIndexTable.leaseStartDate}`,
       uploadedAt: sql<string | null>`${dealsTable.data}->>'uploadedAt'`,
     })
     .from(tenantIndexTable)
@@ -103,12 +111,13 @@ async function queryBenchmarks(
   // Group by canonical name and compute recency-weighted statistics
   const groups = new Map<
     string,
-    Array<{ rentPerSf: number | null; sf: number | null; uploadedAt: string | null }>
+    Array<{ rentPerSf: number | null; sf: number | null; vintage: string | null; vintageFromLease: boolean }>
   >();
   for (const row of rows) {
     if (!row.canonicalName) continue;
     const arr = groups.get(row.canonicalName) ?? [];
-    arr.push({ rentPerSf: row.rentPerSf, sf: row.sf, uploadedAt: row.uploadedAt });
+    const vintage = row.leaseStartDate ?? row.uploadedAt;
+    arr.push({ rentPerSf: row.rentPerSf, sf: row.sf, vintage, vintageFromLease: row.leaseStartDate != null });
     groups.set(row.canonicalName, arr);
   }
 
@@ -123,9 +132,11 @@ async function queryBenchmarks(
     let sfCount = 0;
     let oldest: Date | null = null;
     let newest: Date | null = null;
+    let leaseDatedCount = 0;
 
     for (const e of entries) {
-      const weight = recencyWeight(e.uploadedAt);
+      const weight = recencyWeight(e.vintage);
+      if (e.vintageFromLease) leaseDatedCount++;
 
       if (e.rentPerSf != null) {
         weightedRentSum += e.rentPerSf * weight;
@@ -137,8 +148,8 @@ async function queryBenchmarks(
         sfSum += e.sf;
         sfCount++;
       }
-      if (e.uploadedAt) {
-        const d = new Date(e.uploadedAt);
+      if (e.vintage) {
+        const d = new Date(e.vintage);
         if (!oldest || d < oldest) oldest = d;
         if (!newest || d > newest) newest = d;
       }
@@ -148,6 +159,7 @@ async function queryBenchmarks(
     const simpleAvgRentPerSf = simpleRentCount > 0 ? simpleRentSum / simpleRentCount : null;
     const effectiveWeightedCount = weightSum; // sum of weights = effective sample size
     const confidence = deriveConfidence(entries.length, effectiveWeightedCount);
+    void leaseDatedCount;
 
     result.set(canonicalName, {
       canonicalName,
@@ -196,24 +208,29 @@ ${existingFlagsJson}
 RECENCY-WEIGHTED TENANT BENCHMARK DATA (primary reference for flagging):
 ${tenantLines.join("\n")}
 
-DATA CONFIDENCE LEVELS (already computed — use as stated):
-- "high" (≥3 portfolio locations, effective weighted count ≥2.0): Portfolio weighted avg is AUTHORITATIVE. It supersedes general market assumptions. Explicitly state "Portfolio data from N locations (YYYY–YYYY) shows…" in the description.
-- "medium" (2 locations or effective weight ≥1.0): Reliable comparison. Flag normally with sample context.
-- "low" (1 location or low effective weight): Directional only. Cap severity at "medium". Note "single data point" in description.
+DATA STRENGTH (each tenant line shows its confidence tier — use it to set SEVERITY, but DON'T parrot the word "confidence" in your prose):
+- "high" (≥3 portfolio locations): the portfolio average is AUTHORITATIVE and supersedes general market assumptions.
+- "medium" (2 locations): a reliable comparison.
+- "low" (1 location / thin data): directional only — cap severity at "medium".
+
+HOW TO PHRASE THE DATA in descriptions (IMPORTANT — Eric finds "high/medium confidence" repetitive):
+- Do NOT write "high confidence" / "medium confidence" in the output. Instead just state HOW MANY leases you're verifying against, e.g. "across 4 Marshalls leases in the portfolio ($22.50/SF avg)…".
+- ONLY call out data strength when it's genuinely LIMITED — i.e. a single lease / thin sample. In that case say so plainly, e.g. "(only 1 portfolio lease — directional)".
+- The lease years already reflect recency (more recent leases are weighted more); you may note when the comparison leans on recent vs older leases if relevant, but keep it brief.
 
 RULES:
 1. For any tenant paying >20% BELOW their weighted portfolio avg, decide what the gap MEANS using the per-tenant signals in {curly braces} (lease term left, renewal options, sales/SF, occupancy-cost %). Below-market rent is NOT automatically good or bad:
    a. CAPTURABLE MARK-TO-MARKET UPSIDE → add to dealScore.strengths or upsideItems (NOT a red flag). Strongest when the tenant is below market AND has LITTLE term left (low remaining term / near expiry) AND few/no remaining fixed-rate options AND can clearly afford more (strong sales/SF with low occupancy-cost %). This is the rent we can push at rollover.
    b. LOCKED-IN, NOT UPSIDE → if the tenant has many years of term left and/or multiple remaining fixed/below-market options, we'd never reach market during a normal hold. Mention only briefly (low severity / neutral), do NOT score it as upside.
-   c. WARNING / POSSIBLE SOFTNESS → if sales are weak or occupancy-cost % is already high, the low rent may signal a struggling tenant or soft market; pushing rent risks losing them. THIS is when below-market belongs in redFlags. Severity: high confidence + ≥35% below → "high"; high confidence + 20–34% → "medium"; medium confidence → "medium"; low confidence → "low".
+   c. WARNING / POSSIBLE SOFTNESS → if sales are weak or occupancy-cost % is already high, the low rent may signal a struggling tenant or soft market; pushing rent risks losing them. THIS is when below-market belongs in redFlags. Severity by data strength + gap: 3+ leases & ≥35% below → "high"; 3+ leases & 20–34% → "medium"; 2 leases → "medium"; 1 lease → "low".
    d. SIGNALS ABSENT → if term/options/sales/occ-cost are unknown, stay measured: note it as a POSSIBLE mark-to-market opportunity contingent on lease term and sales, at "low" severity — do not assert either upside or distress.
-   - Any below-market mention must include: tenant name, this deal rent/SF, weighted portfolio avg, location count, data years, confidence, and % gap. Example (capturable): "Portfolio data from 4 locations (2021–2024, high confidence) shows Starbucks averaging $42/SF; this deal has them at $27/SF — 36% below — with only 1.5y left, no remaining options, and strong $1.1M/SF sales at a ~6% occupancy cost, a clear mark-to-market opportunity at rollover."
-2. For any tenant paying >20% ABOVE their weighted portfolio avg with high or medium confidence: add a strength bullet to dealScore.strengths noting the premium and data source.
+   - Any below-market mention must include: tenant name, this deal rent/SF, portfolio avg, the LEASE COUNT you're comparing against, data years, and % gap. Example (capturable): "Across 4 Starbucks leases in the portfolio (2021–2024) averaging $42/SF, this deal has them at $27/SF — 36% below — with only 1.5y left, no remaining options, and strong $1.1M/SF sales at a ~6% occupancy cost: a clear mark-to-market opportunity at rollover."
+2. For any tenant paying >20% ABOVE their portfolio avg backed by 2+ leases: add a strength bullet to dealScore.strengths noting the premium and the lease count.
 3. Keep ALL existing red flags unchanged — append benchmark-derived flags after them.
-4. When high-confidence data exists, prefer it over general market assumptions. You may update dealScore.grade and rationale if high-confidence benchmarks materially change the investment thesis (e.g. multiple anchors are deeply below-market vs. portfolio). Otherwise leave the grade unchanged.
+4. When backed by 3+ leases, prefer the portfolio data over general market assumptions. You may update dealScore.grade and rationale if it materially changes the thesis (e.g. multiple anchors deeply below-market vs. portfolio). Otherwise leave the grade unchanged.
 5. DO NOT invent benchmark data. Only flag tenants listed in the analysis above.
 6. Vacant tenants: skip entirely.
-7. For low-confidence flags, prefix the description with "(1 portfolio data point — directional only)".
+7. For single-lease flags, note "(only 1 portfolio lease — directional)" in the description.
 
 Return ONLY valid JSON with no markdown or explanation:
 {"dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "string", "strengths": ["string"], "risks": ["string"]}, "redFlags": [{"severity": "high|medium|low", "description": "string"}]}`;
@@ -352,15 +369,17 @@ export async function augmentScoringWithBenchmarks(
           sales != null ? `sales ${fmtMoney(sales)}/SF` : null,
           occCost != null ? `occ-cost ${occCost.toFixed(1)}%` : null,
         ].filter(Boolean).join(", ");
+        const leaseWord = bench.locationCount === 1 ? "lease" : "leases";
         tenantLines.push(
-          `• ${rawName} (${sfStr}): this deal ${fmtMoney(rentPSF)}/SF vs weighted portfolio avg ${fmtMoney(bench.weightedAvgRentPerSf)}/SF${simpleNote}` +
-            ` [${bench.locationCount} location(s), ${dateRange}, effective weight ${effCount}, confidence: ${bench.confidence}]` +
+          `• ${rawName} (${sfStr}): this deal ${fmtMoney(rentPSF)}/SF vs avg ${fmtMoney(bench.weightedAvgRentPerSf)}/SF across ${bench.locationCount} portfolio ${leaseWord}${simpleNote}` +
+            ` [${dateRange}, recency-weighted; severity tier: ${bench.confidence}, eff. weight ${effCount}]` +
             ` → ${pctStr(pct)} vs benchmark` +
             (mtmBits ? ` {${mtmBits}}` : ""),
         );
       } else if (bench.locationCount > 0) {
+        const leaseWord = bench.locationCount === 1 ? "lease" : "leases";
         tenantLines.push(
-          `• ${rawName} (${sfStr}): ${bench.locationCount} location(s) in portfolio [${dateRange}, confidence: ${bench.confidence}] — no rent/SF data for comparison`,
+          `• ${rawName} (${sfStr}): ${bench.locationCount} portfolio ${leaseWord} [${dateRange}; severity tier: ${bench.confidence}] — no rent/SF data for comparison`,
         );
       }
     }

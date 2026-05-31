@@ -9,6 +9,8 @@ export const tenantIndexTable = pgTable("tenant_index", {
   sf: doublePrecision("sf"),
   rentPerSf: doublePrecision("rent_per_sf"),
   annualRent: doublePrecision("annual_rent"),
+  leaseStart: text("lease_start"),
+  leaseStartDate: date("lease_start_date"),
   leaseExpiry: text("lease_expiry"),
   leaseExpiryDate: date("lease_expiry_date"),
   leaseType: text("lease_type"),
