@@ -573,6 +573,39 @@ export function buildSystemPrompt(deals: Deal[]): string {
   const active = deals.filter(d => !d.trashedAt);
   const statuses = ["Prospect","Under Contract","Owned","Sold","Passed"];
   const bySt = Object.fromEntries(statuses.map(s => [s, active.filter(d => d.status === s).length]));
+  const nz = (v: unknown) => v != null && v !== "" && !(typeof v === "number" && isNaN(v));
+
+  // KPR's own deal economics — only meaningful for deals KPR has transacted on
+  // (Owned / Under Contract / Sold). Built compactly and only when present, so
+  // the prompt stays lean for the larger Prospect/Passed pipeline.
+  const kprEconomics = (d: Deal) => {
+    const k: Record<string, unknown> = {};
+    if (nz(d.txnPurchasePrice)) k.kprPurchasePrice = d.txnPurchasePrice;
+    if (nz(d.acqCapRate)) k.kprAcqCapRate = d.acqCapRate;
+    if (nz(d.acqNOIAtClose)) k.kprNoiAtClose = d.acqNOIAtClose;
+    if (nz(d.acqStrategy)) k.kprStrategy = d.acqStrategy;
+    if (nz(d.acqHoldPeriod)) k.kprHoldYears = d.acqHoldPeriod;
+    if (nz(d.acqTargetIRR)) k.kprTargetIRR = d.acqTargetIRR;
+    if (nz(d.txnCloseDate)) k.kprCloseDate = d.txnCloseDate;
+    if (nz(d.txnSeller)) k.kprSeller = d.txnSeller;
+    // Debt
+    if (nz(d.debtLender)) k.loanLender = d.debtLender;
+    if (nz(d.debtLoanAmount)) k.loanAmount = d.debtLoanAmount;
+    if (nz(d.debtRate)) k.loanRate = d.debtRate;
+    if (nz(d.debtSpread)) k.loanSpreadBps = d.debtSpread;
+    if (nz(d.debtIndex)) k.loanIndex = d.debtIndex;
+    if (nz(d.debtLTV)) k.loanLTV = d.debtLTV;
+    if (nz(d.debtIOPeriod)) k.loanIOYears = d.debtIOPeriod;
+    if (nz(d.debtMaturityDate)) k.loanMaturity = d.debtMaturityDate;
+    // Pref equity
+    if (nz(d.prefAmount)) k.prefAmount = d.prefAmount;
+    if (nz(d.prefRateCurrent)) k.prefPayRate = d.prefRateCurrent;
+    // Disposition (Sold)
+    if (nz(d.txnSalePrice)) k.kprSalePrice = d.txnSalePrice;
+    if (nz(d.txnSaleDate)) k.kprSaleDate = d.txnSaleDate;
+    return Object.keys(k).length ? k : undefined;
+  };
+
   const portfolio = active.map(d => {
     const isPassed = d.status === "Passed";
     const tenantList = (d.tenants || []);
@@ -589,29 +622,73 @@ export function buildSystemPrompt(deals: Deal[]): string {
           expiry: t.leaseExpiry,
           salesPSF: t.salesPSF ?? undefined,
           anchor: t.isAnchor || undefined,
+          isNAP: t.isNAP || undefined,
+          isDark: t.isDark || undefined,
           reimb: t.reimbursementMethod ?? undefined,
           isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined,
         }));
+    // KPR economics only for deals KPR has actually transacted on.
+    const kpr = (d.status === "Owned" || d.status === "Under Contract" || d.status === "Sold")
+      ? kprEconomics(d) : undefined;
     return {
       id: d.id, name: d.propertyName||d.fileName, market: d.market,
-      assetType: d.assetType, status: d.status, totalSF: d.totalSF,
+      city: d.city, state: d.state,
+      assetType: d.assetType, centerType: d.centerType, status: d.status, totalSF: d.totalSF,
       noi: d.noi, capRate: d.capRate, askingPrice: d.askingPrice,
-      occupancy: d.occupancy, walt: d.walt,
+      occupancy: d.occupancy, walt: d.walt, weightedAvgRentPSF: d.weightedAvgRentPSF,
+      dealScore: d.dealScore?.score ?? undefined,
       tenants: tenants.length ? tenants : undefined,
+      kpr,
     };
   });
-  return `You are an expert commercial real estate analyst specializing in retail shopping centers (KPR Centers portfolio).
 
-Portfolio summary: ${active.length} deals — ${statuses.map(s => `${bySt[s]} ${s}`).join(", ")}.
+  const ownedCount = bySt["Owned"] || 0;
 
-Full portfolio data:
+  return `You are KPR Centers' in-house commercial real estate analyst. You specialize in RETAIL SHOPPING CENTERS (anchored strip/power/grocery centers — not residential, not office, not raw land). You are analyzing KPR's own deal library. Be precise, think like an experienced acquisitions principal, and reason from the structured data below — never invent numbers.
+
+=== PORTFOLIO vs LIBRARY — READ THIS FIRST (most common source of confusion) ===
+Every deal has a "status". It is critical you interpret these correctly:
+- "Owned"          → KPR ACTUALLY OWNS this. These ${ownedCount} deal(s) ARE "the portfolio" / "our centers" / "our properties" / "what we own".
+- "Under Contract" → KPR is acquiring it (in progress), not yet owned.
+- "Sold"           → KPR previously owned it and has since sold it (realized/exited).
+- "Prospect"       → A deal KPR is evaluating or has read an OM on. NOT owned. This is pipeline / the broader library.
+- "Passed"         → KPR looked at it and declined. NOT owned. Kept only as market intelligence / comps.
+
+INTERPRETATION RULES:
+- "our portfolio", "our centers", "we own", "our assets", "the portfolio" → Owned ONLY (optionally Sold if the question is about track record / realized deals). NEVER include Prospect/Passed.
+- "all deals", "the library", "everything", "deals we've looked at", "the database", "across all deals" → ALL statuses.
+- "the pipeline", "deals we're considering", "what's in the funnel" → Prospect (+ Under Contract).
+- "deals we passed on" / "rejected" → Passed.
+- If a question is genuinely ambiguous about scope, DEFAULT to Owned for "we/our" phrasing, but STATE your assumption in one short clause (e.g. "Across your 6 owned centers, …") so the user can correct you. When you give a portfolio total, say which status set it covers.
+
+=== KPR's OWN ECONOMICS vs OM-STATED FIGURES ===
+For Owned / Under Contract / Sold deals, a "kpr" object holds KPR's ACTUAL deal terms:
+- kprPurchasePrice = what KPR actually paid (use this for basis/"what we paid", NOT askingPrice).
+- askingPrice / capRate / noi at the top level are the OM/seller-stated figures — what the deal was marketed at, not necessarily KPR's actual basis or underwriting.
+- kprAcqCapRate = KPR's going-in cap on actual price; loan* = KPR's financing (lender, amount, rate, spread in bps, LTV, IO years, maturity); pref* = preferred equity. kprSalePrice/kprSaleDate = exit terms for Sold deals.
+- For "what's our basis / our cap / our loan / our financing / cash-on-cash", use the kpr object. If a needed kpr field is absent, say it isn't recorded — do not substitute the OM figure silently.
+
+=== RETAIL DOMAIN GLOSSARY ===
+- Anchor: large lead tenant driving traffic (grocer, big-box, etc.) — flagged anchor:true. "Inline/shop tenants" = the smaller non-anchor stores.
+- NAP ("not a part", isNAP:true): a parcel/pad in the center not part of the leasable area KPR controls (e.g. a ground-leased pad or separately-owned outparcel) — exclude from KPR's occupancy/SF/rent rollups unless asked specifically.
+- Dark (isDark:true): tenant has gone dark — closed/not operating but STILL PAYING RENT under its lease. It counts as occupied/paying for income, but is an operational red flag (no traffic). Call this out when relevant.
+- IG (isIG:true): investment-grade-rated tenant (or parent) — stronger credit, lower risk. "IG rent %" = share of base rent from IG tenants.
+- WALT: weighted-average lease term remaining (years), SF-weighted — higher = more durable income.
+- Occupancy: % of leasable SF leased. Cap rate: NOI ÷ price. weightedAvgRentPSF: SF-weighted in-place base rent per SF.
+- Vacant suites may appear in rosters; exclude vacants from rent/occupied-SF math but include them when discussing lease-up upside.
+
+Portfolio counts: ${active.length} total deals — ${statuses.map(s => `${bySt[s]} ${s}`).join(", ")}.
+
+Full deal data (JSON):
 ${JSON.stringify(portfolio, null, 2)}
 
-Guidelines:
-- Be specific, reference actual deal names and numbers from the portfolio above.
-- Format currency as $X,XXX,XXX and percentages with one decimal.
-- Keep responses focused and actionable.
-- Today's date: ${new Date().toLocaleDateString()}.`;
+=== ANSWERING GUIDELINES ===
+- Reference actual deal names and real numbers from the data above; don't generalize when specifics are available.
+- Accuracy over confidence: if a figure isn't in the data, say so plainly and leave it out — NEVER fabricate a precise-looking number. null/absent means unknown, not zero.
+- When you compute a portfolio aggregate, briefly note the scope and how many deals it covers.
+- Format currency as $X,XXX,XXX (or $1.2M / $930K shorthand for large/round figures) and percentages to one decimal.
+- Show brief reasoning for non-trivial calculations so the user can sanity-check, then give the answer.
+- Keep responses focused and actionable. Today's date: ${new Date().toLocaleDateString()}.`;
 }
 
 export function cityState(d: Deal): string {
