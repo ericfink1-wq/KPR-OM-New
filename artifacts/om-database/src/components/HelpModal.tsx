@@ -5,11 +5,12 @@ interface HelpModalProps {
   onClose: () => void;
 }
 
-function Chevron({ up }: { up: boolean }) {
+function ExpandToggle({ open }: { open: boolean }) {
   return (
-    <span style={{ display:"inline-flex", flexShrink:0, transform: up ? "rotate(180deg)" : "rotate(0deg)", transition:"transform 0.2s ease" }}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M4 6l4 4 4-4" stroke="#6f6a5f" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <span style={{ display:"inline-flex", alignItems:"center", gap:5, flexShrink:0, background: open ? "#eef3e6" : "#3f7a1f", color: open ? "#3f7a1f" : "#fff", border: open ? "1px solid #b8d49a" : "1px solid #3f7a1f", borderRadius:6, padding:"4px 10px", fontSize:11.5, fontWeight:700, fontFamily:"'Inter',sans-serif", letterSpacing:"0.01em" }}>
+      {open ? "Collapse" : "Expand"}
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition:"transform 0.2s ease" }}>
+        <path d="M4 6l4 4 4-4" stroke={open ? "#3f7a1f" : "#fff"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     </span>
   );
@@ -314,7 +315,7 @@ function PanelContent({ expanded, toggle, onClose }: {
               >
                 <Chip n={section.id} />
                 <span style={{ flex:1, fontWeight:700, color:"#3f7a1f", fontSize:14 }}>{section.title}</span>
-                <Chevron up={isOpen} />
+                <ExpandToggle open={isOpen} />
               </button>
 
               <div style={{ padding:"12px 14px 12px 51px", fontSize:13, color:"#383a37", lineHeight:1.65 }}>

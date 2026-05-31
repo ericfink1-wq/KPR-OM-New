@@ -202,12 +202,12 @@ DATA CONFIDENCE LEVELS (already computed — use as stated):
 - "low" (1 location or low effective weight): Directional only. Cap severity at "medium". Note "single data point" in description.
 
 RULES:
-1. For any tenant paying >20% BELOW their weighted portfolio avg:
-   - high confidence + 20–34% below → severity "medium"
-   - high confidence + ≥35% below → severity "high"
-   - medium confidence → severity "medium" regardless of gap size
-   - low confidence → severity "low" regardless of gap size
-   - Description must include: tenant name, this deal rent/SF, weighted portfolio avg, location count, data years, confidence, and % gap. Example: "Portfolio data from 4 locations (2021–2024, high confidence) shows Petco averaging $22.50/SF; this deal has them at $14.00/SF — 38% below benchmark, suggesting below-market rent or market softness."
+1. For any tenant paying >20% BELOW their weighted portfolio avg, decide what the gap MEANS using the per-tenant signals in {curly braces} (lease term left, renewal options, sales/SF, occupancy-cost %). Below-market rent is NOT automatically good or bad:
+   a. CAPTURABLE MARK-TO-MARKET UPSIDE → add to dealScore.strengths or upsideItems (NOT a red flag). Strongest when the tenant is below market AND has LITTLE term left (low remaining term / near expiry) AND few/no remaining fixed-rate options AND can clearly afford more (strong sales/SF with low occupancy-cost %). This is the rent we can push at rollover.
+   b. LOCKED-IN, NOT UPSIDE → if the tenant has many years of term left and/or multiple remaining fixed/below-market options, we'd never reach market during a normal hold. Mention only briefly (low severity / neutral), do NOT score it as upside.
+   c. WARNING / POSSIBLE SOFTNESS → if sales are weak or occupancy-cost % is already high, the low rent may signal a struggling tenant or soft market; pushing rent risks losing them. THIS is when below-market belongs in redFlags. Severity: high confidence + ≥35% below → "high"; high confidence + 20–34% → "medium"; medium confidence → "medium"; low confidence → "low".
+   d. SIGNALS ABSENT → if term/options/sales/occ-cost are unknown, stay measured: note it as a POSSIBLE mark-to-market opportunity contingent on lease term and sales, at "low" severity — do not assert either upside or distress.
+   - Any below-market mention must include: tenant name, this deal rent/SF, weighted portfolio avg, location count, data years, confidence, and % gap. Example (capturable): "Portfolio data from 4 locations (2021–2024, high confidence) shows Starbucks averaging $42/SF; this deal has them at $27/SF — 36% below — with only 1.5y left, no remaining options, and strong $1.1M/SF sales at a ~6% occupancy cost, a clear mark-to-market opportunity at rollover."
 2. For any tenant paying >20% ABOVE their weighted portfolio avg with high or medium confidence: add a strength bullet to dealScore.strengths noting the premium and data source.
 3. Keep ALL existing red flags unchanged — append benchmark-derived flags after them.
 4. When high-confidence data exists, prefer it over general market assumptions. You may update dealScore.grade and rationale if high-confidence benchmarks materially change the investment thesis (e.g. multiple anchors are deeply below-market vs. portfolio). Otherwise leave the grade unchanged.
@@ -341,10 +341,22 @@ export async function augmentScoringWithBenchmarks(
           Math.abs(bench.simpleAvgRentPerSf - bench.weightedAvgRentPerSf) > 0.5
             ? ` (unweighted avg ${fmtMoney(bench.simpleAvgRentPerSf)}/SF)`
             : "";
+        // Signals that decide whether below-market rent is capturable upside, locked-in, or a warning.
+        const term = toNum(t.remainingTermYears);
+        const sales = toNum(t.salesPSF);
+        const occCost = toNum(t.occupancyCost);
+        const optsRaw = typeof t.renewalOptions === "string" ? t.renewalOptions.trim() : "";
+        const mtmBits = [
+          term != null ? `term ${term.toFixed(1)}y left` : null,
+          optsRaw ? `options: ${optsRaw.slice(0, 60)}` : "options: none/unknown",
+          sales != null ? `sales ${fmtMoney(sales)}/SF` : null,
+          occCost != null ? `occ-cost ${occCost.toFixed(1)}%` : null,
+        ].filter(Boolean).join(", ");
         tenantLines.push(
           `• ${rawName} (${sfStr}): this deal ${fmtMoney(rentPSF)}/SF vs weighted portfolio avg ${fmtMoney(bench.weightedAvgRentPerSf)}/SF${simpleNote}` +
             ` [${bench.locationCount} location(s), ${dateRange}, effective weight ${effCount}, confidence: ${bench.confidence}]` +
-            ` → ${pctStr(pct)} vs benchmark`,
+            ` → ${pctStr(pct)} vs benchmark` +
+            (mtmBits ? ` {${mtmBits}}` : ""),
         );
       } else if (bench.locationCount > 0) {
         tenantLines.push(

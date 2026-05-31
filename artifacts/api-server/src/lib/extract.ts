@@ -316,8 +316,15 @@ Return ONLY a single valid JSON object with EXACTLY these keys and nothing else:
   "notes": "5-8 sentence institutional underwriting narrative covering: (1) what the asset is and why the location matters, (2) anchor tenant quality and lease profile, (3) inline tenant mix and credit quality, (4) key lease metrics (WALT, occupancy, rent PSF), (5) the primary investment thesis (cash-flow, mark-to-market, value-add, or development), (6) the most important risk or watch item. Specific and data-driven using the numbers provided; no generic filler; do not just restate the tenant list.",
   "dealScore": {"grade":"A+|A|B+|B|C+|C|D","rationale":"one precise sentence grounded in the data","strengths":["string"],"risks":["string"]},
   "upsideItems": [{"priority":"high|medium|low","item":"short label","detail":"1-2 sentences; empty array if none beyond going-in yield"}],
-  "redFlags": [{"severity":"high|medium|low","description":"string; reflect near-term lease expirations, below-market rent, or vacancy evident in the data"}]
+  "redFlags": [{"severity":"high|medium|low","description":"string; reflect near-term lease expirations or vacancy evident in the data"}]
 }
+
+BELOW-MARKET RENT — judge it correctly, do not treat it as automatically good or bad:
+- Below-market rent is only real MARK-TO-MARKET UPSIDE when the landlord can actually capture it during a normal hold. The strongest case (priority "high") is a tenant that is BELOW market AND has LITTLE LEASE TERM REMAINING (low remainingTermYears / near-term leaseExpiry) AND few or no remaining fixed-rate renewal options (renewalOptions) AND demonstrates it can pay more — STRONG sales (salesPSF) with a LOW occupancyCost %. That tenant can be marked to market at rollover.
+- DISCOUNT the upside when the tenant has many years of term left, OR has multiple remaining options at fixed/below-market rents (you would never reach market during the hold) — in that case below-market rent is locked in, not upside. Mention it at most as minor/"low".
+- Below-market rent can also be a WARNING, not upside: if sales are weak or occupancyCost is already high, the low rent may reflect a struggling tenant or a soft market, and pushing rent at renewal risks losing them. Frame it as a risk in that case.
+- If sales/occupancy-cost data is absent, stay measured: note the below-market rent as a POSSIBLE mark-to-market opportunity contingent on lease term/options and sales, rather than asserting upside.
+
 Base everything on the CURRENT roster below (note tenantsAsOf — this roster supersedes any older OM). Output must start with { and end with }.
 
 CURRENT PROPERTY DATA (JSON):
@@ -338,6 +345,9 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>): Prom
       leaseExpiry: x.leaseExpiry, remainingTermYears: x.remainingTermYears,
       isAnchor: x.isAnchor, isNAP: x.isNAP, isDark: x.isDark, creditRating: x.creditRating,
       leaseType: x.leaseType, rentSchedule: x.rentSchedule,
+      // Needed to judge whether below-market rent is REAL mark-to-market upside
+      renewalOptions: x.renewalOptions, rentBumps: x.rentBumps,
+      salesPSF: x.salesPSF, salesYear: x.salesYear, occupancyCost: x.occupancyCost,
     })),
   };
   const content = ROSTER_ANALYSIS_PROMPT + JSON.stringify(snapshot, null, 1);
