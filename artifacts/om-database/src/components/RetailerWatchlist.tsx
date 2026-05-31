@@ -40,6 +40,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [editId, setEditId] = useState<string | null>(null);
+  const [scope, setScope] = useState<"all" | "owned">("all");
 
   const load = useCallback(() => {
     fetch("/api/watchlist", { credentials: "include" })
@@ -52,10 +53,14 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Build a map from canonical tenant key -> exposure across all deals (once per deals change)
+  // Build a map from canonical tenant key -> exposure across the in-scope deals.
+  const scopedDeals = useMemo(
+    () => scope === "owned" ? deals.filter(d => d.status === "Owned" || d.status === "Sold") : deals,
+    [deals, scope],
+  );
   const exposureByKey = useMemo(() => {
     const map = new Map<string, Exposure>();
-    for (const d of deals) {
+    for (const d of scopedDeals) {
       const seenInDeal = new Set<string>(); // count a brand once per center
       for (const t of d.tenants || []) {
         if (!t.name || isVacant(t.name)) continue;
@@ -76,7 +81,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
       }
     }
     return map;
-  }, [deals]);
+  }, [scopedDeals]);
 
   const watched = useMemo(() => {
     if (!rows) return [];
@@ -93,6 +98,9 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
       return b.exp.totalRent - a.exp.totalRent;
     });
   }, [rows, exposureByKey]);
+
+  const exposedRows = useMemo(() => watched.filter(w => w.exp.centers.length > 0), [watched]);
+  const noExposureRows = useMemo(() => watched.filter(w => w.exp.centers.length === 0), [watched]);
 
   const totals = useMemo(() => {
     const exposedBrands = watched.filter(w => w.exp.centers.length > 0);
@@ -139,6 +147,52 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
 
   const inp: React.CSSProperties = { border: "1px solid #d9d2c4", borderRadius: 6, padding: "7px 9px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", width: "100%", boxSizing: "border-box" };
 
+  const scopeWord = scope === "owned" ? "owned portfolio" : "dataset";
+
+  const renderRow = (w: (typeof watched)[number]) => {
+    const m = meta(w.status);
+    const exposed = w.exp.centers.length > 0;
+    const isOpen = expanded.has(w.id);
+    return (
+      <div key={w.id} style={{ background: "#fff", border: `1px solid ${exposed ? "#ecd9c0" : "#efe8da"}`, borderLeft: `3px solid ${exposed ? m.bg : "#efe8da"}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: exposed ? "pointer" : "default", flexWrap: "wrap" }}
+          onClick={() => exposed && toggle(w.id)}>
+          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", color: m.color, background: m.bg, border: `1px solid ${m.border}`, borderRadius: 4, padding: "2px 7px", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif" }}>{w.brand}</span>
+          {exposed ? (
+            <span style={{ fontSize: 11.5, color: "#b3261e", fontWeight: 600 }}>
+              {w.exp.centers.length} center{w.exp.centers.length !== 1 ? "s" : ""} · {fmtSF(w.exp.totalSF)} · {fmtMoney(w.exp.totalRent)} rent
+              {w.exp.darkCount > 0 && <span style={{ color: "#3a342b" }}> · {w.exp.darkCount} dark</span>}
+            </span>
+          ) : (
+            <span style={{ fontSize: 11.5, color: "#9a9384" }}>No locations in {scopeWord}</span>
+          )}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+            {w.sourceUrl && <a href={w.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#4f7aac" }}>source ↗</a>}
+            <button onClick={e => { e.stopPropagation(); startEdit(w); }} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 11 }}>edit</button>
+            <button onClick={e => { e.stopPropagation(); remove(w.id, w.brand); }} style={{ background: "transparent", border: "none", color: "#c98", cursor: "pointer", fontSize: 11 }}>remove</button>
+            {exposed && <span style={{ fontSize: 10, color: "#a69e91" }}>{isOpen ? "▲" : "▼"}</span>}
+          </div>
+        </div>
+        {w.note && <div style={{ fontSize: 11.5, color: "#8b8578", padding: "0 14px 10px", marginTop: -4 }}>{w.note}</div>}
+        {isOpen && exposed && (
+          <div style={{ borderTop: "1px solid #f1ece1", padding: "4px 0" }}>
+            {w.exp.centers.slice().sort((a, b) => b.annualRent - a.annualRent).map((c, i) => (
+              <div key={c.dealId + i} onClick={() => onOpenDeal?.(c.dealId)}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: onOpenDeal ? "pointer" : "default", borderTop: i === 0 ? "none" : "1px solid #f6f2ea", flexWrap: "wrap" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#383a37", textDecoration: onOpenDeal ? "underline" : "none", textDecorationColor: "#d8cfbd" }}>{c.propertyName}</span>
+                {c.isDark && <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: "#3a342b", borderRadius: 10, padding: "1px 6px" }}>DARK</span>}
+                {c.status && <span style={{ fontSize: 10, color: "#a69e91", textTransform: "capitalize" }}>{c.status}</span>}
+                <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6f6a5f" }}>{fmtSF(c.sf)} · {fmtMoney(c.annualRent)} rent</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
@@ -154,6 +208,19 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
             + Add retailer
           </button>
         )}
+      </div>
+
+      {/* All / Owned scope toggle */}
+      <div style={{ display: "flex", marginBottom: 14 }}>
+        <div style={{ display: "flex", background: "#ede8df", borderRadius: 7, padding: 2, flexShrink: 0 }}>
+          {(["all", "owned"] as const).map(opt => (
+            <button key={opt} onClick={() => setScope(opt)}
+              style={{ padding: "5px 14px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif",
+                background: scope === opt ? "#383a37" : "transparent", color: scope === opt ? "#fff" : "#7d766a", transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap" }}>
+              {opt === "all" ? "All" : "Owned"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Exposure summary strip */}
@@ -214,51 +281,37 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
 
       {/* Watchlist rows */}
       {rows && watched.length === 0 && <div style={{ color: "#a69e91", fontSize: 13, padding: "20px 0" }}>No retailers on the watchlist yet. Add one above.</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {watched.map(w => {
-          const m = meta(w.status);
-          const exposed = w.exp.centers.length > 0;
-          const isOpen = expanded.has(w.id);
-          return (
-            <div key={w.id} style={{ background: "#fff", border: `1px solid ${exposed ? "#ecd9c0" : "#efe8da"}`, borderLeft: `3px solid ${exposed ? m.bg : "#efe8da"}`, borderRadius: 10, overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: exposed ? "pointer" : "default", flexWrap: "wrap" }}
-                onClick={() => exposed && toggle(w.id)}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", color: m.color, background: m.bg, border: `1px solid ${m.border}`, borderRadius: 4, padding: "2px 7px", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif" }}>{w.brand}</span>
-                {exposed ? (
-                  <span style={{ fontSize: 11.5, color: "#b3261e", fontWeight: 600 }}>
-                    {w.exp.centers.length} center{w.exp.centers.length !== 1 ? "s" : ""} · {fmtSF(w.exp.totalSF)} · {fmtMoney(w.exp.totalRent)} rent
-                    {w.exp.darkCount > 0 && <span style={{ color: "#3a342b" }}> · {w.exp.darkCount} dark</span>}
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 11.5, color: "#9a9384" }}>No exposure in portfolio</span>
-                )}
-                <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-                  {w.sourceUrl && <a href={w.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#4f7aac" }}>source ↗</a>}
-                  <button onClick={e => { e.stopPropagation(); startEdit(w); }} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 11 }}>edit</button>
-                  <button onClick={e => { e.stopPropagation(); remove(w.id, w.brand); }} style={{ background: "transparent", border: "none", color: "#c98", cursor: "pointer", fontSize: 11 }}>remove</button>
-                  {exposed && <span style={{ fontSize: 10, color: "#a69e91" }}>{isOpen ? "▲" : "▼"}</span>}
-                </div>
-              </div>
-              {w.note && <div style={{ fontSize: 11.5, color: "#8b8578", padding: "0 14px 10px", marginTop: -4 }}>{w.note}</div>}
-              {isOpen && exposed && (
-                <div style={{ borderTop: "1px solid #f1ece1", padding: "4px 0" }}>
-                  {w.exp.centers.sort((a, b) => b.annualRent - a.annualRent).map((c, i) => (
-                    <div key={c.dealId + i} onClick={() => onOpenDeal?.(c.dealId)}
-                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: onOpenDeal ? "pointer" : "default", borderTop: i === 0 ? "none" : "1px solid #f6f2ea", flexWrap: "wrap" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                      <span style={{ fontSize: 12.5, fontWeight: 600, color: "#383a37", textDecoration: onOpenDeal ? "underline" : "none", textDecorationColor: "#d8cfbd" }}>{c.propertyName}</span>
-                      {c.isDark && <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: "#3a342b", borderRadius: 10, padding: "1px 6px" }}>DARK</span>}
-                      {c.status && <span style={{ fontSize: 10, color: "#a69e91", textTransform: "capitalize" }}>{c.status}</span>}
-                      <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6f6a5f" }}>{fmtSF(c.sf)} · {fmtMoney(c.annualRent)} rent</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+
+      {/* Section 1 — watched retailers WITH locations in the current scope */}
+      {exposedRows.length > 0 && (
+        <>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "4px 0 10px" }}>
+            <h4 style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: "#26281f", margin: 0 }}>
+              In your {scope === "owned" ? "owned portfolio" : "dataset"}
+            </h4>
+            <span style={{ fontSize: 11, color: "#a69e91" }}>{exposedRows.length} brand{exposedRows.length !== 1 ? "s" : ""} with locations</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {exposedRows.map(renderRow)}
+          </div>
+        </>
+      )}
+
+      {/* Separation + Section 2 — watched retailers with NO locations in scope */}
+      {noExposureRows.length > 0 && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: exposedRows.length > 0 ? "26px 0 10px" : "4px 0 10px" }}>
+            <div style={{ height: 1, background: "#e7ddcb", flex: 1 }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+              Not in {scope === "owned" ? "owned portfolio" : "dataset"} · {noExposureRows.length}
+            </span>
+            <div style={{ height: 1, background: "#e7ddcb", flex: 1 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {noExposureRows.map(renderRow)}
+          </div>
+        </>
+      )}
     </div>
   );
 }
