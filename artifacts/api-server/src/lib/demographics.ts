@@ -88,6 +88,131 @@ export async function fetchCensusDemographics(address: string): Promise<MarketDe
       };
     }
 
+    // ── Preferred method: block-group centroid apportionment ────────────────
+    // Block groups are ~3× finer than census tracts. We take every block group
+    // whose polygon touches the 5-mile ring, then assign each to the 1/3/5-mile
+    // rings by whether its CENTROID falls inside that radius. Counting only the
+    // centroids that land inside the circle apportions population far better than
+    // summing whole tracts that merely clip the ring (the old method's overcount,
+    // which inflated the 1-mile ring ~3×). Falls back to the tract method below
+    // if anything here returns no usable data.
+    const center = coords;
+    const bgResult = await (async (): Promise<MarketDemographics | null> => {
+      function milesBetween(aLat: number, aLng: number, bLat: number, bLng: number): number {
+        const R = 3958.7613, toRad = (d: number) => (d * Math.PI) / 180;
+        const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
+        const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+      }
+
+      // Block groups touching the 5-mile ring (superset), with centroids
+      let features: Array<{ geoid: string; state: string; county: string; lat: number; lng: number }> = [];
+      try {
+        const url =
+          `https://tigerweb.geo.census.gov/arcgis/rest/services/Census2020/Tracts_Blocks/MapServer/1/query` +
+          `?geometry=${center.lng},${center.lat}&geometryType=esriGeometryPoint&distance=5` +
+          `&units=esriSRUnit_StatuteMile&inSR=4326&spatialRel=esriSpatialRelIntersects` +
+          `&outFields=GEOID,STATE,COUNTY,CENTLAT,CENTLON&returnGeometry=false&f=json`;
+        const resp = await fetchWithTimeout(url);
+        if (!resp.ok) return null;
+        const json = await resp.json() as { features?: Array<{ attributes: Record<string, string> }>; error?: { message?: string } };
+        if (json.error || !json.features?.length) return null;
+        features = json.features.map(f => ({
+          geoid: f.attributes.GEOID,
+          state: f.attributes.STATE,
+          county: f.attributes.COUNTY,
+          lat: Number(f.attributes.CENTLAT),
+          lng: Number(f.attributes.CENTLON),
+        })).filter(b => b.geoid && isFinite(b.lat) && isFinite(b.lng));
+      } catch {
+        return null;
+      }
+      if (features.length === 0) return null;
+
+      // Ring membership by centroid distance from the property
+      const g1 = new Set<string>(), g3 = new Set<string>(), g5 = new Set<string>();
+      for (const b of features) {
+        const dist = milesBetween(center.lat, center.lng, b.lat, b.lng);
+        if (dist <= 5) g5.add(b.geoid);
+        if (dist <= 3) g3.add(b.geoid);
+        if (dist <= 1) g1.add(b.geoid);
+      }
+      if (g5.size === 0) return null;
+
+      // Counties to query ACS for (any block group with a centroid within 5 mi)
+      const counties = new Map<string, { state: string; county: string }>();
+      for (const b of features) if (g5.has(b.geoid)) counties.set(`${b.state}-${b.county}`, { state: b.state, county: b.county });
+
+      // ACS at the block-group level — 2024 first, fall back to 2023. Tries both
+      // valid "in" forms (with and without an explicit tract wildcard) so we work
+      // regardless of the endpoint's hierarchy requirement.
+      const acs = new Map<string, { pop: number; households: number; aggIncome: number }>();
+      let vStart = 2020, vEnd = 2024;
+      for (const { state, county } of counties.values()) {
+        let got = false;
+        for (const vintage of [2024, 2023]) {
+          if (got) break;
+          for (const inClause of [`state:${state} county:${county}`, `state:${state} county:${county} tract:*`]) {
+            const params = new URLSearchParams({ get: "B01003_001E,B19025_001E,B11001_001E", for: "block group:*", in: inClause });
+            if (process.env.CENSUS_API_KEY) params.set("key", process.env.CENSUS_API_KEY);
+            try {
+              const resp = await fetchWithTimeout(`https://api.census.gov/data/${vintage}/acs/acs5?${params.toString()}`);
+              if (!resp.ok) continue;
+              const text = await resp.text();
+              if (text.trim().startsWith("<")) continue;
+              const rows = JSON.parse(text) as string[][];
+              if (!rows || rows.length < 2) continue;
+              const h = rows[0];
+              const pI = h.indexOf("B01003_001E"), iI = h.indexOf("B19025_001E"), hI = h.indexOf("B11001_001E");
+              const sI = h.indexOf("state"), cI = h.indexOf("county"), tI = h.indexOf("tract"), bI = h.indexOf("block group");
+              if (bI < 0 || tI < 0) continue;
+              for (let i = 1; i < rows.length; i++) {
+                const r = rows[i];
+                const geoid = `${r[sI]}${r[cI]}${r[tI]}${r[bI]}`;
+                acs.set(geoid, {
+                  pop: Math.max(0, Number(r[pI]) || 0),
+                  households: Math.max(0, Number(r[hI]) || 0),
+                  aggIncome: Math.max(0, Number(r[iI]) || 0),
+                });
+              }
+              if (vintage === 2023) { vStart = 2019; vEnd = 2023; }
+              got = true;
+              break;
+            } catch { /* try next variant/vintage */ }
+          }
+        }
+      }
+      if (acs.size === 0) return null;
+
+      const agg = (set: Set<string>): { pop: number; avgHHI: number | null } => {
+        let pop = 0, hh = 0, inc = 0;
+        for (const g of set) { const r = acs.get(g); if (r) { pop += r.pop; hh += r.households; inc += r.aggIncome; } }
+        return { pop: Math.round(pop), avgHHI: hh > 0 ? Math.round(inc / hh) : null };
+      };
+      const a1 = agg(g1), a3 = agg(g3), a5 = agg(g5);
+      if (![a1.pop, a3.pop, a5.pop].some(v => v > 0)) return null;
+
+      debug.method = "blockgroup-centroid";
+      debug.blockGroups = { fetched: features.length, in1: g1.size, in3: g3.size, in5: g5.size, acsLoaded: acs.size, counties: counties.size };
+
+      return {
+        pop1mi: a1.pop || null,
+        pop3mi: a3.pop || null,
+        pop5mi: a5.pop || null,
+        avgHHI1mi: a1.avgHHI,
+        avgHHI3mi: a3.avgHHI,
+        avgHHI5mi: a5.avgHHI,
+        confidence: "high",
+        source: "US Census Bureau ACS 5-Year Estimates",
+        asOf: `${vStart}–${vEnd}`,
+        note: null,
+        sources: [{ url: "https://www.census.gov/programs-surveys/acs", title: "American Community Survey 5-Year Estimates" }],
+        lookedUpAt: new Date().toISOString(),
+      };
+    })();
+    if (bgResult) return bgResult;
+    // Block-group method unavailable — fall through to the legacy tract method.
+
     // ── Step 2: Tracts for each radius ──────────────────────────────────────
     async function fetchTractsForRadius(lat: number, lng: number, miles: number): Promise<TractFeature[]> {
       const url =
