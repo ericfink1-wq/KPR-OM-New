@@ -418,6 +418,13 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               Tenant Analytics
             </button>
           )}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <button onClick={handleScoreUnscored} disabled={scoring} style={{ background: scoring ? "#eef3e6" : "transparent", border: "1px solid #6dba43", color: scoring ? "#a89f8f" : "#3f7a1f", padding: "6px 12px", borderRadius: 7, cursor: scoring ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 12 }}>★</span>
+              {scoring ? "Scoring…" : "Score unscored deals"}
+            </button>
+            {scoreMsg && <span style={{ fontSize: 10.5, color: scoreMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{scoreMsg}</span>}
+          </div>
           {isAdmin && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
               <button onClick={handleRebuildComps} disabled={rebuildingComps} style={{ background: rebuildingComps ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuildingComps ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuildingComps ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
