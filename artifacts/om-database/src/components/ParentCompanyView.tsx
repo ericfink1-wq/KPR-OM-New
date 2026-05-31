@@ -125,6 +125,20 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4, flexWrap:"wrap" }}>
         <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:600, color:"#26281f", margin:0 }}>{parentName}</h1>
         <span style={{ fontSize:10, color:"#6f6a5f", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Parent Company</span>
+        {anchorCount > 0 && <span style={{ fontSize:10, color:"#1f2b16", background:"#6dba4322", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>ANCHOR · {anchorCount}</span>}
+        {igBrands.size > 0 && (
+          <span title={allBrandsIG ? "All brands under this company are investment grade" : `${igBrands.size} of ${distinctBrands.size} brands are investment grade`}
+            style={{ fontSize:10, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>
+            Investment Grade{allBrandsIG ? "" : ` · ${igBrands.size}/${distinctBrands.size}`}
+          </span>
+        )}
+        {headerCredit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Credit: {headerCredit}</span>}
+        {headerWatch && (() => { const m = WATCH_STATUS_META[headerWatch.status] || WATCH_STATUS_META.watch; return (
+          <span title={`Retailer watchlist — ${m.label}: ${headerWatch.note || headerWatch.brand}`}
+            style={{ fontSize:10, color:m.color, background:m.bg, border:`1px solid ${m.border}`, padding:"2px 9px", borderRadius:12, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.03em" }}>
+            ⚠ {m.label}
+          </span>
+        ); })()}
       </div>
 
       {/* Subtitle + scope toggle on same row */}
@@ -187,6 +201,11 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                             {r.brandLabel}
                           </button>
                           {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
+                          {isNAPTenant(r.t) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
+                          {(r.t.name || "") && isInvestmentGrade(r.t.name || "", r.t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>Investment Grade</span>}
+                          {(() => { const w = lookupWatch(watchMap, r.t.name); if (!w) return null; const m = WATCH_STATUS_META[w.status] || WATCH_STATUS_META.watch; return (
+                            <span title={`Retailer watchlist — ${m.label}: ${w.note || w.brand}`} style={{ fontSize:9, color:m.color, background:m.bg, border:`1px solid ${m.border}`, padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.03em" }}>⚠ {m.label}</span>
+                          ); })()}
                         </td>
                         <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
