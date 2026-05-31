@@ -4,7 +4,7 @@ import { compsIndexTable, dealsTable } from "@workspace/db";
 import { and, or, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
 import { rebuildAllComps, rebuildCompsIndex } from "../lib/compsIndex";
 
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 import { toFloat, toStr } from "../lib/parsers";
 
 const router = Router();
@@ -530,6 +530,26 @@ router.post("/comps/rebuild-all", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to rebuild comps index");
     res.status(500).json({ error: "Failed to rebuild comps index" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/comps/retag-manual-to-upload — admin one-time cleanup
+// Re-tags every legacy "__manual__" comp as "__upload__" so historical bulk
+// imports show the UPLOAD badge. Only touches rows whose sourceDealId is exactly
+// "__manual__"; isManual stays true (same quality tier). Idempotent.
+// ---------------------------------------------------------------------------
+router.post("/comps/retag-manual-to-upload", requireAdmin, async (req, res) => {
+  try {
+    const updated = await db.update(compsIndexTable)
+      .set({ sourceDealId: "__upload__", updatedAt: new Date() })
+      .where(eq(compsIndexTable.sourceDealId, "__manual__"))
+      .returning({ id: compsIndexTable.id });
+    req.log.info({ retagged: updated.length }, "Retagged manual comps to upload");
+    res.json({ ok: true, retagged: updated.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to retag manual comps");
+    res.status(500).json({ error: "Failed to retag manual comps" });
   }
 });
 
