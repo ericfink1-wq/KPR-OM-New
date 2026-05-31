@@ -6,6 +6,8 @@ import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { classifyLocation, cityState, assessExtraction } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
+import { useWatchlist } from "../lib/useWatchlist";
+import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import RecencyBadge from "./RecencyBadge";
 
 interface Props {
@@ -204,6 +206,7 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
 }
 
 export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFiles }: Props) {
+  const watchMap = useWatchlist();
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [filterStates, setFilterStates] = useState<string[]>([]);
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
@@ -1041,6 +1044,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
           {rows.map(d => {
             const sc = STATUS_COLORS[d.status || ""] || "#a69e91";
             const loc = cityState(d);
+            const adjScore = computeWatchlistImpact(d, watchMap).adjustScore(d.dealScore);
             return (
               <button key={d.id} onClick={() => onOpen(d.id)}
                 style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 14, padding: "16px 18px", textAlign: "left", cursor: "pointer", boxShadow: "0 1px 2px rgba(56,58,55,0.04)", transition: "transform .2s ease" }}
@@ -1049,7 +1053,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: sc, flexShrink: 0 }} />
                   <span style={{ fontSize: 9, color: sc, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{d.status}</span>
-                  <ScoreBadge score={d.dealScore} size={11} />
+                  <ScoreBadge score={adjScore} size={11} />
                   <RecencyBadge deal={d} />
                 </div>
                 <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 500, color: "#26281f", marginBottom: 2, lineHeight: 1.2 }}>{d.propertyName || d.fileName || "Untitled"}</div>

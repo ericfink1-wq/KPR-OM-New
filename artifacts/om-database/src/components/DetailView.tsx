@@ -16,6 +16,8 @@ import LeaseRollover from "./LeaseRollover";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import DealSummaryPDF from "./DealSummaryPDF";
 import { isInvestmentGrade } from "../lib/tenantCredit";
+import { useWatchlist } from "../lib/useWatchlist";
+import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import ClosingCostsCard from "./ClosingCostsCard";
 import TenantSalesPanel from "./TenantSalesPanel";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
@@ -708,6 +710,9 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
 }
 
 export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick }: Props) {
+  const watchMap = useWatchlist();
+  const watchImpact = computeWatchlistImpact(d, watchMap);
+  const adjustedScore = watchImpact.adjustScore(d.dealScore);
   const [confirmDel, setConfirmDel] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [imgs, setImgs] = useState<ImageBundle | null>(null);
@@ -1549,7 +1554,7 @@ ${text.slice(0, 40000)}`;
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:6, marginBottom:4 }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
             <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
-            <ScoreBadge score={d.dealScore} size={12}/>
+            <ScoreBadge score={adjustedScore} size={12}/>
             <RecencyBadge deal={d}/>
             {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
             {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
@@ -1869,11 +1874,17 @@ ${text.slice(0, 40000)}`;
           <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
             <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
               <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
-              {d.dealScore && <ScoreBadge score={d.dealScore}/>}
+              {d.dealScore && <ScoreBadge score={adjustedScore}/>}
+              {watchImpact.notches > 0 && d.dealScore && (
+                <span title={`Lowered from ${d.dealScore.grade} for at-risk tenant exposure, weighted by share of income.`}
+                  style={{ display:"inline-flex", alignItems:"center", gap:4, fontSize:9*fs, color:"#b3261e", background:"#fbe6e4", border:"1px solid #f0c5c1", padding:"2px 7px", borderRadius:10, fontWeight:700 }}>
+                  ⚠ Adjusted from {d.dealScore.grade} · watchlist
+                </span>
+              )}
               {d.analysisStale && <StaleBadge />}
             </div>
             {d.dealScore && <>
-              <p style={{ fontSize:12*fs, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{d.dealScore.rationale}</p>
+              <p style={{ fontSize:12*fs, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{(adjustedScore || d.dealScore).rationale}</p>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <div>
                   <div style={{ fontSize:8*fs, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
@@ -1922,7 +1933,7 @@ ${text.slice(0, 40000)}`;
       {(() => {
         const expenseFlag = deriveExpenseRiskFlag(d);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(d.redFlags || [])]
+        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return (allRedFlags.length > 0 || d.analysisStale) && (
           <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
