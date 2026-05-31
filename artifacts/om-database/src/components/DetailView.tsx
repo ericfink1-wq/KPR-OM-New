@@ -2170,9 +2170,9 @@ ${text.slice(0, 40000)}`;
         );
       })()}
 
-      {/* FINANCING & DEBT — full loan record once a deal is Owned or Sold */}
+      {/* FINANCING & DEBT — loan record / term sheet for deals Under Contract, Owned, or Sold */}
       {(() => {
-        const owned = d.status === "Owned" || d.status === "Sold";
+        const owned = d.status === "Owned" || d.status === "Sold" || d.status === "Under Contract";
         const f = (p: Omit<TxnFieldProps,"dealId"|"onUpdate">) =>
           <TxnField key={p.field as string} {...p} initial={d[p.field]} dealId={d.id} onUpdate={onUpdate} />;
         const Group = ({ title }: { title: string }) => (
@@ -2195,12 +2195,18 @@ ${text.slice(0, 40000)}`;
         if (!owned) return (
           <div style={{ background:"#ffffff", border:"1px dashed #ddd4c2", borderRadius:12, padding:"16px 20px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
             <div style={{ fontSize:13, color:"#837c6e" }}>
-              <span style={{ fontWeight:600, color:"#383a37" }}>Financing & Debt</span> — set this deal's status to <span style={{ fontWeight:600 }}>Owned</span> to record acquisition financing.
+              <span style={{ fontWeight:600, color:"#383a37" }}>Financing & Debt</span> — set this deal's status to <span style={{ fontWeight:600 }}>Under Contract</span> or <span style={{ fontWeight:600 }}>Owned</span> to record financing or upload a term sheet.
             </div>
-            <button onClick={() => onUpdate(d.id, { status:"Owned" })}
-              style={{ background:"#6dba43", border:"none", color:"#1f2b16", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
-              Mark as Owned
-            </button>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <button onClick={() => onUpdate(d.id, { status:"Under Contract" })}
+                style={{ background:"#f6efe0", border:"1px solid #e0c98a", color:"#8a5a12", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
+                Mark Under Contract
+              </button>
+              <button onClick={() => onUpdate(d.id, { status:"Owned" })}
+                style={{ background:"#6dba43", border:"none", color:"#1f2b16", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
+                Mark as Owned
+              </button>
+            </div>
           </div>
         );
 
