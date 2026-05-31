@@ -10,7 +10,8 @@ import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
 import { loadPdfJs, _capturePagePhoto, extractPdfText } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
-import { exportDealToExcel } from "../lib/exportExcel";
+import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
+import RentRollPDF from "./RentRollPDF";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
 import { PDFDownloadLink } from "@react-pdf/renderer";
@@ -1810,7 +1811,26 @@ ${text.slice(0, 40000)}`;
 
       {/* Tenant roster */}
       {(d.tenants||[]).length > 0 && (
-        <div id="section-tenants"><TenantRoster
+        <div id="section-tenants">
+          <div style={{ display:"flex", justifyContent:"flex-end", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+            <button onClick={() => exportRosterToExcel(d)}
+              title="Export this rent roll to a clean Excel file"
+              style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+              ⬇ Rent roll — Excel
+            </button>
+            <PDFDownloadLink
+              document={<RentRollPDF deal={d} />}
+              fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
+              style={{ textDecoration:"none" }}
+            >
+              {({ loading }) => (
+                <span style={{ background:"#2a2c27", border:"1px solid #2a2c27", color:"#fff", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
+                  {loading ? "Preparing…" : "⬇ Rent roll — PDF"}
+                </span>
+              )}
+            </PDFDownloadLink>
+          </div>
+          <TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
           onUpdateTenant={(idx, patch) => {

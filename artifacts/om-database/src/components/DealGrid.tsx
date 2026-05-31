@@ -9,6 +9,7 @@ import ScoreBadge from "./ScoreBadge";
 import { useWatchlist } from "../lib/useWatchlist";
 import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { startAiTask, updateAiTask, finishAiTask } from "../lib/aiProgress";
+import { exportPortfolioToExcel } from "../lib/exportExcel";
 import RecencyBadge from "./RecencyBadge";
 
 interface Props {
@@ -931,6 +932,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
           />
         )}
         <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
+        <button onClick={() => exportPortfolioToExcel(rows, filterStatuses.length === 1 ? filterStatuses[0].replace(/\s+/g, "") : "All")} disabled={rows.length === 0}
+          title="Export the current (filtered) deal list to Excel"
+          style={{ background: "transparent", border: "1px solid #c8b89a", color: rows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 11px", borderRadius: 7, cursor: rows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
+          ⬇ Excel
+        </button>
         <button onClick={() => setViewMode(v => v === "table" ? "grid" : "table")}
           style={{ background: "transparent", border: "1px solid #e3dccd", color: "#a89f8f", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11 }}>
           {viewMode === "table" ? "⊞" : "☰"}

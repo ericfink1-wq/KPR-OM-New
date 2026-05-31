@@ -3,6 +3,7 @@ import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
 import { tenantKey, isVacant, isNAPTenant, tenantLabel, parentCompany } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
+import { exportAggregateToExcel, type AggColumn } from "../lib/exportExcel";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -341,6 +342,39 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     [parentRows, parentMode]
   );
 
+  const scopeLabel = filter === "owned" ? "Owned" : "All";
+
+  const exportTenants = () => {
+    const cols: AggColumn[] = [
+      { header: "Tenant", width: 30, get: r => tenantLabel(String((r as unknown as TenantRow).displayName)) },
+      { header: "Parent Company", width: 24, get: r => (r as unknown as TenantRow).parentCo ?? "" },
+      { header: "Locations", width: 11, fmt: "#,##0", get: r => (r as unknown as TenantRow).locationCount },
+      { header: "Total SF", width: 13, fmt: "#,##0", get: r => (r as unknown as TenantRow).totalSF || "" },
+      { header: "Total Annual Rent", width: 16, fmt: '$#,##0', get: r => (r as unknown as TenantRow).totalAnnualRent || "" },
+      { header: "Avg Rent/SF", width: 12, fmt: '$#,##0.00', get: r => { const t = r as unknown as TenantRow; return t.totalSF > 0 ? Math.round((t.totalAnnualRent / t.totalSF) * 100) / 100 : ""; } },
+      { header: "Anchor", width: 9, get: r => (r as unknown as TenantRow).isAnchor ? "Yes" : "" },
+      { header: "Investment Grade", width: 16, get: r => (r as unknown as TenantRow).isIG ? "Yes" : "" },
+      { header: "Credit Rating", width: 14, get: r => (r as unknown as TenantRow).creditRating ?? "" },
+    ];
+    exportAggregateToExcel(
+      activeRows as unknown as Record<string, unknown>[],
+      cols, "Tenants", `KPR_TenantAnalysis_${scopeLabel}_${new Date().toISOString().slice(0,10)}.xlsx`,
+    );
+  };
+
+  const exportParents = () => {
+    const cols: AggColumn[] = [
+      { header: "Parent Company", width: 28, get: r => String((r as { parent: string }).parent) },
+      { header: "Brands", width: 10, fmt: "#,##0", get: r => (r as { brands: Set<string> }).brands.size },
+      { header: "Locations", width: 11, fmt: "#,##0", get: r => (r as { locationCount: number }).locationCount },
+      { header: "Total Annual Rent", width: 16, fmt: '$#,##0', get: r => (r as { totalAnnualRent: number }).totalAnnualRent || "" },
+    ];
+    exportAggregateToExcel(
+      sortedParentRows as unknown as Record<string, unknown>[],
+      cols, "Parent Cos", `KPR_ParentExposure_${scopeLabel}_${new Date().toISOString().slice(0,10)}.xlsx`,
+    );
+  };
+
   // Credit / anchor — derived from activeRows
   const igCount = useMemo(() => activeRows.filter(r => r.isIG).length, [activeRows]);
   const igRent = useMemo(() => activeRows.filter(r => r.isIG).reduce((s, r) => s + r.totalAnnualRent, 0), [activeRows]);
@@ -614,12 +648,19 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
               <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 }}>
                 All Tenants ({rows.length})
               </div>
-              <input
-                value={tenantSearch}
-                onChange={e => setTenantSearch(e.target.value)}
-                placeholder="Search tenants…"
-                style={{ fontSize: 12, padding: "5px 10px", border: "1px solid #e3dccd", borderRadius: 7, color: "#383a37", background: "#f9f6f0", fontFamily: "'Inter',sans-serif", maxWidth: 220, width: "100%", minWidth: 0, boxSizing: "border-box" }}
-              />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={exportTenants} disabled={activeRows.length === 0}
+                  title="Export the tenant analysis list to Excel"
+                  style={{ background: "transparent", border: "1px solid #c8b89a", color: activeRows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: activeRows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                  ⬇ Excel
+                </button>
+                <input
+                  value={tenantSearch}
+                  onChange={e => setTenantSearch(e.target.value)}
+                  placeholder="Search tenants…"
+                  style={{ fontSize: 12, padding: "5px 10px", border: "1px solid #e3dccd", borderRadius: 7, color: "#383a37", background: "#f9f6f0", fontFamily: "'Inter',sans-serif", maxWidth: 220, width: "100%", minWidth: 0, boxSizing: "border-box" }}
+                />
+              </div>
             </div>
             <div style={{ maxHeight: 420, overflowY: "auto", display: "flex", flexDirection: "column" }}>
               {filteredAllTenants.length === 0 ? (
@@ -673,6 +714,12 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
             <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, flexWrap:"wrap", marginBottom:6 }}>
                 <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Parent Company Exposure</div>
+                <div style={{ display:"inline-flex", alignItems:"center", gap:8 }}>
+                <button onClick={exportParents}
+                  title="Export parent company exposure to Excel"
+                  style={{ background:"transparent", border:"1px solid #c8b89a", color:"#5c5047", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap" }}>
+                  ⬇ Excel
+                </button>
                 <div style={{ display:"inline-flex", background:"#f1eadc", borderRadius:7, padding:2, flexShrink:0 }}>
                   {([["rent","Rent"],["stores","Store count"]] as const).map(([key,label]) => (
                     <button key={key} onClick={() => setParentMode(key)}
@@ -682,6 +729,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                       {label}
                     </button>
                   ))}
+                </div>
                 </div>
               </div>
               <div style={{ fontSize:10, color:"#a69e91", marginBottom:12 }}>

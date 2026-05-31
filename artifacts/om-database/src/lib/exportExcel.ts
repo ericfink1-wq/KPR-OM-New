@@ -24,6 +24,46 @@ function applyFmt(ws: XLSX.WorkSheet, r: number, c: number, fmt: string) {
   if (cell && cell.v !== "" && cell.v != null) cell.z = fmt;
 }
 
+// ---------------------------------------------------------------------------
+// Shared "polish": freeze the header row, add an autofilter dropdown over it,
+// and bold it where the SheetJS build supports cell styles. Column number
+// formats are applied per-exporter via colFormats (1-based-safe column index map).
+// Works with the community xlsx build (freeze + autofilter + widths + z-formats
+// are honored; bold is best-effort).
+// ---------------------------------------------------------------------------
+function polishSheet(
+  ws: XLSX.WorkSheet,
+  opts: { rows: number; cols: number; widths: number[]; colFormats?: Record<number, string> },
+) {
+  const { rows, cols, widths, colFormats } = opts;
+  ws["!cols"] = widths.map(w => ({ wch: w }));
+  // Freeze the header row so it stays visible while scrolling.
+  ws["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" };
+  // Autofilter across the header row.
+  const lastCol = XLSX.utils.encode_col(Math.max(0, cols - 1));
+  ws["!autofilter"] = { ref: `A1:${lastCol}1` };
+  // Best-effort bold header (honored by styled builds; ignored otherwise).
+  for (let c = 0; c < cols; c++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 0, c })];
+    if (cell) cell.s = { font: { bold: true }, alignment: { vertical: "center" } };
+  }
+  // Number formats per data column.
+  if (colFormats) {
+    for (let r = 1; r < rows; r++) {
+      for (const [cStr, fmt] of Object.entries(colFormats)) applyFmt(ws, r, Number(cStr), fmt);
+    }
+  }
+}
+
+function downloadWb(ws: XLSX.WorkSheet, sheetName: string, fileName: string) {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileName);
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+
 export function exportDealToExcel(deal: Deal): void {
   const wb = XLSX.utils.book_new();
 
@@ -218,4 +258,111 @@ export function exportCompsToExcel(comps: CompExportRow[]): void {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Comps");
   XLSX.writeFile(wb, `KPR_Comps_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// ---------------------------------------------------------------------------
+// Export the PORTFOLIO deal library list to Excel (polished + formatted).
+// ---------------------------------------------------------------------------
+export function exportPortfolioToExcel(deals: Deal[], scopeLabel = "All"): void {
+  const headers = [
+    "Property", "City", "State", "Market", "Asset Type", "Center Type", "Status",
+    "Grade", "Total SF", "Occupancy (%)", "WALT (yrs)", "Avg Rent/SF",
+    "Cap Rate (%)", "NOI", "Asking Price", "Price/SF",
+  ];
+  const rows = deals.map(d => {
+    const sf = Number(d.totalSF) || 0;
+    const price = Number(d.askingPrice) || 0;
+    return [
+      d.propertyName ?? d.fileName ?? "",
+      d.city ?? "",
+      d.state ?? "",
+      d.market ?? "",
+      d.assetType ?? "",
+      d.centerType ?? "",
+      d.status ?? "",
+      d.dealScore?.grade ?? "",
+      safeNum(d.totalSF),
+      safeNum(d.occupancy),
+      safeNum(d.walt),
+      safeNum(d.weightedAvgRentPSF),
+      safeNum(d.capRate),
+      safeNum(d.noi),
+      safeNum(d.askingPrice),
+      sf > 0 && price > 0 ? Math.round(price / sf) : "",
+    ];
+  });
+  const aoa = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  polishSheet(ws, {
+    rows: aoa.length, cols: headers.length,
+    widths: [34, 16, 7, 20, 18, 18, 14, 7, 12, 13, 11, 11, 11, 16, 16, 11],
+    colFormats: { 8: "#,##0", 9: "0.0", 10: "0.0", 11: '$#,##0.00', 12: "0.00", 13: '$#,##0', 14: '$#,##0', 15: '$#,##0' },
+  });
+  downloadWb(ws, "Portfolio", `KPR_Portfolio_${scopeLabel}_${today()}.xlsx`);
+}
+
+// ---------------------------------------------------------------------------
+// Export ONE deal's rent roll to a clean, formatted single-sheet Excel.
+// (Distinct from exportDealToExcel, which is the full multi-sheet workbook.)
+// ---------------------------------------------------------------------------
+export function exportRosterToExcel(deal: Deal): void {
+  const tenants = deal.tenants ?? [];
+  const headers = [
+    "Tenant", "Anchor", "Dark", "Credit", "SF", "Rent/SF", "Annual Rent",
+    "Lease Start", "Lease Expiry", "Rem. Term (yrs)", "Lease Type",
+    "Renewal Options", "Rent Steps", "Sales PSF", "Notes",
+  ];
+  const rows = tenants.map(t => [
+    t.name ?? "",
+    t.isAnchor ? "Yes" : "",
+    t.isDark ? "Yes" : "",
+    t.creditRating ?? "",
+    safeNum(t.sf),
+    safeNum(t.rentPerSF),
+    safeNum(t.annualRent),
+    fmtDate(t.leaseStart),
+    fmtDate(t.leaseExpiry),
+    safeNum(t.remainingTermYears),
+    t.leaseType ?? "",
+    t.renewalOptions ?? "",
+    (() => { const f = filterFutureRentSteps(t.rentSchedule || t.rentBumps); return f ? f.split(";").map(s => s.trim()).filter(Boolean).join("\n") : ""; })(),
+    safeNum(t.salesPSF),
+    t.assumptionNote ?? "",
+  ]);
+  // Totals row
+  const totSF = tenants.reduce((s, t) => s + (Number(t.sf) || 0), 0);
+  const totRent = tenants.reduce((s, t) => s + (Number(t.annualRent) || 0), 0);
+  const totalRow = ["TOTAL", "", "", "", totSF || "", "", totRent || "", "", "", "", "", "", "", "", ""];
+  const aoa = [headers, ...rows, totalRow];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  polishSheet(ws, {
+    rows: aoa.length, cols: headers.length,
+    widths: [32, 8, 7, 12, 12, 10, 14, 13, 13, 16, 16, 26, 36, 11, 40],
+    colFormats: { 4: "#,##0", 5: '$#,##0.00', 6: '$#,##0', 9: "0.0", 13: '$#,##0.00' },
+  });
+  if (deal.tenantsAsOf && ws["A1"]) ws["A1"].c = [{ a: "KPR", t: `Rent roll as of: ${fmtDate(deal.tenantsAsOf)}` }];
+  const safeName = (deal.propertyName || deal.fileName || "deal").replace(/[/\\?%*:|"<>]/g, "-").slice(0, 80);
+  downloadWb(ws, "Rent Roll", `KPR_RentRoll_${safeName}_${today()}.xlsx`);
+}
+
+// ---------------------------------------------------------------------------
+// Export a Tenant Analytics aggregate list (by-tenant or by-parent) to Excel.
+// Generic: caller passes the already-aggregated rows + a column spec.
+// ---------------------------------------------------------------------------
+export type AggColumn = { header: string; width: number; fmt?: string; get: (r: Record<string, unknown>) => string | number | "" };
+
+export function exportAggregateToExcel(
+  rowsIn: Record<string, unknown>[],
+  columns: AggColumn[],
+  sheetName: string,
+  fileName: string,
+): void {
+  const headers = columns.map(c => c.header);
+  const rows = rowsIn.map(r => columns.map(c => c.get(r)));
+  const aoa = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const colFormats: Record<number, string> = {};
+  columns.forEach((c, i) => { if (c.fmt) colFormats[i] = c.fmt; });
+  polishSheet(ws, { rows: aoa.length, cols: headers.length, widths: columns.map(c => c.width), colFormats });
+  downloadWb(ws, sheetName, fileName);
 }
