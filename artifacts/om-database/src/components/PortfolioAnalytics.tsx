@@ -297,6 +297,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [rebuildMsg, setRebuildMsg] = useState<string | null>(null);
   const [rebuildingComps, setRebuildingComps] = useState(false);
   const [rebuildCompsMsg, setRebuildCompsMsg] = useState<string | null>(null);
+  const [scoring, setScoring] = useState(false);
+  const [scoreMsg, setScoreMsg] = useState<string | null>(null);
   const [scope, setScope] = useState<"all" | "owned">("all");
 
   // Effective deal IDs: when Owned, use ownedDealIds intersected with any Deal Library filter
@@ -349,6 +351,22 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       })
       .catch(e => setRebuildMsg(`⚠ ${e.message}`))
       .finally(() => setRebuilding(false));
+  };
+
+  const handleScoreUnscored = () => {
+    if (!window.confirm("Score every deal that doesn't have a grade yet? This runs the AI roster analysis on each ungraded deal and may take up to a minute.")) return;
+    setScoring(true);
+    setScoreMsg(null);
+    fetch("/api/deals/score-unscored", { method: "POST", credentials: "include" })
+      .then(r => r.json() as Promise<{ ok: boolean; scored?: number; failed?: number; total?: number; error?: string }>)
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || "Scoring failed");
+        const n = d.scored ?? 0;
+        setScoreMsg(`✓ Scored ${n} deal${n === 1 ? "" : "s"}${d.failed ? `, ${d.failed} failed` : ""} — reloading…`);
+        setTimeout(() => window.location.reload(), 1200);
+      })
+      .catch(e => setScoreMsg(`⚠ ${e.message}`))
+      .finally(() => setScoring(false));
   };
 
   const handleRebuildComps = () => {

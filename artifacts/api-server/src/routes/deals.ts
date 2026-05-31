@@ -612,4 +612,35 @@ router.post("/deals/:id/refresh-analysis", requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/deals/score-unscored — generate a grade for every deal that has no
+// dealScore yet (e.g. imported via JSON without a self-contained grade), using
+// the same roster analysis the per-deal "Refresh Analysis" action runs.
+router.post("/deals/score-unscored", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    const targets = rows.filter((r) => {
+      const d = r.data as Record<string, unknown>;
+      return !d.trashedAt && !d._processing && !d.dealScore;
+    });
+    let scored = 0, failed = 0;
+    for (const r of targets) {
+      const data = r.data as Record<string, unknown>;
+      try {
+        const analysis = await runRosterAnalysis(data);
+        await db.update(dealsTable)
+          .set({ data: { ...data, ...analysis }, updatedAt: new Date() })
+          .where(eq(dealsTable.id, r.id));
+        scored++;
+      } catch (err) {
+        req.log.error({ err, id: r.id }, "score-unscored: failed for deal");
+        failed++;
+      }
+    }
+    res.json({ ok: true, scored, failed, total: targets.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to score unscored deals");
+    res.status(500).json({ error: "Failed to score unscored deals" });
+  }
+});
+
 export default router;
