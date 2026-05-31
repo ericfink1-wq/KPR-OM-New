@@ -11,29 +11,23 @@ import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
-// imported deal and persist the result, mirroring POST /deals/:id/rescore. The
-// JSON's grade is the baseline; benchmarks only adjust it when they materially
-// differ, and benchmark red flags are layered in. Non-fatal.
-async function autoRescoreOnImport(id: string, data: Record<string, unknown>, log: Logger): Promise<void> {
+// imported deal and merge the result back. The JSON's self-contained grade is
+// the baseline (so we only rescore when one exists); benchmarks then adjust it
+// and layer in benchmark red flags. Fully non-fatal — errors are swallowed.
+async function autoRescoreOnImport(id: string, clean: Record<string, unknown>, log: Logger): Promise<void> {
   try {
-    const patch = await rescoreDeal(id, data, log);
-    const [row] = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
-    if (!row) return;
-    const cur = row.data as Record<string, unknown>;
-    await db.update(dealsTable)
-      .set({
-        data: {
-          ...cur,
-          ...(patch.dealScore !== undefined ? { dealScore: patch.dealScore } : {}),
-          ...(patch.redFlags !== undefined ? { redFlags: patch.redFlags } : {}),
-          lastScoredAt: patch.lastScoredAt,
-          lastScoredDealCount: patch.lastScoredDealCount,
-        },
-        updatedAt: new Date(),
-      })
-      .where(eq(dealsTable.id, id));
-  } catch (err) {
-    log.error({ err, id }, "Import auto-rescore failed (non-fatal)");
+    if (!clean.dealScore) return; // no baseline grade to augment — skip
+    const patch = await rescoreDeal(id, clean, log);
+    if (patch && Object.keys(patch).length > 0) {
+      const [row] = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+      if (!row) return;
+      const cur = row.data as Record<string, unknown>;
+      await db.update(dealsTable)
+        .set({ data: { ...cur, ...patch }, updatedAt: new Date() })
+        .where(eq(dealsTable.id, id));
+    }
+  } catch {
+    /* non-fatal — swallow silently */
   }
 }
 
