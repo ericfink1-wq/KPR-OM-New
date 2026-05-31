@@ -1067,6 +1067,10 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
                               OWNED
                             </span>
+                          ) : row.isManual && row.sourceDealId === "__upload__" ? (
+                            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#7a6aa0", background: "#efeaf7", border: "1px solid #d4c9ec", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                              UPLOAD
+                            </span>
                           ) : row.isManual ? (
                             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#5a7c9e", background: "#e8f1f8", border: "1px solid #c3d9ec", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
                               MANUAL

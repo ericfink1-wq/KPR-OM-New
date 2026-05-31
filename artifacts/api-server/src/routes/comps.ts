@@ -201,7 +201,10 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
       }
       const market = toStr(item.market);
       candidates.push({
-        sourceDealId: "__manual__", sourceDealName: null, sourceDealMarket: market,
+        // Bulk/file imports are tagged "__upload__" so the UI can show an UPLOAD
+        // badge distinct from a hand-typed MANUAL comp. Still isManual:true — same
+        // broker/manual quality tier for benchmarking, and still editable/deletable.
+        sourceDealId: "__upload__", sourceDealName: null, sourceDealMarket: market,
         name, address: toStr(item.address), market, state: toStr(item.state),
         saleDateRaw: toStr(item.saleDateRaw),
         saleDate: toStr(item.saleDate),

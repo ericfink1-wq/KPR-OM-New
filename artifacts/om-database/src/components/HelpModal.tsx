@@ -220,7 +220,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <>
         <p style={{ margin:0 }}>The <B>Comps</B> tab is a dedicated database of verified SALE comps — separate from your deal library. The banner shows total comps, total transaction volume, states covered, and the date span.</p>
         <BriefList items={[
-          <>Every comp is tagged by source quality: <B>OWNED</B> (your own verified trades, highest), <B>MANUAL</B> (broker/comp-sheet entries), and <B>OM</B> (pulled from offering memoranda — weakest, since the seller selected them).</>,
+          <>Every comp is tagged by source: <B>OWNED</B> (your own verified trades, highest), <B>MANUAL</B> (a single comp you typed in by hand), <B>UPLOAD</B> (comps brought in via a JSON file import), and <B>OM</B> (pulled from offering memoranda — weakest, since the seller selected them). MANUAL and UPLOAD carry the same weight in benchmarking; the tag just tells you how the comp got there.</>,
           <>Add comps manually, bulk-import JSON (Replace or Add), edit or delete any manual comp, and export the filtered set to Excel.</>,
           <>The table is fully sortable and searchable across name, market, state, anchor, buyer, and seller. Possible duplicate trades are flagged for review.</>,
           <>The actions column (hide/edit/delete) stays pinned to the right edge while you scroll.</>,
