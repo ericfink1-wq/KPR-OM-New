@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useIsMobile } from "../hooks/use-mobile";
+import { startAiTask, finishAiTask } from "../lib/aiProgress";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -369,6 +370,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     if (!window.confirm(`Refresh the written analysis for ${staleCount} deal${staleCount === 1 ? "" : "s"} that predate the latest scoring logic? This runs the cheap AI roster-analysis pass on each and may take a bit. (Your badges and score adjustments are already current — this only updates the written narrative and benchmark notes.)`)) return;
     setRefreshingStale(true);
     setStaleMsg(null);
+    const taskId = startAiTask(`Refreshing ${staleCount} outdated analysis${staleCount === 1 ? "" : "es"}`);
     fetch("/api/deals/refresh-stale-analysis", { method: "POST", credentials: "include" })
       .then(r => r.json() as Promise<{ ok: boolean; refreshed?: number; failed?: number; error?: string }>)
       .then(d => {
@@ -376,9 +378,10 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
         const n = d.refreshed ?? 0;
         setStaleMsg(`✓ Refreshed ${n} deal${n === 1 ? "" : "s"}${d.failed ? `, ${d.failed} failed` : ""} — reloading…`);
         setStaleCount(0);
+        finishAiTask(taskId, "done", `Refreshed ${n} deal${n === 1 ? "" : "s"}${d.failed ? `, ${d.failed} failed` : ""}`);
         setTimeout(() => window.location.reload(), 1200);
       })
-      .catch(e => setStaleMsg(`⚠ ${e.message}`))
+      .catch(e => { setStaleMsg(`⚠ ${e.message}`); finishAiTask(taskId, "error", `Refresh failed — ${e.message}`); })
       .finally(() => setRefreshingStale(false));
   };
 
@@ -386,15 +389,17 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     if (!window.confirm("Score every deal that doesn't have a grade yet? This runs the AI roster analysis on each ungraded deal and may take up to a minute.")) return;
     setScoring(true);
     setScoreMsg(null);
+    const taskId = startAiTask("Scoring all unscored deals");
     fetch("/api/deals/score-unscored", { method: "POST", credentials: "include" })
       .then(r => r.json() as Promise<{ ok: boolean; scored?: number; failed?: number; total?: number; error?: string }>)
       .then(d => {
         if (!d.ok) throw new Error(d.error || "Scoring failed");
         const n = d.scored ?? 0;
         setScoreMsg(`✓ Scored ${n} deal${n === 1 ? "" : "s"}${d.failed ? `, ${d.failed} failed` : ""} — reloading…`);
+        finishAiTask(taskId, "done", `Scored ${n} deal${n === 1 ? "" : "s"}${d.failed ? `, ${d.failed} failed` : ""}`);
         setTimeout(() => window.location.reload(), 1200);
       })
-      .catch(e => setScoreMsg(`⚠ ${e.message}`))
+      .catch(e => { setScoreMsg(`⚠ ${e.message}`); finishAiTask(taskId, "error", `Scoring failed — ${e.message}`); })
       .finally(() => setScoring(false));
   };
 

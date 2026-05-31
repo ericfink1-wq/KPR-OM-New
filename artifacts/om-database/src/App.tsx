@@ -18,6 +18,7 @@ import RolloverYearView from "./components/RolloverYearView";
 import CompsSearch from "./components/CompsSearch";
 import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
+import AiProgressBar from "./components/AiProgressBar";
 import TenantAudit from "./components/TenantAudit";
 import TenantAnalytics from "./components/TenantAnalytics";
 import RetailerWatchlist from "./components/RetailerWatchlist";
@@ -257,6 +258,7 @@ function AppInner() {
         onAdminChange={checkAuth}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <AiProgressBar />
 
       {/* Drag overlay */}
       {dragging && (

@@ -18,6 +18,7 @@ import DealSummaryPDF from "./DealSummaryPDF";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist } from "../lib/useWatchlist";
 import { computeWatchlistImpact } from "../lib/watchlistImpact";
+import { runWithProgress, startAiTask, finishAiTask } from "../lib/aiProgress";
 import ClosingCostsCard from "./ClosingCostsCard";
 import TenantSalesPanel from "./TenantSalesPanel";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
@@ -760,21 +761,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const { mutateAsync: sendMessage } = useCreateAiMessage();
   const [rescoreBusy, setRescoreBusy] = useState(false);
   const autoRescoreTriggered = useRef(false);
-  // Status toast for long-running score/analysis actions so the user sees progress
-  const [scoreStatus, setScoreStatus] = useState<{ label: string; phase: "running" | "done" | "error" } | null>(null);
-  const [scoreElapsed, setScoreElapsed] = useState(0);
-  useEffect(() => {
-    if (scoreStatus?.phase !== "running") return;
-    setScoreElapsed(0);
-    const started = Date.now();
-    const t = setInterval(() => setScoreElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
-    return () => clearInterval(t);
-  }, [scoreStatus?.phase, scoreStatus?.label]);
-  useEffect(() => {
-    if (scoreStatus?.phase !== "done" && scoreStatus?.phase !== "error") return undefined;
-    const t = setTimeout(() => setScoreStatus(null), scoreStatus.phase === "done" ? 3500 : 6000);
-    return () => clearTimeout(t);
-  }, [scoreStatus?.phase]);
+  // Long-running AI actions report to the global pinned progress bar (see lib/aiProgress).
 
   useEffect(() => {
     let alive = true;
@@ -810,10 +797,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     if (!autoRescoreTriggered.current && allDeals.length - lastCount >= 10) {
       autoRescoreTriggered.current = true;
       setRescoreBusy(true);
-      apiRescore(d.id)
-        .then(patch => onUpdate(d.id, patch as Partial<typeof d>))
-        .catch(() => {})
-        .finally(() => setRescoreBusy(false));
+      runWithProgress(
+        `Re-scoring against portfolio benchmarks — ${d.propertyName || d.fileName || "deal"}`,
+        async () => { const patch = await apiRescore(d.id); onUpdate(d.id, patch as Partial<typeof d>); },
+        { doneLabel: "Score refreshed against portfolio benchmarks", errorLabel: "Auto re-score failed" },
+      ).catch(() => {}).finally(() => setRescoreBusy(false));
     }
   }, [d.id, allDeals.length]);
 
@@ -1027,12 +1015,16 @@ ${text.slice(0, 40000)}`;
     }
     setAnalyzeOpen(false);
     setReanalyzeBusy(true);
+    const taskId = startAiTask(`Rebuilding from OM — ${d.propertyName || d.fileName || "deal"}`);
     try {
       const result = await apiReanalyzeDeal(d.id, { overwriteRoster });
-      if (result.rosterManual) { setReanalyzeBusy(false); return; }
+      if (result.rosterManual) { finishAiTask(taskId, "error", "Re-analyze blocked — manual roster (use Refresh Analysis)"); setReanalyzeBusy(false); return; }
       await pollUntilDone(d.id);
       onUpdate(d.id, { analysisStale: false });
-    } catch {}
+      finishAiTask(taskId, "done", "Rebuilt from OM — analysis updated");
+    } catch (err) {
+      finishAiTask(taskId, "error", err instanceof Error ? err.message : "Rebuild from OM failed");
+    }
     setReanalyzeBusy(false);
   };
 
@@ -1040,20 +1032,22 @@ ${text.slice(0, 40000)}`;
     if (!ensureUploadAllowed()) return;
     setActionsOpen(false);
     setReanalyzeBusy(true);
-    setScoreStatus({ label: "Refreshing analysis from the current roster…", phase: "running" });
     try {
-      const result = await apiRefreshAnalysis(d.id);
-      onUpdate(d.id, {
-        notes: result.notes as string | undefined,
-        dealScore: result.dealScore as import("../lib/idb").DealScore | undefined,
-        upsideItems: result.upsideItems as import("../lib/idb").Deal["upsideItems"],
-        redFlags: result.redFlags,
-        analysisStale: false,
-      });
-      setScoreStatus({ label: "Analysis refreshed — grade, narrative & red flags updated", phase: "done" });
-    } catch (err) {
-      setScoreStatus({ label: err instanceof Error ? err.message : "Refresh analysis failed", phase: "error" });
-    }
+      await runWithProgress(
+        `Refreshing analysis — ${d.propertyName || d.fileName || "deal"}`,
+        async () => {
+          const result = await apiRefreshAnalysis(d.id);
+          onUpdate(d.id, {
+            notes: result.notes as string | undefined,
+            dealScore: result.dealScore as import("../lib/idb").DealScore | undefined,
+            upsideItems: result.upsideItems as import("../lib/idb").Deal["upsideItems"],
+            redFlags: result.redFlags,
+            analysisStale: false,
+          });
+        },
+        { doneLabel: "Analysis refreshed — grade, narrative & red flags updated", errorLabel: "Refresh analysis failed" },
+      );
+    } catch { /* surfaced by the progress bar */ }
     setReanalyzeBusy(false);
   };
 
@@ -1063,18 +1057,23 @@ ${text.slice(0, 40000)}`;
     if (!file) return;
     if (!ensureUploadAllowed()) return;
     setReanalyzeBusy(true);
+    const taskId = startAiTask(`Re-running extraction from PDF — ${file.name}`);
     try {
       const { text, pages } = await extractPdfText(await file.arrayBuffer());
       await apiIngestDeal({ id: d.id, text, fileName: file.name, pageCount: pages, correctionsNote: buildCorrectionsNote(allDeals) });
       await pollUntilDone(d.id);
       onUpdate(d.id, { analysisStale: false });
-    } catch {}
+      finishAiTask(taskId, "done", "Extraction complete — deal updated");
+    } catch (err) {
+      finishAiTask(taskId, "error", err instanceof Error ? err.message : "PDF extraction failed");
+    }
     setReanalyzeBusy(false);
   };
 
   const onLookupSale = async (id: string) => {
     if (!ensureUploadAllowed()) return;
     setSaleBusy(true);
+    const taskId = startAiTask(`Finding sale record — ${d.propertyName || d.fileName || "deal"}`);
     try {
       const resp = await sendMessage({ data: {
         system: "You are a CRE data analyst. Search for recent sale records of the property provided. Return JSON with: price (number), soldDate (string YYYY-MM-DD), capRate (number), buyer, seller, pricePerSF (number), summary (string), sources (array of {url, title}). If no sale found, return {notFound: true}.",
@@ -1083,20 +1082,26 @@ ${text.slice(0, 40000)}`;
       }});
       const text = (resp as any)?.content?.[0]?.text || "";
       const jsonMatch = text.match(/\{[\s\S]+\}/);
+      let found = false;
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
         if (!data.notFound) {
+          found = true;
           onUpdate(id, { marketSale: { ...data, lookedUpAt: new Date().toISOString() }, marketSaleChecked: new Date().toISOString() });
         } else {
           onUpdate(id, { marketSaleChecked: new Date().toISOString() });
         }
       }
-    } catch { /* silently fail */ }
+      finishAiTask(taskId, "done", found ? "Sale record found" : "No sale record found");
+    } catch (err) {
+      finishAiTask(taskId, "error", err instanceof Error ? err.message : "Sale lookup failed");
+    }
     finally { setSaleBusy(false); }
   };
 
   const onGetDemo = async (id: string) => {
     setDemoBusy(true);
+    const taskId = startAiTask(`Fetching demographics — ${d.propertyName || d.fileName || "deal"}`);
     try {
       const demo = await apiRefreshDemographics(id);
       if (demo) {
@@ -1104,7 +1109,10 @@ ${text.slice(0, 40000)}`;
       } else {
         onUpdate(id, { demoChecked: new Date().toISOString() });
       }
-    } catch { /* silently fail */ }
+      finishAiTask(taskId, "done", demo ? "Demographics updated" : "No demographics found");
+    } catch (err) {
+      finishAiTask(taskId, "error", err instanceof Error ? err.message : "Demographics lookup failed");
+    }
     finally { setDemoBusy(false); }
   };
 
@@ -1356,43 +1364,6 @@ ${text.slice(0, 40000)}`;
 
   return (
     <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"32px 24px 20px 24px" }}>
-      {scoreStatus && (
-        <div style={{
-          position: "fixed",
-          top: 84,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 400,
-          width: "min(420px, calc(100vw - 32px))",
-          background: "#fff",
-          border: `1px solid ${scoreStatus.phase === "error" ? "#f0c5c0" : scoreStatus.phase === "done" ? "#b8d49a" : "#e3dccd"}`,
-          borderRadius: 12,
-          boxShadow: "0 10px 30px -8px rgba(56,58,55,0.28)",
-          padding: "12px 16px",
-          fontFamily: "'Inter',sans-serif",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            {scoreStatus.phase === "running" && (
-              <span style={{ width: 14, height: 14, flexShrink: 0, border: "2px solid #d8cfbd", borderTopColor: "#3f7a1f", borderRadius: "50%", display: "inline-block", animation: "kprspin 0.7s linear infinite" }} />
-            )}
-            {scoreStatus.phase === "done" && <span style={{ color: "#3f7a1f", fontSize: 15, lineHeight: 1 }}>✓</span>}
-            {scoreStatus.phase === "error" && <span style={{ color: "#dc2626", fontSize: 15, lineHeight: 1 }}>⚠</span>}
-            <span style={{ fontSize: 12.5, color: scoreStatus.phase === "error" ? "#b3261e" : "#383a37", fontWeight: 500, flex: 1 }}>{scoreStatus.label}</span>
-            {scoreStatus.phase === "running" && (
-              <span style={{ fontSize: 11, color: "#a69e91", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{scoreElapsed}s</span>
-            )}
-            {scoreStatus.phase !== "running" && (
-              <button onClick={() => setScoreStatus(null)} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
-            )}
-          </div>
-          {scoreStatus.phase === "running" && (
-            <div style={{ marginTop: 9, height: 3, background: "#f1eadc", borderRadius: 3, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: "40%", background: "#6dba43", borderRadius: 3, animation: "kprbar 1.2s ease-in-out infinite" }} />
-            </div>
-          )}
-          <style>{`@keyframes kprspin{to{transform:rotate(360deg)}}@keyframes kprbar{0%{margin-left:-40%}100%{margin-left:100%}}`}</style>
-        </div>
-      )}
       <div style={{
         position: "fixed",
         top: 88,

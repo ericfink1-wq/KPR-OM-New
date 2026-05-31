@@ -8,6 +8,7 @@ import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
 import { useWatchlist } from "../lib/useWatchlist";
 import { computeWatchlistImpact } from "../lib/watchlistImpact";
+import { startAiTask, updateAiTask, finishAiTask } from "../lib/aiProgress";
 import RecencyBadge from "./RecencyBadge";
 
 interface Props {
@@ -510,7 +511,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
     clearSelection();
     setReanalyzeBusy(new Set(ids));
 
+    const taskId = startAiTask(`Re-analyzing ${ids.length} deal${ids.length === 1 ? "" : "s"}`, `0 of ${ids.length}`);
     let done = 0, failed = 0;
+    const tick = () => updateAiTask(taskId, { detail: `${done + failed} of ${ids.length}` });
     await Promise.all(ids.map(async id => {
       try {
         await apiReanalyzeDeal(id);
@@ -528,10 +531,12 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
       } catch {
         failed++;
       } finally {
+        tick();
         setReanalyzeBusy(prev => { const next = new Set(prev); next.delete(id); return next; });
       }
     }));
 
+    finishAiTask(taskId, failed && !done ? "error" : "done", `Re-analysis done — ${done} updated${failed ? `, ${failed} failed` : ""}`);
     setNotice(`Re-analysis done — ${done} updated${failed ? `, ${failed} failed` : ""}.`);
   };
 
