@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { apiSubmitFeedback } from "../lib/api";
 
 interface Props {
@@ -10,6 +10,37 @@ type FeedbackType = "Bug" | "Idea" | "Other";
 type Phase = "idle" | "open" | "submitting" | "done" | "error";
 
 const TYPES: FeedbackType[] = ["Bug", "Idea", "Other"];
+const MAX_IMAGES = 5;
+
+// Downscale/re-encode an image file to a data URL so phone screenshots don't
+// balloon the request or the email. Caps the longest edge and re-encodes to JPEG;
+// falls back to the original bytes if anything goes wrong.
+function fileToDownscaledDataUrl(file: File, maxDim = 1400, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.onload = () => {
+      const src = reader.result as string;
+      const img = new Image();
+      img.onerror = () => resolve(src); // can't process — send original
+      img.onload = () => {
+        const longest = Math.max(img.width, img.height);
+        if (longest <= maxDim) { resolve(src); return; }
+        const scale = maxDim / longest;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(src); return; }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        try { resolve(canvas.toDataURL("image/jpeg", quality)); }
+        catch { resolve(src); }
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
   const bottomOffset = liftAboveBar ? 110 : 24;
@@ -17,15 +48,38 @@ export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
   const [type, setType] = useState<FeedbackType>("Idea");
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const open = () => {
     setPhase("open");
     setType("Idea");
     setMessage("");
     setName("");
+    setImages([]);
   };
 
   const close = () => setPhase("idle");
+
+  const addFiles = async (files: FileList | File[] | null | undefined) => {
+    if (!files) return;
+    const imgs = Array.from(files).filter(f => f.type.startsWith("image/"));
+    for (const f of imgs) {
+      if (images.length >= MAX_IMAGES) break;
+      try {
+        const url = await fileToDownscaledDataUrl(f);
+        setImages(prev => prev.length >= MAX_IMAGES ? prev : [...prev, url]);
+      } catch { /* skip unreadable image */ }
+    }
+  };
+
+  const onPaste = (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const files = items.filter(it => it.kind === "file" && it.type.startsWith("image/")).map(it => it.getAsFile()).filter((f): f is File => !!f);
+    if (files.length) { e.preventDefault(); addFiles(files); }
+  };
+
+  const removeImage = (i: number) => setImages(prev => prev.filter((_, idx) => idx !== i));
 
   const submit = async () => {
     if (!message.trim()) return;
@@ -37,6 +91,7 @@ export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
         name: name.trim() || undefined,
         page: currentPage,
         userAgent: navigator.userAgent,
+        images: images.length ? images : undefined,
       });
       setPhase("done");
       setTimeout(() => setPhase("idle"), 2600);
@@ -92,7 +147,8 @@ export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
             <textarea
               value={message}
               onChange={e => setMessage(e.target.value)}
-              placeholder="Describe the issue or idea…"
+              onPaste={onPaste}
+              placeholder="Describe the issue or idea… (you can paste a screenshot here)"
               rows={4}
               style={{
                 resize: "vertical",
@@ -127,6 +183,51 @@ export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
                 boxSizing: "border-box",
               }}
             />
+
+            {/* Screenshots: paste into the box above, or attach here */}
+            <div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: "none" }}
+                onChange={e => { addFiles(e.target.files); e.target.value = ""; }}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={images.length >= MAX_IMAGES}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "transparent", border: "1.5px dashed #d8cfbd", borderRadius: 8,
+                  padding: "6px 10px", fontSize: 12, fontFamily: "'Inter',sans-serif",
+                  color: images.length >= MAX_IMAGES ? "#b0a898" : "#7d766a",
+                  cursor: images.length >= MAX_IMAGES ? "default" : "pointer", width: "100%", justifyContent: "center",
+                }}
+              >
+                📎 {images.length ? `Add another screenshot (${images.length}/${MAX_IMAGES})` : "Attach a screenshot"}
+              </button>
+              {images.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                  {images.map((src, i) => (
+                    <div key={i} style={{ position: "relative", width: 56, height: 56, borderRadius: 8, overflow: "hidden", border: "1px solid #e6dfd0" }}>
+                      <img src={src} alt={`screenshot ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        aria-label="Remove screenshot"
+                        style={{
+                          position: "absolute", top: 2, right: 2, width: 16, height: 16, borderRadius: "50%",
+                          background: "rgba(38,40,31,0.78)", color: "#fff", border: "none", cursor: "pointer",
+                          fontSize: 11, lineHeight: "16px", padding: 0, textAlign: "center",
+                        }}
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {phase === "error" && (
               <div style={{ fontSize: 12, color: "#c0392b", background: "#fdf0ee", borderRadius: 6, padding: "6px 10px" }}>

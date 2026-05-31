@@ -306,6 +306,7 @@ export async function apiSubmitFeedback(payload: {
   name?: string;
   page?: string;
   userAgent?: string;
+  images?: string[];   // data URLs (e.g. "data:image/png;base64,…"), emailed as attachments
 }): Promise<{ id: number; createdAt: string }> {
   const resp = await apiFetch("/feedback", {
     method: "POST",
