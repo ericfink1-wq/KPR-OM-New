@@ -4,6 +4,7 @@ import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown } from "../lib/idb";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
+import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
@@ -227,6 +228,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
 }
 
 export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate }: Props) {
+  const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
   const [sortKey, setSortKey] = useState("sf");
@@ -333,6 +335,18 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         </span>
                       )}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
+                      {(() => {
+                        const w = lookupWatch(watchMap, t.name);
+                        if (!w) return null;
+                        const m = WATCH_STATUS_META[w.status] || WATCH_STATUS_META.watch;
+                        return (
+                          <span
+                            title={`Retailer watchlist — ${m.label}: ${w.note || w.brand}`}
+                            style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:m.color, background:m.bg, border:`1px solid ${m.border}`, padding:"1px 6px", borderRadius:4, fontWeight:700, letterSpacing:"0.03em", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                            ⚠ {m.label}
+                          </span>
+                        );
+                      })()}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
                     </div>
                   )}

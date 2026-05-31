@@ -9,16 +9,57 @@ const router = Router();
 
 const VALID_STATUS = new Set(["watch", "distressed", "bankruptcy", "liquidating"]);
 
-// Starter set of currently-distressed retail chains. Seeded once, on first load
-// of an empty table. Eric can edit/remove any of these in the UI.
-const SEED: Array<{ brand: string; status: string; note: string }> = [
-  { brand: "Party City",   status: "bankruptcy",  note: "Filed Chapter 11 and began winding down all U.S. stores (2025)." },
-  { brand: "Big Lots",     status: "liquidating", note: "Chapter 11; going-out-of-business sales across the fleet." },
-  { brand: "Joann",        status: "liquidating", note: "Second Chapter 11; full store-closing process underway." },
-  { brand: "Express",      status: "bankruptcy",  note: "Chapter 11; large number of store closures." },
-  { brand: "Rite Aid",     status: "distressed",  note: "Emerged from bankruptcy smaller; ongoing store closures — watch exposure." },
-  { brand: "Conn's",       status: "liquidating", note: "Chapter 11; liquidating HomePlus / Conn's stores." },
+// Curated list of distressed / failed retail tenants, compiled from reputable
+// sources (Coresight Research store trackers, Retail Dive, RapidRatings, CNBC,
+// Axios, TheStreet) as of May 2026. Status reflects current condition:
+//   liquidating = closed / GOB now (a sighting in a rent roll = a dark box)
+//   bankruptcy  = in Chapter 11, operating but closing stores
+//   distressed  = not filed, but downgraded / mass closures / unsustainable
+//   watch       = financial pressure, negative outlook, smaller closures
+// These auto-refresh on every deploy (keyed by brand); retailers Eric adds
+// himself (added_by = 'user') are never touched.
+const CURATED: Array<{ brand: string; status: string; note: string; sourceUrl: string }> = [
+  // — Defunct / liquidated: if listed as in-place, treat the space as dark —
+  { brand: "Rite Aid", status: "liquidating", note: "Completed its Chapter 11 wind-down in 2025 and closed ALL U.S. stores; scripts sold to CVS/Walgreens/Kroger/Albertsons. Any Rite Aid in a rent roll is a dark box.", sourceUrl: "https://www.foxbusiness.com/lifestyle/cvs-walgreens-rite-aid-closing-stores-brick-mortar-downfall" },
+  { brand: "Party City", status: "liquidating", note: "Liquidated in 2025 after Chapter 11; closed all ~695 U.S. stores. Defunct — treat as vacant if listed.", sourceUrl: "https://www.the-sun.com/money/15533893/retail-bankruptcy-joann-party-city-claires/" },
+  { brand: "Joann", status: "liquidating", note: "Liquidated in 2025 (second Chapter 11); closed ~800 fabric/craft stores. Defunct.", sourceUrl: "https://www.the-sun.com/money/15533893/retail-bankruptcy-joann-party-city-claires/" },
+  { brand: "Forever 21", status: "liquidating", note: "U.S. operator liquidated in 2025; closed all 354 U.S. stores. Defunct.", sourceUrl: "https://www.axios.com/local/new-orleans/2025/03/20/forever-21-party-city-joann-store-closures" },
+  { brand: "Conn's HomePlus", status: "liquidating", note: "Liquidated in a 2024 Chapter 11; closed all furniture/electronics stores. Defunct.", sourceUrl: "https://www.retaildive.com/news/distressed-retailers-vulnerable-could-file-bankruptcy-2026/810234/" },
+  { brand: "rue21", status: "liquidating", note: "Liquidated in 2024 (its third bankruptcy); closed all ~540 stores. Defunct.", sourceUrl: "https://www.retaildive.com/news/distressed-retailers-vulnerable-could-file-bankruptcy-2026/810234/" },
+  { brand: "LL Flooring", status: "liquidating", note: "Lumber Liquidators liquidated in 2024; most stores closed (some banners acquired). Largely defunct.", sourceUrl: "https://www.retaildive.com/news/distressed-retailers-vulnerable-could-file-bankruptcy-2026/810234/" },
+  { brand: "Eddie Bauer", status: "liquidating", note: "Filed for bankruptcy and liquidation in February 2026.", sourceUrl: "https://passionatepennypincher.com/retail-store-closures/" },
+  { brand: "Allbirds", status: "liquidating", note: "Closed all U.S. full-price stores by Feb 2026 and sold to American Exchange Group (~$39M); now DTC/e-commerce. Minimal center exposure.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
+
+  // — In Chapter 11, still operating / closing stores —
+  { brand: "Saks Fifth Avenue", status: "bankruptcy", note: "Saks Global filed Chapter 11 in Jan 2026 on Neiman Marcus acquisition debt; closing ~57 Saks OFF 5th and ~8 Saks Fifth Avenue stores.", sourceUrl: "https://www.axios.com/2026/01/14/saks-global-bankruptcy-2026-department-stores" },
+  { brand: "Saks OFF 5th", status: "liquidating", note: "Part of Saks Global's Jan 2026 Chapter 11; ~57 stores closing with an online liquidation underway.", sourceUrl: "https://www.axios.com/2026/01/14/saks-global-bankruptcy-2026-department-stores" },
+  { brand: "Francesca's", status: "bankruptcy", note: "Filed Chapter 11 again in early 2026 (second time); closing mall apparel stores.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
+  { brand: "Claire's", status: "bankruptcy", note: "Filed Chapter 11 again in 2025 (PE-leveraged); closing stores and exploring an asset sale.", sourceUrl: "https://www.the-sun.com/money/15533893/retail-bankruptcy-joann-party-city-claires/" },
+  { brand: "At Home", status: "bankruptcy", note: "Filed Chapter 11 in 2025; closing underperforming big-box home stores under restructuring.", sourceUrl: "https://www.retaildive.com/news/distressed-retailers-vulnerable-could-file-bankruptcy-2026/810234/" },
+
+  // — Not filed, but materially distressed (downgrades / mass closures) —
+  { brand: "Big Lots", status: "distressed", note: "2024 Chapter 11 closed ~340 net stores; Variety Wholesalers acquired the brand and reopened a subset. Surviving footprint is far smaller and fragile.", sourceUrl: "https://www.mmcginvest.com/post/the-great-american-store-closure-tracker-2026-edition" },
+  { brand: "Express", status: "distressed", note: "Liquidated most stores in a 2024 Chapter 11; WHP/brand group kept a limited number operating. Footprint gutted.", sourceUrl: "https://www.retaildive.com/news/distressed-retailers-vulnerable-could-file-bankruptcy-2026/810234/" },
+  { brand: "Container Store", status: "distressed", note: "Emerged from a 2024 Chapter 11 in Jan 2025 with reduced debt; still pressured by weak discretionary demand.", sourceUrl: "https://www.thestreet.com/retail/torrid-closes-stores-no-bankruptcy" },
+  { brand: "Walgreens", status: "distressed", note: "Closing ~1,200 stores over three years (under 100 in 2026) under its PE take-private; squeezed by low drug reimbursement. Major drug anchor — watch lease exposure.", sourceUrl: "https://www.thestreet.com/retail/another-major-pharmacy-chain-walgreens-closes-stores-nationwide" },
+  { brand: "JCPenney", status: "distressed", note: "Ongoing closures with a thin balance sheet under Catalyst/SPARC ownership; anchor risk.", sourceUrl: "https://coresight.com/coresight-research-store-trackers/" },
+  { brand: "GameStop", status: "distressed", note: "Closing 470+ stores to start 2026; secular decline in physical game retail.", sourceUrl: "https://www.cnbc.com/2026/02/02/store-openings-and-closures-2026-dollar-general-aldi-gamestop.html" },
+  { brand: "Torrid", status: "distressed", note: "S&P downgrade called its capital structure 'unsustainable'; closing up to 180 stores (no filing yet).", sourceUrl: "https://www.thestreet.com/retail/torrid-closes-stores-no-bankruptcy" },
+  { brand: "Tillys", status: "distressed", note: "On RapidRatings' 2026 'retailers to watch' list; closing stores amid mounting losses.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
+
+  // — Watch: pressure / negative outlook, smaller closures —
+  { brand: "Macy's", status: "watch", note: "Closing stores under its 'Bold New Chapter' plan (66 in 2025, 50 in 2024); anchor footprint shrinking.", sourceUrl: "https://coresight.com/coresight-research-store-trackers/" },
+  { brand: "Kohl's", status: "watch", note: "Closing 27 underperforming stores in 2026 amid multi-year sales declines and leadership turnover; ~1,100 stores remain.", sourceUrl: "https://www.mmcginvest.com/post/the-great-american-store-closure-tracker-2026-edition" },
+  { brand: "CVS", status: "watch", note: "Closed ~270 stores in 2025 (and ~900 in 2022–24) but is stabilizing and planning modest 2026 openings. Lower risk than its drug-store peers.", sourceUrl: "https://www.pymnts.com/news/retail/2026/cvs-to-expand-retail-footprint-after-shrinking-for-4-years/" },
+  { brand: "Carter's", status: "watch", note: "Announced ~150 store closures and layoffs across 2025–26.", sourceUrl: "https://coresight.com/coresight-research-store-trackers/" },
+  { brand: "Cato", status: "watch", note: "On RapidRatings' 2026 'retailers to watch' list; weak apparel sales.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
+  { brand: "Wayfair", status: "watch", note: "On RapidRatings' 2026 'retailers to watch' list; primarily online, so limited shopping-center exposure.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
 ];
+
+// Deterministic id per curated brand so re-seeding upserts instead of duplicating.
+function seedId(brand: string): string {
+  return "seed_" + brand.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
 
 // Ensure the table exists even if `drizzle-kit push` hasn't been run against this
 // database yet (Eric pulls + restarts; he can't run shell migrations). Idempotent.
@@ -38,22 +79,19 @@ function ensureTable(): Promise<void> {
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `);
-      // Seed only when completely empty
-      const existing = await db.select({ id: retailerWatchlistTable.id }).from(retailerWatchlistTable).limit(1);
-      if (existing.length === 0) {
-        const now = new Date();
-        await db.insert(retailerWatchlistTable).values(
-          SEED.map((s, i) => ({
-            id: `seed_${i}_${Math.random().toString(36).slice(2, 8)}`,
-            brand: s.brand,
-            status: s.status,
-            note: s.note,
-            sourceUrl: null,
-            addedBy: "seed",
-            createdAt: now,
-            updatedAt: now,
-          })),
-        ).onConflictDoNothing();
+      // Upsert the curated list on every boot, keyed by a deterministic per-brand
+      // id. This keeps the sourced statuses/notes current as situations change,
+      // adds any brands introduced since last deploy, and — because user-added
+      // rows get random ids with added_by = 'user' — never clobbers Eric's own
+      // entries. (If he deletes a curated brand it returns on next deploy; tell
+      // me and I'll drop it from the source list instead.)
+      for (const c of CURATED) {
+        await db.insert(retailerWatchlistTable)
+          .values({ id: seedId(c.brand), brand: c.brand, status: c.status, note: c.note, sourceUrl: c.sourceUrl, addedBy: "seed" })
+          .onConflictDoUpdate({
+            target: retailerWatchlistTable.id,
+            set: { brand: c.brand, status: c.status, note: c.note, sourceUrl: c.sourceUrl, updatedAt: new Date() },
+          });
       }
     })().catch((err) => {
       tableReady = null; // allow retry on next request if it failed

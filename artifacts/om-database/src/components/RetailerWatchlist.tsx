@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, tenantLabel, isVacant } from "../lib/utils";
+import { tenantKey, isVacant } from "../lib/utils";
+import { invalidateWatchlist } from "../lib/useWatchlist";
 
 interface WatchRow {
   id: string;
@@ -115,7 +116,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
       if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "Save failed"); }
       setForm({ brand: "", status: "watch", note: "", sourceUrl: "" });
       setAdding(false); setEditId(null);
-      load();
+      load(); invalidateWatchlist();
     } catch (e) { setError(e instanceof Error ? e.message : "Save failed"); }
     finally { setBusy(false); }
   };
@@ -124,7 +125,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
     if (!window.confirm(`Remove "${brand}" from the watchlist?`)) return;
     try {
       await fetch(`/api/watchlist/${id}`, { method: "DELETE", credentials: "include" });
-      load();
+      load(); invalidateWatchlist();
     } catch { /* ignore */ }
   };
 
