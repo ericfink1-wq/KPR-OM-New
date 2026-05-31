@@ -3,6 +3,7 @@ export * from "./tenantAliases";
 export * from "./tenantDecisions";
 export * from "./tenantIndex";
 export * from "./compsIndex";
+export * from "./retailerWatchlist";
 export * from "./snapshots";
 export * from "./feedback";
 export * from "./clientErrors";

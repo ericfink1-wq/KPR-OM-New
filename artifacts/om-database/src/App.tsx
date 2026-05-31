@@ -20,6 +20,7 @@ import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
 import TenantAudit from "./components/TenantAudit";
 import TenantAnalytics from "./components/TenantAnalytics";
+import RetailerWatchlist from "./components/RetailerWatchlist";
 import ParentCompanyView from "./components/ParentCompanyView";
 
 const queryClient = new QueryClient({
@@ -48,7 +49,7 @@ function AppInner() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant">("tenant");
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist">("tenant");
 
   // Scroll analytics content to top whenever the view changes
   useEffect(() => {
@@ -310,7 +311,7 @@ function AppInner() {
                 {/* Segmented toggle */}
                 <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 0" }}>
                   <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
-                    {(["tenant", "portfolio"] as const).map(v => (
+                    {(["tenant", "portfolio", "watchlist"] as const).map(v => (
                       <button
                         key={v}
                         onClick={() => setAnalyticsView(v)}
@@ -329,13 +330,17 @@ function AppInner() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {v === "portfolio" ? "Portfolio Analytics" : "Tenant Analytics"}
+                        {v === "portfolio" ? "Portfolio Analytics" : v === "watchlist" ? "Watchlist" : "Tenant Analytics"}
                       </button>
                     ))}
                   </div>
                 </div>
                 {analyticsView === "portfolio" ? (
                   <PortfolioAnalytics onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
+                ) : analyticsView === "watchlist" ? (
+                  <div style={{ padding: "24px 18px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
+                    <RetailerWatchlist deals={activeDeals} onOpenDeal={handleOpenDeal} />
+                  </div>
                 ) : (
                   <TenantAnalytics
                     deals={activeDeals}
