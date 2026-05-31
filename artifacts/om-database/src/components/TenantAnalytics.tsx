@@ -204,6 +204,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const filter = scope; // driven by local toggle; filterProp sets initial value only
   const [salesMetric, setSalesMetric] = useState<"psf" | "gross">("psf");
   const [showAllParents, setShowAllParents] = useState(false);
+  const [parentMode, setParentMode] = useState<"rent" | "stores">("rent");
   const [tenantSearch, setTenantSearch] = useState("");
 
   // Ignored tenants — persisted across refreshes
@@ -329,6 +330,16 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     }
     return [...map.values()].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent);
   }, [activeRows]);
+
+  // Parent exposure totals + sort, switchable between rent and store count
+  const parentTotalRent = useMemo(() => parentRows.reduce((s, p) => s + p.totalAnnualRent, 0), [parentRows]);
+  const parentTotalStores = useMemo(() => parentRows.reduce((s, p) => s + p.locationCount, 0), [parentRows]);
+  const sortedParentRows = useMemo(
+    () => parentMode === "rent"
+      ? parentRows
+      : [...parentRows].sort((a, b) => b.locationCount - a.locationCount),
+    [parentRows, parentMode]
+  );
 
   // Credit / anchor — derived from activeRows
   const igCount = useMemo(() => activeRows.filter(r => r.isIG).length, [activeRows]);
@@ -660,22 +671,52 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
           {/* Parent Company Exposure */}
           {parentRows.length > 0 && (
             <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:6 }}>Parent Company Exposure</div>
-              <div style={{ fontSize:10, color:"#a69e91", marginBottom:12 }}>Combined portfolio exposure across brands sharing a parent corporation</div>
-              {(showAllParents ? parentRows : parentRows.slice(0, 10)).map(pr => (
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, flexWrap:"wrap", marginBottom:6 }}>
+                <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Parent Company Exposure</div>
+                <div style={{ display:"inline-flex", background:"#f1eadc", borderRadius:7, padding:2, flexShrink:0 }}>
+                  {([["rent","Rent"],["stores","Store count"]] as const).map(([key,label]) => (
+                    <button key={key} onClick={() => setParentMode(key)}
+                      style={{ background: parentMode===key ? "#fff" : "transparent", color: parentMode===key ? "#26281f" : "#8b8578",
+                        border:"none", borderRadius:5, padding:"4px 11px", fontSize:11, fontWeight:600, cursor:"pointer",
+                        fontFamily:"'Inter',sans-serif", boxShadow: parentMode===key ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize:10, color:"#a69e91", marginBottom:12 }}>
+                {parentMode === "rent"
+                  ? "Share of base rent across brands sharing a parent corporation"
+                  : "Share of store count across brands sharing a parent corporation"}
+              </div>
+              {(showAllParents ? sortedParentRows : sortedParentRows.slice(0, 10)).map(pr => {
+                const pct = parentMode === "rent"
+                  ? (parentTotalRent > 0 ? (pr.totalAnnualRent / parentTotalRent) * 100 : 0)
+                  : (parentTotalStores > 0 ? (pr.locationCount / parentTotalStores) * 100 : 0);
+                return (
                 <div key={pr.parent} style={{ borderTop:"1px solid #f1ece1", padding:"10px 0" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
                     <button onClick={() => onParentClick?.(pr.parent)} style={{ background:"transparent", border:"none", padding:0, cursor:onParentClick?"pointer":"default", fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:600, color:"#383a37", textDecoration:onParentClick?"underline":"none" }}>
                       {pr.parent}
                     </button>
-                    <span style={{ fontSize:12, color:"#0f7a4e", fontWeight:600 }}>{fmtRent(pr.totalAnnualRent)}</span>
+                    <span style={{ fontSize:12, color:"#0f7a4e", fontWeight:600 }}>
+                      {parentMode === "rent"
+                        ? `${fmtRent(pr.totalAnnualRent)} · ${pct.toFixed(1)}%`
+                        : `${pr.locationCount} store${pr.locationCount !== 1 ? "s" : ""} · ${pct.toFixed(1)}%`}
+                    </span>
+                  </div>
+                  <div style={{ height:6, background:"#f1eadc", borderRadius:4, overflow:"hidden", margin:"4px 0 6px" }}>
+                    <div style={{ width:`${Math.min(100,pct)}%`, height:"100%", background:"#6dba43", borderRadius:4 }} />
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                     <span style={{ fontSize:11, color:"#6f6a5f" }}>{[...pr.brands].join(" · ")}</span>
-                    <span style={{ fontSize:10, color:"#a89f8f", flexShrink:0, marginLeft:8 }}>{pr.locationCount} loc{pr.locationCount !== 1 ? "s" : ""}</span>
+                    <span style={{ fontSize:10, color:"#a89f8f", flexShrink:0, marginLeft:8 }}>
+                      {parentMode === "rent" ? `${pr.locationCount} loc${pr.locationCount !== 1 ? "s" : ""}` : fmtRent(pr.totalAnnualRent)}
+                    </span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {parentRows.length > 10 && (
                 <div style={{ borderTop:"1px solid #f1ece1", paddingTop:10, textAlign:"center" }}>
                   <button onClick={() => setShowAllParents(v => !v)}
