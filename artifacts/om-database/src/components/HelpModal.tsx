@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 
+// Where a tutorial section can jump you. App maps this to the right tab/subview.
+export type HelpDest = "portfolio" | "analytics" | "analytics-watchlist" | "comps" | "analyst";
+
 interface HelpModalProps {
   open: boolean;
   onClose: () => void;
+  onNavigate?: (dest: HelpDest) => void;
 }
 
 function ExpandToggle({ open }: { open: boolean }) {
@@ -65,10 +69,11 @@ function TryAsking({ items }: { items: string[] }) {
   );
 }
 
-const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: React.ReactNode }[] = [
+const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: React.ReactNode; goTo?: { dest: HelpDest; label: string } }[] = [
   {
     id: 1,
     title: "Uploading OMs, rent rolls & sales reports",
+    goTo: { dest: "portfolio", label: "Go to Portfolio" },
     brief: (
       <>
         <p style={{ margin:0 }}>Everything starts with a PDF — just drop in the document and the AI reads it for you. There are three kinds of PDF you'll upload:</p>
@@ -95,6 +100,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   {
     id: 2,
     title: "Portfolio — deal library",
+    goTo: { dest: "portfolio", label: "Go to Portfolio" },
     brief: (
       <>
         <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library. Every OM you've uploaded lives here, organized by status.</p>
@@ -120,6 +126,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   {
     id: 3,
     title: "Deal pages — everything about one property",
+    goTo: { dest: "portfolio", label: "Go to Portfolio — open any deal" },
     brief: (
       <>
         <p style={{ margin:0 }}>Click any deal card to open its detail page. The page follows an analyst flow: Overview → Tenants/Sales/Rollover → Highlights/Upside/Red Flags → Financials/Comp Benchmark/Closing Costs → Assumptions/Cash Flow → Demographics → Notes.</p>
@@ -157,6 +164,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   {
     id: 4,
     title: "The Analyst — AI across your whole library",
+    goTo: { dest: "analyst", label: "Go to the Analyst" },
     brief: (
       <>
         <p style={{ margin:0 }}>The <B>Analyst</B> reads your entire deal library and answers questions across tenants, rents, expirations, financials, and demographics. Reach it three ways:</p>
@@ -189,6 +197,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   {
     id: 5,
     title: "Analytics — portfolio-wide intelligence",
+    goTo: { dest: "analytics", label: "Go to Analytics" },
     brief: (
       <>
         <p style={{ margin:0 }}>The <B>Analytics</B> tab surfaces patterns across your entire deal library — tenant concentration, lease rollover timelines, occupancy trends, market exposure, and credit distribution.</p>
@@ -217,6 +226,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   {
     id: 6,
     title: "Comps — your sale-comp database & benchmarking",
+    goTo: { dest: "comps", label: "Go to Comps" },
     brief: (
       <>
         <p style={{ margin:0 }}>The <B>Comps</B> tab is a dedicated database of verified SALE comps — separate from your deal library. The banner shows total comps, total transaction volume, states covered, and the date span.</p>
@@ -281,7 +291,9 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   },
 ];
 
-function PanelContent({ expanded, toggle, onClose }: {
+function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop }: {
+  onNavigate?: (dest: HelpDest) => void;
+  isDesktop?: boolean;
   expanded: Set<number>;
   toggle: (id: number) => void;
   onClose: () => void;
@@ -320,6 +332,15 @@ function PanelContent({ expanded, toggle, onClose }: {
 
               <div style={{ padding:"12px 14px 12px 51px", fontSize:13, color:"#383a37", lineHeight:1.65 }}>
                 {section.brief}
+                {section.goTo && onNavigate && (
+                  <button
+                    type="button"
+                    onClick={() => { onNavigate(section.goTo!.dest); if (!isDesktop) onClose(); }}
+                    style={{ marginTop:12, display:"inline-flex", alignItems:"center", gap:6, background:"#3f7a1f", border:"none", color:"#fff", padding:"7px 14px", borderRadius:8, cursor:"pointer", fontSize:12.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
+                  >
+                    {section.goTo.label} <span style={{ fontSize:13, lineHeight:1 }}>→</span>
+                  </button>
+                )}
               </div>
 
               {isOpen && (
@@ -352,7 +373,7 @@ function PanelContent({ expanded, toggle, onClose }: {
   );
 }
 
-export default function HelpModal({ open, onClose }: HelpModalProps) {
+export default function HelpModal({ open, onClose, onNavigate }: HelpModalProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [panelIn, setPanelIn] = useState(false);
@@ -411,7 +432,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
           transition: "transform 0.2s ease",
         }}
       >
-        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} />
+        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} onNavigate={onNavigate} isDesktop={true} />
       </div>
     );
   }
@@ -429,7 +450,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
         aria-labelledby="help-modal-title"
         style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1001, width:"min(680px, calc(100vw - 32px))", maxHeight:"85vh", overflowY:"auto", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", padding:"26px 26px 22px", fontFamily:"'Inter',-apple-system,sans-serif" }}
       >
-        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} />
+        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} onNavigate={onNavigate} isDesktop={false} />
       </div>
     </>
   );

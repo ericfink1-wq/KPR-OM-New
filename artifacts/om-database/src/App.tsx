@@ -42,6 +42,17 @@ function AppInner() {
   const navigate = useCallback((v: View) => setViewStack(prev => [...prev, v]), []);
   const goBack = useCallback(() => setViewStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev), []);
   const resetToList = useCallback(() => setViewStack([{ type: "list" }]), []);
+
+  // Tutorial "Go to" links → jump to the relevant page. On desktop the help panel
+  // stays open (it's a side panel); on mobile HelpModal closes itself after calling this.
+  const handleHelpNavigate = useCallback((dest: "portfolio" | "analytics" | "analytics-watchlist" | "comps" | "analyst") => {
+    resetToList();
+    if (dest === "portfolio") setTab("portfolio");
+    else if (dest === "comps") setTab("comps");
+    else if (dest === "analyst") setTab("analyst");
+    else if (dest === "analytics") { setTab("analytics"); setAnalyticsView("tenant"); }
+    else if (dest === "analytics-watchlist") { setTab("analytics"); setAnalyticsView("watchlist"); }
+  }, [resetToList]);
   const [loaded, setLoaded] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | undefined>();
   const [dragging, setDragging] = useState(false);
@@ -257,7 +268,7 @@ function AppInner() {
         isAdmin={isAdmin}
         onAdminChange={checkAuth}
       />
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} />
       <AiProgressBar />
 
       {/* Drag overlay */}
