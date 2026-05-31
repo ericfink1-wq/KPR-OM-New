@@ -2357,7 +2357,7 @@ ${text.slice(0, 40000)}`;
                 {m.source && <span style={{ fontSize:10.5, color:"#837c6e" }}>{m.source}{m.asOf?` · ${m.asOf}`:""}</span>}
               </div>
               {m.note && <div style={{ fontSize:10.5, color:"#7d766a", lineHeight:1.55, marginTop:7 }}>{m.note}</div>}
-              <div style={{ fontSize:9, color:"#a69e91", marginTop:9 }}>Sourced from US Census Bureau ACS 5-Year Estimates. Tract-aggregated within radius rings — verify before relying on it.</div>
+              <div style={{ fontSize:9, color:"#a69e91", marginTop:9 }}>Sourced from US Census Bureau ACS 5-Year Estimates. Block-group centroids apportioned within radius rings — a close estimate; verify before relying on it.</div>
 
             </>
           );
