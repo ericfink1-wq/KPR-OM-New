@@ -84,6 +84,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <><B>After upload:</B> the deal lands in your Portfolio as a Prospect. A green "Fresh" badge means it was just extracted. Check the tenant roster and financials — if anything looks off, use <B>Analyze → Re-run extraction</B> on the deal page before editing manually.</>,
         <><B>Partial or thin extraction?</B> This happens when the PDF is low-quality, scanned, or missing key pages. Try "Re-run extraction" first. If it still looks sparse, you can fill in fields manually by clicking the pencil icon on any field, or upload a JSON with corrected data — it merges by address.</>,
         <><B>JSON upload</B> is the zero-token path: send Claude an OM or rent roll PDF, ask it to extract in the app's schema, download the .json, and upload here. Identical result to full AI extraction, no API cost. The JSON always merges by address — uploading an updated file overwrites the existing deal, it doesn't create a duplicate.</>,
+        <><B>Imported deals now self-score.</B> When a JSON import includes a grade, the app automatically benchmarks the deal against your portfolio in the background a few seconds after upload — refreshing its red flags and score with no extra step. Nothing to click.</>,
         <><B>Updating a rent roll only:</B> on any deal page, the tenant roster panel has an "Upload new rent roll" option. This re-runs just the tenant extraction — updates leases without touching financials or other deal-level data.</>,
         <><B>Cover photo wrong?</B> Use "Set cover from page #" to pick any page from the PDF, with left/right/full spread options.</>,
       ]} />
@@ -125,7 +126,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <><B>AI Investment Highlights</B> — institutional-grade narrative covering the asset, anchor quality, inline mix, key metrics, investment thesis, and top risk. Generated from the OM.</>,
           <><B>Financials</B> — NOI, cap rate, occupancy, WALT, and cash flow summary from the OM proforma.</>,
           <><B>Comp Benchmark</B> — the deal is benchmarked against comparable trades: median cap rate and price/SF, with sample size and date range shown. You can exclude a comp you find irrelevant or type-ahead to add a missing one, and the medians recompute.</>,
-          <><B>Trade Area demographics</B> — 1/3/5-mile population, households, and average household income from US Census data.</>,
+          <><B>Trade Area demographics</B> — 1/3/5-mile population and average household income from US Census data, apportioned by block-group centroids so the rings track the OM's numbers closely (rather than over-counting whole tracts).</>,
           <><B>Red Flags & Upside Items</B> — AI-surfaced risks and value-creation opportunities specific to this deal.</>,
           <><B>Jump to ▾</B> in the sticky header navigates instantly to any section on the page.</>,
         ]} />
@@ -137,7 +138,10 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <><B>Clicking a tenant name</B> opens a cross-portfolio summary for that brand — total SF across all deals, blended rent/SF, and which properties they occupy. Great for credit concentration analysis.</>,
         <><B>Editing any field:</B> click the pencil icon on any field to edit it directly. Changes save automatically and are logged in the deal's edit history. Figures you've verified can be locked to prevent them being overwritten by a future re-extraction.</>,
         <><B>Re-run extraction (Analyze menu):</B> re-reads the original OM PDF and refreshes all extracted fields. Use this if the initial extraction missed something or the data looks stale.</>,
-        <><B>Score button</B> runs the AI deal scoring model — grades the deal on anchor quality, lease structure, demographics, and market, and returns a letter grade with explanation.</>,
+        <><B>Refresh Analysis (current roster):</B> in the Actions menu — regenerates the grade, narrative, strengths, and red flags from the deal's <em>current</em> roster and financials, not the stored OM. This is the safe refresh to run after you've pasted in an updated rent roll, since it won't revert your tenants to the OM's older list.</>,
+        <><B>Refresh Score / Refresh Analysis show live progress.</B> When you run either, a status card appears at the top of the page with a spinner, an elapsed-seconds timer, and a progress bar so you can see it's working — then a green check when it's done (or a clear error if something failed). No more wondering whether it ran.</>,
+        <><B>Refresh Score button</B> re-benchmarks the deal against your portfolio — refreshing the letter grade and red flags from current portfolio data. It's deterministic and augments (doesn't erase) the existing qualitative flags.</>,
+        <><B>Dark-store flags are read-only.</B> The <em>DARK</em> badge on a tenant (closed but still paying rent) is set from the OM/rent-roll data and can't be toggled by hand — this prevents accidental edits from skewing the data. To correct a dark flag, re-extract or paste an updated roster.</>,
         <><B>Summary button</B> generates a one-page investment summary you can copy or share.</>,
         <><B>Excel button</B> exports the deal's full rent roll and financials as a spreadsheet.</>,
         <><B>Find Sale button</B> searches public records and market sources for comparable sales.</>,
@@ -190,6 +194,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <><B>Lease rollover chart</B> — shows how much GLA and rent expires by year across all deals. Immediately reveals rollover concentration risk.</>,
           <><B>Rollover years are clickable</B> — tap any year bar to drill into exactly which tenants roll that year across the portfolio.</>,
           <><B>Tenant concentration</B> — top tenants by total SF and total rent across the portfolio. See where you're over-indexed on a single brand or category.</>,
+          <><B>Parent Company Exposure</B> — groups brands under their parent corporation. Toggle between <B>Rent</B> and <B>Store count</B> to see exposure either way — useful for spotting an operator that's a small slice of rent but a large slice of your store count, or vice versa.</>,
           <><B>Ignore outliers</B> — on the tenant lists, an eye-slash toggle excludes a skewing tenant from all the stat boxes, which recompute live.</>,
           <><B>Market & asset type breakdowns</B> — how your library splits across geographies and property types.</>,
           <><B>Credit distribution</B> — what percentage of rent comes from investment-grade vs. non-rated tenants.</>,
@@ -201,6 +206,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <DetailList items={[
         <><B>Tenant Name Audit</B> catches cases like "Burlington" vs "Burlington Coat Factory" or "T Mobile" vs "T-Mobile." The system auto-normalizes common variants, but the audit surfaces what it missed. Mark pairs as <em>Correct (merge)</em> or <em>Incorrect (keep separate)</em> — these corrections apply going forward.</>,
         <><B>Analytics update in real time</B> as you add or update deals. There's no refresh needed — the charts always reflect the current state of the library.</>,
+        <><B>"Score unscored deals" button</B> (Portfolio Analytics) grades any deal that doesn't have a letter grade yet — a one-click safety net for deals that were imported without one. It runs the analysis on each ungraded deal, shows a count when done, and skips deals already scored.</>,
         <><B>All deal statuses are included</B> in analytics by default — Owned, Prospect, Passed. This gives you the full picture including historical deals you didn't pursue.</>,
         <><B>Status and state filters are multi-select</B> — they live on the Deal Library (Portfolio) page and let you pick several values at once. On an individual tenant's detail page you can also ignore specific locations to clean an outlier out of that brand's blended averages; choices persist across sessions.</>,
       ]} />
@@ -275,7 +281,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <><B>Always upload full JSON files</B> when correcting deal data — never a partial patch. The app merges by address, so a full file updates all fields cleanly.</>,
         <><B>Shift+Enter</B> in the Analyst chat inserts a line break. Enter alone sends.</>,
         <><B>Occupancy cost</B> displayed on deal pages is total occupancy cost (base rent + CAM + taxes + recoveries) ÷ gross sales — not just base rent ÷ sales. If only base rent is available, the field shows as estimated.</>,
-        <><B>Demographics auto-populate</B> when a deal is created from a PDF. Hit "Re-Pull" on the deal page to refresh them if the property location changed or data looks stale.</>,
+        <><B>Demographics auto-populate</B> when a deal is created from a PDF. Hit "Re-Pull" on the deal page to refresh them if the property location changed or data looks stale. The rings are estimated from US Census block-group data apportioned by centroid — close to an Esri/CoStar report but not identical (Census is historical 5-year data, not forward projections), so treat it as a solid cross-check.</>,
         <><B>If the site feels slow</B> after a large import, give it 30 seconds — the background indexing catches up and search/analytics will snap back to speed.</>,
       ]} />
     ),
