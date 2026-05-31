@@ -238,31 +238,6 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
   },
   {
     id: 7,
-    title: "Backups, exports & data safety",
-    brief: (
-      <>
-        <p style={{ margin:0 }}>Your data is backed up automatically, but these manual tools give you full control. Access them from the <B>☰ menu</B> in the top-right.</p>
-        <BriefList items={[
-          <><B>Full backup (.json)</B> — downloads all deals, sources, and images as a single file. Do this before any large import or batch change.</>,
-          <><B>Export spreadsheet (.csv)</B> — exports key fields for Excel or Google Sheets. Good for sharing a deal list or doing your own analysis.</>,
-          <><B>Automatic snapshots</B> — the app auto-saves before every import, delete, or restore. Up to 30 snapshots kept; no action required.</>,
-          <><B>Restore a snapshot</B> — rolls back to any recent auto-save. Merge-only — never wipes deals that exist in the current database.</>,
-          <><B>Restore from backup</B> — re-imports a downloaded backup file. Same merge behavior.</>,
-        ]} />
-      </>
-    ),
-    detail: (
-      <DetailList items={[
-        <><B>Snapshots are automatic</B> — triggered before imports, deletes, and restores. You'll never lose data from a bad import. The "Restore a snapshot" option shows a timestamped list of all available saves.</>,
-        <><B>Restore is always non-destructive:</B> it merges by deal ID. Deals in the live database that aren't in the snapshot are untouched. Nothing gets wiped — only missing or changed deals are restored.</>,
-        <><B>Full backup includes everything:</B> deal data, the raw OM source text, and cover images. Download one before any major bulk operation.</>,
-        <><B>CSV export</B> is useful for sharing deal lists with people who don't have app access, or for building custom models in Excel.</>,
-        <><B>Permanent delete</B> is only available from the Trash section. Moving a deal to Trash is reversible; deleting from Trash is not.</>,
-      ]} />
-    ),
-  },
-  {
-    id: 8,
     title: "Tips, shortcuts & things worth knowing",
     brief: (
       <>
@@ -291,7 +266,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <BriefList items={[
             <>Browsing the portfolio, opening deals, sorting/filtering/searching, and editing fields by hand.</>,
             <>All of the Analytics charts, Comp Benchmark, the Closing-Cost estimator, and Trade Area demographics ("Re-Pull" uses the free Census API, not AI).</>,
-            <>"Refresh Score" / "Score unscored deals" (math against your own data, no AI), and all exports, backups, and Excel/CSV downloads.</>,
+            <>"Refresh Score" / "Score unscored deals" (math against your own data, no AI), and exporting a deal's rent roll to Excel.</>,
           ]} />
           <div style={{ marginTop:6 }}>Bottom line: <B>uploading PDFs and talking to the Analyst are where the cost is.</B> Avoid re-uploading the same document, and you'll keep spend low.</div>
         </>,
