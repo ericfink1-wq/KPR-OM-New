@@ -19,6 +19,7 @@ import CompsSearch from "./components/CompsSearch";
 import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
 import AiProgressBar from "./components/AiProgressBar";
+import { isSupportedUpload } from "./lib/fileExtract";
 import TenantAudit from "./components/TenantAudit";
 import TenantAnalytics from "./components/TenantAnalytics";
 import RetailerWatchlist from "./components/RetailerWatchlist";
@@ -276,8 +277,8 @@ function AppInner() {
         <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(56,58,55,0.55)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
           <div style={{ background: "#ffffff", border: "2px dashed #6dba43", borderRadius: 16, padding: "48px 64px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>📁</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, color: "#383a37" }}>Drop your OMs to import</div>
-            <div style={{ fontSize: 13, color: "#8b9aa8", marginTop: 6 }}>PDF files only</div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, color: "#383a37" }}>Drop OMs, rent rolls or sales reports</div>
+            <div style={{ fontSize: 13, color: "#8b9aa8", marginTop: 6 }}>PDF or Excel — we'll sort each to the right property</div>
           </div>
         </div>
       )}

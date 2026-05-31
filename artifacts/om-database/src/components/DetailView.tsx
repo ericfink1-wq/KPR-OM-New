@@ -12,6 +12,8 @@ import { loadPdfJs, _capturePagePhoto, extractPdfText } from "../lib/pdfExtract"
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
 import RentRollPDF from "./RentRollPDF";
+import { extractAnyFile } from "../lib/fileExtract";
+import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
 import { PDFDownloadLink } from "@react-pdf/renderer";
@@ -1764,10 +1766,10 @@ ${text.slice(0, 40000)}`;
         <div style={{ marginBottom:12, background:"#f3f7ee", border:"1px dashed #b8d49a", borderRadius:10, padding:"10px 14px" }}>
           <style>{`@keyframes rrIndeterminate{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}`}</style>
           <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-            <input ref={rrPdfRef} type="file" accept="application/pdf" style={{ display:"none" }} onChange={handleRentRoll}/>
+            <input ref={rrPdfRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display:"none" }} onChange={handleRentRoll}/>
             <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
               style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"8px 14px", borderRadius:8, cursor: rrBusy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
-              {rrBusy ? "Refreshing…" : "⬆ Refresh tenants from a current rent roll (PDF)"}
+              {rrBusy ? "Refreshing…" : "⬆ Refresh tenants from a current rent roll (PDF or Excel)"}
             </button>
             <span style={{ fontSize:12, color: rrError ? "#dc2626" : (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? "#3f7a1f" : "#6f6a5f") }}>
               {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf

@@ -1,14 +1,17 @@
 import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus } from "../lib/api";
-import { extractPdfText, extractPdfImages } from "../lib/pdfExtract";
+import { extractPdfImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote } from "../lib/utils";
+import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
+import { classifyDocument, matchDeal, type DocType } from "../lib/docClassify";
+import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
 
 interface QueueItem {
   id: string;
   name: string;
   file?: File;
-  status: "pending" | "extracting" | "awaiting_dup" | "done" | "error";
+  status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "done" | "error";
   msg: string;
   progress: number;
   error?: string;
@@ -18,6 +21,11 @@ interface QueueItem {
   pendingExtracted?: Record<string, unknown>;
   pendingImages?: ImageBundle | null;
   pendingText?: string;
+  // Smart-routing (rent roll / sales)
+  routedType?: DocType;
+  matchedDealName?: string;            // the property we routed this doc to
+  pendingRosterPatch?: Partial<Deal>;  // staged roster update awaiting a property choice
+  pendingText2?: string;               // extracted text, kept for re-routing after manual pick
 }
 
 interface Props {
@@ -133,7 +141,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // Process newly added files
   useEffect(() => {
     if (!pendingFiles.length) return;
-    const pdfs = pendingFiles.filter(f => f.name.toLowerCase().endsWith(".pdf"));
+    const pdfs = pendingFiles.filter(isSupportedUpload);
     onFilesConsumed();
     if (pdfs.length) {
       setQueueOpen(true);
@@ -145,20 +153,101 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
   };
 
+  // Apply an extracted roster to a matched deal (safe path: preserves financials).
+  const applyRosterToDeal = async (
+    itemId: string, deal: Deal, result: { asOf: string | null; tenants: NonNullable<Deal["tenants"]> },
+  ) => {
+    const patch = buildRosterPatch(deal, result);
+    const updated = { ...deal, ...patch } as Deal;
+    await apiSaveDeal(updated);
+    onDealUpdated?.(updated);
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: "rent-roll",
+      matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      msg: `Rent roll → ${deal.propertyName || deal.fileName || "matched deal"} · roster updated (${result.tenants.length} tenants)`,
+    });
+  };
+
+  // Route a rent roll: extract its tenants, match to an existing deal, and either
+  // auto-update that deal's roster (high/medium confidence) or ask which property.
+  const routeRentRoll = async (
+    itemId: string, _dealId: string, text: string, fileName: string,
+    propertyName: string | null, address: string | null,
+  ) => {
+    updateItem(itemId, { msg: "Reading rent roll…", progress: 55, routedType: "rent-roll" });
+    const result = await extractRentRoll(text);
+    const m = matchDeal({ propertyName, address, fileName }, existingDeals);
+    if (m.deal && m.confidence !== "none") {
+      await applyRosterToDeal(itemId, m.deal, result);
+    } else {
+      updateItem(itemId, {
+        status: "awaiting_match", routedType: "rent-roll",
+        pendingExtracted: result as unknown as Record<string, unknown>,
+        msg: `Rent roll (${result.tenants.length} tenants) — pick the property it belongs to`, progress: 100,
+      });
+    }
+  };
+
+  // User manually assigns an awaiting doc to a property.
+  const assignMatch = async (itemId: string, deal: Deal) => {
+    const item = queue.find(q => q.id === itemId);
+    if (!item) return;
+    if (item.routedType === "rent-roll" && item.pendingExtracted) {
+      updateItem(itemId, { status: "extracting", msg: "Updating roster…", progress: 60 });
+      try {
+        await applyRosterToDeal(itemId, deal, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Roster update failed", error: err instanceof Error ? err.message : "failed" });
+      }
+    } else if (item.routedType === "sales") {
+      updateItem(itemId, {
+        status: "done", progress: 100, deal,
+        matchedDealName: deal.propertyName || deal.fileName || "deal",
+        msg: `Sales report → ${deal.propertyName || deal.fileName || "deal"} · open the deal to import sales`,
+      });
+    }
+  };
+
   const processFile = async (file: File, itemId: string) => {
     const dealId = uid();
     updateItem(itemId, { tempDealId: dealId });
 
     try {
-      updateItem(itemId, { status: "extracting", msg: "Reading PDF…", progress: 5 });
+      const xls = isSpreadsheet(file);
+      const fileName = file.name.replace(/\.(pdf|xlsx?|xlsm|xlsb|csv)$/i, "");
+
+      updateItem(itemId, { status: "extracting", msg: xls ? "Reading spreadsheet…" : "Reading PDF…", progress: 5 });
 
       const buf = await file.arrayBuffer();
-      const imgPromise = extractPdfImages(buf.slice(0)).catch(() => null);
+      // Images only make sense for PDFs (OM cover / site plan).
+      const imgPromise = xls ? Promise.resolve(null) : extractPdfImages(buf.slice(0)).catch(() => null);
 
-      updateItem(itemId, { msg: "Extracting text…", progress: 20 });
-      const { text, pages } = await extractPdfText(buf.slice(0));
+      updateItem(itemId, { msg: "Extracting text…", progress: 18 });
+      const { text, pages } = await extractAnyFile(file);
 
-      const fileName = file.name.replace(/\.pdf$/i, "");
+      // ── Smart routing: what KIND of document is this? ──────────────────────
+      updateItem(itemId, { msg: "Identifying document…", progress: 30 });
+      const cls = await classifyDocument(text, file.name);
+
+      if (cls.type === "rent-roll") {
+        await routeRentRoll(itemId, dealId, text, fileName, cls.propertyName, cls.address);
+        return;
+      }
+      if (cls.type === "sales") {
+        // Sales reports route to a matched property; the sales-history merge is
+        // completed on the deal page (open it from the queue).
+        const m = matchDeal({ propertyName: cls.propertyName, address: cls.address, fileName }, existingDeals);
+        if (m.deal) {
+          updateItem(itemId, {
+            status: "done", progress: 100, routedType: "sales", matchedDealName: m.deal.propertyName || m.deal.fileName || "deal",
+            deal: m.deal, msg: `Sales report → ${m.deal.propertyName || "matched deal"} · open the deal to import sales`,
+          });
+        } else {
+          updateItem(itemId, { status: "awaiting_match", routedType: "sales", pendingText2: text, msg: "Sales report — pick the property it belongs to", progress: 100 });
+        }
+        return;
+      }
+      // Otherwise treat as an OM / deal package (the original flow, unchanged).
 
       updateItem(itemId, { msg: "Sending to Claude AI…", progress: 40 });
       await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages, correctionsNote: buildCorrectionsNote(existingDeals) });
