@@ -754,6 +754,21 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const { mutateAsync: sendMessage } = useCreateAiMessage();
   const [rescoreBusy, setRescoreBusy] = useState(false);
   const autoRescoreTriggered = useRef(false);
+  // Status toast for long-running score/analysis actions so the user sees progress
+  const [scoreStatus, setScoreStatus] = useState<{ label: string; phase: "running" | "done" | "error" } | null>(null);
+  const [scoreElapsed, setScoreElapsed] = useState(0);
+  useEffect(() => {
+    if (scoreStatus?.phase !== "running") return;
+    setScoreElapsed(0);
+    const started = Date.now();
+    const t = setInterval(() => setScoreElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [scoreStatus?.phase, scoreStatus?.label]);
+  useEffect(() => {
+    if (scoreStatus?.phase !== "done" && scoreStatus?.phase !== "error") return undefined;
+    const t = setTimeout(() => setScoreStatus(null), scoreStatus.phase === "done" ? 3500 : 6000);
+    return () => clearTimeout(t);
+  }, [scoreStatus?.phase]);
 
   useEffect(() => {
     let alive = true;
@@ -799,10 +814,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const handleRescore = async () => {
     if (rescoreBusy) return;
     setRescoreBusy(true);
+    setScoreStatus({ label: "Refreshing score against portfolio benchmarks…", phase: "running" });
     try {
       const patch = await apiRescore(d.id);
       onUpdate(d.id, patch as Partial<typeof d>);
-    } catch {}
+      setScoreStatus({ label: "Score refreshed", phase: "done" });
+    } catch (err) {
+      setScoreStatus({ label: err instanceof Error ? err.message : "Score refresh failed", phase: "error" });
+    }
     setRescoreBusy(false);
   };
 
@@ -1029,6 +1048,7 @@ ${text.slice(0, 40000)}`;
     if (!ensureUploadAllowed()) return;
     setActionsOpen(false);
     setReanalyzeBusy(true);
+    setScoreStatus({ label: "Refreshing analysis from the current roster…", phase: "running" });
     try {
       const result = await apiRefreshAnalysis(d.id);
       onUpdate(d.id, {
@@ -1038,8 +1058,9 @@ ${text.slice(0, 40000)}`;
         redFlags: result.redFlags,
         analysisStale: false,
       });
+      setScoreStatus({ label: "Analysis refreshed — grade, narrative & red flags updated", phase: "done" });
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Refresh analysis failed");
+      setScoreStatus({ label: err instanceof Error ? err.message : "Refresh analysis failed", phase: "error" });
     }
     setReanalyzeBusy(false);
   };
@@ -1343,6 +1364,43 @@ ${text.slice(0, 40000)}`;
 
   return (
     <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"32px 24px 20px 24px" }}>
+      {scoreStatus && (
+        <div style={{
+          position: "fixed",
+          top: 84,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 400,
+          width: "min(420px, calc(100vw - 32px))",
+          background: "#fff",
+          border: `1px solid ${scoreStatus.phase === "error" ? "#f0c5c0" : scoreStatus.phase === "done" ? "#b8d49a" : "#e3dccd"}`,
+          borderRadius: 12,
+          boxShadow: "0 10px 30px -8px rgba(56,58,55,0.28)",
+          padding: "12px 16px",
+          fontFamily: "'Inter',sans-serif",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            {scoreStatus.phase === "running" && (
+              <span style={{ width: 14, height: 14, flexShrink: 0, border: "2px solid #d8cfbd", borderTopColor: "#3f7a1f", borderRadius: "50%", display: "inline-block", animation: "kprspin 0.7s linear infinite" }} />
+            )}
+            {scoreStatus.phase === "done" && <span style={{ color: "#3f7a1f", fontSize: 15, lineHeight: 1 }}>✓</span>}
+            {scoreStatus.phase === "error" && <span style={{ color: "#dc2626", fontSize: 15, lineHeight: 1 }}>⚠</span>}
+            <span style={{ fontSize: 12.5, color: scoreStatus.phase === "error" ? "#b3261e" : "#383a37", fontWeight: 500, flex: 1 }}>{scoreStatus.label}</span>
+            {scoreStatus.phase === "running" && (
+              <span style={{ fontSize: 11, color: "#a69e91", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{scoreElapsed}s</span>
+            )}
+            {scoreStatus.phase !== "running" && (
+              <button onClick={() => setScoreStatus(null)} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+            )}
+          </div>
+          {scoreStatus.phase === "running" && (
+            <div style={{ marginTop: 9, height: 3, background: "#f1eadc", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: "40%", background: "#6dba43", borderRadius: 3, animation: "kprbar 1.2s ease-in-out infinite" }} />
+            </div>
+          )}
+          <style>{`@keyframes kprspin{to{transform:rotate(360deg)}}@keyframes kprbar{0%{margin-left:-40%}100%{margin-left:100%}}`}</style>
+        </div>
+      )}
       <div style={{
         position: "fixed",
         top: 88,

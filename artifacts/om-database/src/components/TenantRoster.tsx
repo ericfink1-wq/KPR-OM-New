@@ -326,23 +326,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="Not A Part — this tenant owns their parcel and pays no rent to the landlord">NAP</span>
                       )}
                       {t.isDark && (
-                        <button
-                          onClick={onUpdateTenant ? (e) => { e.stopPropagation(); onUpdateTenant(tenants.indexOf(t), { isDark: false }); } : undefined}
-                          title={onUpdateTenant ? "Dark store — closed/not operating but still paying rent. Click to unmark." : "Dark store — closed/not operating but still paying rent."}
-                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#fff", background:"#3a342b", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.04em", border:"none", cursor:onUpdateTenant?"pointer":"default" }}>
+                        <span
+                          title="Dark store — closed/not operating but still paying rent. Set from the OM/rent-roll data; not manually editable."
+                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#fff", background:"#3a342b", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.04em" }}>
                           <Moon size={9} strokeWidth={2.25} /> DARK
-                        </button>
+                        </span>
                       )}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
-                      {!t.isDark && onUpdateTenant && !isVacantRow(t) && !isNAPTenant(t) && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onUpdateTenant(tenants.indexOf(t), { isDark: true }); }}
-                          title="Mark as a dark store (closed but still paying rent)"
-                          style={{ display:"inline-flex", alignItems:"center", background:"transparent", border:"none", cursor:"pointer", color:"#cabfa9", padding:"1px 2px", flexShrink:0 }}>
-                          <Moon size={12} strokeWidth={1.75} />
-                        </button>
-                      )}
                     </div>
                   )}
                 </td>
