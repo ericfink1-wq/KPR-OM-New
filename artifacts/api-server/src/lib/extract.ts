@@ -307,6 +307,16 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
 
   extracted.tenants = mergePhaseDuplicates(extracted.tenants as Array<Record<string, unknown>>);
 
+  // Occupancy sanity: OMs sometimes express occupancy as a fraction (1.0 = 100%,
+  // 0.99 = 99%). A retail center occupancy of "1%" is never real, so a stored
+  // value in (0, 1.5] is a fraction → scale to a percent. (1.0 → 100, 0.989 → 98.9)
+  {
+    const occ = Number(extracted.occupancy);
+    if (!isNaN(occ) && occ > 0 && occ <= 1.5) {
+      extracted.occupancy = Math.round(occ * 100 * 10) / 10;
+    }
+  }
+
   return { data: extracted, tenantsComplete: stopReason !== "max_tokens" };
 }
 

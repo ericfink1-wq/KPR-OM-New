@@ -1989,7 +1989,7 @@ ${text.slice(0, 40000)}`;
       {/* Deal score */}
       {(d.dealScore || d.analysisStale) && (
         <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
-          {(expanded) => { const fs = expanded ? 1.35 : 1; return (
+          {(expanded) => { const fs = 1; void expanded; return (
           <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
             <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
               <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
@@ -2034,7 +2034,7 @@ ${text.slice(0, 40000)}`;
         const sorted = [...d.upsideItems!].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
         return (
           <CollapsibleBox collapsedHeight={300} fadeColor="#f2faf0">
-            {(expanded) => { const fs = expanded ? 1.35 : 1; return (
+            {(expanded) => { const fs = 1; void expanded; return (
             <div id="section-upside" style={{ background:"#f2faf0", border:"1px solid #3f7a1f40", borderRadius:8, padding:"14px 16px" }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                 <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#2d7a0e", fontWeight:700 }}>&#10024; UPSIDE ITEMS</div>
@@ -2063,7 +2063,7 @@ ${text.slice(0, 40000)}`;
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return (allRedFlags.length > 0 || d.analysisStale) && (
           <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
-            {(expanded) => { const fs = expanded ? 1.35 : 1; return (
+            {(expanded) => { const fs = 1; void expanded; return (
             <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px" }}>
               <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
                 <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
