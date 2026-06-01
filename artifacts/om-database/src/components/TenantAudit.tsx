@@ -103,11 +103,28 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
       "nail","nails","hair","thai","china","golden","happy","star",
     ]);
 
+    // Auto-reject: a brand's regular store and a different-format pad under the
+    // same brand are NOT the same tenant and must never be suggested for merge
+    // (e.g. "Old Navy" vs "Old Navy Storage", "Costco" vs "Costco Gasoline/Fuel").
+    // If the two names differ by one of these format tokens, skip the pair.
+    const FORMAT_TOKENS = ["storage", "gasoline", "gas", "fuel", "fueling", "fuels"];
+    const isFormatSplit = (ka: string, kb: string): boolean => {
+      const setA = new Set(ka.split(" "));
+      const setB = new Set(kb.split(" "));
+      // Symmetric difference of words
+      const diff: string[] = [];
+      setA.forEach(w => { if (!setB.has(w)) diff.push(w); });
+      setB.forEach(w => { if (!setA.has(w)) diff.push(w); });
+      // If any distinguishing word is a format token, the two are different uses.
+      return diff.some(w => FORMAT_TOKENS.includes(w));
+    };
+
     const splits: { a: Group; b: Group; reason: string }[] = [];
     for (let i = 0; i < groups.length; i++) {
       for (let j = i + 1; j < groups.length; j++) {
         const ka = groups[i].key;
         const kb = groups[j].key;
+        if (isFormatSplit(ka, kb)) continue; // auto-reject store vs storage/gas pad
         const prefix = ka.startsWith(kb + " ") || kb.startsWith(ka + " ");
 
         const wordsA = ka.split(" ");
