@@ -90,6 +90,7 @@ const USER_PRESERVED_KEYS = new Set([
   "trashedAt", "uploadedAt", "fileName", "pdfPages", "imageMeta", "dealScore",
   "prefLender", "prefAmount", "prefRateCurrent", "prefRateAllIn", "prefReturnType", "prefOriginationDate", "prefMaturityDate", "prefTermYears", "prefRecourse", "prefNotes",
   "tenantSalesHistory",
+  "ownershipStructure",
 ]);
 
 // GET /api/deals — list all deals (excludes in-progress ingests)

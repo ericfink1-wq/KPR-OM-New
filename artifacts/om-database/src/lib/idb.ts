@@ -472,6 +472,17 @@ export interface Deal {
   // Benchmark scoring metadata
   lastScoredAt?: string | null;
   lastScoredDealCount?: number | null;
+  // KPR ownership / cap table — members of the purchasing entity and their
+  // capital balances. Ownership % is derived (capital ÷ total), never stored.
+  ownershipStructure?: OwnerStake[] | null;
+}
+
+// One member/owner of the purchasing entity. Ownership % is computed from the
+// capital balances, so it is intentionally NOT stored here.
+export interface OwnerStake {
+  name?: string;            // member / owner name
+  capital?: number | null;  // capital balance ($)
+  note?: string | null;     // optional role / class (e.g. "GP", "LP", "Class A")
 }
 
 export interface MyUnderwritingInputs {

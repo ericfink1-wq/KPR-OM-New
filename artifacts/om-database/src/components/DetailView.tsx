@@ -25,6 +25,7 @@ import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { runWithProgress, startAiTask, finishAiTask } from "../lib/aiProgress";
 import ClosingCostsCard from "./ClosingCostsCard";
 import TenantSalesPanel from "./TenantSalesPanel";
+import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 
 // Renders **bold** segments in AI text (highlights, deal-score rationale) so key
@@ -2564,6 +2565,11 @@ ${text.slice(0, 40000)}`;
           </div>
         );
       })()}
+
+      {/* Ownership Structure — owned/sold deals only (below Financing & Debt) */}
+      {(d.status === "Owned" || d.status === "Sold") && (
+        <OwnershipStructure deal={d} onUpdate={onUpdate} />
+      )}
 
       {/* Property info */}
       <div style={{ marginBottom:12 }}>
