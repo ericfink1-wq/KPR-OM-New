@@ -154,6 +154,15 @@ export function buildReviewQuestions(deal: Deal): ReviewQuestion[] {
     const r = raw as Partial<ReviewQuestion> & Record<string, unknown>;
     if (!r.question) return;
     const id = r.id || `ai-${i}-${String(r.field ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}`;
+    const t = r.target as Record<string, unknown> | null | undefined;
+    const target = t && (t.kind === "deal" || t.kind === "tenant") && typeof t.fieldKey === "string"
+      ? {
+          kind: t.kind as "deal" | "tenant",
+          fieldKey: t.fieldKey as string,
+          tenantName: typeof t.tenantName === "string" ? t.tenantName : null,
+          valueType: (t.valueType === "text" ? "text" : "number") as "number" | "text",
+        }
+      : null;
     add({
       id,
       source: "ai",
@@ -162,6 +171,7 @@ export function buildReviewQuestions(deal: Deal): ReviewQuestion[] {
       question: String(r.question),
       detail: typeof r.detail === "string" ? r.detail : null,
       suggestedValue: r.suggestedValue != null ? String(r.suggestedValue) : null,
+      target,
       resolvedAt: r.resolvedAt ?? null,
       resolution: r.resolution ?? null,
     });

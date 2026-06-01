@@ -269,8 +269,17 @@ export interface ReviewQuestion {
   question: string;                   // plain-English question to confirm
   detail?: string | null;             // supporting context (the numbers / why it's uncertain)
   suggestedValue?: string | null;     // what was captured, for a confirm/fix prompt
-  resolvedAt?: string | null;         // ISO timestamp once the user confirms/dismisses
-  resolution?: "confirmed" | "dismissed" | null;
+  // Structured edit target — lets the review overlay write a correction back
+  // deterministically (no free-form parsing). Set by the extractor when the
+  // question concerns a specific, editable value.
+  target?: {
+    kind: "deal" | "tenant";          // a top-level deal field, or a field on one tenant
+    fieldKey: string;                 // exact Deal/Tenant key, e.g. "totalSF", "noi", "sf", "annualRent"
+    tenantName?: string | null;       // for kind:"tenant" — the tenant whose field this is
+    valueType?: "number" | "text";    // how to coerce the user's input (default number)
+  } | null;
+  resolvedAt?: string | null;         // ISO timestamp once the user confirms/dismisses/fixes
+  resolution?: "confirmed" | "dismissed" | "fixed" | null;
 }
 
 export interface Deal {

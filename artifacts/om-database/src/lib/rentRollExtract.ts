@@ -26,7 +26,7 @@ Rules:
 - If a value isn't shown, omit it.
 - remainingTermYears: compute from asOf to leaseExpiry if possible.
 
-reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"tenant name or column","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string"}. Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
+reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"human label e.g. 'Five Below — SF'","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string","target":{"kind":"tenant","fieldKey":"exact tenant field key (sf, rentPerSF, annualRent, leaseStart, leaseExpiry, remainingTermYears, salesPSF)","tenantName":"exact tenant name from the tenants array","valueType":"number|text"}}. ALWAYS set target when the question is about one tenant's field so the user can fix it in one click; set target null only for non-field questions (e.g. possible duplicate rows). Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
 
   const res = await apiAiMessages({
     model: "claude-haiku-4-5-20251001",
@@ -42,6 +42,15 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
   const reviewQuestions = (Array.isArray(parsed.reviewQuestions) ? parsed.reviewQuestions : [])
     .map((q, i) => {
       const r = q as Record<string, unknown>;
+      const tgt = r.target as Record<string, unknown> | undefined;
+      const target = tgt && tgt.kind === "tenant" && typeof tgt.fieldKey === "string"
+        ? {
+            kind: "tenant" as const,
+            fieldKey: tgt.fieldKey,
+            tenantName: typeof tgt.tenantName === "string" ? tgt.tenantName : null,
+            valueType: (tgt.valueType === "text" ? "text" : "number") as "number" | "text",
+          }
+        : null;
       return {
         id: `ai-rr-${i}-${String(r.field ?? "").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}`,
         source: "ai" as const,
@@ -50,6 +59,7 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
         question: typeof r.question === "string" ? r.question : "",
         detail: typeof r.detail === "string" ? r.detail : null,
         suggestedValue: r.suggestedValue != null ? String(r.suggestedValue) : null,
+        target,
       } as ReviewQuestion;
     })
     .filter(q => q.question);
