@@ -171,50 +171,6 @@ function StaleBadge() {
   );
 }
 
-function DataIntegrity({ deal }: { deal: Deal }) {
-  const [open, setOpen] = useState(false);
-  const { checks, errors, warns, hadData } = reconcileDeal(deal);
-  const C = { error: "#dc2626", warn: "#b45309", ok: "#0f9d63" };
-  if (!hadData) return null;
-  if (checks.length === 0) {
-    return (
-      <div style={{ display:"flex", alignItems:"center", gap:8, background:"#0f9d6310", border:"1px solid #0f9d6333", borderRadius:8, padding:"10px 14px", marginBottom:12 }}>
-        <span style={{ color:C.ok, fontSize:13 }}>✓</span>
-        <span style={{ fontSize:11, color:"#0f6b46", fontWeight:500 }}>Data checks passed — extracted numbers are internally consistent.</span>
-        <span style={{ fontSize:9, color:"#958d80", marginLeft:"auto" }}>Verify against the OM before deciding.</span>
-      </div>
-    );
-  }
-  const headColor = errors > 0 ? C.error : C.warn;
-  const headBg = errors > 0 ? "#dc262610" : "#b4530910";
-  const ordered = [...checks].sort((a, b) => (a.severity === "error" ? 0 : 1) - (b.severity === "error" ? 0 : 1));
-  return (
-    <div style={{ background:headBg, border:`1px solid ${headColor}40`, borderRadius:8, padding:"12px 16px", marginBottom:12 }}>
-      <button onClick={() => setOpen(o => !o)} style={{ display:"flex", alignItems:"center", gap:10, width:"100%", background:"transparent", border:"none", cursor:"pointer", padding:0 }}>
-        <span style={{ color:headColor, fontSize:14 }}>⚠</span>
-        <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", color:headColor }}>
-          DATA INTEGRITY — {errors > 0 ? `${errors} error${errors>1?"s":""}` : ""}{errors > 0 && warns > 0 ? ", " : ""}{warns > 0 ? `${warns} to verify` : ""}
-        </span>
-        <span style={{ marginLeft:"auto", fontSize:10, color:"#958d80" }}>{open ? "HIDE ▴" : "REVIEW ▾"}</span>
-      </button>
-      {open && (
-        <div style={{ marginTop:12, display:"flex", flexDirection:"column", gap:8 }}>
-          {ordered.map((c, i) => (
-            <div key={i} style={{ display:"flex", gap:10, padding:"8px 10px", background:"#fff", border:`1px solid ${C[c.severity]}33`, borderRadius:6 }}>
-              <span style={{ color:C[c.severity], fontSize:9, fontWeight:700, letterSpacing:"0.05em", flexShrink:0, paddingTop:1 }}>{c.severity==="error"?"ERROR":"CHECK"}</span>
-              <div>
-                <div style={{ fontSize:11, color:"#383a37", fontWeight:600, marginBottom:2 }}>{c.label}</div>
-                <div style={{ fontSize:11, color:"#6f6a5f", lineHeight:1.55 }}>{c.detail}</div>
-              </div>
-            </div>
-          ))}
-          <div style={{ fontSize:9, color:"#958d80", marginTop:2, lineHeight:1.5 }}>Automated checks — flag likely misreads, not confirmed errors. Verify against the OM.</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ExtractionQuality({ deal }: { deal: Deal }) {
   const { quality, missing } = assessExtraction(deal);
   if (quality === "good") return null;
@@ -1558,8 +1514,36 @@ ${text.slice(0, 40000)}`;
         })()}
       </div>
 
-      {/* Data check — surfaced above the cover photo */}
-      <DataIntegrity deal={d}/>
+      {/* Unified import-review / data-integrity banner — top of page. Amber when
+          there are open items to confirm (opens the review overlay), green when
+          everything checks out. Supersedes the old standalone DataIntegrity box. */}
+      {(() => {
+        const openCount = openReviewCount(d);
+        if (openCount > 0) {
+          return (
+            <button onClick={() => setReviewOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fffaf2", border: "1px solid #e7c48f", borderRadius: 10, padding: "11px 15px", marginBottom: 12, cursor: "pointer" }}>
+              <span style={{ fontSize: 16 }}>📝</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#9a6a1e" }}>{openCount} import detail{openCount === 1 ? "" : "s"} to confirm</span>
+                <span style={{ display: "block", fontSize: 11, color: "#b08a4e", marginTop: 1 }}>A few values I wasn't fully sure I captured right (incl. any failed data checks) — tap to review or fix.</span>
+              </span>
+              <span style={{ fontSize: 12, color: "#9a6a1e", fontWeight: 600 }}>Review ›</span>
+            </button>
+          );
+        }
+        // No open items: reassure that the deterministic checks ran clean.
+        const { hadData } = reconcileDeal(d);
+        if (!hadData) return null;
+        return (
+          <div style={{ display:"flex", alignItems:"center", gap:8, background:"#0f9d6310", border:"1px solid #0f9d6333", borderRadius:8, padding:"10px 14px", marginBottom:12 }}>
+            <span style={{ color:"#0f9d63", fontSize:13 }}>✓</span>
+            <span style={{ fontSize:11, color:"#0f6b46", fontWeight:500 }}>Data checks passed — extracted numbers are internally consistent.</span>
+            <span style={{ fontSize:9, color:"#958d80", marginLeft:"auto" }}>Verify against the OM before deciding.</span>
+          </div>
+        );
+      })()}
+      {reviewOpen && <ImportReview deal={d} onClose={() => setReviewOpen(false)} onUpdate={onUpdate} />}
 
       {/* Cover hero */}
       {imgs?.cover && (
@@ -1634,25 +1618,6 @@ ${text.slice(0, 40000)}`;
       )}
 
       <ExtractionQuality deal={d}/>
-
-      {/* Import data-integrity review — non-blocking banner when the import had
-          things worth confirming. Opens the ImportReview overlay. */}
-      {(() => {
-        const openCount = openReviewCount(d);
-        if (openCount === 0) return null;
-        return (
-          <button onClick={() => setReviewOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fffaf2", border: "1px solid #e7c48f", borderRadius: 10, padding: "11px 15px", marginBottom: 12, cursor: "pointer" }}>
-            <span style={{ fontSize: 16 }}>📝</span>
-            <span style={{ flex: 1 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: "#9a6a1e" }}>{openCount} import detail{openCount === 1 ? "" : "s"} to confirm</span>
-              <span style={{ display: "block", fontSize: 11, color: "#b08a4e", marginTop: 1 }}>I flagged a few values I wasn't fully sure I captured right — tap to review.</span>
-            </span>
-            <span style={{ fontSize: 12, color: "#9a6a1e", fontWeight: 600 }}>Review ›</span>
-          </button>
-        );
-      })()}
-      {reviewOpen && <ImportReview deal={d} onClose={() => setReviewOpen(false)} onUpdate={onUpdate} />}
 
       {/* Market sale */}
       {d.marketSale && (
