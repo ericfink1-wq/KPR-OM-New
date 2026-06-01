@@ -82,7 +82,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <><B>Rent roll</B> — drop it in (auto-matches) or use a deal's <B>"⬆ Refresh tenants"</B>; updates the roster + as-of date only, leaving financials intact.</>,
           <><B>Tenant sales report</B> — a deal's <B>Tenant Sales</B> panel → <B>"⬆ Upload Sales"</B>; auto-detects the year and tracks sales by vintage.</>,
         ]} />
-        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}><B>Confirm import details:</B> if the AI was unsure about a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner — confirm, dismiss, or fix it right there. First upload of a session asks for the <B>upload password</B>.</p>
+        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}><B>Confirm import details:</B> if the AI was unsure about a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner — confirm, dismiss, or fix it right there.</p>
         <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>AI reads cost money.</B> Each PDF/Excel read uses paid tokens (a full OM is the biggest). Avoid re-uploading the same file; browsing, editing, and exporting are free.</p>
       </>
     ),

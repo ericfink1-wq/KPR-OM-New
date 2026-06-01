@@ -1,19 +1,12 @@
-const UPLOAD_PASSWORD = "omkey";
+// Upload/AI gating was previously behind a shared password ("omkey"). That gate
+// has been removed — uploads, analyst chat, and web lookups are open to any
+// signed-in user. These functions are kept as no-ops so existing call sites work
+// unchanged.
 
 export function uploadsUnlocked(): boolean {
-  try { return sessionStorage.getItem("kpr_upload_unlocked") === "1"; } catch { return false; }
+  return true;
 }
 
 export function ensureUploadAllowed(): boolean {
-  if (uploadsUnlocked()) return true;
-  const entry = window.prompt(
-    "Enter the password to use AI features — uploads, analyst chat, and web lookups (this protects your API tokens):"
-  );
-  if (entry == null) return false;
-  if (entry === UPLOAD_PASSWORD) {
-    try { sessionStorage.setItem("kpr_upload_unlocked", "1"); } catch {}
-    return true;
-  }
-  window.alert("Incorrect upload password — upload cancelled.");
-  return false;
+  return true;
 }

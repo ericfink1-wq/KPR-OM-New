@@ -1,11 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
+import { tenantKey } from "../lib/utils";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
   salesHistory: TenantSalesYear[];
   omTenants?: Tenant[];         // existing roster tenants — used to seed OM sales data
   omDate?: string | null;       // OM date — used to estimate the sales year
+  recoveries?: Map<string, { value: number; estimated: boolean }>; // per-tenant recovery estimate
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploadBusy: boolean;
   uploadError: string | null;
@@ -183,12 +185,52 @@ interface MergedRow {
   byYear: Record<number, TenantSalesRecord>;
 }
 
-function mergeRows(history: TenantSalesYear[]): MergedRow[] {
+// Re-derive sales PSF (from gross) and occupancy cost (from the roster's rent
+// components against this record's gross sales) LIVE on display — so existing
+// stored sales snapshots benefit from the latest logic without a re-upload.
+function deriveSalesRecord(
+  t: TenantSalesRecord,
+  rosterByKey: Map<string, Tenant>,
+  recByKey: Map<string, { value: number; estimated: boolean }>,
+): TenantSalesRecord {
+  const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+  const key = tenantKey(t.name);
+  const rt = rosterByKey.get(key);
+  let sf = nv(t.sf) ?? nv(rt?.sf) ?? null;
+  let psf = nv(t.salesPSF);
+  let gross = nv(t.annualSales);
+  if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
+  if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
+
+  let occupancyCost = nv(t.occupancyCost);
+  let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
+  let occBreakdown: OccBreakdown | null = t.occBreakdown ?? null;
+  const base = nv(rt?.annualRent);
+  const disclosedReimb = nv(rt?.expenseReimbursements);
+  const est = recByKey.get(key);
+  const reimb = disclosedReimb ?? (est ? est.value : null);
+  const reimbEstimated = disclosedReimb == null && !!est?.estimated;
+  const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
+  if (base != null && reimb != null && gross != null && gross > 0) {
+    const total = base + reimb + pctRent + other;
+    occupancyCost = Math.round((total / gross) * 1000) / 10;
+    occSource = "computed";
+    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
+  }
+  return { ...t, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
+}
+
+function mergeRows(
+  history: TenantSalesYear[],
+  rosterByKey: Map<string, Tenant>,
+  recByKey: Map<string, { value: number; estimated: boolean }>,
+): MergedRow[] {
   const map: Record<string, MergedRow> = {};
   for (const snap of history) {
-    for (const t of snap.tenants) {
-      const key = (t.name || "").toLowerCase().trim();
+    for (const raw of snap.tenants) {
+      const key = (raw.name || "").toLowerCase().trim();
       if (!key) continue;
+      const t = deriveSalesRecord(raw, rosterByKey, recByKey);
       if (!map[key]) map[key] = { name: t.name, byYear: {} };
       map[key].byYear[snap.year] = t;
     }
@@ -202,7 +244,9 @@ function yearLabel(year: number, source: "om" | "upload"): string {
   return String(year);
 }
 
-export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUpload, uploadBusy, uploadError }: Props) {
+export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError }: Props) {
+  const rosterByKey = useMemo(() => new Map((omTenants || []).map(t => [tenantKey(t.canonicalName || t.name), t])), [omTenants]);
+  const recByKey = recoveries ?? new Map();
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedYear, setSelectedYear] = useState<number | "all">("all");
   const [filter, setFilter] = useState("");
@@ -245,10 +289,10 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
     if (selectedYear !== "all") {
       const snap = fullHistory.find(s => s.year === selectedYear);
       if (!snap) return [];
-      return snap.tenants.map(t => ({ name: t.name, byYear: { [selectedYear]: t } as Record<number, TenantSalesRecord> }));
+      return snap.tenants.map(raw => { const t = deriveSalesRecord(raw, rosterByKey, recByKey); return { name: t.name, byYear: { [selectedYear]: t } as Record<number, TenantSalesRecord> }; });
     }
-    return mergeRows(fullHistory);
-  }, [fullHistory, selectedYear]);
+    return mergeRows(fullHistory, rosterByKey, recByKey);
+  }, [fullHistory, selectedYear, rosterByKey, recByKey]);
 
   const displayYears = selectedYear === "all" ? years : [selectedYear as number];
 

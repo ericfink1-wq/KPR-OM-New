@@ -2079,6 +2079,7 @@ ${text.slice(0, 40000)}`;
             salesHistory={d.tenantSalesHistory || []}
             omTenants={d.tenants}
             omDate={d.omDate}
+            recoveries={estimateRecoveries(d).byName}
             onUpload={handleSalesUpload}
             uploadBusy={salesBusy}
             uploadError={salesError}
