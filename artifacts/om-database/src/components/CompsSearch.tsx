@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { EyeOff } from "lucide-react";
 import { exportCompsToExcel } from "../lib/exportExcel";
+import { extractAnyFile, isPdf, isSpreadsheet } from "../lib/fileExtract";
+import { extractCompsFromText } from "../lib/compsImport";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -601,6 +603,16 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     e.target.value = "";
     setImportMsg(null);
     try {
+      if (isSpreadsheet(file) || isPdf(file)) {
+        // Excel / CSV / PDF → read to text, then AI-map rows into comp objects.
+        setImportMsg({ ok: true, text: `Reading ${isPdf(file) ? "PDF" : "spreadsheet"} & extracting comps…` });
+        const { text } = await extractAnyFile(file);
+        const comps = await extractCompsFromText(text, isPdf(file) ? "a PDF comps sheet" : "a spreadsheet");
+        setImportMsg(null);
+        setPendingImport(comps as unknown[]);
+        return;
+      }
+      // JSON
       const text = await file.text();
       const parsed = JSON.parse(text);
       const arr: unknown[] = Array.isArray(parsed) ? parsed : (parsed?.comps ?? null);
@@ -820,7 +832,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       <input
         ref={importRef}
         type="file"
-        accept=".json"
+        accept=".json,.xlsx,.xls,.xlsm,.xlsb,.csv,.pdf,application/pdf"
         style={{ display: "none" }}
         onChange={handleImportFile}
       />
@@ -884,8 +896,9 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
               fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
               letterSpacing: "-0.01em",
             }}
+            title="Import comps from JSON, Excel/CSV, or a PDF comps sheet"
           >
-            ↑ Import JSON
+            ↑ Import file
           </button>
           <button
             onClick={() => setAddOpen(true)}
