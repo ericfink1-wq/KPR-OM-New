@@ -38,7 +38,7 @@ function AppInner() {
   const [auth, setAuth] = useState<AuthState>("checking");
   const [isAdmin, setIsAdmin] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [tab, setTab] = useState<TabId>("portfolio");
+  const [tab, setTab] = useState<TabId>("analyst");
   // Right-side AI chat drawer (opened from the ask bar / "Ask about this property").
   const [chatOpen, setChatOpen] = useState(false);
   const [viewStack, setViewStack] = useState<View[]>([{ type: "list" }]);
@@ -283,8 +283,8 @@ function AppInner() {
       style={{ height: "100%", background: "#f6f2ea", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 16, fontFamily: "'Inter',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any, paddingRight: helpOpen && isDesktop ? "clamp(420px, 33vw, 680px)" : 0, transition: "padding-right 0.2s ease" }}>
 
       <Header
-        tab={chatOpen ? "analyst" : tab}
-        onTab={t => { if (t === "analyst") { setChatOpen(true); return; } setChatOpen(false); setTab(t as TabId); resetToList(); }}
+        tab={tab}
+        onTab={t => { setTab(t as TabId); resetToList(); }}
         deals={deals}
         queueLen={processingCount}
         onLogout={handleLogout}
@@ -394,6 +394,18 @@ function AppInner() {
         </div>
       )}
 
+      {/* Analyst home page (dashboard) — submitting a question opens the chat drawer */}
+      {tab === "analyst" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+          <AnalystChat
+            deals={deals}
+            onOpenDeal={handleOpenDeal}
+            onTenantClick={handleOpenTenant}
+            onAsk={handleQuery}
+          />
+        </div>
+      )}
+
       {/* Portfolio tab */}
       {tab === "portfolio" && (
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
@@ -494,7 +506,7 @@ function AppInner() {
         </div>
       )}
 
-      {view.type !== "detail" && (
+      {tab !== "analyst" && view.type !== "detail" && (
         <AnalystBar onAsk={handleQuery} />
       )}
 

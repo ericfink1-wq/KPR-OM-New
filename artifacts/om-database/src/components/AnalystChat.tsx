@@ -19,6 +19,10 @@ interface Props {
   onTenantClick?: (name: string) => void;
   initialQuery?: string;
   onClearQuery?: () => void;
+  // When set (home-page/dashboard mode), submitting a question or tapping a
+  // suggested prompt hands off to the drawer via onAsk instead of running the
+  // conversation inline. When absent (drawer mode), the chat runs here.
+  onAsk?: (q: string) => void;
 }
 
 // ── Formatting helpers ──────────────────────────────────────────────────────
@@ -57,7 +61,7 @@ const panelLabel: React.CSSProperties = {
   marginTop: 16,
 };
 
-export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQuery, onClearQuery }: Props) {
+export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQuery, onClearQuery, onAsk }: Props) {
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -84,12 +88,15 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, []);
 
-  // Handle incoming query from DetailView
+  // Incoming query (from the dashboard hand-off / ask bar / "Ask about this
+  // property"). In drawer mode (no onAsk) auto-send it so the answer appears;
+  // in dashboard mode just pre-fill the box.
   useEffect(() => {
-    if (initialQuery) {
-      setInput(initialQuery);
-      onClearQuery?.();
-    }
+    if (!initialQuery) return;
+    onClearQuery?.();
+    if (onAsk) setInput(initialQuery);
+    else sendMsg(initialQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
   // Only auto-scroll to newest message after the user has sent something
@@ -125,6 +132,14 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     } finally {
       setLoading(false);
     }
+  };
+
+  // Route a submitted question: in dashboard mode hand off to the drawer (onAsk),
+  // otherwise run the conversation inline (drawer mode).
+  const submit = (text: string) => {
+    if (!text.trim()) return;
+    if (onAsk) { onAsk(text.trim()); setInput(""); return; }
+    sendMsg(text);
   };
 
   // ── Intelligence Library stats ───────────────────────────────────────────
@@ -257,7 +272,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               <div style={{ fontSize: 10, letterSpacing: "0.14em", color: "#a89f8f", fontWeight: 700, marginBottom: 10, textTransform: "uppercase" }}>Try asking…</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {SUGGESTED.map(s => (
-                  <button key={s} onClick={() => sendMsg(s)}
+                  <button key={s} onClick={() => submit(s)}
                     style={{ textAlign: "left", background: "#fff", border: "1px solid #e7e0d2", borderRadius: 10, padding: "10px 14px", cursor: "pointer", fontSize: 12.5, color: "#4a4d46", fontFamily: "'Inter', sans-serif", transition: "background .15s ease, border-color .15s ease" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "#f6f2ea"; e.currentTarget.style.borderColor = "#c8bfb0"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e7e0d2"; }}>
@@ -344,7 +359,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             onChange={e => { setInput(e.target.value); if (e.target.value) setShowSuggestions(false); }}
             onFocus={() => { if (!input.trim()) setShowSuggestions(true); }}
             onKeyDown={e => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); setShowSuggestions(false); sendMsg(input); }
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); setShowSuggestions(false); submit(input); }
               if (e.key === "Escape") setShowSuggestions(false);
             }}
             placeholder={active.length === 0 ? "Upload some OMs first, then ask me anything…" : "Ask anything about your deal library…"}
@@ -357,7 +372,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               outline: "none", boxShadow: "0 1px 2px rgba(56,58,55,0.05)",
             }}
           />
-          <button onClick={() => { setShowSuggestions(false); sendMsg(input); }} disabled={loading || !input.trim()}
+          <button onClick={() => { setShowSuggestions(false); submit(input); }} disabled={loading || !input.trim()}
             style={{
               background: input.trim() && !loading ? "#26281f" : "#e3dccd",
               border: "none", color: input.trim() && !loading ? "#e8e0cf" : "#a89f8f",
