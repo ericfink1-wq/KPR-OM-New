@@ -898,6 +898,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     e.target.value = "";
     if (!file) return;
     if (!ensureUploadAllowed()) return;
+    const taskId = startAiTask(`Reading rent roll — ${d.propertyName || d.fileName || "deal"}`, file.name);
     setRrBusy(true);
     setRrError(null);
     try {
@@ -998,8 +999,11 @@ ${text.slice(0, 60000)}`;
       }
 
       onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", tenantsManual: true, analysisStale: true, ...recomputed });
+      finishAiTask(taskId, "done", `Roster updated — ${newTenants.length} tenants from the rent roll`);
     } catch (err: unknown) {
-      setRrError(err instanceof Error ? err.message : "Rent roll import failed.");
+      const msg = err instanceof Error ? err.message : "Rent roll import failed.";
+      setRrError(msg);
+      finishAiTask(taskId, "error", msg);
     }
     setRrBusy(false);
   };
@@ -1009,6 +1013,7 @@ ${text.slice(0, 60000)}`;
     e.target.value = "";
     if (!file) return;
     if (!ensureUploadAllowed()) return;
+    const taskId = startAiTask(`Reading sales report — ${d.propertyName || d.fileName || "deal"}`, file.name);
     setSalesBusy(true);
     setSalesError(null);
     try {
@@ -1063,8 +1068,11 @@ ${text.slice(0, 40000)}`;
       // Replace any existing snapshot for the same year, append otherwise
       const existing = (d.tenantSalesHistory || []).filter(s => s.year !== year);
       onUpdate(d.id, { tenantSalesHistory: [...existing, newSnap] });
+      finishAiTask(taskId, "done", `Sales loaded — ${tenants.length} tenants (${year})`);
     } catch (err: unknown) {
-      setSalesError(err instanceof Error ? err.message : "Sales upload failed.");
+      const msg = err instanceof Error ? err.message : "Sales upload failed.";
+      setSalesError(msg);
+      finishAiTask(taskId, "error", msg);
     }
     setSalesBusy(false);
   };
@@ -2668,6 +2676,7 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
     const file = e.target.files?.[0];
     if (e.target) e.target.value = "";
     if (!file) return;
+    const taskId = startAiTask(`Reading term sheet — ${deal.propertyName || deal.fileName || "deal"}`, file.name);
     setBusy(true); setStatus("Reading term sheet…");
     try {
       const buf = await file.arrayBuffer();
@@ -2685,7 +2694,7 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
         const m = raw.match(/\{[\s\S]+\}/);
         if (m) out = JSON.parse(m[0]);
       } catch {}
-      if (!out) { setStatus("Couldn't read terms from that PDF — try a clearer term sheet."); setBusy(false); return; }
+      if (!out) { setStatus("Couldn't read terms from that PDF — try a clearer term sheet."); finishAiTask(taskId, "error", "Couldn't read terms from that term sheet"); setBusy(false); return; }
       const patch: Partial<Deal> = {};
       for (const k of Object.keys(SCHEMA)) {
         const v = out[k];
@@ -2696,7 +2705,8 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
       const n = Object.keys(patch).length;
       if (n) onUpdate(deal.id, patch);
       setStatus(n ? `✓ Filled ${n} blank field${n>1?"s":""} from the term sheet — review and verify each before relying on it.` : "No new blank fields found to fill (existing entries were left untouched).");
-    } catch { setStatus("Couldn't read that PDF — try again."); }
+      finishAiTask(taskId, "done", n ? `Term sheet — filled ${n} blank field${n>1?"s":""}` : "Term sheet read — no new blank fields to fill");
+    } catch { setStatus("Couldn't read that PDF — try again."); finishAiTask(taskId, "error", "Couldn't read that term sheet PDF"); }
     setBusy(false);
   }
 
