@@ -2,6 +2,7 @@
 // All functions maintain the same signatures as idb.ts for easy drop-in replacement
 
 import type { Deal, ImageBundle } from "./idb";
+import { normalizeDeal } from "./utils";
 
 const BASE = "/api";
 
@@ -56,7 +57,10 @@ export async function apiAdminUnlock(password: string): Promise<void> {
 export async function apiLoadDeals(): Promise<Deal[]> {
   const resp = await apiFetch("/deals");
   if (!resp.ok) throw new Error("Failed to load deals");
-  return resp.json() as Promise<Deal[]>;
+  const deals = await resp.json() as Deal[];
+  // Normalize occupancy on load so stored fraction values (1.0 / 0.99 read as
+  // "1%") display correctly everywhere without needing a re-extract.
+  return deals.map(normalizeDeal);
 }
 
 export async function apiSaveDeal(deal: Deal): Promise<void> {

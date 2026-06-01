@@ -41,7 +41,10 @@ export async function syncOwnTransactionComps(
     const address     = toStr(data.address);
     const market      = toStr(data.market) ?? toStr(data.state);
     const sf          = toFloat(data.totalSF);
-    const occupancy   = toFloat(data.occupancy);
+    // Occupancy stored as a fraction (1.0 = 100%) → scale to percent (matches the
+    // client-side normalizeOccupancy guard).
+    const occRaw      = toFloat(data.occupancy);
+    const occupancy   = occRaw != null && occRaw > 0 && occRaw <= 1.5 ? Math.round(occRaw * 100 * 10) / 10 : occRaw;
     const propertyType = toStr(data.propertyType);
 
     // Top-3 tenant names as anchor string

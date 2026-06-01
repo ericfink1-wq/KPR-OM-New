@@ -4,6 +4,24 @@ import type { Deal, ReviewQuestion } from "./idb";
 import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "./idb";
 import { isInvestmentGrade } from "./tenantCredit";
 
+// Occupancy sanity: some OMs express occupancy as a FRACTION (1.0 = 100%,
+// 0.993 = 99.3%) rather than a percent. A real retail-center occupancy is never
+// ≤1.5%, so any value in (0, 1.5] is treated as a fraction and scaled to a percent.
+// Applied at every data-load boundary so the whole app (grid, detail, compare,
+// analytics, PDF, export, comps) sees a consistent percent. Idempotent.
+export function normalizeOccupancy(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  if (isNaN(n) || n <= 0) return null;
+  return n <= 1.5 ? Math.round(n * 100 * 10) / 10 : n;
+}
+
+// Return a deal with its occupancy normalized (non-mutating).
+export function normalizeDeal<T extends { occupancy?: number | null }>(deal: T): T {
+  const occ = normalizeOccupancy(deal.occupancy);
+  return occ != null && occ !== deal.occupancy ? { ...deal, occupancy: occ } : deal;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
