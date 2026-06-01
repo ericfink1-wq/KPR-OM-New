@@ -683,6 +683,19 @@ function DealThesisBox({ deal, onUpdate, onRegrade, regrading }: {
   const saved = (deal.dealThesis ?? "");
   const dirty = text.trim() !== saved.trim();
 
+  // Keep the box in sync when the saved value changes from outside (deal reloaded,
+  // another user's edit, post-regrade) — but never clobber unsaved local edits.
+  const lastSavedRef = useRef(saved);
+  useEffect(() => {
+    const prevSaved = lastSavedRef.current;
+    if (saved !== prevSaved) {
+      lastSavedRef.current = saved;
+      // Adopt the new saved value only if the box wasn't mid-edit (i.e. it still
+      // matched the previously-saved text or was empty).
+      setText(prev => (prev.trim() === "" || prev === prevSaved ? saved : prev));
+    }
+  }, [saved]);
+
   const save = () => { if (dirty) onUpdate(deal.id, { dealThesis: text.trim() || null }); };
   const saveAndRegrade = async () => {
     if (dirty) onUpdate(deal.id, { dealThesis: text.trim() || null });
