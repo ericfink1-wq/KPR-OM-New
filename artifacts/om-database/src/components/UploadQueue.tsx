@@ -106,6 +106,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const activeCountRef = useRef(0);
   const waitingFilesRef = useRef<{ file: File; itemId: string }[]>([]);
   const stopRef = useRef(false);
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
 
   const drainQueue = () => {
     while (activeCountRef.current < MAX_CONCURRENT && waitingFilesRef.current.length > 0) {
@@ -115,6 +117,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         waitingFilesRef.current = [];
         break;
       }
+      // Paused: don't start new files (in-flight ones finish on their own). The
+      // waiting items stay "pending" and resume when the user unpauses.
+      if (pausedRef.current) break;
       const next = waitingFilesRef.current.shift()!;
       activeCountRef.current++;
       processFile(next.file, next.itemId).finally(() => {
@@ -126,8 +131,23 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
   const stopAll = () => {
     stopRef.current = true;
+    pausedRef.current = false;
+    setPaused(false);
     waitingFilesRef.current = [];
     setQueue(prev => prev.map(it => it.status === "pending" ? { ...it, status: "error", msg: "Stopped", error: "Stopped by user" } : it));
+  };
+
+  const togglePause = () => {
+    if (pausedRef.current) {
+      // Resume
+      pausedRef.current = false;
+      setPaused(false);
+      drainQueue();
+    } else {
+      // Pause — stop starting new files; in-flight ones finish.
+      pausedRef.current = true;
+      setPaused(true);
+    }
   };
 
   const enqueueFile = (file: File) => {
@@ -398,9 +418,16 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                   {failed > 0 && <> · <span style={{ color: "#dc2626", fontWeight: 600 }}>{failed} failed</span></>}
                   {waiting > 0 && <> · <span style={{ color: "#d9890c", fontWeight: 600 }}>{waiting} need review</span></>}
                   {working > 0 && <> · {working} remaining</>}
+                  {paused && working > 0 && <> · <span style={{ color: "#d9890c", fontWeight: 600 }}>paused</span></>}
                 </span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
+                {working > 0 && (
+                  <button onClick={togglePause}
+                    style={{ background: paused ? "#6dba43" : "#fff", border: paused ? "none" : "1px solid #d9d2c4", color: paused ? "#1f2b16" : "#5c5047", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+                    {paused ? "▶ Resume" : "❚❚ Pause"}
+                  </button>
+                )}
                 {working > 0 && (
                   <button onClick={stopAll}
                     style={{ background: "#dc2626", border: "none", color: "#fff", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
