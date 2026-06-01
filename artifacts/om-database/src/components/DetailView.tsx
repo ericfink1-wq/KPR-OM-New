@@ -1052,7 +1052,7 @@ RULES:
 - salesPSF: sales per square foot (dollars). Often labeled "Sales/SF", "$/SF", or "PSF".
 - annualSales: total annual sales volume in dollars (not PSF). If shown in thousands, convert to full dollars.
 - sf: tenant GLA / leased SF for use in sales calculations.
-- occupancyCost: occupancy cost percentage (rent ÷ sales). Often labeled "Occ Cost %", "OC%", or "Occupancy Cost".
+- occupancyCost: TOTAL occupancy cost percentage = (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled "Occ Cost %", "OC%", or "Occupancy Cost" — capture the report's stated total. Do NOT report a base-rent-only ratio.
 - Skip total/subtotal rows and blank rows.
 - Include all tenants that have any sales data, even if some fields are null.
 

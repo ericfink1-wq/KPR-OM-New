@@ -101,7 +101,7 @@ REQUIRED SCHEMA:
       "salesPSF": "number or null",
       "salesYear": "number or null — the calendar year the salesPSF figure is from (e.g. 2024). Infer from context ('2024 sales', 'trailing 12 months ending Dec-2024', etc.).",
       "salesNotes": "string or null",
-      "occupancyCost": "number or null — total occupancy cost as a percentage of sales (base rent + CAM + taxes + insurance recoveries, all divided by gross sales). Often labeled 'Occ Cost %', 'OC%', or 'Occupancy Cost'. If the OM only states base rent ÷ sales, note that in salesNotes instead and leave this null.",
+      "occupancyCost": "number or null — TOTAL occupancy cost as a percentage of gross sales, defined as (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled 'Occ Cost %', 'OC%', or 'Occupancy Cost'. Use the OM's stated total occ-cost % when given. If the OM only states base rent ÷ sales (not the full health ratio), note that in salesNotes instead and leave this null.",
       "assumptionNote": "string or null — any footnote/assumption for this tenant",
       "isAnchor": "true|false",
       "isNAP": "true if this tenant is on an adjacent parcel NOT part of this sale/ownership (marked NAP, Not A Part, or outparcel on the site plan). false or null otherwise.",

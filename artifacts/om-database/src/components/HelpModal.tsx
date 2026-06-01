@@ -290,7 +290,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         </>,
         <><B>Upload on the live site, not the Replit preview.</B> The preview and live site have separate databases — anything uploaded in the preview won't appear on the live site after a publish.</>,
         <><B>Shift+Enter</B> in the Analyst chat inserts a line break. Enter alone sends.</>,
-        <><B>Occupancy cost</B> displayed on deal pages is total occupancy cost (base rent + CAM + taxes + recoveries) ÷ gross sales — not just base rent ÷ sales. If only base rent is available, the field shows as estimated.</>,
+        <><B>Occupancy cost (health ratio)</B> everywhere on the site is the TOTAL: (base rent + reimbursements + percentage rent + other rent) ÷ gross sales — never just base rent ÷ sales. It uses the OM's stated total when given; otherwise it computes from the disclosed components (and stays blank rather than report a base-rent-only ratio).</>,
         <><B>Demographics auto-populate</B> when a deal is created from a PDF. Hit "Re-Pull" on the deal page to refresh them if the property location changed or data looks stale. The rings are estimated from US Census block-group data apportioned by centroid — close to an Esri/CoStar report but not identical (Census is historical 5-year data, not forward projections), so treat it as a solid cross-check.</>,
         <><B>If the site feels slow</B> after a large import, give it 30 seconds — the background indexing catches up and search/analytics will snap back to speed.</>,
       ]} />
