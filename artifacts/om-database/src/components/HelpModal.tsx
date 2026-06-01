@@ -76,25 +76,22 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Just drop in a document — <B>PDF or Excel/CSV</B> — and the AI reads it for you. When you upload, the system <B>auto-detects what each file is</B> (OM, rent roll, or sales report) and routes it to the right place; if it's a rent roll or sales report for a property already in your library, it matches it to that deal (and asks you if it's unsure). Three kinds of document:</p>
+        <p style={{ margin:0 }}>Drop in a document — <B>PDF or Excel/CSV</B> — and the AI reads it. It auto-detects the type and, for a rent roll or sales report, matches it to the right deal (asking if unsure).</p>
         <BriefList items={[
-          <><B>Offering Memorandum (OM)</B> — click the green <B>Upload</B> button (top-right) and pick one or more files. The AI reads the whole document and fills in tenants, financials, lease terms, demographics, and the cover photo automatically. About 1–3 minutes per deal. You can drop several files at once — they process in parallel.</>,
-          <><B>Rent roll</B> (PDF or Excel) — either drop it in the main upload (it auto-matches to the right deal) or open a deal and use <B>"⬆ Refresh tenants from a current rent roll (PDF or Excel)."</B> This updates just the tenant list/leases and stamps it with the roll's date — your financials and everything else stay put.</>,
-          <><B>Tenant sales report</B> (PDF or Excel) — open a deal, find the <B>Tenant Sales</B> panel, and hit <B>"⬆ Upload Sales (PDF or Excel)."</B> The AI reads the sales figures and auto-detects the year, so your sales data is tracked by vintage.</>,
+          <><B>OM</B> — click <B>Upload</B> (top-right) and pick one or more files; the AI fills in tenants, financials, lease terms, demographics, and the cover. ~1–3 min each, processed in parallel.</>,
+          <><B>Rent roll</B> — drop it in (auto-matches) or use a deal's <B>"⬆ Refresh tenants"</B>; updates the roster + as-of date only, leaving financials intact.</>,
+          <><B>Tenant sales report</B> — a deal's <B>Tenant Sales</B> panel → <B>"⬆ Upload Sales"</B>; auto-detects the year and tracks sales by vintage.</>,
         ]} />
-        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}><B>Confirm import details:</B> after a read, if the AI wasn't fully sure it captured a value (or the numbers don't reconcile), the deal shows a <B>"📝 N import details to confirm"</B> banner. Open it to confirm, dismiss, or <B>fix the value right there</B> — including correcting a tenant in the roster.</p>
-        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}>The first time you upload in a browser session you'll be asked for the <B>upload password</B> — this keeps uploads limited to your team.</p>
-        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>Heads up — these AI reads cost money.</B> Every PDF you upload is read by the AI, which uses paid tokens. A full OM is the biggest single cost (a long document); rent rolls and sales reports are smaller. It's not expensive per file, but avoid re-uploading the same PDF repeatedly. Browsing, editing, and exporting are always free — see the cost breakdown in the detail below.</p>
+        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}><B>Confirm import details:</B> if the AI was unsure about a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner — confirm, dismiss, or fix it right there. First upload of a session asks for the <B>upload password</B>.</p>
+        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>AI reads cost money.</B> Each PDF/Excel read uses paid tokens (a full OM is the biggest). Avoid re-uploading the same file; browsing, editing, and exporting are free.</p>
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>After an OM upload:</B> the deal lands in your Portfolio as a Prospect with a green "Fresh" badge. Skim the tenant roster and financials — if something looks off, open the deal and use <B>Analyze → Re-run extraction</B> to have the AI read the PDF again before you edit anything by hand.</>,
-        <><B>Thin or partial extraction?</B> Usually means the PDF was scanned, low-quality, or missing pages. Try "Re-run extraction" first. You can also fix any single value by clicking the pencil icon next to it.</>,
-        <><B>Rent roll vs. OM tenants:</B> uploading a rent roll replaces the roster with the current leases and marks it as rent-roll-sourced (you'll see a teal "RENT ROLL" tag and the as-of date). Because that's now your hand-verified roster, a later OM "Re-run extraction" won't quietly overwrite it — and after a rent-roll update, use <B>Actions → ✨ Refresh Analysis (current roster)</B> to refresh the grade/narrative from the new tenants.</>,
-        <><B>Tenant sales reports stack by year:</B> upload one each year and the panel keeps the history, so you can see sales trends over time. A dedicated sales report is richer than the sales figures pulled from the OM, and the panel will prompt you to upload one for more detail.</>,
-        <><B>Cover photo wrong?</B> On the deal page use "Set cover from page #" to pick any page from the OM, with left/right/full-spread options.</>,
-        <><B>Advanced (you may never need this):</B> the ▾ next to "Upload OMs" also offers <em>Import a folder</em> (queue many OMs at once) and <em>Upload .json</em> (load a pre-extracted deal, e.g. one prepared for you outside the app). Both merge by address so they update an existing deal rather than duplicating it; JSON-imported deals also auto-score against your portfolio in the background. For day-to-day use, the three PDF uploads above are all you need.</>,
+        <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → Re-run extraction</B>, or fix any value with its pencil icon.</>,
+        <><B>Rent roll vs. OM:</B> a rent roll becomes your verified roster (teal "RENT ROLL" tag); a later OM re-extraction won't overwrite it. After updating it, run <B>Actions → ✨ Refresh Analysis</B> to refresh the grade/narrative.</>,
+        <><B>Sales reports stack by year</B> — upload one annually to build a sales trend.</>,
+        <><B>Advanced:</B> the ▾ by Upload also offers <em>Import a folder</em> and <em>Upload .json</em> (both merge by address; JSON deals auto-score).</>,
       ]} />
     ),
   },
@@ -104,23 +101,20 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio" },
     brief: (
       <>
-        <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library. Every OM you've uploaded lives here, organized by status.</p>
+        <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library, organized by status (Prospect → Under Contract → Owned → Sold, or Passed) — active deals surface first.</p>
         <BriefList items={[
-          <><B>Status flow:</B> Prospect → Under Contract → Owned → Sold (or Passed). Set status on the deal page. Cards sort by status — active deals surface first.</>,
-          <><B>Deal cards</B> show key metrics at a glance: anchor, SF, occupancy, WALT, NOI, cap rate, and market. Red flags show as a badge count.</>,
-          <><B>Filters & search</B> — filter the library by state, asset type, or status (multi-select). The search box matches <B>across all fields</B> now — name, market, city/state, tenants &amp; anchors, lender, buyer/seller, notes, thesis, even red flags and upside items — not just the name.</>,
-          <><B>Compare</B> — select 2+ deals from the list and hit Compare for a side-by-side view: best value per metric is highlighted, KPR's own economics (for owned/sold) sit alongside the OM figures, plus shared tenants, an AI "analyze side-by-side" read, and Excel export.</>,
-          <><B>Analytics bar</B> at the bottom of the Portfolio page — type any question about your library and hit Enter to get an instant AI answer.</>,
+          <><B>Cards</B> show anchor, SF, occupancy, WALT, NOI, cap rate, market, and a red-flag count.</>,
+          <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches <B>every field</B> (name, location, tenants, lender, notes, thesis, flags), not just the name.</>,
+          <><B>Compare</B> — pick 2+ deals for a side-by-side: best value per metric highlighted, KPR's own economics next to the OM figures, shared tenants, an AI read, and Excel export.</>,
+          <><B>Bulk actions</B> — checkboxes (on hover) to re-status or delete several at once.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Deal status controls grouping:</B> Owned deals show first, then Under Contract, then Prospects. Passed and Sold deals are collapsed at the bottom but still searchable and usable as comps.</>,
-        <><B>Red flag badges</B> on cards are generated by the AI during extraction — lease rollover concentration, below-market rents, gross leases, anchor co-tenancy risks. Click the deal to see the full list.</>,
-        <><B>Bulk operations:</B> select multiple deals with the checkboxes that appear on hover to move them to a different status or delete them together.</>,
-        <><B>Compare view</B> puts up to 4 deals side-by-side on every metric — anchor, WALT, occupancy, rent PSF, NOI, demographics, lease rollover schedule, and tenant mix. Good for investment committee prep.</>,
-        <><B>The portfolio count</B> in the nav (e.g. "Portfolio (28)") is your total deal count including Prospects and Passed deals — it's your full library, not just owned assets.</>,
+        <><B>Red-flag badges</B> are AI-generated during extraction (rollover concentration, below-market rent, gross leases, co-tenancy risk) — click a deal for the full list.</>,
+        <><B>The nav count</B> ("Portfolio (28)") is your whole library including Prospects/Passed, not just owned.</>,
+        <><B>Deleting is permanent</B> (with a confirm) — there's no Trash, though an automatic snapshot is taken before each delete for admin recovery.</>,
       ]} />
     ),
   },
@@ -130,37 +124,24 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio — open any deal" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Click any deal card to open its detail page. The page follows an analyst flow: Overview → Tenants/Sales/Rollover → Highlights/Upside/Red Flags → Financials/Comp Benchmark/Closing Costs → Assumptions/Cash Flow → Demographics → Notes.</p>
+        <p style={{ margin:0 }}>Click any card to open its detail page (Overview → Tenants/Sales/Rollover → Highlights/Upside/Flags → Financials/Comps/Closing Costs → Thesis/Cash Flow → Demographics → Notes). <B>Jump to ▾</B> in the sticky header skips to any section.</p>
         <BriefList items={[
-          <><B>Tenant roster</B> — every lease with SF, rent/SF, commencement, expiration, remaining term, options, lease type, and anchor/credit flags. Click any tenant name to see all their locations across the library.</>,
-          <><B>AI Investment Highlights</B> — institutional-grade narrative covering the asset, anchor quality, inline mix, key metrics, investment thesis, and top risk. Generated from the OM.</>,
-          <><B>Financials</B> — NOI, cap rate, occupancy, WALT, and cash flow summary from the OM proforma.</>,
-          <><B>Comp Benchmark</B> — the deal is benchmarked against comparable trades: median cap rate and price/SF, with sample size and date range shown. You can exclude a comp you find irrelevant or type-ahead to add a missing one, and the medians recompute.</>,
-          <><B>Trade Area demographics</B> — 1/3/5-mile population and average household income from US Census data, apportioned by block-group centroids so the rings track the OM's numbers closely (rather than over-counting whole tracts).</>,
-          <><B>Red Flags & Upside Items</B> — AI-surfaced risks and value-creation opportunities specific to this deal.</>,
-          <><B>Our Thesis / Assumptions</B> — a box (above the site plan) where you type why you like the deal / what you're underwriting to. Hit <B>"Save &amp; Re-grade"</B> to fold it into the AI grade — the analyst weighs it but stays objective and will push back where the data doesn't support a claim. Saved in the database and shared with the team.</>,
-          <><B>Cover photo &amp; site plan</B> — both fit to your screen so the whole image is visible; each has a 🗑 to remove a wrong image (with a confirm). Section titles show the data source (e.g. Demographics = OM, Trade Area = Census).</>,
-          <><B>Jump to ▾</B> in the sticky header navigates instantly to any section — and it now stays in sync with the page automatically.</>,
+          <><B>Tenant roster</B> — every lease (SF, rent/SF, dates, term, options, anchor/credit flags). Click a tenant name for all its locations library-wide.</>,
+          <><B>AI Highlights, Financials, Red Flags & Upside</B> — narrative, NOI/cap/occupancy/WALT, and AI-surfaced risks/opportunities.</>,
+          <><B>Comp Benchmark</B> — median cap rate and price/SF vs. comparable trades, with sample size and date range; exclude or add comps and it recomputes.</>,
+          <><B>Our Thesis / Assumptions</B> — type why you like the deal; <B>"Save & Re-grade"</B> folds it into the AI grade (it stays objective). Saved and shared with the team.</>,
+          <><B>Trade Area demographics</B> — 1/3/5-mile population & income from US Census data.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Tenant roster columns:</B> base rent (not gross), rent/SF, lease dates, remaining term in years, anchor flag (≥10,000 SF), and investment-grade credit flag. Vacant suites appear as "Vacant" rows so occupancy math is honest.</>,
-        <><B>Clicking a tenant name</B> opens a cross-portfolio summary for that brand — total SF across all deals, blended rent/SF, and which properties they occupy. Great for credit concentration analysis.</>,
-        <><B>Editing any field:</B> click the pencil icon on any field to edit it directly. Changes save automatically and are logged in the deal's edit history. Figures you've verified can be locked to prevent them being overwritten by a future re-extraction.</>,
-        <><B>Re-run extraction (Analyze menu):</B> re-reads the original OM PDF and refreshes all extracted fields. Use this if the initial extraction missed something or the data looks stale.</>,
-        <><B>Refresh Analysis (current roster):</B> in the Actions menu — regenerates the grade, narrative, strengths, and red flags from the deal's <em>current</em> roster and financials, not the stored OM. This is the safe refresh to run after you've pasted in an updated rent roll, since it won't revert your tenants to the OM's older list.</>,
-        <><B>Refresh Score / Refresh Analysis show live progress.</B> When you run either, a status card appears at the top of the page with a spinner, an elapsed-seconds timer, and a progress bar so you can see it's working — then a green check when it's done (or a clear error if something failed). No more wondering whether it ran.</>,
-        <><B>Refresh Score button</B> re-benchmarks the deal against your portfolio — refreshing the letter grade and red flags from current portfolio data. It's deterministic and augments (doesn't erase) the existing qualitative flags.</>,
-        <><B>Dark-store flags are read-only.</B> The <em>DARK</em> badge on a tenant (closed but still paying rent) is set from the OM/rent-roll data and can't be toggled by hand — this prevents accidental edits from skewing the data. To correct a dark flag, re-extract or paste an updated roster.</>,
-        <><B>Summary button</B> generates a one-page investment summary you can copy or share.</>,
-        <><B>Excel button</B> exports the deal's full rent roll and financials as a spreadsheet.</>,
-        <><B>Find Sale button</B> searches public records and market sources for comparable sales.</>,
-        <><B>Comp Benchmark methodology:</B> uses medians (not averages), shows how many comps and over what date window, and tiers comps by relevance — same state + type + size range within 24 months first, widening only if needed and labeling how far it reached. Below a minimum sample it shows the comps but withholds a verdict rather than guess from thin data. It never falls back to the full unfiltered comp pool.</>,
-        <><B>Closing Costs estimator</B> calculates title, transfer, and mortgage-recording taxes by state with buyer/seller splits. Defaults to 65% LTV; an entity-sale toggle adds controlling-interest taxes. Treat as a ballpark — confirm with your title company.</>,
-        <><B>Deal Terms & Financing (owned deals):</B> purchase price, going-in cap, seller, close date, lender, loan amount, rate, and maturity — all editable. These feed the portfolio analytics.</>,
-        <><B>Trash:</B> moves the deal out of the library but doesn't delete it permanently. Restore from the Trash section at the bottom of Portfolio.</>,
+        <><B>Edit any field</B> via its pencil icon (auto-saved, logged); lock verified figures so a re-extraction won't overwrite them.</>,
+        <><B>Re-run extraction</B> re-reads the OM PDF; <B>Refresh Analysis</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste); <B>Refresh Score</B> re-benchmarks against your portfolio. All show live progress.</>,
+        <><B>Comp Benchmark</B> uses medians and tiers comps by relevance (same state/type/size within 24 months first, widening if needed); below a minimum sample it withholds a verdict rather than guess.</>,
+        <><B>Closing Costs</B> estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle) — a ballpark, confirm with title.</>,
+        <><B>Cover & site plan</B> fit to screen; each has a 🗑 (with confirm). Dark-store flags are read-only (set from the data). Section titles show their source (OM vs. Census).</>,
+        <><B>Owned-deal Terms & Financing</B> (purchase price, going-in cap, lender, loan terms) are editable and feed the analytics. <B>Summary</B>, <B>Excel</B>, and <B>Find Sale</B> buttons export or research the deal.</>,
       ]} />
     ),
   },
@@ -170,30 +151,19 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "analyst", label: "Go to the Analyst" },
     brief: (
       <>
-        <p style={{ margin:0 }}>The <B>Analyst</B> reads your entire deal library and answers questions across tenants, rents, expirations, financials, and demographics. Reach it three ways:</p>
-        <BriefList items={[
-          <><B>Ask bar</B> — the text box at the bottom of the Portfolio, Analytics, and Comps pages. Type and hit Enter; your question opens the Analyst with an answer.</>,
-          <><B>Analyst tab</B> — the full chat view with conversation history. Follow-ups work; it remembers the thread.</>,
-          <><B>Ask about this property</B> — on any deal page, this scopes the question to just that deal.</>,
-        ]} />
+        <p style={{ margin:0 }}>The <B>Analyst</B> reads your entire library and answers across tenants, rents, expirations, financials, and demographics. The <B>Analyst</B> tab is the home page; the <B>ask bar</B> at the bottom of other pages opens the answer in a side drawer; <B>"Ask about this property"</B> on a deal scopes it to that deal.</p>
         <TryAsking items={[
           "Which grocery-anchored deals have a WALT under 5 years?",
           "What leases roll in the next 18 months across our owned portfolio?",
-          "Rank our prospects by NOI per square foot.",
           "How many SF of Dollar Tree do we have across all deals?",
-          "What's our total exposure to non-investment-grade tenants?",
-          "Compare Somerset Square and Eagle Plaza on anchor quality and lease rollover.",
+          "Compare Somerset Square and Eagle Plaza on anchor quality and rollover.",
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Be specific.</B> "WALT for owned grocery-anchored centers" gets a precise answer. "Tell me about the portfolio" gets a vague summary. The more targeted the question, the more useful the answer.</>,
-        <><B>Ask for tables and ranked lists</B> — the analyst formats them well. "Top 10 tenants by total rent across all deals, sorted by credit rating" works great.</>,
-        <><B>Cross-deal analysis</B> is where this shines. Lease rollover concentration, tenant credit exposure, market diversification, anchor performance — questions that would take hours in a spreadsheet answer in seconds.</>,
-        <><B>It only knows what's been uploaded.</B> If you ask about a property not in the library, it won't have data. Upload the OM first.</>,
-        <><B>If a number looks wrong,</B> the underlying deal data may be stale or have an extraction error. Check the deal page, correct the field, and ask again.</>,
-        <><B>Shift+Enter</B> inserts a line break without sending. Enter alone sends.</>,
+        <><B>Be specific</B> and ask for tables/ranked lists — cross-deal questions (rollover concentration, credit exposure, anchor performance) are where it shines.</>,
+        <><B>It only knows what's uploaded</B>; if a number looks off, the underlying deal data may need a fix. <B>Shift+Enter</B> for a line break, Enter to send.</>,
       ]} />
     ),
   },
@@ -203,28 +173,20 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "analytics", label: "Go to Analytics" },
     brief: (
       <>
-        <p style={{ margin:0 }}>The <B>Analytics</B> tab surfaces patterns across your entire deal library — tenant concentration, lease rollover timelines, occupancy trends, market exposure, and credit distribution.</p>
+        <p style={{ margin:0 }}>The <B>Analytics</B> tab surfaces patterns across the library — rollover timelines, tenant/parent concentration, credit mix, and market exposure.</p>
         <BriefList items={[
-          <><B>Lease rollover chart</B> — shows how much GLA and rent expires by year across all deals. Immediately reveals rollover concentration risk.</>,
-          <><B>Rollover years are clickable</B> — tap any year bar to drill into exactly which tenants roll that year across the portfolio.</>,
-          <><B>Tenant concentration</B> — top tenants by total SF and total rent across the portfolio. See where you're over-indexed on a single brand or category.</>,
-          <><B>Parent Company Exposure</B> — groups brands under their parent corporation. Toggle between <B>Rent</B> and <B>Store count</B> to see exposure either way — useful for spotting an operator that's a small slice of rent but a large slice of your store count, or vice versa.</>,
-          <><B>Ignore outliers</B> — on the tenant lists, an eye-slash toggle excludes a skewing tenant from all the stat boxes, which recompute live.</>,
-          <><B>Market & asset type breakdowns</B> — how your library splits across geographies and property types.</>,
-          <><B>Credit distribution</B> — what percentage of rent comes from investment-grade vs. non-rated tenants.</>,
-          <><B>Pinned search</B> — on the Tenant Analytics view, a search bar stays pinned at the top: type any tenant or parent company and jump straight to it. It always searches the whole database regardless of the All/Owned toggle.</>,
-          <><B>Tenant &amp; parent pages</B> — open any tenant or parent company for a brief description plus all its locations, defaulting to a sort by annual rent.</>,
-          <><B>Tenant Name Audit</B> — flags tenant names that may be the same brand but aren't grouping together in analytics. Fix them here.</>,
+          <><B>Lease rollover chart</B> — GLA & rent expiring by year; click a year to drill into which tenants roll (sortable).</>,
+          <><B>Tenant & Parent concentration</B> — top exposure by rent or store count; an eye-slash toggle excludes an outlier and stats recompute live.</>,
+          <><B>Pinned search</B> (Tenant Analytics) — jump to any tenant or parent; tenant/parent pages show a description plus all locations.</>,
+          <><B>Tenant Name Audit</B> — merge brand-name variants that aren't grouping (auto-rejects store-vs-fuel/storage pads).</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Tenant Name Audit</B> catches cases like "Burlington" vs "Burlington Coat Factory" or "T Mobile" vs "T-Mobile." The system auto-normalizes common variants, but the audit surfaces what it missed. Mark pairs as <em>Correct (merge)</em> or <em>Incorrect (keep separate)</em> — these corrections apply going forward. It auto-rejects a store vs. its storage/fuel pad (e.g. "Costco" vs "Costco Gas") so those never get merged.</>,
-        <><B>Analytics update in real time</B> as you add or update deals. There's no refresh needed — the charts always reflect the current state of the library.</>,
-        <><B>"Score unscored deals" button</B> (Portfolio Analytics) grades any deal that doesn't have a letter grade yet — a one-click safety net for deals that were imported without one. It runs the analysis on each ungraded deal, shows a count when done, and skips deals already scored.</>,
-        <><B>All deal statuses are included</B> in analytics by default — Owned, Prospect, Passed. This gives you the full picture including historical deals you didn't pursue.</>,
-        <><B>Status and state filters are multi-select</B> — they live on the Deal Library (Portfolio) page and let you pick several values at once. On an individual tenant's detail page you can also ignore specific locations to clean an outlier out of that brand's blended averages; choices persist across sessions.</>,
+        <><B>Updates live</B> as deals change — no refresh needed. All statuses are included by default.</>,
+        <><B>"Score unscored deals"</B> (Portfolio Analytics) grades any deal missing a letter grade in one click.</>,
+        <><B>Name Audit</B> catches "Burlington" vs "Burlington Coat Factory" etc.; mark pairs Correct (merge) or keep separate — choices persist.</>,
       ]} />
     ),
   },
@@ -234,22 +196,18 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "comps", label: "Go to Comps" },
     brief: (
       <>
-        <p style={{ margin:0 }}>The <B>Comps</B> tab is a dedicated database of verified SALE comps — separate from your deal library. The banner shows total comps, total transaction volume, states covered, and the date span.</p>
+        <p style={{ margin:0 }}>The <B>Comps</B> tab is a dedicated database of SALE comps, separate from your deals. Each is source-tagged: <B>OWNED</B> (your verified trades, strongest) &gt; <B>MANUAL</B>/<B>UPLOAD</B> &gt; <B>OM</B> (seller-selected, weakest).</p>
         <BriefList items={[
-          <>Every comp is tagged by source: <B>OWNED</B> (your own verified trades, highest), <B>MANUAL</B> (a single comp you typed in by hand), <B>UPLOAD</B> (comps brought in via a JSON file import), and <B>OM</B> (pulled from offering memoranda — weakest, since the seller selected them). MANUAL and UPLOAD carry the same weight in benchmarking; the tag just tells you how the comp got there.</>,
-          <>Add comps manually, or use <B>Import file</B> to bring in a whole set from <B>JSON, Excel/CSV, or a PDF comps sheet</B> — the AI reads the rows and maps them in. Edit or delete any comp, and export the filtered set to Excel.</>,
-          <>Filter by a <B>multi-select State</B> dropdown plus market, sale date, and cap-rate range. The table is fully sortable and searchable across name, market, state, anchor, buyer, and seller. Possible duplicate trades are flagged for review.</>,
-          <>Only deals you <B>actually own or have sold</B> flow in as your own (OWNED) comps — a deal merely under contract won't appear as a closed comp.</>,
-          <>The actions column (hide/edit/delete) stays pinned to the right edge while you scroll.</>,
+          <>Add comps by hand, or <B>Import file</B> from <B>JSON, Excel/CSV, or a PDF comps sheet</B> (AI maps the rows). Edit, delete, or export to Excel.</>,
+          <>Filter by a <B>multi-select State</B>, market, sale date, and cap rate; the table is sortable and searchable, with duplicate trades flagged.</>,
+          <>Only deals you actually <B>own or have sold</B> become your OWNED comps — one merely under contract won't.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Source tiers matter:</B> the Comp Benchmark on deal pages prefers OWNED &gt; MANUAL &gt; OM comps, so your own trades carry the most weight in the benchmark calculation.</>,
-        <><B>Importing a file:</B> JSON imports instantly; Excel/CSV and PDF are read by the AI (a small token cost) and shown for review before they're added. You confirm the count first, so a misread is easy to catch. Imported comps are tagged UPLOAD and stay fully editable/deletable.</>,
-        <><B>Duplicate detection</B> flags two comps as possible dupes when they share a name and a close price/date, or a near-identical price+date in the same state — it won't flag the same property genuinely sold years apart.</>,
-        <><B>Use the Excel export</B> to hand a comp set to someone without app access, or to build your own pricing model outside the app.</>,
+        <>The deal-page Comp Benchmark weights <B>OWNED &gt; MANUAL &gt; OM</B>. JSON imports instantly; Excel/PDF are AI-read and shown for review (small token cost) before adding — tagged UPLOAD and fully editable.</>,
+        <>Use Excel export to share a comp set or build a pricing model outside the app.</>,
       ]} />
     ),
   },
@@ -258,41 +216,20 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     title: "Tips, shortcuts & things worth knowing",
     brief: (
       <>
-        <p style={{ margin:0 }}>A few things that aren't obvious but save time:</p>
         <BriefList items={[
-          <><B>Tenant names are always clickable</B> — anywhere you see a tenant name (roster, analytics, Comps), clicking it opens their cross-portfolio summary.</>,
-          <><B>Back button</B> — both the on-page Back and your <B>browser/phone Back button</B> step back through where you've been in the app (deal → tenant → back to deal), instead of leaving the site.</>,
-          <><B>Jump to ▾</B> in the sticky header of any deal page skips directly to any section — saves scrolling on long OMs.</>,
-          <><B>Verified fields</B> — check the box next to any figure to lock it against future re-extractions. Use this for fields you've manually confirmed are correct.</>,
-          <><B>Feedback button</B> (life-ring icon, bottom-left) — report bugs or request features. Goes directly to the team, logged and tracked.</>,
+          <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
+          <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,
+          <><B>Verified fields</B> — lock a confirmed figure against future re-extractions.</>,
+          <><B>Feedback button</B> (life-ring, bottom-left) goes straight to the team.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>What costs money (uses AI tokens) vs. what's free.</B> A handful of actions send data to the AI and cost money each time you run them — everything else is free to use as much as you like.
-          <div style={{ marginTop:6 }}><B>Costs tokens — use deliberately:</B></div>
-          <BriefList items={[
-            <><B>Uploading an OM PDF</B> — the largest single cost, since the AI reads the whole document. Roughly proportional to length; a big OM costs more than a short one.</>,
-            <><B>Uploading a rent roll or tenant sales file</B> (PDF or Excel) — smaller than a full OM, but still a paid AI read each time.</>,
-            <><B>Importing comps from Excel or PDF</B> on the Comps page — the AI maps the rows (small cost). Importing comps from JSON is free.</>,
-            <><B>Re-run extraction</B> and <B>Re-run from PDF</B> — these read the document again, so they cost about the same as the original upload. Don't run them repeatedly out of habit.</>,
-            <><B>Asking the Analyst / "Ask about this property"</B> — each question is a paid AI call. Bigger libraries and longer questions cost a little more.</>,
-            <><B>Refresh Analysis, Find Comps, Find Sale Record</B> — each uses the AI once per run.</>,
-          ]} />
-          <div style={{ marginTop:6 }}><B>Free — no AI, use freely:</B></div>
-          <BriefList items={[
-            <>Browsing the portfolio, opening deals, sorting/filtering/searching, and editing fields by hand.</>,
-            <>All of the Analytics charts, Comp Benchmark, the Closing-Cost estimator, and Trade Area demographics ("Re-Pull" uses the free Census API, not AI).</>,
-            <>"Refresh Score" / "Score unscored deals" (math against your own data, no AI), and exporting a deal's rent roll to Excel.</>,
-          ]} />
-          <div style={{ marginTop:6 }}>Bottom line: <B>uploading PDFs and talking to the Analyst are where the cost is.</B> Avoid re-uploading the same document, and you'll keep spend low.</div>
-        </>,
-        <><B>Upload on the live site, not the Replit preview.</B> The preview and live site have separate databases — anything uploaded in the preview won't appear on the live site after a publish.</>,
-        <><B>Shift+Enter</B> in the Analyst chat inserts a line break. Enter alone sends.</>,
-        <><B>Occupancy cost (health ratio)</B> everywhere on the site is the TOTAL: (base rent + reimbursements + percentage rent + other rent) ÷ gross sales — never just base rent ÷ sales. It uses the OM's stated total when given; otherwise it computes from the disclosed components (and stays blank rather than report a base-rent-only ratio).</>,
-        <><B>Demographics auto-populate</B> when a deal is created from a PDF. Hit "Re-Pull" on the deal page to refresh them if the property location changed or data looks stale. The rings are estimated from US Census block-group data apportioned by centroid — close to an Esri/CoStar report but not identical (Census is historical 5-year data, not forward projections), so treat it as a solid cross-check.</>,
-        <><B>If the site feels slow</B> after a large import, give it 30 seconds — the background indexing catches up and search/analytics will snap back to speed.</>,
+        <><B>What costs AI tokens:</B> uploading OMs / rent rolls / sales files, importing comps from Excel or PDF, re-running extraction, and asking the Analyst (incl. Refresh Analysis, Find Comps, Find Sale). <B>Free:</B> browsing, editing, sorting/searching, all Analytics & Comp Benchmark, Closing Costs, demographics Re-Pull (Census, not AI), Refresh Score, and JSON/Excel exports. Bottom line: uploading documents and talking to the Analyst are where the cost is.</>,
+        <><B>Occupancy cost (health ratio)</B> is always the TOTAL: (base rent + reimbursements + percentage rent + other rent) ÷ gross sales — never base rent alone. Uses the stated total when given, else computes from disclosed components.</>,
+        <><B>Upload on the live site, not the Replit preview</B> — they have separate databases.</>,
+        <><B>If the site feels slow</B> right after a big import, give it ~30 seconds for background indexing to catch up.</>,
       ]} />
     ),
   },
