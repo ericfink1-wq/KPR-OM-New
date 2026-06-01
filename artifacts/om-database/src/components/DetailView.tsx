@@ -2249,8 +2249,17 @@ ${text.slice(0, 40000)}`;
       {(() => {
         const owned = d.status === "Owned" || d.status === "Sold";
         const sold  = d.status === "Sold";
-        const tf = (p: Omit<TxnFieldProps,"dealId"|"onUpdate">) =>
-          <TxnField key={p.field as string} {...p} initial={d[p.field]} dealId={d.id} onUpdate={onUpdate} />;
+        // Seller & Broker are linked to the Property Info rows of the same name —
+        // editing the Transaction field mirrors into the OM field (and vice versa)
+        // so the value only has to be entered once.
+        const LINKED: Partial<Record<keyof Deal, keyof Deal>> = { txnSeller: "seller", acqBroker: "broker" };
+        const tf = (p: Omit<TxnFieldProps,"dealId"|"onUpdate">) => {
+          const mirror = LINKED[p.field];
+          const upd = mirror
+            ? (id: string, patch: Partial<Deal>) => onUpdate(id, (p.field in patch) ? { ...patch, [mirror]: patch[p.field] } : patch)
+            : onUpdate;
+          return <TxnField key={p.field as string} {...p} initial={d[p.field] ?? (mirror ? d[mirror] : undefined)} dealId={d.id} onUpdate={upd} />;
+        };
         const Grp = ({ title }: { title: string }) => (
           <div style={{ gridColumn:"1 / -1", fontSize:13, fontWeight:600, color:"#383a37", marginTop:8, marginBottom:-2, display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{title}
@@ -2496,8 +2505,10 @@ ${text.slice(0, 40000)}`;
         <Card title="PROPERTY INFO">
           <Row l="MARKET" v={d.market}/>
           <Row l="SUBMARKET" v={d.submarket}/>
-          <Row l="BROKER" v={d.broker}/>
-          <EditableTextRow label="SELLER" value={d.seller} placeholder="Seller / current owner" onSave={v => onUpdate(d.id, { seller: v })} />
+          {/* Broker & Seller are LINKED with the Transaction Details fields —
+              editing here writes both so you only enter each once. */}
+          <EditableTextRow label="BROKER" value={d.broker ?? d.acqBroker} placeholder="Listing / deal broker" onSave={v => onUpdate(d.id, { broker: v, acqBroker: v })} />
+          <EditableTextRow label="SELLER" value={d.seller ?? d.txnSeller} placeholder="Seller / current owner" onSave={v => onUpdate(d.id, { seller: v, txnSeller: v })} />
           <Row l="LAST SALE DATE" v={d.lastSaleDate}/>
           <Row l="LAST SALE PRICE" v={d.lastSalePrice?`$${Number(d.lastSalePrice).toLocaleString()}`:null}/>
         </Card>
