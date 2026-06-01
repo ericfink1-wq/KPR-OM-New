@@ -261,6 +261,18 @@ export interface RoofData {
   warrantyInfo?: string | null;
 }
 
+export interface ReviewQuestion {
+  id: string;                          // stable id (e.g. "calc-cap-price" or "ai-<field>")
+  source: "check" | "ai";             // deterministic integrity check vs AI low-confidence flag
+  severity: "high" | "medium" | "low";
+  field?: string | null;              // related deal/tenant field, when applicable
+  question: string;                   // plain-English question to confirm
+  detail?: string | null;             // supporting context (the numbers / why it's uncertain)
+  suggestedValue?: string | null;     // what was captured, for a confirm/fix prompt
+  resolvedAt?: string | null;         // ISO timestamp once the user confirms/dismisses
+  resolution?: "confirmed" | "dismissed" | null;
+}
+
 export interface Deal {
   id: string;
   fileName?: string;
@@ -340,6 +352,10 @@ export interface Deal {
   // Staleness
   analysisStale?: boolean;
   analysisVersion?: number | null;  // scoring-logic version this deal's saved AI analysis was produced under
+  // Import review — data-integrity questions flagged after the most recent upload
+  // (deterministic arithmetic/missing-field checks + AI low-confidence captures).
+  // Resolved items keep resolvedAt set so they aren't re-asked.
+  reviewQuestions?: ReviewQuestion[] | null;
   // User data
   userNotes?: string | null;
   verified?: Record<string, { by?: string; ts?: number }>;

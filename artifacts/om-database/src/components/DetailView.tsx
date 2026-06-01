@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount } from "../lib/utils";
+import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
 import StatusTag from "./StatusTag";
@@ -717,6 +718,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const watchImpact = computeWatchlistImpact(d, watchMap);
   const adjustedScore = watchImpact.adjustScore(d.dealScore);
   const [confirmDel, setConfirmDel] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [imgs, setImgs] = useState<ImageBundle | null>(null);
   const [saleBusy, setSaleBusy] = useState(false);
@@ -1632,6 +1634,25 @@ ${text.slice(0, 40000)}`;
       )}
 
       <ExtractionQuality deal={d}/>
+
+      {/* Import data-integrity review — non-blocking banner when the import had
+          things worth confirming. Opens the ImportReview overlay. */}
+      {(() => {
+        const openCount = openReviewCount(d);
+        if (openCount === 0) return null;
+        return (
+          <button onClick={() => setReviewOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fffaf2", border: "1px solid #e7c48f", borderRadius: 10, padding: "11px 15px", marginBottom: 12, cursor: "pointer" }}>
+            <span style={{ fontSize: 16 }}>📝</span>
+            <span style={{ flex: 1 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: "#9a6a1e" }}>{openCount} import detail{openCount === 1 ? "" : "s"} to confirm</span>
+              <span style={{ display: "block", fontSize: 11, color: "#b08a4e", marginTop: 1 }}>I flagged a few values I wasn't fully sure I captured right — tap to review.</span>
+            </span>
+            <span style={{ fontSize: 12, color: "#9a6a1e", fontWeight: 600 }}>Review ›</span>
+          </button>
+        );
+      })()}
+      {reviewOpen && <ImportReview deal={d} onClose={() => setReviewOpen(false)} onUpdate={onUpdate} />}
 
       {/* Market sale */}
       {d.marketSale && (

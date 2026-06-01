@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Deal } from "./idb";
+import type { Deal, ReviewQuestion } from "./idb";
 import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "./idb";
 import { isInvestmentGrade } from "./tenantCredit";
 
@@ -124,6 +124,81 @@ export function reconcileDeal(deal: Deal) {
   }
   const hadData = !!(noi || price || sf || gpr);
   return { checks, errors: checks.filter(c => c.severity==="error").length, warns: checks.filter(c => c.severity==="warn").length, hadData };
+}
+
+// Build the post-import data-integrity review list: deterministic arithmetic
+// checks (reconcileDeal, free) + missing core fields (assessExtraction, free) +
+// the AI's own low-confidence flags (deal.reviewQuestions from extraction).
+// Previously-resolved questions are preserved (so we don't re-ask), and the
+// returned list is sorted high → low severity. Pure/idempotent — safe to call
+// on every deal render and after each (re)upload.
+const SEV_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
+export function buildReviewQuestions(deal: Deal): ReviewQuestion[] {
+  const prior = Array.isArray(deal.reviewQuestions) ? deal.reviewQuestions : [];
+  const resolvedById = new Map(prior.filter(q => q.resolvedAt).map(q => [q.id, q]));
+  const out: ReviewQuestion[] = [];
+  const seen = new Set<string>();
+  const add = (q: ReviewQuestion) => {
+    if (seen.has(q.id)) return;
+    seen.add(q.id);
+    // Carry forward a prior resolution so confirmed/dismissed items stay quiet.
+    const wasResolved = resolvedById.get(q.id);
+    out.push(wasResolved ? { ...q, resolvedAt: wasResolved.resolvedAt, resolution: wasResolved.resolution } : q);
+  };
+
+  // 1) AI-flagged low-confidence captures carried on the deal. These may be raw
+  //    from the model (OM extraction stores them as-is, without id/source), so
+  //    normalize: anything not produced by a deterministic check is treated as AI.
+  prior.forEach((raw, i) => {
+    if (raw.source === "check") return; // deterministic checks are regenerated below
+    const r = raw as Partial<ReviewQuestion> & Record<string, unknown>;
+    if (!r.question) return;
+    const id = r.id || `ai-${i}-${String(r.field ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}`;
+    add({
+      id,
+      source: "ai",
+      severity: (["high", "medium", "low"].includes(r.severity as string) ? r.severity : "medium") as ReviewQuestion["severity"],
+      field: typeof r.field === "string" ? r.field : null,
+      question: String(r.question),
+      detail: typeof r.detail === "string" ? r.detail : null,
+      suggestedValue: r.suggestedValue != null ? String(r.suggestedValue) : null,
+      resolvedAt: r.resolvedAt ?? null,
+      resolution: r.resolution ?? null,
+    });
+  });
+
+  // 2) Deterministic arithmetic integrity checks.
+  const { checks } = reconcileDeal(deal);
+  for (const c of checks) {
+    add({
+      id: "calc-" + c.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      source: "check",
+      severity: c.severity === "error" ? "high" : "medium",
+      question: `${c.label} — does this look right, or was a number mis-captured?`,
+      detail: c.detail,
+    });
+  }
+
+  // 3) Missing core fields (only when the rest of the import looks substantive,
+  //    so we don't nag on a deliberately thin entry).
+  const { quality, missing } = assessExtraction(deal);
+  if (quality === "partial" && missing.length > 0) {
+    add({
+      id: "missing-core",
+      source: "check",
+      severity: "medium",
+      field: missing.join(", "),
+      question: `Couldn't find ${missing.join(", ")} in this document — is it in there to capture, or genuinely not stated?`,
+      detail: "These core fields drive the analysis; confirm whether they were missed or simply not disclosed.",
+    });
+  }
+
+  return out.sort((a, b) => (SEV_RANK[a.severity] ?? 1) - (SEV_RANK[b.severity] ?? 1));
+}
+
+// Count of OPEN (unresolved) review questions — for badges.
+export function openReviewCount(deal: Deal): number {
+  return buildReviewQuestions(deal).filter(q => !q.resolvedAt).length;
 }
 
 // ── User-defined tenant merges ────────────────────────────────────────────────

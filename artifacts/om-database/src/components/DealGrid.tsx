@@ -3,7 +3,7 @@ import type { Deal } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
-import { classifyLocation, cityState, assessExtraction } from "../lib/utils";
+import { classifyLocation, cityState, assessExtraction, openReviewCount } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
 import { useWatchlist } from "../lib/useWatchlist";
@@ -1007,6 +1007,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
               <tbody>
                 {rows.map((d, i) => {
                   const { quality } = assessExtraction(d);
+                  const reviewCount = openReviewCount(d);
                   const busyRow = reanalyzeBusy.has(d.id) || lookingUp.has(d.id) || gettingDemo.has(d.id);
                   const anchor = leadAnchorName(d);
                   return (
@@ -1026,6 +1027,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
                           onMouseLeave={e => (e.currentTarget.style.color = "#383a37")}>
                           {d.propertyName || d.fileName || "Untitled"}
                           {busyRow && <span style={{ marginLeft: 6, fontSize: 9, color: "#d9890c" }}>● processing</span>}
+                          {!busyRow && reviewCount > 0 && <span title={`${reviewCount} import detail${reviewCount === 1 ? "" : "s"} to confirm`} style={{ marginLeft: 6, fontSize: 9, color: "#9a6a1e", background: "#fff3df", border: "1px solid #e7c48f", borderRadius: 4, padding: "0 5px", fontWeight: 600 }}>📝 {reviewCount}</span>}
                         </div>
                         {quality !== "good" && !busyRow && <div style={{ fontSize: 9, color: quality === "thin" ? "#dc2626" : "#d9890c" }}>{quality === "thin" ? "thin extraction" : "partial"}</div>}
                       </td>

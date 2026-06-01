@@ -1,17 +1,18 @@
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
-import type { Deal } from "./idb";
+import type { Deal, ReviewQuestion } from "./idb";
 
 export interface RentRollResult {
   asOf: string | null;
   tenants: NonNullable<Deal["tenants"]>;
+  reviewQuestions?: ReviewQuestion[];
 }
 
 // Extract a tenant roster from rent-roll text (PDF or spreadsheet-derived).
 // Shared by the deal page's "Refresh tenants" button and the smart uploader.
 export async function extractRentRoll(text: string): Promise<RentRollResult> {
   const prompt = `You are a CRE data extraction engine. Extract every occupied tenant from this rent roll.
-Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","tenants":[{...}]}
+Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","tenants":[{...}],"reviewQuestions":[{...}]}
 
 Each tenant object (omit unknown fields):
 {"name","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","rentBumps","rentSchedule","renewalOptions","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
@@ -23,7 +24,9 @@ Rules:
 - rentSchedule: future steps only as of the asOf date.
 - SF and rents as plain numbers (no $ or commas).
 - If a value isn't shown, omit it.
-- remainingTermYears: compute from asOf to leaseExpiry if possible.`;
+- remainingTermYears: compute from asOf to leaseExpiry if possible.
+
+reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"tenant name or column","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string"}. Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
 
   const res = await apiAiMessages({
     model: "claude-haiku-4-5-20251001",
@@ -31,12 +34,26 @@ Rules:
     messages: [{ role: "user", content: prompt + "\n\nRENT ROLL TEXT:\n" + text }],
   });
   const raw = res.content?.[0]?.text ?? "";
-  let parsed: { asOf?: string | null; tenants?: unknown[] };
+  let parsed: { asOf?: string | null; tenants?: unknown[]; reviewQuestions?: unknown[] };
   try { parsed = robustParseJSON(raw) as typeof parsed; }
   catch { throw new Error("Couldn't parse the rent roll. Try a clearer file."); }
   const tenants = (Array.isArray(parsed.tenants) ? parsed.tenants : []) as NonNullable<Deal["tenants"]>;
   if (tenants.length === 0) throw new Error("No tenants found in the rent roll.");
-  return { asOf: parsed.asOf || new Date().toISOString().slice(0, 10), tenants };
+  const reviewQuestions = (Array.isArray(parsed.reviewQuestions) ? parsed.reviewQuestions : [])
+    .map((q, i) => {
+      const r = q as Record<string, unknown>;
+      return {
+        id: `ai-rr-${i}-${String(r.field ?? "").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}`,
+        source: "ai" as const,
+        severity: (["high", "medium", "low"].includes(r.severity as string) ? r.severity : "medium") as ReviewQuestion["severity"],
+        field: typeof r.field === "string" ? r.field : null,
+        question: typeof r.question === "string" ? r.question : "",
+        detail: typeof r.detail === "string" ? r.detail : null,
+        suggestedValue: r.suggestedValue != null ? String(r.suggestedValue) : null,
+      } as ReviewQuestion;
+    })
+    .filter(q => q.question);
+  return { asOf: parsed.asOf || new Date().toISOString().slice(0, 10), tenants, reviewQuestions };
 }
 
 // Recompute occupancy + WALT from a fresh roster, respecting verified locks.
@@ -57,12 +74,20 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
     }, 0);
     if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
   }
+  // Merge fresh rent-roll questions with any existing ones on the deal: drop the
+  // prior rent-roll AI flags (ids prefixed "ai-rr-") and append the new batch,
+  // keeping OM-extraction and resolved questions intact.
+  const fresh = result.reviewQuestions ?? [];
+  const prior = (deal.reviewQuestions ?? []).filter(q => !(q.source === "ai" && q.id.startsWith("ai-rr-")));
+  const reviewQuestions = [...prior, ...fresh];
+
   return {
     tenants: result.tenants,
     tenantsAsOf: result.asOf,
     tenantsSource: "rent-roll",
     tenantsManual: true,
     analysisStale: true,
+    reviewQuestions,
     ...recomputed,
   };
 }
