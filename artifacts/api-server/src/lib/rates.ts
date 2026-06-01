@@ -82,6 +82,25 @@ export async function debugIronhound(): Promise<Record<string, unknown>> {
     for (const m of html.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi)) urls.add(m[1]);
     for (const m of html.matchAll(/["'](https?:\/\/[^"']+|\/[a-zA-Z0-9_\-./]+\.(?:json|js|php|aspx?)[^"']*)["']/gi)) urls.add(m[1]);
     const parsed = await fetchIronhound().catch(e => ({ error: e instanceof Error ? e.message : String(e) }));
+
+    // The board is a Vue SPA — its data endpoint is a string literal inside the
+    // app bundle. Download it and pull out anything that looks like a rates API.
+    let jsHints: unknown = null;
+    try {
+      const jr = await fetchWithTimeout("https://ironhound.com/js/app-vue.js", 15_000, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" },
+      });
+      if (!jr.ok) { jsHints = { jsStatus: jr.status }; }
+      else {
+        const js = await jr.text();
+        const hits = new Set<string>();
+        for (const m of js.matchAll(/["'`]([^"'`]*(?:api|rate|market|sofr|swap|today|quote|treasur|libor)[^"'`]*)["'`]/gi)) {
+          if (m[1].length <= 120) hits.add(m[1]);
+        }
+        jsHints = { jsLength: js.length, candidates: [...hits].slice(0, 150) };
+      }
+    } catch (e) { jsHints = { jsError: e instanceof Error ? e.message : String(e) }; }
+
     return {
       ok: r.ok,
       status: r.status,
@@ -89,7 +108,7 @@ export async function debugIronhound(): Promise<Record<string, unknown>> {
       contentType: r.headers.get("content-type"),
       hasTodaysMarket: /TODAY'?S\s*MARKET/i.test(html),
       urls: [...urls],
-      fullHtml: html.slice(0, 20000),
+      jsHints,
       parsed,
     };
   } catch (e) {
