@@ -148,6 +148,7 @@ body { background: #f1ece1; font-family: 'Inter', -apple-system, sans-serif; -we
 ::-webkit-scrollbar-thumb:hover { background: #c7bca6; background-clip: padding-box; }
 
 @keyframes riseIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@keyframes slideInRight { from { transform:translateX(100%); } to { transform:translateX(0); } }
 @keyframes dotPulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
 @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
 
