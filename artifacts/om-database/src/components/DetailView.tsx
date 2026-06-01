@@ -1954,77 +1954,72 @@ ${text.slice(0, 40000)}`;
       </div>
       )}
 
-      {/* Rent roll importer */}
-      {(d.tenants||[]).length > 0 && (
-        <div style={{ marginBottom:12, background:"#f3f7ee", border:"1px dashed #b8d49a", borderRadius:10, padding:"10px 14px" }}>
-          <style>{`@keyframes rrIndeterminate{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}`}</style>
-          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-            <input ref={rrPdfRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display:"none" }} onChange={handleRentRoll}/>
-            <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
-              style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"8px 14px", borderRadius:8, cursor: rrBusy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
-              {rrBusy ? "Refreshing…" : "⬆ Refresh tenants from a current rent roll (PDF or Excel)"}
-            </button>
-            <span style={{ fontSize:12, color: rrError ? "#dc2626" : (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? "#3f7a1f" : "#6f6a5f") }}>
-              {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf
-                ? `✓ Last refreshed from rent roll — ${d.tenantsAsOf}`
-                : "")}
-            </span>
-          </div>
-          {rrBusy && (
-            <div style={{ marginTop:9, height:5, borderRadius:3, background:"#dfe7d2", overflow:"hidden" }}>
-              <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#6dba43", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
-            </div>
-          )}
-          <div style={{ marginTop:10, borderTop:"1px solid #d2e5ba", paddingTop:10 }}>
-            <button onClick={() => { setPastePanelOpen(o => !o); setPasteError(null); }}
-              style={{ background:"transparent", border:"none", color:"#4d8a2a", fontSize:11.5, fontWeight:600, cursor:"pointer", padding:0, fontFamily:"'Inter',sans-serif" }}>
-              {pastePanelOpen ? "Close paste box" : "⌘ Paste roster from Claude (no API)"}
-            </button>
-            {pastePanelOpen && (
-              <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:7 }}>
-                <textarea
-                  value={pasteText} onChange={e => setPasteText(e.target.value)}
-                  placeholder='Paste the JSON Claude returned — {"asOf":"…","tenants":[…]}'
-                  style={{ width:"100%", minHeight:90, fontSize:11, padding:"8px 10px", border:"1px solid #b8d49a", borderRadius:7, fontFamily:"monospace", resize:"vertical", color:"#383a37", boxSizing:"border-box" }}
-                />
-                {pasteError && <div style={{ fontSize:11, color:"#dc2626" }}>{pasteError}</div>}
-                <div style={{ display:"flex", gap:8 }}>
-                  <button onClick={applyPaste} disabled={!pasteText.trim()}
-                    style={{ background: pasteText.trim() ? "#6dba43" : "#ccc", border:"none", color:"#fff", padding:"7px 16px", borderRadius:7, cursor: pasteText.trim() ? "pointer" : "default", fontSize:12, fontWeight:700, fontFamily:"'Inter',sans-serif" }}>
-                    Apply
-                  </button>
-                  <button onClick={() => { setPastePanelOpen(false); setPasteText(""); setPasteError(null); }}
-                    style={{ background:"transparent", border:"1px solid #b8d49a", color:"#6f6a5f", padding:"7px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Tenant roster */}
       {(d.tenants||[]).length > 0 && (
         <div id="section-tenants">
-          <div style={{ display:"flex", justifyContent:"flex-end", gap:8, marginBottom:8, flexWrap:"wrap" }}>
-            <button onClick={() => exportRosterToExcel(d)}
-              title="Export this rent roll to a clean Excel file"
-              style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
-              ⬇ Rent roll — Excel
-            </button>
-            <PDFDownloadLink
-              document={<RentRollPDF deal={d} />}
-              fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
-              style={{ textDecoration:"none" }}
-            >
-              {({ loading }) => (
-                <span style={{ background:"#2a2c27", border:"1px solid #2a2c27", color:"#fff", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
-                  {loading ? "Preparing…" : "⬇ Rent roll — PDF"}
-                </span>
-              )}
-            </PDFDownloadLink>
+          <style>{`@keyframes rrIndeterminate{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}`}</style>
+          {/* Roster action bar — refresh/paste on the left, exports on the right */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <input ref={rrPdfRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display:"none" }} onChange={handleRentRoll}/>
+              <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
+                title="Update the roster from a current rent roll (PDF or Excel)"
+                style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"6px 13px", borderRadius:7, cursor: rrBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                {rrBusy ? "Refreshing…" : "⬆ Refresh from rent roll"}
+              </button>
+              <button onClick={() => { setPastePanelOpen(o => !o); setPasteError(null); }}
+                title="Paste a roster JSON from Claude (no API call)"
+                style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                {pastePanelOpen ? "Close paste box" : "⌘ Paste roster"}
+              </button>
+              <span style={{ fontSize:11.5, color: rrError ? "#dc2626" : "#3f7a1f" }}>
+                {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? `✓ Refreshed ${d.tenantsAsOf}` : "")}
+              </span>
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <button onClick={() => exportRosterToExcel(d)}
+                title="Export this rent roll to a clean Excel file"
+                style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                ⬇ Rent roll — Excel
+              </button>
+              <PDFDownloadLink
+                document={<RentRollPDF deal={d} />}
+                fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
+                style={{ textDecoration:"none" }}
+              >
+                {({ loading }) => (
+                  <span style={{ background:"#2a2c27", border:"1px solid #2a2c27", color:"#fff", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
+                    {loading ? "Preparing…" : "⬇ Rent roll — PDF"}
+                  </span>
+                )}
+              </PDFDownloadLink>
+            </div>
           </div>
+          {rrBusy && (
+            <div style={{ marginBottom:9, height:5, borderRadius:3, background:"#dfe7d2", overflow:"hidden" }}>
+              <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#6dba43", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
+            </div>
+          )}
+          {pastePanelOpen && (
+            <div style={{ marginBottom:10, background:"#f3f7ee", border:"1px dashed #b8d49a", borderRadius:10, padding:"10px 14px", display:"flex", flexDirection:"column", gap:7 }}>
+              <textarea
+                value={pasteText} onChange={e => setPasteText(e.target.value)}
+                placeholder='Paste the JSON Claude returned — {"asOf":"…","tenants":[…]}'
+                style={{ width:"100%", minHeight:90, fontSize:11, padding:"8px 10px", border:"1px solid #b8d49a", borderRadius:7, fontFamily:"monospace", resize:"vertical", color:"#383a37", boxSizing:"border-box" }}
+              />
+              {pasteError && <div style={{ fontSize:11, color:"#dc2626" }}>{pasteError}</div>}
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={applyPaste} disabled={!pasteText.trim()}
+                  style={{ background: pasteText.trim() ? "#6dba43" : "#ccc", border:"none", color:"#fff", padding:"7px 16px", borderRadius:7, cursor: pasteText.trim() ? "pointer" : "default", fontSize:12, fontWeight:700, fontFamily:"'Inter',sans-serif" }}>
+                  Apply
+                </button>
+                <button onClick={() => { setPastePanelOpen(false); setPasteText(""); setPasteError(null); }}
+                  style={{ background:"transparent", border:"1px solid #b8d49a", color:"#6f6a5f", padding:"7px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
           <TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
