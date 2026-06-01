@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
+import RatesPanel from "./RatesPanel";
 
 interface Props {
   tab: string;
@@ -26,6 +27,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const backupTriggerRef = useRef<HTMLDivElement>(null);
   const [backupMenu, setBackupMenu] = useState(false);
   const [uploadMenu, setUploadMenu] = useState(false);
+  const [ratesOpen, setRatesOpen] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
@@ -429,6 +431,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
+
+        {/* Today's Rates */}
+        <button onClick={() => setRatesOpen(true)} title="Today's benchmark interest rates"
+          style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#5c5047", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+          📈 Today's Rates
+        </button>
+        {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} />}
 
         {/* Upload OMs split button */}
         <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>

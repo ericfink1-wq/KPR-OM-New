@@ -14,6 +14,7 @@ import closingRouter from "./closing";
 import snapshotsRouter from "./snapshots";
 import feedbackRouter from "./feedback";
 import clientErrorsRouter from "./clientErrors";
+import ratesRouter from "./rates";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,7 @@ router.use(closingRouter);
 router.use(snapshotsRouter);
 router.use(feedbackRouter);
 router.use(clientErrorsRouter);
+router.use(ratesRouter);
 router.use(aiRouter);
 
 export default router;

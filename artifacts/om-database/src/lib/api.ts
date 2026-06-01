@@ -346,3 +346,20 @@ export async function apiRestoreSnapshot(
   }
   return resp.json() as Promise<{ restored: number; updated: number }>;
 }
+
+// ── Today's Rates ────────────────────────────────────────────────────────────
+export interface RateRow { label: string; value: number | null; asOf: string | null; note?: string }
+export interface RatesPayload {
+  treasuries: { rows: RateRow[]; asOf: string | null; source: string };
+  sofr: { rows: RateRow[]; asOf: string | null; source: string };
+  swaps: { rows: RateRow[]; asOf: string | null; source: string; spreadBps: number };
+  fetchedAt: string;
+}
+export async function apiGetRates(refresh = false): Promise<RatesPayload> {
+  const resp = await apiFetch(`/rates${refresh ? "?refresh=1" : ""}`);
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Couldn't fetch rates");
+  }
+  return resp.json() as Promise<RatesPayload>;
+}
