@@ -6,6 +6,37 @@ import type { Deal, OwnerStake } from "../lib/idb";
 // (capital ÷ total) so the percentages always reconcile to 100%. Persists onto
 // deal.ownershipStructure via onUpdate (a normal deal PUT), and is in the
 // import preserve-list so a bulk OM re-upload never wipes it.
+
+// A $ money input that shows commas + a dollar sign when idle, and the raw
+// number while you're typing (so the cursor never jumps). Reused for the JV
+// capital balance and KP's outside-JV balance.
+function MoneyInput({ value, placeholder, onChange, onCommit }: {
+  value: number | null | undefined;
+  placeholder?: string;
+  onChange: (n: number | null) => void;
+  onCommit: () => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  const display = value == null ? ""
+    : focused ? String(value)
+    : Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return (
+    <div style={{ position: "relative" }}>
+      <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12.5, color: "#8b8578", pointerEvents: "none" }}>$</span>
+      <input inputMode="decimal" value={display} placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); onCommit(); }}
+        onChange={e => { const raw = e.target.value.replace(/[^0-9.]/g, ""); onChange(raw === "" ? null : Number(raw)); }}
+        style={{ border: "1px solid #d9d2c4", borderRadius: 6, padding: "7px 9px 7px 18px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", width: "100%", boxSizing: "border-box", background: "#fff" }} />
+    </div>
+  );
+}
+
+const isKpName = (name?: string) => {
+  const n = (name ?? "").trim().toUpperCase();
+  return n === "KP" || n === "KPR";
+};
+
 export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
   const [owners, setOwners] = useState<OwnerStake[]>(deal.ownershipStructure ?? []);
 
@@ -57,6 +88,7 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
           {owners.map((o, i) => {
             const cap = Number(o.capital) || 0;
             const pct = pctOf(cap);
+            const kp = isKpName(o.name);
             return (
               <div key={i} style={{ border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 12px", background: "#faf7f0" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr) auto auto", gap: 10, alignItems: "end" }}>
@@ -67,15 +99,12 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={labelStyle}>Capital ($)</div>
-                    <input style={inp} inputMode="decimal" value={o.capital == null ? "" : String(o.capital)} placeholder="e.g. 500,000"
-                      onChange={e => {
-                        const raw = e.target.value.replace(/[^0-9.]/g, "");
-                        editLocal(i, { capital: raw === "" ? null : Number(raw) });
-                      }} onBlur={commit} />
+                    <MoneyInput value={o.capital} placeholder="500,000"
+                      onChange={n => editLocal(i, { capital: n })} onCommit={commit} />
                   </div>
                   <div style={{ textAlign: "right", paddingBottom: 7 }}>
                     <div style={labelStyle}>Ownership</div>
-                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f", fontVariantNumeric: "tabular-nums" }}>{pct.toFixed(1)}%</div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f", fontVariantNumeric: "tabular-nums" }}>{pct.toFixed(2)}%</div>
                   </div>
                   <button onClick={() => removeOwner(i)} title="Remove member" aria-label="Remove member"
                     style={{ background: "transparent", border: "none", color: "#c98", cursor: "pointer", fontSize: 16, paddingBottom: 7 }}>✕</button>
@@ -88,6 +117,17 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
                   <input style={{ ...inp, fontSize: 11.5, padding: "5px 8px", background: "transparent", border: "1px dashed #ddd4c2" }} value={o.note ?? ""} placeholder="Optional: role / class (e.g. GP, LP, Class A)"
                     onChange={e => editLocal(i, { note: e.target.value })} onBlur={commit} />
                 </div>
+                {/* KP-only: capital balance held OUTSIDE this JV (does not affect ownership %) */}
+                {kp && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #e3dccd" }}>
+                    <div style={{ ...labelStyle, color: "#8a6d3b" }}>KP member balance — capital outside this JV</div>
+                    <div style={{ maxWidth: 280 }}>
+                      <MoneyInput value={o.kpMemberBalance} placeholder="e.g. 2,000,000"
+                        onChange={n => editLocal(i, { kpMemberBalance: n })} onCommit={commit} />
+                    </div>
+                    <div style={{ fontSize: 10, color: "#bcae97", marginTop: 4 }}>Tracked for reference; excluded from the JV ownership % above.</div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -108,7 +148,7 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
             <div style={{ textAlign: "right" }}>
               <div style={labelStyle}>Total Ownership</div>
               <div style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 600, color: totalCapital > 0 ? "#0f9d63" : "#a69e91" }}>
-                {totalCapital > 0 ? "100.0%" : "—"}
+                {totalCapital > 0 ? "100.00%" : "—"}
               </div>
             </div>
           </div>
@@ -116,7 +156,7 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
       </div>
 
       <div style={{ marginTop: 12, fontSize: 11, color: "#b3aa9b", lineHeight: 1.5 }}>
-        Ownership % is each member's capital balance ÷ total capital, so the column always sums to 100%. The entity name at the top pulls from “Acquiring entity” in Purchase Metrics.
+        Ownership % is each member's capital balance ÷ total capital, so the column always sums to 100%. The entity name at the top pulls from “Acquiring entity” in Purchase Metrics. Name a member “KP” to also record KP's capital outside this JV.
       </div>
     </div>
   );

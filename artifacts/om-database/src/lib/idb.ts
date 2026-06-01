@@ -481,8 +481,9 @@ export interface Deal {
 // capital balances, so it is intentionally NOT stored here.
 export interface OwnerStake {
   name?: string;            // member / owner name
-  capital?: number | null;  // capital balance ($)
+  capital?: number | null;  // capital balance in THIS JV ($) — drives ownership %
   note?: string | null;     // optional role / class (e.g. "GP", "LP", "Class A")
+  kpMemberBalance?: number | null; // KP only: KP's capital balance OUTSIDE this JV
 }
 
 export interface MyUnderwritingInputs {
