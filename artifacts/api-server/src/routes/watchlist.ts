@@ -55,11 +55,15 @@ const CURATED: Array<{ brand: string; status: string; note: string; sourceUrl: s
   { brand: "Carter's", status: "watch", note: "Announced ~150 store closures and layoffs across 2025–26.", sourceUrl: "https://coresight.com/coresight-research-store-trackers/" },
   { brand: "Cato", status: "watch", note: "On RapidRatings' 2026 'retailers to watch' list; weak apparel sales.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
   { brand: "Wayfair", status: "watch", note: "On RapidRatings' 2026 'retailers to watch' list; primarily online, so limited shopping-center exposure.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
+  { brand: "AMC Theatres", status: "watch", note: "Highly leveraged movie-theater operator carrying heavy meme-stock-era debt; completed another debt restructuring in early 2026 (new financing plus debt-to-equity conversions) to push out 2026 maturities. Negative equity and free cash flow with a Q4 2025 earnings miss; deeply junk-rated and reliant on equity raises/refinancings to avoid an in- or out-of-court restructuring. Operating and not filed — but a leverage/credit name to watch as a big-box anchor or junior anchor.", sourceUrl: "https://www.tipranks.com/news/company-announcements/amc-entertainment-advances-debt-restructuring-with-indenture-amendments" },
 ];
 
 // Deterministic id per curated brand so re-seeding upserts instead of duplicating.
+function brandNorm(brand: string): string {
+  return brand.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
 function seedId(brand: string): string {
-  return "seed_" + brand.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return "seed_" + brandNorm(brand);
 }
 
 // Ensure the table exists even if `drizzle-kit push` hasn't been run against this
@@ -93,6 +97,17 @@ function ensureTable(): Promise<void> {
             target: retailerWatchlistTable.id,
             set: { brand: c.brand, status: c.status, note: c.note, sourceUrl: c.sourceUrl, updatedAt: new Date() },
           });
+      }
+      // Self-healing dedupe: if a brand Eric once hand-added later becomes
+      // curated, drop his duplicate so it isn't counted twice in the exposure
+      // totals. Only removes user rows whose brand matches a curated brand —
+      // every other personal entry is left untouched.
+      const curatedNorms = new Set(CURATED.map(c => brandNorm(c.brand)));
+      const userRows = await db.select().from(retailerWatchlistTable).where(eq(retailerWatchlistTable.addedBy, "user"));
+      for (const u of userRows) {
+        if (curatedNorms.has(brandNorm(u.brand))) {
+          await db.delete(retailerWatchlistTable).where(eq(retailerWatchlistTable.id, u.id));
+        }
       }
     })().catch((err) => {
       tableReady = null; // allow retry on next request if it failed
