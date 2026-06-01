@@ -22,10 +22,10 @@ export default function EntityDescription({ name, kind }: { name: string; kind: 
   }, [name, kind]);
 
   if (loading) {
-    return <div style={{ fontSize:12.5, color:"#bcae97", fontStyle:"italic", margin:"6px 0 2px", maxWidth:680 }}>Loading description…</div>;
+    return <div style={{ fontSize:12.5, color:"#bcae97", fontStyle:"italic", margin:"6px 0 2px", width:"100%" }}>Loading description…</div>;
   }
   if (!text) return null;
   return (
-    <div style={{ fontSize:12.5, color:"#7d766a", lineHeight:1.55, margin:"6px 0 2px", maxWidth:680 }}>{text}</div>
+    <div style={{ fontSize:12.5, color:"#7d766a", lineHeight:1.55, margin:"6px 0 2px", width:"100%" }}>{text}</div>
   );
 }

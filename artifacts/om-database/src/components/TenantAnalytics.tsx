@@ -305,7 +305,11 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   // toggle, so the pinned search can find any tenant or parent company.
   const searchIndex = useMemo(() => {
     const tmap = new Map<string, { displayName: string; parentCo?: string; locationCount: number; totalAnnualRent: number }>();
-    const pmap = new Map<string, { parent: string; brands: Set<string>; locationCount: number; totalAnnualRent: number }>();
+    // Parents are keyed by a NORMALIZED key so name variants from OM extraction
+    // ("Ross Stores", "Ross Stores, Inc.", "Ross Stores Inc.") collapse into one
+    // entry instead of showing as duplicates. We track each variant's frequency
+    // to pick the cleanest display label.
+    const pmap = new Map<string, { labels: Map<string, number>; brands: Set<string>; locationCount: number; totalAnnualRent: number }>();
     for (const deal of deals) {
       if (!deal.tenants) continue;
       for (const t of deal.tenants) {
@@ -319,15 +323,23 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         tr.locationCount += 1;
         tr.totalAnnualRent += annualRent;
         if (parentCo) {
-          if (!pmap.has(parentCo)) pmap.set(parentCo, { parent: parentCo, brands: new Set(), locationCount: 0, totalAnnualRent: 0 });
-          const pr = pmap.get(parentCo)!;
-          pr.brands.add(rawName);
+          const pkey = tenantKey(parentCo);
+          if (!pmap.has(pkey)) pmap.set(pkey, { labels: new Map(), brands: new Set(), locationCount: 0, totalAnnualRent: 0 });
+          const pr = pmap.get(pkey)!;
+          pr.labels.set(parentCo, (pr.labels.get(parentCo) ?? 0) + 1);
+          pr.brands.add(key); // dedupe brands by normalized key too
           pr.locationCount += 1;
           pr.totalAnnualRent += annualRent;
         }
       }
     }
-    return { tenants: [...tmap.values()], parents: [...pmap.values()] };
+    // Pick the most common label per parent (tiebreak: shortest, then alphabetical).
+    const parents = [...pmap.values()].map(p => {
+      const label = [...p.labels.entries()].sort((a, b) =>
+        b[1] - a[1] || a[0].length - b[0].length || a[0].localeCompare(b[0]))[0][0];
+      return { parent: label, brands: p.brands, locationCount: p.locationCount, totalAnnualRent: p.totalAnnualRent };
+    });
+    return { tenants: [...tmap.values()], parents };
   }, [deals]);
 
   // Active rows = all rows minus ignored

@@ -158,12 +158,18 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   const portfolio = (() => {
     const owned = active.filter(d => d.status === "Owned");
     const tenants = owned.flatMap(d => (d.tenants || []));
-    const seenAnchors = new Set<string>();
-    const anchors = tenants.filter(t => t.isAnchor && t.name).reduce<string[]>((acc, t) => {
+    // Aggregate each anchor brand's total annual rent across owned properties,
+    // then rank the list by rent (highest first).
+    const anchorAgg = new Map<string, { label: string; rent: number }>();
+    for (const t of tenants) {
+      if (!t.isAnchor || !t.name) continue;
       const k = tenantKey(t.canonicalName || t.name);
-      if (k && !seenAnchors.has(k)) { seenAnchors.add(k); acc.push(tenantLabel(t.name!, t.canonicalName)); }
-      return acc;
-    }, []);
+      if (!k) continue;
+      const cur = anchorAgg.get(k) ?? { label: tenantLabel(t.name, t.canonicalName), rent: 0 };
+      cur.rent += num(t.annualRent);
+      anchorAgg.set(k, cur);
+    }
+    const anchors = [...anchorAgg.values()].sort((a, b) => b.rent - a.rent).map(a => a.label);
     const totalValue = owned.reduce((s, d) => s + (num(d.txnPurchasePrice) || num(d.askingPrice)), 0);
     const totalSF = owned.reduce((s, d) => s + num(d.totalSF), 0);
     const allOccupied = tenants.filter(t => !isVacant(t.name));
