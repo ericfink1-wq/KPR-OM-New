@@ -669,6 +669,29 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
   );
 }
 
+// Disposition subsection — collapsed behind a hide/unhide toggle by default,
+// auto-expanded when the deal is Sold (so exit details surface automatically).
+function DispositionSection({ sold, children }: { sold: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(sold);
+  // If the deal becomes Sold after mount, auto-reveal it.
+  const prevSold = useRef(sold);
+  useEffect(() => {
+    if (sold && !prevSold.current) setOpen(true);
+    prevSold.current = sold;
+  }, [sold]);
+  return (
+    <div style={{ marginTop: 4 }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ display:"flex", alignItems:"center", gap:8, width:"100%", textAlign:"left", background:"transparent", border:"none", cursor:"pointer", padding:"4px 0", marginBottom: open ? 10 : 0, fontFamily:"'Inter',sans-serif" }}>
+        <span style={{ width:6, height:6, borderRadius:"50%", background:sold?"#0d9488":"#d0c9bc", flexShrink:0 }}/>
+        <span style={{ fontSize:13, fontWeight:600, color:"#383a37" }}>{sold ? "Disposition Record" : "Disposition"}</span>
+        <span style={{ marginLeft:"auto", fontSize:10, color:"#a69e91", fontWeight:600 }}>{open ? "HIDE ▴" : "SHOW ▾"}</span>
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
 export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick }: Props) {
   const watchMap = useWatchlist();
   const watchImpact = computeWatchlistImpact(d, watchMap);
@@ -2131,11 +2154,8 @@ ${text.slice(0, 40000)}`;
               </div>
             )}
 
-            {/* Disposition */}
-            <div style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ width:6, height:6, borderRadius:"50%", background:sold?"#0d9488":"#d0c9bc" }}/>{sold ? "Disposition Record" : "Disposition"}
-            </div>
-
+            {/* Disposition — collapsed behind a toggle, auto-expanded when Sold */}
+            <DispositionSection sold={sold}>
             {sold && (() => {
               const req: [string, unknown][] = [["Sale price", d.txnSalePrice],["Buyer", d.txnBuyer],["Sale date", d.txnSaleDate],["Exit cap", d.dispExitCap]];
               const missing = req.filter(([,v]) => v == null || v === "");
@@ -2173,6 +2193,7 @@ ${text.slice(0, 40000)}`;
                 <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Realized Gain / (Loss)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:gain>=0?"#0f9d63":"#dc2626" }}>{gain>=0?"":"-"}${Math.abs(gain).toLocaleString()}</div></div>
               </div>
             )}
+            </DispositionSection>
           </div>
         );
       })()}
