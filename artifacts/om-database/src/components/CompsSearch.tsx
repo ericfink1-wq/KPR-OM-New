@@ -517,6 +517,9 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [rows, setRows] = useState<CompRow[]>([]);
+  // Client-side multi-select state filter (the full list is already fetched).
+  const [selectedStates, setSelectedStates] = useState<string[]>([]);
+  const [stateMenuOpen, setStateMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -645,7 +648,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     }
   };
 
-  const hasFilters = Object.values(filters).some(v => v.trim() !== "");
+  const hasFilters = Object.values(filters).some(v => v.trim() !== "") || selectedStates.length > 0;
 
   // Determine if optional columns should show (only when data present)
   const hasAnchor  = rows.some(r => r.anchor);
@@ -731,17 +734,25 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     return result;
   }, [rows]);
 
+  // States present in the data, for the multi-select dropdown options.
+  const availableStates = useMemo(
+    () => Array.from(new Set(rows.map(r => (r.state || "").trim().toUpperCase()).filter(Boolean))).sort(),
+    [rows]
+  );
+
   const displayRows = useMemo(() => {
-    if (!showDupsOnly) return rows;
+    const stateSet = selectedStates.length ? new Set(selectedStates) : null;
+    const stateFilter = (r: CompRow) => !stateSet || stateSet.has((r.state || "").trim().toUpperCase());
+    if (!showDupsOnly) return rows.filter(stateFilter);
     const tierOf = (r: CompRow) => r.isOwnTransaction ? 2 : r.isManual ? 1 : 0;
     return rows
-      .filter(r => dupMap.has(r.id))
+      .filter(r => dupMap.has(r.id) && stateFilter(r))
       .sort((a, b) => {
         const ca = dupMap.get(a.id)!.clusterId, cb = dupMap.get(b.id)!.clusterId;
         if (ca !== cb) return ca - cb;
         return tierOf(b) - tierOf(a);
       });
-  }, [rows, dupMap, showDupsOnly]);
+  }, [rows, dupMap, showDupsOnly, selectedStates]);
 
   // Tile stats — derived from displayRows minus hidden rows (client-side, filter-aware)
   const activeTileStats = useMemo(() => {
@@ -844,7 +855,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             Comp Sales Database
           </div>
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>
-            {loading ? "Loading…" : `${rows.length} comp${rows.length !== 1 ? "s" : ""}${hasFilters ? " matching filters" : " in index"}`}
+            {loading ? "Loading…" : `${displayRows.length} comp${displayRows.length !== 1 ? "s" : ""}${hasFilters ? " matching filters" : " in index"}`}
           </div>
           {importMsg && (
             <div style={{ marginTop: 6, fontSize: 11.5, color: importMsg.ok ? "#6dba43" : "#c0392b", fontFamily: "'Inter',sans-serif" }}>
@@ -869,7 +880,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
           )}
           {hasFilters && (
             <button
-              onClick={() => { setFilters(EMPTY_FILTERS); fetch_(EMPTY_FILTERS, sort); }}
+              onClick={() => { setFilters(EMPTY_FILTERS); setSelectedStates([]); fetch_(EMPTY_FILTERS, sort); }}
               style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}
             >
               Clear filters
@@ -978,6 +989,50 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
         <div>
           <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>Market / MSA</div>
           {In("e.g. Chicago, MSA, Midwest…", "market")}
+        </div>
+        <div style={{ position: "relative" }}>
+          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>State</div>
+          <button
+            type="button"
+            onClick={() => setStateMenuOpen(o => !o)}
+            onBlur={() => setTimeout(() => setStateMenuOpen(false), 150)}
+            style={{
+              width: "100%", boxSizing: "border-box", textAlign: "left",
+              padding: "8px 10px", fontSize: 13, borderRadius: 8,
+              border: `1px solid ${selectedStates.length ? "#6dba43" : "#e0d8c8"}`,
+              background: selectedStates.length ? "#f0fae8" : "#fff",
+              color: selectedStates.length ? "#3f7a1f" : "#8b8578",
+              fontWeight: selectedStates.length ? 600 : 400, cursor: "pointer",
+              fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
+            }}
+          >
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {selectedStates.length === 0 ? "All states" : selectedStates.length === 1 ? selectedStates[0] : `${selectedStates.length} states`}
+            </span>
+            <span style={{ fontSize: 9, flexShrink: 0 }}>▾</span>
+          </button>
+          {stateMenuOpen && (
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: "#fff", border: "1px solid #e0d8c8", borderRadius: 8, boxShadow: "0 8px 24px rgba(56,58,55,0.15)", maxHeight: 240, overflowY: "auto" }}>
+              {selectedStates.length > 0 && (
+                <button type="button" onMouseDown={e => { e.preventDefault(); setSelectedStates([]); }}
+                  style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: 12, color: "#9a6a1e", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                  Clear ({selectedStates.length})
+                </button>
+              )}
+              {availableStates.length === 0 && <div style={{ padding: "10px 12px", fontSize: 12, color: "#a89f8f" }}>No states in data</div>}
+              {availableStates.map(st => {
+                const on = selectedStates.includes(st);
+                return (
+                  <button key={st} type="button"
+                    onMouseDown={e => { e.preventDefault(); setSelectedStates(prev => on ? prev.filter(s => s !== st) : [...prev, st]); }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "8px 12px", fontSize: 13, background: on ? "#f0fae8" : "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter',sans-serif", color: "#383a37" }}>
+                    <input type="checkbox" checked={on} readOnly style={{ pointerEvents: "none" }} />
+                    {st}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
         <div>
           <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>Sold After</div>
