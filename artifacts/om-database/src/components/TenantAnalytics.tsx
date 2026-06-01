@@ -207,6 +207,10 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const [showAllParents, setShowAllParents] = useState(false);
   const [parentMode, setParentMode] = useState<"rent" | "stores">("rent");
   const [tenantSearch, setTenantSearch] = useState("");
+  // Pinned top search — jump straight to any tenant or parent company.
+  const [navSearch, setNavSearch] = useState("");
+  const [navFocused, setNavFocused] = useState(false);
+  const [navHover, setNavHover] = useState(0);
 
   // Ignored tenants — persisted across refreshes
   const [ignoredKeys, setIgnoredKeys] = useState<Set<string>>(() => {
@@ -342,6 +346,48 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     [parentRows, parentMode]
   );
 
+  // ── Pinned search: live tenant + parent-company results as you type ─────────
+  type NavResult =
+    | { kind: "tenant"; label: string; sub: string; rent: number; locations: number; onPick: () => void }
+    | { kind: "parent"; label: string; sub: string; rent: number; locations: number; onPick: () => void };
+  const navResults = useMemo<NavResult[]>(() => {
+    const q = navSearch.trim().toLowerCase();
+    if (!q) return [];
+    const tenants: NavResult[] = rows
+      .filter(r => {
+        const name = tenantLabel(r.displayName).toLowerCase();
+        const parent = (r.parentCo || "").toLowerCase();
+        return name.includes(q) || parent.includes(q);
+      })
+      .map(r => ({
+        kind: "tenant" as const,
+        label: tenantLabel(r.displayName),
+        sub: `${r.locationCount} location${r.locationCount === 1 ? "" : "s"}${r.parentCo ? ` · ${r.parentCo}` : ""}`,
+        rent: r.totalAnnualRent,
+        locations: r.locationCount,
+        onPick: () => onTenantClick?.(r.displayName),
+      }));
+    const parents: NavResult[] = parentRows
+      .filter(p => p.parent.toLowerCase().includes(q))
+      .map(p => ({
+        kind: "parent" as const,
+        label: p.parent,
+        sub: `Parent company · ${p.brands.size} brand${p.brands.size === 1 ? "" : "s"} · ${p.locationCount} location${p.locationCount === 1 ? "" : "s"}`,
+        rent: p.totalAnnualRent,
+        locations: p.locationCount,
+        onPick: () => onParentClick?.(p.parent),
+      }));
+    // Parents first (broader), then tenants — each by rent desc; cap the list.
+    return [...parents.sort((a, b) => b.rent - a.rent), ...tenants.sort((a, b) => b.rent - a.rent)].slice(0, 12);
+  }, [navSearch, rows, parentRows, onTenantClick, onParentClick]);
+
+  const pickNav = useCallback((r: NavResult) => {
+    setNavSearch("");
+    setNavFocused(false);
+    setNavHover(0);
+    r.onPick();
+  }, []);
+
   const scopeLabel = filter === "owned" ? "Owned" : "All";
 
   const exportTenants = () => {
@@ -456,6 +502,53 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
   return (
     <div style={{ padding:"20px 24px", maxWidth:1100, margin:"0 auto" }}>
+        {/* Pinned search — jump to any tenant or parent company. Sticks to the top
+            of the analytics scroll area as you scroll. */}
+        <div style={{ position:"sticky", top:0, zIndex:50, margin:"-20px -24px 16px", padding:"12px 24px", background:"rgba(246,242,234,0.92)", backdropFilter:"blur(10px)", borderBottom:"1px solid #ece5d7" }}>
+          <div style={{ position:"relative", maxWidth:560 }}>
+            <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", fontSize:14, color:"#a89f8f", pointerEvents:"none" }}>🔍</span>
+            <input
+              value={navSearch}
+              onChange={e => { setNavSearch(e.target.value); setNavHover(0); }}
+              onFocus={() => setNavFocused(true)}
+              onBlur={() => setTimeout(() => setNavFocused(false), 150)}
+              onKeyDown={e => {
+                if (navResults.length === 0) return;
+                if (e.key === "ArrowDown") { e.preventDefault(); setNavHover(h => Math.min(h + 1, navResults.length - 1)); }
+                else if (e.key === "ArrowUp") { e.preventDefault(); setNavHover(h => Math.max(h - 1, 0)); }
+                else if (e.key === "Enter") { e.preventDefault(); const r = navResults[navHover]; if (r) pickNav(r); }
+                else if (e.key === "Escape") { setNavSearch(""); setNavFocused(false); }
+              }}
+              placeholder="Search a tenant or parent company…"
+              style={{ width:"100%", boxSizing:"border-box", padding:"10px 14px 10px 36px", fontSize:13.5, border:"1px solid #d9d2c4", borderRadius:10, background:"#fff", color:"#383a37", fontFamily:"'Inter',sans-serif", outline:"none", boxShadow:"0 1px 2px rgba(56,58,55,0.05)" }}
+            />
+            {navSearch && (
+              <button onMouseDown={e => { e.preventDefault(); setNavSearch(""); }}
+                style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"transparent", border:"none", fontSize:16, color:"#bcae97", cursor:"pointer", lineHeight:1 }}>×</button>
+            )}
+            {/* Results dropdown */}
+            {navFocused && navSearch.trim() && (
+              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:12, boxShadow:"0 12px 36px rgba(56,58,55,0.16)", overflow:"hidden", zIndex:60, maxHeight:360, overflowY:"auto" }}>
+                {navResults.length === 0 ? (
+                  <div style={{ padding:"14px 16px", fontSize:12.5, color:"#a89f8f" }}>No tenant or parent company matches “{navSearch.trim()}”.</div>
+                ) : navResults.map((r, i) => (
+                  <button key={`${r.kind}-${r.label}`}
+                    onMouseDown={e => { e.preventDefault(); pickNav(r); }}
+                    onMouseEnter={() => setNavHover(i)}
+                    style={{ display:"flex", alignItems:"center", gap:10, width:"100%", textAlign:"left", background:i===navHover?"#f6f2ea":"transparent", border:"none", borderBottom:i<navResults.length-1?"1px solid #f1eadc":"none", padding:"10px 14px", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
+                    <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color:r.kind==="parent"?"#8a6d3b":"#3f7a1f", background:r.kind==="parent"?"#f6efe2":"#eef6e6", border:`1px solid ${r.kind==="parent"?"#e0cfa8":"#c6e6a0"}`, borderRadius:4, padding:"2px 6px", flexShrink:0 }}>{r.kind === "parent" ? "Parent" : "Tenant"}</span>
+                    <span style={{ flex:1, minWidth:0 }}>
+                      <span style={{ display:"block", fontSize:13, fontWeight:600, color:"#26281f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.label}</span>
+                      <span style={{ display:"block", fontSize:10.5, color:"#a89f8f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.sub}</span>
+                    </span>
+                    {r.rent > 0 && <span style={{ fontSize:11, fontWeight:600, color:"#5c5047", flexShrink:0 }}>{fmtRent(r.rent)}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Header */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
