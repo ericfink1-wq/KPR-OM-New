@@ -532,7 +532,17 @@ export function parentCompany(name: unknown, storedParent?: string | null): stri
 const _TENANT_TRAIL = new Set([
   "salon","salons","outlet","outlets","factory","factories",
   "supercenter","pharmacy","wireless",
-  "inc","llc","corp","co","company","ltd","lp","plc","na",
+  // Legal/entity suffixes — always safe to strip.
+  "inc","incorporated","llc","corp","corporation","co","company","companies",
+  "ltd","limited","lp","llp","plc","na","holdings","holding",
+]);
+// Corporate filler that's usually a suffix but CAN be part of a real brand
+// ("The Container Store", "Burlington Stores"). Strip only when ≥3 words are
+// present (≥2 brand words remain after removal), so two-word brands keep their
+// identity while "Best Buy Stores", "Dollar Tree Stores" collapse correctly.
+// Known two-word exceptions (e.g. "Walmart Stores") are handled by the alias map.
+const _TENANT_TRAIL_SOFT = new Set([
+  "stores","store","enterprises","enterprise","partners","partnership","markets",
 ]);
 
 /** Lowercase, punctuation-free normalised form of a tenant name. */
@@ -551,8 +561,12 @@ export function _normTenant(name: unknown): string {
        .trim();
   if (s.startsWith("the ")) s = s.slice(4);
   let parts = s.split(" ").filter(Boolean);
-  while (parts.length > 1 && (_TENANT_TRAIL.has(parts[parts.length - 1]) || /^\d+$/.test(parts[parts.length - 1]))) {
-    parts.pop();
+  while (parts.length > 1) {
+    const last = parts[parts.length - 1];
+    if (_TENANT_TRAIL.has(last) || /^\d+$/.test(last)) { parts.pop(); continue; }
+    // Soft filler ("Stores", etc.): only strip if ≥2 brand words would remain.
+    if (parts.length >= 3 && _TENANT_TRAIL_SOFT.has(last)) { parts.pop(); continue; }
+    break;
   }
   return parts.join(" ");
 }
