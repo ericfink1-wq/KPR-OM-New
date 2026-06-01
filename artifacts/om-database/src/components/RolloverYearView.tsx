@@ -92,6 +92,15 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
   const [error, setError] = useState<string | null>(null);
   // Carries the All/Owned scope from the analytics page; toggle re-filters here.
   const [scope, setScope] = useState<"all" | "owned">(initialScope);
+  // Column sort for the tenant table.
+  type SortKey = "name" | "dealName" | "annualRent" | "sf" | "expiryDate" | "dealStatus";
+  const [sortKey, setSortKey] = useState<SortKey>("annualRent");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
+    // Text columns default A→Z; numbers/dates default high→low (most relevant first).
+    else { setSortKey(k); setSortDir(k === "name" || k === "dealName" || k === "dealStatus" ? "asc" : "desc"); }
+  };
 
   // Effective deal-id filter: in Owned mode, intersect any inbound filter with
   // the owned set; in All mode, use whatever inbound filter (if any) was passed.
@@ -117,6 +126,29 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
 
   const totalRent = data?.tenants.reduce((s, t) => s + (t.annualRent ?? 0), 0) ?? 0;
   const totalSF   = data?.tenants.reduce((s, t) => s + (t.sf ?? 0), 0) ?? 0;
+
+  const sortedTenants = (() => {
+    const arr = [...(data?.tenants ?? [])];
+    const dir = sortDir === "asc" ? 1 : -1;
+    const numV = (v: number | null) => v == null ? null : v;
+    const strV = (v: string | null) => (v ?? "").toLowerCase();
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "annualRent" || sortKey === "sf") {
+        const av = numV(a[sortKey]), bv = numV(b[sortKey]);
+        if (av == null && bv == null) cmp = 0;
+        else if (av == null) return 1;   // nulls always last
+        else if (bv == null) return -1;
+        else cmp = (av - bv) * dir;
+      } else {
+        cmp = strV(a[sortKey] as string | null).localeCompare(strV(b[sortKey] as string | null)) * dir;
+      }
+      // Stable tiebreak by tenant name.
+      if (cmp === 0 && sortKey !== "name") cmp = strV(a.name).localeCompare(strV(b.name));
+      return cmp;
+    });
+    return arr;
+  })();
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
@@ -183,17 +215,30 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
               </colgroup>
               <thead>
                 <tr style={{ background: "#faf7f0", borderBottom: "1px solid #ece5d7" }}>
-                  <th style={{ padding: "10px 14px", textAlign: "right", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>#</th>
-                  <th style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>TENANT</th>
-                  <th style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>PROPERTY</th>
-                  <th style={{ padding: "10px 14px", textAlign: "right", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>ANNUAL RENT</th>
-                  <th style={{ padding: "10px 14px", textAlign: "right", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>SF</th>
-                  <th style={{ padding: "10px 14px", textAlign: "right", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>EXPIRY</th>
-                  <th style={{ padding: "10px 14px", textAlign: "center", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>STATUS</th>
+                  {(() => {
+                    const arrow = (k: SortKey) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+                    const Hd = ({ k, label, align }: { k: SortKey; label: string; align: "left" | "right" | "center" }) => (
+                      <th onClick={() => toggleSort(k)}
+                        style={{ padding: "10px 14px", textAlign: align, fontSize: 10, color: sortKey === k ? "#383a37" : "#a89f8f", fontWeight: 700, letterSpacing: "0.05em", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                        {label}{arrow(k)}
+                      </th>
+                    );
+                    return (
+                      <>
+                        <th style={{ padding: "10px 14px", textAlign: "right", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>#</th>
+                        <Hd k="name" label="TENANT" align="left" />
+                        <Hd k="dealName" label="PROPERTY" align="left" />
+                        <Hd k="annualRent" label="ANNUAL RENT" align="right" />
+                        <Hd k="sf" label="SF" align="right" />
+                        <Hd k="expiryDate" label="EXPIRY" align="right" />
+                        <Hd k="dealStatus" label="STATUS" align="center" />
+                      </>
+                    );
+                  })()}
                 </tr>
               </thead>
               <tbody>
-                {data.tenants.map((t, i) => (
+                {sortedTenants.map((t, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid #f5f1ea" }}>
                     <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 10.5, color: "#c9c2b8" }}>{i + 1}</td>
                     <td style={{ padding: "10px 14px", fontWeight: 600, fontSize: 12, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
