@@ -71,7 +71,7 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
   const labelStyle: React.CSSProperties = { fontSize: 9.5, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 };
 
   return (
-    <div style={{ background: "#ffffff", border: "1px solid #efe8da", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+    <div id="section-ownership" data-jump="Ownership Structure" style={{ background: "#ffffff", border: "1px solid #efe8da", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#a69e91", fontWeight: 600, textTransform: "uppercase" }}>Ownership Structure</div>
         <div style={{ fontSize: 12, color: "#a69e91" }}>Capital balances → ownership % (auto-calculated)</div>
