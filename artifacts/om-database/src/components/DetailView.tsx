@@ -1374,9 +1374,12 @@ ${text.slice(0, 40000)}`;
     );
   };
 
-  const Card = ({ title, children, accent }: { title: string; children: React.ReactNode; accent?: string }) => (
+  const Card = ({ title, source, children, accent }: { title: string; source?: string; children: React.ReactNode; accent?: string }) => (
     <div style={{ background:"#fff", border:`1px solid ${accent||"#ece5d7"}`, borderRadius:12, padding:"16px 18px", boxShadow:"0 1px 2px rgba(56,58,55,0.04), 0 12px 28px -22px rgba(56,58,55,0.45)" }}>
-      <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:accent||"#a89f8f", marginBottom:12 }}>{title}</div>
+      <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:accent||"#a89f8f", marginBottom:12 }}>
+        {title}
+        {source && <span style={{ textTransform:"none", letterSpacing:"normal", fontWeight:500, color:"#bcae97" }}> (Source: {source})</span>}
+      </div>
       {children}
     </div>
   );
@@ -2434,7 +2437,7 @@ ${text.slice(0, 40000)}`;
 
       {/* Demographics from OM */}
       {(d.trafficCountVPD || d.population3mi || d.medianHHIncome3mi) && (
-        <div id="section-demographics"><Card title="DEMOGRAPHICS & SITE">
+        <div id="section-demographics"><Card title="DEMOGRAPHICS & SITE" source="OM">
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8 }}>
             {[["TRAFFIC/DAY", d.trafficCountVPD?`${Number(d.trafficCountVPD).toLocaleString()} VPD`:null],
               ["POP. 3MI", d.population3mi?`${Number(d.population3mi).toLocaleString()}`:null],
@@ -2456,7 +2459,7 @@ ${text.slice(0, 40000)}`;
       {/* Trade area demographics pull */}
       <div id="section-trade-area" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"16px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:d.marketDemographics?12:9, flexWrap:"wrap" }}>
-          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Trade Area — 1 / 3 / 5 Mile</div>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Trade Area — 1 / 3 / 5 Mile<span style={{ textTransform:"none", letterSpacing:"normal", fontWeight:500, color:"#bcae97" }}> (Source: Address-based Census data pull)</span></div>
           <button onClick={() => onGetDemo(d.id)} disabled={demoBusy}
             style={{ background:"transparent", border:"1px solid #0d9488", color:demoBusy?"#a69e91":"#0d9488", padding:"5px 11px", borderRadius:5, cursor:demoBusy?"default":"pointer", fontSize:10, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
             {demoBusy?"PULLING…":(d.marketDemographics?"RE-PULL":"PULL DEMOGRAPHICS")}
