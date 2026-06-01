@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount } from "../lib/utils";
@@ -559,28 +559,56 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   );
 }
 
+// Default human labels for known section ids. A section is included in the
+// Jump-to menu if it is actually rendered in the DOM AND either carries a
+// data-jump="Label" attribute or its id appears here. Deriving the menu from the
+// live DOM (rather than a hand-kept list) means it stays correct automatically
+// whenever sections are added, removed, reordered, or conditionally hidden.
+const SECTION_LABELS: Record<string, string> = {
+  "section-cover": "Overview",
+  "section-highlights": "Investment Highlights",
+  "section-tenants": "Tenant Roster",
+  "section-tenant-sales": "Tenant Sales",
+  "section-rollover": "Lease Rollover & WALT",
+  "section-upside": "Upside Items",
+  "section-redflags": "Red Flags",
+  "section-financials": "Key Financials",
+  "section-assumptions": "Key Assumptions",
+  "section-thesis": "Our Thesis",
+  "section-comp-benchmark": "Comp Benchmark",
+  "section-closing-costs": "Estimated Closing Costs",
+  "section-cashflow": "Cash Flow",
+  "section-demographics": "Demographics & Site",
+  "section-trade-area": "Trade Area (Census)",
+  "section-notes": "Your Notes",
+};
+
 function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObject<HTMLDivElement | null> }) {
   const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<{ id: string; label: string }[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
-  const items: { id: string; label: string }[] = [];
-  items.push({ id: "section-cover", label: "Overview" });
-  if (deal.notes || deal.analysisStale) items.push({ id: "section-highlights", label: "Investment Highlights" });
-  if (deal.tenants && deal.tenants.length > 0) {
-    items.push({ id: "section-tenants", label: "Tenant Roster" });
-    items.push({ id: "section-tenant-sales", label: "Tenant Sales" });
-    items.push({ id: "section-rollover", label: "Lease Rollover & WALT" });
-  }
-  if (deal.upsideItems && deal.upsideItems.length > 0) items.push({ id: "section-upside", label: "Upside Items" });
-  if ((deal.redFlags && deal.redFlags.length > 0) || deriveExpenseRiskFlag(deal)) items.push({ id: "section-redflags", label: "Red Flags" });
-  if (deal.askingPrice || deal.capRate || deal.noi || deal.pricePerSF || deal.totalSF) items.push({ id: "section-financials", label: "Key Financials" });
-  items.push({ id: "section-comp-benchmark", label: "Comp Benchmark" });
-  items.push({ id: "section-closing-costs", label: "Estimated Closing Costs" });
-  if (deal.keyAssumptions) items.push({ id: "section-assumptions", label: "Key Assumptions" });
-  if (deal.cashFlowProjection && deal.cashFlowProjection.length > 0) items.push({ id: "section-cashflow", label: "Cash Flow" });
-  if (deal.trafficCountVPD || deal.population3mi || deal.medianHHIncome3mi || deal.avgHHIncome3mi || deal.proximityHighways) items.push({ id: "section-demographics", label: "Demographics & Site" });
-  if (deal.marketDemographics) items.push({ id: "section-trade-area", label: "Trade Area (Census)" });
-  items.push({ id: "section-notes", label: "Your Notes" });
+  // Build the menu from the sections actually present in the DOM, in document
+  // order. A section qualifies if it has id starting with "section-" and either
+  // a data-jump label or a known id in SECTION_LABELS. Recomputed each time the
+  // menu opens (and when the deal changes), so it can never drift from the layout.
+  const rebuildItems = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const seen = new Set<string>();
+    const next: { id: string; label: string }[] = [];
+    container.querySelectorAll<HTMLElement>('[id^="section-"]').forEach(el => {
+      const id = el.id;
+      if (seen.has(id)) return;
+      const label = el.dataset.jump || SECTION_LABELS[id];
+      if (!label) return;
+      seen.add(id);
+      next.push({ id, label });
+    });
+    setItems(next);
+  }, [scrollRef]);
+
+  useEffect(() => { rebuildItems(); }, [rebuildItems, deal.id, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -1735,8 +1763,17 @@ ${text.slice(0, 40000)}`;
         </div>
       )}
 
-      {/* Site plan */}
-      {imgs != null && imgs.sitePlan && imgs.sitePlan.length > 0 && (
+      {/* KPR thesis / assumptions — folded into the AI grade on re-grade. Placed
+          above the site plan. */}
+      <div id="section-thesis" data-jump="Our Thesis">
+        <DealThesisBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy}/>
+      </div>
+
+      {/* Site plan (all states wrapped in one jump anchor; rendered only when the
+          image bundle has loaded so the menu entry tracks the visible section) */}
+      {imgs != null && (
+      <div id="section-site" data-jump="Site Plan">
+      {imgs.sitePlan && imgs.sitePlan.length > 0 && (
         sitePlanFinalized ? (
           // Finalized: keep showing the site plan images; only the upload/confirm controls collapse.
           <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
@@ -1834,6 +1871,8 @@ ${text.slice(0, 40000)}`;
             ))}
           </div>
         </div>
+      )}
+      </div>
       )}
 
       {/* Rent roll importer */}
@@ -2093,10 +2132,7 @@ ${text.slice(0, 40000)}`;
       <div id="section-assumptions"><KeyAssumptions deal={d} /></div>
 
       {/* My Underwriting */}
-      <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
-
-      {/* KPR thesis / assumptions — folded into the AI grade on re-grade */}
-      <DealThesisBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy}/>
+      <div id="section-underwriting" data-jump="My Underwriting"><MyUnderwritingPanel deal={d} onUpdate={onUpdate}/></div>
 
       {/* Comp Benchmark — below My Underwriting */}
       <CompBenchmarkCard deal={d} />
