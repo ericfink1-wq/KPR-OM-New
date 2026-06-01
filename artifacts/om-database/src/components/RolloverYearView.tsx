@@ -77,6 +77,8 @@ function StatusBadge({ status }: { status: string | null }) {
 interface Props {
   year: string;
   filterDealIds?: string[];
+  initialScope?: "all" | "owned";
+  ownedDealIds?: string[];
   onBack: () => void;
 }
 
@@ -84,24 +86,34 @@ interface Props {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function RolloverYearView({ year, filterDealIds, onBack }: Props) {
+export default function RolloverYearView({ year, filterDealIds, initialScope = "all", ownedDealIds, onBack }: Props) {
   const [data, setData] = useState<RolloverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Carries the All/Owned scope from the analytics page; toggle re-filters here.
+  const [scope, setScope] = useState<"all" | "owned">(initialScope);
+
+  // Effective deal-id filter: in Owned mode, intersect any inbound filter with
+  // the owned set; in All mode, use whatever inbound filter (if any) was passed.
+  const effectiveDealIds = scope === "owned"
+    ? (filterDealIds && filterDealIds.length > 0
+        ? (ownedDealIds ?? []).filter(id => filterDealIds.includes(id))
+        : ownedDealIds)
+    : filterDealIds;
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     let url = `/api/analytics/rollover-detail?year=${encodeURIComponent(year)}`;
-    if (filterDealIds && filterDealIds.length > 0) {
+    if (effectiveDealIds && effectiveDealIds.length > 0) {
       // No brackets: parses to an array under both the "simple" and "extended" query parsers.
-      url += "&" + filterDealIds.map(id => `dealId=${encodeURIComponent(id)}`).join("&");
+      url += "&" + effectiveDealIds.map(id => `dealId=${encodeURIComponent(id)}`).join("&");
     }
     fetch(url, { credentials: "include" })
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() as Promise<RolloverDetail>; })
       .then(d => { setData(d); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
-  }, [year, filterDealIds]);
+  }, [year, scope, JSON.stringify(effectiveDealIds)]);
 
   const totalRent = data?.tenants.reduce((s, t) => s + (t.annualRent ?? 0), 0) ?? 0;
   const totalSF   = data?.tenants.reduce((s, t) => s + (t.sf ?? 0), 0) ?? 0;
@@ -125,8 +137,19 @@ export default function RolloverYearView({ year, filterDealIds, onBack }: Props)
               {data.tenants.length} tenant{data.tenants.length !== 1 ? "s" : ""}
               {totalRent > 0 && <> · {fmtRent(totalRent)} total annual rent</>}
               {totalSF > 0 && <> · {fmtSF(totalSF)} SF</>}
+              {` · ${scope === "owned" ? "Owned portfolio" : "All deals"}`}
             </div>
           )}
+        </div>
+
+        {/* All / Owned scope toggle (carried from the analytics page) */}
+        <div style={{ marginLeft: "auto", display: "flex", border: "1px solid #e7e0d2", borderRadius: 7, overflow: "hidden", fontFamily: "'Inter',sans-serif", fontSize: 12, flexShrink: 0, marginTop: 4 }}>
+          {(["all", "owned"] as const).map(s => (
+            <button key={s} onClick={() => setScope(s)}
+              style={{ padding: "5px 13px", background: scope === s ? "#383a37" : "#faf7f0", color: scope === s ? "#f6f2ea" : "#7d766a", border: "none", cursor: "pointer", fontWeight: scope === s ? 600 : 400, fontFamily: "inherit", fontSize: "inherit" }}>
+              {s === "all" ? "All" : "Owned"}
+            </button>
+          ))}
         </div>
       </div>
 

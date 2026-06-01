@@ -284,7 +284,7 @@ interface Props {
   filterDealIds?: string[];
   ownedDealIds?: string[];
   isAdmin?: boolean;
-  onYearClick?: (year: string) => void;
+  onYearClick?: (year: string, scope: "all" | "owned") => void;
   onTenantAudit?: () => void;
   onTenantAnalytics?: () => void;
 }
@@ -566,7 +566,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               {data.leaseExpiration.length === 0 ? (
                 <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No lease expiry data available.</div>
               ) : (
-                <ExpirationWaterfall data={data.leaseExpiration} onYearClick={onYearClick} />
+                <ExpirationWaterfall data={data.leaseExpiration} onYearClick={onYearClick ? (year => onYearClick(year, scope)) : undefined} />
               )}
             </Card>
 

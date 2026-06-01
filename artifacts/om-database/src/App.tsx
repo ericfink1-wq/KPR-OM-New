@@ -31,7 +31,7 @@ const queryClient = new QueryClient({
 });
 
 type TabId = "analyst" | "portfolio" | "analytics" | "comps";
-type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string } | { type: "rollover-year"; year: string };
+type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string } | { type: "rollover-year"; year: string; scope: "all" | "owned" };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
@@ -320,7 +320,7 @@ function AppInner() {
                 <TenantAudit deals={activeDeals} onTenantClick={handleOpenTenant} onDealsChanged={handleReloadDeals} />
               </div>
             ) : view.type === "rollover-year" ? (
-              <RolloverYearView year={view.year} onBack={goBack} />
+              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} />
             ) : (
               <>
                 {/* Segmented toggle */}
@@ -351,7 +351,7 @@ function AppInner() {
                   </div>
                 </div>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics onYearClick={year => navigate({ type: "rollover-year", year })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
+                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
                 ) : analyticsView === "watchlist" ? (
                   <div style={{ padding: "24px 18px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
                     <RetailerWatchlist deals={activeDeals} onOpenDeal={handleOpenDeal} />
