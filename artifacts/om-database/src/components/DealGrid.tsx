@@ -271,7 +271,21 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
   if (filterTypes.length > 0) rows = rows.filter(d => d.assetType != null && filterTypes.includes(d.assetType));
   if (q.trim()) {
     const s = q.toLowerCase();
-    rows = rows.filter(d => [d.propertyName, d.fileName, d.market, d.address, d.assetType].some(v => v?.toLowerCase().includes(s)));
+    // Search across all meaningful fields — name, location, type, status, tenants/
+    // anchors, lenders, narrative/notes/thesis, and key numbers — not just the name.
+    const hay = (d: Deal): string => {
+      const parts: (string | number | null | undefined)[] = [
+        d.propertyName, d.fileName, d.market, d.address, d.city, d.state,
+        d.assetType, d.centerType, d.status, d.notes, d.userNotes, d.dealThesis,
+        d.debtLender, d.txnSeller, d.txnBuyer,
+        Array.isArray(d.keyAssumptions) ? d.keyAssumptions.join(" ") : d.keyAssumptions,
+        (d.tenants || []).map(t => `${t.name ?? ""} ${t.canonicalName ?? ""} ${t.parentCompany ?? ""}`).join(" "),
+        (d.redFlags || []).map(f => f.description).join(" "),
+        (d.upsideItems || []).map(u => `${u.item} ${u.detail}`).join(" "),
+      ];
+      return parts.filter(Boolean).join(" ").toLowerCase();
+    };
+    rows = rows.filter(d => hay(d).includes(s));
   }
   const STATUS_ORDER: Record<string, number> = {
     "Under Contract": 0, "Prospect": 1, "Owned": 2, "Sold": 3, "Passed": 4,
