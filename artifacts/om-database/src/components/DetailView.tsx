@@ -49,6 +49,7 @@ interface Props {
   onQuery: (q: string) => void;
   onCompare: (ids: string[]) => void;
   onTenantClick?: (name: string) => void;
+  isAdmin?: boolean;
 }
 
 // Downscale/recompress an uploaded image before we store it as a data URL.
@@ -821,7 +822,7 @@ function DispositionSection({ sold, children }: { sold: boolean; children: React
   );
 }
 
-export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick }: Props) {
+export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick, isAdmin }: Props) {
   const watchMap = useWatchlist();
   const watchImpact = computeWatchlistImpact(d, watchMap);
   const adjustedScore = watchImpact.adjustScore(d.dealScore);
@@ -1675,6 +1676,26 @@ ${text.slice(0, 40000)}`;
                   onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   🔍 Find Sale Record
                 </button>
+                {isAdmin && (<>
+                  <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+                  <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Admin · Debug</div>
+                  <button onClick={() => {
+                      setActionsOpen(false);
+                      const { id, ...data } = d;
+                      const blob = new Blob([JSON.stringify([{ id, data }], null, 2)], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `kpr-rawdata-${(d.propertyName || d.fileName || "deal").replace(/[^a-z0-9]+/gi, "-").slice(0, 40)}-${new Date().toISOString().slice(0, 10)}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    title="Download this deal's full extracted data to review against the OM"
+                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                    onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    🧪 Export raw data (.json)
+                  </button>
+                </>)}
                 <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
                 <button onClick={() => { setActionsOpen(false); setConfirmDel(true); }}
                   style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#dc2626", fontFamily:"'Inter',sans-serif" }}

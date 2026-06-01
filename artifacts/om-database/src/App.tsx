@@ -449,6 +449,7 @@ function AppInner() {
                 onQuery={handleQuery}
                 onCompare={handleCompare}
                 onTenantClick={handleOpenTenant}
+                isAdmin={isAdmin}
               />
             </div>
           )}
