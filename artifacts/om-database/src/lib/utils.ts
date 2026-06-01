@@ -500,6 +500,46 @@ export const PARENT_COMPANIES: Record<string, string> = {
   "food lion": "Ahold Delhaize", "hannaford": "Ahold Delhaize",
   "safeway": "Albertsons Companies", "albertsons": "Albertsons Companies",
   "jewel osco": "Albertsons Companies", "vons": "Albertsons Companies",
+  "acme": "Albertsons Companies", "shaws": "Albertsons Companies",
+  "star market": "Albertsons Companies", "tom thumb": "Albertsons Companies",
+  "randalls": "Albertsons Companies", "pavilions": "Albertsons Companies",
+  "carrs": "Albertsons Companies", "united supermarkets": "Albertsons Companies",
+  // The Kroger Co. and its regional banners
+  "kroger": "The Kroger Co.", "king soopers": "The Kroger Co.",
+  "kings soopers": "The Kroger Co.", "fry s": "The Kroger Co.", "frys": "The Kroger Co.",
+  "fry s food": "The Kroger Co.", "ralphs": "The Kroger Co.", "smiths": "The Kroger Co.",
+  "smith s": "The Kroger Co.", "frys food": "The Kroger Co.",
+  "qfc": "The Kroger Co.", "harris teeter": "The Kroger Co.",
+  "dillons": "The Kroger Co.", "food 4 less": "The Kroger Co.", "foods co": "The Kroger Co.",
+  "fred meyer": "The Kroger Co.", "city market": "The Kroger Co.", "baker s": "The Kroger Co.",
+  "bakers": "The Kroger Co.", "gerbes": "The Kroger Co.", "pick n save": "The Kroger Co.",
+  "metro market": "The Kroger Co.", "marianos": "The Kroger Co.", "mariano s": "The Kroger Co.",
+  "ruler foods": "The Kroger Co.",
+  // Other major grocers / wholesale (canonical = the operating brand)
+  "walmart": "Walmart Inc.", "walmart neighborhood market": "Walmart Inc.",
+  "sams club": "Walmart Inc.", "sam s club": "Walmart Inc.",
+  "costco": "Costco Wholesale", "costco wholesale": "Costco Wholesale",
+  "target": "Target Corporation",
+  "whole foods": "Amazon", "whole foods market": "Amazon",
+  "trader joes": "Trader Joe's", "trader joe s": "Trader Joe's",
+  "publix": "Publix Super Markets", "heb": "H-E-B", "h e b": "H-E-B",
+  "meijer": "Meijer", "wegmans": "Wegmans", "aldi": "Aldi",
+  "sprouts": "Sprouts Farmers Market", "sprouts farmers market": "Sprouts Farmers Market",
+  "winco": "WinCo Foods", "winco foods": "WinCo Foods",
+  "save a lot": "Save A Lot", "grocery outlet": "Grocery Outlet",
+  "bjs": "BJ's Wholesale Club", "bj s": "BJ's Wholesale Club",
+  "bjs wholesale": "BJ's Wholesale Club", "bj s wholesale club": "BJ's Wholesale Club",
+  "weis": "Weis Markets", "weis markets": "Weis Markets",
+  "ingles": "Ingles Markets", "ingles markets": "Ingles Markets",
+  // Home / hardware
+  "home depot": "The Home Depot", "the home depot": "The Home Depot",
+  "lowes": "Lowe's", "lowe s": "Lowe's",
+  "petsmart": "PetSmart", "petco": "Petco",
+  // Off-price / discount (own parents)
+  "dollar general": "Dollar General",
+  "five below": "Five Below", "big lots": "Big Lots",
+  "ollies": "Ollie's Bargain Outlet", "ollie s": "Ollie's Bargain Outlet",
+  "ollie s bargain": "Ollie's Bargain Outlet", "ollies bargain": "Ollie's Bargain Outlet",
   "taco bell": "Yum! Brands", "kfc": "Yum! Brands", "pizza hut": "Yum! Brands",
   "burger king": "Restaurant Brands Intl.", "tim hortons": "Restaurant Brands Intl.",
   "popeyes": "Restaurant Brands Intl.", "firehouse subs": "Restaurant Brands Intl.",
@@ -522,9 +562,13 @@ export const PARENT_COMPANIES: Record<string, string> = {
 };
 
 export function parentCompany(name: unknown, storedParent?: string | null): string | null {
-  if (storedParent && storedParent.trim()) return storedParent.trim();
+  // Prefer the curated map: it gives ONE canonical parent name per brand, so
+  // banners like King Soopers/Ralphs/Fry's all roll up to "The Kroger Co." and
+  // aren't split by inconsistent AI-extracted parent strings. Fall back to the
+  // stored value only for brands the map doesn't know.
   const key = tenantKey(name);
-  return PARENT_COMPANIES[key] ?? null;
+  if (PARENT_COMPANIES[key]) return PARENT_COMPANIES[key];
+  return storedParent && storedParent.trim() ? storedParent.trim() : null;
 }
 
 // Redundant format/descriptor words safe to strip from the END of a name.
