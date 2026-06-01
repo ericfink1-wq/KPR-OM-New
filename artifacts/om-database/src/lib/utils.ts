@@ -648,6 +648,7 @@ type RecoveryTenant = {
   reimbursementMethod?: string | null; leaseType?: string | null;
   expenseReimbursements?: number | null; isNAP?: boolean | null;
   annualRent?: number | string | null; rentPerSF?: number | string | null;
+  percentageRent?: number | string | null; otherRent?: number | string | null;
 };
 
 const _num = (v: unknown): number | null =>
@@ -729,6 +730,68 @@ export function estimateRecoveries(deal: {
   }
 
   return { byName, poolTotal: pool, poolSource };
+}
+
+export interface LatestSale {
+  salesPSF: number | null;
+  occupancyCost: number | null;
+  occSource?: "stated" | "computed";
+  occBreakdown?: import("./idb").OccBreakdown | null;
+}
+
+/**
+ * Per-tenant latest sales + occupancy cost, derived the same way as the Tenant
+ * Sales panel (gross→PSF, recoveries-aware occ cost), so the tenant roster can
+ * mirror the sales table. Uses the most recent uploaded sales year per tenant,
+ * falling back to OM-stated sales on the roster. Returns a map keyed by tenantKey.
+ */
+export function buildLatestSales(deal: {
+  tenants?: RecoveryTenant[] | null;
+  tenantSalesHistory?: Array<{ year: number; source?: string; tenants: Array<{ name: string; salesPSF?: number | null; annualSales?: number | null; sf?: number | null; occupancyCost?: number | null }> }> | null;
+} & Parameters<typeof estimateRecoveries>[0]): Map<string, LatestSale> {
+  const out = new Map<string, LatestSale>();
+  const rec = estimateRecoveries(deal).byName;
+  const roster = new Map((deal.tenants || []).map(t => [tenantKey(t.canonicalName ?? t.name), t]));
+
+  // Most-recent uploaded sales record per tenant (highest year wins; uploads over OM).
+  const latestByKey = new Map<string, { year: number; r: { salesPSF?: number | null; annualSales?: number | null; sf?: number | null; occupancyCost?: number | null }; isUpload: boolean }>();
+  for (const snap of deal.tenantSalesHistory || []) {
+    const isUpload = snap.source !== "om";
+    for (const r of snap.tenants) {
+      const key = tenantKey(r.name);
+      const cur = latestByKey.get(key);
+      if (!cur || (isUpload && !cur.isUpload) || (isUpload === cur.isUpload && snap.year > cur.year)) {
+        latestByKey.set(key, { year: snap.year, r, isUpload });
+      }
+    }
+  }
+
+  for (const [key, { r }] of latestByKey) {
+    const rt = roster.get(key);
+    let sf = _num(r.sf) ?? _num(rt?.sf);
+    let psf = _num(r.salesPSF);
+    let gross = _num(r.annualSales);
+    if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
+    if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
+
+    let occupancyCost = _num(r.occupancyCost);
+    let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
+    let occBreakdown: import("./idb").OccBreakdown | null = null;
+    const base = _num(rt?.annualRent);
+    const disclosed = _num(rt?.expenseReimbursements);
+    const est = rec.get(key);
+    const reimb = disclosed ?? (est ? est.value : null);
+    const reimbEstimated = disclosed == null && !!est?.estimated;
+    const pctRent = _num(rt?.percentageRent) ?? 0, other = _num(rt?.otherRent) ?? 0;
+    if (base != null && reimb != null && gross != null && gross > 0) {
+      const total = base + reimb + pctRent + other;
+      occupancyCost = Math.round((total / gross) * 1000) / 10;
+      occSource = "computed";
+      occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
+    }
+    out.set(key, { salesPSF: psf, occupancyCost, occSource, occBreakdown });
+  }
+  return out;
 }
 
 /** Stable grouping key — every spelling of one brand collapses to the same string. */

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, estimateRecoveries } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, estimateRecoveries, buildLatestSales } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal } from "../lib/prepay";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
@@ -2102,6 +2102,7 @@ ${text.slice(0, 40000)}`;
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}
           estimatedRecoveries={estimateRecoveries(d).byName}
+          latestSales={buildLatestSales(d)}
         /></div>
       )}
 

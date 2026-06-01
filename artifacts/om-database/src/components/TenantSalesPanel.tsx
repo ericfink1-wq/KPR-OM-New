@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
 import { tenantKey } from "../lib/utils";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -106,8 +107,18 @@ function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): 
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const isMobile = useIsMobile();
+
+  // Fixed-position portal so the tooltip is never clipped by the scrolling table.
+  const place = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const w = 240;
+    setPos({ top: r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w });
+  };
+  const show = () => { place(); setOpen(true); };
 
   useEffect(() => {
     if (!open) return;
@@ -125,9 +136,9 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
   return (
     <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 3 }}>
       <span
-        onMouseEnter={isMobile ? undefined : () => setOpen(true)}
+        onMouseEnter={isMobile ? undefined : show}
         onMouseLeave={isMobile ? undefined : () => setOpen(false)}
-        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        onClick={e => { e.stopPropagation(); if (open) setOpen(false); else show(); }}
         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
       >
         {val.toFixed(1)}%
@@ -135,12 +146,12 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
           {source}
         </span>
       </span>
-      {open && (
+      {open && pos && createPortal(
         <div style={{
-          position: "absolute", bottom: "calc(100% + 6px)", right: 0,
+          position: "fixed", top: pos.top, left: pos.left, transform: "translateY(-100%)",
           background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
-          zIndex: 9999, minWidth: 200, maxWidth: "min(280px, calc(100vw - 32px))",
+          zIndex: 10000, width: 240, maxWidth: "calc(100vw - 24px)",
           fontSize: 11, fontFamily: "'Inter',sans-serif",
         }}>
           {breakdown ? (
@@ -174,7 +185,8 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
           ) : (
             <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </span>
   );

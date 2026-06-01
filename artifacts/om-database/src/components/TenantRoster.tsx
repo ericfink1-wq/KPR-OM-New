@@ -17,12 +17,26 @@ interface Props {
   // Estimated per-tenant recoveries (by tenantKey) — used as a fallback for the
   // occupancy-cost calc when the OM didn't disclose a tenant's recoveries.
   estimatedRecoveries?: Map<string, { value: number; estimated: boolean }>;
+  // Latest sales (by tenantKey) from the Tenant Sales panel — when present, the
+  // roster shows these (uploaded report figures) instead of the OM-stated sales.
+  latestSales?: Map<string, { salesPSF: number | null; occupancyCost: number | null; occSource?: "stated" | "computed"; occBreakdown?: OccBreakdown | null }>;
 }
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const isMobile = useIsMobile();
+
+  // Position the tooltip with FIXED coords from the trigger's rect (via a portal),
+  // so it can't be clipped by the scrolling table and always tracks the cursor's row.
+  const place = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const w = 240;
+    setPos({ top: r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w });
+  };
+  const show = () => { place(); setOpen(true); };
 
   useEffect(() => {
     if (!open) return;
@@ -40,9 +54,9 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
   return (
     <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 3 }}>
       <span
-        onMouseEnter={isMobile ? undefined : () => setOpen(true)}
+        onMouseEnter={isMobile ? undefined : show}
         onMouseLeave={isMobile ? undefined : () => setOpen(false)}
-        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        onClick={e => { e.stopPropagation(); if (open) setOpen(false); else show(); }}
         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
       >
         {val.toFixed(1)}%
@@ -50,12 +64,12 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
           {source}
         </span>
       </span>
-      {open && (
+      {open && pos && createPortal(
         <div style={{
-          position: "absolute", bottom: "calc(100% + 6px)", right: 0,
+          position: "fixed", top: pos.top, left: pos.left, transform: "translateY(-100%)",
           background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
-          zIndex: 9999, minWidth: 200, maxWidth: "min(280px, calc(100vw - 32px))",
+          zIndex: 10000, width: 240, maxWidth: "calc(100vw - 24px)",
           fontSize: 11, fontFamily: "'Inter',sans-serif",
         }}>
           {breakdown ? (
@@ -89,7 +103,8 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
           ) : (
             <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </span>
   );
@@ -230,7 +245,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -500,8 +515,25 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   })()}
                 </td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
-                <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(t.salesPSF, t.sf)}</td>
                 {(() => {
+                  // Prefer the latest uploaded sales-report figures over OM-stated.
+                  const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
+                  const salesPSF = ls?.salesPSF ?? n(t.salesPSF);
+                  return <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(salesPSF, t.sf)}</td>;
+                })()}
+                {(() => {
+                  const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
+                  // If the sales panel already resolved occ cost (computed or stated)
+                  // for this tenant, mirror it so roster + sales table always agree.
+                  if (ls && ls.occupancyCost != null && ls.occSource) {
+                    const occ = ls.occupancyCost;
+                    const color = occ > 15 ? "#dc2626" : "#0f9d63";
+                    return (
+                      <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
+                        <OccTip val={occ} source={ls.occSource} breakdown={ls.occBreakdown ?? null} />
+                      </td>
+                    );
+                  }
                   const stated = n(t.occupancyCost);
                   const base = n(t.annualRent);
                   // Recoveries: OM-disclosed value first; else the SF-allocated
