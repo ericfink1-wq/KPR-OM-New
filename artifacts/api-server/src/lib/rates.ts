@@ -93,22 +93,36 @@ export async function debugIronhound(): Promise<Record<string, unknown>> {
       if (!jr.ok) { jsHints = { jsStatus: jr.status }; }
       else {
         const js = await jr.text();
-        const hits = new Set<string>();
-        for (const m of js.matchAll(/["'`]([^"'`]*(?:api|rate|market|sofr|swap|today|quote|treasur|libor)[^"'`]*)["'`]/gi)) {
-          if (m[1].length <= 120) hits.add(m[1]);
-        }
-        jsHints = { jsLength: js.length, candidates: [...hits].slice(0, 150) };
+        const apiPaths = new Set<string>();
+        for (const m of js.matchAll(/["'`](\/api\/[A-Za-z0-9/_.\-]*)["'`]/g)) apiPaths.add(m[1]);
+        // Context around the first few "markets" references to spot the load URL.
+        const marketCtx: string[] = [];
+        const re = /markets/g; let mm: RegExpExecArray | null; let n = 0;
+        while ((mm = re.exec(js)) && n < 5) { marketCtx.push(js.slice(Math.max(0, mm.index - 140), mm.index + 60)); n++; }
+        jsHints = { jsLength: js.length, apiPaths: [...apiPaths], marketCtx };
       }
     } catch (e) { jsHints = { jsError: e instanceof Error ? e.message : String(e) }; }
+
+    // Probe likely data endpoints for the market ticker (which one returns the
+    // rate rows — propername/value/change, SOFR, swaps).
+    const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+    const probes: Record<string, unknown> = {};
+    for (const path of ["/api/copy/common/", "/api/copy/home", "/api/home", "/api/markets", "/api/market-snapshot", "/api/copy/home-page"]) {
+      try {
+        const pr = await fetchWithTimeout("https://ironhound.com" + path, 10_000, { headers: { "User-Agent": ua, "Accept": "application/json, text/plain, */*" } });
+        const body = await pr.text();
+        const has = /propername|sofr|swap|overnight|treasury|libor/i.test(body);
+        probes[path] = { status: pr.status, len: body.length, hasMarketData: has, snippet: body.slice(0, has ? 700 : 140) };
+      } catch (e) { probes[path] = { error: e instanceof Error ? e.message : String(e) }; }
+    }
 
     return {
       ok: r.ok,
       status: r.status,
       htmlLength: html.length,
-      contentType: r.headers.get("content-type"),
       hasTodaysMarket: /TODAY'?S\s*MARKET/i.test(html),
-      urls: [...urls],
       jsHints,
+      probes,
       parsed,
     };
   } catch (e) {
