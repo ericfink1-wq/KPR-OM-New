@@ -3,6 +3,7 @@ import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain, isNAPTenant } from "../lib/utils";
 import StatusTag from "./StatusTag";
+import EntityDescription from "./EntityDescription";
 
 interface Props {
   tenantName: string;
@@ -175,6 +176,8 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
           Part of <span style={{ fontWeight:600, color:"#2d4ecf", textDecoration:"underline" }}>{p}</span>
         </button>
       ) : null; })()}
+
+      <EntityDescription name={tenantName} kind="tenant" />
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
         <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>

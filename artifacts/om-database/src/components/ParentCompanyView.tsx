@@ -4,6 +4,7 @@ import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTena
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import StatusTag from "./StatusTag";
+import EntityDescription from "./EntityDescription";
 
 interface Props {
   parentName: string;
@@ -140,6 +141,8 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
           </span>
         ); })()}
       </div>
+
+      <EntityDescription name={parentName} kind="parent" />
 
       {/* Subtitle + scope toggle on same row */}
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
