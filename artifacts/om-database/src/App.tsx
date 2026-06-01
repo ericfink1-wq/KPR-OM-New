@@ -38,10 +38,7 @@ function AppInner() {
   const [auth, setAuth] = useState<AuthState>("checking");
   const [isAdmin, setIsAdmin] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [tab, setTab] = useState<TabId>("portfolio");
-  // Analyst is now a right-side drawer (half-screen on desktop, full on mobile)
-  // rather than a full tab — opened from the Analyst nav button or any "ask" action.
-  const [analystOpen, setAnalystOpen] = useState(false);
+  const [tab, setTab] = useState<TabId>("analyst");
   const [viewStack, setViewStack] = useState<View[]>([{ type: "list" }]);
   const view = viewStack[viewStack.length - 1];
   const navigate = useCallback((v: View) => setViewStack(prev => [...prev, v]), []);
@@ -75,7 +72,7 @@ function AppInner() {
     resetToList();
     if (dest === "portfolio") setTab("portfolio");
     else if (dest === "comps") setTab("comps");
-    else if (dest === "analyst") setAnalystOpen(true);
+    else if (dest === "analyst") setTab("analyst");
     else if (dest === "analytics") { setTab("analytics"); setAnalyticsView("tenant"); }
     else if (dest === "analytics-watchlist") { setTab("analytics"); setAnalyticsView("watchlist"); }
   }, [resetToList]);
@@ -176,8 +173,9 @@ function AppInner() {
 
   const handleQuery = useCallback((q: string) => {
     setPendingQuery(q);
-    setAnalystOpen(true);
-  }, []);
+    setTab("analyst");
+    resetToList();
+  }, [resetToList]);
 
   const handleCompare = useCallback((ids: string[]) => {
     navigate({ type: "compare", dealIds: ids });
@@ -233,7 +231,7 @@ function AppInner() {
 
   // Hide overlay on Escape and on any window dragleave that exits the document
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") { dragCounter.current = 0; setDragging(false); setAnalystOpen(false); } };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") { dragCounter.current = 0; setDragging(false); } };
     const onDragLeaveDoc = (e: DragEvent) => { if (!e.relatedTarget) { dragCounter.current = 0; setDragging(false); } };
     window.addEventListener("keydown", onKeyDown);
     document.addEventListener("dragleave", onDragLeaveDoc);
@@ -282,8 +280,8 @@ function AppInner() {
       style={{ height: "100dvh", background: "#f6f2ea", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 16, fontFamily: "'Inter',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any, paddingRight: helpOpen && isDesktop ? "clamp(420px, 33vw, 680px)" : 0, transition: "padding-right 0.2s ease" }}>
 
       <Header
-        tab={analystOpen ? "analyst" : tab}
-        onTab={t => { if (t === "analyst") { setAnalystOpen(true); return; } setAnalystOpen(false); setTab(t as TabId); resetToList(); }}
+        tab={tab}
+        onTab={t => { setTab(t as TabId); resetToList(); }}
         deals={deals}
         queueLen={processingCount}
         onLogout={handleLogout}
@@ -393,6 +391,18 @@ function AppInner() {
         </div>
       )}
 
+      {/* Analyst tab */}
+      {tab === "analyst" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, height: "calc(100vh - 72px)" }}>
+          <AnalystChat
+            deals={deals}
+            onOpenDeal={handleOpenDeal}
+            onTenantClick={handleOpenTenant}
+            initialQuery={pendingQuery}
+            onClearQuery={() => setPendingQuery(undefined)}
+          />
+        </div>
+      )}
 
       {/* Portfolio tab */}
       {tab === "portfolio" && (
@@ -517,44 +527,8 @@ function AppInner() {
         </div>
       )}
 
-      {!analystOpen && view.type !== "detail" && (
+      {tab !== "analyst" && view.type !== "detail" && (
         <AnalystBar onAsk={handleQuery} />
-      )}
-
-      {/* Analyst drawer — half-screen on desktop, full on mobile, with a close (X) */}
-      {analystOpen && (
-        <>
-          {/* Backdrop (mobile + desktop) */}
-          <div onClick={() => setAnalystOpen(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 1100, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
-          <div
-            role="dialog"
-            aria-label="KPR Analyst"
-            style={{
-              position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 1101,
-              width: isDesktop ? "clamp(520px, 50vw, 860px)" : "100vw",
-              background: "#faf7f0", borderLeft: isDesktop ? "1px solid #d8d2c1" : "none",
-              boxShadow: "-8px 0 40px rgba(38,40,31,0.18)",
-              display: "flex", flexDirection: "column", overflow: "hidden",
-              animation: "slideInRight 0.2s ease both",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid #ece5d7", flexShrink: 0, background: "#fff" }}>
-              <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f" }}>KPR Analyst</span>
-              <button onClick={() => setAnalystOpen(false)} aria-label="Close analyst"
-                style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 17, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-            </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <AnalystChat
-                deals={deals}
-                onOpenDeal={id => { setAnalystOpen(false); handleOpenDeal(id); }}
-                onTenantClick={name => { setAnalystOpen(false); handleOpenTenant(name); }}
-                initialQuery={pendingQuery}
-                onClearQuery={() => setPendingQuery(undefined)}
-              />
-            </div>
-          </div>
-        </>
       )}
 
       <FeedbackWidget
