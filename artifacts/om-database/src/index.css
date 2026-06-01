@@ -137,12 +137,12 @@
 
 /* ── App shell ── */
 body { background: #f1ece1; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
-/* Global +10% scale. The app uses px-based inline styles throughout, so scaling
+/* Global +5% scale. The app uses px-based inline styles throughout, so scaling
    the root with zoom enlarges all text and layout uniformly (incl. fixed bars).
-   The app shell is height:100dvh; under zoom that becomes 110% of the viewport and
+   The app shell is height:100dvh; under zoom that becomes 105% of the viewport and
    overflows (pushing the bottom Analyst bar off-screen), so constrain #root height
-   to one *zoomed* viewport — 100dvh ÷ 1.1 — which renders to exactly full height. */
-#root { zoom: 1.1; height: calc(100dvh / 1.1); }
+   to one *zoomed* viewport — 100dvh ÷ 1.05 — which renders to exactly full height. */
+#root { zoom: 1.05; height: calc(100dvh / 1.05); }
 
 ::selection { background: #6dba4338; color: #2a2c27; }
 ::-webkit-scrollbar { width: 9px; height: 9px; }

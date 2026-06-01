@@ -499,28 +499,31 @@ function AppInner() {
       )}
 
       {/* AI chat drawer — right side, ~1/3 of the screen on desktop, full on mobile */}
+      {/* Backdrop — only when open */}
       {chatOpen && (
-        <>
-          <div onClick={() => setChatOpen(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 1100, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
-          <div role="dialog" aria-label="KPR Analyst"
-            style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 1101, width: isDesktop ? "clamp(420px, 34vw, 680px)" : "100vw", background: "#faf7f0", borderLeft: isDesktop ? "1px solid #d8d2c1" : "none", boxShadow: "-8px 0 40px rgba(38,40,31,0.18)", display: "flex", flexDirection: "column", overflow: "hidden", animation: "slideInRight 0.2s ease both" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid #ece5d7", flexShrink: 0, background: "#fff" }}>
-              <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f" }}>KPR Analyst</span>
-              <button onClick={() => setChatOpen(false)} aria-label="Close analyst"
-                style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 17, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-            </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <AnalystChat
-                deals={deals}
-                onOpenDeal={id => { setChatOpen(false); handleOpenDeal(id); }}
-                onTenantClick={name => { setChatOpen(false); handleOpenTenant(name); }}
-                initialQuery={pendingQuery}
-                onClearQuery={() => setPendingQuery(undefined)}
-              />
-            </div>
+        <div onClick={() => setChatOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 1100, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
+      )}
+      {/* Chat drawer — kept MOUNTED and slid off-screen when closed, so the
+          conversation persists across opens. Only rendered once any deals load. */}
+      {deals.length > 0 && (
+        <div role="dialog" aria-label="KPR Analyst" aria-hidden={!chatOpen}
+          style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 1101, width: isDesktop ? "clamp(420px, 34vw, 680px)" : "100vw", maxWidth: "100vw", background: "#faf7f0", borderLeft: isDesktop ? "1px solid #d8d2c1" : "none", boxShadow: chatOpen ? "-8px 0 40px rgba(38,40,31,0.18)" : "none", display: "flex", flexDirection: "column", overflow: "hidden", transform: chatOpen ? "translateX(0)" : "translateX(101%)", transition: "transform 0.22s ease", pointerEvents: chatOpen ? "auto" : "none" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid #ece5d7", flexShrink: 0, background: "#fff" }}>
+            <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f" }}>KPR Analyst</span>
+            <button onClick={() => setChatOpen(false)} aria-label="Close analyst"
+              style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 17, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
           </div>
-        </>
+          <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <AnalystChat
+              deals={deals}
+              onOpenDeal={id => { setChatOpen(false); handleOpenDeal(id); }}
+              onTenantClick={name => { setChatOpen(false); handleOpenTenant(name); }}
+              initialQuery={pendingQuery}
+              onClearQuery={() => setPendingQuery(undefined)}
+            />
+          </div>
+        </div>
       )}
 
       <FeedbackWidget
