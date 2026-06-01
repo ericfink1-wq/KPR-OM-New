@@ -1603,17 +1603,11 @@ ${text.slice(0, 40000)}`;
                   🔍 Find Sale Record
                 </button>
                 <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
-                {!confirmDel
-                  ? <button onClick={() => { setActionsOpen(false); setConfirmDel(true); }}
-                      style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#dc2626", fontFamily:"'Inter',sans-serif" }}
-                      onMouseEnter={e => e.currentTarget.style.background="#fff5f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                      🗑 Delete Deal
-                    </button>
-                  : <div style={{ padding:"6px 12px", display:"flex", gap:6 }}>
-                      <button onClick={() => onDelete(d.id)} style={{ flex:1, background:"#dc2626", border:"none", color:"#fff", padding:"6px 8px", borderRadius:5, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Confirm Delete</button>
-                      <button onClick={() => setConfirmDel(false)} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"6px 8px", borderRadius:5, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
-                    </div>
-                }
+                <button onClick={() => { setActionsOpen(false); setConfirmDel(true); }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#dc2626", fontFamily:"'Inter',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#fff5f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  🗑 Delete Deal
+                </button>
                 </>)}
               </div>
             )}
@@ -1781,6 +1775,23 @@ ${text.slice(0, 40000)}`;
               <button onClick={() => setConfirmDelImg(null)} style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
               <button onClick={() => { const which = confirmDelImg; setConfirmDelImg(null); if (which === "cover") deleteCover(); else deleteSitePlan(); }}
                 style={{ background:"#c0392b", border:"none", color:"#fff", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete-deal confirmation */}
+      {confirmDel && (
+        <div onClick={() => setConfirmDel(false)} style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(38,40,31,0.5)", backdropFilter:"blur(2px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:14, padding:"22px 24px", width:"min(400px, 92vw)", boxShadow:"0 20px 60px rgba(38,40,31,0.28)", fontFamily:"'Inter',sans-serif" }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, fontWeight:600, color:"#26281f", marginBottom:6 }}>Delete this deal?</div>
+            <div style={{ fontSize:13, color:"#7d766a", lineHeight:1.55, marginBottom:18 }}>
+              Permanently delete <strong style={{ color:"#383a37" }}>{d.propertyName || d.fileName || "this deal"}</strong> — its tenants, financials, images, and comp entries. This can't be undone.
+            </div>
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button onClick={() => setConfirmDel(false)} style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+              <button onClick={() => { setConfirmDel(false); onDelete(d.id); }}
+                style={{ background:"#c0392b", border:"none", color:"#fff", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Delete permanently</button>
             </div>
           </div>
         </div>
@@ -2884,18 +2895,29 @@ function PropertyChat({ deal }: { deal: Deal }) {
     "What are the upside opportunities?",
   ];
 
+  const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
   return (
     <>
       <button onClick={() => setOpen(o => !o)} title="Ask AI about this property"
-        style={{ position:"fixed", bottom:24, right:24, zIndex:160, height:52, padding:open?0:"0 20px", width:open?52:"auto", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif", transition:"width .2s,padding .2s" }}>
-        {open ? "✕" : "✦ Ask about this property"}
+        style={{ position:"fixed", bottom:24, right:24, zIndex:160, height:52, padding:"0 20px", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif" }}>
+        ✦ Ask about this property
       </button>
       {open && (
-        <div style={{ position:"fixed", bottom:88, right:24, zIndex:160, width:374, maxWidth:"calc(100vw - 48px)", height:480, maxHeight:"calc(100vh - 130px)", background:"#fff", border:"1px solid #e7e0d2", borderRadius:16, boxShadow:"0 16px 50px -12px rgba(56,58,55,0.4)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+        <>
+          {/* Backdrop */}
+          <div onClick={() => setOpen(false)}
+            style={{ position:"fixed", inset:0, zIndex:1100, background:"rgba(38,40,31,0.42)", backdropFilter:"blur(2px)" }} />
+          {/* Right-side drawer — half-screen on desktop, full on mobile */}
+          <div role="dialog" aria-label="Property assistant"
+            style={{ position:"fixed", top:0, right:0, bottom:0, zIndex:1101, width: wide ? "clamp(440px, 42vw, 720px)" : "100vw", background:"#fff", borderLeft: wide ? "1px solid #d8d2c1" : "none", boxShadow:"-8px 0 40px rgba(38,40,31,0.18)", display:"flex", flexDirection:"column", overflow:"hidden", animation:"slideInRight 0.2s ease both" }}>
           {/* Header */}
-          <div style={{ padding:"13px 16px", borderBottom:"1px solid #f1eadc", background:"#faf7f0", flexShrink:0 }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:600, fontSize:15, color:"#26281f" }}>Property assistant</div>
-            <div style={{ fontSize:11, color:"#a69e91", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{deal.propertyName || "This property"}</div>
+          <div style={{ padding:"13px 16px", borderBottom:"1px solid #f1eadc", background:"#faf7f0", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontFamily:"'Fraunces',serif", fontWeight:600, fontSize:15, color:"#26281f" }}>Property assistant</div>
+              <div style={{ fontSize:11, color:"#a69e91", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{deal.propertyName || "This property"}</div>
+            </div>
+            <button onClick={() => setOpen(false)} aria-label="Close"
+              style={{ background:"transparent", border:"1px solid #e3dccd", color:"#7d766a", width:32, height:32, borderRadius:8, cursor:"pointer", fontSize:16, lineHeight:1, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
           </div>
           {/* Messages */}
           <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:11 }}>
@@ -2941,7 +2963,8 @@ function PropertyChat({ deal }: { deal: Deal }) {
             <button onClick={() => { setShowSuggestions(false); ask(input); }} disabled={thinking || !input.trim()}
               style={{ background:(!thinking && input.trim()) ? "#6dba43" : "#efe8da", color:(!thinking && input.trim()) ? "#1f2b16" : "#b3aa9b", border:"none", borderRadius:9, padding:"0 15px", fontSize:15, fontWeight:700, cursor:(!thinking && input.trim()) ? "pointer" : "default" }}>↑</button>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   );
