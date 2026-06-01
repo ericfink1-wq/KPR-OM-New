@@ -59,11 +59,12 @@ export default function RatesPanel({ onClose }: { onClose: () => void }) {
     </div>
   );
 
-  // Trim the panel to the tenors/rates Eric tracks, without touching the
-  // backend feed (the prepay calc reads the full Treasury curve).
+  // Trim the Treasury panel to the tenors Eric tracks, without touching the
+  // backend feed (the prepay calc reads the full Treasury curve). SOFR and swaps
+  // come back from the server already shaped (Iron Hound, NY Fed fallback), so
+  // render those rows as-is.
   const treasuryRows = data ? data.treasuries.rows.filter(r => TREASURY_TENORS_SHOWN.includes(r.label)) : [];
-  const sofr1mo = data?.sofr.rows.find(r => r.label.includes("30-Day")) ?? null;
-  const sofrRows: RateRow[] = sofr1mo ? [{ ...sofr1mo, label: "1-Month SOFR (30-day avg)" }] : [];
+  const sofrRows: RateRow[] = data?.sofr.rows ?? [];
 
   return createPortal(
     <>
@@ -84,9 +85,9 @@ export default function RatesPanel({ onClose }: { onClose: () => void }) {
             <>
               <Section title="Treasury Yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
               <Section title="SOFR" rows={sofrRows} asOf={data.sofr.asOf} source={data.sofr.source} />
-              <Section title="SOFR Swaps" rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} note="estimate = matching Treasury + spread; not a live swap quote" />
+              <Section title="SOFR Swaps" rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
               <div style={{ fontSize: 10.5, color: "#a89f8f", lineHeight: 1.5, marginTop: 4 }}>
-                Treasury & SOFR are official daily figures, pulled live from free public APIs (U.S. Treasury, NY Fed) — refreshed each business day. The 1-month SOFR shown is the NY Fed 30-day average (backward-looking), not licensed CME Term SOFR. Swap rates are indicative estimates — there is no free real-time SOFR swap feed; for live swaps a paid data feed would be needed.
+                Treasury yields are official daily figures from the U.S. Treasury. 1-Month Term SOFR and the 5/10-yr SOFR swaps are pulled from Iron Hound's market board (ironhound.com). If Iron Hound is unreachable, the 1-month figure falls back to the NY Fed 30-day average and swaps are hidden. Hit Refresh to re-pull.
               </div>
             </>
           )}

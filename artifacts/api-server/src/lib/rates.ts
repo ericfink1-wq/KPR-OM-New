@@ -1,11 +1,10 @@
-// Today's Rates — fetches benchmark interest rates from FREE, OFFICIAL sources,
-// no API key required:
-//   • Treasury yields (par yield curve) — U.S. Treasury fiscaldata API, daily.
-//   • 1-month SOFR (30-day Average SOFR) — NY Fed markets API, daily.
-//   • 3/5/7yr SOFR swaps — INDICATIVE: matching-tenor Treasury + an adjustable
-//     swap spread (there is no free, official real-time SOFR swap feed; ICE Swap
-//     Rate is licensed). Clearly labelled indicative so it's never mistaken for a
-//     live quote; a paid feed can be dropped in later.
+// Today's Rates — benchmark interest rates:
+//   • Treasury yields (par yield curve) — U.S. Treasury, official daily, free.
+//   • 1-month Term SOFR + 5yr/10yr SOFR swaps — scraped from Iron Hound's public
+//     "Today's Market" board (ironhound.com). These are the forward-looking Term
+//     SOFR and ICE-based swap rates loans quote off of; there is no free official
+//     API for them. If the scrape fails, SOFR falls back to the free NY Fed
+//     30-day average and swaps are omitted (better empty than wrong).
 import { fetchWithTimeout } from "./http";
 
 export interface RateRow {
@@ -21,9 +20,49 @@ export interface RatesPayload {
   fetchedAt: string;          // ISO timestamp of this server fetch
 }
 
-// Default indicative swap spreads over the matching Treasury (bps). Rough,
-// adjustable; only used for the indicative swap estimate.
-const DEFAULT_SWAP_SPREADS: Record<string, number> = { "3": 18, "5": 22, "7": 26 };
+// ── Iron Hound "Today's Market" board — scrape the public homepage for the
+//    forward-looking rates with no free official feed: 1-month Term SOFR and the
+//    5yr / 10yr SOFR swaps. Sent with a browser User-Agent to clear bot blocks. ─
+const IRONHOUND_URL = "https://ironhound.com/";
+interface IronhoundData { termSofr1mo: number | null; swap5: number | null; swap10: number | null; asOf: string | null }
+
+async function fetchIronhound(): Promise<IronhoundData> {
+  const r = await fetchWithTimeout(IRONHOUND_URL, 12_000, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  });
+  if (!r.ok) throw new Error(`Iron Hound HTTP ${r.status}`);
+  const html = await r.text();
+
+  // For each labelled row, grab the FIRST percentage that follows the label
+  // (that's the "LAST" column; the second % is the day's change). Whitespace is
+  // made flexible so HTML between the label and value doesn't matter.
+  const grab = (label: string): number | null => {
+    const escaped = label.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&").replace(/\s+/g, "\\s*");
+    const m = html.match(new RegExp(escaped + "[\\s\\S]{0,400}?(-?\\d+\\.\\d+)\\s*%", "i"));
+    if (!m) return null;
+    const n = Number(m[1]);
+    return isNaN(n) || n <= 0 || n > 15 ? null : n; // sanity range for a rate %
+  };
+
+  // "TODAY'S MARKET … June 1st 2026, 2:33 PM" → ISO when parseable, else raw.
+  let asOf: string | null = null;
+  const dm = html.match(/TODAY'?S\s*MARKET[\s\S]{0,250}?([A-Z][a-z]+\s+\d{1,2}(?:st|nd|rd|th)?[\s,]+\d{4}[^<\n]*)/i);
+  if (dm) {
+    const cleaned = dm[1].replace(/(\d{1,2})(st|nd|rd|th)/i, "$1").trim();
+    const d = new Date(cleaned);
+    asOf = isNaN(d.getTime()) ? dm[1].trim() : d.toISOString();
+  }
+
+  return {
+    termSofr1mo: grab("SOFR TERM - 1 MONTH"),
+    swap5: grab("SOFR SWAP - 5 YEAR"),
+    swap10: grab("SOFR SWAP - 10 YEAR"),
+    asOf,
+  };
+}
 
 // ── Treasury par yield curve — Treasury's official daily par-yield XML feed
 //    (home.treasury.gov, free, no key, stable documented field names). ─────────
@@ -90,31 +129,39 @@ async function fetchSofr(): Promise<{ rows: RateRow[]; asOf: string | null }> {
   return { rows, asOf };
 }
 
-export async function fetchTodaysRates(spreadOverrides?: Record<string, number>): Promise<RatesPayload> {
-  const spreads = { ...DEFAULT_SWAP_SPREADS, ...(spreadOverrides ?? {}) };
-  const [tres, sofr] = await Promise.allSettled([fetchTreasuries(), fetchSofr()]);
+export async function fetchTodaysRates(): Promise<RatesPayload> {
+  const [tres, sofr, iron] = await Promise.allSettled([fetchTreasuries(), fetchSofr(), fetchIronhound()]);
 
   const treasuries = tres.status === "fulfilled" ? tres.value : { rows: [] as RateRow[], asOf: null };
   const sofrData = sofr.status === "fulfilled" ? sofr.value : { rows: [] as RateRow[], asOf: null };
+  const iron2 = iron.status === "fulfilled" ? iron.value : { termSofr1mo: null, swap5: null, swap10: null, asOf: null };
 
-  // Indicative SOFR swaps = matching-tenor Treasury + spread (bps).
-  const tByLabel = new Map(treasuries.rows.map(r => [r.label, r.value]));
-  const swapTenors: Array<{ key: string; label: string; tenor: string }> = [
-    { key: "3", label: "3-Yr SOFR Swap", tenor: "3-Yr" },
-    { key: "5", label: "5-Yr SOFR Swap", tenor: "5-Yr" },
-    { key: "7", label: "7-Yr SOFR Swap", tenor: "7-Yr" },
-  ];
-  const swapRows: RateRow[] = swapTenors.map(({ key, label, tenor }) => {
-    const t = tByLabel.get(tenor) ?? null;
-    const spread = spreads[key] ?? 0;
-    const value = t != null ? Math.round((t + spread / 100) * 1000) / 1000 : null;
-    return { label, value, asOf: treasuries.asOf, note: "indicative" };
-  });
+  // SOFR row: prefer Iron Hound's true 1-month Term SOFR (what loans quote off);
+  // fall back to the free NY Fed 30-day average if the scrape didn't return it.
+  let sofrRows: RateRow[];
+  let sofrAsOf: string | null;
+  let sofrSource: string;
+  if (iron2.termSofr1mo != null) {
+    sofrRows = [{ label: "SOFR Term – 1 Month", value: iron2.termSofr1mo, asOf: iron2.asOf }];
+    sofrAsOf = iron2.asOf;
+    sofrSource = "Iron Hound (Term SOFR)";
+  } else {
+    sofrRows = sofrData.rows.filter(r => r.label.includes("30-Day"));
+    sofrAsOf = sofrData.asOf;
+    sofrSource = "NY Fed 30-day avg (Term SOFR unavailable)";
+  }
+
+  // SOFR swaps: Iron Hound 5yr & 10yr (omitted entirely if the scrape failed —
+  // better to show nothing than a wrong estimate).
+  const swapRows: RateRow[] = [];
+  if (iron2.swap5 != null) swapRows.push({ label: "SOFR Swap – 5 Year", value: iron2.swap5, asOf: iron2.asOf });
+  if (iron2.swap10 != null) swapRows.push({ label: "SOFR Swap – 10 Year", value: iron2.swap10, asOf: iron2.asOf });
+  const swapsSource = swapRows.length ? "Iron Hound" : "Unavailable — no free live swap feed";
 
   return {
     treasuries: { rows: treasuries.rows, asOf: treasuries.asOf, source: "U.S. Treasury (par yield curve)" },
-    sofr: { rows: sofrData.rows, asOf: sofrData.asOf, source: "NY Fed (SOFR)" },
-    swaps: { rows: swapRows, asOf: treasuries.asOf, source: "Indicative: Treasury + swap spread", spreadBps: 0 },
+    sofr: { rows: sofrRows, asOf: sofrAsOf, source: sofrSource },
+    swaps: { rows: swapRows, asOf: iron2.asOf, source: swapsSource, spreadBps: 0 },
     fetchedAt: new Date().toISOString(),
   };
 }
