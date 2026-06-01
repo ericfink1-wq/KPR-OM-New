@@ -1017,7 +1017,7 @@ ${text.slice(0, 60000)}`;
     setSalesBusy(true);
     setSalesError(null);
     try {
-      const { text } = await extractPdfText(await file.arrayBuffer());
+      const { text } = await extractAnyFile(file);
       const prompt = `You are a CRE data extraction engine. Extract tenant sales data from this retail sales report.
 Return ONLY valid JSON — no markdown fences, no explanation — with this exact shape:
 {

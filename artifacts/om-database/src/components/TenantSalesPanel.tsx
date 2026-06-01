@@ -318,11 +318,11 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
             padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer",
             opacity: uploadBusy ? 0.6 : 1, whiteSpace: "nowrap",
           }}>
-            {uploadBusy ? "Uploading…" : "⬆ Upload Sales PDF"}
+            {uploadBusy ? "Uploading…" : "⬆ Upload Sales (PDF or Excel)"}
           </button>
         </div>
         {uploadError && <div style={{ marginTop: 8, fontSize: 11, color: "#dc2626" }}>⚠ {uploadError}</div>}
-        <input ref={fileRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={onUpload} />
+        <input ref={fileRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display: "none" }} onChange={onUpload} />
         <div style={{ marginTop: 10, fontSize: 11, color: "#958d80", lineHeight: 1.55 }}>
           Upload a tenant sales report PDF and the year will be automatically detected. Sales data is tracked by year so you always know how current the numbers are.
         </div>
@@ -388,7 +388,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
                 {omSnapshot.year > 0
                   ? `Year estimated as ${omSnapshot.year} (prior year to OM date).`
                   : "Sales year could not be determined from the OM date."}{" "}
-                Upload a dedicated tenant sales PDF to replace with verified annual figures.
+                Upload a dedicated tenant sales report (PDF or Excel) to replace with verified annual figures.
               </span>
             </div>
           )}
@@ -422,7 +422,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, onUp
             }}>
               {uploadBusy ? "Uploading…" : "⬆ Update Sales"}
             </button>
-            <input ref={fileRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={onUpload} />
+            <input ref={fileRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display: "none" }} onChange={onUpload} />
           </div>
 
           {uploadError && <div style={{ marginBottom: 8, fontSize: 11, color: "#dc2626" }}>⚠ {uploadError}</div>}
