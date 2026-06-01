@@ -583,6 +583,7 @@ const SECTION_LABELS: Record<string, string> = {
   "section-tenants": "Tenant Roster",
   "section-tenant-sales": "Tenant Sales",
   "section-rollover": "Lease Rollover & WALT",
+  "section-dealscore": "AI Deal Score",
   "section-upside": "Upside Items",
   "section-redflags": "Red Flags",
   "section-financials": "Key Financials",
@@ -596,7 +597,23 @@ const SECTION_LABELS: Record<string, string> = {
   "section-notes": "Your Notes",
 };
 
-function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObject<HTMLDivElement | null> }) {
+// All / Asset Management view toggle — AM mode hides the acquisition-underwriting
+// sections (thesis, AI score, upside, red flags, key assumptions, closing costs,
+// cash flow), leaving the operational data an asset manager cares about.
+function ViewToggle({ mode, onChange }: { mode: "all" | "am"; onChange: (m: "all" | "am") => void }) {
+  return (
+    <div style={{ display:"flex", border:"1px solid #ddd4c2", borderRadius:6, overflow:"hidden", flexShrink:0, fontFamily:"'Inter',sans-serif" }}>
+      {([["all","All"],["am","Asset Mgmt"]] as const).map(([v,label]) => (
+        <button key={v} onClick={() => onChange(v)}
+          style={{ background: mode===v ? "#383a37" : "#fff", color: mode===v ? "#f6f2ea" : "#52554e", border:"none", padding:"5px 11px", fontSize:11, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SectionJump({ deal, scrollRef, viewMode }: { deal: Deal; scrollRef: React.RefObject<HTMLDivElement | null>; viewMode?: string }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<{ id: string; label: string }[]>([]);
   const ref = useRef<HTMLDivElement>(null);
@@ -621,7 +638,10 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
     setItems(next);
   }, [scrollRef]);
 
-  useEffect(() => { rebuildItems(); }, [rebuildItems, deal.id, open]);
+  // Rebuild when the menu opens, the deal changes, or the view mode toggles
+  // (which adds/removes sections from the DOM). A microtask delay lets the
+  // conditional sections mount/unmount before we scan.
+  useEffect(() => { const t = setTimeout(rebuildItems, 0); return () => clearTimeout(t); }, [rebuildItems, deal.id, open, viewMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -805,6 +825,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const watchImpact = computeWatchlistImpact(d, watchMap);
   const adjustedScore = watchImpact.adjustScore(d.dealScore);
   const [confirmDel, setConfirmDel] = useState(false);
+  // View mode — "all" shows everything; "am" (Asset Management) hides the
+  // acquisition-underwriting sections (thesis, AI score, upside, red flags, key
+  // assumptions, closing costs, cash flow).
+  const [viewMode, setViewMode] = useState<"all" | "am">("all");
+  const showAcq = viewMode === "all"; // acquisition/underwriting sections visible?
   // Which image a delete-confirmation is open for ("cover" | "site" | null).
   const [confirmDelImg, setConfirmDelImg] = useState<null | "cover" | "site">(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -1567,7 +1592,10 @@ ${text.slice(0, 40000)}`;
               </div>
             )}
           </div>
-          <div style={{ flexShrink: 0 }}><SectionJump deal={d} scrollRef={scrollContainerRef} /></div>
+          <div style={{ display:"flex", gap:8, flexShrink: 0 }}>
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+            <SectionJump deal={d} scrollRef={scrollContainerRef} viewMode={viewMode} />
+          </div>
         </div>
       </div>
       {/* Back */}
@@ -1650,7 +1678,10 @@ ${text.slice(0, 40000)}`;
               </div>
             )}
           </div>
-          <SectionJump deal={d} scrollRef={scrollContainerRef} />
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+            <SectionJump deal={d} scrollRef={scrollContainerRef} viewMode={viewMode} />
+          </div>
         </div>
       </div>
       <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 12px 0" }}>{fullAddress || "—"}</p>
@@ -1875,10 +1906,12 @@ ${text.slice(0, 40000)}`;
       )}
 
       {/* KPR thesis / assumptions — folded into the AI grade on re-grade. Placed
-          above the site plan. */}
+          above the site plan. Hidden in Asset Management view. */}
+      {showAcq && (
       <div id="section-thesis" data-jump="Our Thesis">
         <DealThesisBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy}/>
       </div>
+      )}
 
       {/* Site plan (all states wrapped in one jump anchor; rendered only when the
           image bundle has loaded so the menu entry tracks the visible section) */}
@@ -2093,10 +2126,10 @@ ${text.slice(0, 40000)}`;
       )}
 
       {/* Deal score */}
-      {(d.dealScore || d.analysisStale) && (
+      {showAcq && (d.dealScore || d.analysisStale) && (
         <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
           {(expanded) => { const fs = 1; void expanded; return (
-          <div style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
+          <div id="section-dealscore" data-jump="AI Deal Score" style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
             <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
               <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
               {d.dealScore && <ScoreBadge score={adjustedScore}/>}
@@ -2135,7 +2168,7 @@ ${text.slice(0, 40000)}`;
 
 
       {/* Upside items */}
-      {(d.upsideItems && d.upsideItems.length > 0) && (() => {
+      {showAcq && (d.upsideItems && d.upsideItems.length > 0) && (() => {
         const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const sorted = [...d.upsideItems!].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
         return (
@@ -2167,7 +2200,7 @@ ${text.slice(0, 40000)}`;
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
-        return (allRedFlags.length > 0 || d.analysisStale) && (
+        return showAcq && (allRedFlags.length > 0 || d.analysisStale) && (
           <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
             {(expanded) => { const fs = 1; void expanded; return (
             <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px" }}>
@@ -2242,8 +2275,8 @@ ${text.slice(0, 40000)}`;
         );
       })()}
 
-      {/* Key assumptions — above My Underwriting */}
-      <div id="section-assumptions"><KeyAssumptions deal={d} /></div>
+      {/* Key assumptions — above My Underwriting. Hidden in Asset Management view. */}
+      {showAcq && <div id="section-assumptions"><KeyAssumptions deal={d} /></div>}
 
       {/* My Underwriting */}
       <div id="section-underwriting" data-jump="My Underwriting"><MyUnderwritingPanel deal={d} onUpdate={onUpdate}/></div>
@@ -2251,10 +2284,10 @@ ${text.slice(0, 40000)}`;
       {/* Comp Benchmark — below My Underwriting */}
       <CompBenchmarkCard deal={d} />
 
-      <ClosingCostsCard deal={d} />
+      {showAcq && <ClosingCostsCard deal={d} />}
 
       {/* Cash flow */}
-      {(d.cashFlowProjection||[]).length > 0 && (
+      {showAcq && (d.cashFlowProjection||[]).length > 0 && (
         <div id="section-cashflow" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
           <div style={{ overflowX:"auto" }}>
