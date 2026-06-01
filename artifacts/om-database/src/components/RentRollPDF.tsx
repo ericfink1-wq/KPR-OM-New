@@ -58,7 +58,7 @@ function Header() {
     <View>
       <View style={s.hdrRow}>
         <View style={s.logoZone}>
-          <Image src={logoUrl} style={{ height: 20, width: 60, marginRight: 7 }} />
+          <Image src={logoUrl} style={{ height: 20, width: 60, marginRight: 7, objectFit: "contain" }} />
           <Text style={s.logoLabel}>KPR DEAL LIBRARY</Text>
         </View>
         <Text style={s.hdrRight}>RENT ROLL · {today()}</Text>

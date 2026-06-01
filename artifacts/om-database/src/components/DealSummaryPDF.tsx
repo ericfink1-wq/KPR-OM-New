@@ -68,7 +68,7 @@ const s = StyleSheet.create({
   addr: { fontSize: 9.5, color: C.muted, marginTop: 3 },
   pill: { backgroundColor: C.sage, borderWidth: 0.5, borderColor: C.border, borderStyle: "solid", borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, marginTop: 2 },
   pillTxt: { fontSize: 8, fontFamily: "Helvetica-Bold", color: C.olive },
-  cover: { height: 178, borderRadius: 6, marginBottom: 12, width: "100%" },
+  cover: { height: 178, borderRadius: 6, marginBottom: 12, width: "100%", objectFit: "cover" },
   coverPh: { height: 178, borderRadius: 6, marginBottom: 12, backgroundColor: C.olive, alignItems: "center", justifyContent: "center" },
   coverPhTxt: { color: "#fff", fontSize: 15, fontFamily: "Helvetica-Bold" },
   mRow: { flexDirection: "row", marginBottom: 14 },
@@ -93,7 +93,7 @@ function HDR({ logoUrl }: { logoUrl: string }) {
     <View>
       <View style={s.hdrRow}>
         <View style={s.logoZone}>
-          <Image src={logoUrl} style={{ height: 20, width: 60, marginRight: 7 }} />
+          <Image src={logoUrl} style={{ height: 20, width: 60, marginRight: 7, objectFit: "contain" }} />
           <Text style={s.logoLabel}>KPR DEAL LIBRARY</Text>
         </View>
         <Text style={s.hdrRight}>PROPERTY SUMMARY · {today()}</Text>
@@ -362,7 +362,7 @@ export default function DealSummaryPDF({ deal: d, imgs, logoUrl }: DealSummaryPD
         {siteSrc && (
           <View style={s.sec}>
             <SH t="SITE PLAN" />
-            <Image src={siteSrc} style={{ height: 140, borderRadius: 4, width: "100%" }} />
+            <Image src={siteSrc} style={{ height: 140, borderRadius: 4, width: "100%", objectFit: "contain" }} />
           </View>
         )}
 
