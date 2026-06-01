@@ -20,46 +20,45 @@ export interface RatesPayload {
   fetchedAt: string;          // ISO timestamp of this server fetch
 }
 
-// ── Iron Hound "Today's Market" board — scrape the public homepage for the
-//    forward-looking rates with no free official feed: 1-month Term SOFR and the
-//    5yr / 10yr SOFR swaps. Sent with a browser User-Agent to clear bot blocks. ─
+// ── Iron Hound "Today's Market" board — its Vue app loads the rate rows from a
+//    JSON feed at /api/market (each row: propername, value, change, spread, date).
+//    These are the forward-looking Term SOFR and ICE-based swap rates that loans
+//    quote off of, with no free official feed. Browser User-Agent clears bot
+//    blocks. If unreachable, the caller falls back to the free NY Fed average. ──
 const IRONHOUND_URL = "https://ironhound.com/";
+const IRONHOUND_MARKET_URL = "https://ironhound.com/api/market";
+const IRONHOUND_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 interface IronhoundData { termSofr1mo: number | null; swap5: number | null; swap10: number | null; asOf: string | null }
 
 async function fetchIronhound(): Promise<IronhoundData> {
-  const r = await fetchWithTimeout(IRONHOUND_URL, 12_000, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
+  const r = await fetchWithTimeout(IRONHOUND_MARKET_URL, 12_000, {
+    headers: { "User-Agent": IRONHOUND_UA, "Accept": "application/json, text/plain, */*" },
   });
   if (!r.ok) throw new Error(`Iron Hound HTTP ${r.status}`);
-  const html = await r.text();
+  const rows = await r.json() as Array<Record<string, unknown>>;
+  if (!Array.isArray(rows)) throw new Error("Iron Hound: unexpected market payload");
 
-  // For each labelled row, grab the FIRST percentage that follows the label
-  // (that's the "LAST" column; the second % is the day's change). Whitespace is
-  // made flexible so HTML between the label and value doesn't matter.
-  const grab = (label: string): number | null => {
-    const escaped = label.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&").replace(/\s+/g, "\\s*");
-    const m = html.match(new RegExp(escaped + "[\\s\\S]{0,400}?(-?\\d+\\.\\d+)\\s*%", "i"));
-    if (!m) return null;
-    const n = Number(m[1]);
-    return isNaN(n) || n <= 0 || n > 15 ? null : n; // sanity range for a rate %
+  const num = (v: unknown): number | null => {
+    const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+    return isNaN(n) ? null : n;
   };
-
-  // "TODAY'S MARKET … June 1st 2026, 2:33 PM" → ISO when parseable, else raw.
+  // Match rows by their displayed name so we don't depend on array order.
+  const pick = (re: RegExp): number | null => {
+    const m = rows.find(row => re.test(String(row.propername ?? row.name ?? "")));
+    return m ? num(m.value) : null;
+  };
+  // As-of = the most recent row date.
   let asOf: string | null = null;
-  const dm = html.match(/TODAY'?S\s*MARKET[\s\S]{0,250}?([A-Z][a-z]+\s+\d{1,2}(?:st|nd|rd|th)?[\s,]+\d{4}[^<\n]*)/i);
-  if (dm) {
-    const cleaned = dm[1].replace(/(\d{1,2})(st|nd|rd|th)/i, "$1").trim();
-    const d = new Date(cleaned);
-    asOf = isNaN(d.getTime()) ? dm[1].trim() : d.toISOString();
+  for (const row of rows) {
+    const raw = row.date ?? row.updated_at ?? row.updatedAt;
+    const d = raw ? new Date(String(raw)) : null;
+    if (d && !isNaN(d.getTime())) { const iso = d.toISOString(); if (!asOf || iso > asOf) asOf = iso; }
   }
 
   return {
-    termSofr1mo: grab("SOFR TERM - 1 MONTH"),
-    swap5: grab("SOFR SWAP - 5 YEAR"),
-    swap10: grab("SOFR SWAP - 10 YEAR"),
+    termSofr1mo: pick(/term\s*-?\s*1\s*month/i),
+    swap5: pick(/swap\s*-?\s*5\s*year/i),
+    swap10: pick(/swap\s*-?\s*10\s*year/i),
     asOf,
   };
 }
@@ -107,7 +106,7 @@ export async function debugIronhound(): Promise<Record<string, unknown>> {
     // rate rows — propername/value/change, SOFR, swaps).
     const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
     const probes: Record<string, unknown> = {};
-    for (const path of ["/api/copy/common/", "/api/copy/home", "/api/home", "/api/markets", "/api/market-snapshot", "/api/copy/home-page"]) {
+    for (const path of ["/api/market", "/api/copy/common/", "/api/markets"]) {
       try {
         const pr = await fetchWithTimeout("https://ironhound.com" + path, 10_000, { headers: { "User-Agent": ua, "Accept": "application/json, text/plain, */*" } });
         const body = await pr.text();
