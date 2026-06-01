@@ -22,8 +22,8 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
 
   const watchMap = useWatchlist();
   const [scope, setScope] = useState<"all" | "owned">("all");
-  const [sortKey, setSortKey] = useState<SortKey>("brand");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<SortKey>("annualRent");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const setSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
@@ -75,11 +75,14 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
         case "salesPSF":   av = num(a.t.salesPSF); bv = num(b.t.salesPSF); break;
         default: av = null; bv = null;
       }
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      const cmp = typeof av === "string" ? av.localeCompare(bv as string) : (av as number) - (bv as number);
-      return sortDir === "asc" ? cmp : -cmp;
+      let cmp = 0;
+      if (av == null && bv == null) cmp = 0;
+      else if (av == null) return 1;
+      else if (bv == null) return -1;
+      else cmp = (typeof av === "string" ? av.localeCompare(bv as string) : (av as number) - (bv as number)) * (sortDir === "asc" ? 1 : -1);
+      // Tiebreak by property name (always ascending).
+      if (cmp === 0 && sortKey !== "property") cmp = norm(a.deal.propertyName).localeCompare(norm(b.deal.propertyName));
+      return cmp;
     });
   }, [rows, sortKey, sortDir]);
 

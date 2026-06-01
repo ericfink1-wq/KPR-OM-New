@@ -53,9 +53,10 @@ export async function syncOwnTransactionComps(
     const anchor = anchorNames.length > 0 ? anchorNames.join(", ") : null;
 
     // ── ACQUISITION ──
-    const acqCondition =
-      status === "Owned" || status === "Sold" ||
-      (data.txnPurchasePrice != null && data.txnCloseDate != null);
+    // Only a CLOSED deal (Owned or Sold) is a real KPR transaction comp. A deal
+    // still Under Contract may have a purchase price + close date entered, but it
+    // hasn't closed — don't surface it as an owned comp.
+    const acqCondition = status === "Owned" || status === "Sold";
 
     await db.delete(compsIndexTable).where(
       and(eq(compsIndexTable.sourceDealId, dealId), eq(compsIndexTable.txnKind, "acquisition"))
@@ -82,10 +83,8 @@ export async function syncOwnTransactionComps(
       }
     }
 
-    // ── DISPOSITION ──
-    const dispCondition =
-      status === "Sold" ||
-      (data.txnSalePrice != null && data.txnSaleDate != null);
+    // ── DISPOSITION ── only when actually Sold.
+    const dispCondition = status === "Sold";
 
     await db.delete(compsIndexTable).where(
       and(eq(compsIndexTable.sourceDealId, dealId), eq(compsIndexTable.txnKind, "disposition"))

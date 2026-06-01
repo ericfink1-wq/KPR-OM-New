@@ -38,7 +38,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   );
 
   type SortKey = "property"|"market"|"sf"|"rentPSF"|"annualRent"|"expiry"|"salesPSF"|"reimbursement";
-  const [sortKey, setSortKey] = useState<SortKey>("sf");
+  const [sortKey, setSortKey] = useState<SortKey>("annualRent");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [scope, setScope] = useState<"all"|"owned">("all");
 
@@ -95,11 +95,15 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const sorted = [...rows].sort((a, b) => {
     const av = val(a, sortKey), bv = val(b, sortKey);
     const dir = sortDir === "asc" ? 1 : -1;
-    if (av == null && bv == null) return 0;
-    if (av == null) return 1;
-    if (bv == null) return -1;
-    if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
-    return String(av).localeCompare(String(bv)) * dir;
+    let cmp = 0;
+    if (av == null && bv == null) cmp = 0;
+    else if (av == null) return 1;
+    else if (bv == null) return -1;
+    else if (typeof av === "number" && typeof bv === "number") cmp = (av - bv) * dir;
+    else cmp = String(av).localeCompare(String(bv)) * dir;
+    // Tiebreak by property name (always ascending) so ties are stably ordered.
+    if (cmp === 0 && sortKey !== "property") cmp = norm(a.deal.propertyName).localeCompare(norm(b.deal.propertyName));
+    return cmp;
   });
 
   // Averages — derive from ACTIVE rows (excludes ignored locations)

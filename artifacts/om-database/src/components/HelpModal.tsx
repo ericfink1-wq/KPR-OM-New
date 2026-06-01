@@ -318,29 +318,41 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop }: {
           const isOpen = expanded.has(section.id);
           return (
             <div key={section.id} style={{ border:"1px solid #e3dccd", borderRadius:10, overflow:"hidden", background:"#fff" }}>
-              <button
-                type="button"
-                onClick={() => toggle(section.id)}
-                aria-expanded={isOpen}
-                aria-controls={`help-detail-${section.id}`}
-                style={{ display:"flex", alignItems:"center", gap:11, width:"100%", background:"#faf7f0", border:"none", cursor:"pointer", padding:"11px 14px", minHeight:48, textAlign:"left", fontFamily:"'Inter',-apple-system,sans-serif" }}
-              >
-                <Chip n={section.id} />
-                <span style={{ flex:1, fontWeight:700, color:"#3f7a1f", fontSize:14 }}>{section.title}</span>
-                <ExpandToggle open={isOpen} />
-              </button>
-
-              <div style={{ padding:"12px 14px 12px 51px", fontSize:13, color:"#383a37", lineHeight:1.65 }}>
-                {section.brief}
+              {/* Header row: title toggles open/close; the "Go to" action sits on the right. */}
+              <div style={{ display:"flex", alignItems:"center", gap:11, background:"#faf7f0", padding:"11px 14px", minHeight:48 }}>
+                <button
+                  type="button"
+                  onClick={() => toggle(section.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={`help-detail-${section.id}`}
+                  style={{ display:"flex", alignItems:"center", gap:11, flex:1, minWidth:0, background:"transparent", border:"none", cursor:"pointer", padding:0, textAlign:"left", fontFamily:"'Inter',-apple-system,sans-serif" }}
+                >
+                  <Chip n={section.id} />
+                  <span style={{ flex:1, fontWeight:700, color:"#3f7a1f", fontSize:14 }}>{section.title}</span>
+                </button>
                 {section.goTo && onNavigate && (
                   <button
                     type="button"
                     onClick={() => { onNavigate(section.goTo!.dest); if (!isDesktop) onClose(); }}
-                    style={{ marginTop:12, display:"inline-flex", alignItems:"center", gap:6, background:"#3f7a1f", border:"none", color:"#fff", padding:"7px 14px", borderRadius:8, cursor:"pointer", fontSize:12.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
+                    style={{ flexShrink:0, display:"inline-flex", alignItems:"center", gap:6, background:"#3f7a1f", border:"none", color:"#fff", padding:"7px 14px", borderRadius:8, cursor:"pointer", fontSize:12.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
                   >
                     {section.goTo.label} <span style={{ fontSize:13, lineHeight:1 }}>→</span>
                   </button>
                 )}
+              </div>
+
+              {/* Brief + the Expand/Collapse toggle moved down here. */}
+              <div style={{ padding:"12px 14px 12px 51px", fontSize:13, color:"#383a37", lineHeight:1.65 }}>
+                {section.brief}
+                <button
+                  type="button"
+                  onClick={() => toggle(section.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={`help-detail-${section.id}`}
+                  style={{ marginTop:12, display:"inline-flex", background:"transparent", border:"none", padding:0, cursor:"pointer" }}
+                >
+                  <ExpandToggle open={isOpen} />
+                </button>
               </div>
 
               {isOpen && (
@@ -422,7 +434,7 @@ export default function HelpModal({ open, onClose, onNavigate }: HelpModalProps)
         role="dialog"
         aria-labelledby="help-modal-title"
         style={{
-          position: "fixed", top: 0, right: 0, bottom: 0, width: 420,
+          position: "fixed", top: 0, right: 0, bottom: 0, width: "clamp(420px, 33vw, 680px)",
           zIndex: 1001, background: "#fff",
           borderLeft: "1px solid #d8d2c1",
           boxShadow: "-4px 0 24px rgba(0,0,0,0.06)",
