@@ -26,6 +26,18 @@ import ClosingCostsCard from "./ClosingCostsCard";
 import TenantSalesPanel from "./TenantSalesPanel";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 
+// Renders **bold** segments in AI text (highlights, deal-score rationale) so key
+// figures/terms stand out. Plain text otherwise.
+function BoldText({ text }: { text: string }) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return <>{parts.map((p, i) =>
+    p.startsWith("**") && p.endsWith("**")
+      ? <strong key={i} style={{ fontWeight: 700, color: "#383a37" }}>{p.slice(2, -2)}</strong>
+      : <span key={i}>{p}</span>
+  )}</>;
+}
+
 interface Props {
   deal: Deal;
   allDeals: Deal[];
@@ -1658,7 +1670,7 @@ ${text.slice(0, 40000)}`;
             loc.income?.tier || null,
           ].filter(Boolean) as string[];
           return parts.length > 0 ? (
-            <div style={{ fontSize:10, color:"#a69e91" }}>{parts.join(" · ")}</div>
+            <div style={{ fontSize:13, color:"#a69e91" }}>{parts.join(" · ")}</div>
           ) : null;
         })()}
       </div>
@@ -1781,7 +1793,7 @@ ${text.slice(0, 40000)}`;
             <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
             {d.analysisStale && <StaleBadge />}
           </div>
-          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}>{d.notes}</p>}
+          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}><BoldText text={d.notes}/></p>}
         </div>
       )}
 
@@ -2058,7 +2070,7 @@ ${text.slice(0, 40000)}`;
               )}
             </div>
             {d.dealScore && <>
-              <p style={{ fontSize:12*fs, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}>{(adjustedScore || d.dealScore).rationale}</p>
+              <p style={{ fontSize:12*fs, color:"#5c5f57", lineHeight:1.7, margin:"0 0 12px 0" }}><BoldText text={(adjustedScore || d.dealScore).rationale || ""}/></p>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <div>
                   <div style={{ fontSize:8*fs, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
