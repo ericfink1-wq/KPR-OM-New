@@ -24,6 +24,7 @@ import TenantAudit from "./components/TenantAudit";
 import TenantAnalytics from "./components/TenantAnalytics";
 import RetailerWatchlist from "./components/RetailerWatchlist";
 import ParentCompanyView from "./components/ParentCompanyView";
+import CompareView from "./components/CompareView";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -464,6 +465,7 @@ function AppInner() {
               deals={deals.filter(d => view.type === "compare" && view.dealIds.includes(d.id))}
               onBack={goBack}
               onOpen={handleOpenDeal}
+              onTenantClick={handleOpenTenant}
             />
           )}
 
@@ -530,53 +532,6 @@ function AppInner() {
         onOpenDeal={handleOpenDeal}
         existingDeals={deals}
       />
-    </div>
-  );
-}
-
-function CompareView({ deals, onBack, onOpen }: { deals: Deal[]; onBack: () => void; onOpen: (id: string) => void }) {
-  const cols = [
-    ["ASKING PRICE", (d: Deal) => d.askingPrice ? `$${Number(d.askingPrice).toLocaleString()}` : "—"],
-    ["CAP RATE", (d: Deal) => d.capRate ? `${d.capRate}%` : "—"],
-    ["NOI", (d: Deal) => d.noi ? `$${Number(d.noi).toLocaleString()}` : "—"],
-    ["PRICE / SF", (d: Deal) => d.pricePerSF ? `$${d.pricePerSF}` : "—"],
-    ["TOTAL SF", (d: Deal) => d.totalSF ? `${Number(d.totalSF).toLocaleString()} SF` : "—"],
-    ["OCCUPANCY", (d: Deal) => d.occupancy ? `${d.occupancy}%` : "—"],
-    ["WALT", (d: Deal) => d.walt ? `${d.walt} yrs` : "—"],
-    ["MARKET", (d: Deal) => d.market || "—"],
-    ["ASSET TYPE", (d: Deal) => d.assetType || "—"],
-    ["# TENANTS", (d: Deal) => String((d.tenants||[]).length) || "—"],
-    ["NOI / SF", (d: Deal) => d.noi && d.totalSF ? `$${(Number(d.noi)/Number(d.totalSF)).toFixed(2)}` : "—"],
-  ] as [string, (d: Deal) => string][];
-
-  return (
-    <div style={{ padding: "20px 28px" }}>
-      <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", marginBottom:18 }}>← Back</button>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", width: "100%", background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
-          <thead>
-            <tr style={{ background: "#faf7f0" }}>
-              <th style={{ padding: "10px 14px", textAlign: "left", fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", width: 160 }}>Metric</th>
-              {deals.map(d => (
-                <th key={d.id} style={{ padding: "10px 14px", textAlign: "left", minWidth: 180 }}>
-                  <button onClick={() => onOpen(d.id)} style={{ background:"transparent", border:"none", cursor:"pointer", textAlign:"left", padding:0 }}>
-                    <div style={{ fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:500, color:"#26281f" }}>{d.propertyName||d.fileName||"Untitled"}</div>
-                    <div style={{ fontSize:10, color:"#a89f8f" }}>{d.market||d.assetType||""}</div>
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {cols.map(([label, fn]) => (
-              <tr key={label} style={{ borderTop: "1px solid #f1eadc" }}>
-                <td style={{ padding:"9px 14px", fontSize:9.5, fontWeight:700, letterSpacing:"0.06em", color:"#a89f8f", textTransform:"uppercase", whiteSpace:"nowrap" }}>{label}</td>
-                {deals.map(d => <td key={d.id} style={{ padding:"9px 14px", fontSize:12, color:"#383a37", fontWeight:500 }}>{fn(d)}</td>)}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
