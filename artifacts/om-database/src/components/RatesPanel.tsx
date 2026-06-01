@@ -5,6 +5,12 @@ import { apiGetRates, type RatesPayload, type RateRow } from "../lib/api";
 // "Today's Rates" panel — benchmark interest rates from free official sources
 // (Treasury par yields, NY Fed SOFR) plus indicative SOFR swaps. Each section
 // shows its own as-of date so the freshness is always clear.
+
+// Treasury tenors shown in the panel. The backend feed still returns the full
+// curve (1-Mo … 30-Yr) — the prepayment calc relies on it — but the panel only
+// displays the tenors that matter for retail-center loans.
+const TREASURY_TENORS_SHOWN = ["1-Yr", "2-Yr", "3-Yr", "5-Yr", "7-Yr", "10-Yr"];
+
 export default function RatesPanel({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<RatesPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +59,12 @@ export default function RatesPanel({ onClose }: { onClose: () => void }) {
     </div>
   );
 
+  // Trim the panel to the tenors/rates Eric tracks, without touching the
+  // backend feed (the prepay calc reads the full Treasury curve).
+  const treasuryRows = data ? data.treasuries.rows.filter(r => TREASURY_TENORS_SHOWN.includes(r.label)) : [];
+  const sofr1mo = data?.sofr.rows.find(r => r.label.includes("30-Day")) ?? null;
+  const sofrRows: RateRow[] = sofr1mo ? [{ ...sofr1mo, label: "1-Month SOFR (30-day avg)" }] : [];
+
   return createPortal(
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9400, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
@@ -70,11 +82,11 @@ export default function RatesPanel({ onClose }: { onClose: () => void }) {
           {error && !data && <div style={{ color: "#c0392b", fontSize: 13, padding: "20px 0" }}>{error}</div>}
           {data && (
             <>
-              <Section title="Treasury Yields" rows={data.treasuries.rows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
-              <Section title="SOFR" rows={data.sofr.rows} asOf={data.sofr.asOf} source={data.sofr.source} />
+              <Section title="Treasury Yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
+              <Section title="SOFR" rows={sofrRows} asOf={data.sofr.asOf} source={data.sofr.source} />
               <Section title="SOFR Swaps" rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} note="estimate = matching Treasury + spread; not a live swap quote" />
               <div style={{ fontSize: 10.5, color: "#a89f8f", lineHeight: 1.5, marginTop: 4 }}>
-                Treasury & SOFR are official daily figures (free public APIs). Swap rates are indicative estimates — there is no free real-time SOFR swap feed; for live swaps a paid data feed would be needed.
+                Treasury & SOFR are official daily figures, pulled live from free public APIs (U.S. Treasury, NY Fed) — refreshed each business day. The 1-month SOFR shown is the NY Fed 30-day average (backward-looking), not licensed CME Term SOFR. Swap rates are indicative estimates — there is no free real-time SOFR swap feed; for live swaps a paid data feed would be needed.
               </div>
             </>
           )}
