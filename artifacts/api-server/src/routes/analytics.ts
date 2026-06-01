@@ -4,6 +4,7 @@ import { tenantIndexTable } from "@workspace/db";
 import { inArray } from "drizzle-orm";
 import type { TenantIndexRow } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
+import { ensureTenantIndexColumns } from "../lib/tenantIndex";
 
 const router = Router();
 
@@ -127,6 +128,7 @@ function computeAnalytics(rows: TenantIndexRow[]) {
 // ---------------------------------------------------------------------------
 router.get("/analytics/portfolio", requireAuth, async (req, res) => {
   try {
+    await ensureTenantIndexColumns();
     const dealIds = parseDealIds(req.query.dealId);
 
     if (dealIds && dealIds.length === 0) {
@@ -153,6 +155,7 @@ router.get("/analytics/portfolio", requireAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 router.get("/analytics/rollover-detail", requireAuth, async (req, res) => {
   try {
+    await ensureTenantIndexColumns();
     const year = typeof req.query.year === "string" ? req.query.year : null;
     if (!year) {
       res.status(400).json({ error: "year query param is required" });

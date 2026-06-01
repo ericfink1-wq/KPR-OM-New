@@ -3,15 +3,22 @@ import { tenantIndexTable, tenantAliasesTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { toFloat } from "./parsers";
 
-// Self-provision the lease-commencement columns on databases created before they
-// existed, so Eric never has to run a manual migration (he pulls + restarts).
-// Idempotent; runs once per process.
+// Self-provision tenant_index columns on databases created before they existed,
+// so Eric never has to run a manual migration (he pulls + restarts). Idempotent;
+// runs once per process. Must list EVERY column added to the schema after the
+// table's original creation — otherwise `db.select().from(tenantIndexTable)`
+// (which selects all schema columns) throws on the missing column, surfacing as
+// e.g. a 500 on the analytics route. Keep this in sync with schema/tenantIndex.ts.
 let columnsReady: Promise<void> | null = null;
-function ensureLeaseStartColumns(): Promise<void> {
+export function ensureTenantIndexColumns(): Promise<void> {
   if (!columnsReady) {
     columnsReady = (async () => {
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS lease_start text`);
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS lease_start_date date`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS expense_reimbursements double precision`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS percentage_rent double precision`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS other_rent double precision`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS deal_status text`);
     })().catch((err) => { columnsReady = null; throw err; });
   }
   return columnsReady;
@@ -78,7 +85,7 @@ export async function rebuildTenantIndex(
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await ensureLeaseStartColumns();
+    await ensureTenantIndexColumns();
     const [, aliasRows] = await Promise.all([
       db.delete(tenantIndexTable).where(eq(tenantIndexTable.dealId, dealId)),
       db.select().from(tenantAliasesTable),

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { tenantIndexTable, dealsTable } from "@workspace/db";
 import { and, eq, lt, lte, gte, ilike, SQL } from "drizzle-orm";
-import { rebuildTenantIndex } from "../lib/tenantIndex";
+import { rebuildTenantIndex, ensureTenantIndexColumns } from "../lib/tenantIndex";
 
 import { requireAuth } from "../middleware/auth";
 
@@ -19,6 +19,7 @@ const router = Router();
 //   isAnchor=true|false
 router.get("/tenant-index", requireAuth, async (req, res) => {
   try {
+    await ensureTenantIndexColumns();
     const { expiringBefore, expiringAfter, rentPerSFBelow, canonicalName, status, dealId, isAnchor } = req.query;
     const filters: SQL[] = [];
 
