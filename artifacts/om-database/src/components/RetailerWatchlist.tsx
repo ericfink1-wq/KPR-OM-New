@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { Deal } from "../lib/idb";
 import { tenantKey, isVacant } from "../lib/utils";
 import { invalidateWatchlist } from "../lib/useWatchlist";
@@ -10,6 +11,13 @@ interface WatchRow {
   note: string | null;
   sourceUrl: string | null;
   addedBy: string | null;
+}
+
+interface WatchlistArticle {
+  title: string;
+  link: string;
+  source: string;
+  publishedAt: string | null;
 }
 
 interface Exposure {
@@ -31,6 +39,11 @@ function meta(status: string) {
 
 const fmtMoney = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `$${Math.round(n / 1_000)}K` : `$${Math.round(n)}`;
 const fmtSF = (n: number) => n > 0 ? `${Math.round(n).toLocaleString()} SF` : "—";
+const fmtNewsDate = (iso: string | null) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+};
 
 export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: { deals: Deal[]; onOpenDeal?: (id: string) => void; onTenantClick?: (name: string) => void }) {
   const [rows, setRows] = useState<WatchRow[] | null>(null);
@@ -41,6 +54,35 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [editId, setEditId] = useState<string | null>(null);
   const [scope, setScope] = useState<"all" | "owned">("all");
+  const [news, setNews] = useState<WatchlistArticle[] | null>(null);
+  const [newsLoading, setNewsLoading] = useState(false);
+
+  const closeForm = useCallback(() => { setAdding(false); setEditId(null); setNews(null); }, []);
+
+  // While the modal is open, pull recent headlines for the typed brand (debounced).
+  useEffect(() => {
+    if (!adding) { setNews(null); return; }
+    const b = form.brand.trim();
+    if (b.length < 2) { setNews(null); setNewsLoading(false); return; }
+    let alive = true;
+    setNewsLoading(true);
+    const t = setTimeout(() => {
+      fetch(`/api/watchlist/news?brand=${encodeURIComponent(b)}`, { credentials: "include" })
+        .then(r => r.json())
+        .then(d => { if (alive) setNews(Array.isArray(d.articles) ? d.articles : []); })
+        .catch(() => { if (alive) setNews([]); })
+        .finally(() => { if (alive) setNewsLoading(false); });
+    }, 600);
+    return () => { alive = false; clearTimeout(t); };
+  }, [adding, form.brand]);
+
+  // Esc closes the modal.
+  useEffect(() => {
+    if (!adding) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeForm(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [adding, closeForm]);
 
   const load = useCallback(() => {
     fetch("/api/watchlist", { credentials: "include" })
@@ -123,7 +165,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
       });
       if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || "Save failed"); }
       setForm({ brand: "", status: "watch", note: "", sourceUrl: "" });
-      setAdding(false); setEditId(null);
+      closeForm();
       load(); invalidateWatchlist();
     } catch (e) { setError(e instanceof Error ? e.message : "Save failed"); }
     finally { setBusy(false); }
@@ -211,12 +253,10 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
             Track distressed chains and instantly see every center exposed. Matching uses the same brand grouping as the rest of the app, so "Party City #042" still counts.
           </p>
         </div>
-        {!adding && (
-          <button onClick={() => { setAdding(true); setEditId(null); setForm({ brand: "", status: "watch", note: "", sourceUrl: "" }); }}
-            style={{ background: "#2a2c27", color: "#fff", border: "none", borderRadius: 7, padding: "7px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-            + Add retailer
-          </button>
-        )}
+        <button onClick={() => { setNews(null); setEditId(null); setForm({ brand: "", status: "watch", note: "", sourceUrl: "" }); setAdding(true); }}
+          style={{ background: "#2a2c27", color: "#fff", border: "none", borderRadius: 7, padding: "7px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+          + Add retailer
+        </button>
       </div>
 
       {/* All / Owned scope toggle */}
@@ -250,39 +290,82 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
         </div>
       )}
 
-      {/* Add / edit form */}
-      {adding && (
-        <div style={{ background: "#fff", border: "1px solid #e3dccd", borderRadius: 10, padding: 14, marginBottom: 16 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <div>
-              <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Brand</label>
-              <input style={inp} value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} placeholder="e.g. Party City" />
+      {/* Add / edit form — centered overlay so it appears in front of you,
+          not at the top of the page. */}
+      {adding && createPortal(
+        <>
+          <div onClick={closeForm} style={{ position: "fixed", inset: 0, zIndex: 9600, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
+          <div role="dialog" aria-label={editId ? "Edit watchlist retailer" : "Add watchlist retailer"}
+            style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9601, width: "min(540px, 94vw)", maxHeight: "88vh", background: "#faf7f0", border: "1px solid #e0d8c8", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.28)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
+              <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f" }}>{editId ? "Edit retailer" : "Add retailer to watchlist"}</span>
+              <button onClick={closeForm} aria-label="Close" style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
-            <div>
-              <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Status</label>
-              <select style={inp} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                <option value="watch">Watch</option>
-                <option value="distressed">Distressed</option>
-                <option value="bankruptcy">Bankruptcy</option>
-                <option value="liquidating">Liquidating</option>
-              </select>
+
+            <div style={{ padding: "16px 18px", overflowY: "auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <div>
+                  <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Brand</label>
+                  <input style={inp} value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} placeholder="e.g. Party City" autoFocus />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Status</label>
+                  <select style={inp} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                    <option value="watch">Watch</option>
+                    <option value="distressed">Distressed</option>
+                    <option value="bankruptcy">Bankruptcy</option>
+                    <option value="liquidating">Liquidating</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Note (optional)</label>
+                <input style={inp} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="What's going on with this retailer" />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Source link (optional)</label>
+                <input style={inp} value={form.sourceUrl} onChange={e => setForm(f => ({ ...f, sourceUrl: e.target.value }))} placeholder="https://…" />
+              </div>
+
+              {/* Related news */}
+              <div style={{ borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 7 }}>
+                  <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>Related news</label>
+                  {newsLoading && <span style={{ fontSize: 10, color: "#a89f8f" }}>searching…</span>}
+                </div>
+                {form.brand.trim().length < 2 ? (
+                  <div style={{ fontSize: 11.5, color: "#a89f8f" }}>Type a brand name to pull recent headlines.</div>
+                ) : news && news.length === 0 && !newsLoading ? (
+                  <div style={{ fontSize: 11.5, color: "#a89f8f" }}>No recent headlines found for “{form.brand.trim()}”.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(news || []).map((a, i) => (
+                      <div key={i} style={{ border: "1px solid #ece5d7", borderRadius: 8, padding: "8px 10px", background: "#fff" }}>
+                        <a href={a.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#26281f", fontWeight: 600, textDecoration: "none", lineHeight: 1.35, display: "block" }}>{a.title}</a>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 5 }}>
+                          <span style={{ fontSize: 10, color: "#a89f8f" }}>{a.source}{a.publishedAt ? ` · ${fmtNewsDate(a.publishedAt)}` : ""}</span>
+                          <button onClick={() => setForm(f => ({ ...f, sourceUrl: a.link }))} title="Use this link as the source"
+                            style={{ background: form.sourceUrl === a.link ? "#eef3e7" : "transparent", border: "1px solid #ddd4c2", color: "#5c5047", borderRadius: 6, padding: "2px 8px", fontSize: 10, cursor: "pointer", whiteSpace: "nowrap" }}>
+                            {form.sourceUrl === a.link ? "✓ source" : "use as source"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ fontSize: 9.5, color: "#bcae97", marginTop: 6 }}>Headlines via Google News (free) — quick context, not vetted.</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, padding: "12px 18px", borderTop: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
+              <button onClick={submit} disabled={busy || !form.brand.trim()} style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy || !form.brand.trim() ? 0.6 : 1 }}>
+                {busy ? "Saving…" : editId ? "Save changes" : "Add to watchlist"}
+              </button>
+              <button onClick={closeForm} style={{ background: "transparent", color: "#8b8578", border: "1px solid #ddd4c2", borderRadius: 7, padding: "8px 16px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Note (optional)</label>
-            <input style={inp} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="What's going on with this retailer" />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Source link (optional)</label>
-            <input style={inp} value={form.sourceUrl} onChange={e => setForm(f => ({ ...f, sourceUrl: e.target.value }))} placeholder="https://…" />
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={submit} disabled={busy || !form.brand.trim()} style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy || !form.brand.trim() ? 0.6 : 1 }}>
-              {busy ? "Saving…" : editId ? "Save changes" : "Add to watchlist"}
-            </button>
-            <button onClick={() => { setAdding(false); setEditId(null); }} style={{ background: "transparent", color: "#8b8578", border: "1px solid #ddd4c2", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
-          </div>
-        </div>
+        </>,
+        document.body
       )}
 
       {error && <div style={{ color: "#dc2626", fontSize: 12, marginBottom: 12 }}>⚠ {error}</div>}
