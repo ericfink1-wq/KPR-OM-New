@@ -792,6 +792,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const watchImpact = computeWatchlistImpact(d, watchMap);
   const adjustedScore = watchImpact.adjustScore(d.dealScore);
   const [confirmDel, setConfirmDel] = useState(false);
+  // Which image a delete-confirmation is open for ("cover" | "site" | null).
+  const [confirmDelImg, setConfirmDelImg] = useState<null | "cover" | "site">(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [imgs, setImgs] = useState<ImageBundle | null>(null);
@@ -1232,7 +1234,7 @@ ${text.slice(0, 40000)}`;
       if (pages.length === 0) { alert(`No valid pages found in "${fixPage}" (PDF has ${pdf.numPages} pages).`); return; }
       const imgs_raw: string[] = [];
       for (const pg of pages) {
-        const res = await _capturePagePhoto(pdf, pg, lib, sitePlanHalf);
+        const res = await _capturePagePhoto(pdf, pg, lib, sitePlanHalf, true);
         if (res.cover) imgs_raw.push(res.cover);
       }
       const current = (await apiLoadImages(d.id)) || {};
@@ -1303,6 +1305,24 @@ ${text.slice(0, 40000)}`;
     setImgs(next);
     await apiSaveImages(d.id, next);
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: urls.length, needsSitePlanPick: false } });
+  };
+
+  // Remove the cover or site plan without uploading a replacement (with a confirm).
+  const deleteCover = async () => {
+    const current = (await apiLoadImages(d.id)) || {};
+    const next: ImageBundle = { ...current, cover: null, coverThumb: null };
+    setImgs(next);
+    await apiSaveImages(d.id, next);
+    setCoverFinalized(false);
+    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: false, coverConfirmed: false } });
+  };
+  const deleteSitePlan = async () => {
+    const current = (await apiLoadImages(d.id)) || {};
+    const next: ImageBundle = { ...current, sitePlan: [], pagePicks: [], needsSitePlanPick: false };
+    setImgs(next);
+    await apiSaveImages(d.id, next);
+    setSitePlanFinalized(false);
+    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: 0, needsSitePlanPick: false } });
   };
 
   const applyParsed = (parsed: { asOf?: string | null; tenants?: unknown[] }) => {
@@ -1676,11 +1696,13 @@ ${text.slice(0, 40000)}`;
 
       {/* Cover hero */}
       {imgs?.cover && (
-        <div id="section-cover" onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge"
-          style={{ position:"relative", height:228, borderRadius:14, overflow:"hidden", marginBottom:16, cursor:"zoom-in", boxShadow:"0 1px 2px rgba(56,58,55,0.05), 0 20px 40px -28px rgba(56,58,55,0.6)", border:"1px solid #ece5d7" }}>
-          <img src={imgs.cover} alt={`${d.propertyName||"Property"} cover`} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
-          <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(38,40,31,0) 45%, rgba(38,40,31,0.55) 100%)" }}/>
-          <div style={{ position:"absolute", left:18, bottom:14, color:"#fff", fontSize:9, letterSpacing:"0.18em", textTransform:"uppercase", opacity:0.85, fontWeight:600 }}>From the offering memorandum</div>
+        <div id="section-cover"
+          style={{ position:"relative", height:228, borderRadius:14, overflow:"hidden", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.05), 0 20px 40px -28px rgba(56,58,55,0.6)", border:"1px solid #ece5d7" }}>
+          <img onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge" src={imgs.cover} alt={`${d.propertyName||"Property"} cover`} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", cursor:"zoom-in" }}/>
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(38,40,31,0) 45%, rgba(38,40,31,0.55) 100%)", pointerEvents:"none" }}/>
+          <div style={{ position:"absolute", left:18, bottom:14, color:"#fff", fontSize:9, letterSpacing:"0.18em", textTransform:"uppercase", opacity:0.85, fontWeight:600, pointerEvents:"none" }}>From the offering memorandum</div>
+          <button onClick={() => setConfirmDelImg("cover")} title="Remove cover photo"
+            style={{ position:"absolute", top:10, right:10, background:"rgba(38,40,31,0.62)", border:"none", color:"#fff", width:30, height:30, borderRadius:8, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>🗑</button>
         </div>
       )}
 
@@ -1732,6 +1754,23 @@ ${text.slice(0, 40000)}`;
         <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, zIndex:600, background:"rgba(26,28,22,0.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, cursor:"zoom-out" }}>
           <img src={lightbox} alt="Enlarged" style={{ maxWidth:"94%", maxHeight:"92%", objectFit:"contain", borderRadius:8, boxShadow:"0 30px 80px rgba(0,0,0,0.5)" }}/>
           <button onClick={() => setLightbox(null)} style={{ position:"fixed", top:20, right:24, background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:18 }}>✕</button>
+        </div>
+      )}
+
+      {/* Cover / site-plan delete confirmation */}
+      {confirmDelImg && (
+        <div onClick={() => setConfirmDelImg(null)} style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(38,40,31,0.5)", backdropFilter:"blur(2px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:14, padding:"22px 24px", width:"min(380px, 92vw)", boxShadow:"0 20px 60px rgba(38,40,31,0.28)", fontFamily:"'Inter',sans-serif" }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, fontWeight:600, color:"#26281f", marginBottom:6 }}>Delete {confirmDelImg === "cover" ? "cover photo" : "site plan"}?</div>
+            <div style={{ fontSize:13, color:"#7d766a", lineHeight:1.55, marginBottom:18 }}>
+              This removes the {confirmDelImg === "cover" ? "cover photo" : "site plan"} from this deal. You can upload a new one anytime.
+            </div>
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button onClick={() => setConfirmDelImg(null)} style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+              <button onClick={() => { const which = confirmDelImg; setConfirmDelImg(null); if (which === "cover") deleteCover(); else deleteSitePlan(); }}
+                style={{ background:"#c0392b", border:"none", color:"#fff", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Delete</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1790,7 +1829,10 @@ ${text.slice(0, 40000)}`;
           <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Site Plan</div>
-              <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+                <button onClick={() => setConfirmDelImg("site")} title="Remove site plan" style={{ background:"transparent", border:"none", color:"#c0392b", fontSize:13, cursor:"pointer", padding:0 }}>🗑</button>
+              </div>
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
@@ -1802,7 +1844,10 @@ ${text.slice(0, 40000)}`;
           </div>
         ) : (
           <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:12 }}>Site Plan</div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Site Plan</div>
+              <button onClick={() => setConfirmDelImg("site")} title="Remove site plan" style={{ background:"transparent", border:"none", color:"#c0392b", fontSize:13, cursor:"pointer", padding:0 }}>🗑</button>
+            </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
                 <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7" }}>

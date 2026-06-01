@@ -79,7 +79,12 @@ export async function _capturePagePhoto(
   pdf: any,
   pageNum: number,
   lib: any,
-  half: "full" | "left" | "right" = "full"
+  half: "full" | "left" | "right" = "full",
+  // Site plans are composed pages (a vector diagram + labels layered over an
+  // aerial photo). Extracting the single largest embedded image grabs only the
+  // aerial background (a green wash), so site-plan captures pass
+  // preferPageRender=true to use the full composed page render instead.
+  preferPageRender = false,
 ): Promise<{ cover: string | null; thumb: string | null }> {
   const page = await pdf.getPage(pageNum);
   const base = page.getViewport({ scale: 1 });
@@ -94,6 +99,15 @@ export async function _capturePagePhoto(
   pctx.fillStyle = "#ffffff";
   pctx.fillRect(0, 0, pc.width, pc.height);
   await page.render({ canvasContext: pctx, viewport }).promise;
+
+  // For site plans, use the full composed page render and skip largest-image
+  // extraction entirely (which would grab the aerial background only).
+  if (preferPageRender && half === "full") {
+    const cover = _scaleCanvas(pc, 1600, 0.8);
+    const thumb = _scaleCanvas(pc, 168, 0.5);
+    pc.width = pc.height = 0;
+    return { cover, thumb };
+  }
 
   let cleanCanvas: HTMLCanvasElement | null = null;
   try {
