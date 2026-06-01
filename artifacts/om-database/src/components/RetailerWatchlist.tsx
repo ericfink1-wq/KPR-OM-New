@@ -32,7 +32,7 @@ function meta(status: string) {
 const fmtMoney = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `$${Math.round(n / 1_000)}K` : `$${Math.round(n)}`;
 const fmtSF = (n: number) => n > 0 ? `${Math.round(n).toLocaleString()} SF` : "—";
 
-export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]; onOpenDeal?: (id: string) => void }) {
+export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: { deals: Deal[]; onOpenDeal?: (id: string) => void; onTenantClick?: (name: string) => void }) {
   const [rows, setRows] = useState<WatchRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -155,10 +155,12 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
     const isOpen = expanded.has(w.id);
     return (
       <div key={w.id} style={{ background: "#fff", border: `1px solid ${exposed ? "#ecd9c0" : "#efe8da"}`, borderLeft: `3px solid ${exposed ? m.bg : "#efe8da"}`, borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: exposed ? "pointer" : "default", flexWrap: "wrap" }}
-          onClick={() => exposed && toggle(w.id)}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", flexWrap: "wrap" }}>
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", color: m.color, background: m.bg, border: `1px solid ${m.border}`, borderRadius: 4, padding: "2px 7px", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif" }}>{w.brand}</span>
+          {onTenantClick
+            ? <button onClick={e => { e.stopPropagation(); onTenantClick(w.brand); }} title={`View ${w.brand} across the portfolio`}
+                style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif", background: "transparent", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline", textDecorationColor: "#d8cfbd", textUnderlineOffset: "2px" }}>{w.brand}</button>
+            : <span style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif" }}>{w.brand}</span>}
           {exposed ? (
             <span style={{ fontSize: 11.5, color: "#b3261e", fontWeight: 600 }}>
               {w.exp.centers.length} center{w.exp.centers.length !== 1 ? "s" : ""} · {fmtSF(w.exp.totalSF)} · {fmtMoney(w.exp.totalRent)} rent
@@ -171,9 +173,16 @@ export default function RetailerWatchlist({ deals, onOpenDeal }: { deals: Deal[]
             {w.sourceUrl && <a href={w.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#4f7aac" }}>source ↗</a>}
             <button onClick={e => { e.stopPropagation(); startEdit(w); }} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 11 }}>edit</button>
             <button onClick={e => { e.stopPropagation(); remove(w.id, w.brand); }} style={{ background: "transparent", border: "none", color: "#c98", cursor: "pointer", fontSize: 11 }}>remove</button>
-            {exposed && <span style={{ fontSize: 10, color: "#a69e91" }}>{isOpen ? "▲" : "▼"}</span>}
           </div>
         </div>
+        {exposed && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "2px 0 8px" }}>
+            <button onClick={() => toggle(w.id)}
+              style={{ background: "transparent", border: "1px solid #e0d8c8", color: "#5c5047", borderRadius: 7, padding: "4px 16px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", letterSpacing: "0.02em" }}>
+              {isOpen ? "Collapse" : `Expand ${w.exp.centers.length} center${w.exp.centers.length !== 1 ? "s" : ""}`}
+            </button>
+          </div>
+        )}
         {w.note && <div style={{ fontSize: 11.5, color: "#8b8578", padding: "0 14px 10px", marginTop: -4 }}>{w.note}</div>}
         {isOpen && exposed && (
           <div style={{ borderTop: "1px solid #f1ece1", padding: "4px 0" }}>

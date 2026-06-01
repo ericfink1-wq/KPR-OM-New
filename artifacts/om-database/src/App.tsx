@@ -378,7 +378,7 @@ function AppInner() {
                   <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
                 ) : analyticsView === "watchlist" ? (
                   <div style={{ padding: "24px 18px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
-                    <RetailerWatchlist deals={activeDeals} onOpenDeal={handleOpenDeal} />
+                    <RetailerWatchlist deals={activeDeals} onOpenDeal={handleOpenDeal} onTenantClick={handleOpenTenant} />
                   </div>
                 ) : (
                   <TenantAnalytics
