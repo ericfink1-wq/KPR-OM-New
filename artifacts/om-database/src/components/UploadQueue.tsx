@@ -153,6 +153,22 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
   };
 
+  // Warn before a hard page exit (refresh / close tab / browser-back) while work
+  // is still in flight — a reload wipes the visible queue and its per-file status.
+  // Only guards genuinely-active items; finished / awaiting-input / errored ones
+  // don't trigger it. (Navigating WITHIN the app doesn't unmount this component,
+  // so it isn't affected — this is purely for full-document unloads.)
+  const hasActiveWork = queue.some(x => x.status === "pending" || x.status === "extracting");
+  useEffect(() => {
+    if (!hasActiveWork) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ""; // required for Chrome to show the native prompt
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasActiveWork]);
+
   // Apply an extracted roster to a matched deal (safe path: preserves financials).
   const applyRosterToDeal = async (
     itemId: string, deal: Deal, result: { asOf: string | null; tenants: NonNullable<Deal["tenants"]> },
