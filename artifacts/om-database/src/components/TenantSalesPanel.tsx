@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
-import { tenantKey } from "../lib/utils";
+import { tenantKey, stripSuiteCode } from "../lib/utils";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
@@ -206,7 +206,7 @@ function deriveSalesRecord(
   recByKey: Map<string, { value: number; estimated: boolean }>,
 ): TenantSalesRecord {
   const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
-  const key = tenantKey(t.name);
+  const key = tenantKey(stripSuiteCode(t.name));
   const rt = rosterByKey.get(key);
   let sf = nv(t.sf) ?? nv(rt?.sf) ?? null;
   let psf = nv(t.salesPSF);
@@ -229,7 +229,10 @@ function deriveSalesRecord(
     occSource = "computed";
     occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
   }
-  return { ...t, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
+  // Show the clean brand (matched roster name, else suite-stripped) so the panel
+  // mirrors the roster instead of "A06 Elite Nutrition".
+  const cleanName = rt ? (rt.canonicalName || rt.name || stripSuiteCode(t.name)) : stripSuiteCode(t.name);
+  return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
 }
 
 function mergeRows(
@@ -240,7 +243,7 @@ function mergeRows(
   const map: Record<string, MergedRow> = {};
   for (const snap of history) {
     for (const raw of snap.tenants) {
-      const key = (raw.name || "").toLowerCase().trim();
+      const key = tenantKey(stripSuiteCode(raw.name));
       if (!key) continue;
       const t = deriveSalesRecord(raw, rosterByKey, recByKey);
       if (!map[key]) map[key] = { name: t.name, byYear: {} };

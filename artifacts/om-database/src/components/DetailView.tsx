@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, estimateRecoveries, buildLatestSales } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal } from "../lib/prepay";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
@@ -1108,7 +1108,8 @@ ${text.slice(0, 40000)}`;
       const roster = new Map((d.tenants || []).map(t => [tenantKey(t.canonicalName || t.name), t]));
       const recEst = estimateRecoveries(d).byName;
       const tenants = rawTenants.map(t => {
-        const rt = roster.get(tenantKey(t.name));
+        const matchKey = tenantKey(stripSuiteCode(t.name));
+        const rt = roster.get(matchKey);
         let sf = nv(t.sf);
         if (sf == null) sf = nv(rt?.sf) ?? null;
         let psf = nv(t.salesPSF);
@@ -1123,7 +1124,7 @@ ${text.slice(0, 40000)}`;
         let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
         let occBreakdown: import("../lib/idb").OccBreakdown | null = null;
         const base = nv(rt?.annualRent);
-        const estRec = recEst.get(tenantKey(t.name));
+        const estRec = recEst.get(matchKey);
         const reimb = nv(rt?.expenseReimbursements) ?? (estRec ? estRec.value : null);
         const reimbEstimated = nv(rt?.expenseReimbursements) == null && !!estRec?.estimated;
         const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
@@ -1133,7 +1134,11 @@ ${text.slice(0, 40000)}`;
           occSource = "computed";
           occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
         }
-        return { ...t, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
+        // Store the clean brand name — the matched roster name when we found one,
+        // else the suite-stripped name — so the roster Sales column and the sales
+        // table key off the same brand and the suite code never sticks around.
+        const cleanName = rt ? (rt.canonicalName || rt.name || stripSuiteCode(t.name)) : stripSuiteCode(t.name);
+        return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
       });
 
       const newSnap: TenantSalesYear = {

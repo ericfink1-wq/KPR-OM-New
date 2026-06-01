@@ -758,7 +758,7 @@ export function buildLatestSales(deal: {
   for (const snap of deal.tenantSalesHistory || []) {
     const isUpload = snap.source !== "om";
     for (const r of snap.tenants) {
-      const key = tenantKey(r.name);
+      const key = tenantKey(stripSuiteCode(r.name));
       const cur = latestByKey.get(key);
       if (!cur || (isUpload && !cur.isUpload) || (isUpload === cur.isUpload && snap.year > cur.year)) {
         latestByKey.set(key, { year: snap.year, r, isUpload });
@@ -800,6 +800,28 @@ export function tenantKey(name: unknown): string {
   if (_userAliases[n]) return _normTenant(_userAliases[n]);
   const alias = TENANT_ALIASES[n];
   return alias ? _normTenant(alias) : n;
+}
+
+/**
+ * Strip a leading or trailing SUITE / UNIT code from a sales-report tenant name
+ * so it matches the clean roster brand. Sales reports label tenants like
+ * "A06 Elite Nutrition", "MH01 Samurai Japan", "P Publix Supermarkets",
+ * "Taco Mama 194A". Conservative — only removes things that look like unit codes,
+ * never real brand words. Used ONLY in the sales-matching path (not _normTenant),
+ * so comp / analytics / watchlist grouping is unaffected.
+ */
+export function stripSuiteCode(name: unknown): string {
+  const original = String(name ?? "").trim();
+  let s = original
+    // Leading alphanumeric unit code: "A06", "MH01", "P02", "MB04", "A-05".
+    .replace(/^[A-Za-z]{1,4}-?\d{1,4}[A-Za-z]?[\s.:)\-]+/, "")
+    // Leading 1-2 letter building code ("P Publix Supermarkets"), only when ≥2
+    // words remain afterward (protects 2-word brands like "A Plus").
+    .replace(/^[A-Za-z]{1,2}\s+(?=\S+\s+\S+)/, "")
+    // Trailing unit code like "194A" / "12" separated from the name.
+    .replace(/[\s.\-]+\d{1,4}[A-Za-z]?$/, "")
+    .trim();
+  return s || original;
 }
 
 /** Clean, human-readable canonical name for labels and headers. */
