@@ -849,6 +849,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [salesBusy, setSalesBusy] = useState(false);
   const [salesError, setSalesError] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [showPrefManual, setShowPrefManual] = useState(false);
   const [notesVal, setNotesVal] = useState(d.userNotes || "");
   const [fixPage, setFixPage] = useState("");
   const [fixingPlan, setFixingPlan] = useState(false);
@@ -2540,24 +2541,41 @@ ${text.slice(0, 40000)}`;
               {f({ label:"Prepayment", field:"debtPrepay", placeholder:"e.g. Yield maintenance, defeasance, 5-4-3-2-1 step-down" })}
               {f({ label:"Escrows / Reserves", field:"debtEscrows", placeholder:"e.g. Tax, insurance, TI/LC, replacement" })}
               {f({ label:"Notes", field:"debtNotes", placeholder:"Anything else worth recording", wide:true })}
-              <Group title="Preferred Equity (if applicable)"/>
-              {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
-              {d.prefLender && onTenantClick && (
-                <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
-                  <button onClick={() => onTenantClick("__lender__" + d.prefLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
-                    View all loans with {lenderLabel(d.prefLender)} ›
-                  </button>
-                </div>
-              )}
-              {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
-              {f({ label:"Current Pay Rate", field:"prefRateCurrent", placeholder:"e.g. 8.0", suffix:"%" })}
-              {f({ label:"All-In Rate (at sale/refi)", field:"prefRateAllIn", placeholder:"e.g. 9.25", suffix:"%" })}
-              {f({ label:"Return Type", field:"prefReturnType", options:["Current Pay","Accruing","Hybrid"] })}
-              {f({ label:"Origination Date", field:"prefOriginationDate", placeholder:"YYYY-MM-DD" })}
-              {f({ label:"Maturity / Redemption Date", field:"prefMaturityDate", placeholder:"YYYY-MM-DD" })}
-              {f({ label:"Term", field:"prefTermYears", placeholder:"e.g. 3", suffix:"yrs" })}
-              {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
-              {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
+              {(() => {
+                const hasPref = [d.prefLender, d.prefAmount, d.prefRateCurrent, d.prefRateAllIn, d.prefReturnType, d.prefOriginationDate, d.prefMaturityDate, d.prefTermYears, d.prefRecourse, d.prefNotes].some(v => v != null && v !== "");
+                const prefOpen = hasPref || showPrefManual;
+                return (
+                  <>
+                    <div onClick={() => { if (!hasPref) setShowPrefManual(v => !v); }}
+                      style={{ gridColumn:"1 / -1", fontSize:13, fontWeight:600, color:"#383a37", marginTop:6, marginBottom: prefOpen ? -2 : 0, display:"flex", alignItems:"center", gap:8, cursor: hasPref ? "default" : "pointer", userSelect:"none" }}>
+                      <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>
+                      Preferred Equity (if applicable)
+                      {!hasPref && <span style={{ fontSize:11, fontWeight:600, color:"#a69e91" }}>{prefOpen ? "▾ hide" : "▸ add"}</span>}
+                    </div>
+                    {prefOpen && (
+                      <>
+                        {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
+                        {d.prefLender && onTenantClick && (
+                          <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
+                            <button onClick={() => onTenantClick("__lender__" + d.prefLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
+                              View all loans with {lenderLabel(d.prefLender)} ›
+                            </button>
+                          </div>
+                        )}
+                        {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
+                        {f({ label:"Current Pay Rate", field:"prefRateCurrent", placeholder:"e.g. 8.0", suffix:"%" })}
+                        {f({ label:"All-In Rate (at sale/refi)", field:"prefRateAllIn", placeholder:"e.g. 9.25", suffix:"%" })}
+                        {f({ label:"Return Type", field:"prefReturnType", options:["Current Pay","Accruing","Hybrid"] })}
+                        {f({ label:"Origination Date", field:"prefOriginationDate", placeholder:"YYYY-MM-DD" })}
+                        {f({ label:"Maturity / Redemption Date", field:"prefMaturityDate", placeholder:"YYYY-MM-DD" })}
+                        {f({ label:"Term", field:"prefTermYears", placeholder:"e.g. 3", suffix:"yrs" })}
+                        {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
+                        {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             {(annualDS || dscrCalc) && (
               <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
