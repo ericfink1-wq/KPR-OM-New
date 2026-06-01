@@ -17,6 +17,7 @@ interface Props {
   onOpen: (id: string) => void;
   onUpdate: (id: string, patch: Partial<Deal>) => void;
   onCompare: (ids: string[]) => void;
+  onDelete?: (id: string) => void;
   onAddFiles?: (files: File[]) => void;
 }
 
@@ -207,7 +208,7 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
   );
 }
 
-export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFiles }: Props) {
+export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles }: Props) {
   const watchMap = useWatchlist();
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [filterStates, setFilterStates] = useState<string[]>([]);
@@ -509,13 +510,13 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
     setNotice(`Status set to "${status}" for ${selected.size} deal${selected.size === 1 ? "" : "s"}.`);
   };
 
-  // ── Bulk: delete (trash) ─────────────────────────────────────────────────
+  // ── Bulk: permanently delete ─────────────────────────────────────────────
   const bulkDelete = () => {
     const ids = Array.from(selected);
-    const ts = new Date().toISOString();
-    for (const id of ids) onUpdate(id, { trashedAt: ts });
+    if (onDelete) { for (const id of ids) onDelete(id); }
+    else { const ts = new Date().toISOString(); for (const id of ids) onUpdate(id, { trashedAt: ts }); }
     clearSelection();
-    setNotice(`Moved ${ids.length} deal${ids.length === 1 ? "" : "s"} to Trash.`);
+    setNotice(`Deleted ${ids.length} deal${ids.length === 1 ? "" : "s"}.`);
   };
 
   // ── Bulk: re-analyze from stored source text ─────────────────────────────
@@ -904,8 +905,8 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onAddFile
           {/* Delete */}
           {confirmBulkDel ? (
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ color: "#ffb3b3", fontSize: 11.5 }}>Move {selected.size} to trash?</span>
-              <button onClick={bulkDelete} style={{ ...darkBtnDanger, padding: "5px 10px" }}>Yes, trash</button>
+              <span style={{ color: "#ffb3b3", fontSize: 11.5 }}>Delete {selected.size} permanently?</span>
+              <button onClick={bulkDelete} style={{ ...darkBtnDanger, padding: "5px 10px" }}>Yes, delete</button>
               <button onClick={() => setConfirmBulkDel(false)} style={{ ...darkBtn, padding: "5px 10px" }}>Cancel</button>
             </span>
           ) : (

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable } from "@workspace/db";
+import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { runOmExtraction, runRosterAnalysis } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
@@ -8,7 +8,7 @@ import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "..
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics } from "../lib/demographics";
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
-import { requireAuth, requireAdmin } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 import type { Logger } from "pino";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
@@ -304,13 +304,15 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/deals/:id — delete a deal and its images/source (admin only)
-router.delete("/deals/:id", requireAdmin, async (req, res) => {
+// DELETE /api/deals/:id — permanently delete a deal and its images/source/index
+// (any signed-in user; the UI confirms before calling this).
+router.delete("/deals/:id", requireAuth, async (req, res) => {
   try {
     const id = req.params.id as string;
     await db.delete(dealImagesTable).where(eq(dealImagesTable.id, id));
     await db.delete(dealSourcesTable).where(eq(dealSourcesTable.id, id));
     await db.delete(tenantIndexTable).where(eq(tenantIndexTable.dealId, id));
+    await db.delete(compsIndexTable).where(eq(compsIndexTable.sourceDealId, id));
     await db.delete(dealsTable).where(eq(dealsTable.id, id));
     res.json({ ok: true });
   } catch (err) {

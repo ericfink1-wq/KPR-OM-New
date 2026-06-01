@@ -267,7 +267,6 @@ function AppInner() {
   }
 
   const activeDeals = deals.filter(d => !d.trashedAt);
-  const trashedDeals = deals.filter(d => d.trashedAt);
   const ownedDealIds = activeDeals.filter(d => d.status === "Owned" || d.status === "Sold").map(d => d.id);
   const currentDeal = view.type === "detail" ? deals.find(d => d.id === view.dealId) : null;
 
@@ -429,32 +428,9 @@ function AppInner() {
                   onOpen={handleOpenDeal}
                   onUpdate={handleUpdate}
                   onCompare={handleCompare}
+                  onDelete={handleDelete}
                   onAddFiles={files => setPendingFiles(prev => [...prev, ...files])}
                 />
-              )}
-
-              {trashedDeals.length > 0 && (
-                <div style={{ padding: "0 28px 28px" }}>
-                  <div style={{ borderTop: "1px solid #e7e0d2", paddingTop: 18, marginTop: 4 }}>
-                    <div style={{ fontSize: 10, letterSpacing: "0.14em", color: "#b3aa9b", fontWeight: 700, textTransform: "uppercase", marginBottom: 12 }}>Trash ({trashedDeals.length})</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {trashedDeals.map(d => (
-                        <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "8px 14px" }}>
-                          <span style={{ flex: 1, fontSize: 12, color: "#a89f8f" }}>{d.propertyName || d.fileName || "Untitled"}</span>
-                          <button onClick={() => handleUpdate(d.id, { trashedAt: undefined })}
-                            style={{ fontSize: 10, color: "#6dba43", background: "transparent", border: "1px solid #6dba4340", padding: "2px 8px", borderRadius: 5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Restore</button>
-                          {isAdmin && (
-                            <button onClick={() => {
-                                const name = d.propertyName || d.fileName || "this deal";
-                                if (window.confirm(`Permanently delete "${name}"? This removes the deal, its images, and its source text from the database and cannot be undone.`)) handleDelete(d.id);
-                              }}
-                              style={{ fontSize: 10, color: "#dc2626", background: "transparent", border: "1px solid #dc262640", padding: "2px 8px", borderRadius: 5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Delete permanently</button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               )}
             </>
           )}
@@ -465,7 +441,7 @@ function AppInner() {
                 deal={currentDeal}
                 allDeals={deals}
                 onBack={goBack}
-                onDelete={id => { handleUpdate(id, { trashedAt: new Date().toISOString() }); resetToList(); }}
+                onDelete={handleDelete}
                 onUpdate={handleUpdate}
                 onQuery={handleQuery}
                 onCompare={handleCompare}
