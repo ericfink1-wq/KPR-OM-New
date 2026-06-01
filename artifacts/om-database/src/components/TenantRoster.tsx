@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown } from "../lib/idb";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, tenantKey } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -14,6 +14,9 @@ interface Props {
   tenantsAsOf?: string | null;
   tenantsSource?: string | null;
   omDate?: string | null;
+  // Estimated per-tenant recoveries (by tenantKey) — used as a fallback for the
+  // occupancy-cost calc when the OM didn't disclose a tenant's recoveries.
+  estimatedRecoveries?: Map<string, { value: number; estimated: boolean }>;
 }
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
@@ -61,7 +64,7 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
                 <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>+ Recoveries</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+                <span style={{ color: "#a89f8f" }}>+ Recoveries{breakdown.reimbEstimated ? " (est.)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
               </div>
               {breakdown.percentRent > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
@@ -227,7 +230,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -501,7 +504,12 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 {(() => {
                   const stated = n(t.occupancyCost);
                   const base = n(t.annualRent);
-                  const reimb = n(t.expenseReimbursements);
+                  // Recoveries: OM-disclosed value first; else the SF-allocated
+                  // estimate so occ cost can still be computed on NNN tenants.
+                  const disclosedReimb = n(t.expenseReimbursements);
+                  const est = estimatedRecoveries?.get(tenantKey(t.canonicalName || t.name));
+                  const reimb = disclosedReimb ?? (est ? est.value : null);
+                  const reimbEstimated = disclosedReimb == null && !!est?.estimated;
                   const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
                   const other = n(t.otherRent) ?? 0;
                   const sp = n(t.salesPSF);
@@ -510,7 +518,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
 
                   let occ: number | null = null;
                   let occSource: "stated" | "computed" | null = null;
-                  let occBreakdown: { base: number; reimbursements: number; percentRent: number; other: number; total: number; sales: number } | null = null;
+                  let occBreakdown: OccBreakdown | null = null;
 
                   if (stated != null) {
                     occ = stated; occSource = "stated";
@@ -518,7 +526,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     const total = base + reimb + pctRent + other;
                     occ = (total / sales) * 100;
                     occSource = "computed";
-                    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales };
+                    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales, reimbEstimated };
                   }
 
                   const color = occ != null ? (occ > 15 ? "#dc2626" : "#0f9d63") : "#a69e91";

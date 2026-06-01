@@ -636,6 +636,101 @@ export function isNAPTenant(t: { name?: string | null; sf?: number | string | nu
   return sf != null && sf > 0 && (rent == null || rent === 0) && (rentPSF == null || rentPSF === 0);
 }
 
+// ── Expense-recovery estimation ──────────────────────────────────────────────
+// OMs disclose per-tenant recoveries only sometimes. When they don't, we estimate
+// each recovery-paying tenant's annual expense reimbursements by ALLOCATING the
+// property-level recovery revenue across the recovery-paying tenants, weighted by
+// SF. Best-effort, clearly flagged as estimated — close enough for occupancy-cost
+// / health-ratio purposes, never presented as OM-disclosed.
+
+type RecoveryTenant = {
+  name?: string | null; canonicalName?: string | null; sf?: number | string | null;
+  reimbursementMethod?: string | null; leaseType?: string | null;
+  expenseReimbursements?: number | null; isNAP?: boolean | null;
+  annualRent?: number | string | null; rentPerSF?: number | string | null;
+};
+
+const _num = (v: unknown): number | null =>
+  v == null || v === "" || isNaN(Number(v)) ? null : Number(v);
+
+/** True if a tenant's lease pays expense recoveries (NNN/NN/net), not gross. */
+export function paysRecoveries(t: { reimbursementMethod?: string | null; leaseType?: string | null }): boolean {
+  const m = `${t.reimbursementMethod || ""} ${t.leaseType || ""}`.toLowerCase();
+  if (!m.trim()) return false;
+  if (/\bgross\b/.test(m) && !/modified|net/.test(m)) return false; // pure gross → no recovery
+  // NNN / triple net / double net / net / CAM / "n n n" / recover*
+  return /\bn\s*n\s*n\b|triple\s*net|double\s*net|\bnnn\b|\bnn\b|\bnet\b|\bcam\b|recover/.test(m);
+}
+
+interface RecoveryEstimate {
+  /** Per-tenant annual recoveries — disclosed value when present, else estimated. */
+  byName: Map<string, { value: number; estimated: boolean }>;
+  /** Property-level recovery pool used for the estimate, and its source. */
+  poolTotal: number | null;
+  poolSource: string | null;
+}
+
+/**
+ * Estimate per-tenant expense recoveries for a deal. Tenants with an OM-disclosed
+ * `expenseReimbursements` keep that exact figure; the remaining property-level
+ * recovery pool is spread across the other recovery-paying tenants by SF share.
+ */
+export function estimateRecoveries(deal: {
+  tenants?: RecoveryTenant[] | null;
+  nnnRecoveries?: number | null;
+  incomeBreakdown?: Record<string, number | null> | null;
+  cashFlowProjection?: Array<{ reimbursements?: number | null }> | null;
+  effectiveGrossIncome?: number | null;
+  grossPotentialRent?: number | null;
+}): RecoveryEstimate {
+  const tenants = (deal.tenants || []).filter(t => !isVacant(t.name) && !isNAPTenant(t));
+  const byName = new Map<string, { value: number; estimated: boolean }>();
+
+  // 1) Property-level recovery pool — first available reliable source.
+  const ib = deal.incomeBreakdown || {};
+  const ibSum = (_num(ib.camReimbursements) ?? 0) + (_num(ib.realEstateTaxReimbursements) ?? 0) + (_num(ib.insuranceReimbursements) ?? 0);
+  const cfReimb = (deal.cashFlowProjection || []).map(r => _num(r?.reimbursements)).find(v => v != null) ?? null;
+  let pool: number | null = null;
+  let poolSource: string | null = null;
+  if (_num(deal.nnnRecoveries) != null) { pool = _num(deal.nnnRecoveries); poolSource = "OM recovery income"; }
+  else if (ibSum > 0) { pool = ibSum; poolSource = "OM income breakdown (CAM+tax+insurance)"; }
+  else if (cfReimb != null && cfReimb > 0) { pool = cfReimb; poolSource = "OM cash-flow reimbursements"; }
+  else if (_num(deal.effectiveGrossIncome) != null && _num(deal.grossPotentialRent) != null) {
+    const diff = (_num(deal.effectiveGrossIncome) as number) - (_num(deal.grossPotentialRent) as number);
+    if (diff > 0) { pool = diff; poolSource = "OM EGI − base rent"; }
+  }
+
+  // 2) Disclosed tenants keep their exact figure; subtract from the pool.
+  let remainingPool = pool;
+  let disclosedTotal = 0;
+  for (const t of tenants) {
+    const disc = _num(t.expenseReimbursements);
+    if (disc != null && disc > 0) {
+      byName.set(tenantKey(t.canonicalName ?? t.name), { value: disc, estimated: false });
+      disclosedTotal += disc;
+    }
+  }
+  if (remainingPool != null) remainingPool = Math.max(0, remainingPool - disclosedTotal);
+
+  // 3) Spread the remaining pool across recovery-paying tenants WITHOUT a
+  //    disclosed figure, weighted by SF.
+  if (remainingPool != null && remainingPool > 0) {
+    const eligible = tenants.filter(t => {
+      const key = tenantKey(t.canonicalName ?? t.name);
+      return !byName.has(key) && paysRecoveries(t) && (_num(t.sf) ?? 0) > 0;
+    });
+    const totalSf = eligible.reduce((s, t) => s + (_num(t.sf) ?? 0), 0);
+    if (totalSf > 0) {
+      for (const t of eligible) {
+        const share = (_num(t.sf) as number) / totalSf;
+        byName.set(tenantKey(t.canonicalName ?? t.name), { value: Math.round(remainingPool * share), estimated: true });
+      }
+    }
+  }
+
+  return { byName, poolTotal: pool, poolSource };
+}
+
 /** Stable grouping key — every spelling of one brand collapses to the same string. */
 export function tenantKey(name: unknown): string {
   const n = _normTenant(name);

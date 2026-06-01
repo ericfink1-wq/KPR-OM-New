@@ -179,6 +179,7 @@ export interface OccBreakdown {
   other: number;
   total: number;
   sales: number;
+  reimbEstimated?: boolean; // true when recoveries were estimated, not OM-disclosed
 }
 
 // One tenant's data within a TenantSalesYear snapshot

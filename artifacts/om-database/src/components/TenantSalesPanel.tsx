@@ -147,7 +147,7 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
                 <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>+ Recoveries</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+                <span style={{ color: "#a89f8f" }}>+ Recoveries{breakdown.reimbEstimated ? " (est.)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
               </div>
               {breakdown.percentRent > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>

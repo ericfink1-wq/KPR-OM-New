@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, estimateRecoveries } from "../lib/utils";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
@@ -1079,6 +1079,7 @@ ${text.slice(0, 40000)}`;
       // Index the roster by tenant for SF + rent components (to recompute occ cost
       // from the report's gross sales using the full health-ratio formula).
       const roster = new Map((d.tenants || []).map(t => [tenantKey(t.canonicalName || t.name), t]));
+      const recEst = estimateRecoveries(d).byName;
       const tenants = rawTenants.map(t => {
         const rt = roster.get(tenantKey(t.name));
         let sf = nv(t.sf);
@@ -1094,13 +1095,16 @@ ${text.slice(0, 40000)}`;
         let occupancyCost = nv(t.occupancyCost);
         let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
         let occBreakdown: import("../lib/idb").OccBreakdown | null = null;
-        const base = nv(rt?.annualRent), reimb = nv(rt?.expenseReimbursements);
+        const base = nv(rt?.annualRent);
+        const estRec = recEst.get(tenantKey(t.name));
+        const reimb = nv(rt?.expenseReimbursements) ?? (estRec ? estRec.value : null);
+        const reimbEstimated = nv(rt?.expenseReimbursements) == null && !!estRec?.estimated;
         const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
         if (base != null && reimb != null && gross != null && gross > 0) {
           const total = base + reimb + pctRent + other;
           occupancyCost = Math.round((total / gross) * 1000) / 10;
           occSource = "computed";
-          occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross };
+          occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
         }
         return { ...t, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
       });
@@ -2063,6 +2067,7 @@ ${text.slice(0, 40000)}`;
           tenantsAsOf={d.tenantsAsOf}
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}
+          estimatedRecoveries={estimateRecoveries(d).byName}
         /></div>
       )}
 
