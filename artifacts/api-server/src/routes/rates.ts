@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
-import { fetchTodaysRates, type RatesPayload } from "../lib/rates";
+import { fetchTodaysRates, debugIronhound, type RatesPayload } from "../lib/rates";
 
 const router = Router();
 
@@ -26,6 +26,11 @@ router.get("/rates", requireAuth, async (req, res) => {
     if (cache) { res.json(cache.data); return; }
     res.status(502).json({ error: "Couldn't fetch rates right now — try again shortly." });
   }
+});
+
+// GET /api/rates/debug-ironhound — temporary diagnostic for the Iron Hound scrape.
+router.get("/rates/debug-ironhound", requireAuth, async (_req, res) => {
+  res.json(await debugIronhound());
 });
 
 export default router;

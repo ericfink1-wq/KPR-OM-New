@@ -64,6 +64,37 @@ async function fetchIronhound(): Promise<IronhoundData> {
   };
 }
 
+// Diagnostic: shows exactly what the server gets back from ironhound.com so we
+// can tell apart "blocked", "JavaScript-rendered" and "parser missed it".
+// Reachable at GET /api/rates/debug-ironhound. Safe to remove once it works.
+export async function debugIronhound(): Promise<Record<string, unknown>> {
+  try {
+    const r = await fetchWithTimeout(IRONHOUND_URL, 12_000, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+    const html = await r.text();
+    const idx = html.search(/SOFR\s*TERM|TODAY'?S\s*MARKET|SOFR\s*SWAP/i);
+    const snippet = idx >= 0 ? html.slice(Math.max(0, idx - 80), idx + 320) : html.slice(0, 500);
+    const parsed = await fetchIronhound().catch(e => ({ error: e instanceof Error ? e.message : String(e) }));
+    return {
+      ok: r.ok,
+      status: r.status,
+      htmlLength: html.length,
+      contentType: r.headers.get("content-type"),
+      hasTodaysMarket: /TODAY'?S\s*MARKET/i.test(html),
+      hasSofrTerm: /SOFR\s*TERM/i.test(html),
+      hasSofrSwap: /SOFR\s*SWAP/i.test(html),
+      snippet,
+      parsed,
+    };
+  } catch (e) {
+    return { fetchError: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 // ── Treasury par yield curve — Treasury's official daily par-yield XML feed
 //    (home.treasury.gov, free, no key, stable documented field names). ─────────
 async function fetchTreasuries(): Promise<{ rows: RateRow[]; asOf: string | null }> {
