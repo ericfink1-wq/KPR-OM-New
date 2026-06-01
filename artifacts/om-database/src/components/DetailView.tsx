@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey } from "../lib/utils";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
@@ -1069,8 +1069,41 @@ ${text.slice(0, 40000)}`;
       try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't parse the AI response — try again."); }
 
       const year = typeof parsed.year === "number" ? parsed.year : new Date().getFullYear() - 1;
-      const tenants = Array.isArray(parsed.tenants) ? parsed.tenants as TenantSalesYear["tenants"] : [];
-      if (tenants.length === 0) throw new Error("No tenant sales data found in the PDF.");
+      const rawTenants = Array.isArray(parsed.tenants) ? parsed.tenants as TenantSalesYear["tenants"] : [];
+      if (rawTenants.length === 0) throw new Error("No tenant sales data found in the PDF.");
+
+      // Cross-derive sales PSF <-> gross annual sales so a report that gives only
+      // one of them still populates both (and the chart can show sales PSF / occ
+      // cost). The roster's SF fills in when the report omits it.
+      const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+      // Index the roster by tenant for SF + rent components (to recompute occ cost
+      // from the report's gross sales using the full health-ratio formula).
+      const roster = new Map((d.tenants || []).map(t => [tenantKey(t.canonicalName || t.name), t]));
+      const tenants = rawTenants.map(t => {
+        const rt = roster.get(tenantKey(t.name));
+        let sf = nv(t.sf);
+        if (sf == null) sf = nv(rt?.sf) ?? null;
+        let psf = nv(t.salesPSF);
+        let gross = nv(t.annualSales);
+        if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
+        if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
+
+        // Occupancy cost = (base + reimbursements + % rent + other) ÷ gross sales.
+        // Recompute from the roster's rent components against THIS report's gross
+        // sales when we can — more reliable than a possibly base-only stated ratio.
+        let occupancyCost = nv(t.occupancyCost);
+        let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
+        let occBreakdown: import("../lib/idb").OccBreakdown | null = null;
+        const base = nv(rt?.annualRent), reimb = nv(rt?.expenseReimbursements);
+        const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
+        if (base != null && reimb != null && gross != null && gross > 0) {
+          const total = base + reimb + pctRent + other;
+          occupancyCost = Math.round((total / gross) * 1000) / 10;
+          occSource = "computed";
+          occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross };
+        }
+        return { ...t, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
+      });
 
       const newSnap: TenantSalesYear = {
         year,
