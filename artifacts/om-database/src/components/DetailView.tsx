@@ -2342,10 +2342,10 @@ ${text.slice(0, 40000)}`;
         const goingInCap   = pp && noiClose ? (noiClose/pp*100) : null;
         const pricePerSFCalc = pp && d.totalSF ? (pp/Number(d.totalSF)) : null;
         return (
-          <div style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div id="section-acquisition" data-jump={owned ? "Purchase Metrics" : "Transaction Details"} style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, flexWrap:"wrap", gap:8 }}>
               <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
-                {owned ? "Acquisition Record" : "Transaction Details"}
+                {owned ? "Purchase Metrics" : "Transaction Details"}
               </div>
               <div style={{ fontSize:12, color:"#a69e91" }}>
                 {owned ? "Complete the closing details below" : "Set status to Owned when acquired to record full closing details"}
@@ -2366,7 +2366,7 @@ ${text.slice(0, 40000)}`;
                 <div style={{ background:done?"#f0faf0":"#fffaf2", border:`1px solid ${done?"#cfe9c4":"#f0d9b5"}`, borderRadius:10, padding:"12px 16px", marginBottom:18 }}>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:done?0:8 }}>
                     <span style={{ fontSize:13, fontWeight:600, color:done?"#0f7a3d":"#9a6a1e" }}>
-                      {done ? "✓ Acquisition record complete" : `Acquisition record ${pct}% complete — ${missing.length} key detail${missing.length===1?"":"s"} still needed`}
+                      {done ? "✓ Purchase metrics complete" : `Purchase metrics ${pct}% complete — ${missing.length} key detail${missing.length===1?"":"s"} still needed`}
                     </span>
                     <div style={{ width:90, height:6, background:"#efe8da", borderRadius:4, overflow:"hidden", flexShrink:0 }}>
                       <div style={{ width:`${pct}%`, height:"100%", background:done?"#0f9d63":"#d9a441", borderRadius:4, transition:"width 0.3s" }}/>
@@ -2477,14 +2477,11 @@ ${text.slice(0, 40000)}`;
           if (amortY > 0) { const r = rate/100/12, n = amortY*12; annualDS = (r>0 ? amt*r/(1-Math.pow(1+r,-n)) : amt/n)*12; }
           else annualDS = amt * rate/100;
         }
-        const pp2    = Number(d.txnPurchasePrice)||0;
-        const equity = pp2 && amt ? pp2 - amt : null;
-        const ltvCalc  = pp2 && amt ? (amt/pp2*100) : null;
         const noi2     = Number(d.noi)||0;
         const dscrCalc = annualDS && noi2 ? noi2/annualDS : null;
 
         if (!owned) return (
-          <div style={{ background:"#ffffff", border:"1px dashed #ddd4c2", borderRadius:12, padding:"16px 20px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div id="section-financing" data-jump="Financing & Debt" style={{ background:"#ffffff", border:"1px dashed #ddd4c2", borderRadius:12, padding:"16px 20px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
             <div style={{ fontSize:13, color:"#837c6e" }}>
               <span style={{ fontWeight:600, color:"#383a37" }}>Financing & Debt</span> — set this deal's status to <span style={{ fontWeight:600 }}>Under Contract</span> or <span style={{ fontWeight:600 }}>Owned</span> to record financing or upload a term sheet.
             </div>
@@ -2502,7 +2499,7 @@ ${text.slice(0, 40000)}`;
         );
 
         return (
-          <div style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div id="section-financing" data-jump="Financing & Debt" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Financing & Debt</div>
             <TermSheetImport deal={d} onUpdate={onUpdate}/>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
@@ -2556,16 +2553,14 @@ ${text.slice(0, 40000)}`;
               {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
               {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
             </div>
-            {(annualDS || equity != null || ltvCalc || dscrCalc) && (
+            {(annualDS || dscrCalc) && (
               <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
                 {annualDS && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Est. Annual Debt Service</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${Math.round(annualDS).toLocaleString()}</div></div>}
-                {equity != null && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Equity Invested</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${equity.toLocaleString()}</div></div>}
-                {ltvCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied LTV</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:ltvCalc>75?"#dc2626":"#0f9d63" }}>{ltvCalc.toFixed(1)}%</div></div>}
                 {dscrCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied DSCR (NOI)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:dscrCalc<1.2?"#dc2626":"#0f9d63" }}>{dscrCalc.toFixed(2)}x</div></div>}
               </div>
             )}
             <PrepayCalculator deal={d} onUpdate={onUpdate} />
-            <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; LTV/DSCR use your purchase price and the OM NOI). For reference only.</div>
+            <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; DSCR uses the OM NOI). For reference only.</div>
           </div>
         );
       })()}
