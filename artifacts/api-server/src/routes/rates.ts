@@ -29,7 +29,9 @@ router.get("/rates", requireAuth, async (req, res) => {
 });
 
 // GET /api/rates/debug-ironhound — temporary diagnostic for the Iron Hound scrape.
-router.get("/rates/debug-ironhound", requireAuth, async (_req, res) => {
+// No auth: returns only Iron Hound's PUBLIC page info (no KPR data) so it can be
+// opened directly in a browser. Remove this route once the scrape works.
+router.get("/rates/debug-ironhound", async (_req, res) => {
   res.json(await debugIronhound());
 });
 
