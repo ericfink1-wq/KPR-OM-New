@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore } from "../lib/api";
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, estimateRecoveries } from "../lib/utils";
+import { calcPrepay, prepayInputsFromDeal } from "../lib/prepay";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
@@ -2528,6 +2529,7 @@ ${text.slice(0, 40000)}`;
                 {dscrCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied DSCR (NOI)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:dscrCalc<1.2?"#dc2626":"#0f9d63" }}>{dscrCalc.toFixed(2)}x</div></div>}
               </div>
             )}
+            <PrepayCalculator deal={d} onUpdate={onUpdate} />
             <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; LTV/DSCR use your purchase price and the OM NOI). For reference only.</div>
           </div>
         );
@@ -2767,6 +2769,91 @@ function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, 
   );
 }
 
+// ── Prepayment penalty calculator ────────────────────────────────────────────
+// Estimates the prepay penalty as of a payoff date from the deal's structured
+// prepayTerms (extracted from a term sheet, or set by hand). Exact for step-down;
+// indicative for yield-maintenance/defeasance using a current Treasury rate.
+function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
+  const [payoff, setPayoff] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [reinvest, setReinvest] = useState<number | null>(null);
+  const terms = deal.prepayTerms || null;
+  const needsRate = terms?.type === "yield_maintenance" || terms?.type === "defeasance";
+
+  // Pull a current matching-tenor Treasury for YM/defeasance estimates.
+  useEffect(() => {
+    if (!needsRate) return;
+    let alive = true;
+    apiGetRates().then(r => {
+      if (!alive) return;
+      // Pick the Treasury tenor closest to the loan's remaining term.
+      const mat = deal.debtMaturityDate ? new Date(deal.debtMaturityDate) : null;
+      const yrsLeft = mat ? Math.max(0, (mat.getTime() - new Date(payoff).getTime()) / (365.25 * 864e5)) : 7;
+      const tenors: Array<[string, number]> = [["1-Yr",1],["2-Yr",2],["3-Yr",3],["5-Yr",5],["7-Yr",7],["10-Yr",10],["30-Yr",30]];
+      const best = tenors.reduce((a, b) => Math.abs(b[1]-yrsLeft) < Math.abs(a[1]-yrsLeft) ? b : a);
+      const row = r.treasuries.rows.find(x => x.label === best[0]);
+      setReinvest(row?.value ?? null);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [needsRate, payoff, deal.debtMaturityDate]);
+
+  const result = calcPrepay(terms, prepayInputsFromDeal(deal, payoff, reinvest));
+  const setType = (type: NonNullable<Deal["prepayTerms"]>["type"]) =>
+    onUpdate(deal.id, { prepayTerms: { ...(terms || {}), type } });
+
+  const fmt$ = (v: number | null) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
+  const basisColor = result.basis === "exact" ? "#0f9d63" : result.basis === "estimate" ? "#b08a3e" : result.basis === "locked" ? "#dc2626" : "#7d766a";
+
+  return (
+    <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
+      <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:10 }}>Prepayment Penalty Calculator</div>
+      <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:12 }}>
+        <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+          Payoff date
+          <input type="date" value={payoff} onChange={e => setPayoff(e.target.value)}
+            style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
+        </label>
+        <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+          Prepay type
+          <select value={terms?.type || "none"} onChange={e => setType(e.target.value as NonNullable<Deal["prepayTerms"]>["type"])}
+            style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}>
+            <option value="none">None / open</option>
+            <option value="stepdown">Step-down %</option>
+            <option value="yield_maintenance">Yield maintenance</option>
+            <option value="defeasance">Defeasance</option>
+            <option value="lockout_open">Lockout then open</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        {needsRate && (
+          <div style={{ fontSize:11, color:"#7d766a" }}>
+            Reinvestment (Treasury): <span style={{ fontWeight:600, color:"#383a37" }}>{reinvest != null ? `${reinvest.toFixed(2)}%` : "loading…"}</span>
+          </div>
+        )}
+      </div>
+      <div style={{ background:"#faf7f0", border:`1px solid ${basisColor}33`, borderRadius:10, padding:"12px 14px" }}>
+        <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{result.label}</span>
+          <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:basisColor }}>
+            {fmt$(result.penalty)}{result.pct != null ? <span style={{ fontSize:13, color:"#a69e91", marginLeft:6 }}>({result.pct}%)</span> : null}
+          </span>
+        </div>
+        {result.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{result.detail}</div>}
+        {result.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
+      </div>
+      {terms?.type === "stepdown" && (
+        <div style={{ marginTop:8, fontSize:11, color:"#7d766a" }}>
+          Step-down schedule (%, by loan year):
+          <input value={(terms.stepdown || []).join(", ")}
+            onChange={e => onUpdate(deal.id, { prepayTerms: { ...terms, stepdown: e.target.value.split(",").map(s => Number(s.trim())).filter(n => !isNaN(n)) } })}
+            placeholder="e.g. 5, 4, 3, 2, 1"
+            style={{ marginLeft:8, background:"#fff", border:"1px solid #e6dfd0", borderRadius:7, padding:"5px 9px", fontSize:12, width:180 }}/>
+        </div>
+      )}
+      <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>Step-down is exact; yield-maintenance & defeasance are indicative estimates (servicer conventions vary — confirm before payoff).</div>
+    </div>
+  );
+}
+
 // ── Term sheet / closing statement PDF importer ──────────────────────────────
 // Only shown on Owned/Sold deals. Extracts acquisition & financing terms via
 // the existing server AI proxy and fills BLANK fields only — never overwrites.
@@ -2797,7 +2884,10 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
       const buf = await file.arrayBuffer();
       const { text } = await extractPdfText(buf);
       setStatus("Extracting deal terms with AI…");
-      const sys = `You extract acquisition and financing terms from a commercial real estate term sheet, loan term sheet, or closing statement. Output ONLY a single JSON object with exactly these keys; use null for anything not clearly stated. For money use plain numbers (no $ or commas); for percentages use numbers (6.25 not "6.25%"). Keys and meanings: ${JSON.stringify(SCHEMA)}`;
+      const sys = `You extract acquisition and financing terms from a commercial real estate term sheet, loan term sheet, or closing statement. Output ONLY a single JSON object with exactly these keys; use null for anything not clearly stated. For money use plain numbers (no $ or commas); for percentages use numbers (6.25 not "6.25%"). Keys and meanings: ${JSON.stringify(SCHEMA)}
+ALSO include a "prepayTerms" object with the structured PREPAYMENT penalty terms:
+{"type":"stepdown|yield_maintenance|defeasance|lockout_open|none|other","stepdown":[declining penalty %s by loan year, e.g. [3,2,1] for 3-2-1, else null],"lockoutEnd":"YYYY-MM-DD first date prepay is allowed, else null","openDate":"YYYY-MM-DD first date prepayable at par/no penalty, else null","reinvestmentSpreadBps":"bps over the matching Treasury for YM/defeasance, else null","floorPenaltyPct":"minimum penalty % (e.g. 'greater of YM or 1%'), else null","prepayPremiumPct":"a single flat premium % if that's the whole penalty, else null","notes":"the verbatim prepay language"}.
+Pick the type that matches: a declining %% schedule = stepdown; make-whole vs Treasuries = yield_maintenance; defeasance = defeasance; lockout then open/par = lockout_open; freely prepayable = none. If the doc doesn't address prepayment, set prepayTerms to null.`;
       const resp = await sendMessage({ data: {
         system: sys,
         messages: [{ role: "user", content: `Term sheet / closing document text:\n${(text||"").slice(0,60000)}\n\nReturn ONLY the JSON object, no prose.` }],
@@ -2816,6 +2906,11 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
         if (v == null || v === "") continue;
         if ((deal as any)[k] != null && (deal as any)[k] !== "") continue;
         (patch as any)[k] = NUMERIC_TXN_FIELDS.has(k) && !isNaN(Number(v)) ? Number(v) : v;
+      }
+      // Structured prepay terms (separate object — fill if we don't already have one).
+      if (out.prepayTerms && typeof out.prepayTerms === "object" && !deal.prepayTerms) {
+        const pt = out.prepayTerms as Record<string, unknown>;
+        if (pt.type) (patch as Partial<Deal>).prepayTerms = pt as unknown as Deal["prepayTerms"];
       }
       const n = Object.keys(patch).length;
       if (n) onUpdate(deal.id, patch);

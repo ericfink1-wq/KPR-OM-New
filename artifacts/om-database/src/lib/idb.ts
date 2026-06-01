@@ -182,6 +182,23 @@ export interface OccBreakdown {
   reimbEstimated?: boolean; // true when recoveries were estimated, not OM-disclosed
 }
 
+// Structured prepayment terms for the prepay calculator.
+export interface PrepayTerms {
+  type: "stepdown" | "yield_maintenance" | "defeasance" | "lockout_open" | "none" | "other";
+  // Step-down: declining penalty %s by loan year (index 0 = year 1).
+  stepdown?: number[] | null;
+  // Lockout / open dates (ISO). lockoutEnd = first day prepay is allowed (post-
+  // lockout, possibly with a penalty); openDate = first day prepayable at par.
+  lockoutEnd?: string | null;
+  openDate?: string | null;
+  // Yield maintenance / defeasance reference: the spread (bps) over the matching
+  // Treasury used as the floor/discount rate, plus any minimum penalty %.
+  reinvestmentSpreadBps?: number | null;
+  floorPenaltyPct?: number | null;
+  prepayPremiumPct?: number | null;   // flat premium when applicable
+  notes?: string | null;              // verbatim language for reference
+}
+
 // One tenant's data within a TenantSalesYear snapshot
 export interface TenantSalesRecord {
   name: string;
@@ -434,6 +451,9 @@ export interface Deal {
   debtLoanNumber?: string | null;
   debtContact?: string | null;
   debtNotes?: string | null;
+  // Structured prepayment terms — drives the prepay calculator. Extracted from a
+  // loan doc / term sheet, or entered by hand.
+  prepayTerms?: PrepayTerms | null;
   // Preferred equity (second tranche, acts like a second loan)
   prefLender?: string | null;
   prefAmount?: number | null;
