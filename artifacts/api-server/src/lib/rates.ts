@@ -68,18 +68,23 @@ async function fetchTreasuries(): Promise<{ rows: RateRow[]; asOf: string | null
 
 // ── 1-month SOFR — NY Fed 30-Day Average SOFR (free, no key) ──────────────────
 async function fetchSofr(): Promise<{ rows: RateRow[]; asOf: string | null }> {
-  // NY Fed publishes SOFR averages (30/90/180-day) + the SOFR index.
-  const url = "https://markets.newyorkfed.org/api/rates/secured/sofr/last/1.json";
+  // The 30-/90-/180-day compounded averages live on the SOFR Averages & Index
+  // endpoint ("sofrai"). The plain overnight "sofr" endpoint carries NO average
+  // fields — so reading average30day off it always returned null, which is why
+  // the 1-month row rendered "—" (the date still populated from effectiveDate).
+  const url = "https://markets.newyorkfed.org/api/rates/secured/sofrai/last/1.json";
   const r = await fetchWithTimeout(url, 12_000);
   if (!r.ok) throw new Error(`NY Fed SOFR HTTP ${r.status}`);
-  const j = await r.json() as { refRates?: Array<Record<string, unknown>> };
-  const rec = j.refRates?.[0];
+  const j = await r.json() as Record<string, unknown>;
+  // Be tolerant of the wrapper key: secured-rate endpoints return `refRates`,
+  // but fall back to the first array in the payload just in case it changes.
+  const arr = (Array.isArray(j.refRates) ? j.refRates : Object.values(j).find(v => Array.isArray(v))) as Array<Record<string, unknown>> | undefined;
+  const rec = arr?.[0];
   if (!rec) throw new Error("SOFR: no data");
   const asOf = (rec.effectiveDate as string) ?? null;
   const num = (v: unknown) => { const n = Number(v); return isNaN(n) ? null : n; };
   const rows: RateRow[] = [
-    { label: "SOFR (overnight)", value: num(rec.percentRate), asOf },
-    { label: "30-Day Avg SOFR (1-mo floating)", value: num(rec.average30day), asOf },
+    { label: "30-Day Avg SOFR (1-mo)", value: num(rec.average30day), asOf },
     { label: "90-Day Avg SOFR", value: num(rec.average90day), asOf },
   ];
   return { rows, asOf };
