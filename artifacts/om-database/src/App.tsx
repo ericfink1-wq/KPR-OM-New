@@ -45,6 +45,27 @@ function AppInner() {
   const goBack = useCallback(() => setViewStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev), []);
   const resetToList = useCallback(() => setViewStack([{ type: "list" }]), []);
 
+  // Make the BROWSER back button mirror the in-page Back button: when there's a
+  // view to pop, intercept the back navigation and go back in-app instead of
+  // leaving the site; at the root view, let the browser navigate away normally.
+  const canGoBackRef = useRef(false);
+  canGoBackRef.current = viewStack.length > 1;
+  useEffect(() => {
+    // Seed one sentinel entry so the first Back press has something to consume.
+    window.history.pushState({ kpr: true }, "");
+    const onPop = () => {
+      if (canGoBackRef.current) {
+        goBack();
+        // Re-arm: keep a sentinel in place so subsequent Back presses stay caught
+        // until we're at the root view.
+        window.history.pushState({ kpr: true }, "");
+      }
+      // else: no in-app history left — allow the browser to leave the page.
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [goBack]);
+
   // Tutorial "Go to" links → jump to the relevant page. On desktop the help panel
   // stays open (it's a side panel); on mobile HelpModal closes itself after calling this.
   const handleHelpNavigate = useCallback((dest: "portfolio" | "analytics" | "analytics-watchlist" | "comps" | "analyst") => {
