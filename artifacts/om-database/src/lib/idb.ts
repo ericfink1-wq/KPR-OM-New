@@ -367,6 +367,9 @@ export interface Deal {
   reviewQuestions?: ReviewQuestion[] | null;
   // User data
   userNotes?: string | null;
+  // KPR's own thesis / assumptions for this deal — free text the acquisitions team
+  // writes. Folded into the AI grade/narrative (advisory) on re-grade.
+  dealThesis?: string | null;
   verified?: Record<string, { by?: string; ts?: number }>;
   autoPassed?: boolean;
   autoPassedAt?: string;

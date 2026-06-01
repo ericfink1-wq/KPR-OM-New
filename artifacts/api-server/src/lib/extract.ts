@@ -338,6 +338,8 @@ BELOW-MARKET RENT — judge it correctly, do not treat it as automatically good 
 - Below-market rent can also be a WARNING, not upside: if sales are weak or occupancyCost is already high, the low rent may reflect a struggling tenant or a soft market, and pushing rent at renewal risks losing them. Frame it as a risk in that case.
 - If sales/occupancy-cost data is absent, stay measured: note the below-market rent as a POSSIBLE mark-to-market opportunity contingent on lease term/options and sales, rather than asserting upside.
 
+KPR THESIS (the "kprThesis" field, if present): this is the KPR acquisitions team's own stated thesis / assumptions for the deal — why they like it, what they're underwriting to, risks they're discounting. Treat it as INFORMED INTERNAL CONTEXT and weave it into the narrative, strengths, and risks — but stay OBJECTIVE and ADVISORY: you may agree, add nuance, or PUSH BACK where the roster/financials don't support a claim. If a thesis point is contradicted by the data, say so plainly (e.g. as a risk or caveat) rather than parroting it. Do NOT let an optimistic thesis inflate the grade beyond what the numbers justify. If kprThesis is absent, ignore this.
+
 Base everything on the CURRENT roster below (note tenantsAsOf — this roster supersedes any older OM). Output must start with { and end with }.
 
 CURRENT PROPERTY DATA (JSON):
@@ -345,6 +347,7 @@ CURRENT PROPERTY DATA (JSON):
 
 export async function runRosterAnalysis(dealData: Record<string, unknown>): Promise<Record<string, unknown>> {
   const t = Array.isArray(dealData.tenants) ? (dealData.tenants as Array<Record<string, unknown>>) : [];
+  const thesis = typeof dealData.dealThesis === "string" ? dealData.dealThesis.trim() : "";
   const snapshot = {
     propertyName: dealData.propertyName, address: dealData.address, city: dealData.city, state: dealData.state,
     assetType: dealData.assetType, centerType: dealData.centerType,
@@ -353,6 +356,7 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>): Prom
     weightedAvgRentPSF: dealData.weightedAvgRentPSF, grossPotentialRent: dealData.grossPotentialRent,
     tenantsAsOf: dealData.tenantsAsOf, tenantsSource: dealData.tenantsSource,
     marketDemographics: dealData.marketDemographics ?? null,
+    kprThesis: thesis || undefined,
     tenants: t.map((x) => ({
       name: x.name, sf: x.sf, rentPerSF: x.rentPerSF, annualRent: x.annualRent,
       leaseExpiry: x.leaseExpiry, remainingTermYears: x.remainingTermYears,

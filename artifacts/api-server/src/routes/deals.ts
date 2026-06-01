@@ -77,7 +77,7 @@ const router = Router();
 // Fields entered by humans — preserved across re-analysis so user data is never overwritten
 const USER_PRESERVED_KEYS = new Set([
   "status", "statusSince", "autoPassed",
-  "userNotes",
+  "userNotes", "dealThesis",
   "txnPurchasePrice", "txnSeller", "txnLoiDate", "txnCloseDate",
   "txnSalePrice", "txnBuyer", "txnSaleDate", "txnBroker",
   "acqCapRate", "acqNOIAtClose", "acqEntity", "acqBroker", "acqContractDate", "acqDDExpiration",

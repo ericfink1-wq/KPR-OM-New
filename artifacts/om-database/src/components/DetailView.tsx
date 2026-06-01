@@ -669,6 +669,60 @@ function SectionJump({ deal, scrollRef }: { deal: Deal; scrollRef: React.RefObje
   );
 }
 
+// KPR thesis / assumptions box — free text the acquisitions team writes about why
+// they like a deal / what they're underwriting to. Saving stores the text (free);
+// "Save & Re-grade" folds it into the AI analysis (advisory — the model can push
+// back where the data doesn't support a claim).
+function DealThesisBox({ deal, onUpdate, onRegrade, regrading }: {
+  deal: Deal;
+  onUpdate: (id: string, patch: Partial<Deal>) => void;
+  onRegrade: () => void | Promise<void>;
+  regrading: boolean;
+}) {
+  const [text, setText] = useState(deal.dealThesis ?? "");
+  const saved = (deal.dealThesis ?? "");
+  const dirty = text.trim() !== saved.trim();
+
+  const save = () => { if (dirty) onUpdate(deal.id, { dealThesis: text.trim() || null }); };
+  const saveAndRegrade = async () => {
+    if (dirty) onUpdate(deal.id, { dealThesis: text.trim() || null });
+    // Let the save propagate, then re-grade (reads the deal incl. the new thesis).
+    await Promise.resolve();
+    await onRegrade();
+  };
+
+  return (
+    <div style={{ background:"#f3f7fc", border:"1px solid #c9dbf0", borderRadius:12, padding:"16px 18px", marginBottom:14 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+        <span style={{ fontSize:13 }}>📝</span>
+        <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.04em", color:"#2d4ecf", textTransform:"uppercase" }}>Our Thesis / Assumptions</span>
+      </div>
+      <div style={{ fontSize:11, color:"#6f7a8c", marginBottom:10, lineHeight:1.5 }}>
+        Why we like this deal, what we're underwriting to, risks we're discounting. Folded into the AI grade when you re-grade — the analyst weighs it but stays objective and will flag anything the data contradicts.
+      </div>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={save}
+        placeholder="e.g. Underwriting to mark-to-market on the inline shops at rollover; comfortable with the grocer's below-market sales given the dense infill location and lack of nearby competition; assume the vacant pad leases within 18 months…"
+        rows={4}
+        style={{ width:"100%", boxSizing:"border-box", resize:"vertical", fontFamily:"'Inter',sans-serif", fontSize:13, lineHeight:1.55, padding:"10px 12px", border:"1px solid #c9dbf0", borderRadius:8, color:"#383a37", background:"#fff", outline:"none" }}
+      />
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10, flexWrap:"wrap" }}>
+        <button onClick={save} disabled={!dirty}
+          style={{ background: dirty ? "#fff" : "#f1eadc", border:"1px solid #c9dbf0", color: dirty ? "#2d4ecf" : "#a89f8f", padding:"7px 14px", borderRadius:7, cursor: dirty ? "pointer" : "default", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+          {dirty ? "Save" : "Saved"}
+        </button>
+        <button onClick={saveAndRegrade} disabled={regrading || (!saved && !text.trim())}
+          style={{ background:"#2d4ecf", border:"none", color:"#fff", padding:"7px 14px", borderRadius:7, cursor: regrading ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", opacity: regrading ? 0.6 : 1 }}>
+          {regrading ? "Re-grading…" : "✨ Save & Re-grade with this thesis"}
+        </button>
+        <span style={{ fontSize:10.5, color:"#9aa3b2" }}>Re-grade uses a token refresh.</span>
+      </div>
+    </div>
+  );
+}
+
 // Disposition subsection — collapsed behind a hide/unhide toggle by default,
 // auto-expanded when the deal is Sold (so exit details surface automatically).
 function DispositionSection({ sold, children }: { sold: boolean; children: React.ReactNode }) {
@@ -2027,6 +2081,9 @@ ${text.slice(0, 40000)}`;
 
       {/* My Underwriting */}
       <MyUnderwritingPanel deal={d} onUpdate={onUpdate}/>
+
+      {/* KPR thesis / assumptions — folded into the AI grade on re-grade */}
+      <DealThesisBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy}/>
 
       {/* Comp Benchmark — below My Underwriting */}
       <CompBenchmarkCard deal={d} />
