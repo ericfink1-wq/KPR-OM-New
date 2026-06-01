@@ -16,17 +16,27 @@ function MoneyInput({ value, placeholder, onChange, onCommit }: {
   onChange: (n: number | null) => void;
   onCommit: () => void;
 }) {
-  const [focused, setFocused] = useState(false);
-  const display = value == null ? ""
-    : focused ? String(value)
+  // While editing, show the user's literal text (so you can type "." and cents
+  // without it being re-parsed away). When idle, show $-commas from the number.
+  const [text, setText] = useState<string | null>(null);
+  const editing = text !== null;
+  const display = editing ? text
+    : value == null ? ""
     : Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 });
   return (
     <div style={{ position: "relative" }}>
       <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12.5, color: "#8b8578", pointerEvents: "none" }}>$</span>
       <input inputMode="decimal" value={display} placeholder={placeholder}
-        onFocus={() => setFocused(true)}
-        onBlur={() => { setFocused(false); onCommit(); }}
-        onChange={e => { const raw = e.target.value.replace(/[^0-9.]/g, ""); onChange(raw === "" ? null : Number(raw)); }}
+        onFocus={() => setText(value == null ? "" : String(value))}
+        onBlur={() => { setText(null); onCommit(); }}
+        onChange={e => {
+          // Keep digits and a single decimal point.
+          let raw = e.target.value.replace(/[^0-9.]/g, "");
+          const dot = raw.indexOf(".");
+          if (dot !== -1) raw = raw.slice(0, dot + 1) + raw.slice(dot + 1).replace(/\./g, "");
+          setText(raw);
+          onChange(raw === "" || raw === "." ? null : Number(raw));
+        }}
         style={{ border: "1px solid #d9d2c4", borderRadius: 6, padding: "7px 9px 7px 18px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", width: "100%", boxSizing: "border-box", background: "#fff" }} />
     </div>
   );
