@@ -1848,8 +1848,8 @@ ${text.slice(0, 40000)}`;
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
-                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7" }}>
-                  <img src={src} alt={`Site plan ${i+1}`} style={{ width:"100%", display:"block" }}/>
+                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
+                  <img src={src} alt={`Site plan ${i+1}`} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block" }}/>
                 </div>
               ))}
             </div>
@@ -1862,8 +1862,8 @@ ${text.slice(0, 40000)}`;
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
-                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7" }}>
-                  <img src={src} alt={`Site plan ${i+1}`} style={{ width:"100%", display:"block" }}/>
+                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
+                  <img src={src} alt={`Site plan ${i+1}`} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block" }}/>
                 </div>
               ))}
             </div>
