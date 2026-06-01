@@ -301,6 +301,35 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     return { rows, allOccurrences };
   }, [deals, filter]);
 
+  // Search index — ALWAYS spans every deal, independent of the All/Owned scope
+  // toggle, so the pinned search can find any tenant or parent company.
+  const searchIndex = useMemo(() => {
+    const tmap = new Map<string, { displayName: string; parentCo?: string; locationCount: number; totalAnnualRent: number }>();
+    const pmap = new Map<string, { parent: string; brands: Set<string>; locationCount: number; totalAnnualRent: number }>();
+    for (const deal of deals) {
+      if (!deal.tenants) continue;
+      for (const t of deal.tenants) {
+        const rawName = t.canonicalName || t.name;
+        if (!rawName || isVacant(rawName) || isNAPTenant(t)) continue;
+        const key = tenantKey(rawName);
+        const annualRent = num(t.annualRent) ?? 0;
+        const parentCo = parentCompany(rawName, t.parentCompany) ?? undefined;
+        if (!tmap.has(key)) tmap.set(key, { displayName: rawName, parentCo, locationCount: 0, totalAnnualRent: 0 });
+        const tr = tmap.get(key)!;
+        tr.locationCount += 1;
+        tr.totalAnnualRent += annualRent;
+        if (parentCo) {
+          if (!pmap.has(parentCo)) pmap.set(parentCo, { parent: parentCo, brands: new Set(), locationCount: 0, totalAnnualRent: 0 });
+          const pr = pmap.get(parentCo)!;
+          pr.brands.add(rawName);
+          pr.locationCount += 1;
+          pr.totalAnnualRent += annualRent;
+        }
+      }
+    }
+    return { tenants: [...tmap.values()], parents: [...pmap.values()] };
+  }, [deals]);
+
   // Active rows = all rows minus ignored
   const activeRows = useMemo(() => rows.filter(r => !ignoredKeys.has(r.key)), [rows, ignoredKeys]);
 
@@ -353,7 +382,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const navResults = useMemo<NavResult[]>(() => {
     const q = navSearch.trim().toLowerCase();
     if (!q) return [];
-    const tenants: NavResult[] = rows
+    const tenants: NavResult[] = searchIndex.tenants
       .filter(r => {
         const name = tenantLabel(r.displayName).toLowerCase();
         const parent = (r.parentCo || "").toLowerCase();
@@ -367,7 +396,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         locations: r.locationCount,
         onPick: () => onTenantClick?.(r.displayName),
       }));
-    const parents: NavResult[] = parentRows
+    const parents: NavResult[] = searchIndex.parents
       .filter(p => p.parent.toLowerCase().includes(q))
       .map(p => ({
         kind: "parent" as const,
@@ -379,7 +408,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
       }));
     // Parents first (broader), then tenants — each by rent desc; cap the list.
     return [...parents.sort((a, b) => b.rent - a.rent), ...tenants.sort((a, b) => b.rent - a.rent)].slice(0, 12);
-  }, [navSearch, rows, parentRows, onTenantClick, onParentClick]);
+  }, [navSearch, searchIndex, onTenantClick, onParentClick]);
 
   const pickNav = useCallback((r: NavResult) => {
     setNavSearch("");
@@ -519,7 +548,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 else if (e.key === "Enter") { e.preventDefault(); const r = navResults[navHover]; if (r) pickNav(r); }
                 else if (e.key === "Escape") { setNavSearch(""); setNavFocused(false); }
               }}
-              placeholder="Search a tenant or parent company…"
+              placeholder="Search any tenant or parent company (all deals)…"
               style={{ width:"100%", boxSizing:"border-box", padding:"10px 14px 10px 36px", fontSize:13.5, border:"1px solid #d9d2c4", borderRadius:10, background:"#fff", color:"#383a37", fontFamily:"'Inter',sans-serif", outline:"none", boxShadow:"0 1px 2px rgba(56,58,55,0.05)" }}
             />
             {navSearch && (
