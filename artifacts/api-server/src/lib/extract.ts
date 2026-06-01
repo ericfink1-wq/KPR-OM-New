@@ -2,7 +2,7 @@
 import type { Logger } from "pino";
 import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { rebuildTenantIndex } from "./tenantIndex";
+import { rebuildTenantIndex, parseLeaseDate } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { Agent, fetch as undiciFetch } from "undici";
@@ -97,7 +97,7 @@ REQUIRED SCHEMA:
       "expenseReimbursements": "number or null — Populate ONLY when the OM explicitly discloses the annual CAM + real-estate-tax + insurance recoveries paid by this specific tenant in dollars. Never estimate, derive, or guess. If not disclosed, leave null.",
       "percentageRent": "number or null — Populate ONLY when the OM explicitly discloses the annual overage/percentage rent paid by this tenant in dollars. Never estimate. If not disclosed, leave null.",
       "otherRent": "number or null — Populate ONLY when the OM explicitly discloses annual marketing/promo fund, storage, specialty, or other rent paid by this tenant in dollars. Never estimate. If not disclosed, leave null.",
-      "creditRating": "Investment Grade|Non-Investment Grade|null",
+      "creditRating": "Investment Grade | Non-Investment Grade | null — Set this ONLY when the OM explicitly states a credit rating for the tenant, OR the tenant is a national credit you are CERTAIN is investment-grade (e.g. Target, Walmart, Costco, Home Depot, Lowe's, TJX/TJ Maxx/Marshalls, Ross, CVS, Walgreens, Kroger, Publix, McDonald's, Starbucks, Chick-fil-A, Verizon, AT&T, a money-center bank). Otherwise DEFAULT TO null. Do NOT infer 'Investment Grade' for private, PE-owned, franchised, regional, or local operators, and do NOT label junk/non-rated retailers as Investment Grade (e.g. Gap/Old Navy, Burlington, Michaels, Barnes & Noble, At Home, Lane Bryant, Famous Footwear, Destination XL, most restaurants and franchises). When unsure, use null — never guess a rating.",
       "salesPSF": "number or null",
       "salesYear": "number or null — the calendar year the salesPSF figure is from (e.g. 2024). Infer from context ('2024 sales', 'trailing 12 months ending Dec-2024', etc.).",
       "salesNotes": "string or null",
@@ -126,7 +126,7 @@ REQUIRED SCHEMA:
 }
 DATA-INTEGRITY QUESTIONS (reviewQuestions): This is a DASHBOARD for the user to verify a clean import, not a place to dump everything. Add an item ONLY when you genuinely could not capture a value with confidence from the document — e.g. the OM gives conflicting square footages, the NOI/cap/price don't tie out, a rent-roll column was unlabeled or ambiguous, a key number was blurry/footnoted/asterisked, or two tenants might be the same. Severity: "high" = a core financial/SF figure that drives the analysis; "medium" = a material lease/tenant detail; "low" = a minor field. ALWAYS set "target" so the user can fix the value in one click: kind/fieldKey/tenantName/valueType pointing at the exact field; set target to null ONLY when the question is not about a single editable field (e.g. "two tenants might be duplicates"). Do NOT raise questions for values that are simply ABSENT from the document (those are just null) — only for values you DID capture but are UNSURE about, or genuine internal contradictions. Empty array if the import was clean and unambiguous. Cap at the ~5 most important.
 
-PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant roster scope: ONLY include tenants that are actual occupants of THIS property — i.e., they appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Exclude any tenant mentioned solely as: a competitor, a shadow anchor or co-tenant at another parcel, a comparable-sale occupant, a "trade area" or "co-tenancy" narrative reference, or market context. The test is: does this tenant have a lease at THIS property? If yes → include. If no → exclude. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include vacant/availability rows as tenant entries with name "Vacant", their SF if stated, and null for all lease/rent fields — this ensures the roster reflects the actual vacancy picture. Dates: always ISO YYYY-MM-DD. rentSchedule: required for every tenant, never null. WALT: calculate from lease dates if not stated. Tenant names: brand only, no store numbers.
+PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant roster scope: ONLY include tenants that are actual occupants of THIS property — i.e., they appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Exclude any tenant mentioned solely as: a competitor, a shadow anchor or co-tenant at another parcel, a comparable-sale occupant, a "trade area" or "co-tenancy" narrative reference, or market context. The test is: does this tenant have a lease at THIS property? If yes → include. If no → exclude. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include EACH vacant/availability row as its own tenant entry with name "Vacant", its SF if stated, and null for all lease/rent fields — do NOT merge multiple vacant suites into one row. Dates: always ISO YYYY-MM-DD. rentSchedule: leave null when no rent rate/steps are disclosed — do not just restate the lease-expiry date. creditRating: leave null unless the OM states it or the tenant is a certain national investment-grade credit — never guess (see field note). WALT: ALWAYS compute it yourself from the rent-roll lease-expiry dates (SF-weighted, to today); do NOT copy a WALT figure printed on the cover/marketing pages, which may use a different basis and conflict with the roster. Tenant names: brand only, no store numbers.
 
 LANGUAGE (notes/rationale narration): RENTS DO NOT "TRADE" — properties trade, rents do not; say a rent "is X% below/above" market, never "trades below/above." Reserve "portfolio"/"KPR portfolio" for assets the owner holds; call the broader analyzed dataset "the database." KPR underwrites a 5–7 year hold (max ~10): frame mark-to-market/value-add upside that rolls within ~7 years as in-hold upside KPR captures; upside that rolls ~7–12 years out is residual/exit upside to position for the next buyer (not in-hold); upside locked deeper than that is not upside.
 
@@ -402,6 +402,33 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>): Prom
   return out;
 }
 
+// Deterministic SF-weighted WALT from the extracted roster — mirrors the
+// LeaseRollover "WALT (by SF)" calc so the stored number matches what the deal
+// page shows. Models sometimes copy a cover-page WALT computed on a different
+// basis (rent-weighted, or to a future close date), so recompute from the rent
+// roll's lease-expiry dates. Returns null when no parseable expiries exist
+// (then we keep whatever the model gave).
+function computeWaltFromRoster(tenants: unknown, asOf: unknown): number | null {
+  if (!Array.isArray(tenants)) return null;
+  const ref = typeof asOf === "string" && !isNaN(new Date(asOf).getTime()) ? new Date(asOf) : new Date();
+  const isVacant = (n: unknown) => {
+    const s = String(n ?? "").trim().toLowerCase();
+    return !s || s === "-" || /^(vacant|available|spec|white\s*box)\b/.test(s);
+  };
+  let num = 0, den = 0;
+  for (const t of tenants as Array<Record<string, unknown>>) {
+    if (isVacant(t.name)) continue;
+    const iso = parseLeaseDate(t.leaseExpiry);
+    const sf = Number(t.sf);
+    if (!iso || !sf || isNaN(sf) || sf <= 0) continue;
+    const exp = new Date(iso + "T00:00:00Z");
+    if (isNaN(exp.getTime())) continue;
+    const years = Math.max(0, (exp.getTime() - ref.getTime()) / (365.25 * 86_400_000));
+    num += sf * years; den += sf;
+  }
+  return den > 0 ? Math.round((num / den) * 10) / 10 : null;
+}
+
 // Run extraction as a background job — updates the deal row in DB when done/error
 export async function runBackgroundExtraction(
   id: string,
@@ -417,8 +444,14 @@ export async function runBackgroundExtraction(
       augmentScoringWithBenchmarks(id, rawExtracted, log),
       getTotalDealCount(),
     ]);
+    const computedWalt = computeWaltFromRoster(
+      (augmented as Record<string, unknown>).tenants,
+      (augmented as Record<string, unknown>).tenantsAsOf,
+    );
     const dealData: Record<string, unknown> = {
       ...augmented,
+      // Trust the roster-derived WALT over the model's (avoids copied cover figures).
+      ...(computedWalt != null ? { walt: computedWalt } : {}),
       _processing: false,
       fileName,
       uploadedAt: new Date().toISOString(),
