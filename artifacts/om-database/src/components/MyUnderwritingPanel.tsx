@@ -149,10 +149,22 @@ export default function MyUnderwritingPanel({ deal: d, onUpdate }: Props) {
   const uwTarget   = n(targetCap);
   const uwMyNoi    = n(myNoi);
 
-  // EGI: apply user vacancy to GPR if available
+  // Recovery / other income beyond base rent — expense reimbursements (CAM, tax,
+  // insurance), percentage rent, and other rent. In a NNN center these can be
+  // ~30-50% of base rent, so leaving them out of NOI badly understates it.
+  // Prefer the OM's stated EGI (already includes recoveries); else sum what the
+  // tenants disclose.
+  const tenantRecoveries = (d.tenants || []).reduce((s, t) =>
+    s + (n(t.expenseReimbursements) ?? 0) + (n(t.percentageRent) ?? 0) + (n(t.otherRent) ?? 0), 0);
+  const recoveries: number =
+    omEGI != null && omGPR != null && omEGI > omGPR ? omEGI - omGPR : tenantRecoveries;
+
+  // Effective gross income for the NOI build:
+  // - if the user set a vacancy %, re-derive from base rent then add recoveries;
+  // - otherwise use the OM's EGI (includes recoveries), or GPR + recoveries.
   const computedEGI: number | null =
-    omGPR != null && uwVacancy != null ? omGPR * (1 - uwVacancy / 100)
-    : omGPR ?? omEGI;
+    omGPR != null && uwVacancy != null ? omGPR * (1 - uwVacancy / 100) + recoveries
+    : omEGI ?? (omGPR != null ? omGPR + recoveries : null);
 
   const mgmtAmt:  number = computedEGI != null && uwMgmt     != null ? computedEGI * (uwMgmt / 100)     : 0;
   const resAmt:   number = omTotalSF   != null && uwReserves != null ? omTotalSF   * uwReserves         : 0;
@@ -296,7 +308,7 @@ export default function MyUnderwritingPanel({ deal: d, onUpdate }: Props) {
           {uwMyNoi == null && (computedEGI != null || finalNoi == null) && (
             <div style={{ fontSize: 10, color: "#4a7cc9", marginBottom: 14, lineHeight: 1.5 }}>
               {finalNoi != null
-                ? `My NOI is auto-computed from ${omGPR ? "GPR" : "EGI"}${uwVacancy != null ? ` @ ${uwVacancy}% vacancy` : ""}${uwMgmt != null ? `, ${uwMgmt}% mgmt` : ""}${uwReserves != null ? `, $${uwReserves}/SF reserves` : ""}${omOpex ? ", OM opex" : ""}. Enter My NOI above to override.`
+                ? `My NOI is auto-computed from ${uwVacancy != null ? `GPR @ ${uwVacancy}% vacancy + recoveries` : omEGI != null ? "EGI (incl. recoveries)" : "GPR + recoveries"}${uwMgmt != null ? `, less ${uwMgmt}% mgmt` : ""}${uwReserves != null ? `, $${uwReserves}/SF reserves` : ""}${omOpex ? ", less OM opex" : ""}. Enter My NOI above to override.`
                 : "Enter My NOI directly, or fill Vacancy + Mgmt Fee + Reserves to compute it automatically (requires OM income data)."}
             </div>
           )}
