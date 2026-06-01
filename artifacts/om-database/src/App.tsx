@@ -38,7 +38,7 @@ function AppInner() {
   const [auth, setAuth] = useState<AuthState>("checking");
   const [isAdmin, setIsAdmin] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [tab, setTab] = useState<TabId>("analyst");
+  const [tab, setTab] = useState<TabId>("portfolio");
   // Right-side AI chat drawer (opened from the ask bar / "Ask about this property").
   const [chatOpen, setChatOpen] = useState(false);
   const [viewStack, setViewStack] = useState<View[]>([{ type: "list" }]);
@@ -74,7 +74,7 @@ function AppInner() {
     resetToList();
     if (dest === "portfolio") setTab("portfolio");
     else if (dest === "comps") setTab("comps");
-    else if (dest === "analyst") setTab("analyst");
+    else if (dest === "analyst") setChatOpen(true);
     else if (dest === "analytics") { setTab("analytics"); setAnalyticsView("tenant"); }
     else if (dest === "analytics-watchlist") { setTab("analytics"); setAnalyticsView("watchlist"); }
   }, [resetToList]);
@@ -283,8 +283,8 @@ function AppInner() {
       style={{ height: "100%", background: "#f6f2ea", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 16, fontFamily: "'Inter',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any, paddingRight: helpOpen && isDesktop ? "clamp(420px, 33vw, 680px)" : 0, transition: "padding-right 0.2s ease" }}>
 
       <Header
-        tab={tab}
-        onTab={t => { setTab(t as TabId); resetToList(); }}
+        tab={chatOpen ? "analyst" : tab}
+        onTab={t => { if (t === "analyst") { setChatOpen(true); return; } setChatOpen(false); setTab(t as TabId); resetToList(); }}
         deals={deals}
         queueLen={processingCount}
         onLogout={handleLogout}
@@ -394,19 +394,6 @@ function AppInner() {
         </div>
       )}
 
-      {/* Analyst tab */}
-      {tab === "analyst" && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, height: "calc(100vh - 72px)" }}>
-          <AnalystChat
-            deals={deals}
-            onOpenDeal={handleOpenDeal}
-            onTenantClick={handleOpenTenant}
-            initialQuery={pendingQuery}
-            onClearQuery={() => setPendingQuery(undefined)}
-          />
-        </div>
-      )}
-
       {/* Portfolio tab */}
       {tab === "portfolio" && (
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
@@ -507,7 +494,7 @@ function AppInner() {
         </div>
       )}
 
-      {tab !== "analyst" && view.type !== "detail" && (
+      {view.type !== "detail" && (
         <AnalystBar onAsk={handleQuery} />
       )}
 
