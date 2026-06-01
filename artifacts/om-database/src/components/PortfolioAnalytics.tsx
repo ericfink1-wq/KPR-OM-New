@@ -300,8 +300,6 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [rebuildCompsMsg, setRebuildCompsMsg] = useState<string | null>(null);
   const [scoring, setScoring] = useState(false);
   const [scoreMsg, setScoreMsg] = useState<string | null>(null);
-  const [retagging, setRetagging] = useState(false);
-  const [retagMsg, setRetagMsg] = useState<string | null>(null);
   const [staleCount, setStaleCount] = useState(0);
   const [refreshingStale, setRefreshingStale] = useState(false);
   const [staleMsg, setStaleMsg] = useState<string | null>(null);
@@ -417,20 +415,6 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       .finally(() => setRebuildingComps(false));
   };
 
-  const handleRetagComps = () => {
-    if (!window.confirm("Re-tag every existing MANUAL comp as UPLOAD? This is a one-time cleanup for comps imported before the UPLOAD tag existed. It only changes the label, not the comp data, and can be safely run again.")) return;
-    setRetagging(true);
-    setRetagMsg(null);
-    fetch("/api/comps/retag-manual-to-upload", { method: "POST", credentials: "include" })
-      .then(r => r.json() as Promise<{ ok: boolean; retagged?: number; error?: string }>)
-      .then(d => {
-        if (!d.ok) throw new Error(d.error || "Re-tag failed");
-        setRetagMsg(`✓ Re-tagged ${d.retagged ?? 0} comp${d.retagged === 1 ? "" : "s"} to UPLOAD`);
-      })
-      .catch(e => setRetagMsg(`⚠ ${e.message}`))
-      .finally(() => setRetagging(false));
-  };
-
   const pad = isMobile ? "16px" : "28px 32px";
 
   return (
@@ -489,11 +473,6 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                 {rebuildingComps ? "Rebuilding…" : "Rebuild comps index"}
               </button>
               {rebuildCompsMsg && <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildCompsMsg}</span>}
-              <button onClick={handleRetagComps} disabled={retagging} style={{ background: retagging ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: retagging ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: retagging ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 12 }}>⇪</span>
-                {retagging ? "Re-tagging…" : "Re-tag MANUAL → UPLOAD"}
-              </button>
-              {retagMsg && <span style={{ fontSize: 10.5, color: retagMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{retagMsg}</span>}
             </div>
           )}
           {isAdmin && (
