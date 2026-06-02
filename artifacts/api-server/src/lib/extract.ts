@@ -266,9 +266,12 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     ? text.slice(0, 120000) + "\n...[middle truncated]...\n" + text.slice(-40000)
     : text;
 
+  // OM extraction is the hardest, highest-stakes pass — use the stronger Sonnet
+  // model for materially fewer misreads on complex rent rolls / financials. The
+  // lighter rent-roll and sales passes stay on Haiku.
   const callExtract = async (content: string) => {
     const upstream = await callAnthropicOnce({
-      model: "claude-haiku-4-5-20251001",
+      model: "claude-sonnet-4-6",
       max_tokens: 32000,
       messages: [{ role: "user", content }],
     });
