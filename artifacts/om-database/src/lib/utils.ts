@@ -1149,15 +1149,33 @@ export function tenantLogoDomain(name: unknown, canonicalName?: string | null): 
 }
 
 /**
+ * Coerce a step field (rentSchedule / rentBumps / renewalOptions) to a
+ * semicolon-joined string. OM extraction returns these as strings, but the
+ * rent-roll AI sometimes returns an array (or other) — this normalizes both so
+ * downstream `.split(";")` never blows up.
+ */
+export function toStepString(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) return v.map(x => (x == null ? "" : String(x))).filter(Boolean).join("; ");
+  if (typeof v === "object") {
+    try { return Object.values(v as Record<string, unknown>).map(x => String(x)).filter(Boolean).join("; "); }
+    catch { return ""; }
+  }
+  return String(v);
+}
+
+/**
  * Filters a rentSchedule or rentBumps string (semicolon-delimited steps)
  * to only include steps whose date is today or in the future.
  * Steps with no parseable date are kept (can't determine if past).
  */
-export function filterFutureRentSteps(raw: string | null | undefined): string {
-  if (!raw) return "";
+export function filterFutureRentSteps(raw: unknown): string {
+  const s = toStepString(raw);
+  if (!s) return "";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const steps = raw.split(";").map(s => s.trim()).filter(Boolean);
+  const steps = s.split(";").map(s => s.trim()).filter(Boolean);
   const future = steps.filter(step => {
     const isoMatch = step.match(/(\d{4}-\d{2}-\d{2})/);
     if (isoMatch) {

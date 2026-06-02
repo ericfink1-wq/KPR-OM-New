@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown } from "../lib/idb";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, tenantKey } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, tenantKey, toStepString } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -409,7 +409,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedRentStep === i ? 340 : 220, minWidth: 120 }}
                 >
                   {(() => {
-                    const s = t.rentSchedule || t.rentBumps;
+                    const s = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
                     if (!s) return <span style={{ color:"#c4bbaa" }}>—</span>;
                     const expiryDate = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
                     const MONTH_MAP: Record<string,number> = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
@@ -463,8 +463,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedOption === i ? 340 : 220, minWidth: 120 }}
                 >
                   {(() => {
-                    const s = t.renewalOptions;
-                    const rs = t.rentSchedule || t.rentBumps || "";
+                    const s = toStepString(t.renewalOptions);
+                    const rs = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
                     const expiryDate = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
                     const MONTH_MAP2: Record<string,number> = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
                     // Pull rent steps that are AFTER lease expiry (i.e. option period steps)

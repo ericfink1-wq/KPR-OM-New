@@ -1,5 +1,5 @@
 import { apiAiMessages } from "./api";
-import { robustParseJSON } from "./utils";
+import { robustParseJSON, toStepString } from "./utils";
 import type { Deal, ReviewQuestion } from "./idb";
 
 export interface RentRollResult {
@@ -91,8 +91,18 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   const prior = (deal.reviewQuestions ?? []).filter(q => !(q.source === "ai" && q.id.startsWith("ai-rr-")));
   const reviewQuestions = [...prior, ...fresh];
 
+  // Normalize step fields to strings — the AI sometimes returns rentSchedule /
+  // rentBumps / renewalOptions as arrays, which break string-only consumers.
+  const tenants = result.tenants.map(t => {
+    const x = { ...(t as Record<string, unknown>) };
+    if (x.rentSchedule != null) x.rentSchedule = toStepString(x.rentSchedule);
+    if (x.rentBumps != null) x.rentBumps = toStepString(x.rentBumps);
+    if (x.renewalOptions != null) x.renewalOptions = toStepString(x.renewalOptions);
+    return x;
+  }) as NonNullable<Deal["tenants"]>;
+
   return {
-    tenants: result.tenants,
+    tenants,
     tenantsAsOf: result.asOf,
     tenantsSource: "rent-roll",
     tenantsManual: true,
