@@ -137,6 +137,7 @@ CRITICAL RENT-ROLL LESSONS (from real operator corrections — past extractions 
 3. CURRENT EXPIRATION, NOT OPTION-EXTENDED. A pro-forma rent roll's "End"/"Expiration" column often ASSUMES renewal options are exercised (frequently stated in a footnote like "tenants with options assumed to exercise"). leaseExpiry MUST be the CURRENT contractual expiration, NOT the option-extended date. If a tenant's current term ends 2026 but the table shows 2031 because an option is assumed, use 2026 for leaseExpiry and put the option (→2031) in renewalOptions.
 4. CURRENT IN-PLACE RENT, NOT OPTION RATE. rentPerSF and annualRent must be the tenant's CURRENT in-place base rent, not a future renewal-option rate. Option-period rates belong only in rentSchedule/renewalOptions.
 5. DON'T CARRY DEPARTED TENANTS. Only include tenants on the CURRENT rent roll. A tenant that appears in an older options schedule or a prior-year sales report but is NOT on the current rent roll has left — exclude it (its suite is now vacant or re-leased to someone else).
+6. SALES FIGURES — UNITS MATTER (salesPSF is PER SQUARE FOOT). When the OM gives a tenant's TOTAL annual sales (e.g. "Grocer Sales $37.7M", "anecdotal sales of $2.9M"), that is a TOTAL, not a per-SF figure — convert it: salesPSF = total ÷ SF. A $37.7M figure on a 59,678 SF store is ~$632/SF, NOT $37.7/SF. NEVER store a multi-million-dollar total in salesPSF. If the figure is labeled "anecdotal"/"estimated", say so in salesNotes. Only put a number directly in salesPSF when the OM states it per-SF.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
@@ -314,6 +315,48 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       stopReason = cont.stopReason;
     } catch {
       break;
+    }
+  }
+
+  // Completeness backstop — even if the model stopped cleanly, it may have
+  // dropped occupied tenants (this is how a 25,310 SF anchor like Burlington got
+  // missed). If the OM states totalSF + occupancy, the captured occupied SF
+  // should roughly reconcile; when it's well short, re-prompt for the missing
+  // tenants (largest first) until it ties out or stops finding more.
+  {
+    const totalSF = Number(extracted.totalSF);
+    let occPct = Number(extracted.occupancy);
+    if (occPct > 0 && occPct <= 1.5) occPct *= 100; // fraction → percent
+    let gapRounds = 0;
+    while (gapRounds < 3 && totalSF > 0 && occPct > 0 && occPct <= 100) {
+      const tenants = extracted.tenants as Array<{ name?: string; sf?: unknown; isNAP?: boolean }>;
+      const capturedSF = tenants.reduce((s, t) => {
+        const sf = Number(t?.sf);
+        return s + (t && !t.isNAP && !isNaN(sf) && sf > 0 ? sf : 0);
+      }, 0);
+      const expectedOccSF = totalSF * occPct / 100;
+      if (capturedSF >= expectedOccSF * 0.9) break; // close enough — likely complete
+      gapRounds++;
+      const haveNames = tenants.map((t) => t.name).filter(Boolean);
+      const gapPrompt =
+        `This property has ${Math.round(expectedOccSF).toLocaleString()} SF of OCCUPIED space ` +
+        `(${occPct}% of ${totalSF.toLocaleString()} SF), but the tenants captured so far only sum to ` +
+        `${Math.round(capturedSF).toLocaleString()} SF — so OCCUPIED TENANTS ARE MISSING, likely one or more large anchors/junior anchors. ` +
+        `From the Offering Memorandum text below, extract ONLY the occupied tenants NOT already in this list (largest missing first):\n` +
+        haveNames.join(", ") +
+        `\n\nSame inclusion rule: actual lease occupants of THIS property only. Return ONLY {"tenants":[...]} with per-tenant schema ` +
+        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, remainingTermYears}. ` +
+        `If none remain, return {"tenants":[]}. Output must start with { and end with }.\n\nOM TEXT:\n` + truncatedText;
+      try {
+        const cont = await callExtract(gapPrompt);
+        const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
+        const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
+          .filter((t) => t?.name && !haveNames.includes(t.name));
+        if (newOnes.length === 0) break;
+        extracted.tenants = (extracted.tenants as unknown[]).concat(newOnes);
+      } catch {
+        break;
+      }
     }
   }
 

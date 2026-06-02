@@ -77,19 +77,6 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
 export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<Deal> {
   const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
   const recomputed: Partial<Deal> = {};
-  if (!deal.verified?.occupancy && deal.totalSF) {
-    const occupiedSF = result.tenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
-    const occ = Math.round(occupiedSF / Number(deal.totalSF) * 1000) / 10;
-    if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
-  }
-  if (!deal.verified?.walt) {
-    const sfT = result.tenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
-    const wT = result.tenants.reduce((s, t) => {
-      const sf = nv((t as Record<string, unknown>).sf), yr = nv((t as Record<string, unknown>).remainingTermYears);
-      return s + (sf ?? 0) * (yr ?? 0);
-    }, 0);
-    if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
-  }
   // Merge fresh rent-roll questions with any existing ones on the deal: drop the
   // prior rent-roll AI flags (ids prefixed "ai-rr-") and append the new batch,
   // keeping OM-extraction and resolved questions intact.
@@ -114,17 +101,42 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   ];
   const blank = (v: unknown) => v == null || v === "";
 
-  // Normalize step fields to strings — the AI sometimes returns rentSchedule /
-  // rentBumps / renewalOptions as arrays/objects, which break string-only consumers.
-  const tenants = result.tenants.map(t => {
+  // Build the new rows (gap-filled from the prior roster), then UNION them with
+  // any existing tenants the new file doesn't mention. A partial or secondary
+  // file must never DELETE tenants — it can only add to and fill in the roster.
+  const newKeys = new Set<string>();
+  const newRows = result.tenants.map(t => {
     const x = { ...(t as Record<string, unknown>) };
-    const prior = priorByKey.get(tenantKey(stripSuiteCode(x.name)));
+    const k = tenantKey(stripSuiteCode(x.name));
+    if (k) newKeys.add(k);
+    const prior = priorByKey.get(k);
     if (prior) for (const f of CARRY_OVER) { if (blank(x[f]) && !blank(prior[f])) x[f] = prior[f]; }
     if (x.rentSchedule != null) x.rentSchedule = toStepString(x.rentSchedule);
     if (x.rentBumps != null) x.rentBumps = toStepString(x.rentBumps);
     if (x.renewalOptions != null) x.renewalOptions = toStepString(x.renewalOptions);
     return x;
-  }) as NonNullable<Deal["tenants"]>;
+  });
+  const keptExisting = (deal.tenants ?? []).filter(pt => {
+    const k = tenantKey(stripSuiteCode((pt as Record<string, unknown>).name));
+    return !k || !newKeys.has(k);
+  });
+  const tenants = [...newRows, ...keptExisting] as NonNullable<Deal["tenants"]>;
+
+  // Recompute occupancy / WALT from the FULL merged roster (not just the new
+  // rows), so a partial file doesn't understate occupancy.
+  if (!deal.verified?.occupancy && deal.totalSF) {
+    const occupiedSF = tenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
+    const occ = Math.round(occupiedSF / Number(deal.totalSF) * 1000) / 10;
+    if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
+  }
+  if (!deal.verified?.walt) {
+    const sfT = tenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
+    const wT = tenants.reduce((s, t) => {
+      const sf = nv((t as Record<string, unknown>).sf), yr = nv((t as Record<string, unknown>).remainingTermYears);
+      return s + (sf ?? 0) * (yr ?? 0);
+    }, 0);
+    if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
+  }
 
   return {
     tenants,
@@ -135,4 +147,38 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
     reviewQuestions,
     ...recomputed,
   };
+}
+
+// ENRICH-ONLY patch for a lease-OPTIONS schedule. An options file lists renewal
+// ladders but lacks current SF/rent, so it must never add or remove tenants —
+// it only fills in renewalOptions (and option-period rent steps / lease type)
+// on tenants ALREADY in the roster. Matches by normalized name. Tenants in the
+// roster that aren't in the file are untouched; rows in the file with no roster
+// match are ignored (we won't invent a tenant from an options sheet).
+export function buildOptionsPatch(deal: Deal, result: RentRollResult): { patch: Partial<Deal>; updated: number } {
+  const blank = (v: unknown) => v == null || v === "";
+  const byKey = new Map<string, Record<string, unknown>>();
+  for (const ot of result.tenants) {
+    const k = tenantKey(stripSuiteCode((ot as Record<string, unknown>).name));
+    if (k && !byKey.has(k)) byKey.set(k, ot as Record<string, unknown>);
+  }
+  let updated = 0;
+  const tenants = (deal.tenants ?? []).map(t => {
+    const x = { ...(t as Record<string, unknown>) };
+    const opt = byKey.get(tenantKey(stripSuiteCode(x.name)));
+    if (!opt) return x as NonNullable<Deal["tenants"]>[number];
+    let touched = false;
+    // renewalOptions: the file's whole point — always take it when present.
+    const ro = toStepString(opt.renewalOptions);
+    if (ro && ro !== toStepString(x.renewalOptions)) { x.renewalOptions = ro; touched = true; }
+    // Fill (never overwrite) these supporting fields only when the roster lacks them.
+    for (const f of ["rentSchedule", "rentBumps", "leaseType"] as const) {
+      if (blank(x[f]) && !blank(opt[f])) { x[f] = toStepString(opt[f]); touched = true; }
+    }
+    if (touched) updated++;
+    return x as NonNullable<Deal["tenants"]>[number];
+  }) as NonNullable<Deal["tenants"]>;
+
+  if (updated === 0) return { patch: {}, updated: 0 };
+  return { patch: { tenants, analysisStale: true }, updated };
 }

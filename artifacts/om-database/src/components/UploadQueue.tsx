@@ -5,7 +5,7 @@ import { extractPdfImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { classifyDocument, matchDeal, type DocType } from "../lib/docClassify";
-import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
+import { extractRentRoll, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 
 interface QueueItem {
@@ -234,6 +234,55 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   };
 
+  // Apply a lease-OPTIONS schedule to a matched deal: ENRICH-ONLY. Updates the
+  // renewal-option ladders on existing tenants; never adds or removes tenants, so
+  // an options file dropped alongside an OM can't shrink the roster or re-add
+  // departed tenants. Preserves SF/rent/financials entirely.
+  const applyOptionsToDeal = async (
+    itemId: string, deal: Deal, result: { asOf: string | null; tenants: NonNullable<Deal["tenants"]> },
+  ): Promise<Deal> => {
+    const { patch, updated } = buildOptionsPatch(deal, result);
+    if (updated === 0) {
+      updateItem(itemId, {
+        status: "done", progress: 100, routedType: "lease-options",
+        matchedDealName: deal.propertyName || deal.fileName || "deal", deal,
+        msg: `Lease options → ${deal.propertyName || deal.fileName || "matched deal"} · no matching tenants to update`,
+      });
+      return deal;
+    }
+    const upd = { ...deal, ...patch } as Deal;
+    await apiSaveDeal(upd);
+    onDealUpdated?.(upd);
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: "lease-options",
+      matchedDealName: deal.propertyName || deal.fileName || "deal", deal: upd,
+      msg: `Lease options → ${deal.propertyName || deal.fileName || "matched deal"} · option schedules updated on ${updated} tenant${updated === 1 ? "" : "s"}`,
+    });
+    return upd;
+  };
+
+  // Route a lease-options schedule: extract it (reuses the rent-roll extractor to
+  // get per-tenant renewalOptions), match to a deal, and enrich it — or wait for
+  // the deal to finish importing / ask which property.
+  const routeLeaseOptions = async (
+    itemId: string, text: string, fileName: string,
+    propertyName: string | null, address: string | null,
+  ) => {
+    updateItem(itemId, { msg: "Reading lease options…", progress: 55, routedType: "lease-options" });
+    const result = await extractRentRoll(text);
+    const hint = { propertyName, address, fileName };
+    const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
+    if (m.deal && m.confidence !== "none") {
+      await applyOptionsToDeal(itemId, m.deal, result);
+    } else {
+      updateItem(itemId, {
+        status: "awaiting_match", routedType: "lease-options", matchHint: hint,
+        pendingExtracted: result as unknown as Record<string, unknown>,
+        msg: `Lease options (${result.tenants.length} tenants) — will attach when its deal finishes importing, or pick the property`, progress: 100,
+      });
+    }
+  };
+
   // Apply an extracted sales report to a matched deal (auto-import, suite-aware).
   const applySalesToDeal = async (itemId: string, deal: Deal, result: SalesExtractResult): Promise<Deal> => {
     const patch = buildSalesHistoryPatch(deal, result);
@@ -283,6 +332,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       try {
         if (it.routedType === "rent-roll") {
           working = await applyRosterToDeal(it.id, working, it.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        } else if (it.routedType === "lease-options") {
+          working = await applyOptionsToDeal(it.id, working, it.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
         } else if (it.routedType === "sales") {
           working = await applySalesToDeal(it.id, working, it.pendingExtracted as unknown as SalesExtractResult);
         }
@@ -302,6 +353,13 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         await applyRosterToDeal(itemId, deal, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Roster update failed", error: err instanceof Error ? err.message : "failed" });
+      }
+    } else if (item.routedType === "lease-options" && item.pendingExtracted) {
+      updateItem(itemId, { status: "extracting", msg: "Updating options…", progress: 60 });
+      try {
+        await applyOptionsToDeal(itemId, deal, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Options update failed", error: err instanceof Error ? err.message : "failed" });
       }
     } else if (item.routedType === "sales" && item.pendingExtracted) {
       updateItem(itemId, { status: "extracting", msg: "Importing sales…", progress: 60 });
@@ -336,6 +394,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
       if (cls.type === "rent-roll") {
         await routeRentRoll(itemId, dealId, text, fileName, cls.propertyName, cls.address);
+        return;
+      }
+      if (cls.type === "lease-options") {
+        await routeLeaseOptions(itemId, text, fileName, cls.propertyName, cls.address);
         return;
       }
       if (cls.type === "sales") {

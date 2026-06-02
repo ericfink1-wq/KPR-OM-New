@@ -2,7 +2,24 @@ import type { Deal } from "./idb";
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
 
-export type DocType = "om" | "rent-roll" | "sales" | "unknown";
+export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "unknown";
+
+// Deterministic detector for a lease-OPTIONS schedule (a renewal-option report,
+// not a full rent roll). These list option ladders but usually lack current SF /
+// rent, so they must NOT replace a roster — they only enrich existing tenants.
+// Filename hint + the distinctive option-schedule column headers; we require two
+// strong signals so a normal rent roll (which may say "renewal option" once)
+// doesn't trip it.
+export function detectLeaseOptions(text: string, fileName: string): boolean {
+  const fn = fileName.toLowerCase();
+  const isOm = /\b(om|offering|memorandum|teaser|flyer|brochure)\b/.test(fn);
+  const t = text.slice(0, 9000).toLowerCase();
+  const headers = ["option type", "option date", "term to date", "rate descriptor", "option notes", "option number"];
+  const hits = headers.filter(h => t.includes(h)).length;
+  if (hits >= 2) return true;                                  // unmistakable options-schedule columns
+  if (!isOm && /\boption/.test(fn) && hits >= 1) return true;  // "…Options.xlsx" + a header
+  return false;
+}
 
 export interface Classification {
   type: DocType;
@@ -18,11 +35,12 @@ export async function classifyDocument(text: string, fileName: string): Promise<
   const slice = text.slice(0, 6000);
   const prompt = `You are a commercial real estate document classifier. Given the START of a document (and its file name), identify what it is and which property it concerns.
 
-Return ONLY JSON: {"type":"om|rent-roll|sales|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
+Return ONLY JSON: {"type":"om|rent-roll|lease-options|sales|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
 
 Definitions:
 - "om" = an Offering Memorandum / marketing package / investment sale brochure for a property (has sections like investment highlights, financials, demographics, lease abstracts).
 - "rent-roll" = a tenant rent roll / lease schedule: a table of tenants with SF, rent, lease dates. NOT a marketing narrative.
+- "lease-options" = a renewal-OPTIONS schedule: rows of option periods per tenant (columns like Option Type, Option Date, Term To Date, Rate, Rate Descriptor, Option Notes). It lists option ladders, usually WITHOUT current SF/rent. Distinct from a rent roll.
 - "sales" = a tenant SALES report: tenant sales volumes / sales-per-SF / occupancy-cost figures, usually by year.
 - "unknown" = none of the above, or can't tell.
 
@@ -44,8 +62,11 @@ ${slice}`;
     });
     const raw = res.content?.[0]?.text ?? "";
     const parsed = robustParseJSON(raw) as Partial<Classification>;
-    const type = (["om", "rent-roll", "sales", "unknown"] as const).includes(parsed.type as DocType)
+    let type = (["om", "rent-roll", "lease-options", "sales", "unknown"] as const).includes(parsed.type as DocType)
       ? (parsed.type as DocType) : "unknown";
+    // Deterministic override: an options schedule must never be treated as a
+    // roster-replacing rent roll, so trust the column/filename signal over the LLM.
+    if ((type === "rent-roll" || type === "unknown") && detectLeaseOptions(text, fileName)) type = "lease-options";
     const confidence = (["high", "medium", "low"] as const).includes(parsed.confidence as Classification["confidence"])
       ? (parsed.confidence as Classification["confidence"]) : "low";
     return {
