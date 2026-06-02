@@ -27,6 +27,7 @@ interface QueueItem {
   matchedDealName?: string;            // the property we routed this doc to
   pendingRosterPatch?: Partial<Deal>;  // staged roster update awaiting a property choice
   pendingText2?: string;               // extracted text, kept for re-routing after manual pick
+  matchHint?: { propertyName: string | null; address: string | null; fileName: string | null }; // for auto-attaching to a same-drop deal
 }
 
 interface Props {
@@ -109,6 +110,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const stopRef = useRef(false);
   const pausedRef = useRef(false);
   const [paused, setPaused] = useState(false);
+  // Deals created/refreshed by OMs during this session, so a rent roll / sales
+  // report dropped alongside a NEW deal can attach to it (it isn't in
+  // existingDeals yet). Plus a live mirror of the queue for async resolution.
+  const createdDealsRef = useRef<Deal[]>([]);
+  const queueRef = useRef<QueueItem[]>([]);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
 
   const drainQueue = () => {
     while (activeCountRef.current < MAX_CONCURRENT && waitingFilesRef.current.length > 0) {
@@ -193,7 +200,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // Apply an extracted roster to a matched deal (safe path: preserves financials).
   const applyRosterToDeal = async (
     itemId: string, deal: Deal, result: { asOf: string | null; tenants: NonNullable<Deal["tenants"]> },
-  ) => {
+  ): Promise<Deal> => {
     const patch = buildRosterPatch(deal, result);
     const updated = { ...deal, ...patch } as Deal;
     await apiSaveDeal(updated);
@@ -203,6 +210,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
       msg: `Rent roll → ${deal.propertyName || deal.fileName || "matched deal"} · roster updated (${result.tenants.length} tenants)`,
     });
+    return updated;
   };
 
   // Route a rent roll: extract its tenants, match to an existing deal, and either
@@ -213,20 +221,21 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   ) => {
     updateItem(itemId, { msg: "Reading rent roll…", progress: 55, routedType: "rent-roll" });
     const result = await extractRentRoll(text);
-    const m = matchDeal({ propertyName, address, fileName }, existingDeals);
+    const hint = { propertyName, address, fileName };
+    const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
     if (m.deal && m.confidence !== "none") {
       await applyRosterToDeal(itemId, m.deal, result);
     } else {
       updateItem(itemId, {
-        status: "awaiting_match", routedType: "rent-roll",
+        status: "awaiting_match", routedType: "rent-roll", matchHint: hint,
         pendingExtracted: result as unknown as Record<string, unknown>,
-        msg: `Rent roll (${result.tenants.length} tenants) — pick the property it belongs to`, progress: 100,
+        msg: `Rent roll (${result.tenants.length} tenants) — will attach when its deal finishes importing, or pick the property`, progress: 100,
       });
     }
   };
 
   // Apply an extracted sales report to a matched deal (auto-import, suite-aware).
-  const applySalesToDeal = async (itemId: string, deal: Deal, result: SalesExtractResult) => {
+  const applySalesToDeal = async (itemId: string, deal: Deal, result: SalesExtractResult): Promise<Deal> => {
     const patch = buildSalesHistoryPatch(deal, result);
     const updated = { ...deal, ...patch } as Deal;
     await apiSaveDeal(updated);
@@ -236,6 +245,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
       msg: `Sales (${result.year}) → ${deal.propertyName || deal.fileName || "matched deal"} · ${result.tenants.length} tenants applied`,
     });
+    return updated;
   };
 
   // Route a sales report: extract it, match to a deal, and either auto-apply the
@@ -246,15 +256,39 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   ) => {
     updateItem(itemId, { msg: "Reading sales report…", progress: 55, routedType: "sales" });
     const result = await extractSalesReport(text);
-    const m = matchDeal({ propertyName, address, fileName }, existingDeals);
+    const hint = { propertyName, address, fileName };
+    const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
     if (m.deal && m.confidence !== "none") {
       await applySalesToDeal(itemId, m.deal, result);
     } else {
       updateItem(itemId, {
-        status: "awaiting_match", routedType: "sales",
+        status: "awaiting_match", routedType: "sales", matchHint: hint,
         pendingExtracted: result as unknown as Record<string, unknown>,
-        msg: `Sales report (${result.tenants.length} tenants) — pick the property it belongs to`, progress: 100,
+        msg: `Sales report (${result.tenants.length} tenants) — will attach when its deal finishes importing, or pick the property`, progress: 100,
       });
+    }
+  };
+
+  // When an OM finishes creating/refreshing a deal, remember it and auto-attach
+  // any rent roll / sales from the same drop that were waiting for their property.
+  const registerCreatedDeal = async (deal: Deal) => {
+    createdDealsRef.current = [deal, ...createdDealsRef.current.filter(d => d.id !== deal.id)];
+    // Apply waiting docs one at a time, threading the updated deal so a rent roll
+    // and a sales report for the same property don't overwrite each other.
+    let working = deal;
+    for (const it of queueRef.current) {
+      if (it.status !== "awaiting_match" || !it.matchHint || !it.pendingExtracted) continue;
+      const m = matchDeal(it.matchHint, [working]);
+      if (!m.deal || m.confidence === "none") continue;
+      try {
+        if (it.routedType === "rent-roll") {
+          working = await applyRosterToDeal(it.id, working, it.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        } else if (it.routedType === "sales") {
+          working = await applySalesToDeal(it.id, working, it.pendingExtracted as unknown as SalesExtractResult);
+        }
+      } catch (err) {
+        updateItem(it.id, { status: "error", msg: "Auto-attach failed", error: err instanceof Error ? err.message : "failed" });
+      }
     }
   };
 
@@ -369,6 +403,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
       updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal });
       onDealsAdded([finalDeal]);
+      await registerCreatedDeal(finalDeal);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Extraction failed";
       updateItem(itemId, { status: "error", msg: "Failed", error: msg, progress: 0 });
@@ -386,6 +421,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     if (item.pendingImages) await apiSaveImages(refreshed.id, item.pendingImages).catch(() => {});
     updateItem(itemId, { status: "done", msg: refreshed.propertyName || refreshed.fileName || "Updated", progress: 100, deal: refreshed });
     onDealUpdated?.(refreshed);
+    await registerCreatedDeal(refreshed);
   };
 
   const handleDupKeepBoth = async (itemId: string) => {
@@ -404,6 +440,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     await apiSaveDeal(deal).catch(() => {});
     updateItem(itemId, { status: "done", msg: deal.propertyName || deal.fileName || "Saved", progress: 100, deal });
     onDealsAdded([deal]);
+    await registerCreatedDeal(deal);
   };
 
   const handleDupCancel = async (itemId: string) => {
