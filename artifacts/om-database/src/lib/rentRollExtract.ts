@@ -26,6 +26,11 @@ Rules:
 - If a value isn't shown, omit it.
 - remainingTermYears: compute from asOf to leaseExpiry if possible.
 
+CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
+- CAPTURE EVERY occupied line, never drop tenants. Anchors / junior anchors (the largest-SF tenants — grocers, Burlington, Marshalls, banks) are the MOST important to never omit. Before finishing, confirm the sum of your tenant SF reconciles with the rent roll's stated occupied SF; if it doesn't, you missed tenants — add them (largest first).
+- leaseExpiry = CURRENT contractual expiration, NOT an option-extended date. If the roll shows a pro-forma "End" that assumes options are exercised, use the current expiry and put option dates in renewalOptions.
+- rentPerSF / annualRent = CURRENT in-place rent, NOT a future renewal-option rate.
+
 reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"human label e.g. 'Five Below — SF'","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string","target":{"kind":"tenant","fieldKey":"exact tenant field key (sf, rentPerSF, annualRent, leaseStart, leaseExpiry, remainingTermYears, salesPSF)","tenantName":"exact tenant name from the tenants array","valueType":"number|text"}}. ALWAYS set target when the question is about one tenant's field so the user can fix it in one click; set target null only for non-field questions (e.g. possible duplicate rows). Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
 
   const res = await apiAiMessages({
