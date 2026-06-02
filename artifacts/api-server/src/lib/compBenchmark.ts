@@ -50,6 +50,12 @@ export interface BenchmarkRequest {
   excludeCompIds?: number[];
   /** Force-add these comp IDs into the benchmark set (bypass tier filtering) */
   includeCompIds?: number[];
+  // Extra subject signals for smart similarity matching:
+  occupancy?: number | null;
+  /** Subject's lead anchor tenant name(s), comma-separated */
+  anchor?: string | null;
+  /** True if the subject's lead anchor is investment-grade */
+  anchorIG?: boolean;
 }
 
 export interface CompMatch {
@@ -65,6 +71,9 @@ export interface CompMatch {
   source: "owned" | "broker" | "om";
   /** True when manually excluded — still returned for display but not counted in stats */
   excluded: boolean;
+  /** Smart-match similarity score + plain-English reasons (when computed) */
+  matchScore?: number;
+  matchReasons?: string[];
 }
 
 export interface BenchmarkResult {
@@ -85,6 +94,10 @@ export interface BenchmarkResult {
   capDeltaBps: number | null;
   psfDeltaPct: number | null;
   comps: CompMatch[];
+  /** How many comps were auto-included by smart similarity matching */
+  smartMatched: number;
+  /** Ranked, medium-similarity comps offered for one-tap add (not yet counted) */
+  suggestions: CompMatch[];
   subject: { capRate: number | null; pricePerSf: number | null };
 }
 
@@ -137,6 +150,50 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     return r.sf >= req.sf * 0.5 && r.sf <= req.sf * 2;
   };
 
+  // ── Smart similarity scoring ──────────────────────────────────────────────
+  // Ranks each comp against the subject on anchor, region, type, size,
+  // occupancy, cap and recency. Strong matches auto-join the benchmark; medium
+  // matches are returned as one-tap suggestions.
+  const STRONG_SCORE = 55, MEDIUM_SCORE = 25;
+  const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const IG_ANCHORS = new Set(["walmart", "target", "kroger", "publix", "costco", "homedepot", "lowes", "cvs", "walgreens", "tjmaxx", "marshalls", "ross", "rossdressforless", "dollargeneral", "dollartree", "fivebelow", "bestbuy", "aldi", "wholefoods", "traderjoes", "sprouts", "samsclub", "heb", "albertsons", "safeway", "wegmans"]);
+  const subjAnchorsRaw = (req.anchor || "").split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  const subjAnchors = subjAnchorsRaw.map(normName).filter(a => a.length >= 3);
+  const reqMarketN = normName(req.market || "");
+
+  const scoreComp = (r: Row): { score: number; reasons: string[] } => {
+    let score = 0; const reasons: string[] = [];
+    const cAnchors = (r.anchor || "").split(/[,;]/).map(s => normName(s)).filter(Boolean);
+    let anchorHit = -1;
+    for (let i = 0; i < subjAnchors.length; i++) {
+      if (cAnchors.some(ca => ca.length >= 3 && (ca.includes(subjAnchors[i]) || subjAnchors[i].includes(ca)))) { anchorHit = i; break; }
+    }
+    if (anchorHit >= 0) { score += 40; reasons.push(`same anchor: ${subjAnchorsRaw[anchorHit]}`); }
+    if (req.state && stateOk(r)) { score += 18; reasons.push("same state"); }
+    if (reqMarketN && r.market && (normName(r.market).includes(reqMarketN) || reqMarketN.includes(normName(r.market)))) { score += 12; reasons.push("same MSA"); }
+    if (typeOk(r)) { score += 12; reasons.push("same type"); }
+    if (req.sf && r.sf) {
+      const ratio = r.sf / req.sf;
+      if (ratio >= 0.8 && ratio <= 1.25) { score += 12; reasons.push("similar size"); }
+      else if (ratio >= 0.55 && ratio <= 1.8) { score += 6; }
+    }
+    if (req.occupancy != null && r.occupancy != null) {
+      const d = Math.abs(r.occupancy - req.occupancy);
+      if (d <= 5) { score += 8; reasons.push("similar occupancy"); }
+      else if (d <= 12) { score += 4; }
+    }
+    if (req.capRate != null && r.capRate != null) {
+      const d = Math.abs(r.capRate - req.capRate);
+      if (d <= 0.5) score += 6; else if (d <= 1) score += 3;
+    }
+    if (req.anchorIG && cAnchors.some(ca => IG_ANCHORS.has(ca))) { score += 6; reasons.push("IG anchor"); }
+    if (inDate(r, cut24)) score += 6; else if (inDate(r, cut36)) score += 3;
+    return { score, reasons };
+  };
+
+  const scoreMap = new Map<number, { score: number; reasons: string[] }>();
+  for (const r of pool) scoreMap.set(r.id, scoreComp(r));
+
   const TIERS = [
     { label: "same state, same type, similar size, last 24 months", relaxed: [] as string[],
       fn: (r: Row) => stateOk(r) && typeOk(r) && sfOk(r) && inDate(r, cut24) },
@@ -182,6 +239,27 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     chosen = [...chosen, ...extra];
   }
 
+  // Auto-include strongly-similar comps (smart matching) beyond the tier set.
+  const preStrongIds = new Set(chosen.map(r => r.id));
+  const strongMatches = pool.filter(r => !preStrongIds.has(r.id) && (scoreMap.get(r.id)?.score ?? 0) >= STRONG_SCORE);
+  chosen = [...chosen, ...strongMatches];
+  const smartMatched = strongMatches.length;
+
+  // Suggestions = medium-similarity comps not already in the set (one-tap add).
+  const chosenIds = new Set(chosen.map(r => r.id));
+  const suggestions: CompMatch[] = pool
+    .filter(r => !chosenIds.has(r.id))
+    .map(r => ({ r, s: scoreMap.get(r.id)?.score ?? 0 }))
+    .filter(x => x.s >= MEDIUM_SCORE && x.s < STRONG_SCORE)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 8)
+    .map(({ r, s }) => ({
+      id: r.id, name: r.name, sourceDealName: r.sourceDealName, market: r.market, saleDate: r.saleDate,
+      salePrice: r.salePrice, capRate: r.capRate, pricePerSf: r.pricePerSf, sf: r.sf,
+      source: getSource(r), excluded: false,
+      matchScore: s, matchReasons: scoreMap.get(r.id)?.reasons ?? [],
+    }));
+
   // Separate active vs excluded for stats — excluded comps are still returned for display
   const excSet = new Set(req.excludeCompIds ?? []);
   const activeForStats = chosen.filter(r => !excSet.has(r.id));
@@ -219,6 +297,8 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
       salePrice: r.salePrice, capRate: r.capRate, pricePerSf: r.pricePerSf, sf: r.sf,
       source: getSource(r),
       excluded: excSet.has(r.id),
+      matchScore: scoreMap.get(r.id)?.score,
+      matchReasons: scoreMap.get(r.id)?.reasons,
     }));
 
   return {
@@ -226,7 +306,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     n: activeForStats.length,   // n = active (non-excluded) count
     dateRange, sourceMix,
     capRate: capRateStats, pricePerSf: psfStats, last12,
-    capDeltaBps, psfDeltaPct, comps,
+    capDeltaBps, psfDeltaPct, comps, smartMatched, suggestions,
     subject: { capRate: req.capRate ?? null, pricePerSf: req.pricePerSf ?? null },
   };
 }

@@ -487,6 +487,7 @@ router.post("/comps/benchmark", requireAuth, async (req, res) => {
       propertyType?: string | null; sf?: number | null;
       capRate?: number | null; pricePerSf?: number | null; excludeOmComps?: boolean;
       excludeCompIds?: number[]; includeCompIds?: number[];
+      occupancy?: number | null; anchor?: string | null; anchorIG?: boolean;
     };
     if (!body.dealId) { res.status(400).json({ error: "dealId required" }); return; }
     const result = await computeBenchmark({
@@ -496,6 +497,7 @@ router.post("/comps/benchmark", requireAuth, async (req, res) => {
       excludeOmComps: body.excludeOmComps ?? false,
       excludeCompIds: Array.isArray(body.excludeCompIds) ? body.excludeCompIds : [],
       includeCompIds: Array.isArray(body.includeCompIds) ? body.includeCompIds : [],
+      occupancy: body.occupancy ?? null, anchor: body.anchor ?? null, anchorIG: !!body.anchorIG,
     });
     res.json(result);
   } catch (err) {

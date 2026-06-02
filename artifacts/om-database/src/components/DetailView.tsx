@@ -238,6 +238,7 @@ interface BmMatch {
   id: number; name: string | null; sourceDealName: string | null; market: string | null; saleDate: string | null;
   salePrice: number | null; capRate: number | null; pricePerSf: number | null;
   sf: number | null; source: "owned" | "broker" | "om"; excluded: boolean;
+  matchScore?: number; matchReasons?: string[];
 }
 interface BmResult {
   insufficient: boolean; tierLabel: string; relaxed: string[]; excludedInvalid: number;
@@ -246,12 +247,13 @@ interface BmResult {
   capRate: BmStats | null; pricePerSf: BmStats | null;
   last12: { n: number; capRate: BmStats | null; pricePerSf: BmStats | null } | null;
   capDeltaBps: number | null; psfDeltaPct: number | null;
-  comps: BmMatch[]; subject: { capRate: number | null; pricePerSf: number | null };
+  comps: BmMatch[]; smartMatched: number; suggestions: BmMatch[];
+  subject: { capRate: number | null; pricePerSf: number | null };
 }
 
 function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const lsKey = `bm-overrides-${deal.id}`;
-  const readLs = (): { excludeIds?: number[]; includeIds?: number[] } => {
+  const readLs = (): { excludeIds?: number[]; includeIds?: number[]; dismissedSugIds?: number[] } => {
     try { return JSON.parse(localStorage.getItem(lsKey) ?? "{}"); } catch { return {}; }
   };
 
@@ -261,14 +263,15 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [excludeOm, setExcludeOm] = useState(false);
   const [excludeIds, setExcludeIds] = useState<number[]>(() => readLs().excludeIds ?? []);
   const [includeIds, setIncludeIds] = useState<number[]>(() => readLs().includeIds ?? []);
+  const [dismissedSugIds, setDismissedSugIds] = useState<number[]>(() => readLs().dismissedSugIds ?? []);
   const [addQ, setAddQ] = useState("");
   const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string | null; sourceDealName: string | null; salePrice: number | null; market: string | null; saleDate: string | null }>>([]);
   const [sugsLoading, setSugsLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds })); } catch { /* ignore */ }
-  }, [lsKey, excludeIds, includeIds]);
+    try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds, dismissedSugIds })); } catch { /* ignore */ }
+  }, [lsKey, excludeIds, includeIds, dismissedSugIds]);
 
   const toggleExclude = (id: number) =>
     setExcludeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -304,14 +307,22 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const subjectPsf = deal.pricePerSF != null ? deal.pricePerSF
     : (deal.askingPrice && deal.totalSF ? Math.round((deal.askingPrice as number) / (deal.totalSF as number)) : null);
 
+  // Subject anchor signals for smart matching: lead anchor name(s) + IG flag.
+  const anchorTenants = (deal.tenants || []).filter(t => t.isAnchor && t.name);
+  const subjAnchorNames = anchorTenants.map(t => t.canonicalName || t.name).filter(Boolean).slice(0, 3).join(", ");
+  const subjAnchorIG = anchorTenants.some(t => isInvestmentGrade(t.name || "", t.creditRating));
+
   useEffect(() => {
     let cancelled = false;
     const payload = JSON.stringify({
       dealId: deal.id, market: deal.market ?? null,
       state: (deal as unknown as Record<string, unknown>).state ?? null,
-      propertyType: (deal as unknown as Record<string, unknown>).propertyType ?? null,
+      propertyType: deal.centerType ?? (deal as unknown as Record<string, unknown>).propertyType ?? null,
       sf: deal.totalSF ?? null,
       capRate: deal.capRate ?? null, pricePerSf: subjectPsf ?? null,
+      occupancy: deal.occupancy ?? null,
+      anchor: subjAnchorNames || null,
+      anchorIG: subjAnchorIG,
       excludeOmComps: excludeOm,
       excludeCompIds: excludeIds,
       includeCompIds: includeIds,
@@ -475,6 +486,9 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
               {bm.relaxed.length > 0 && (
                 <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>(relaxed: {bm.relaxed.join(", ")})</span>
               )}
+              {bm.smartMatched > 0 && (
+                <span style={{ fontSize: 11, color: "#3f7a1f", marginLeft: 6, fontWeight: 600 }}>· {bm.smartMatched} auto-matched</span>
+              )}
             </div>
             <div style={{ fontSize: 11, color: "#7d766a", marginBottom: bm.insufficient ? 4 : 12 }}>
               {bm.n} comp{bm.n !== 1 ? "s" : ""} — {bm.sourceMix.owned} owned, {bm.sourceMix.broker} broker/manual, {bm.sourceMix.om} OM-sourced
@@ -566,6 +580,29 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                   </tbody>
                 </table>
               </div>
+              {(() => {
+                const sugs = bm.suggestions.filter(s => !dismissedSugIds.includes(s.id) && !includeIds.includes(s.id));
+                if (sugs.length === 0) return null;
+                return (
+                  <div style={{ marginTop: 14, borderTop: "1px solid #f1eadc", paddingTop: 12 }}>
+                    <div style={{ fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Suggested comps — similar deals you can add</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {sugs.map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #ece5d7", borderRadius: 9, padding: "8px 10px", background: "#faf7f0", flexWrap: "wrap" }}>
+                          <div style={{ minWidth: 0, flex: "1 1 220px" }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#26281f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name || s.sourceDealName || s.market || "Comp"}</div>
+                            <div style={{ fontSize: 10.5, color: "#8b8578", marginTop: 1 }}>
+                              {(s.matchReasons ?? []).join(" · ") || "similar"}{s.capRate != null ? ` · ${fmtPct2(s.capRate)} cap` : ""}{s.saleDate ? ` · ${fmtD(s.saleDate)}` : ""}
+                            </div>
+                          </div>
+                          <button onClick={() => addInclude(s.id)} style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6, padding: "5px 11px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>+ Add</button>
+                          <button onClick={() => setDismissedSugIds(prev => prev.includes(s.id) ? prev : [...prev, s.id])} title="Dismiss this suggestion" style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#a69e91", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>Dismiss</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               {AddCompSection()}
             </div>
           </>
