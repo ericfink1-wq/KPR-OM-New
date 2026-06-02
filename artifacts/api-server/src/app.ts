@@ -69,7 +69,9 @@ app.use(session({
   rolling: true, // extend the idle window on each response while active
   cookie: {
     httpOnly: true,
-    secure: "auto", // Secure over HTTPS (prod), plain over HTTP (dev) — needs trust proxy
+    // Default off so the session cookie is always stored (login reliably works);
+    // set SECURE_COOKIES=true in the deployment once HTTPS is confirmed to harden.
+    secure: process.env.SECURE_COOKIES === "true",
     maxAge: 14 * 24 * 60 * 60 * 1000, // idle timeout: 14 days of inactivity
     sameSite: "lax",
   },

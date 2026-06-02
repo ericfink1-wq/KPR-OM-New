@@ -18,27 +18,35 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<Response> {
 // --- Auth ---
 
 export async function apiLogin(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
-  const resp = await apiFetch("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
-  if (!resp.ok) {
-    const body = await resp.json().catch(() => ({})) as { error?: string };
-    return { ok: false, error: body.error || "Login failed" };
+  try {
+    const resp = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Login failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Check your connection and that the app finished publishing, then try again." };
   }
-  return { ok: true };
 }
 
 export async function apiRegister(name: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> {
-  const resp = await apiFetch("/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ name, email, password }),
-  });
-  if (!resp.ok) {
-    const body = await resp.json().catch(() => ({})) as { error?: string };
-    return { ok: false, error: body.error || "Could not create account" };
+  try {
+    const resp = await apiFetch("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name, email, password }),
+    });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Could not create account" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
   }
-  return { ok: true };
 }
 
 export async function apiLogout(): Promise<void> {
