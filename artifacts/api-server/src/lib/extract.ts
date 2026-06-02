@@ -91,7 +91,7 @@ REQUIRED SCHEMA:
       "reimbursementMethod": "string or null",
       "percentOfNOI": "number or null",
       "rentBumps": "string — summarize pattern, e.g. '3%/yr'",
-      "rentSchedule": "string — REQUIRED for every tenant. List all dated rent steps with amounts e.g. '2024-09-01: $13.50 PSF ($345,384/yr); 2029-09-01: $15.50 PSF ($396,552/yr)'. Include option period bumps. If rent is flat, write 'Flat at $XX.XX PSF through YYYY-MM-DD.' Never leave null.",
+      "rentSchedule": "string — REQUIRED for every tenant. ONLY clean dated rent steps with amounts e.g. '2024-09-01: $13.50 PSF ($345,384/yr); 2029-09-01: $15.50 PSF ($396,552/yr)', or 'Flat at $XX.XX PSF through YYYY-MM-DD.' if flat. NEVER write prose, explanations, or renewal narratives here (e.g. do NOT write 'Walmart recently executed a 10-year renewal…') — any such explanation belongs in assumptionNote or recentlyExercisedRenewal. This field feeds a compact Rent-Steps column, so keep it to dates + amounts only. Never leave null.",
       "renewalOptions": "string or null",
       "recentlyExercisedRenewal": "string or null",
       "percentageRentClause": "string or null — text describing the percentage rent clause (e.g. '7% of gross sales above $500/SF natural breakpoint'). Null if no clause.",
@@ -139,6 +139,7 @@ CRITICAL RENT-ROLL LESSONS (from real operator corrections — past extractions 
 5. DON'T CARRY DEPARTED TENANTS. Only include tenants on the CURRENT rent roll. A tenant that appears in an older options schedule or a prior-year sales report but is NOT on the current rent roll has left — exclude it (its suite is now vacant or re-leased to someone else).
 6. SALES FIGURES — UNITS MATTER (salesPSF is PER SQUARE FOOT). When the OM gives a tenant's TOTAL annual sales (e.g. "Grocer Sales $37.7M", "anecdotal sales of $2.9M"), that is a TOTAL, not a per-SF figure — convert it: salesPSF = total ÷ SF. A $37.7M figure on a 59,678 SF store is ~$632/SF, NOT $37.7/SF. NEVER store a multi-million-dollar total in salesPSF. If the figure is labeled "anecdotal"/"estimated", say so in salesNotes. Only put a number directly in salesPSF when the OM states it per-SF.
 7. leaseType is the REIMBURSEMENT / LEASE STRUCTURE (NNN, Gross, Modified Gross, NN, Base Year) — NOT a renewal-option type. NEVER put option codes like "AUT" (automatic) or "REN" (renewal) in leaseType; that detail belongs in renewalOptions, or omit it. Leave leaseType null if the structure isn't stated. Always capture each tenant's suite/unit id when present — it's the key used to match tenants across documents.
+8. rentSchedule = ONLY dates + amounts (or "Flat at $X PSF through YYYY-MM-DD"). NEVER put renewal narratives or commentary in rentSchedule — put those in assumptionNote / recentlyExercisedRenewal. EXECUTED RENEWAL: when the OM says a tenant has already EXECUTED/exercised a renewal extending its term (e.g. "Walmart executed a 10-year renewal through Jan 2037"), set leaseExpiry to that NEW later date (2037-01-18) and record the detail in recentlyExercisedRenewal — do NOT leave leaseExpiry at the pre-renewal date. An UNEXERCISED option, by contrast, stays in renewalOptions and does not change leaseExpiry.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 

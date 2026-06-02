@@ -110,7 +110,7 @@ export async function apiSetMemberAdmin(id: string, isAdmin: boolean): Promise<v
 export async function apiDeleteMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}`, { method: "DELETE" }); }
 
 // --- Extraction lessons (operator-taught rules) ---
-export type LessonScope = "all" | "om" | "rent-roll" | "sales";
+export type LessonScope = "all" | "om" | "rent-roll" | "lease-options" | "sales";
 export interface ExtractionLesson { id: string; scope: LessonScope; lesson: string; createdAt: string; createdBy: string | null }
 export async function apiGetExtractionLessons(scope: LessonScope = "all"): Promise<ExtractionLesson[]> {
   const resp = await apiFetch(`/extraction-lessons?scope=${encodeURIComponent(scope)}`);

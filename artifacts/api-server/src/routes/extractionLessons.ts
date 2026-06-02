@@ -6,7 +6,7 @@ import { requireAuth, requireAdmin } from "../middleware/auth";
 import { ensureExtractionLessonsTable, getActiveLessons, type LessonScope } from "../lib/extractionLessons";
 
 const router: IRouter = Router();
-const SCOPES = ["all", "om", "rent-roll", "sales"];
+const SCOPES = ["all", "om", "rent-roll", "lease-options", "sales"];
 
 // GET /api/extraction-lessons?scope=om — list active lessons (any signed-in user;
 // the client extraction paths read these to inject into prompts).

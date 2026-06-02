@@ -5,7 +5,7 @@ import { extractPdfImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { classifyDocument, matchDeal, type DocType } from "../lib/docClassify";
-import { extractRentRoll, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
+import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 
 interface QueueItem {
@@ -269,7 +269,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     propertyName: string | null, address: string | null,
   ) => {
     updateItem(itemId, { msg: "Reading lease options…", progress: 55, routedType: "lease-options" });
-    const result = await extractRentRoll(text);
+    const result = await extractLeaseOptions(text);
     const hint = { propertyName, address, fileName };
     const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
     if (m.deal && m.confidence !== "none") {

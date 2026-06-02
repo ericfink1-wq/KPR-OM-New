@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { extractionLessonsTable } from "@workspace/db";
 import { sql, eq, desc } from "drizzle-orm";
 
-export type LessonScope = "all" | "om" | "rent-roll" | "sales";
+export type LessonScope = "all" | "om" | "rent-roll" | "lease-options" | "sales";
 
 // Runtime-provision the table (idempotent), mirroring ensureUsersTable so Replit
 // never proposes a destructive migration for a runtime-created table.

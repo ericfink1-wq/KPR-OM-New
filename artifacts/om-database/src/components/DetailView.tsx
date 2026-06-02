@@ -939,6 +939,7 @@ const SCOPE_OPTS: Array<{ value: LessonScope; label: string }> = [
   { value: "all", label: "All documents" },
   { value: "om", label: "Offering memorandums" },
   { value: "rent-roll", label: "Rent rolls" },
+  { value: "lease-options", label: "Lease options" },
   { value: "sales", label: "Sales reports" },
 ];
 function TeachExtractorModal({ onClose }: { onClose: () => void }) {

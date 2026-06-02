@@ -15,7 +15,7 @@ export async function extractRentRoll(text: string): Promise<RentRollResult> {
 Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","tenants":[{...}],"reviewQuestions":[{...}]}
 
 Each tenant object (omit unknown fields):
-{"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","rentBumps","rentSchedule","renewalOptions","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
+{"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","rentBumps","rentSchedule","renewalOptions","recentlyExercisedRenewal","assumptionNote","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
 
 Rules:
 - Brand name only (no store #).
@@ -28,13 +28,14 @@ Rules:
 
 CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
 - CAPTURE EVERY occupied line, never drop tenants. Anchors / junior anchors (the largest-SF tenants — grocers, Burlington, Marshalls, banks) are the MOST important to never omit. Before finishing, confirm the sum of your tenant SF reconciles with the rent roll's stated occupied SF; if it doesn't, you missed tenants — add them (largest first).
-- leaseExpiry = CURRENT contractual expiration, NOT an option-extended date. If the roll shows a pro-forma "End" that assumes options are exercised, use the current expiry and put option dates in renewalOptions.
-- rentPerSF / annualRent = CURRENT in-place rent, NOT a future renewal-option rate.
-- MONTHLY vs ANNUAL: rent rolls usually show base rent as a MONTHLY amount. annualRent must be ANNUAL — multiply a monthly figure by 12. Sanity-check: rentPerSF should ≈ annualRent ÷ SF (a normal inline rent is roughly $10–$120/SF, never thousands).
-- FUTURE RENT INCREASES: capture any "future rent increases" / scheduled step columns into rentSchedule (dated steps); note "flat" if none.
-- EXCLUDE non-inline / outparcel rows: shadow anchors and ground-lease pads that are NOT part of this property — typically 0 SF with a placeholder far-future expiration (e.g. 2098/2099), such as Costco, Target, a theater, or a separately-owned bank/restaurant pad. Do NOT list these as tenants. (A real lease that happens to show 0 SF but has a NORMAL near-term expiration and ordinary rent — e.g. a gas station — IS a real tenant; keep it.)
-- DEDUPE SECTIONS: a rent roll may have separate sections like "New Leases" / "Occupied" / "Vacant". If the same tenant or suite appears in BOTH a future/"New Leases" section AND an in-place "Occupied" section, output ONE row using the OCCUPIED (current) lease; treat the future-commencing row as a renewal and fold its dates/rate into renewalOptions or rentSchedule. Never emit two rows for the same tenant/suite. Skip "Vacant" rows (no tenant name).
-- suite: always capture the suite/unit id when present (e.g. "15908A", "B", "A-FUEL") — it's the most reliable key for matching this tenant to an existing roster.
+- leaseExpiry = CURRENT contractual expiration, NOT an unexercised option-extended date. If the roll shows a pro-forma "End" that assumes options are exercised, use the current expiry and put option dates in renewalOptions.
+- BILLING BREAKDOWN → base rent vs reimbursements. Some rent rolls show the "Base Rent" / "Rate PSF" column as the TOTAL monthly billing, then a "Breakdown:" sub-section that splits it into "RNT - Rent" (the TRUE base rent) plus recovery lines ("CAM", "TAX" or "RET", "INS", etc.). When a breakdown is present: annualRent = the RNT/Rent line × 12 (NOT the gross total); expenseReimbursements = the SUM of the CAM + TAX/RET + INS + other recovery lines × 12; rentPerSF = base annualRent ÷ SF; set reimbursementMethod to "NNN" when CAM/TAX/INS are billed back. If there is NO breakdown, treat the base-rent column as base rent.
+- MONTHLY vs ANNUAL: amounts in these rolls are MONTHLY. annualRent and expenseReimbursements must be ANNUAL — multiply monthly figures by 12. Sanity-check: rentPerSF ≈ annualRent ÷ SF (a normal inline rent is ~$10–$120/SF, never thousands).
+- rentSchedule = ONLY clean dated rent steps ("2027-12-01: $33.01 PSF") or "Flat at $X PSF through YYYY-MM-DD". NEVER put prose, explanations, or renewal narratives in rentSchedule — that belongs in assumptionNote. The "Future Rent Increases" columns/sub-rows (Cat / Date / Monthly Amount / PSF) ARE the steps — capture each future-dated one as a dated step (convert monthly amount to PSF or annual as needed).
+- EXECUTED RENEWAL (extends the term): if a tenant appears in a "New Leases" section with a term that BEGINS the day after its current "Occupied" expiration (a contiguous, already-executed renewal), the lease has been extended — set leaseExpiry to the NEW (later) end date, and note it in recentlyExercisedRenewal (e.g. "10-yr renewal executed, now through 2037-01-18"). This is DIFFERENT from an unexercised OPTION (which stays in renewalOptions and does NOT change leaseExpiry).
+- EXCLUDE non-inline / outparcel rows: shadow anchors and ground-lease pads that are NOT part of this property — typically 0 SF with a placeholder far-future or 12/31/00 expiration, or explicitly marked "(NAP)" / "Not A Part", such as Costco, Target, a theater, or a separately-owned bank/restaurant pad. Do NOT list these as tenants. (A real lease that happens to show 0 SF but has a NORMAL near-term expiration and ordinary rent — e.g. a gas station — IS a real tenant; keep it.)
+- DEDUPE SECTIONS: a rent roll may have separate sections like "New Leases" / "Occupied" / "Vacant". If the same tenant or suite appears in BOTH a future/"New Leases" section AND an in-place "Occupied" section, output ONE row. Use the OCCUPIED current rent/SF; apply the EXECUTED RENEWAL rule above for the expiry. Never emit two rows for the same tenant/suite. Skip "Vacant" rows (no tenant name).
+- suite: always capture the suite/unit id when present (e.g. "14-WALM", "15908A", "B") — it's the most reliable key for matching this tenant to an existing roster.
 - leaseType is the REIMBURSEMENT / LEASE STRUCTURE (NNN, Gross, Modified Gross, NN, Base Year). It is NOT a renewal-option type. NEVER put option-type codes like "AUT" (automatic) or "REN" (renewal) in leaseType — those describe the renewal option; put that detail in renewalOptions, or omit it. Leave leaseType null if the structure isn't stated.
 
 reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"human label e.g. 'Five Below — SF'","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string","target":{"kind":"tenant","fieldKey":"exact tenant field key (sf, rentPerSF, annualRent, leaseStart, leaseExpiry, remainingTermYears, salesPSF)","tenantName":"exact tenant name from the tenants array","valueType":"number|text"}}. ALWAYS set target when the question is about one tenant's field so the user can fix it in one click; set target null only for non-field questions (e.g. possible duplicate rows). Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
@@ -76,6 +77,39 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
     })
     .filter(q => q.question);
   return { asOf: parsed.asOf || new Date().toISOString().slice(0, 10), tenants, reviewQuestions };
+}
+
+// Extract a lease-OPTIONS schedule into per-tenant renewalOptions strings. These
+// files list each occupant followed by their renewal-option rows (Option Type,
+// Option Date, Term To Date, Term in Months, Rate, Option Notes). The generic
+// rent-roll extractor can't parse that ladder, so options came out empty — this
+// builds one readable renewalOptions string per tenant. Returned as a
+// RentRollResult so buildOptionsPatch can enrich the roster unchanged.
+export async function extractLeaseOptions(text: string): Promise<RentRollResult> {
+  const prompt = `You are a CRE data extraction engine. This is a LEASE OPTIONS schedule: each tenant has a header (Suite, Occupant Name, current Expiration), followed by one or more renewal-OPTION rows. Each option row has: an option number, Option Type (REN = renewal-by-notice, AUT = automatic), Option/Notice dates, "Term To Date" (the option period's END date), Term in Months, a Rate (PSF), and Option Notes (which often state the renewal rent $/month).
+
+For EACH tenant, produce ONE object: {"name","suite","renewalOptions"}.
+- renewalOptions: a single readable string listing every option in order, formatted "Opt N: $<rate>/SF → <Mon YYYY>" using the Term To Date (option END) for the date, e.g. "Opt 1: $18.91/SF → Jul 2040; Opt 2: $20.33/SF → Jul 2045; Opt 3: $21.85/SF → Jul 2050". Omit the rate if not given ("Opt 1: → Feb 2034"). Do NOT include the long legal "Doc. Ref / Notice Period / Subordinate Details" prose — just the rate and end date per option.
+- name: brand only (strip store #). suite: the suite id.
+- Skip tenants with no option rows.
+
+Return ONLY JSON: {"tenants":[{"name","suite","renewalOptions"}]}. No prose, no code fences.
+
+LEASE OPTIONS TEXT:
+${text.slice(0, 60000)}`;
+  const taught = await lessonGuidanceClient("lease-options");
+  const res = await apiAiMessages({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 8000,
+    messages: [{ role: "user", content: prompt + taught }],
+  });
+  const raw = res.content?.[0]?.text ?? "";
+  let parsed: { tenants?: unknown[] };
+  try { parsed = robustParseJSON(raw) as typeof parsed; }
+  catch { throw new Error("Couldn't parse the lease-options file."); }
+  const tenants = (Array.isArray(parsed.tenants) ? parsed.tenants : []) as NonNullable<Deal["tenants"]>;
+  if (tenants.length === 0) throw new Error("No options found in the lease-options file.");
+  return { asOf: new Date().toISOString().slice(0, 10), tenants, reviewQuestions: [] };
 }
 
 // Recompute occupancy + WALT from a fresh roster, respecting verified locks.
