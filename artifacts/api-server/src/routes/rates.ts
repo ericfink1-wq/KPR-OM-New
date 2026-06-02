@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth";
 import { fetchTodaysRates, debugIronhound, type RatesPayload } from "../lib/rates";
 
 const router = Router();
@@ -10,7 +9,12 @@ let cache: { at: number; data: RatesPayload } | null = null;
 const TTL_MS = 60 * 60 * 1000;
 
 // GET /api/rates — current benchmark rates (Treasuries, SOFR, indicative swaps).
-router.get("/rates", requireAuth, async (req, res) => {
+// PUBLIC: these are official public market figures (US Treasury, NY Fed SOFR,
+// indicative swaps) with no KPR-proprietary data — intentionally not auth-gated,
+// so the panel works even if the browser session has lapsed (a logged-out
+// session was surfacing a misleading "Not authenticated" here, and the Refresh
+// button silently 401'd, leaving a stale timestamp on screen).
+router.get("/rates", async (req, res) => {
   try {
     const force = req.query.refresh === "1";
     if (!force && cache && Date.now() - cache.at < TTL_MS) {
