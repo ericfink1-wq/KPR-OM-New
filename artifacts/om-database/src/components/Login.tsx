@@ -120,14 +120,14 @@ export default function Login({ onLogin }: Props) {
 
         {mode === "login" && (
           <div style={{ marginTop: 12, textAlign: "center" }}>
-            <button onClick={() => switchMode("forgot")} style={{ background: "none", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 11.5, padding: 0 }}>Forgot password?</button>
+            <button onClick={() => switchMode("forgot")} style={{ background: "none", border: "none", color: "#7d766a", cursor: "pointer", fontSize: 14, fontWeight: 500, padding: 0 }}>Forgot password?</button>
           </div>
         )}
 
-        <div style={{ marginTop: 16, textAlign: "center", fontSize: 12, color: "#a89f8f" }}>
-          {mode === "login" && <>New here? <button onClick={() => switchMode("register")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>Create an account</button></>}
-          {mode === "register" && <>Already have an account? <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>Sign in</button></>}
-          {mode === "forgot" && <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>← Back to sign in</button>}
+        <div style={{ marginTop: 16, textAlign: "center", fontSize: 14, color: "#7d766a" }}>
+          {mode === "login" && <>New here? <button onClick={() => switchMode("register")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Create an account</button></>}
+          {mode === "register" && <>Already have an account? <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Sign in</button></>}
+          {mode === "forgot" && <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>← Back to sign in</button>}
         </div>
       </div>
     </div>
