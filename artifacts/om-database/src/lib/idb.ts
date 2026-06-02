@@ -307,6 +307,7 @@ export interface Deal {
   address?: string;
   city?: string;
   state?: string;
+  zip?: string;
   market?: string;
   submarket?: string;
   assetType?: string;

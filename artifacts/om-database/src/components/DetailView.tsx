@@ -1124,7 +1124,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
   const [teachOpen, setTeachOpen] = useState(false);
   const [editingAddr, setEditingAddr] = useState(false);
-  const [addrDraft, setAddrDraft] = useState({ address: "", city: "", state: "" });
+  const [addrDraft, setAddrDraft] = useState({ address: "", city: "", state: "", zip: "" });
   const [reanalyzeBusy, setReanalyzeBusy] = useState(false);
   const rerunPdfRef = useRef<HTMLInputElement>(null);
   const [rrBusy, setRrBusy] = useState(false);
@@ -1727,8 +1727,10 @@ ${text.slice(0, 60000)}`;
     const street = (d.address || "").trim();
     const city = (d.city || "").trim();
     const state = (d.state || "").trim();
-    if (state && new RegExp(`\\b${state}\\b`, "i").test(street)) return street;
-    const parts = [street, city, state].filter(Boolean);
+    const zip = (d.zip || "").trim();
+    const stateZip = [state, zip].filter(Boolean).join(" ");
+    if (state && new RegExp(`\\b${state}\\b`, "i").test(street)) return [street, zip].filter(Boolean).join(" ");
+    const parts = [street, city, stateZip].filter(Boolean);
     return parts.join(", ");
   })();
 
@@ -1920,13 +1922,15 @@ ${text.slice(0, 60000)}`;
             style={{ flex:"0 1 140px", minWidth:90, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
           <input value={addrDraft.state} onChange={e => setAddrDraft(a => ({ ...a, state: e.target.value.toUpperCase().slice(0,2) }))} placeholder="ST" maxLength={2}
             style={{ width:46, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff", textTransform:"uppercase" }} />
-          <button onClick={() => { onUpdate(d.id, { address: addrDraft.address.trim(), city: addrDraft.city.trim(), state: addrDraft.state.trim().toUpperCase() }); setEditingAddr(false); }}
+          <input value={addrDraft.zip} onChange={e => setAddrDraft(a => ({ ...a, zip: e.target.value.replace(/[^0-9-]/g, "").slice(0,10) }))} placeholder="ZIP" inputMode="numeric"
+            style={{ width:72, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
+          <button onClick={() => { onUpdate(d.id, { address: addrDraft.address.trim(), city: addrDraft.city.trim(), state: addrDraft.state.trim().toUpperCase(), zip: addrDraft.zip.trim() }); setEditingAddr(false); }}
             style={{ background:"#26281f", color:"#fff", border:"none", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Save</button>
           <button onClick={() => setEditingAddr(false)}
             style={{ background:"transparent", color:"#a89f8f", border:"none", padding:"6px 8px", fontSize:12, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Cancel</button>
         </div>
       ) : (
-        <p onClick={() => { setAddrDraft({ address: d.address || "", city: d.city || "", state: d.state || "" }); setEditingAddr(true); }}
+        <p onClick={() => { setAddrDraft({ address: d.address || "", city: d.city || "", state: d.state || "", zip: d.zip || "" }); setEditingAddr(true); }}
           title="Click to edit the address"
           style={{ color: fullAddress ? "#6f6a5f" : "#b08a3c", fontSize:12, margin:"0 0 12px 0", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6 }}>
           {fullAddress || "+ Add address (needed for closing costs)"}

@@ -25,6 +25,7 @@ REQUIRED SCHEMA:
   "address": "full street address",
   "city": "city / town name only, e.g. 'Lewis Center' (no state or zip) or null",
   "state": "2-letter state abbreviation, e.g. 'OH' or null",
+  "zip": "5-digit ZIP code (or ZIP+4) or null — from the property address",
   "market": "metro market (e.g. Dallas-Fort Worth)",
   "submarket": "string or null",
   "assetType": "Retail|Office|Industrial|Multifamily|Mixed-Use|NNN|Other",
