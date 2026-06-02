@@ -311,17 +311,14 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   if (filterTypes.length > 0) rows = rows.filter(d => d.assetType != null && filterTypes.includes(d.assetType));
   if (q.trim()) {
     const s = q.toLowerCase();
-    // Search across all meaningful fields — name, location, type, status, tenants/
-    // anchors, lenders, narrative/notes/thesis, and key numbers — not just the name.
+    // Match ONLY the columns visible in the Deal Library row — property name,
+    // status, city, state, MSA, lead anchor, seller. We deliberately do NOT search
+    // hidden/deep data (street address, notes, thesis, the full tenant roster,
+    // lenders, red flags), which made the box feel over-sensitive (e.g. "floriss"
+    // matching a street address). Results now always map to something on screen.
     const hay = (d: Deal): string => {
-      const parts: (string | number | null | undefined)[] = [
-        d.propertyName, d.fileName, d.market, d.address, d.city, d.state,
-        d.assetType, d.centerType, d.status, d.notes, d.userNotes, d.dealThesis,
-        d.debtLender, d.txnSeller, d.txnBuyer,
-        Array.isArray(d.keyAssumptions) ? d.keyAssumptions.join(" ") : d.keyAssumptions,
-        (d.tenants || []).map(t => `${t.name ?? ""} ${t.canonicalName ?? ""} ${t.parentCompany ?? ""}`).join(" "),
-        (d.redFlags || []).map(f => f.description).join(" "),
-        (d.upsideItems || []).map(u => `${u.item} ${u.detail}`).join(" "),
+      const parts: (string | null | undefined)[] = [
+        d.propertyName, d.status, d.city, d.state, d.market, d.seller, leadAnchorName(d),
       ];
       return parts.filter(Boolean).join(" ").toLowerCase();
     };
