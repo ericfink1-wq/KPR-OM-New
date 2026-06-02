@@ -471,12 +471,29 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
         altGroup: "MD-county", altLabel: "All Other MD Counties", altDefault: true,
         base: "price", party: "split",
         notes: "Allegany, Calvert, Caroline, Carroll, Cecil, Charles, Dorchester, Frederick, Garrett, Kent, Queen Anne's, Somerset, Talbot, Washington, Wicomico, Worcester: 0.5% county each. Split 50/50. Combined with state: 1.0% total." },
+      // ── County recordation tax — charged on the DEED (purchase price), split
+      // 50/50. Region-aware via the same MD-county selector. The deed-of-trust
+      // recordation is EXEMPT under MD's purchase-money exemption when the loan
+      // does not exceed the price (the usual acquisition), so we charge it once,
+      // on the price — NOT on the loan as before.
+      { name: "Recordation Tax (on the deed / price)", rate: 0.01, rateMin: 0, rateMax: 0.01,
+        altGroup: "MD-county", altLabel: "Baltimore City", base: "price", party: "split",
+        notes: "Baltimore City recordation ≈ $5.00/$500 = 1.0% of price. Split 50/50. (Charged on the deed; purchase-money deed of trust exempt up to the price.)" },
+      { name: "Recordation Tax (on the deed / price)", rate: 0.005, rateMin: 0, rateMax: 0.005,
+        altGroup: "MD-county", altLabel: "Baltimore Co./Howard Co.", base: "price", party: "split",
+        notes: "Baltimore County & Howard County recordation ≈ $2.50/$500 = 0.50% of price (lowest in MD). Split 50/50." },
+      { name: "Recordation Tax (on the deed / price)", rate: 0.0055, rateMin: 0, rateMax: 0.0055,
+        altGroup: "MD-county", altLabel: "Prince George's County", base: "price", party: "split",
+        notes: "Prince George's recordation ≈ $5.50/$1,000 = 0.55% of price. Split 50/50. (Corrected — was wrongly 1.10%.)" },
+      { name: "Recordation Tax (on the deed / price)", rate: 0.007, rateMin: 0.007, rateMax: 0.009,
+        altGroup: "MD-county", altLabel: "Anne Arundel/Montgomery/etc.", base: "price", party: "split",
+        notes: "Anne Arundel recordation ≈ $3.50/$500 = 0.70%. NOTE: Montgomery County is higher — ~$4.45/$500 = 0.89% base PLUS surcharges above $500K (up to ~1.35% on the portion over $1M); for a Montgomery deal verify the tiered rate. Split 50/50." },
+      { name: "Recordation Tax (on the deed / price)", rate: 0.0055, rateMin: 0.003, rateMax: 0.014,
+        altGroup: "MD-county", altLabel: "All Other MD Counties", base: "price", party: "split",
+        notes: "Recordation varies widely by county (≈$3/$1K = 0.30% in Allegany/Garrett/Kent up to ~$7/$500 = 1.40% in Charles/Frederick); ~0.55% is a mid-range placeholder. ALWAYS verify the specific county's recordation rate. Split 50/50." },
     ],
-    mortgageRecordingTax: { name: "County Recordation Tax (assessed on deed value / deed of trust)",
-      rate: 0.0089, rateMin: 0.003, rateMax: 0.011, base: "loan", party: "split",
-      notes: "SEPARATE from transfer tax. Also assessed on the deed and on deeds of trust. Varies by county: Allegany/Garrett/Kent $3/$1K (0.30%); most mid-tier counties $5–$6/$1K (0.50%–0.60%); Anne Arundel $7/$1K (0.70%); Baltimore City $10/$1K (1.00%); Montgomery $8.90/$1K (0.89%); Prince George's $11/$1K (1.10%); Talbot $7/$1K (0.70%). Split equally by custom. Baltimore City total deed burden: state 0.5% + county transfer 1.5% + city recordation 1.0% = 3.0% on price." },
     recordingFeesFlat: 100,
-    notes: "ALWAYS verify the exact county. Maryland has both a Transfer Tax AND a Recordation Tax on the deed — each varies by county and both are split equally. Baltimore City: ~3.0% combined. Montgomery/Prince George's (DC suburbs): ~2.4–2.5%. Rural counties: ~1.0–1.3%. Transfer taxes + recordation taxes together represent the full MD closing cost burden.",
+    notes: "Maryland deeds carry BOTH a transfer tax (state 0.5% + county, varies) AND a county recordation tax — both on the PURCHASE PRICE, both split 50/50. The deed-of-trust recordation is exempt under the purchase-money exemption when the loan ≤ price (the usual case), so recordation is charged once on the deed. County recordation rates vary a lot (0.30%–1.40%) — VERIFY the exact county (esp. Montgomery's tiered surcharges) with the county/DLS table; values here are best-effort. Baltimore City ≈ 3.0% combined; Montgomery/PG ≈ 2.0–2.5%.",
   },
 
   PA: {
