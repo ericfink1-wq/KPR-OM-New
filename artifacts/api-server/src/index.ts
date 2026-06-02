@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureUsersTable } from "./routes/auth";
+import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 
 const rawPort = process.env["PORT"];
 
@@ -29,6 +30,14 @@ const server = app.listen(port, (err) => {
 ensureUsersTable()
   .then(() => logger.info("Accounts tables ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureUsersTable failed on startup (will retry on first auth request)"));
+
+// Provision the runtime-added tenant_index columns on startup too, so the DEV
+// database (which only gets them when these run) matches PROD. That keeps
+// Replit's publish diff clean and stops it proposing to DROP these columns on
+// every publish. Best-effort. Keep in sync with schema/tenantIndex.ts.
+ensureTenantIndexColumns()
+  .then(() => logger.info("tenant_index columns ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureTenantIndexColumns failed on startup (will retry on first index query)"));
 
 // Allow long-running AI calls (AnalystChat, lookup endpoints) up to 5 minutes.
 // The PDF ingest route is not affected since it returns immediately.
