@@ -368,10 +368,10 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
         base: "price", party: "seller",
         tiers: [{ over: 0, rate: 0.01 }, { over: 500000, rate: 0.01425 }],
         notes: "NYC residential only: 1.0% ≤$500K; 1.425% above. Seller pays. Not applicable to commercial investment property." },
-      { name: "Yonkers City Transfer Tax", rate: 0.025, rateMin: 0, rateMax: 0.025,
+      { name: "Yonkers City Transfer Tax", rate: 0.015, rateMin: 0, rateMax: 0.015,
         altGroup: "NY-local", altLabel: "Yonkers",
         base: "price", party: "seller",
-        notes: "City of Yonkers (Westchester County) ONLY: 2.5% city transfer tax in addition to state 0.4%. Combined Yonkers: 2.9% total. Other Westchester municipalities: no local tax. Verify property is in Yonkers city limits." },
+        notes: "City of Yonkers (Westchester County) ONLY: 1.5% city transfer tax in addition to state 0.4%. Combined Yonkers: 1.9% total. Seller pays. Other Westchester municipalities: no local tax. Verify property is in Yonkers city limits." },
       { name: "NYS Additional Transfer Tax (residential COOP/condo >$2M)", rate: 0.0025, rateMin: 0, rateMax: 0.0025,
         residentialOnly: true,
         base: "price", party: "seller",
@@ -379,12 +379,22 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
       { name: "NYC / Local Transfer Tax", rate: 0, altGroup: "NY-local", altLabel: "Outside NYC/Yonkers", altDefault: true,
         base: "price", party: "seller",
         notes: "No local city transfer tax outside NYC 5 boroughs or Yonkers. Nassau, Suffolk, Westchester (ex-Yonkers), and all upstate counties: state 0.4% only." },
+      // Mortgage Recording Tax — region-aware (buyer, on the loan). Tied to the same
+      // NY-local region selector so it follows the chosen jurisdiction. NYC is the
+      // outlier at 2.8% for commercial; most retail centers sit in the suburbs/
+      // upstate at ~1.05%, where a flat 2.8% would massively overstate cost.
+      { name: "Mortgage Recording Tax — NYC commercial", rate: 0.028, rateMin: 0.0105, rateMax: 0.028,
+        altGroup: "NY-local", altLabel: "NYC", base: "loan", party: "buyer",
+        notes: "NYC 5 boroughs, commercial / loan ≥$500K: 2.8% (state + city). Buyer pays. (NYC residential ≥$500K: 1.925%.) This is the single largest NYC buyer cost." },
+      { name: "Mortgage Recording Tax — Westchester (Yonkers)", rate: 0.0105, rateMin: 0.0105, rateMax: 0.013,
+        altGroup: "NY-local", altLabel: "Yonkers", base: "loan", party: "buyer",
+        notes: "Westchester County: ~1.05% mortgage recording tax (state 0.5% + 0.25% special additional + ~0.3% county). Buyer pays. Far below NYC's 2.8%." },
+      { name: "Mortgage Recording Tax — Nassau/Suffolk/Westchester & upstate", rate: 0.0105, rateMin: 0.01, rateMax: 0.013,
+        altGroup: "NY-local", altLabel: "Outside NYC/Yonkers", base: "loan", party: "buyer",
+        notes: "Outside NYC: Nassau/Suffolk/Westchester ≈ 1.05%; most upstate counties ≈ 1.0%–1.05%. Buyer pays. NOT the NYC 2.8% rate — this is where suburban retail centers fall." },
     ],
-    mortgageRecordingTax: { name: "Mortgage Recording Tax (MRT)", rate: 0.028, rateMin: 0.0105, rateMax: 0.028,
-      base: "loan", party: "buyer",
-      notes: "NYC commercial ≥$500K: 2.8% (2.05% state + 0.75% NYC). NYC residential: 2.05%. Nassau/Suffolk/Westchester: ~1.05%–1.3%. Other NY: 1.05%. Buyer pays. MRT is the largest single buyer cost in NYC transactions." },
     recordingFeesFlat: 250,
-    notes: "NYC is among the most expensive closing jurisdictions nationally. State 0.4% + NYC RPTT 2.625% = ~3.025% seller; MRT 2.8% buyer. Total NYC transfer cost on a $20M deal: seller ~$605K + buyer ~$364K = ~$969K. Upstate: state 0.4% seller only. Always identify borough/county.",
+    notes: "Pick the region (NYC / Yonkers / Outside) — it drives BOTH the transfer tax and the mortgage recording tax (MRT). NYC: state 0.4% + RPTT 2.625% ≈ 3.0% seller, MRT 2.8% buyer (very expensive). Yonkers: state 0.4% + city 1.5% = 1.9% seller, MRT ~1.05% buyer. Outside NYC/Yonkers (most suburban/upstate retail centers): state 0.4% seller only, MRT ~1.05% buyer — NOT the NYC 2.8% rate. Always identify the borough/county.",
   },
 
   RI: {
