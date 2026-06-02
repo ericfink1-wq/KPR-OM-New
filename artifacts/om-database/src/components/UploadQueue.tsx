@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import type { Deal, ImageBundle } from "../lib/idb";
+import type { Deal, ImageBundle, ReviewQuestion } from "../lib/idb";
 import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload } from "../lib/api";
 import { extractPdfImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote } from "../lib/utils";
@@ -95,12 +95,96 @@ function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): D
     const k = f as keyof Deal;
     if (existing[k] !== undefined) (verifiedOverrides as Record<string, unknown>)[f] = existing[k];
   }
+
+  // Conservative merge: KEEP everything the existing deal already has and only
+  // FILL fields that are currently empty from the new extraction — a re-upload
+  // never silently overwrites your data. Factual fields that genuinely CONFLICT
+  // are flagged for review (with a one-click "apply the OM's value") instead of
+  // being assumed correct.
+  const ex = existing as unknown as Record<string, unknown>;
+  const nw = extracted as Record<string, unknown>;
+  const merged: Record<string, unknown> = { ...ex };
+  for (const [k, v] of Object.entries(nw)) {
+    if (isEmptyVal(ex[k]) && !isEmptyVal(v)) merged[k] = v; // gap-fill only
+  }
+
+  const verifiedSet = new Set(verifiedFields);
+  const stamp = Date.now().toString(36);
+  const flags: ReviewQuestion[] = [];
+  for (const f of REFRESH_FLAG_FIELDS) {
+    if (verifiedSet.has(f.key)) continue;                 // user already verified — leave alone
+    const oldV = ex[f.key], newV = nw[f.key];
+    if (isEmptyVal(oldV) || isEmptyVal(newV)) continue;    // a gap, not a conflict
+    const conflict = f.type === "number"
+      ? (() => { const a = Number(oldV), b = Number(newV); return !isNaN(a) && !isNaN(b) && !numClose(a, b); })()
+      : !strClose(String(oldV), String(newV));
+    if (!conflict) continue;
+    const fmt = (v: unknown) => f.type === "number" ? Number(v).toLocaleString() : String(v);
+    flags.push({
+      id: `refresh-${f.key}-${stamp}`, source: "check", severity: f.sev, field: f.label,
+      question: `The re-uploaded OM lists a different ${f.label} — keep your current value or update it?`,
+      detail: `Current: ${fmt(oldV)} · OM now says: ${fmt(newV)}. Your current value was kept; apply to take the OM's.`,
+      suggestedValue: String(newV),
+      target: { kind: "deal", fieldKey: f.key, tenantName: null, valueType: f.type },
+    });
+  }
+
+  // Tenants: keep the existing roster (often manually curated / rent-roll sourced).
+  // Take the new one only if there wasn't one; flag a material size mismatch.
+  const exTenants = (existing.tenants || []);
+  const newTenants = Array.isArray(nw.tenants) ? (nw.tenants as unknown[]) : [];
+  if (exTenants.length === 0 && newTenants.length > 0) {
+    merged.tenants = newTenants;
+  } else if (exTenants.length > 0 && newTenants.length > 0 && Math.abs(exTenants.length - newTenants.length) >= 1) {
+    flags.push({
+      id: `refresh-tenants-${stamp}`, source: "check", severity: "medium", field: "Tenant roster",
+      question: `The re-uploaded OM has ${newTenants.length} tenants vs your current ${exTenants.length} — review the roster?`,
+      detail: `Your current roster was kept. Use "Refresh tenants" or paste a rent roll if the OM's roster is more current.`,
+      suggestedValue: null, target: null,
+    });
+  }
+
+  const priorQs = (existing.reviewQuestions || []).filter(q => !(q.id || "").startsWith("refresh-"));
   return {
-    ...existing, ...(extracted as Partial<Deal>), ...preserved, ...verifiedOverrides,
+    ...(merged as Partial<Deal>), ...preserved, ...verifiedOverrides,
     id: existing.id, uploadedAt: existing.uploadedAt,
     refreshedAt: new Date().toISOString(),
+    analysisStale: true,
+    reviewQuestions: [...priorQs, ...flags],
   } as Deal;
 }
+
+// Helpers for the conservative refresh merge.
+function isEmptyVal(v: unknown): boolean {
+  return v == null || v === "" || (Array.isArray(v) && v.length === 0);
+}
+function numClose(a: number, b: number): boolean {
+  const m = Math.max(Math.abs(a), Math.abs(b));
+  return m === 0 ? true : Math.abs(a - b) / m <= 0.005; // within 0.5% ≈ rounding, not a real conflict
+}
+function strClose(a: string, b: string): boolean {
+  const n = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+  return n(a) === n(b);
+}
+
+// Factual fields where a re-uploaded OM conflicting with the saved deal should be
+// FLAGGED (existing kept) rather than silently overwritten.
+const REFRESH_FLAG_FIELDS: { key: string; label: string; type: "number" | "text"; sev: "high" | "medium" | "low" }[] = [
+  { key: "askingPrice", label: "Asking Price", type: "number", sev: "high" },
+  { key: "capRate", label: "Cap Rate", type: "number", sev: "high" },
+  { key: "noi", label: "NOI", type: "number", sev: "high" },
+  { key: "totalSF", label: "Total SF", type: "number", sev: "high" },
+  { key: "occupancy", label: "Occupancy %", type: "number", sev: "medium" },
+  { key: "grossPotentialRent", label: "Gross Potential Rent", type: "number", sev: "medium" },
+  { key: "weightedAvgRentPSF", label: "Avg Rent PSF", type: "number", sev: "low" },
+  { key: "walt", label: "WALT", type: "number", sev: "low" },
+  { key: "yearBuilt", label: "Year Built", type: "number", sev: "low" },
+  { key: "loanBalance", label: "Loan Balance", type: "number", sev: "medium" },
+  { key: "loanRate", label: "Loan Rate", type: "number", sev: "medium" },
+  { key: "address", label: "Address", type: "text", sev: "medium" },
+  { key: "city", label: "City", type: "text", sev: "low" },
+  { key: "state", label: "State", type: "text", sev: "low" },
+];
 
 const MAX_CONCURRENT = 3;
 
