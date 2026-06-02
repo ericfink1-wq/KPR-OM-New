@@ -858,13 +858,13 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     titleInsuranceRate: 0.005, titleInsuranceParty: "seller",
     titleSchedule: REP_TITLE_MW_COMPETITIVE,
     transferTaxes: [
-      { name: "State Real Estate Transfer Tax", rate: 0.0015, base: "price", party: "seller",
-        notes: "$0.75 per $500 = 0.15%. Seller pays. Statewide." },
+      { name: "State Real Estate Transfer Tax", rate: 0.0075, base: "price", party: "seller",
+        notes: "$3.75 per $500 = $7.50 per $1,000 = 0.75%. Seller pays. Statewide (MCL 207.523)." },
       { name: "County Real Estate Transfer Tax", rate: 0.0011, base: "price", party: "seller",
-        notes: "$0.55 per $500 = 0.11%. Seller pays. ALL Michigan counties levy this amount — Wayne (Detroit), Oakland, Macomb, Kent (Grand Rapids), Ingham (Lansing): uniform rate. No city-level transfer taxes in MI. Combined state + county = 0.26% everywhere." },
+        notes: "$0.55 per $500 = 0.11%. Seller pays. ALL Michigan counties levy this amount — Wayne (Detroit), Oakland, Macomb, Kent (Grand Rapids), Ingham (Lansing): uniform rate. No city-level transfer taxes in MI. Combined state + county = 0.86% everywhere." },
     ],
     recordingFeesFlat: 50,
-    notes: "Michigan has a perfectly uniform transfer tax across all counties (state 0.15% + county 0.11% = 0.26% combined). No Detroit city transfer tax or any other municipal transfer tax. Seller pays both. Owner's policy customarily seller-paid.",
+    notes: "Michigan has a uniform transfer tax across all counties: state 0.75% + county 0.11% = 0.86% combined. No Detroit or other municipal transfer tax. Seller pays both. Owner's policy customarily seller-paid.",
   },
 
   MN: {
