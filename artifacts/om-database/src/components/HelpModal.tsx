@@ -76,11 +76,13 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Drop in a document — <B>PDF or Excel/CSV</B> — and the AI reads it. It auto-detects the type and, for a rent roll or sales report, matches it to the right deal (asking if unsure).</p>
+        <p style={{ margin:0 }}>Drop in a document — <B>PDF or Excel/CSV</B> — and the AI reads it. It <B>auto-detects the type</B> (OM, rent roll, lease options, or sales report) and routes each one to the right deal (asking only if unsure).</p>
+        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#eef7ee", border:"1px solid #cfe9c4", borderRadius:7, color:"#2f5d2a", fontSize:12.5 }}>✨ <B>Drop the whole set at once.</B> For one property you can drop the <B>OM + rent roll + lease-options + sales report together</B> — the app sorts each file, groups them to the same property, builds one deal, and <B>auto-refreshes the analysis</B> when it's done. No need to do them one at a time.</p>
         <BriefList items={[
-          <><B>OM</B> — click <B>Upload</B> (top-right) and pick one or more files; the AI fills in tenants, financials, lease terms, demographics, and the cover. ~1–3 min each, processed in parallel.</>,
-          <><B>Rent roll</B> — drop it in (auto-matches) or use a deal's <B>"⬆ Refresh tenants"</B>; updates the roster + as-of date only, leaving financials intact.</>,
-          <><B>Tenant sales report</B> — a deal's <B>Tenant Sales</B> panel → <B>"⬆ Upload Sales"</B>; auto-detects the year and tracks sales by vintage.</>,
+          <><B>OM</B> — the foundation: tenants, financials, lease terms, demographics, narrative, grade, cover. ~1–3 min each (the OM pass runs on a stronger model for accuracy).</>,
+          <><B>Rent roll</B> — your authoritative current roster (SF, current rent, dates, rent steps). It <B>only adds to and fills in</B> the roster — it can never delete a tenant.</>,
+          <><B>Lease options</B> — enriches each tenant's <B>renewal-option ladder</B>; it never adds or removes tenants.</>,
+          <><B>Sales report</B> — tenant sales by year; matched suite-aware to the roster and stacked by vintage.</>,
         ]} />
         <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}><B>Confirm import details:</B> if the AI was unsure about a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner — confirm, dismiss, or fix it right there.</p>
         <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>AI reads cost money.</B> Each PDF/Excel read uses paid tokens (a full OM is the biggest). Avoid re-uploading the same file; browsing, editing, and exporting are free.</p>
@@ -88,8 +90,10 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
-        <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → Re-run extraction</B>, or fix any value with its pencil icon.</>,
-        <><B>Rent roll vs. OM:</B> a rent roll becomes your verified roster (teal "RENT ROLL" tag); a later OM re-extraction won't overwrite it. After updating it, run <B>Actions → ✨ Refresh Analysis</B> to refresh the grade/narrative.</>,
+        <><B>Smart sorting is automatic</B> — the four file types are detected by their content/name and merged into one deal. The rent roll's fresher rents win on shared tenants; nothing gets wiped.</>,
+        <><B>🎓 Teach the extractor</B> (admin, on a deal's <B>Actions</B> menu) — caught a mistake? Write a rule in plain English (e.g. "always capture anchor tenants even on a separate page") and the AI applies it to every future extraction. It learns from your corrections.</>,
+        <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → Re-run extraction</B>, or fix any value with its pencil icon. A very large/complex OM is capped at ~5 min so it can't churn tokens; if it stops early it flags the roster for review.</>,
+        <><B>Rent roll vs. OM:</B> a rent roll becomes your verified roster (teal "RENT ROLL" tag); a later OM re-extraction won't overwrite it. Analysis auto-refreshes after an import, so the grade/narrative reflect the final merged roster.</>,
         <><B>Sales reports stack by year</B> — upload one annually to build a sales trend.</>,
         <><B>Advanced:</B> the ▾ by Upload also offers <em>Import a folder</em> and <em>Upload .json</em> (both merge by address; JSON deals auto-score).</>,
       ]} />
@@ -126,9 +130,10 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <>
         <p style={{ margin:0 }}>Click any card to open its detail page (Overview → Tenants/Sales/Rollover → Highlights/Upside/Flags → Financials/Comps/Closing Costs → Thesis/Cash Flow → Demographics → Notes). <B>Jump to ▾</B> in the sticky header skips to any section.</p>
         <BriefList items={[
-          <><B>Tenant roster</B> — every lease (SF, rent/SF, dates, term, options, anchor/credit flags). Click a tenant name for all its locations library-wide.</>,
+          <><B>Editable address</B> — click the address under the title to fill in street/city/state if the OM didn't capture them (the state drives the Closing Costs estimate).</>,
+          <><B>Tenant roster</B> — every lease (SF, rent/SF, annual rent, dates, term, rent steps, options, reimbursements). Anchor, Investment-Grade, NAP, dark-store and <B>ATM</B> badges. Click a tenant name for all its locations library-wide.</>,
           <><B>AI Highlights, Financials, Red Flags & Upside</B> — narrative, NOI/cap/occupancy/WALT, and AI-surfaced risks/opportunities.</>,
-          <><B>Comp Benchmark</B> — median cap rate and price/SF vs. comparable trades, with sample size and date range; exclude or add comps and it recomputes.</>,
+          <><B>Comp Benchmark</B> — median cap rate and price/SF vs. comparable trades (sample size + date range). Sort/search the comps, see each comp's <B>anchor</B>, <B>★ star</B> a great comp to weight it more, <B>×</B> drop one, or <B>click a comp to expand</B> its center detail.</>,
           <><B>Our Thesis / Assumptions</B> — type why you like the deal; <B>"Save & Re-grade"</B> folds it into the AI grade (it stays objective). Saved and shared with the team.</>,
           <><B>Trade Area demographics</B> — 1/3/5-mile population & income from US Census data.</>,
         ]} />
@@ -178,7 +183,9 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <><B>Lease rollover chart</B> — GLA & rent expiring by year; click a year to drill into which tenants roll (sortable).</>,
           <><B>Tenant & Parent concentration</B> — top exposure by rent or store count; an eye-slash toggle excludes an outlier and stats recompute live.</>,
           <><B>Pinned search</B> (Tenant Analytics) — jump to any tenant or parent; tenant/parent pages show a description plus all locations.</>,
-          <><B>Tenant Name Audit</B> — merge brand-name variants that aren't grouping (auto-rejects store-vs-fuel/storage pads).</>,
+          <><B>🔗 Link tenants</B> (All Tenants list) — tick two spellings of the same brand (e.g. <em>Walmart</em> / <em>Wal-Mart</em>), pick the name to keep, and they merge everywhere; unlink anytime.</>,
+          <><B>ATMs tracked separately</B> from bank branches (their own <B>ATM</B> badge) but still rolling up to the same parent bank. A <B>Hide/Show ATMs</B> toggle appears when a dataset has any.</>,
+          <><B>Tenant Name Audit</B> — review/merge brand-name variants that aren't grouping (auto-rejects store-vs-fuel/storage pads).</>,
         ]} />
       </>
     ),
@@ -206,8 +213,8 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
-        <>The deal-page Comp Benchmark weights <B>OWNED &gt; MANUAL &gt; OM</B>. JSON imports instantly; Excel/PDF are AI-read and shown for review (small token cost) before adding — tagged UPLOAD and fully editable.</>,
-        <>Use Excel export to share a comp set or build a pricing model outside the app.</>,
+        <>The deal-page Comp Benchmark weights <B>OWNED &gt; MANUAL &gt; OM</B>, auto-includes strongly-similar trades (by region/anchor/size/cap), and suggests more you can add. <B>★ Star</B> a comp to force-include it and weight it 3× in the medians; <B>click any comp to expand</B> its full center detail (address, anchor, occupancy, buyer/seller, why it matched).</>,
+        <>JSON imports instantly; Excel/PDF are AI-read and shown for review (small token cost) before adding — tagged UPLOAD and fully editable. Use Excel export to share a comp set or build a pricing model outside the app.</>,
       ]} />
     ),
   },
@@ -217,10 +224,12 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     brief: (
       <>
         <BriefList items={[
+          <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and an admin approves them under <B>Members</B> (they get an email that they're cleared). Logins now persist across updates.</>,
+          <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps (the 3-year is an estimate from the Treasury curve when not quoted directly).</>,
           <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
           <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,
           <><B>Verified fields</B> — lock a confirmed figure against future re-extractions.</>,
-          <><B>Feedback button</B> (life-ring, bottom-left) goes straight to the team.</>,
+          <><B>Feedback flag</B> (bottom-left) goes straight to the team; it lifts above the import panel while uploading.</>,
         ]} />
       </>
     ),
