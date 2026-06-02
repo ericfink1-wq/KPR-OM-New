@@ -5,8 +5,38 @@ import { db, usersTable, loginEventsTable } from "@workspace/db";
 import { eq, and, gt, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, validatePassword, sha256 } from "../lib/password";
 import { requireAuth, requireAdmin } from "../middleware/auth";
+import { logger } from "../lib/logger";
 
 const router = Router();
+
+// Shared transactional-email sender (Resend). Logs the outcome so delivery
+// failures are visible in the server logs instead of silently swallowed.
+// IMPORTANT: the default sender "onboarding@resend.dev" is Resend's SHARED test
+// address, which can ONLY deliver to YOUR OWN Resend-account email. To email
+// other people (e.g. a newly-approved user), verify a domain in Resend and set
+// RESEND_FROM (e.g. 'KPR OM Database <noreply@kprcenters.com>'). Never throws.
+async function sendEmail(to: string, subject: string, text: string): Promise<{ ok: boolean; detail?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) { logger.warn({ to, subject }, "email skipped — RESEND_API_KEY not set"); return { ok: false, detail: "no api key" }; }
+  const from = process.env.RESEND_FROM || "KPR OM Database <onboarding@resend.dev>";
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to, subject, text }),
+    });
+    const body = await r.text();
+    if (!r.ok) {
+      logger.error({ to, subject, status: r.status, body, from }, "email send FAILED (Resend rejected it)");
+      return { ok: false, detail: `HTTP ${r.status}: ${body}` };
+    }
+    logger.info({ to, subject }, "email sent");
+    return { ok: true };
+  } catch (err) {
+    logger.error({ err, to, subject }, "email send threw");
+    return { ok: false, detail: err instanceof Error ? err.message : "error" };
+  }
+}
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || "efink@kprcenters.com").trim().toLowerCase();
@@ -65,19 +95,9 @@ export function ensureUsersTable(): Promise<void> {
 // Best-effort: email the owner when someone requests an account. Reuses the
 // Resend setup used for feedback. Never throws to the caller.
 async function notifyNewSignup(email: string, name: string | null): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
   const to = process.env.SIGNUP_EMAIL_TO || process.env.FEEDBACK_EMAIL_TO || "efink@kprcenters.com";
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "KPR OM Database <onboarding@resend.dev>",
-      to,
-      subject: `New account request: ${email}`,
-      text: `${name || "(no name given)"} <${email}> requested access to the KPR OM Database.\n\nApprove or decline them in the app: open Members (admin menu) → Approve.`,
-    }),
-  });
+  await sendEmail(to, `New account request: ${email}`,
+    `${name || "(no name given)"} <${email}> requested access to the KPR OM Database.\n\nApprove or decline them in the app: open Members (admin menu) → Approve.`);
 }
 
 // Brute-force lockout: block an email after too many recent failures.
@@ -101,36 +121,17 @@ async function recordLoginEvent(req: Request, email: string, userId: string | nu
   } catch { /* best-effort audit */ }
 }
 
-// Best-effort: tell a user their account was approved. Never throws to the caller.
-async function notifyApproved(email: string, name: string | null, loginUrl: string): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "KPR OM Database <onboarding@resend.dev>",
-      to: email,
-      subject: "You're approved — KPR OM Database",
-      text: `${name ? name + "," : "Hi,"}\n\nYour account for the KPR OM Database has been approved. You can now sign in with the email and password you created when you requested access:\n\n${loginUrl}\n\nIf you've forgotten your password, use the "Forgot password?" link on the sign-in screen.`,
-    }),
-  });
+// Best-effort: tell a user their account was approved. Returns the send result
+// so the approve endpoint can report whether the email actually went out.
+async function notifyApproved(email: string, name: string | null, loginUrl: string): Promise<{ ok: boolean; detail?: string }> {
+  return sendEmail(email, "You're approved — KPR OM Database",
+    `${name ? name + "," : "Hi,"}\n\nYour account for the KPR OM Database has been approved. You can now sign in with the email and password you created when you requested access:\n\n${loginUrl}\n\nIf you've forgotten your password, use the "Forgot password?" link on the sign-in screen.`);
 }
 
 // Best-effort: email a password-reset link. Never throws to the caller.
 async function sendResetEmail(email: string, link: string): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return;
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "KPR OM Database <onboarding@resend.dev>",
-      to: email,
-      subject: "Reset your KPR OM Database password",
-      text: `We received a request to reset your password.\n\nReset it here (this link expires in 1 hour):\n${link}\n\nIf you didn't request this, you can safely ignore this email.`,
-    }),
-  });
+  await sendEmail(email, "Reset your KPR OM Database password",
+    `We received a request to reset your password.\n\nReset it here (this link expires in 1 hour):\n${link}\n\nIf you didn't request this, you can safely ignore this email.`);
 }
 
 // POST /api/auth/register — create a pending account
@@ -336,10 +337,12 @@ router.post("/auth/users/:id/approve", requireAdmin, async (req, res) => {
     .set({ status: "approved", approvedAt: new Date(), approvedBy: req.session.userEmail || "admin" })
     .where(eq(usersTable.id, String(req.params.id))).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
-  // Let the newly-approved user know they can sign in now (best-effort).
+  // Let the newly-approved user know they can sign in now. We AWAIT the send so
+  // we can tell the admin whether the email actually went out (vs. silently
+  // failing) — the approval itself already succeeded regardless.
   const origin = (typeof req.headers.origin === "string" && req.headers.origin) || `https://${req.headers.host}`;
-  notifyApproved(row.email, row.name, origin).catch(() => { /* best-effort */ });
-  res.json({ ok: true });
+  const mail = await notifyApproved(row.email, row.name, origin).catch((err) => ({ ok: false, detail: String(err) }));
+  res.json({ ok: true, emailSent: mail.ok, emailDetail: mail.ok ? undefined : mail.detail });
 });
 
 // POST /api/auth/users/:id/reject

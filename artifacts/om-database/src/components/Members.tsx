@@ -6,6 +6,7 @@ import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, a
 export default function Members({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<MemberAccount[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [events, setEvents] = useState<LoginEvent[] | null>(null);
   const [showActivity, setShowActivity] = useState(false);
@@ -26,6 +27,21 @@ export default function Members({ onClose }: { onClose: () => void }) {
     setBusy(id);
     try { await fn(); load(); }
     catch { setError("Action failed — try again."); }
+    finally { setBusy(null); }
+  };
+
+  // Approve has its own handler so we can report whether the "you're approved"
+  // email actually went out (Resend's test sender can only email the account
+  // owner — so if it fails, the admin needs to tell the user manually).
+  const approve = async (u: MemberAccount) => {
+    setBusy(u.id); setNotice(null);
+    try {
+      const r = await apiApproveMember(u.id);
+      load();
+      setNotice(r.emailSent
+        ? `Approved ${u.email} — they've been emailed that they can sign in.`
+        : `Approved ${u.email}, but the notification email did NOT send — tell them to sign in with the password they created. (${r.emailDetail || "email not configured"})`);
+    } catch { setError("Action failed — try again."); }
     finally { setBusy(null); }
   };
 
@@ -57,9 +73,9 @@ export default function Members({ onClose }: { onClose: () => void }) {
       </div>
       {statusChip(u.status)}
       <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto", flexWrap: "wrap" }}>
-        {u.status === "pending" && btn("✓ Approve", () => act(u.id, () => apiApproveMember(u.id)), "#0f7a3d", busy === u.id)}
+        {u.status === "pending" && btn("✓ Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "pending" && btn("Decline", () => act(u.id, () => apiRejectMember(u.id)), "#b3261e", busy === u.id)}
-        {u.status === "rejected" && btn("Approve", () => act(u.id, () => apiApproveMember(u.id)), "#0f7a3d", busy === u.id)}
+        {u.status === "rejected" && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#5c5047", busy === u.id)}
         {btn("Remove", () => { if (window.confirm(`Remove ${u.email}? They'll lose access and would have to request a new account.`)) act(u.id, () => apiDeleteMember(u.id)); }, "#c0392b", busy === u.id)}
       </div>
@@ -76,6 +92,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
         </div>
         <div style={{ padding: "16px 18px", overflowY: "auto" }}>
           {error && <div style={{ color: "#c0392b", fontSize: 12.5, marginBottom: 12 }}>⚠ {error}</div>}
+          {notice && <div style={{ color: notice.includes("did NOT send") ? "#92400e" : "#0f7a3d", background: notice.includes("did NOT send") ? "#fef6e7" : "#eef7ee", border: `1px solid ${notice.includes("did NOT send") ? "#f5c842" : "#cfe9c4"}`, borderRadius: 8, padding: "8px 11px", fontSize: 12.5, marginBottom: 12, lineHeight: 1.45 }}>{notice}</div>}
           {!rows && <div style={{ color: "#a69e91", fontSize: 13, padding: "20px 0", textAlign: "center" }}>Loading…</div>}
 
           {rows && pending.length > 0 && (

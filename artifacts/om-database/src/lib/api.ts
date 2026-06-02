@@ -104,7 +104,11 @@ export async function apiListMembers(): Promise<MemberAccount[]> {
   if (!resp.ok) return [];
   return await resp.json().catch(() => []) as MemberAccount[];
 }
-export async function apiApproveMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/approve`, { method: "POST" }); }
+export async function apiApproveMember(id: string): Promise<{ emailSent: boolean; emailDetail?: string }> {
+  const r = await apiFetch(`/auth/users/${id}/approve`, { method: "POST" });
+  const j = await r.json().catch(() => ({})) as { emailSent?: boolean; emailDetail?: string };
+  return { emailSent: j.emailSent !== false, emailDetail: j.emailDetail };
+}
 export async function apiRejectMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/reject`, { method: "POST" }); }
 export async function apiSetMemberAdmin(id: string, isAdmin: boolean): Promise<void> { await apiFetch(`/auth/users/${id}/set-admin`, { method: "POST", body: JSON.stringify({ isAdmin }) }); }
 export async function apiDeleteMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}`, { method: "DELETE" }); }
