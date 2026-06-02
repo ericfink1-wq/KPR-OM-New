@@ -28,7 +28,7 @@ export interface RatesPayload {
 const IRONHOUND_URL = "https://ironhound.com/";
 const IRONHOUND_MARKET_URL = "https://ironhound.com/api/market";
 const IRONHOUND_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-interface IronhoundData { termSofr1mo: number | null; swap5: number | null; swap10: number | null; asOf: string | null }
+interface IronhoundData { termSofr1mo: number | null; swap3: number | null; swap5: number | null; swap10: number | null; asOf: string | null }
 
 async function fetchIronhound(): Promise<IronhoundData> {
   const r = await fetchWithTimeout(IRONHOUND_MARKET_URL, 12_000, {
@@ -57,6 +57,7 @@ async function fetchIronhound(): Promise<IronhoundData> {
 
   return {
     termSofr1mo: pick(/term\s*-?\s*1\s*month/i),
+    swap3: pick(/swap\s*-?\s*3\s*year/i),
     swap5: pick(/swap\s*-?\s*5\s*year/i),
     swap10: pick(/swap\s*-?\s*10\s*year/i),
     asOf,
@@ -199,7 +200,7 @@ export async function fetchTodaysRates(): Promise<RatesPayload> {
 
   const treasuries = tres.status === "fulfilled" ? tres.value : { rows: [] as RateRow[], asOf: null };
   const sofrData = sofr.status === "fulfilled" ? sofr.value : { rows: [] as RateRow[], asOf: null };
-  const iron2 = iron.status === "fulfilled" ? iron.value : { termSofr1mo: null, swap5: null, swap10: null, asOf: null };
+  const iron2 = iron.status === "fulfilled" ? iron.value : { termSofr1mo: null, swap3: null, swap5: null, swap10: null, asOf: null };
 
   // SOFR row: prefer Iron Hound's true 1-month Term SOFR (what loans quote off);
   // fall back to the free NY Fed 30-day average if the scrape didn't return it.
@@ -219,6 +220,7 @@ export async function fetchTodaysRates(): Promise<RatesPayload> {
   // SOFR swaps: Iron Hound 5yr & 10yr (omitted entirely if the scrape failed —
   // better to show nothing than a wrong estimate).
   const swapRows: RateRow[] = [];
+  if (iron2.swap3 != null) swapRows.push({ label: "SOFR Swap – 3 Year", value: iron2.swap3, asOf: iron2.asOf });
   if (iron2.swap5 != null) swapRows.push({ label: "SOFR Swap – 5 Year", value: iron2.swap5, asOf: iron2.asOf });
   if (iron2.swap10 != null) swapRows.push({ label: "SOFR Swap – 10 Year", value: iron2.swap10, asOf: iron2.asOf });
   const swapsSource = swapRows.length ? "Iron Hound" : "Unavailable — no free live swap feed";

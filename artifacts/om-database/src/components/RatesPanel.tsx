@@ -87,7 +87,7 @@ export default function RatesPanel({ onClose }: { onClose: () => void }) {
               <Section title="SOFR Swaps" rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
               <Section title="Treasury Yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
               <div style={{ fontSize: 10.5, color: "#a89f8f", lineHeight: 1.5, marginTop: 4 }}>
-                Treasury yields are official daily figures from the U.S. Treasury. 1-Month Term SOFR and the 5/10-yr SOFR swaps are pulled from Iron Hound's market board (ironhound.com). If Iron Hound is unreachable, the 1-month figure falls back to the NY Fed 30-day average and swaps are hidden. Hit Refresh to re-pull.
+                Treasury yields are official daily figures from the U.S. Treasury. 1-Month Term SOFR and the 3/5/10-yr SOFR swaps are pulled from Iron Hound's market board (ironhound.com). If Iron Hound is unreachable, the 1-month figure falls back to the NY Fed 30-day average and swaps are hidden. Hit Refresh to re-pull.
               </div>
             </>
           )}
