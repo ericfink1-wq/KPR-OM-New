@@ -704,26 +704,18 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     titleSchedule: REP_TITLE_NC,
     transferTaxes: [
       { name: "State Excise Tax on Conveyances", rate: 0.002, base: "price", party: "seller",
-        notes: "$1 per $500 = 0.20%. Seller pays. Statewide; applies to all NC counties as base." },
-      { name: "Orange County Local Land Transfer Tax", rate: 0.004, rateMin: 0, rateMax: 0.004,
-        altGroup: "NC-county", altLabel: "Orange County",
-        base: "price", party: "buyer",
-        notes: "Orange County (Chapel Hill, Carrboro, Hillsborough) ONLY: 0.4% Local Land Transfer Tax adopted by voter referendum. Buyer pays. Combined with state: 0.60% total (0.20% seller + 0.40% buyer)." },
-      { name: "Chatham County Local Land Transfer Tax", rate: 0.004, rateMin: 0, rateMax: 0.004,
-        altGroup: "NC-county", altLabel: "Chatham County",
-        base: "price", party: "buyer",
-        notes: "Chatham County (Pittsboro, Siler City, southern Triangle area) ONLY: 0.4% LTT. Buyer pays. Combined: 0.60% total." },
-      { name: "Mecklenburg County Local Land Transfer Tax", rate: 0.004, rateMin: 0, rateMax: 0.004,
-        altGroup: "NC-county", altLabel: "Mecklenburg County",
-        base: "price", party: "buyer",
-        notes: "Mecklenburg County (Charlotte, Charlotte suburbs) ONLY: 0.4% LTT adopted by voter referendum. Buyer pays. Combined in Charlotte area: 0.60% total. Verify current status — some LTT referendums have been contested." },
+        notes: "$1 per $500 = 0.20%. Seller pays. Statewide; applies to all NC counties." },
+      { name: "Coastal County Land Transfer Tax (7 counties)", rate: 0.01, rateMin: 0, rateMax: 0.01,
+        altGroup: "NC-county", altLabel: "Coastal LTT county",
+        base: "price", party: "seller",
+        notes: "ONLY the 7 northeastern-coastal counties with a pre-existing ~1% land transfer tax under local acts: Beaufort, Camden, Chowan, Currituck, Dare, Pasquotank, Perquimans, Washington. Seller/grantor. Combined with state excise ≈ 1.2%. Verify the exact county rate." },
       { name: "Local Land Transfer Tax", rate: 0,
         altGroup: "NC-county", altLabel: "Other NC Counties", altDefault: true,
-        base: "price", party: "buyer",
-        notes: "97 of 100 NC counties have NO local Land Transfer Tax. State excise tax 0.20% seller only." },
+        base: "price", party: "seller",
+        notes: "Nearly all NC counties — incl. Mecklenburg/Charlotte, Wake/Raleigh, Orange/Chapel Hill, Durham, Guilford — have NO local land transfer tax. The 2007 local-option 0.4% LTT referendums ALL failed. State excise 0.20% (seller) only." },
     ],
     recordingFeesFlat: 75,
-    notes: "Most NC counties: 0.20% seller only. Charlotte (Mecklenburg), Chapel Hill (Orange), and Chatham County: add 0.40% buyer LTT. All other 97 NC counties have NO local LTT. Always check the county.",
+    notes: "Nearly all of NC = 0.20% state excise (seller) only. The 2007 local 0.4% land-transfer-tax referendums all FAILED — Charlotte/Raleigh/Chapel Hill have NO local tax (this was previously wrong in our data). The ONLY local land transfer tax is a pre-existing ~1% in 7 northeastern-coastal counties (Currituck, Dare, etc.). Always check the county.",
   },
 
   SC: {
@@ -1421,9 +1413,7 @@ const CITY_LOCALITY: Record<string, Array<{ group: string; label: string; cities
     { group: "WA-county", label: "Pierce/Snohomish/Spokane",   cities: ["tacoma", "everett", "spokane", "lakewood", "puyallup", "marysville", "edmonds", "lynnwood"] },
   ],
   NC: [
-    { group: "NC-county", label: "Orange County",     cities: ["chapel hill", "carrboro", "hillsborough"] },
-    { group: "NC-county", label: "Chatham County",    cities: ["pittsboro", "siler city"] },
-    { group: "NC-county", label: "Mecklenburg County", cities: ["charlotte", "matthews", "huntersville", "cornelius", "davidson", "mint hill", "pineville"] },
+    { group: "NC-county", label: "Coastal LTT county", cities: ["currituck", "kitty hawk", "kill devil hills", "nags head", "manteo", "elizabeth city", "washington nc", "edenton", "hertford"] },
   ],
   DE: [
     // New Castle County is the group default (Wilmington, Newark, Middletown, Bear, Hockessin).
@@ -1495,9 +1485,7 @@ const COUNTY_LOCALITY: Record<string, Array<{ group: string; label: string; coun
     { group: "MA-region", label: "Cape/Islands", counties: ["barnstable county", "dukes county", "nantucket county"] },
   ],
   NC: [
-    { group: "NC-county", label: "Orange County",      counties: ["orange county"] },
-    { group: "NC-county", label: "Chatham County",     counties: ["chatham county"] },
-    { group: "NC-county", label: "Mecklenburg County", counties: ["mecklenburg county"] },
+    { group: "NC-county", label: "Coastal LTT county", counties: ["beaufort county", "camden county", "chowan county", "currituck county", "dare county", "pasquotank county", "perquimans county", "washington county"] },
   ],
   VA: [
     { group: "VA-region", label: "Northern Virginia (NVTA)", counties: [
