@@ -1157,12 +1157,58 @@ export function tenantLogoDomain(name: unknown, canonicalName?: string | null): 
 export function toStepString(v: unknown): string {
   if (v == null) return "";
   if (typeof v === "string") return v;
-  if (Array.isArray(v)) return v.map(x => (x == null ? "" : String(x))).filter(Boolean).join("; ");
-  if (typeof v === "object") {
-    try { return Object.values(v as Record<string, unknown>).map(x => String(x)).filter(Boolean).join("; "); }
-    catch { return ""; }
-  }
+  if (Array.isArray(v)) return v.map(formatStepItem).filter(Boolean).join("; ");
+  if (typeof v === "object") return formatStepItem(v);
   return String(v);
+}
+
+// Render a single rent-step / renewal-option value as readable text. The AI
+// sometimes returns these as structured objects (e.g. a renewal option
+// {optionNumber, termMonths, rentPerSF, expiryDate}); without this they print
+// as "[object Object]". Strings pass through unchanged.
+function formatStepItem(x: unknown): string {
+  if (x == null) return "";
+  if (typeof x === "string") return x;
+  if (typeof x !== "object") return String(x);
+  const o = x as Record<string, unknown>;
+  // Case-insensitive field lookup across common key spellings.
+  const norm: Record<string, unknown> = {};
+  for (const k of Object.keys(o)) norm[k.toLowerCase().replace(/[^a-z0-9]/g, "")] = o[k];
+  const pick = (...keys: string[]): unknown => {
+    for (const k of keys) { const kk = k.toLowerCase().replace(/[^a-z0-9]/g, ""); if (norm[kk] != null && norm[kk] !== "") return norm[kk]; }
+    return null;
+  };
+  const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
+  const monYear = (v: unknown): string => {
+    const s = String(v);
+    const iso = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) { const d = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00`); if (!isNaN(d.getTime())) return d.toLocaleDateString("en-US", { month: "short", year: "numeric" }); }
+    return s;
+  };
+
+  const optNum = num(pick("optionNumber", "option", "optionNo", "number", "no"));
+  const months = num(pick("termMonths", "months"));
+  const years = num(pick("termYears", "years", "term"));
+  const psf = num(pick("rentPerSF", "rentPSF", "psf", "rentPerSf", "ratePerSF", "rate"));
+  const annual = num(pick("annualRent", "annual", "rent", "amount"));
+  const dateV = pick("expiryDate", "expiry", "endDate", "through", "thru", "leaseExpiry", "date", "startDate", "commencement", "commenceDate", "effectiveDate");
+
+  let term = "";
+  if (years != null) term = `${years} yr`;
+  else if (months != null) term = months % 12 === 0 ? `${months / 12} yr` : `${months} mo`;
+
+  let rent = "";
+  if (psf != null) rent = `$${psf.toFixed(2)}/SF`;
+  else if (annual != null) rent = `$${annual.toLocaleString("en-US")}`;
+
+  const head = optNum != null ? `Opt ${optNum}` : "";
+  const body = [term, rent].filter(Boolean).join(" @ ");
+  const tail = dateV != null ? `→ ${monYear(dateV)}` : "";
+  const tailBody = [body, tail].filter(Boolean).join(" ");
+  const out = head ? (tailBody ? `${head}: ${tailBody}` : head) : tailBody;
+  if (out) return out;
+  // Unknown shape — join primitive values so we never emit "[object Object]".
+  return Object.values(o).filter(v => v != null && typeof v !== "object").map(String).filter(Boolean).join(" ");
 }
 
 /**

@@ -1,5 +1,5 @@
 import { apiAiMessages } from "./api";
-import { robustParseJSON, toStepString } from "./utils";
+import { robustParseJSON, toStepString, tenantKey, stripSuiteCode } from "./utils";
 import type { Deal, ReviewQuestion } from "./idb";
 
 export interface RentRollResult {
@@ -91,10 +91,29 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   const prior = (deal.reviewQuestions ?? []).filter(q => !(q.source === "ai" && q.id.startsWith("ai-rr-")));
   const reviewQuestions = [...prior, ...fresh];
 
+  // Index the existing roster by normalized tenant name so we can gap-fill.
+  const priorByKey = new Map<string, Record<string, unknown>>();
+  for (const pt of deal.tenants ?? []) {
+    const k = tenantKey(stripSuiteCode((pt as Record<string, unknown>).name));
+    if (k && !priorByKey.has(k)) priorByKey.set(k, pt as Record<string, unknown>);
+  }
+  // Fields that an options-focused or partial rent roll often omits. When the new
+  // row leaves one blank but the existing OM roster had it, carry the old value
+  // forward — so a "Lease Options" upload never wipes SF / rent / start dates.
+  const CARRY_OVER = [
+    "sf", "annualRent", "rentPerSF", "leaseStart", "leaseExpiry", "remainingTermYears",
+    "leaseType", "reimbursementMethod", "rentBumps", "rentSchedule", "salesPSF",
+    "salesYear", "expenseReimbursements", "percentageRent", "otherRent", "creditRating",
+    "isAnchor", "isNAP", "isDark", "parentCompany",
+  ];
+  const blank = (v: unknown) => v == null || v === "";
+
   // Normalize step fields to strings — the AI sometimes returns rentSchedule /
-  // rentBumps / renewalOptions as arrays, which break string-only consumers.
+  // rentBumps / renewalOptions as arrays/objects, which break string-only consumers.
   const tenants = result.tenants.map(t => {
     const x = { ...(t as Record<string, unknown>) };
+    const prior = priorByKey.get(tenantKey(stripSuiteCode(x.name)));
+    if (prior) for (const f of CARRY_OVER) { if (blank(x[f]) && !blank(prior[f])) x[f] = prior[f]; }
     if (x.rentSchedule != null) x.rentSchedule = toStepString(x.rentSchedule);
     if (x.rentBumps != null) x.rentBumps = toStepString(x.rentBumps);
     if (x.renewalOptions != null) x.renewalOptions = toStepString(x.renewalOptions);
