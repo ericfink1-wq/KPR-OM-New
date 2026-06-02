@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword } from "../lib/password";
-import { requireAdmin } from "../middleware/auth";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -151,6 +151,26 @@ router.get("/auth/me", (req, res) => {
     email: req.session.userEmail || null,
     name: req.session.userName || null,
   });
+});
+
+// POST /api/auth/change-password — the signed-in user changes their own password
+router.post("/auth/change-password", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    if (!req.session.userId) { res.status(400).json({ error: "Please sign out and sign in again, then retry." }); return; }
+    const body = req.body as Record<string, unknown>;
+    const current = typeof body.currentPassword === "string" ? body.currentPassword : "";
+    const next = typeof body.newPassword === "string" ? body.newPassword : "";
+    if (next.length < 8) { res.status(400).json({ error: "New password must be at least 8 characters." }); return; }
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)))[0];
+    if (!user) { res.status(404).json({ error: "Account not found." }); return; }
+    if (!verifyPassword(current, user.passwordHash)) { res.status(403).json({ error: "Current password is incorrect." }); return; }
+    await db.update(usersTable).set({ passwordHash: hashPassword(next) }).where(eq(usersTable.id, user.id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Change password failed");
+    res.status(500).json({ error: "Could not change password — please try again." });
+  }
 });
 
 // ── Admin: account management ────────────────────────────────────────────────

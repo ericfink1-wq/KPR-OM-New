@@ -45,6 +45,18 @@ export async function apiLogout(): Promise<void> {
   await apiFetch("/auth/logout", { method: "POST" });
 }
 
+export async function apiChangePassword(currentPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+  const resp = await apiFetch("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    return { ok: false, error: body.error || "Could not change password" };
+  }
+  return { ok: true };
+}
+
 export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null }
 export async function apiCheckAuth(): Promise<AuthState> {
   try {
