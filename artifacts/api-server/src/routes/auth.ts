@@ -101,6 +101,22 @@ async function recordLoginEvent(req: Request, email: string, userId: string | nu
   } catch { /* best-effort audit */ }
 }
 
+// Best-effort: tell a user their account was approved. Never throws to the caller.
+async function notifyApproved(email: string, name: string | null, loginUrl: string): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "KPR OM Database <onboarding@resend.dev>",
+      to: email,
+      subject: "You're approved — KPR OM Database",
+      text: `${name ? name + "," : "Hi,"}\n\nYour account for the KPR OM Database has been approved. You can now sign in with the email and password you created when you requested access:\n\n${loginUrl}\n\nIf you've forgotten your password, use the "Forgot password?" link on the sign-in screen.`,
+    }),
+  });
+}
+
 // Best-effort: email a password-reset link. Never throws to the caller.
 async function sendResetEmail(email: string, link: string): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -320,6 +336,9 @@ router.post("/auth/users/:id/approve", requireAdmin, async (req, res) => {
     .set({ status: "approved", approvedAt: new Date(), approvedBy: req.session.userEmail || "admin" })
     .where(eq(usersTable.id, String(req.params.id))).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  // Let the newly-approved user know they can sign in now (best-effort).
+  const origin = (typeof req.headers.origin === "string" && req.headers.origin) || `https://${req.headers.host}`;
+  notifyApproved(row.email, row.name, origin).catch(() => { /* best-effort */ });
   res.json({ ok: true });
 });
 
