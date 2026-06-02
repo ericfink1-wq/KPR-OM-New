@@ -1920,7 +1920,7 @@ ${text.slice(0, 60000)}`;
             style={{ flex:"0 1 140px", minWidth:90, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
           <input value={addrDraft.state} onChange={e => setAddrDraft(a => ({ ...a, state: e.target.value.toUpperCase().slice(0,2) }))} placeholder="ST" maxLength={2}
             style={{ width:46, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff", textTransform:"uppercase" }} />
-          <button onClick={() => { onUpdate(d.id, { address: addrDraft.address.trim() || null, city: addrDraft.city.trim() || null, state: addrDraft.state.trim().toUpperCase() || null }); setEditingAddr(false); }}
+          <button onClick={() => { onUpdate(d.id, { address: addrDraft.address.trim(), city: addrDraft.city.trim(), state: addrDraft.state.trim().toUpperCase() }); setEditingAddr(false); }}
             style={{ background:"#26281f", color:"#fff", border:"none", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Save</button>
           <button onClick={() => setEditingAddr(false)}
             style={{ background:"transparent", color:"#a89f8f", border:"none", padding:"6px 8px", fontSize:12, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Cancel</button>
