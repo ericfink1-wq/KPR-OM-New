@@ -42,28 +42,21 @@ interface Props {
   onPanelHeightChange?: (h: number) => void;
 }
 
+// Does this freshly-extracted OM match a deal we already have? Delegates to the
+// shared matchDeal so a slightly-renamed OM ("Haymarket Center" vs "Haymarket
+// Village Center") is still recognized — and offers Refresh — instead of quietly
+// forking a second deal. A match only opens the duplicate PROMPT (Refresh vs Keep
+// both), so even a fuzzy hit is user-confirmed, never silently merged.
 function findDuplicate(fileName: string, extracted: Record<string, unknown>, existing: Deal[]): Deal | null {
-  const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const cleanFile = fileName.replace(/\.pdf$/i, "").toLowerCase();
-  const byFile = existing.find(d => (d.fileName || "").toLowerCase() === cleanFile);
-  if (byFile) return byFile;
-  const newProp = normName((extracted.propertyName as string) || "");
-  const newAddr = normName((extracted.address as string) || "");
-  if (newProp.length > 4) {
-    const byProp = existing.find(d => {
-      const p = normName(d.propertyName || "");
-      return p.length > 4 && p === newProp;
-    });
-    if (byProp) return byProp;
-  }
-  if (newAddr.length > 8) {
-    const byAddr = existing.find(d => {
-      const a = normName(d.address || "");
-      return a.length > 8 && a === newAddr;
-    });
-    if (byAddr) return byAddr;
-  }
-  return null;
+  const m = matchDeal(
+    {
+      propertyName: (extracted.propertyName as string) ?? null,
+      address: (extracted.address as string) ?? null,
+      fileName,
+    },
+    existing,
+  );
+  return m.confidence !== "none" ? m.deal : null;
 }
 
 function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): Deal {
