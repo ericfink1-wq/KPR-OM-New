@@ -220,10 +220,23 @@ export async function fetchTodaysRates(): Promise<RatesPayload> {
   // SOFR swaps: Iron Hound 5yr & 10yr (omitted entirely if the scrape failed —
   // better to show nothing than a wrong estimate).
   const swapRows: RateRow[] = [];
-  if (iron2.swap3 != null) swapRows.push({ label: "SOFR Swap – 3 Year", value: iron2.swap3, asOf: iron2.asOf });
+  // 3-Year: Iron Hound's board lists only 5yr & 10yr. If it ever carries a real
+  // 3yr, use it; otherwise ESTIMATE it from the 3-year Treasury + the live SOFR
+  // swap spread (5yr swap − 5yr Treasury). Transparent derived figure, clearly
+  // labeled "(est.)" — not a scraped quote, and never fabricated.
+  const tsy = (lbl: string) => treasuries.rows.find(r => r.label === lbl)?.value ?? null;
+  if (iron2.swap3 != null) {
+    swapRows.push({ label: "SOFR Swap – 3 Year", value: iron2.swap3, asOf: iron2.asOf });
+  } else {
+    const t3 = tsy("3-Yr"), t5 = tsy("5-Yr");
+    if (iron2.swap5 != null && t3 != null && t5 != null) {
+      const est3 = Math.round((t3 + (iron2.swap5 - t5)) * 100) / 100;
+      swapRows.push({ label: "SOFR Swap – 3 Year (est.)", value: est3, asOf: iron2.asOf });
+    }
+  }
   if (iron2.swap5 != null) swapRows.push({ label: "SOFR Swap – 5 Year", value: iron2.swap5, asOf: iron2.asOf });
   if (iron2.swap10 != null) swapRows.push({ label: "SOFR Swap – 10 Year", value: iron2.swap10, asOf: iron2.asOf });
-  const swapsSource = swapRows.length ? "Iron Hound" : "Unavailable — no free live swap feed";
+  const swapsSource = swapRows.length ? "Iron Hound (3yr est. from Treasury curve)" : "Unavailable — no free live swap feed";
 
   return {
     treasuries: { rows: treasuries.rows, asOf: treasuries.asOf, source: "U.S. Treasury (par yield curve)" },

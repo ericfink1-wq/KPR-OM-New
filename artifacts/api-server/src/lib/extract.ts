@@ -138,6 +138,7 @@ CRITICAL RENT-ROLL LESSONS (from real operator corrections — past extractions 
 4. CURRENT IN-PLACE RENT, NOT OPTION RATE. rentPerSF and annualRent must be the tenant's CURRENT in-place base rent, not a future renewal-option rate. Option-period rates belong only in rentSchedule/renewalOptions.
 5. DON'T CARRY DEPARTED TENANTS. Only include tenants on the CURRENT rent roll. A tenant that appears in an older options schedule or a prior-year sales report but is NOT on the current rent roll has left — exclude it (its suite is now vacant or re-leased to someone else).
 6. SALES FIGURES — UNITS MATTER (salesPSF is PER SQUARE FOOT). When the OM gives a tenant's TOTAL annual sales (e.g. "Grocer Sales $37.7M", "anecdotal sales of $2.9M"), that is a TOTAL, not a per-SF figure — convert it: salesPSF = total ÷ SF. A $37.7M figure on a 59,678 SF store is ~$632/SF, NOT $37.7/SF. NEVER store a multi-million-dollar total in salesPSF. If the figure is labeled "anecdotal"/"estimated", say so in salesNotes. Only put a number directly in salesPSF when the OM states it per-SF.
+7. leaseType is the REIMBURSEMENT / LEASE STRUCTURE (NNN, Gross, Modified Gross, NN, Base Year) — NOT a renewal-option type. NEVER put option codes like "AUT" (automatic) or "REN" (renewal) in leaseType; that detail belongs in renewalOptions, or omit it. Leave leaseType null if the structure isn't stated. Always capture each tenant's suite/unit id when present — it's the key used to match tenants across documents.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 

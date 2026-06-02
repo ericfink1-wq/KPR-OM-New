@@ -371,7 +371,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 </td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}</td>
-                <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${n(t.annualRent)!.toLocaleString()}`:"—"}</td>
+                <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${Math.round(n(t.annualRent)!).toLocaleString()}`:"—"}</td>
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{fmtLeaseDate(t.leaseExpiry)}</td>
                 <td
@@ -379,7 +379,13 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   style={{ padding:"8px 10px", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedReimb === i ? 400 : 300, minWidth:120, overflow:"hidden" }}
                 >
                   {(() => {
-                    const m = t.reimbursementMethod || t.leaseType || "";
+                    // The "Reimb." column shows the reimbursement / lease structure
+                    // (NNN, Gross, Modified Gross, etc.). leaseType is a fallback ONLY
+                    // when it actually describes that — NOT when it carries a renewal
+                    // option type like "AUT"/"REN", which would be meaningless here.
+                    const lt = t.leaseType || "";
+                    const isStruct = /\b(nnn|nn|net|gross|modified gross|mg|base\s*year|stop|triple net|double net|single net|cam)\b/i.test(lt);
+                    const m = t.reimbursementMethod || (isStruct ? lt : "");
                     if (!m) return <span style={{ color:"#c4bbaa" }}>—</span>;
                     const gross = /gross/i.test(m), fixed = /\bfixed\b/i.test(m);
                     const flag = gross ? { t:"GROSS", c:"#b91c1c", bg:"#fdecea", tip:"Gross lease — landlord absorbs expense growth (no recovery)" }

@@ -15,7 +15,7 @@ export async function extractRentRoll(text: string): Promise<RentRollResult> {
 Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","tenants":[{...}],"reviewQuestions":[{...}]}
 
 Each tenant object (omit unknown fields):
-{"name","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","rentBumps","rentSchedule","renewalOptions","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
+{"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","rentBumps","rentSchedule","renewalOptions","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
 
 Rules:
 - Brand name only (no store #).
@@ -34,6 +34,8 @@ CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
 - FUTURE RENT INCREASES: capture any "future rent increases" / scheduled step columns into rentSchedule (dated steps); note "flat" if none.
 - EXCLUDE non-inline / outparcel rows: shadow anchors and ground-lease pads that are NOT part of this property — typically 0 SF with a placeholder far-future expiration (e.g. 2098/2099), such as Costco, Target, a theater, or a separately-owned bank/restaurant pad. Do NOT list these as tenants. (A real lease that happens to show 0 SF but has a NORMAL near-term expiration and ordinary rent — e.g. a gas station — IS a real tenant; keep it.)
 - DEDUPE SECTIONS: a rent roll may have separate sections like "New Leases" / "Occupied" / "Vacant". If the same tenant or suite appears in BOTH a future/"New Leases" section AND an in-place "Occupied" section, output ONE row using the OCCUPIED (current) lease; treat the future-commencing row as a renewal and fold its dates/rate into renewalOptions or rentSchedule. Never emit two rows for the same tenant/suite. Skip "Vacant" rows (no tenant name).
+- suite: always capture the suite/unit id when present (e.g. "15908A", "B", "A-FUEL") — it's the most reliable key for matching this tenant to an existing roster.
+- leaseType is the REIMBURSEMENT / LEASE STRUCTURE (NNN, Gross, Modified Gross, NN, Base Year). It is NOT a renewal-option type. NEVER put option-type codes like "AUT" (automatic) or "REN" (renewal) in leaseType — those describe the renewal option; put that detail in renewalOptions, or omit it. Leave leaseType null if the structure isn't stated.
 
 reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"human label e.g. 'Five Below — SF'","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string","target":{"kind":"tenant","fieldKey":"exact tenant field key (sf, rentPerSF, annualRent, leaseStart, leaseExpiry, remainingTermYears, salesPSF)","tenantName":"exact tenant name from the tenants array","valueType":"number|text"}}. ALWAYS set target when the question is about one tenant's field so the user can fix it in one click; set target null only for non-field questions (e.g. possible duplicate rows). Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
 
@@ -88,12 +90,6 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   const prior = (deal.reviewQuestions ?? []).filter(q => !(q.source === "ai" && q.id.startsWith("ai-rr-")));
   const reviewQuestions = [...prior, ...fresh];
 
-  // Index the existing roster by normalized tenant name so we can gap-fill.
-  const priorByKey = new Map<string, Record<string, unknown>>();
-  for (const pt of deal.tenants ?? []) {
-    const k = tenantKey(stripSuiteCode((pt as Record<string, unknown>).name));
-    if (k && !priorByKey.has(k)) priorByKey.set(k, pt as Record<string, unknown>);
-  }
   // Fields that an options-focused or partial rent roll often omits. When the new
   // row leaves one blank but the existing OM roster had it, carry the old value
   // forward — so a "Lease Options" upload never wipes SF / rent / start dates.
@@ -104,26 +100,54 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
     "isAnchor", "isNAP", "isDark", "parentCompany",
   ];
   const blank = (v: unknown) => v == null || v === "";
+  const nrm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  const suiteN = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
-  // Build the new rows (gap-filled from the prior roster), then UNION them with
-  // any existing tenants the new file doesn't mention. A partial or secondary
-  // file must never DELETE tenants — it can only add to and fill in the roster.
-  const newKeys = new Set<string>();
+  // Index the existing roster so a new row can be matched to it three ways, in
+  // order of reliability: (1) same suite, (2) alias-aware tenant key, (3) same SF
+  // with a name that contains/shares the other's. This dedupes cases where the OM
+  // and rent roll name the same tenant differently ("Indish" vs "Indish, Exotic
+  // Indian Cuisine"; "Wine & Liquor Dept." vs "Wine & Liquor Depot").
+  const existing = (deal.tenants ?? []) as Array<Record<string, unknown>>;
+  const exMeta = existing.map((pt, idx) => ({
+    idx, pt, key: tenantKey(stripSuiteCode(pt.name)), suite: suiteN(pt.suite), sf: nv(pt.sf), nm: nrm(pt.name),
+  }));
+  const matched = new Set<number>();
+  const findPrior = (x: Record<string, unknown>) => {
+    const suite = suiteN(x.suite), key = tenantKey(stripSuiteCode(x.name)), sf = nv(x.sf), nm = nrm(x.name);
+    let m = suite ? exMeta.find(e => !matched.has(e.idx) && e.suite && e.suite === suite) : undefined;
+    if (!m) m = exMeta.find(e => !matched.has(e.idx) && e.key && e.key === key);
+    if (!m && sf && sf > 0 && nm) m = exMeta.find(e =>
+      !matched.has(e.idx) && e.sf === sf && e.nm &&
+      (e.nm.includes(nm) || nm.includes(e.nm) || e.nm.split(" ")[0] === nm.split(" ")[0]));
+    return m;
+  };
+
+  // Build the new rows (gap-filled from the matched prior row), then UNION them
+  // with any existing tenants the new file didn't mention. A partial or secondary
+  // file must never DELETE tenants — only add to and fill in the roster.
   const newRows = result.tenants.map(t => {
     const x = { ...(t as Record<string, unknown>) };
-    const k = tenantKey(stripSuiteCode(x.name));
-    if (k) newKeys.add(k);
-    const prior = priorByKey.get(k);
-    if (prior) for (const f of CARRY_OVER) { if (blank(x[f]) && !blank(prior[f])) x[f] = prior[f]; }
+    const m = findPrior(x);
+    if (m) { matched.add(m.idx); for (const f of CARRY_OVER) { if (blank(x[f]) && !blank(m.pt[f])) x[f] = m.pt[f]; } }
     if (x.rentSchedule != null) x.rentSchedule = toStepString(x.rentSchedule);
     if (x.rentBumps != null) x.rentBumps = toStepString(x.rentBumps);
     if (x.renewalOptions != null) x.renewalOptions = toStepString(x.renewalOptions);
+    // Rent-step consistency: a "Flat at $X PSF" schedule whose rate no longer
+    // matches the current rentPerSF (a stale OM step carried onto a freshly
+    // repriced lease) is rewritten to the current rate so the Rent Steps column
+    // never contradicts the Rent/SF column. Real dated step schedules are left alone.
+    const rpsf = nv(x.rentPerSF);
+    if (rpsf != null) {
+      const rs = String(x.rentSchedule ?? "");
+      const flat = rs.match(/flat\s+at\s+\$?\s*([\d.]+)\s*psf/i);
+      const exp = !blank(x.leaseExpiry) ? ` through ${x.leaseExpiry}` : "";
+      if (flat && Math.abs(Number(flat[1]) - rpsf) >= 0.01) x.rentSchedule = `Flat at $${rpsf.toFixed(2)} PSF${exp}`;
+      else if (blank(x.rentSchedule)) x.rentSchedule = `Flat at $${rpsf.toFixed(2)} PSF${exp}`;
+    }
     return x;
   });
-  const keptExisting = (deal.tenants ?? []).filter(pt => {
-    const k = tenantKey(stripSuiteCode((pt as Record<string, unknown>).name));
-    return !k || !newKeys.has(k);
-  });
+  const keptExisting = existing.filter((_, idx) => !matched.has(idx));
   const tenants = [...newRows, ...keptExisting] as NonNullable<Deal["tenants"]>;
 
   // Recompute occupancy / WALT from the FULL merged roster (not just the new
