@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, isVacant, isNAPTenant, tenantLabel, parentCompany } from "../lib/utils";
+import { tenantKey, isVacant, isNAPTenant, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, type UserMerge } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { exportAggregateToExcel, type AggColumn } from "../lib/exportExcel";
 
@@ -207,6 +207,11 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const [showAllParents, setShowAllParents] = useState(false);
   const [parentMode, setParentMode] = useState<"rent" | "stores">("rent");
   const [tenantSearch, setTenantSearch] = useState("");
+  // Manual tenant linking ("Walmart" ↔ "Wal-Mart"): merge mode + selected rows +
+  // a version counter that forces the grouping to recompute after a merge/unmerge.
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeSel, setMergeSel] = useState<Set<string>>(new Set());
+  const [mergeVersion, setMergeVersion] = useState(0);
   // Pinned top search — jump straight to any tenant or parent company.
   const [navSearch, setNavSearch] = useState("");
   const [navFocused, setNavFocused] = useState(false);
@@ -299,7 +304,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     const rows = Array.from(map.values());
     const allOccurrences = rows.flatMap(r => r.salesOccurrences);
     return { rows, allOccurrences };
-  }, [deals, filter]);
+    // mergeVersion: recompute groupings after a manual link/unlink (tenantKey
+    // now resolves the new alias).
+  }, [deals, filter, mergeVersion]);
 
   // Search index — ALWAYS spans every deal, independent of the All/Owned scope
   // toggle, so the pinned search can find any tenant or parent company.
@@ -360,6 +367,27 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     if (!q) return allTenantsSorted;
     return allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q));
   }, [allTenantsSorted, tenantSearch]);
+  // ── Manual tenant linking ───────────────────────────────────────────────────
+  const toggleMergeSel = (key: string) => setMergeSel(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  const selectedRows = useMemo(() => rows.filter(r => mergeSel.has(r.key)), [rows, mergeSel]);
+  // Default canonical = the selected name with the most rent (most "authoritative").
+  const [canonKey, setCanonKey] = useState<string | null>(null);
+  const effectiveCanonKey = canonKey && mergeSel.has(canonKey)
+    ? canonKey
+    : ([...selectedRows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent)[0]?.key ?? null);
+  const doMerge = () => {
+    if (selectedRows.length < 2 || !effectiveCanonKey) return;
+    const canonRow = selectedRows.find(r => r.key === effectiveCanonKey)!;
+    addUserMerge({
+      id: `merge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      canonical: tenantLabel(canonRow.displayName),
+      variants: selectedRows.map(r => r.displayName),
+    });
+    setMergeSel(new Set()); setCanonKey(null); setMergeVersion(v => v + 1);
+  };
+  const unmerge = (id: string) => { removeUserMerge(id); setMergeVersion(v => v + 1); };
+  const userMerges: UserMerge[] = getUserMerges();
+
   const maxSF   = bySF[0]?.totalSF ?? 1;
 
   // Parent company exposure (excludes ignored tenants)
@@ -783,6 +811,11 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 All Tenants ({rows.length})
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => { setMergeMode(m => !m); setMergeSel(new Set()); setCanonKey(null); }}
+                  title="Link tenants that are the same brand but spelled differently (e.g. Walmart / Wal-Mart)"
+                  style={{ background: mergeMode ? "#2a2c27" : "transparent", border: `1px solid ${mergeMode ? "#2a2c27" : "#c8b89a"}`, color: mergeMode ? "#f6f2ea" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                  🔗 Link tenants
+                </button>
                 <button onClick={exportTenants} disabled={activeRows.length === 0}
                   title="Export the tenant analysis list to Excel"
                   style={{ background: "transparent", border: "1px solid #c8b89a", color: activeRows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: activeRows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
@@ -796,6 +829,44 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 />
               </div>
             </div>
+            {mergeMode && (
+              <div style={{ background: "#f4f8ef", border: "1px solid #d6e7c4", borderRadius: 9, padding: "10px 12px", marginBottom: 12 }}>
+                {selectedRows.length < 2 ? (
+                  <div style={{ fontSize: 12, color: "#5c5047", lineHeight: 1.5 }}>
+                    <b>Link mode on.</b> Tick two or more rows below that are the same tenant (e.g. <i>Walmart</i> and <i>Wal-Mart</i>), then choose which name to keep. Search narrows the list. {selectedRows.length === 1 && <span style={{ color: "#3f7a1f" }}>1 selected — pick at least one more.</span>}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 12, color: "#5c5047", fontWeight: 600 }}>Link {selectedRows.length} into:</span>
+                    <select value={effectiveCanonKey ?? ""} onChange={e => setCanonKey(e.target.value)}
+                      style={{ fontSize: 12, padding: "5px 8px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: 240 }}>
+                      {selectedRows.map(r => <option key={r.key} value={r.key}>{tenantLabel(r.displayName)}</option>)}
+                    </select>
+                    <button onClick={doMerge}
+                      style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                      Link tenants
+                    </button>
+                    <button onClick={() => { setMergeSel(new Set()); setCanonKey(null); }}
+                      style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "6px 8px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                      Clear
+                    </button>
+                  </div>
+                )}
+                {userMerges.length > 0 && (
+                  <div style={{ marginTop: 10, borderTop: "1px solid #e3ecd6", paddingTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
+                    <div style={{ fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8aa56b", fontWeight: 700 }}>Linked tenants ({userMerges.length})</div>
+                    {userMerges.map(m => (
+                      <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#5c5047" }}>
+                        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <b>{m.canonical}</b> ← {m.variants.filter(v => tenantLabel(v) !== m.canonical).map(v => tenantLabel(v)).join(", ") || "(variants)"}
+                        </span>
+                        <button onClick={() => unmerge(m.id)} title="Unlink" style={{ background: "transparent", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>Unlink</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ maxHeight: 420, overflowY: "auto", display: "flex", flexDirection: "column" }}>
               {filteredAllTenants.length === 0 ? (
                 <div style={{ padding: "20px 0", textAlign: "center", color: "#a89f8f", fontSize: 12 }}>
@@ -804,23 +875,34 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
               ) : (
                 filteredAllTenants.map((row, i) => {
                   const ignored = ignoredKeys.has(row.key);
+                  const sel = mergeSel.has(row.key);
                   return (
                     <div
                       key={row.key}
+                      onClick={mergeMode ? () => toggleMergeSel(row.key) : undefined}
                       style={{
                         display: "flex", alignItems: "center", gap: 10,
                         padding: "7px 2px",
                         borderBottom: i < filteredAllTenants.length - 1 ? "1px solid #f5f1ea" : "none",
                         opacity: ignored ? 0.35 : 1,
                         transition: "opacity 0.15s",
+                        cursor: mergeMode ? "pointer" : "default",
+                        background: mergeMode && sel ? "#eef6e4" : "transparent",
                       }}
                     >
-                      <div style={{ width: 32, textAlign: "right", fontSize: 10, color: "#c8b8a3", flexShrink: 0 }}>
-                        {i + 1}
-                      </div>
+                      {mergeMode ? (
+                        <input type="checkbox" checked={sel} readOnly
+                          style={{ width: 14, height: 14, flexShrink: 0, accentColor: "#3f7a1f", marginLeft: 6 }} />
+                      ) : (
+                        <div style={{ width: 32, textAlign: "right", fontSize: 10, color: "#c8b8a3", flexShrink: 0 }}>
+                          {i + 1}
+                        </div>
+                      )}
                       <div style={{ flex: "1 1 0", minWidth: 0, overflow: "hidden" }}>
                         <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
+                          {mergeMode
+                            ? <span style={{ color: "#383a37", fontWeight: 500 }}>{tenantLabel(row.displayName)}</span>
+                            : <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />}
                         </div>
                         <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
                           <span>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
@@ -835,7 +917,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                       <div style={{ fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0, minWidth: 54, textAlign: "right" }}>
                         {fmtRent(row.totalAnnualRent)}
                       </div>
-                      <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
+                      {!mergeMode && <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />}
                     </div>
                   );
                 })
