@@ -30,6 +30,38 @@ const IRONHOUND_MARKET_URL = "https://ironhound.com/api/market";
 const IRONHOUND_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 interface IronhoundData { termSofr1mo: number | null; swap3: number | null; swap5: number | null; swap10: number | null; asOf: string | null }
 
+// UTC offset (ms, negative west of UTC) of America/New_York at the given instant.
+function easternOffsetMillis(instant: Date): number {
+  const p = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(instant).reduce<Record<string, string>>((a, x) => { a[x.type] = x.value; return a; }, {});
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  return asUTC - instant.getTime();
+}
+
+// Iron Hound's market board stamps each row with an Eastern wall-clock time and
+// NO timezone marker. Parsed naively on our UTC server those digits are read as
+// UTC, landing 4–5h early (a 2:33 PM ET board showed as 10:33 AM). Re-interpret a
+// tz-less timestamp as America/New_York and return the correct absolute UTC ISO.
+// Strings that already carry an explicit offset/Z, or are date-only, pass through.
+function easternNaiveToISO(raw: string): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // date-only — no clock time to localize
+  const hasTz = /[zZ]$|[+\-]\d{2}:?\d{2}$|\bGMT\b|\bUTC\b/.test(s);
+  const norm = /^\d{4}-\d{2}-\d{2} \d{2}:/.test(s) ? s.replace(" ", "T") : s;
+  const d = new Date(norm);
+  if (isNaN(d.getTime())) return null;
+  if (hasTz) return d.toISOString(); // already an absolute instant
+  // `d` holds the ET wall-clock numbers but interpreted in the server's own zone.
+  // trueInstant = d + (serverOffset − easternOffset); correct for any server TZ.
+  const serverOffsetMs = -d.getTimezoneOffset() * 60_000;
+  const etOffsetMs = easternOffsetMillis(d);
+  return new Date(d.getTime() + (serverOffsetMs - etOffsetMs)).toISOString();
+}
+
 async function fetchIronhound(): Promise<IronhoundData> {
   const r = await fetchWithTimeout(IRONHOUND_MARKET_URL, 12_000, {
     headers: { "User-Agent": IRONHOUND_UA, "Accept": "application/json, text/plain, */*" },
@@ -47,12 +79,12 @@ async function fetchIronhound(): Promise<IronhoundData> {
     const m = rows.find(row => re.test(String(row.propername ?? row.name ?? "")));
     return m ? num(m.value) : null;
   };
-  // As-of = the most recent row date.
+  // As-of = the most recent row date, normalized from Eastern to a true UTC instant.
   let asOf: string | null = null;
   for (const row of rows) {
     const raw = row.date ?? row.updated_at ?? row.updatedAt;
-    const d = raw ? new Date(String(raw)) : null;
-    if (d && !isNaN(d.getTime())) { const iso = d.toISOString(); if (!asOf || iso > asOf) asOf = iso; }
+    const iso = raw != null ? easternNaiveToISO(String(raw)) : null;
+    if (iso && (!asOf || iso > asOf)) asOf = iso;
   }
 
   return {
