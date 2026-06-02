@@ -402,7 +402,6 @@ export const TENANT_ALIASES: Record<string, string> = {
   "americas best": "America's Best Contacts & Eyecare",
   "americas best contacts": "America's Best Contacts & Eyecare",
   "at and t mobility": "AT&T",
-  "bank of america atm": "Bank of America",
   "burlington coat": "Burlington",
   "burlington coat factory": "Burlington",
   "suntrust": "Truist Bank", "suntrust bank": "Truist Bank", "truist": "Truist Bank",
@@ -570,6 +569,13 @@ export function parentCompany(name: unknown, storedParent?: string | null): stri
   // stored value only for brands the map doesn't know.
   const key = tenantKey(name);
   if (PARENT_COMPANIES[key]) return PARENT_COMPANIES[key];
+  // An ATM rolls up to the SAME parent as the branch brand (it's tracked as its
+  // own tenant, but belongs to e.g. JPMorgan Chase just like a Chase branch).
+  const stripped = String(name ?? "").replace(/\b(atms?|cash machine)\b/ig, " ").replace(/\s+/g, " ").trim();
+  if (stripped && stripped.toLowerCase() !== String(name ?? "").trim().toLowerCase()) {
+    const k2 = tenantKey(stripped);
+    if (PARENT_COMPANIES[k2]) return PARENT_COMPANIES[k2];
+  }
   return storedParent && storedParent.trim() ? storedParent.trim() : null;
 }
 
@@ -636,6 +642,19 @@ export function isNAPTenant(t: { name?: string | null; sf?: number | string | nu
   const rent = t.annualRent == null || t.annualRent === "" ? null : Number(t.annualRent);
   const rentPSF = t.rentPerSF == null || t.rentPerSF === "" ? null : Number(t.rentPerSF);
   return sf != null && sf > 0 && (rent == null || rent === 0) && (rentPSF == null || rentPSF === 0);
+}
+
+// Distinguish a standalone ATM (a kiosk/license, operationally trivial) from a
+// real bank BRANCH. Two tells: the name often says "ATM", and the footprint is
+// tiny (a kiosk is well under a branch's few-thousand SF). Tracked separately
+// from branches in analytics, though they roll up to the same parent company.
+export function isATM(name?: unknown, sf?: number | string | null): boolean {
+  const n = String(name ?? "");
+  if (/\batms?\b/i.test(n)) return true;
+  const s = sf == null || sf === "" ? null : Number(sf);
+  // SF giveaway: a clearly bank/financial tenant with a kiosk-sized footprint.
+  if (s != null && s > 0 && s <= 200 && /\b(bank|banking|credit union|fcu|f\.?c\.?u\.?|federal credit|financial)\b/i.test(n)) return true;
+  return false;
 }
 
 // ── Expense-recovery estimation ──────────────────────────────────────────────

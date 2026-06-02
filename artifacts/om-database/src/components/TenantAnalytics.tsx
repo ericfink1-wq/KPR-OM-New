@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, isVacant, isNAPTenant, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, type UserMerge } from "../lib/utils";
+import { tenantKey, isVacant, isNAPTenant, isATM, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, type UserMerge } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { exportAggregateToExcel, type AggColumn } from "../lib/exportExcel";
 
@@ -903,6 +903,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                           {mergeMode
                             ? <span style={{ color: "#383a37", fontWeight: 500 }}>{tenantLabel(row.displayName)}</span>
                             : <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />}
+                          {isATM(row.displayName, row.totalSF) && (
+                            <span style={{ fontSize: 8.5, color: "#5a6b8c", background: "#eef1f7", border: "1px solid #cdd6e6", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="ATM — tracked separately from full bank branches (same parent company)">ATM</span>
+                          )}
                         </div>
                         <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
                           <span>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>

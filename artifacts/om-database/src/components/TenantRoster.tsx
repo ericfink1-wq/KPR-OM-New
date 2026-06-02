@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown } from "../lib/idb";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, tenantKey, toStepString } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -342,6 +342,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
+                      {isATM(t.name, t.sf) && (
+                        <span style={{ fontSize:9, color:"#5a6b8c", background:"#eef1f7", border:"1px solid #cdd6e6", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="ATM — a cash machine, not a full bank branch (tracked separately, same parent company)">ATM</span>
+                      )}
                       {isNAPTenant(t) && (
                         <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="Not A Part — this tenant owns their parcel and pays no rent to the landlord">NAP</span>
                       )}
