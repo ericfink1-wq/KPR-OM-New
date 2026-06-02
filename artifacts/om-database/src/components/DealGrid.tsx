@@ -566,7 +566,8 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     for (const k of cfg.also || []) patch[k] = finalVal;
     const n = selected.size;
     for (const id of selected) onUpdate(id, patch as Partial<Deal>);
-    clearSelection();
+    // Keep the selection (and the bulk-edit panel open) so several fields can be
+    // applied to the same set in a row — just reset the value input.
     setBulkEditValue("");
     setNotice(`${cfg.label} ${finalVal === null ? "cleared" : `set to "${finalVal}"`} for ${n} propert${n === 1 ? "y" : "ies"}.`);
   };

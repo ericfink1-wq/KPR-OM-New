@@ -237,7 +237,7 @@ interface BmStats { median: number; p25: number; p75: number }
 interface BmMatch {
   id: number; name: string | null; sourceDealName: string | null; market: string | null; saleDate: string | null;
   salePrice: number | null; capRate: number | null; pricePerSf: number | null;
-  sf: number | null; source: "owned" | "broker" | "om"; excluded: boolean;
+  sf: number | null; anchor?: string | null; source: "owned" | "broker" | "om"; excluded: boolean;
   matchScore?: number; matchReasons?: string[];
 }
 interface BmResult {
@@ -265,6 +265,9 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [includeIds, setIncludeIds] = useState<number[]>(() => readLs().includeIds ?? []);
   const [dismissedSugIds, setDismissedSugIds] = useState<number[]>(() => readLs().dismissedSugIds ?? []);
   const [addQ, setAddQ] = useState("");
+  const [tableQ, setTableQ] = useState("");
+  const [sortKey, setSortKey] = useState<"name" | "market" | "anchor" | "date" | "price" | "cap" | "psf" | "sf" | "source">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string | null; sourceDealName: string | null; salePrice: number | null; market: string | null; saleDate: string | null }>>([]);
   const [sugsLoading, setSugsLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -282,6 +285,12 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   };
   const removeInclude = (id: number) =>
     setIncludeIds(prev => prev.filter(x => x !== id));
+
+  // Click a column header to sort; clicking the active column flips direction.
+  const toggleSort = (key: typeof sortKey) => {
+    if (key === sortKey) setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "name" || key === "market" || key === "anchor" || key === "source" ? "asc" : "desc"); }
+  };
 
   useEffect(() => {
     if (!addQ.trim()) { setSuggestions([]); return; }
@@ -542,33 +551,78 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
 
             {/* Comps list — always shown, no toggle */}
             <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 11, color: "#7d766a", marginBottom: 6 }}>
-                <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length} comp{activeComps.length !== 1 ? "s" : ""}</span> in benchmark
-                {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} manually excluded</span>}
-                <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— × removes added comps · eye excludes/re-includes others</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: "#7d766a" }}>
+                  <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length} comp{activeComps.length !== 1 ? "s" : ""}</span> in benchmark
+                  {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} manually excluded</span>}
+                  <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— × drops a comp · eye re-includes · tap a header to sort</span>
+                </div>
+                <input value={tableQ} onChange={e => setTableQ(e.target.value)}
+                  placeholder="Filter comps…"
+                  style={{ flex: "0 1 200px", minWidth: 130, boxSizing: "border-box", border: "1px solid #e7e0d2", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontFamily: "'Inter',sans-serif", outline: "none", background: "#fdfaf6" }} />
               </div>
-              <div style={{ overflowX: "auto" }}>
+              {(() => {
+                const q = tableQ.trim().toLowerCase();
+                const dispName = (c: BmMatch) => c.name || c.sourceDealName || c.market || "Unnamed comp";
+                let rows = bm.comps;
+                if (q) rows = rows.filter(c =>
+                  dispName(c).toLowerCase().includes(q) ||
+                  (c.market || "").toLowerCase().includes(q) ||
+                  (c.anchor || "").toLowerCase().includes(q));
+                const sv = (c: BmMatch): string | number => {
+                  switch (sortKey) {
+                    case "name": return dispName(c).toLowerCase();
+                    case "market": return (c.market || "").toLowerCase();
+                    case "anchor": return (c.anchor || "").toLowerCase();
+                    case "date": return c.saleDate || "";
+                    case "price": return c.salePrice ?? -Infinity;
+                    case "cap": return c.capRate ?? -Infinity;
+                    case "psf": return c.pricePerSf ?? -Infinity;
+                    case "sf": return c.sf ?? -Infinity;
+                    case "source": return ({ owned: 0, broker: 1, om: 2 } as const)[c.source];
+                  }
+                };
+                const sorted = [...rows].sort((a, b) => {
+                  const av = sv(a), bv = sv(b);
+                  const cmp = typeof av === "number" && typeof bv === "number"
+                    ? av - bv : String(av).localeCompare(String(bv));
+                  return sortDir === "asc" ? cmp : -cmp;
+                });
+                const COLS: Array<{ key: typeof sortKey; label: string }> = [
+                  { key: "name", label: "Name" }, { key: "market", label: "Market" },
+                  { key: "anchor", label: "Anchor" }, { key: "date", label: "Date" },
+                  { key: "price", label: "Sale Price" }, { key: "cap", label: "Cap %" },
+                  { key: "psf", label: "$/SF" }, { key: "sf", label: "SF" },
+                  { key: "source", label: "Source" },
+                ];
+                return (
+                <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid #ece5d7" }}>
                       <th style={{ width: 26 }} />
-                      {["Name", "Market", "Date", "Sale Price", "Cap %", "$/SF", "SF", "Source"].map(h => (
-                        <th key={h} style={{ textAlign: "left", padding: "4px 8px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                      {COLS.map(col => (
+                        <th key={col.key} onClick={() => toggleSort(col.key)}
+                          title="Sort by this column"
+                          style={{ textAlign: "left", padding: "4px 8px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: sortKey === col.key ? "#6dba43" : "#a89f8f", fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer", userSelect: "none" }}>
+                          {col.label}{sortKey === col.key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {bm.comps.map(c => (
+                    {sorted.map(c => (
                       <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1 }}>
                         <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle" }}>
-                          {includeIds.includes(c.id)
-                            ? <button onClick={() => removeInclude(c.id)}
+                          {c.excluded && !includeIds.includes(c.id)
+                            ? <EyeBtn id={c.id} isExcluded={true} />
+                            : <button onClick={() => includeIds.includes(c.id) ? removeInclude(c.id) : toggleExclude(c.id)}
                                 title="Remove from benchmark"
-                                style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: "#dc2626", fontSize: 16, lineHeight: 1, display: "inline-flex", alignItems: "center", flexShrink: 0, fontFamily: "sans-serif" }}>×</button>
-                            : <EyeBtn id={c.id} isExcluded={c.excluded} />}
+                                style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: "#dc2626", fontSize: 16, lineHeight: 1, display: "inline-flex", alignItems: "center", flexShrink: 0, fontFamily: "sans-serif" }}>×</button>}
                         </td>
-                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name || c.sourceDealName || c.market || "Unnamed comp"}</td>
+                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dispName(c)}</td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: c.anchor ? "#5c5850" : "#c9c2b8", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.anchor || "—"}</td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
                         <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(c.salePrice)}</td>
                         <td style={{ padding: "6px 8px", color: c.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: c.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>{fmtPct2(c.capRate)}</td>
@@ -577,9 +631,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                         <td style={{ padding: "6px 8px" }}>{sourceBadge(c.source)}</td>
                       </tr>
                     ))}
+                    {sorted.length === 0 && (
+                      <tr><td colSpan={10} style={{ padding: "10px 8px", color: "#a89f8f", fontStyle: "italic" }}>No comps match "{tableQ}".</td></tr>
+                    )}
                   </tbody>
                 </table>
-              </div>
+                </div>
+                );
+              })()}
               {(() => {
                 const sugs = bm.suggestions.filter(s => !dismissedSugIds.includes(s.id) && !includeIds.includes(s.id));
                 if (sugs.length === 0) return null;

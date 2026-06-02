@@ -68,6 +68,7 @@ export interface CompMatch {
   capRate: number | null;
   pricePerSf: number | null;
   sf: number | null;
+  anchor: string | null;
   source: "owned" | "broker" | "om";
   /** True when manually excluded — still returned for display but not counted in stats */
   excluded: boolean;
@@ -256,6 +257,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     .map(({ r, s }) => ({
       id: r.id, name: r.name, sourceDealName: r.sourceDealName, market: r.market, saleDate: r.saleDate,
       salePrice: r.salePrice, capRate: r.capRate, pricePerSf: r.pricePerSf, sf: r.sf,
+      anchor: r.anchor ?? null,
       source: getSource(r), excluded: false,
       matchScore: s, matchReasons: scoreMap.get(r.id)?.reasons ?? [],
     }));
@@ -295,6 +297,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     .map(r => ({
       id: r.id, name: r.name, sourceDealName: r.sourceDealName, market: r.market, saleDate: r.saleDate,
       salePrice: r.salePrice, capRate: r.capRate, pricePerSf: r.pricePerSf, sf: r.sf,
+      anchor: r.anchor ?? null,
       source: getSource(r),
       excluded: excSet.has(r.id),
       matchScore: scoreMap.get(r.id)?.score,
