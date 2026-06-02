@@ -71,6 +71,7 @@ export function exportDealToExcel(deal: Deal): void {
   const tenants = deal.tenants ?? [];
   const rrHeaders = [
     "Tenant",
+    "Suite",
     "Anchor?",
     "Dark?",
     "Credit Rating",
@@ -89,6 +90,7 @@ export function exportDealToExcel(deal: Deal): void {
 
   const rrRows = tenants.map(t => [
     t.name ?? "",
+    t.suite ?? "",
     t.isAnchor ? "Yes" : "",
     t.isDark ? "Yes" : "",
     t.creditRating ?? "",
@@ -114,6 +116,7 @@ export function exportDealToExcel(deal: Deal): void {
 
   rrWs["!cols"] = [
     { wch: 32 }, // Tenant
+    { wch: 9 },  // Suite
     { wch: 8 },  // Anchor
     { wch: 7 },  // Dark
     { wch: 14 }, // Credit Rating
@@ -131,10 +134,10 @@ export function exportDealToExcel(deal: Deal): void {
   ];
 
   for (let row = 1; row < rrAoa.length; row++) {
-    applyFmt(rrWs, row, 4, "#,##0");         // SF
-    applyFmt(rrWs, row, 5, '$#,##0.00');     // Rent/SF
-    applyFmt(rrWs, row, 6, '$#,##0');        // Annual Rent
-    applyFmt(rrWs, row, 13, '$#,##0.00');    // Sales PSF
+    applyFmt(rrWs, row, 5, "#,##0");         // SF
+    applyFmt(rrWs, row, 6, '$#,##0.00');     // Rent/SF
+    applyFmt(rrWs, row, 7, '$#,##0');        // Annual Rent
+    applyFmt(rrWs, row, 14, '$#,##0.00');    // Sales PSF
   }
 
   if (deal.tenantsAsOf) {
@@ -308,12 +311,13 @@ export function exportPortfolioToExcel(deals: Deal[], scopeLabel = "All"): void 
 export function exportRosterToExcel(deal: Deal): void {
   const tenants = deal.tenants ?? [];
   const headers = [
-    "Tenant", "Anchor", "Dark", "Credit", "SF", "Rent/SF", "Annual Rent",
+    "Tenant", "Suite", "Anchor", "Dark", "Credit", "SF", "Rent/SF", "Annual Rent",
     "Lease Start", "Lease Expiry", "Rem. Term (yrs)", "Lease Type",
     "Renewal Options", "Rent Steps", "Sales PSF", "Notes",
   ];
   const rows = tenants.map(t => [
     t.name ?? "",
+    t.suite ?? "",
     t.isAnchor ? "Yes" : "",
     t.isDark ? "Yes" : "",
     t.creditRating ?? "",
@@ -332,13 +336,13 @@ export function exportRosterToExcel(deal: Deal): void {
   // Totals row
   const totSF = tenants.reduce((s, t) => s + (Number(t.sf) || 0), 0);
   const totRent = tenants.reduce((s, t) => s + (Number(t.annualRent) || 0), 0);
-  const totalRow = ["TOTAL", "", "", "", totSF || "", "", totRent || "", "", "", "", "", "", "", "", ""];
+  const totalRow = ["TOTAL", "", "", "", "", totSF || "", "", totRent || "", "", "", "", "", "", "", "", ""];
   const aoa = [headers, ...rows, totalRow];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   polishSheet(ws, {
     rows: aoa.length, cols: headers.length,
-    widths: [32, 8, 7, 12, 12, 10, 14, 13, 13, 16, 16, 26, 36, 11, 40],
-    colFormats: { 4: "#,##0", 5: '$#,##0.00', 6: '$#,##0', 9: "0.0", 13: '$#,##0.00' },
+    widths: [32, 9, 8, 7, 12, 12, 10, 14, 13, 13, 16, 16, 26, 36, 11, 40],
+    colFormats: { 5: "#,##0", 6: '$#,##0.00', 7: '$#,##0', 10: "0.0", 14: '$#,##0.00' },
   });
   if (deal.tenantsAsOf && ws["A1"]) ws["A1"].c = [{ a: "KPR", t: `Rent roll as of: ${fmtDate(deal.tenantsAsOf)}` }];
   const safeName = (deal.propertyName || deal.fileName || "deal").replace(/[/\\?%*:|"<>]/g, "-").slice(0, 80);

@@ -1,5 +1,5 @@
 import { apiAiMessages, lessonGuidanceClient } from "./api";
-import { robustParseJSON, toStepString, tenantKey, stripSuiteCode } from "./utils";
+import { robustParseJSON, toStepString, tenantKey, stripSuiteCode, isVacant } from "./utils";
 import type { Deal, ReviewQuestion } from "./idb";
 
 export interface RentRollResult {
@@ -20,7 +20,7 @@ Each tenant object (omit unknown fields):
 Rules:
 - Brand name only (no store #).
 - Dates ISO YYYY-MM-DD.
-- Skip vacant/available units unless they have a tenant name.
+- VACANT SUITES: INCLUDE every vacant/available unit as its OWN row — set name to "Vacant", capture its suite and sf, and leave ALL lease/rent fields null. Do NOT merge multiple vacant suites into one row, and do NOT drop them. A large vacant box (e.g. a former anchor) MUST appear. (This is how the app shows availability and reconciles occupied vs. total SF.)
 - rentSchedule: future steps only as of the asOf date.
 - SF and rents as plain numbers (no $ or commas).
 - If a value isn't shown, omit it.
@@ -34,7 +34,7 @@ CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
 - rentSchedule = ONLY clean dated rent steps ("2027-12-01: $33.01 PSF") or "Flat at $X PSF through YYYY-MM-DD". NEVER put prose, explanations, or renewal narratives in rentSchedule — that belongs in assumptionNote. The "Future Rent Increases" columns/sub-rows (Cat / Date / Monthly Amount / PSF) ARE the steps — capture each future-dated one as a dated step (convert monthly amount to PSF or annual as needed).
 - EXECUTED RENEWAL (extends the term): if a tenant appears in a "New Leases" section with a term that BEGINS the day after its current "Occupied" expiration (a contiguous, already-executed renewal), the lease has been extended — set leaseExpiry to the NEW (later) end date, and note it in recentlyExercisedRenewal (e.g. "10-yr renewal executed, now through 2037-01-18"). This is DIFFERENT from an unexercised OPTION (which stays in renewalOptions and does NOT change leaseExpiry).
 - EXCLUDE non-inline / outparcel rows: shadow anchors and ground-lease pads that are NOT part of this property — typically 0 SF with a placeholder far-future or 12/31/00 expiration, or explicitly marked "(NAP)" / "Not A Part", such as Costco, Target, a theater, or a separately-owned bank/restaurant pad. Do NOT list these as tenants. (A real lease that happens to show 0 SF but has a NORMAL near-term expiration and ordinary rent — e.g. a gas station — IS a real tenant; keep it.)
-- DEDUPE SECTIONS: a rent roll may have separate sections like "New Leases" / "Occupied" / "Vacant". If the same tenant or suite appears in BOTH a future/"New Leases" section AND an in-place "Occupied" section, output ONE row. Use the OCCUPIED current rent/SF; apply the EXECUTED RENEWAL rule above for the expiry. Never emit two rows for the same tenant/suite. Skip "Vacant" rows (no tenant name).
+- DEDUPE SECTIONS: a rent roll may have separate sections like "New Leases" / "Occupied" / "Vacant". If the same tenant or suite appears in BOTH a future/"New Leases" section AND an in-place "Occupied" section, output ONE row. Use the OCCUPIED current rent/SF; apply the EXECUTED RENEWAL rule above for the expiry. Never emit two rows for the same tenant/suite. Emit each "Vacant" suite as its own "Vacant" row per the VACANT SUITES rule (do NOT skip them) — but if a suite is listed BOTH as Vacant and as occupied/new-leased to a named tenant, keep only the occupied/named row.
 - suite: always capture the suite/unit id when present (e.g. "14-WALM", "15908A", "B") — it's the most reliable key for matching this tenant to an existing roster.
 - leaseType is the REIMBURSEMENT / LEASE STRUCTURE (NNN, Gross, Modified Gross, NN, Base Year). It is NOT a renewal-option type. NEVER put option-type codes like "AUT" (automatic) or "REN" (renewal) in leaseType — those describe the renewal option; put that detail in renewalOptions, or omit it. Leave leaseType null if the structure isn't stated.
 - ATM vs BANK BRANCH: a standalone ATM (e.g. "Chase Bank ATM", "Bank of America ATM", usually 0 or tiny SF) is NOT a bank branch. KEEP "ATM" in the name and list it as its OWN tenant row — never merge it into the bank's branch lease.
@@ -163,8 +163,12 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   // file must never DELETE tenants — only add to and fill in the roster.
   const newRows = result.tenants.map(t => {
     const x = { ...(t as Record<string, unknown>) };
+    const vac = isVacant(x.name);
     const m = findPrior(x);
-    if (m) { matched.add(m.idx); for (const f of CARRY_OVER) { if (blank(x[f]) && !blank(m.pt[f])) x[f] = m.pt[f]; } }
+    // A vacant row may match a now-departed prior tenant by suite — consume that
+    // match so the old occupied row drops out, but NEVER carry the old tenant's
+    // lease/rent data onto the vacant row (it would show a phantom lease).
+    if (m) { matched.add(m.idx); if (!vac) for (const f of CARRY_OVER) { if (blank(x[f]) && !blank(m.pt[f])) x[f] = m.pt[f]; } }
     if (x.rentSchedule != null) x.rentSchedule = toStepString(x.rentSchedule);
     if (x.rentBumps != null) x.rentBumps = toStepString(x.rentBumps);
     if (x.renewalOptions != null) x.renewalOptions = toStepString(x.renewalOptions);
@@ -187,14 +191,16 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
 
   // Recompute occupancy / WALT from the FULL merged roster (not just the new
   // rows), so a partial file doesn't understate occupancy.
+  // Vacant rows count toward total SF but NOT toward occupied SF or WALT.
+  const occTenants = tenants.filter(t => !isVacant((t as Record<string, unknown>).name));
   if (!deal.verified?.occupancy && deal.totalSF) {
-    const occupiedSF = tenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
+    const occupiedSF = occTenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
     const occ = Math.round(occupiedSF / Number(deal.totalSF) * 1000) / 10;
     if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
   }
   if (!deal.verified?.walt) {
-    const sfT = tenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
-    const wT = tenants.reduce((s, t) => {
+    const sfT = occTenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
+    const wT = occTenants.reduce((s, t) => {
       const sf = nv((t as Record<string, unknown>).sf), yr = nv((t as Record<string, unknown>).remainingTermYears);
       return s + (sf ?? 0) * (yr ?? 0);
     }, 0);
