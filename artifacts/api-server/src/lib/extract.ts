@@ -332,7 +332,8 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       const tenants = extracted.tenants as Array<{ name?: string; sf?: unknown; isNAP?: boolean }>;
       const capturedSF = tenants.reduce((s, t) => {
         const sf = Number(t?.sf);
-        return s + (t && !t.isNAP && !isNaN(sf) && sf > 0 ? sf : 0);
+        const vacant = /vacant|available/i.test(String(t?.name || ""));
+        return s + (t && !t.isNAP && !vacant && !isNaN(sf) && sf > 0 ? sf : 0);
       }, 0);
       const expectedOccSF = totalSF * occPct / 100;
       if (capturedSF >= expectedOccSF * 0.9) break; // close enough — likely complete
