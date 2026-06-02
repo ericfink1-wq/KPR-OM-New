@@ -1365,6 +1365,11 @@ ${text.slice(0, 60000)}`;
     }
   };
 
+  // Confirm before any action that spends AI / API tokens, so an accidental
+  // button press can't quietly draw down usage. (Returns true to proceed.)
+  const confirmAi = (label: string) =>
+    window.confirm(`${label} uses AI and will draw down your API token usage.\n\nContinue?`);
+
   const handleReanalyze = async () => {
     if (!ensureUploadAllowed()) return;
     let overwriteRoster = false;
@@ -1377,6 +1382,8 @@ ${text.slice(0, 60000)}`;
       );
       if (!confirmed) return;
       overwriteRoster = true;
+    } else if (!confirmAi("Rebuild from OM")) {
+      return;
     }
     setAnalyzeOpen(false);
     setReanalyzeBusy(true);
@@ -1395,6 +1402,7 @@ ${text.slice(0, 60000)}`;
 
   const handleRefreshAnalysis = async () => {
     if (!ensureUploadAllowed()) return;
+    if (!confirmAi("Refresh Analysis")) return;
     setActionsOpen(false);
     setReanalyzeBusy(true);
     try {
@@ -1437,6 +1445,7 @@ ${text.slice(0, 60000)}`;
 
   const onLookupSale = async (id: string) => {
     if (!ensureUploadAllowed()) return;
+    if (!confirmAi("Find sale record (web search)")) return;
     setSaleBusy(true);
     const taskId = startAiTask(`Finding sale record — ${d.propertyName || d.fileName || "deal"}`);
     try {
@@ -1465,6 +1474,7 @@ ${text.slice(0, 60000)}`;
   };
 
   const onGetDemo = async (id: string) => {
+    if (!confirmAi("Fetch demographics (web search)")) return;
     setDemoBusy(true);
     const taskId = startAiTask(`Fetching demographics — ${d.propertyName || d.fileName || "deal"}`);
     try {
