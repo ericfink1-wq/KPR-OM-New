@@ -238,7 +238,7 @@ interface BmMatch {
   id: number; name: string | null; sourceDealName: string | null; market: string | null; saleDate: string | null;
   salePrice: number | null; capRate: number | null; pricePerSf: number | null;
   sf: number | null; anchor?: string | null; source: "owned" | "broker" | "om"; excluded: boolean;
-  matchScore?: number; matchReasons?: string[];
+  starred?: boolean; matchScore?: number; matchReasons?: string[];
 }
 interface BmResult {
   insufficient: boolean; tierLabel: string; relaxed: string[]; excludedInvalid: number;
@@ -253,7 +253,7 @@ interface BmResult {
 
 function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const lsKey = `bm-overrides-${deal.id}`;
-  const readLs = (): { excludeIds?: number[]; includeIds?: number[]; dismissedSugIds?: number[] } => {
+  const readLs = (): { excludeIds?: number[]; includeIds?: number[]; dismissedSugIds?: number[]; starredIds?: number[] } => {
     try { return JSON.parse(localStorage.getItem(lsKey) ?? "{}"); } catch { return {}; }
   };
 
@@ -264,6 +264,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [excludeIds, setExcludeIds] = useState<number[]>(() => readLs().excludeIds ?? []);
   const [includeIds, setIncludeIds] = useState<number[]>(() => readLs().includeIds ?? []);
   const [dismissedSugIds, setDismissedSugIds] = useState<number[]>(() => readLs().dismissedSugIds ?? []);
+  const [starredIds, setStarredIds] = useState<number[]>(() => readLs().starredIds ?? []);
   const [addQ, setAddQ] = useState("");
   const [tableQ, setTableQ] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "market" | "anchor" | "date" | "price" | "cap" | "psf" | "sf" | "source">("date");
@@ -273,8 +274,11 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds, dismissedSugIds })); } catch { /* ignore */ }
-  }, [lsKey, excludeIds, includeIds, dismissedSugIds]);
+    try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds, dismissedSugIds, starredIds })); } catch { /* ignore */ }
+  }, [lsKey, excludeIds, includeIds, dismissedSugIds, starredIds]);
+
+  const toggleStar = (id: number) =>
+    setStarredIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const toggleExclude = (id: number) =>
     setExcludeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -335,6 +339,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       excludeOmComps: excludeOm,
       excludeCompIds: excludeIds,
       includeCompIds: includeIds,
+      starCompIds: starredIds,
     });
     setLoading(true); setErr(null); setBm(null);
 
@@ -368,7 +373,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
 
     run(0);
     return () => { cancelled = true; };
-  }, [deal.id, excludeOm, excludeIds, includeIds, retryKey]);
+  }, [deal.id, excludeOm, excludeIds, includeIds, starredIds, retryKey]);
 
   const fmtD = (s: string | null) => {
     if (!s) return "—";
@@ -555,7 +560,8 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 <div style={{ fontSize: 11, color: "#7d766a" }}>
                   <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length} comp{activeComps.length !== 1 ? "s" : ""}</span> in benchmark
                   {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} manually excluded</span>}
-                  <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— × drops a comp · eye re-includes · tap a header to sort</span>
+                  {starredIds.length > 0 && <span style={{ color: "#c98f1e", marginLeft: 5, fontWeight: 600 }}>· {starredIds.length} starred (weighted ×3)</span>}
+                  <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— ★ stars a comp (weighted heavier) · × drops it · tap a header to sort</span>
                 </div>
                 <input value={tableQ} onChange={e => setTableQ(e.target.value)}
                   placeholder="Filter comps…"
@@ -600,7 +606,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid #ece5d7" }}>
-                      <th style={{ width: 26 }} />
+                      <th style={{ width: 48 }} />
                       {COLS.map(col => (
                         <th key={col.key} onClick={() => toggleSort(col.key)}
                           title="Sort by this column"
@@ -611,9 +617,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {sorted.map(c => (
-                      <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1 }}>
-                        <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle" }}>
+                    {sorted.map(c => {
+                      const isStar = starredIds.includes(c.id) || !!c.starred;
+                      return (
+                      <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1, background: isStar && !c.excluded ? "#fffaf0" : undefined }}>
+                        <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                          <button onClick={() => toggleStar(c.id)}
+                            title={isStar ? "Unstar — remove extra weight" : "Star — weight this comp more heavily"}
+                            style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 2px", color: isStar ? "#e8a92e" : "#cfc7b8", fontSize: 14, lineHeight: 1, display: "inline-flex", alignItems: "center", flexShrink: 0, fontFamily: "sans-serif" }}>{isStar ? "★" : "☆"}</button>
                           {c.excluded && !includeIds.includes(c.id)
                             ? <EyeBtn id={c.id} isExcluded={true} />
                             : <button onClick={() => includeIds.includes(c.id) ? removeInclude(c.id) : toggleExclude(c.id)}
@@ -630,9 +641,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(c.sf)}</td>
                         <td style={{ padding: "6px 8px" }}>{sourceBadge(c.source)}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                     {sorted.length === 0 && (
-                      <tr><td colSpan={10} style={{ padding: "10px 8px", color: "#a89f8f", fontStyle: "italic" }}>No comps match "{tableQ}".</td></tr>
+                      <tr><td colSpan={11} style={{ padding: "10px 8px", color: "#a89f8f", fontStyle: "italic" }}>No comps match "{tableQ}".</td></tr>
                     )}
                   </tbody>
                 </table>

@@ -50,6 +50,8 @@ export interface BenchmarkRequest {
   excludeCompIds?: number[];
   /** Force-add these comp IDs into the benchmark set (bypass tier filtering) */
   includeCompIds?: number[];
+  /** Starred comps — force-included AND weighted more heavily in the median/range math */
+  starCompIds?: number[];
   // Extra subject signals for smart similarity matching:
   occupancy?: number | null;
   /** Subject's lead anchor tenant name(s), comma-separated */
@@ -72,6 +74,8 @@ export interface CompMatch {
   source: "owned" | "broker" | "om";
   /** True when manually excluded — still returned for display but not counted in stats */
   excluded: boolean;
+  /** True when the user starred this comp (force-included + weighted in stats) */
+  starred?: boolean;
   /** Smart-match similarity score + plain-English reasons (when computed) */
   matchScore?: number;
   matchReasons?: string[];
@@ -228,8 +232,10 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     insufficient = true;
   }
 
-  // Force-add specific comps from allRows (bypass tier logic)
-  const incSet = new Set(req.includeCompIds ?? []);
+  // Force-add specific comps from allRows (bypass tier logic). Starred comps are
+  // also force-included (a star implies "definitely use this one").
+  const starSet = new Set(req.starCompIds ?? []);
+  const incSet = new Set([...(req.includeCompIds ?? []), ...starSet]);
   if (incSet.size > 0) {
     const alreadyIds = new Set(chosen.map(r => r.id));
     const extra = allRows.filter(r =>
@@ -266,16 +272,27 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   const excSet = new Set(req.excludeCompIds ?? []);
   const activeForStats = chosen.filter(r => !excSet.has(r.id));
 
-  const capRates = activeForStats.map(r => r.capRate).filter((v): v is number => v != null);
-  const psfs     = activeForStats.map(r => r.pricePerSf).filter((v): v is number => v != null);
+  // Starred comps count multiple times in the median/range math so the user can
+  // tell the system "this is a really good comp." Counts (n, sourceMix, dates)
+  // still reflect the true comp set — only the stats inputs are weighted.
+  const STAR_WEIGHT = 3;
+  const wt = (r: Row) => (starSet.has(r.id) ? STAR_WEIGHT : 1);
+  const weighted = (rows: Row[], val: (r: Row) => number | null): number[] => {
+    const out: number[] = [];
+    for (const r of rows) { const v = val(r); if (v != null) for (let i = 0; i < wt(r); i++) out.push(v); }
+    return out;
+  };
+
+  const capRates = weighted(activeForStats, r => r.capRate);
+  const psfs     = weighted(activeForStats, r => r.pricePerSf);
 
   const capRateStats = triStats(capRates);
   const psfStats     = triStats(psfs);
 
   const cut12  = mAgo(12);
   const l12    = activeForStats.filter(r => inDate(r, cut12));
-  const l12cap = l12.map(r => r.capRate).filter((v): v is number => v != null);
-  const l12psf = l12.map(r => r.pricePerSf).filter((v): v is number => v != null);
+  const l12cap = weighted(l12, r => r.capRate);
+  const l12psf = weighted(l12, r => r.pricePerSf);
   const last12 = l12.length >= 3 ? { n: l12.length, capRate: triStats(l12cap), pricePerSf: triStats(l12psf) } : null;
 
   const sourceMix = { owned: 0, broker: 0, om: 0 };
@@ -300,6 +317,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
       anchor: r.anchor ?? null,
       source: getSource(r),
       excluded: excSet.has(r.id),
+      starred: starSet.has(r.id),
       matchScore: scoreMap.get(r.id)?.score,
       matchReasons: scoreMap.get(r.id)?.reasons,
     }));
