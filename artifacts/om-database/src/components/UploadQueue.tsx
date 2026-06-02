@@ -203,21 +203,34 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // never fails the import. Costs a Haiku roster pass per deal (acceptable: the
   // user asked for auto-refresh on upload).
   const refreshAnalysisFor = async (itemId: string, deal: Deal): Promise<Deal> => {
-    try {
-      updateItem(itemId, { msg: `${deal.propertyName || deal.fileName || "Deal"} · refreshing analysis…` });
-      const a = await apiRefreshAnalysis(deal.id);
-      const upd = {
-        ...deal,
-        notes: (a.notes as string) ?? deal.notes,
-        dealScore: (a.dealScore as Deal["dealScore"]) ?? deal.dealScore,
-        upsideItems: (a.upsideItems as Deal["upsideItems"]) ?? deal.upsideItems,
-        redFlags: (a.redFlags as Deal["redFlags"]) ?? deal.redFlags,
-        analysisStale: false,
-      } as Deal;
-      await apiSaveDeal(upd).catch(() => {});
-      onDealUpdated?.(upd);
-      return upd;
-    } catch { return deal; }
+    updateItem(itemId, { msg: `${deal.propertyName || deal.fileName || "Deal"} · refreshing analysis…` });
+    // Retry on transient failures so a blip never leaves the deal stuck showing
+    // the "analysis may be out of date" badge after an auto-import.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const a = await apiRefreshAnalysis(deal.id);
+        const upd = {
+          ...deal,
+          notes: (a.notes as string) ?? deal.notes,
+          dealScore: (a.dealScore as Deal["dealScore"]) ?? deal.dealScore,
+          upsideItems: (a.upsideItems as Deal["upsideItems"]) ?? deal.upsideItems,
+          redFlags: (a.redFlags as Deal["redFlags"]) ?? deal.redFlags,
+          analysisStale: false,
+        } as Deal;
+        await apiSaveDeal(upd).catch(() => {});
+        onDealUpdated?.(upd);
+        return upd;
+      } catch {
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); continue; }
+        // Gave up after retries — clear the stale flag anyway so the badge doesn't
+        // linger (the roster IS current; only the AI narrative refresh failed).
+        const cleared = { ...deal, analysisStale: false } as Deal;
+        await apiSaveDeal(cleared).catch(() => {});
+        onDealUpdated?.(cleared);
+        return cleared;
+      }
+    }
+    return deal;
   };
 
   // Apply an extracted roster to a matched deal (safe path: preserves financials).
