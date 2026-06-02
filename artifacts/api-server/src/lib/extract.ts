@@ -270,7 +270,8 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // OM extraction is the hardest, highest-stakes pass — use the stronger Sonnet
   // model for materially fewer misreads on complex rent rolls / financials. The
   // lighter rent-roll and sales passes stay on Haiku.
-  const callExtract = async (content: string) => {
+  type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
+  const callExtract = async (content: string | Block[]) => {
     const upstream = await callAnthropicOnce({
       model: "claude-sonnet-4-6",
       max_tokens: 32000,
@@ -293,7 +294,14 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // so the system applies past corrections to every new OM. Best-effort: never
   // blocks extraction if the lessons table is unavailable.
   const taughtRules = await lessonGuidance("om");
-  const first = await callExtract(EXTRACTION_PROMPT + taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText);
+  // Prompt caching: the large static EXTRACTION_PROMPT is byte-identical on every
+  // OM, so mark it as a cached block. Across a batch of deals (within the cache
+  // window) the schema/instructions prefix is a cache hit — cheaper + faster on
+  // the Sonnet pass. The variable part (lessons + this OM's text) is uncached.
+  const first = await callExtract([
+    { type: "text", text: EXTRACTION_PROMPT, cache_control: { type: "ephemeral" } },
+    { type: "text", text: taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText },
+  ]);
   let extracted = robustParseJSON(first.raw) as Record<string, unknown>;
   if (!extracted.tenants) extracted.tenants = [];
 
@@ -438,11 +446,16 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>): Prom
       salesPSF: x.salesPSF, salesYear: x.salesYear, occupancyCost: x.occupancyCost,
     })),
   };
-  const content = ROSTER_ANALYSIS_PROMPT + JSON.stringify(snapshot, null, 1);
+  // Prompt caching: the static ROSTER_ANALYSIS_PROMPT is identical every refresh,
+  // so cache it; only the per-deal snapshot JSON varies. Helps now that analysis
+  // auto-refreshes on every upload.
   const upstream = await callAnthropicOnce({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 4000,
-    messages: [{ role: "user", content }],
+    messages: [{ role: "user", content: [
+      { type: "text", text: ROSTER_ANALYSIS_PROMPT, cache_control: { type: "ephemeral" } },
+      { type: "text", text: JSON.stringify(snapshot, null, 1) },
+    ] }],
   });
   const data = await upstream.json() as Record<string, unknown>;
   if (!upstream.ok) {

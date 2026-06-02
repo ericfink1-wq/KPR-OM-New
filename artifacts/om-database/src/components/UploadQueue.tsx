@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus } from "../lib/api";
+import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis } from "../lib/api";
 import { extractPdfImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
@@ -197,6 +197,29 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasActiveWork]);
 
+  // After a roster/sales/options update, regenerate the AI analysis (grade,
+  // narrative, strengths/risks, red flags) from the FINAL merged roster so the
+  // deal page isn't left showing stale "analysis may be outdated". Best-effort —
+  // never fails the import. Costs a Haiku roster pass per deal (acceptable: the
+  // user asked for auto-refresh on upload).
+  const refreshAnalysisFor = async (itemId: string, deal: Deal): Promise<Deal> => {
+    try {
+      updateItem(itemId, { msg: `${deal.propertyName || deal.fileName || "Deal"} · refreshing analysis…` });
+      const a = await apiRefreshAnalysis(deal.id);
+      const upd = {
+        ...deal,
+        notes: (a.notes as string) ?? deal.notes,
+        dealScore: (a.dealScore as Deal["dealScore"]) ?? deal.dealScore,
+        upsideItems: (a.upsideItems as Deal["upsideItems"]) ?? deal.upsideItems,
+        redFlags: (a.redFlags as Deal["redFlags"]) ?? deal.redFlags,
+        analysisStale: false,
+      } as Deal;
+      await apiSaveDeal(upd).catch(() => {});
+      onDealUpdated?.(upd);
+      return upd;
+    } catch { return deal; }
+  };
+
   // Apply an extracted roster to a matched deal (safe path: preserves financials).
   const applyRosterToDeal = async (
     itemId: string, deal: Deal, result: { asOf: string | null; tenants: NonNullable<Deal["tenants"]> },
@@ -224,7 +247,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const hint = { propertyName, address, fileName };
     const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
     if (m.deal && m.confidence !== "none") {
-      await applyRosterToDeal(itemId, m.deal, result);
+      const upd = await applyRosterToDeal(itemId, m.deal, result);
+      await refreshAnalysisFor(itemId, upd);
     } else {
       updateItem(itemId, {
         status: "awaiting_match", routedType: "rent-roll", matchHint: hint,
@@ -273,7 +297,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const hint = { propertyName, address, fileName };
     const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
     if (m.deal && m.confidence !== "none") {
-      await applyOptionsToDeal(itemId, m.deal, result);
+      const upd = await applyOptionsToDeal(itemId, m.deal, result);
+      await refreshAnalysisFor(itemId, upd);
     } else {
       updateItem(itemId, {
         status: "awaiting_match", routedType: "lease-options", matchHint: hint,
@@ -308,7 +333,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const hint = { propertyName, address, fileName };
     const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
     if (m.deal && m.confidence !== "none") {
-      await applySalesToDeal(itemId, m.deal, result);
+      const upd = await applySalesToDeal(itemId, m.deal, result);
+      await refreshAnalysisFor(itemId, upd);
     } else {
       updateItem(itemId, {
         status: "awaiting_match", routedType: "sales", matchHint: hint,
@@ -325,6 +351,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     // Apply waiting docs one at a time, threading the updated deal so a rent roll
     // and a sales report for the same property don't overwrite each other.
     let working = deal;
+    let lastApplied: string | null = null;
     for (const it of queueRef.current) {
       if (it.status !== "awaiting_match" || !it.matchHint || !it.pendingExtracted) continue;
       const m = matchDeal(it.matchHint, [working]);
@@ -332,15 +359,21 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       try {
         if (it.routedType === "rent-roll") {
           working = await applyRosterToDeal(it.id, working, it.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+          lastApplied = it.id;
         } else if (it.routedType === "lease-options") {
           working = await applyOptionsToDeal(it.id, working, it.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+          lastApplied = it.id;
         } else if (it.routedType === "sales") {
           working = await applySalesToDeal(it.id, working, it.pendingExtracted as unknown as SalesExtractResult);
+          lastApplied = it.id;
         }
       } catch (err) {
         updateItem(it.id, { status: "error", msg: "Auto-attach failed", error: err instanceof Error ? err.message : "failed" });
       }
     }
+    // Once every same-drop file is merged into the deal, refresh its analysis ONCE
+    // from the final roster (so the grade/narrative reflect the merged result).
+    if (lastApplied) await refreshAnalysisFor(lastApplied, working);
   };
 
   // User manually assigns an awaiting doc to a property.
@@ -350,21 +383,24 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     if (item.routedType === "rent-roll" && item.pendingExtracted) {
       updateItem(itemId, { status: "extracting", msg: "Updating roster…", progress: 60 });
       try {
-        await applyRosterToDeal(itemId, deal, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        const upd = await applyRosterToDeal(itemId, deal, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        await refreshAnalysisFor(itemId, upd);
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Roster update failed", error: err instanceof Error ? err.message : "failed" });
       }
     } else if (item.routedType === "lease-options" && item.pendingExtracted) {
       updateItem(itemId, { status: "extracting", msg: "Updating options…", progress: 60 });
       try {
-        await applyOptionsToDeal(itemId, deal, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        const upd = await applyOptionsToDeal(itemId, deal, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        await refreshAnalysisFor(itemId, upd);
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Options update failed", error: err instanceof Error ? err.message : "failed" });
       }
     } else if (item.routedType === "sales" && item.pendingExtracted) {
       updateItem(itemId, { status: "extracting", msg: "Importing sales…", progress: 60 });
       try {
-        await applySalesToDeal(itemId, deal, item.pendingExtracted as unknown as SalesExtractResult);
+        const upd = await applySalesToDeal(itemId, deal, item.pendingExtracted as unknown as SalesExtractResult);
+        await refreshAnalysisFor(itemId, upd);
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Sales import failed", error: err instanceof Error ? err.message : "failed" });
       }
