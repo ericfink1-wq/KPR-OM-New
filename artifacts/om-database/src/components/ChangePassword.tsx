@@ -26,7 +26,7 @@ export default function ChangePassword({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     if (busy) return;
     setError(null);
-    if (next.length < 8) { setError("New password must be at least 8 characters."); return; }
+    if (next.length < 10) { setError("New password must be at least 10 characters."); return; }
     if (next !== confirm) { setError("New passwords don't match."); return; }
     setBusy(true);
     const r = await apiChangePassword(current, next);
@@ -54,7 +54,7 @@ export default function ChangePassword({ onClose }: { onClose: () => void }) {
               </div>
               <div style={{ marginBottom: 12 }}>
                 <label style={lbl}>New password</label>
-                <input type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} placeholder="At least 8 characters" style={inp} />
+                <input type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} placeholder="At least 10 characters" style={inp} />
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={lbl}>Confirm new password</label>

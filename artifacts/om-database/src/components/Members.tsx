@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, type MemberAccount } from "../lib/api";
+import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiLoginEvents, type MemberAccount, type LoginEvent } from "../lib/api";
 
 // Admin-only screen to approve / decline account requests and manage members.
 export default function Members({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<MemberAccount[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [events, setEvents] = useState<LoginEvent[] | null>(null);
+  const [showActivity, setShowActivity] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
     apiListMembers().then(setRows).catch(() => setError("Couldn't load members"));
+    apiLoginEvents().then(setEvents).catch(() => { /* non-fatal */ });
   }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -89,6 +92,28 @@ export default function Members({ onClose }: { onClose: () => void }) {
                 ? <div style={{ color: "#a69e91", fontSize: 12.5 }}>No active members yet.</div>
                 : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{others.map(row)}</div>}
             </>
+          )}
+
+          {/* Recent sign-in activity */}
+          {events && events.length > 0 && (
+            <div style={{ marginTop: 18, borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
+              <button onClick={() => setShowActivity(s => !s)}
+                style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {showActivity ? "▾" : "▸"} Recent sign-in activity
+              </button>
+              {showActivity && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, maxHeight: 240, overflowY: "auto" }}>
+                  {events.map(ev => (
+                    <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "4px 2px", borderBottom: "1px solid #f4efe6" }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.success ? "#3f7a1f" : "#c0392b", flexShrink: 0 }} />
+                      <span style={{ color: "#383a37", minWidth: 0, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.email || "(unknown)"}</span>
+                      <span style={{ color: ev.success ? "#6f6a5f" : "#c0392b", flexShrink: 0 }}>{ev.success ? "signed in" : "failed"}</span>
+                      <span style={{ color: "#a89f8f", flexShrink: 0 }}>{new Date(ev.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <div style={{ fontSize: 10.5, color: "#bcae97", marginTop: 14, lineHeight: 1.5 }}>

@@ -17,6 +17,7 @@ import PortfolioAnalytics from "./components/PortfolioAnalytics";
 import RolloverYearView from "./components/RolloverYearView";
 import CompsSearch from "./components/CompsSearch";
 import Login from "./components/Login";
+import ResetPassword from "./components/ResetPassword";
 import HelpModal from "./components/HelpModal";
 import AiProgressBar from "./components/AiProgressBar";
 import { isSupportedUpload } from "./lib/fileExtract";
@@ -36,6 +37,16 @@ type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
   const [auth, setAuth] = useState<AuthState>("checking");
+  // Password-reset deep link (?reset=1&email=…&token=…) from the reset email.
+  const [resetParams, setResetParams] = useState<{ email: string; token: string } | null>(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("reset") === "1" && p.get("token") && p.get("email")) {
+        return { email: p.get("email") as string, token: p.get("token") as string };
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
   const [isAdmin, setIsAdmin] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [tab, setTab] = useState<TabId>("analyst");
@@ -243,6 +254,13 @@ function AppInner() {
   }, []);
 
   const processingCount = 0; // UploadQueue tracks this internally now
+
+  if (resetParams) {
+    return <ResetPassword email={resetParams.email} token={resetParams.token} onDone={() => {
+      try { window.history.replaceState({}, "", window.location.pathname); } catch { /* ignore */ }
+      setResetParams(null);
+    }} />;
+  }
 
   if (auth === "checking") {
     return (

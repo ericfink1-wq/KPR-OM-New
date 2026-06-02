@@ -69,7 +69,27 @@ export async function apiCheckAuth(): Promise<AuthState> {
   }
 }
 
+export async function apiForgotPassword(email: string): Promise<void> {
+  await apiFetch("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+export async function apiResetPassword(email: string, token: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+  const resp = await apiFetch("/auth/reset-password", { method: "POST", body: JSON.stringify({ email, token, newPassword }) });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    return { ok: false, error: body.error || "Could not reset password" };
+  }
+  return { ok: true };
+}
+
 // --- Admin: member accounts ---
+export interface LoginEvent { id: string; email: string | null; success: boolean; ip: string | null; createdAt: string }
+export async function apiLoginEvents(): Promise<LoginEvent[]> {
+  const resp = await apiFetch("/auth/login-events");
+  if (!resp.ok) return [];
+  return await resp.json().catch(() => []) as LoginEvent[];
+}
+
 export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; createdAt: string; lastLoginAt: string | null }
 export async function apiListMembers(): Promise<MemberAccount[]> {
   const resp = await apiFetch("/auth/users");

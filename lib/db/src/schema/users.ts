@@ -14,4 +14,6 @@ export const usersTable = pgTable("users", {
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   approvedBy: text("approved_by"),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  resetTokenHash: text("reset_token_hash"),
+  resetTokenExpires: timestamp("reset_token_expires", { withTimezone: true }),
 });

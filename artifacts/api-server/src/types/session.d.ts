@@ -7,5 +7,6 @@ declare module "express-session" {
     userId?: string;
     userEmail?: string;
     userName?: string | null;
+    loginAt?: number;
   }
 }
