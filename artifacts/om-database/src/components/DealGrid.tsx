@@ -230,6 +230,19 @@ function mergeSalesHistories(deals: Deal[]): Deal["tenantSalesHistory"] | undefi
 const USER_EXTRA = new Set(["status", "statusSince", "autoPassed", "dealThesis", "ownershipStructure", "marketSale", "marketSaleChecked", "propertyGroupId", "broker", "seller"]);
 const isUserField = (k: string) => /^(acq|debt|pref|txn|disp)/.test(k) || USER_EXTRA.has(k);
 
+// Fields that can be bulk-set across selected properties. `also` keeps linked
+// fields in sync (seller↔txnSeller, broker↔acqBroker), mirroring the deal page.
+const BULK_FIELDS: { key: keyof Deal; label: string; also?: (keyof Deal)[]; hint?: string; options?: readonly string[] }[] = [
+  { key: "status", label: "Status", options: STATUS_OPTS },
+  { key: "seller", label: "Seller", also: ["txnSeller"], hint: "Also updates Transaction Details → Seller." },
+  { key: "broker", label: "Broker", also: ["acqBroker"], hint: "Also updates Acquisition → Broker." },
+  { key: "market", label: "Market (MSA)" },
+  { key: "submarket", label: "Submarket" },
+  { key: "state", label: "State" },
+  { key: "assetType", label: "Asset Type" },
+  { key: "centerType", label: "Center Type" },
+];
+
 export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles }: Props) {
   const watchMap = useWatchlist();
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
@@ -244,7 +257,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const [merging, setMerging] = useState(false);
 
   // Bulk action state
-  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditField, setBulkEditField] = useState<keyof Deal>("status");
+  const [bulkEditValue, setBulkEditValue] = useState<string>(STATUS_OPTS[0] ?? "");
   const [confirmBulkDel, setConfirmBulkDel] = useState(false);
   const [confirmGate, setConfirmGate] = useState<ConfirmGate | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -345,7 +360,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   };
   const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
   const toggleSel = (id: string) => setSelected(s => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
-  const clearSelection = () => { setSelected(new Set()); setConfirmBulkDel(false); setBulkStatusOpen(false); };
+  const clearSelection = () => { setSelected(new Set()); setConfirmBulkDel(false); setBulkEditOpen(false); };
 
   // ── Combine phases ───────────────────────────────────────────────────────
   const openCombine = () => {
@@ -540,12 +555,20 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     setNotice(`Merged ${modal.deals.length} deals into one — newest data kept per section, your underwriting preserved. Extras are in Trash.`);
   };
 
-  // ── Bulk: change status ──────────────────────────────────────────────────
-  const bulkChangeStatus = (status: string) => {
-    for (const id of selected) onUpdate(id, { status });
-    setBulkStatusOpen(false);
+  // ── Bulk: set a field across the selected properties ─────────────────────
+  const applyBulkEdit = () => {
+    const cfg = BULK_FIELDS.find(f => f.key === bulkEditField);
+    if (!cfg) return;
+    let v = bulkEditValue.trim();
+    if (cfg.key === "state") v = v.toUpperCase();
+    const finalVal = v === "" ? null : v;
+    const patch: Record<string, unknown> = { [cfg.key]: finalVal };
+    for (const k of cfg.also || []) patch[k] = finalVal;
+    const n = selected.size;
+    for (const id of selected) onUpdate(id, patch as Partial<Deal>);
     clearSelection();
-    setNotice(`Status set to "${status}" for ${selected.size} deal${selected.size === 1 ? "" : "s"}.`);
+    setBulkEditValue("");
+    setNotice(`${cfg.label} ${finalVal === null ? "cleared" : `set to "${finalVal}"`} for ${n} propert${n === 1 ? "y" : "ies"}.`);
   };
 
   // ── Bulk: permanently delete ─────────────────────────────────────────────
@@ -873,21 +896,38 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
           <span style={{ color: "#ffffff", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{selected.size} selected</span>
           <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
 
-          {/* Change status */}
+          {/* Bulk edit fields (status, seller, broker, market, …) */}
           <div style={{ position: "relative" }}>
-            <button onClick={() => setBulkStatusOpen(o => !o)} style={darkBtn}>
-              Change status ▾
+            <button onClick={() => setBulkEditOpen(o => !o)} style={darkBtn}>
+              Bulk edit ▾
             </button>
-            {bulkStatusOpen && (
-              <div style={{ position: "absolute", top: "110%", left: 0, background: "#ffffff", border: "1px solid #e3dccd", borderRadius: 10, padding: 6, zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 160 }}>
-                {STATUS_OPTS.map(s => (
-                  <button key={s} onClick={() => bulkChangeStatus(s)} style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "8px 10px", borderRadius: 7, cursor: "pointer", fontSize: 12, color: "#383a37", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f6f2ea"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: STATUS_COLORS[s] || "#a69e91", marginRight: 8 }} />
-                    {s}
-                  </button>
-                ))}
+            {bulkEditOpen && (
+              <div style={{ position: "absolute", top: "110%", left: 0, background: "#ffffff", border: "1px solid #e3dccd", borderRadius: 10, padding: 12, zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", width: 270 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "#a69e91", textTransform: "uppercase", marginBottom: 6 }}>Set field for {selected.size} selected</div>
+                <select value={String(bulkEditField)}
+                  onChange={e => { const k = e.target.value as keyof Deal; setBulkEditField(k); const c = BULK_FIELDS.find(f => f.key === k); setBulkEditValue(c?.options ? c.options[0] : ""); }}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "7px 9px", border: "1px solid #d9d2c4", borderRadius: 7, fontSize: 12.5, fontFamily: "'Inter',sans-serif", background: "#fff", color: "#26281f" }}>
+                  {BULK_FIELDS.map(f => <option key={String(f.key)} value={String(f.key)}>{f.label}</option>)}
+                </select>
+                {(() => {
+                  const cfg = BULK_FIELDS.find(f => f.key === bulkEditField);
+                  const ctrl: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "7px 9px", border: "1px solid #d9d2c4", borderRadius: 7, fontSize: 12.5, fontFamily: "'Inter',sans-serif", background: "#fff", color: "#26281f", marginTop: 8 };
+                  if (cfg?.options) {
+                    return (
+                      <select value={bulkEditValue} onChange={e => setBulkEditValue(e.target.value)} style={ctrl}>
+                        {cfg.options.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    );
+                  }
+                  return <input value={bulkEditValue} onChange={e => setBulkEditValue(e.target.value)} placeholder="New value (blank = clear)" onKeyDown={e => { if (e.key === "Enter") applyBulkEdit(); }} style={ctrl} />;
+                })()}
+                <div style={{ fontSize: 10, color: "#a69e91", marginTop: 6, lineHeight: 1.4 }}>
+                  {BULK_FIELDS.find(f => f.key === bulkEditField)?.hint || "Applies to all selected properties."}
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button onClick={applyBulkEdit} style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Apply to {selected.size}</button>
+                  <button onClick={() => setBulkEditOpen(false)} style={{ background: "transparent", color: "#837c6e", border: "1px solid #ddd4c2", borderRadius: 7, padding: "7px 12px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
+                </div>
               </div>
             )}
           </div>
