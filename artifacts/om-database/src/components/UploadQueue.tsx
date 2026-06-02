@@ -37,6 +37,9 @@ interface Props {
   onDealUpdated?: (deal: Deal) => void;
   onOpenDeal: (id: string) => void;
   existingDeals: Deal[];
+  // Reports the open import panel's height (0 when hidden) so the feedback flag
+  // can sit just above it instead of overlapping the queue.
+  onPanelHeightChange?: (h: number) => void;
 }
 
 function findDuplicate(fileName: string, extracted: Record<string, unknown>, existing: Deal[]): Deal | null {
@@ -101,9 +104,10 @@ function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): D
 
 const MAX_CONCURRENT = 3;
 
-export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, onOpenDeal, existingDeals }: Props) {
+export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, onOpenDeal, existingDeals, onPanelHeightChange }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [queueOpen, setQueueOpen] = useState(true);
+  const panelRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef<File[]>([]);
   const activeCountRef = useRef(0);
   const waitingFilesRef = useRef<{ file: File; itemId: string }[]>([]);
@@ -116,6 +120,17 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const createdDealsRef = useRef<Deal[]>([]);
   const queueRef = useRef<QueueItem[]>([]);
   useEffect(() => { queueRef.current = queue; }, [queue]);
+
+  // Report the open panel's live height so the feedback flag can lift above it.
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!queueOpen || !el || queue.length === 0) { onPanelHeightChange?.(0); return; }
+    const report = () => onPanelHeightChange?.(el.offsetHeight);
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => { ro.disconnect(); onPanelHeightChange?.(0); };
+  }, [queueOpen, queue.length, onPanelHeightChange]);
 
   const drainQueue = () => {
     while (activeCountRef.current < MAX_CONCURRENT && waitingFilesRef.current.length > 0) {
@@ -580,7 +595,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     <>
       {/* Fixed bottom queue panel */}
       {queueOpen && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#ffffff", borderTop: "1px solid #ebe4d6", zIndex: 200, maxHeight: "60vh", display: "flex", flexDirection: "column", boxShadow: "0 -12px 48px rgba(56,58,55,0.12)" }}>
+        <div ref={panelRef} style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#ffffff", borderTop: "1px solid #ebe4d6", zIndex: 200, maxHeight: "60vh", display: "flex", flexDirection: "column", boxShadow: "0 -12px 48px rgba(56,58,55,0.12)" }}>
           {/* Header */}
           <div style={{ padding: "16px 28px 12px", borderBottom: "1px solid #f1eadc" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>

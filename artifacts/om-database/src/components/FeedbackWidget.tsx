@@ -4,6 +4,8 @@ import { apiSubmitFeedback } from "../lib/api";
 interface Props {
   currentPage: string;
   liftAboveBar?: boolean;
+  /** Height (px) of the open import panel — lifts the flag just above it so it doesn't overlap. */
+  liftAbove?: number;
 }
 
 type FeedbackType = "Bug" | "Idea" | "Other";
@@ -42,8 +44,9 @@ function fileToDownscaledDataUrl(file: File, maxDim = 1400, quality = 0.8): Prom
   });
 }
 
-export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
-  const bottomOffset = liftAboveBar ? 110 : 24;
+export default function FeedbackWidget({ currentPage, liftAboveBar, liftAbove }: Props) {
+  // When the import panel is open, sit just above it; otherwise normal position.
+  const bottomOffset = liftAbove && liftAbove > 0 ? liftAbove + 16 : (liftAboveBar ? 110 : 24);
   const [phase, setPhase] = useState<Phase>("idle");
   const [type, setType] = useState<FeedbackType>("Idea");
   const [message, setMessage] = useState("");
@@ -101,7 +104,7 @@ export default function FeedbackWidget({ currentPage, liftAboveBar }: Props) {
   };
 
   return (
-    <div style={{ position: "fixed", bottom: bottomOffset, left: 24, zIndex: 9500, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
+    <div style={{ position: "fixed", bottom: bottomOffset, left: 24, zIndex: 9500, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, transition: "bottom 0.2s ease" }}>
       {(phase === "open" || phase === "submitting" || phase === "error") && (
         <div style={{
           background: "#fff",

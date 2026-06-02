@@ -107,6 +107,7 @@ function AppInner() {
   const dragCounter = useRef(0);
   const analyticsScrollRef = useRef<HTMLDivElement>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadPanelH, setUploadPanelH] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist">("tenant");
@@ -587,6 +588,7 @@ function AppInner() {
           tab
         }
         liftAboveBar={view.type !== "detail"}
+        liftAbove={uploadPanelH}
       />
 
       {/* Global fixed-bottom upload queue — always rendered so it can track uploads from any tab */}
@@ -597,6 +599,7 @@ function AppInner() {
         onDealUpdated={handleDealUpdated}
         onOpenDeal={handleOpenDeal}
         existingDeals={deals}
+        onPanelHeightChange={setUploadPanelH}
       />
     </div>
   );
