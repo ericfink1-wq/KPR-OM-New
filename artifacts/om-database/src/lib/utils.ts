@@ -372,6 +372,42 @@ export function getUserMerges(): UserMerge[] {
   return _userMerges;
 }
 
+// Split a single tenant name back out of whatever group it's in — used by the
+// per-row "Unlink" on tenant detail pages when a stray variant snuck into a
+// grouping. Removes the name from any user-merge it belongs to (collapsing the
+// merge if only the canonical remains) and deletes its server-side alias, so the
+// split flows through analytics on every device. Returns true if anything changed.
+export function unlinkTenantName(rawName: string): boolean {
+  const target = _normTenant(rawName);
+  if (!target) return false;
+  let changed = false;
+  const remaining: UserMerge[] = [];
+  for (const m of _userMerges) {
+    if (!m.variants.some(v => _normTenant(v) === target)) { remaining.push(m); continue; }
+    changed = true;
+    const variants = m.variants.filter(v => _normTenant(v) !== target);
+    const distinct = new Set(variants.map(_normTenant)); distinct.add(_normTenant(m.canonical));
+    if (distinct.size >= 2) {
+      // Merge still links ≥2 names — keep it, trimmed.
+      remaining.push({ ...m, variants });
+      saveTenantDecision({ id: m.id, type: "merge", nameA: m.canonical, nameB: "", variants }).catch(() => { /**/ });
+      saveServerDecision({ id: m.id, type: "merge", nameA: m.canonical, canonical: m.canonical, variants });
+    } else {
+      // Nothing left to link — drop the whole merge.
+      removeTenantDecision(m.id).catch(() => { /**/ });
+      deleteServerDecision(m.id);
+    }
+  }
+  if (changed) {
+    _userMerges = remaining;
+    rebuildUserAliases();
+    try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
+  }
+  // Always clear the backend alias for this name so the tenant index splits it too.
+  fetch(`/api/aliases/${encodeURIComponent(rawName)}`, { method: "DELETE", credentials: "include" }).catch(() => { /**/ });
+  return changed;
+}
+
 // ── Tenant-name normalisation ─────────────────────────────────────────────────
 // These helpers ensure that spelling variants of the same brand (e.g. "T Mobile",
 // "T-Mobile", "TMobile") collapse to one key in every cross-deal grouping.

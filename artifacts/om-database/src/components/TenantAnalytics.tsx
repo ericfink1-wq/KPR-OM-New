@@ -363,8 +363,13 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
   // All tenants sorted by rent desc — searchable full list
   const allTenantsSorted = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent), [rows]);
-  // Only worth offering the ATM filter if this dataset actually contains ATMs.
-  const hasATMs = useMemo(() => rows.some(r => isATM(r.displayName, r.totalSF)), [rows]);
+  // Only offer the ATM filter when the CURRENTLY VISIBLE (search-filtered) list
+  // actually contains ATMs — so it doesn't show while browsing non-bank tenants.
+  const hasATMs = useMemo(() => {
+    const q = tenantSearch.trim().toLowerCase();
+    const base = q ? allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q)) : allTenantsSorted;
+    return base.some(r => isATM(r.displayName, r.totalSF));
+  }, [allTenantsSorted, tenantSearch]);
   const filteredAllTenants = useMemo(() => {
     const q = tenantSearch.trim().toLowerCase();
     let list = q ? allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q)) : allTenantsSorted;

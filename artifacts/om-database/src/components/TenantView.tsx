@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
-import { EyeOff } from "lucide-react";
+import { EyeOff, Unlink } from "lucide-react";
 import type { Deal } from "../lib/idb";
-import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain, isNAPTenant } from "../lib/utils";
+import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
 
@@ -64,6 +64,17 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     setIgnoredIds(new Set<string>());
     try { localStorage.removeItem(storageKey); } catch {}
   }, [storageKey]);
+
+  // Force a re-render after an unlink so the grouping (tenantKey) recomputes and
+  // the split-out row drops from this tenant immediately.
+  const [, forceUpdate] = useState(0);
+  const handleUnlink = useCallback((rawName: string | undefined) => {
+    const name = rawName?.trim();
+    if (!name) return;
+    if (!window.confirm(`Unlink "${tenantLabel(name)}" from ${tenantLabel(tenantName)}?\n\nIt will split back out into its own tenant across the whole app. You can re-link it later from Tenant Analytics → Link Tenants.`)) return;
+    unlinkTenantName(name);
+    forceUpdate(n => n + 1);
+  }, [tenantName]);
 
   const rows = scope === "owned"
     ? allRows.filter(r => r.deal.status === "Owned")
@@ -256,9 +267,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         {label}{arrow(k)}
                       </th>
                     ))}
-                    {/* Ignore button column — sticky right */}
+                    {/* Ignore + Unlink buttons column — sticky right */}
                     <th style={{
-                      width:40, padding:"6px 6px",
+                      width:76, padding:"6px 6px",
                       position:"sticky", right:0, zIndex:3,
                       background:"#fff",
                       borderLeft:"1px solid #efe8da",
@@ -307,10 +318,10 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
                         <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
-                        {/* Ignore button — sticky right, stopPropagation so it doesn't open the deal */}
+                        {/* Ignore + Unlink — sticky right, stopPropagation so they don't open the deal */}
                         <td
                           style={{
-                            padding:"4px 6px", width:40, textAlign:"center",
+                            padding:"4px 4px", width:76, textAlign:"center",
                             position:"sticky", right:0, zIndex:2,
                             background: owned ? "#f3faef" : "#fff",
                             borderLeft:"1px solid #efe8da",
@@ -318,25 +329,34 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                           }}
                           onClick={e => e.stopPropagation()}
                         >
-                          <button
-                            onClick={() => toggleIgnore(id)}
-                            title={ignored ? "Re-include in averages" : "Exclude from averages"}
-                            style={{
-                              background:"transparent",
-                              border:"none",
-                              cursor:"pointer",
-                              padding:0,
-                              display:"inline-flex",
-                              alignItems:"center",
-                              justifyContent:"center",
-                              minWidth:32,
-                              minHeight:32,
-                              color: ignored ? "#d9890c" : "#d4cdc4",
-                              transition:"color 0.15s",
-                            }}
-                          >
-                            <EyeOff size={13} strokeWidth={1.75} />
-                          </button>
+                          <div style={{ display:"inline-flex", alignItems:"center", gap:2 }}>
+                            <button
+                              onClick={() => toggleIgnore(id)}
+                              title={ignored ? "Re-include in averages" : "Exclude from averages"}
+                              style={{
+                                background:"transparent", border:"none", cursor:"pointer", padding:0,
+                                display:"inline-flex", alignItems:"center", justifyContent:"center",
+                                minWidth:30, minHeight:32,
+                                color: ignored ? "#d9890c" : "#d4cdc4", transition:"color 0.15s",
+                              }}
+                            >
+                              <EyeOff size={13} strokeWidth={1.75} />
+                            </button>
+                            <button
+                              onClick={() => handleUnlink(r.t.canonicalName || r.t.name)}
+                              title={`Unlink "${tenantLabel(r.t.canonicalName || r.t.name || "")}" — split it out if it was wrongly grouped here`}
+                              style={{
+                                background:"transparent", border:"none", cursor:"pointer", padding:0,
+                                display:"inline-flex", alignItems:"center", justifyContent:"center",
+                                minWidth:30, minHeight:32,
+                                color:"#d4cdc4", transition:"color 0.15s",
+                              }}
+                              onMouseEnter={e => (e.currentTarget.style.color = "#c0392b")}
+                              onMouseLeave={e => (e.currentTarget.style.color = "#d4cdc4")}
+                            >
+                              <Unlink size={13} strokeWidth={1.75} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

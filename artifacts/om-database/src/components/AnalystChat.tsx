@@ -105,8 +105,15 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, loading]);
 
+  // Each send gets a generation id. Pressing Stop bumps the counter, so when the
+  // (still in-flight) request resolves we see it's stale and discard the answer
+  // instead of dropping it into the chat — an immediate Stop for an accidental ask.
+  const genRef = useRef(0);
+  const stop = () => { genRef.current++; setLoading(false); };
+
   const sendMsg = async (text: string) => {
     if (!text.trim() || loading) return;
+    const myGen = ++genRef.current;
     const userMsg: Message = { role: "user", content: text, ts: Date.now() };
     setMsgs(m => [...m, userMsg]);
     setInput("");
@@ -124,13 +131,15 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
         }
       });
 
+      if (genRef.current !== myGen) return; // stopped — discard the response
       const content = (resp as any)?.content?.[0]?.text || (resp as any)?.text || "I couldn't generate a response.";
       setMsgs(m => [...m, { role: "assistant", content, ts: Date.now() }]);
     } catch (err: unknown) {
+      if (genRef.current !== myGen) return; // stopped — swallow the error too
       const msg = err instanceof Error ? err.message : "Request failed";
       setMsgs(m => [...m, { role: "assistant", content: `Error: ${msg}`, ts: Date.now() }]);
     } finally {
-      setLoading(false);
+      if (genRef.current === myGen) setLoading(false);
     }
   };
 
@@ -372,15 +381,26 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               outline: "none", boxShadow: "0 1px 2px rgba(56,58,55,0.05)",
             }}
           />
-          <button onClick={() => { setShowSuggestions(false); submit(input); }} disabled={loading || !input.trim()}
-            style={{
-              background: input.trim() && !loading ? "#26281f" : "#e3dccd",
-              border: "none", color: input.trim() && !loading ? "#e8e0cf" : "#a89f8f",
-              borderRadius: 12, width: 44, cursor: input.trim() && !loading ? "pointer" : "default",
-              fontSize: 18, flexShrink: 0,
-            }}>
-            ↑
-          </button>
+          {loading ? (
+            <button onClick={stop} title="Stop generating"
+              style={{
+                background: "#b91c1c", border: "none", color: "#fff",
+                borderRadius: 12, width: 44, cursor: "pointer", fontSize: 15, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+              ■
+            </button>
+          ) : (
+            <button onClick={() => { setShowSuggestions(false); submit(input); }} disabled={!input.trim()}
+              style={{
+                background: input.trim() ? "#26281f" : "#e3dccd",
+                border: "none", color: input.trim() ? "#e8e0cf" : "#a89f8f",
+                borderRadius: 12, width: 44, cursor: input.trim() ? "pointer" : "default",
+                fontSize: 18, flexShrink: 0,
+              }}>
+              ↑
+            </button>
+          )}
         </div>
         <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6 }}>Enter to send · Shift+Enter for new line · Powered by Claude</div>
         </div>
