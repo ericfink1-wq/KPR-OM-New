@@ -20,7 +20,7 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 // can't be squatted. ON CONFLICT DO NOTHING — never overwrites a later password
 // change. Idempotent; runs once per process.
 let tableReady: Promise<void> | null = null;
-function ensureUsersTable(): Promise<void> {
+export function ensureUsersTable(): Promise<void> {
   if (!tableReady) {
     tableReady = (async () => {
       await db.execute(sql`

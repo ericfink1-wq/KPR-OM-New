@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { ensureUsersTable } from "./routes/auth";
 
 const rawPort = process.env["PORT"];
 
@@ -19,6 +20,15 @@ const server = app.listen(port, (err) => {
   }
   logger.info({ port }, "Server listening");
 });
+
+// Restore/provision the accounts tables on startup: recreates `users` and
+// `login_events` (CREATE TABLE IF NOT EXISTS) and re-seeds the owner admin from
+// ADMIN_PASSWORD if they were missing — so a dropped/missing accounts schema is
+// healed the moment a healthy build boots, without waiting for a login attempt.
+// Best-effort: never crash the server if the database is briefly unreachable.
+ensureUsersTable()
+  .then(() => logger.info("Accounts tables ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureUsersTable failed on startup (will retry on first auth request)"));
 
 // Allow long-running AI calls (AnalystChat, lookup endpoints) up to 5 minutes.
 // The PDF ingest route is not affected since it returns immediately.
