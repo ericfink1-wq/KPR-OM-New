@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureUsersTable } from "./routes/auth";
 import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
+import { ensureSessionTable } from "./lib/sessionStore";
 
 const rawPort = process.env["PORT"];
 
@@ -46,6 +47,11 @@ ensureTenantIndexColumns()
 ensureExtractionLessonsTable()
   .then(() => logger.info("extraction_lessons table ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureExtractionLessonsTable failed on startup (will retry on first use)"));
+
+// Provision the DB-backed session table before requests need it (best-effort).
+ensureSessionTable()
+  .then(() => logger.info("session table ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureSessionTable failed on startup (will retry on next boot)"));
 
 // Allow long-running AI calls (AnalystChat, lookup endpoints) up to 5 minutes.
 // The PDF ingest route is not affected since it returns immediately.

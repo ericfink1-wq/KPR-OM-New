@@ -10,3 +10,4 @@ export * from "./clientErrors";
 export * from "./users";
 export * from "./loginEvents";
 export * from "./extractionLessons";
+export * from "./sessions";

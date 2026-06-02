@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot } from "./lib/api";
@@ -9,27 +9,39 @@ import FeedbackWidget from "./components/FeedbackWidget";
 import AnalystBar from "./components/AnalystBar";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
-import DetailView from "./components/DetailView";
-import TenantView from "./components/TenantView";
-import LenderView from "./components/LenderView";
 import AnalystChat from "./components/AnalystChat";
-import PortfolioAnalytics from "./components/PortfolioAnalytics";
-import RolloverYearView from "./components/RolloverYearView";
-import CompsSearch from "./components/CompsSearch";
 import Login from "./components/Login";
-import ResetPassword from "./components/ResetPassword";
 import HelpModal from "./components/HelpModal";
 import AiProgressBar from "./components/AiProgressBar";
 import { isSupportedUpload } from "./lib/fileExtract";
-import TenantAudit from "./components/TenantAudit";
-import TenantAnalytics from "./components/TenantAnalytics";
-import RetailerWatchlist from "./components/RetailerWatchlist";
-import ParentCompanyView from "./components/ParentCompanyView";
-import CompareView from "./components/CompareView";
+// Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
+// bundle (faster first paint, especially on mobile). They only fetch their chunk
+// when first opened; a Suspense fallback covers the brief load.
+const DetailView = lazy(() => import("./components/DetailView"));
+const TenantView = lazy(() => import("./components/TenantView"));
+const LenderView = lazy(() => import("./components/LenderView"));
+const PortfolioAnalytics = lazy(() => import("./components/PortfolioAnalytics"));
+const RolloverYearView = lazy(() => import("./components/RolloverYearView"));
+const CompsSearch = lazy(() => import("./components/CompsSearch"));
+const ResetPassword = lazy(() => import("./components/ResetPassword"));
+const TenantAudit = lazy(() => import("./components/TenantAudit"));
+const TenantAnalytics = lazy(() => import("./components/TenantAnalytics"));
+const RetailerWatchlist = lazy(() => import("./components/RetailerWatchlist"));
+const ParentCompanyView = lazy(() => import("./components/ParentCompanyView"));
+const CompareView = lazy(() => import("./components/CompareView"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
+
+// Fallback shown while a lazy-loaded screen's chunk is fetched (usually a blink).
+function ViewLoading() {
+  return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 240, color: "#a89f8f", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
+      Loading…
+    </div>
+  );
+}
 
 type TabId = "analyst" | "portfolio" | "analytics" | "comps";
 type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string } | { type: "rollover-year"; year: string; scope: "all" | "owned" };
@@ -256,10 +268,14 @@ function AppInner() {
   const processingCount = 0; // UploadQueue tracks this internally now
 
   if (resetParams) {
-    return <ResetPassword email={resetParams.email} token={resetParams.token} onDone={() => {
-      try { window.history.replaceState({}, "", window.location.pathname); } catch { /* ignore */ }
-      setResetParams(null);
-    }} />;
+    return (
+      <Suspense fallback={<ViewLoading />}>
+        <ResetPassword email={resetParams.email} token={resetParams.token} onDone={() => {
+          try { window.history.replaceState({}, "", window.location.pathname); } catch { /* ignore */ }
+          setResetParams(null);
+        }} />
+      </Suspense>
+    );
   }
 
   if (auth === "checking") {
@@ -326,6 +342,7 @@ function AppInner() {
         </div>
       )}
 
+      <Suspense fallback={<ViewLoading />}>
       {/* Comps tab */}
       {tab === "comps" && (
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
@@ -524,6 +541,8 @@ function AppInner() {
           )}
         </div>
       )}
+
+      </Suspense>
 
       {tab !== "analyst" && view.type !== "detail" && (
         <AnalystBar onAsk={handleQuery} />

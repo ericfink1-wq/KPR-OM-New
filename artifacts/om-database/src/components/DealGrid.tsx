@@ -9,7 +9,9 @@ import ScoreBadge from "./ScoreBadge";
 import { useWatchlist } from "../lib/useWatchlist";
 import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { startAiTask, updateAiTask, finishAiTask } from "../lib/aiProgress";
-import { exportPortfolioToExcel } from "../lib/exportExcel";
+// exportExcel pulls in the heavy SheetJS (xlsx) library — load it on demand at
+// click time so it stays out of the initial bundle (DealGrid is on the first
+// paint). See onClick below.
 import RecencyBadge from "./RecencyBadge";
 
 interface Props {
@@ -1026,7 +1028,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
           />
         )}
         <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
-        <button onClick={() => exportPortfolioToExcel(rows, filterStatuses.length === 1 ? filterStatuses[0].replace(/\s+/g, "") : "All")} disabled={rows.length === 0}
+        <button onClick={async () => { const { exportPortfolioToExcel } = await import("../lib/exportExcel"); exportPortfolioToExcel(rows, filterStatuses.length === 1 ? filterStatuses[0].replace(/\s+/g, "") : "All"); }} disabled={rows.length === 0}
           title="Export the current (filtered) deal list to Excel"
           style={{ background: "transparent", border: "1px solid #c8b89a", color: rows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 11px", borderRadius: 7, cursor: rows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
           ⬇ Excel

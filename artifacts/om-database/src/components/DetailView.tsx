@@ -14,13 +14,13 @@ import TenantRoster from "./TenantRoster";
 import { loadPdfJs, _capturePagePhoto, extractPdfText } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
-import RentRollPDF from "./RentRollPDF";
 import { extractAnyFile } from "../lib/fileExtract";
 import { extractSalesReport, buildSalesHistoryPatch } from "../lib/salesExtract";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import DealSummaryPDF from "./DealSummaryPDF";
+// @react-pdf/renderer (~2 MB) and the PDF document components are loaded ON
+// CLICK via PdfDownloadButton, so opening a deal page no longer pulls the whole
+// PDF engine into its chunk.
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist } from "../lib/useWatchlist";
 import { computeWatchlistImpact } from "../lib/watchlistImpact";
@@ -1028,6 +1028,30 @@ function TeachExtractorModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// Generates a PDF on click by dynamically importing @react-pdf + the document
+// component — keeps the heavy PDF engine out of the deal page's initial load.
+function PdfDownloadButton({ fileName, makeDoc, render }: {
+  fileName: string;
+  makeDoc: () => Promise<React.ReactElement>;
+  render: (busy: boolean) => React.ReactNode;
+}) {
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const [{ pdf }, doc] = await Promise.all([import("@react-pdf/renderer"), makeDoc()]);
+      const blob = await pdf(doc as Parameters<typeof pdf>[0]).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fileName; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch { /* ignore — user can retry */ }
+    finally { setBusy(false); }
+  };
+  return <span onClick={onClick} style={{ display: "contents", cursor: "pointer" }}>{render(busy)}</span>;
+}
+
 export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick, isAdmin }: Props) {
   const watchMap = useWatchlist();
   const watchImpact = computeWatchlistImpact(d, watchMap);
@@ -1846,17 +1870,15 @@ ${text.slice(0, 60000)}`;
             <span style={{ fontSize:13 }}>⬇</span> Excel
           </button>
         )}
-        <PDFDownloadLink
-          document={<DealSummaryPDF deal={d} imgs={imgs} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />}
+        <PdfDownloadButton
           fileName={`${(d.propertyName||d.fileName||"deal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}-summary.pdf`}
-          style={{ textDecoration:"none" }}
-        >
-          {({ loading }: { loading: boolean }) => (
-            <button style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color: loading ? "#a69e91" : "#4a7fb5", padding:"8px 16px", borderRadius:6, cursor: loading ? "default" : "pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5, opacity: loading ? 0.7 : 1 }}>
-              <span style={{ fontSize:13 }}>⬇</span>{loading ? "PDF…" : "Summary PDF"}
+          makeDoc={async () => { const { default: DealSummaryPDF } = await import("./DealSummaryPDF"); return <DealSummaryPDF deal={d} imgs={imgs} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />; }}
+          render={(busy) => (
+            <button style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color: busy ? "#a69e91" : "#4a7fb5", padding:"8px 16px", borderRadius:6, cursor: busy ? "default" : "pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5, opacity: busy ? 0.7 : 1 }}>
+              <span style={{ fontSize:13 }}>⬇</span>{busy ? "PDF…" : "Summary PDF"}
             </button>
           )}
-        </PDFDownloadLink>
+        />
       </div>
       <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
 
@@ -2207,17 +2229,15 @@ ${text.slice(0, 60000)}`;
                 style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 ⬇ Rent roll — Excel
               </button>
-              <PDFDownloadLink
-                document={<RentRollPDF deal={d} />}
+              <PdfDownloadButton
                 fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
-                style={{ textDecoration:"none" }}
-              >
-                {({ loading }) => (
+                makeDoc={async () => { const { default: RentRollPDF } = await import("./RentRollPDF"); return <RentRollPDF deal={d} />; }}
+                render={(busy) => (
                   <span style={{ background:"#2a2c27", border:"1px solid #2a2c27", color:"#fff", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
-                    {loading ? "Preparing…" : "⬇ Rent roll — PDF"}
+                    {busy ? "Preparing…" : "⬇ Rent roll — PDF"}
                   </span>
                 )}
-              </PDFDownloadLink>
+              />
             </div>
           </div>
           {rrBusy && (

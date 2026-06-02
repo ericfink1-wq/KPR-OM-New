@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { makeSessionStore } from "./lib/sessionStore";
 
 const app: Express = express();
 
@@ -48,11 +49,12 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 const ABSOLUTE_SESSION_MAX_MS = 30 * 24 * 60 * 60 * 1000; // hard re-login cap: 30 days
 
-// In-memory session store (default). NOTE: kept in-memory deliberately — a
-// Postgres-backed store (connect-pg-simple) was attempted but crashed the
-// deployment on start, so sessions live in memory (users re-login after a
-// deploy/restart; accounts & approvals are always persisted in the DB).
+// Postgres-backed session store so logins survive redeploys/restarts. The table
+// is provisioned by ensureSessionTable() at startup and createTableIfMissing is
+// off, so connect-pg-simple never reads the bundled table.sql that crashed the
+// earlier attempt.
 app.use(session({
+  store: makeSessionStore(),
   secret: process.env.SESSION_SECRET || "kpr-om-database-secret",
   resave: false,
   saveUninitialized: false,

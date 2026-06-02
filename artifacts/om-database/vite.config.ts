@@ -58,6 +58,10 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // The PDF engine (@react-pdf, ~1.5 MB) is code-split into its own chunk that
+    // loads only when you click a PDF export — it never affects first paint. Raise
+    // the per-chunk warning above it so the build doesn't flag an intentional split.
+    chunkSizeWarningLimit: 1600,
   },
   server: {
     port,
