@@ -533,15 +533,20 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
         notes: "$2.50 per $1,000 = 0.25%. Buyer pays. Statewide." },
       { name: "Local 1/3 Recordation Tax (Buyer)", rate: 0.000833, base: "price", party: "buyer",
         notes: "Each Virginia locality also charges 1/3 of the state grantee recordation tax = ~$0.83/$1K = 0.083%. Buyer pays. Combined buyer recordation: 0.25% + 0.083% = ~0.333%." },
-      { name: "NoVA/Hampton Roads Regional Grantor + Congestion Relief (RCRF)",
+      { name: "NoVA Regional Grantor — WMATA + Congestion Relief (RCRF)",
         rate: 0.002, rateMin: 0, rateMax: 0.002,
-        altGroup: "VA-region", altLabel: "NoVA/Hampton Roads",
+        altGroup: "VA-region", altLabel: "Northern Virginia (NVTA)",
         base: "price", party: "seller",
-        notes: "ONLY in NoVA (Fairfax, Arlington, Loudoun, Prince William Counties; Cities of Alexandria, Falls Church, Manassas, Manassas Park) and Hampton Roads (Norfolk, Virginia Beach, Portsmouth, Chesapeake, Hampton, Newport News, Suffolk). TWO seller add-ons: a regional grantor tax (~$1.00/$1K = 0.10%) PLUS the Regional Congestion Relief Fee / RCRF (~$1.00/$1K = 0.10%) — combined ~0.20%. Seller pays. NoVA seller total grantor: 0.10% state + 0.20% regional = 0.30%. (Matches First American's NoVA recording calculator.)" },
-      { name: "Northern VA / Hampton Roads Regional Grantor Tax", rate: 0,
+        notes: "NVTA member jurisdictions: Arlington, Fairfax, Loudoun, Prince William Counties; Cities of Alexandria, Fairfax, Falls Church, Manassas, Manassas Park. TWO grantor add-ons: WMATA capital fee $0.10/$100 (0.10%) + Regional Congestion Relief Fee $0.10/$100 (0.10%) = 0.20%. Seller pays. NoVA seller total grantor: 0.10% state + 0.20% = 0.30%. Matches First American's NoVA recording calculator and Code of Virginia §§58.1-802.2/802.3." },
+      { name: "Hampton Roads Regional Transportation Improvement Fee (HRTAC)",
+        rate: 0.0006, rateMin: 0, rateMax: 0.0006,
+        altGroup: "VA-region", altLabel: "Hampton Roads (HRTAC)",
+        base: "price", party: "seller",
+        notes: "HRTAC member localities: Norfolk, Virginia Beach, Chesapeake, Newport News, Hampton, Portsmouth, Suffolk, Williamsburg, Poquoson, Isle of Wight/James City/York/Southampton Counties, Franklin. Regional transportation improvement fee $0.06/$100 = 0.06% (Code of Virginia §58.1-802.3). Seller (grantor) pays. Hampton Roads seller total grantor: 0.10% state + 0.06% = 0.16%. NOTE: Hampton Roads does NOT carry the NoVA WMATA/RCRF fees." },
+      { name: "Regional Grantor Fee", rate: 0,
         altGroup: "VA-region", altLabel: "Rest of VA", altDefault: true,
         base: "price", party: "seller",
-        notes: "Outside NoVA and Hampton Roads: no regional grantor tax. Seller pays only state 0.10% grantor tax." },
+        notes: "Outside NoVA and Hampton Roads: no regional grantor fee. Seller pays only the 0.10% state grantor tax." },
     ],
     mortgageRecordingTax: { name: "Recordation Tax on Deed of Trust", rate: 0.003333, base: "loan", party: "buyer",
       marginalTiers: [
@@ -1403,7 +1408,8 @@ const CITY_LOCALITY: Record<string, Array<{ group: string; label: string; cities
     { group: "MA-region", label: "Cape/Islands", cities: ["barnstable", "hyannis", "falmouth", "sandwich", "bourne", "mashpee", "yarmouth", "dennis", "harwich", "brewster", "orleans", "chatham", "eastham", "wellfleet", "truro", "provincetown", "nantucket", "edgartown", "oak bluffs", "tisbury", "vineyard haven", "west tisbury"] },
   ],
   VA: [
-    { group: "VA-region", label: "NoVA/Hampton Roads", cities: ["arlington", "alexandria", "fairfax", "falls church", "reston", "mclean", "vienna", "herndon", "manassas", "leesburg", "ashburn", "sterling", "centreville", "chantilly", "woodbridge", "norfolk", "virginia beach", "chesapeake", "newport news", "hampton", "portsmouth", "suffolk"] },
+    { group: "VA-region", label: "Northern Virginia (NVTA)", cities: ["arlington", "alexandria", "fairfax", "falls church", "reston", "mclean", "vienna", "herndon", "manassas", "leesburg", "ashburn", "sterling", "centreville", "chantilly", "woodbridge", "dumfries", "dale city", "annandale", "springfield", "tysons", "great falls", "lorton"] },
+    { group: "VA-region", label: "Hampton Roads (HRTAC)", cities: ["norfolk", "virginia beach", "chesapeake", "newport news", "hampton", "portsmouth", "suffolk", "williamsburg", "poquoson", "smithfield", "yorktown"] },
   ],
   CO: [
     // Front Range / non-resort is the group default. Only the named resort towns carry RETT.
@@ -1469,11 +1475,14 @@ const COUNTY_LOCALITY: Record<string, Array<{ group: string; label: string; coun
     { group: "NC-county", label: "Mecklenburg County", counties: ["mecklenburg county"] },
   ],
   VA: [
-    { group: "VA-region", label: "NoVA/Hampton Roads", counties: [
+    { group: "VA-region", label: "Northern Virginia (NVTA)", counties: [
       "arlington county", "fairfax county", "loudoun county", "prince william county",
       "alexandria city", "fairfax city", "falls church city", "manassas city", "manassas park city",
+    ] },
+    { group: "VA-region", label: "Hampton Roads (HRTAC)", counties: [
       "norfolk city", "virginia beach city", "chesapeake city", "newport news city",
-      "hampton city", "portsmouth city", "suffolk city",
+      "hampton city", "portsmouth city", "suffolk city", "williamsburg city", "poquoson city", "franklin city",
+      "isle of wight county", "james city county", "york county", "southampton county", "gloucester county",
     ] },
   ],
   NV: [
