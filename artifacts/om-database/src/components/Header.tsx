@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
@@ -37,6 +37,15 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
   const [backupRect, setBackupRect] = useState<DOMRect | null>(null);
+  // Count of upload failures in the last 24h → red badge on the admin Members button.
+  const [uploadFails, setUploadFails] = useState(0);
+  useEffect(() => {
+    if (!isAdmin) return;
+    apiUploadLog().then(list => {
+      const since = Date.now() - 24 * 60 * 60 * 1000;
+      setUploadFails(list.filter(u => u.status === "failed" && new Date(u.createdAt).getTime() >= since).length);
+    }).catch(() => { /* non-fatal */ });
+  }, [isAdmin]);
   // Analytics nav dropdowns (Portfolio Analytics ▾ / Tenant Analytics ▾)
   const [analyticsMenu, setAnalyticsMenu] = useState<null | "portfolio" | "tenant">(null);
   const [analyticsRect, setAnalyticsRect] = useState<DOMRect | null>(null);
@@ -543,10 +552,18 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
         {/* Members (account approvals) — admin only */}
         {isAdmin && (
-          <button onClick={() => setMembersOpen(true)}
-            style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
-            Members
-          </button>
+          <div style={{ position: "relative", display: "inline-flex" }}>
+            <button onClick={() => { setMembersOpen(true); setUploadFails(0); }}
+              style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+              Members
+            </button>
+            {uploadFails > 0 && (
+              <span title={`${uploadFails} failed upload${uploadFails === 1 ? "" : "s"} in the last 24h`}
+                style={{ position: "absolute", top: -6, right: -6, minWidth: 17, height: 17, padding: "0 4px", boxSizing: "border-box", background: "#c0392b", color: "#fff", borderRadius: 9, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif", border: "2px solid #faf7f0" }}>
+                {uploadFails}
+              </span>
+            )}
+          </div>
         )}
         {membersOpen && <Members onClose={() => setMembersOpen(false)} />}
 

@@ -26,6 +26,24 @@ export default function Members({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const uploadFails = (uploads || []).filter(u => u.status === "failed").length;
+  const exportUploadsCsv = () => {
+    if (!uploads || uploads.length === 0) return;
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const header = ["When", "File", "Type", "Status", "User", "Detail"];
+    const lines = uploads.map(u => [
+      new Date(u.createdAt).toLocaleString(),
+      u.fileName ?? "", u.docType ?? "", u.status,
+      u.userName || u.userEmail || "", u.detail ?? "",
+    ].map(esc).join(","));
+    const csv = [header.map(esc).join(","), ...lines].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `KPR_upload_log_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   const act = async (id: string, fn: () => Promise<void>) => {
     setBusy(id);
     try { await fn(); load(); }
@@ -139,10 +157,16 @@ export default function Members({ onClose }: { onClose: () => void }) {
           {/* Upload activity log */}
           {uploads && uploads.length > 0 && (
             <div style={{ marginTop: 18, borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
-              <button onClick={() => setShowUploads(s => !s)}
-                style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                {showUploads ? "▾" : "▸"} Upload activity ({uploads.length})
-              </button>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <button onClick={() => setShowUploads(s => !s)}
+                  style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {showUploads ? "▾" : "▸"} Upload activity ({uploads.length}){uploadFails > 0 ? <span style={{ color: "#c0392b" }}> · {uploadFails} failed</span> : null}
+                </button>
+                <button onClick={exportUploadsCsv} title="Download the upload log as CSV"
+                  style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "3px 9px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                  ⬇ CSV
+                </button>
+              </div>
               {showUploads && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, maxHeight: 300, overflowY: "auto" }}>
                   {uploads.map(u => (
