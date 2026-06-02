@@ -77,6 +77,14 @@ export default function ClosingCostsCard({ deal }: Props) {
   const localityGroups = useMemo(() => getLocalityGroups(jurisdiction), [jurisdiction]);
   const breakdown = useMemo(() => calculateClosingCosts(jurisdiction, price, loan, { includeEntityTaxes: entitySale, localities }), [jurisdiction, price, loan, entitySale, localities]);
 
+  // Lines whose value is best-effort / pending / locality-specific and must be
+  // confirmed with title before being taken as gospel. Only the lines that are
+  // actually APPLIED (not dormant alternatives) count toward the banner.
+  const verifyLines = useMemo(
+    () => breakdown.lines.filter((l) => (l as any).verify && !(l as any).inactive),
+    [breakdown],
+  );
+
   const hasPrice = price > 0;
   const loanIsAssumed = !knownLoan && hasPrice && loan === Math.round(price * DEFAULT_LTV);
   const hasEntityLine = jurisdiction.transferTaxes.some((t) => t.entitySaleOnly);
@@ -101,6 +109,28 @@ export default function ClosingCostsCard({ deal }: Props) {
       {isPlaceholder && (
         <div style={{ fontSize: 10.5, color: "#8a5a14", background: "#fff8ec", border: "1px solid #ead9b3", borderRadius: 6, padding: "8px 10px", marginBottom: 12, lineHeight: 1.5 }}>
           ⚠ This state isn't configured with sourced data yet — figures below are national-average placeholders. Verify via the Fidelity guide linked below before relying on them.
+        </div>
+      )}
+
+      {/* BIG uncertainty flag — surfaces any applied line that isn't a hard, sourced
+          number so a representative/pending/locality-specific figure is never taken
+          as gospel. Lists exactly which lines to confirm with title. */}
+      {verifyLines.length > 0 && (
+        <div style={{ fontSize: 12, color: "#8a2b14", background: "#fdeee9", border: "2px solid #e2a691", borderRadius: 8, padding: "11px 13px", marginBottom: 14, lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 5, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 15 }}>🚩</span> Confirm with title before relying on these numbers
+          </div>
+          <div style={{ color: "#9a4a32", marginBottom: 6 }}>
+            {verifyLines.length === 1 ? "One line below is" : `${verifyLines.length} lines below are`} a best-effort estimate, a pending rate change, or vary by the specific locality — not a hard sourced figure. Don't treat {verifyLines.length === 1 ? "it" : "them"} as gospel:
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {verifyLines.map((l, i) => (
+              <li key={i} style={{ marginBottom: 2 }}>
+                <span style={{ fontWeight: 600 }}>{l.name}</span>
+                {l.notes ? <span style={{ color: "#9a4a32" }}> — {l.notes}</span> : null}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -214,10 +244,11 @@ export default function ClosingCostsCard({ deal }: Props) {
           <tbody>
             {breakdown.lines.map((l, i) => {
               const dormant = !!(l as any).inactive;
+              const needsVerify = !!(l as any).verify && !dormant;
               return (
                 <tr key={i} style={{ borderBottom: "1px solid #f5efe2", opacity: dormant ? 0.45 : 1 }}>
                   <td style={{ padding: "8px 8px", color: "#383a37", verticalAlign: "top" }}>
-                    <div>{l.name}{dormant ? <span style={{ fontSize: 9, color: "#a69e91", fontWeight: 600 }}> · not applied</span> : null}</div>
+                    <div>{l.name}{dormant ? <span style={{ fontSize: 9, color: "#a69e91", fontWeight: 600 }}> · not applied</span> : null}{needsVerify ? <span style={{ fontSize: 9, color: "#b04a2e", fontWeight: 700, marginLeft: 5, whiteSpace: "nowrap" }}>🚩 confirm w/ title</span> : null}</div>
                     {l.notes && <div style={{ fontSize: 9.5, color: "#a69e91", marginTop: 2, lineHeight: 1.4 }}>{l.notes}</div>}
                   </td>
                   <td style={{ padding: "8px 8px", textAlign: "left", color: "#52554e", whiteSpace: "nowrap", verticalAlign: "top", fontVariantNumeric: "tabular-nums" }}>

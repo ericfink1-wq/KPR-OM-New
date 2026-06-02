@@ -56,6 +56,7 @@ export interface TaxLineItem {
   altLabel?: string;         // label for this line's dropdown option
   altDefault?: boolean;      // this option is the default selection for the group
   residentialOnly?: boolean; // suppress on commercial (non-residential) deals
+  verify?: boolean;          // value is best-effort / pending change / locality-specific — flag prominently, confirm with title
   notes?: string;
 }
 
@@ -485,10 +486,10 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
       { name: "Recordation Tax (on the deed / price)", rate: 0.0055, rateMin: 0, rateMax: 0.0055,
         altGroup: "MD-county", altLabel: "Prince George's County", base: "price", party: "split",
         notes: "Prince George's recordation ≈ $5.50/$1,000 = 0.55% of price. Split 50/50. (Corrected — was wrongly 1.10%.)" },
-      { name: "Recordation Tax (on the deed / price)", rate: 0.007, rateMin: 0.007, rateMax: 0.009,
+      { name: "Recordation Tax (on the deed / price)", rate: 0.007, rateMin: 0.007, rateMax: 0.009, verify: true,
         altGroup: "MD-county", altLabel: "Anne Arundel/Montgomery/etc.", base: "price", party: "split",
         notes: "Anne Arundel recordation ≈ $3.50/$500 = 0.70%. NOTE: Montgomery County is higher — ~$4.45/$500 = 0.89% base PLUS surcharges above $500K (up to ~1.35% on the portion over $1M); for a Montgomery deal verify the tiered rate. Split 50/50." },
-      { name: "Recordation Tax (on the deed / price)", rate: 0.0055, rateMin: 0.003, rateMax: 0.014,
+      { name: "Recordation Tax (on the deed / price)", rate: 0.0055, rateMin: 0.003, rateMax: 0.014, verify: true,
         altGroup: "MD-county", altLabel: "All Other MD Counties", base: "price", party: "split",
         notes: "Recordation varies widely by county (≈$3/$1K = 0.30% in Allegany/Garrett/Kent up to ~$7/$500 = 1.40% in Charles/Frederick); ~0.55% is a mid-range placeholder. ALWAYS verify the specific county's recordation rate. Split 50/50." },
     ],
@@ -705,7 +706,7 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     transferTaxes: [
       { name: "State Excise Tax on Conveyances", rate: 0.002, base: "price", party: "seller",
         notes: "$1 per $500 = 0.20%. Seller pays. Statewide; applies to all NC counties." },
-      { name: "Coastal County Land Transfer Tax (7 counties)", rate: 0.01, rateMin: 0, rateMax: 0.01,
+      { name: "Coastal County Land Transfer Tax (7 counties)", rate: 0.01, rateMin: 0, rateMax: 0.01, verify: true,
         altGroup: "NC-county", altLabel: "Coastal LTT county",
         base: "price", party: "seller",
         notes: "ONLY the 7 northeastern-coastal counties with a pre-existing ~1% land transfer tax under local acts: Beaufort, Camden, Chowan, Currituck, Dare, Pasquotank, Perquimans, Washington. Seller/grantor. Combined with state excise ≈ 1.2%. Verify the exact county rate." },
@@ -856,10 +857,8 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     titleInsuranceRate: 0.0045, titleInsuranceParty: "buyer",
     titleSchedule: REP_TITLE_MW_COMPETITIVE,
     transferTaxes: [],
-    mortgageRecordingTax: { name: "Mortgage Registration Tax", rate: 0.0026, base: "loan", party: "buyer",
-      notes: "0.26% of loan. Buyer pays. Statewide; no county or city variations. Kansas City and Wichita use same rate." },
     recordingFeesFlat: 50,
-    notes: "Kansas has NO deed transfer tax at any level. Mortgage registration tax (0.26%) is the main buyer closing cost. Title insurance buyer-paid.",
+    notes: "Kansas has NO deed transfer tax at any level. The mortgage registration tax was fully repealed effective Jan 1, 2019 (HB 2643) — it no longer applies; only flat per-page recording fees remain. Title insurance buyer-paid.",
   },
 
   MI: {
@@ -913,8 +912,8 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     titleInsuranceRate: 0.0045, titleInsuranceParty: "buyer",
     titleSchedule: REP_TITLE_MW_COMPETITIVE,
     transferTaxes: [
-      { name: "Documentary Stamp Tax", rate: 0.00225, base: "price", party: "seller",
-        notes: "$2.25 per $1,000 = 0.225%. Seller pays. Statewide uniform — Omaha, Lincoln: no county or city add-ons." },
+      { name: "Documentary Stamp Tax", rate: 0.00232, base: "price", party: "seller", verify: true,
+        notes: "$2.32 per $1,000 = 0.232%. Seller pays. Statewide uniform — Omaha, Lincoln: no county or city add-ons. ⚠ PENDING INCREASE: LB1067 (passed Apr 2026) raises this to $3.32 per $1,000 (0.332%) effective later in summer 2026 — confirm the effective date with title before relying on the current rate for a summer/fall close." },
     ],
     recordingFeesFlat: 50,
     notes: "State-only documentary stamp tax; no county or city variations. Title insurance buyer-paid.",
@@ -1321,7 +1320,7 @@ export function formatRate(item: { rate: number; rateMin?: number; rateMax?: num
 export interface ClosingCostLine {
   name: string; rate: number; rateMin?: number; rateMax?: number; tiers?: TaxTier[]; marginalTiers?: TaxTier[];
   base: "price" | "loan"; party: Party; entitySaleOnly?: boolean;
-  altGroup?: string; altLabel?: string; residentialOnly?: boolean; inactive?: boolean;
+  altGroup?: string; altLabel?: string; residentialOnly?: boolean; inactive?: boolean; verify?: boolean;
   amount: number; buyer: number; seller: number; notes?: string;
 }
 
@@ -1561,8 +1560,9 @@ export function calculateClosingCosts(jurisdiction: JurisdictionRates, price: nu
         rateMax: sched.brackets[0].per1000 / 1000,
         base: "price",
         party: jurisdiction.titleInsuranceParty,
+        verify: !sched.promulgated,
         amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
-        notes: `Regressive filed schedule (${sched.source}). Rate shown is the sliding range at this price.${sched.minPremium ? ` Min premium $${sched.minPremium.toLocaleString()}.` : ""}`,
+        notes: `${sched.promulgated ? "Promulgated/filed-bureau schedule" : "REPRESENTATIVE schedule (not a filed per-state rate) — confirm an underwriter quote"} (${sched.source}). Rate shown is the sliding range at this price.${sched.minPremium ? ` Min premium $${sched.minPremium.toLocaleString()}.` : ""}`,
       }
     : {
         name: "Title Insurance (Owner's Policy)",
