@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureUsersTable } from "./routes/auth";
 import { ensureTenantIndexColumns } from "./lib/tenantIndex";
+import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
 
 const rawPort = process.env["PORT"];
 
@@ -38,6 +39,13 @@ ensureUsersTable()
 ensureTenantIndexColumns()
   .then(() => logger.info("tenant_index columns ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureTenantIndexColumns failed on startup (will retry on first index query)"));
+
+// Provision the operator-taught extraction-lessons table on startup (CREATE
+// TABLE IF NOT EXISTS), so DEV matches PROD and Replit's publish diff stays
+// clean. Best-effort. Keep in sync with lib/extractionLessons.ts.
+ensureExtractionLessonsTable()
+  .then(() => logger.info("extraction_lessons table ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureExtractionLessonsTable failed on startup (will retry on first use)"));
 
 // Allow long-running AI calls (AnalystChat, lookup endpoints) up to 5 minutes.
 // The PDF ingest route is not affected since it returns immediately.

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates } from "../lib/api";
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
+  apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal } from "../lib/prepay";
 import ImportReview from "./ImportReview";
@@ -931,6 +932,101 @@ function DispositionSection({ sold, children }: { sold: boolean; children: React
   );
 }
 
+// Inline "Teach the extractor" modal (admin). Lets Eric record a plain-English
+// rule when he catches an extraction mistake; the rule is stored and fed into
+// the AI on every future extraction of that document type, so the system learns.
+const SCOPE_OPTS: Array<{ value: LessonScope; label: string }> = [
+  { value: "all", label: "All documents" },
+  { value: "om", label: "Offering memorandums" },
+  { value: "rent-roll", label: "Rent rolls" },
+  { value: "sales", label: "Sales reports" },
+];
+function TeachExtractorModal({ onClose }: { onClose: () => void }) {
+  const [lessons, setLessons] = useState<ExtractionLesson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [scope, setScope] = useState<LessonScope>("all");
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const reload = useCallback(() => {
+    setLoading(true);
+    apiGetExtractionLessons("all").then(rows => { setLessons(rows); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
+  useEffect(() => { reload(); }, [reload]);
+
+  const save = async () => {
+    const t = text.trim();
+    if (!t) return;
+    setSaving(true); setErr(null);
+    const res = await apiAddExtractionLesson(scope, t);
+    setSaving(false);
+    if (!res.ok) { setErr(res.error || "Could not save."); return; }
+    setText(""); reload();
+  };
+  const remove = async (id: string) => { await apiDeleteExtractionLesson(id); reload(); };
+  const scopeLabel = (s: string) => SCOPE_OPTS.find(o => o.value === s)?.label || s;
+
+  const fld: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #ddd4c2", borderRadius: 8, padding: "9px 11px", fontSize: 13, fontFamily: "'Inter',sans-serif", outline: "none", background: "#fdfaf6" };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 800, background: "rgba(38,40,31,0.5)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "20px 22px", width: "min(560px, 96vw)", maxHeight: "88vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(38,40,31,0.28)", fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>🎓 Teach the extractor</div>
+            <div style={{ fontSize: 12.5, color: "#7d766a", lineHeight: 1.5, marginTop: 4 }}>
+              Caught a mistake? Write a rule in plain English. The AI will follow it on every future extraction, so it gets it right next time.
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>✕</button>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", marginBottom: 5 }}>New rule</label>
+          <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+            placeholder="e.g. Always capture every anchor tenant (Burlington, grocers, banks) even if they're on a separate page of the rent roll — never drop large tenants."
+            style={{ ...fld, resize: "vertical", lineHeight: 1.5 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+            <span style={{ fontSize: 12, color: "#7d766a" }}>Apply to:</span>
+            <select value={scope} onChange={e => setScope(e.target.value as LessonScope)} style={{ ...fld, width: "auto", padding: "7px 9px" }}>
+              {SCOPE_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <button onClick={save} disabled={saving || !text.trim()}
+              style={{ marginLeft: "auto", background: "#26281f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: saving || !text.trim() ? "default" : "pointer", opacity: saving || !text.trim() ? 0.5 : 1 }}>
+              {saving ? "Saving…" : "Add rule"}
+            </button>
+          </div>
+          {err && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 6 }}>{err}</div>}
+        </div>
+
+        <div style={{ borderTop: "1px solid #f1ece1", margin: "18px 0 12px" }} />
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", marginBottom: 8 }}>
+          Active rules{lessons.length > 0 ? ` (${lessons.length})` : ""}
+        </div>
+        {loading ? (
+          <div style={{ fontSize: 12.5, color: "#a89f8f" }}>Loading…</div>
+        ) : lessons.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: "#a89f8f", fontStyle: "italic" }}>No custom rules yet. Add one above — the built-in extraction rules still apply on their own.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {lessons.map(l => (
+              <div key={l.id} style={{ display: "flex", alignItems: "flex-start", gap: 9, border: "1px solid #ece5d7", borderRadius: 9, padding: "9px 11px", background: "#faf7f0" }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 12.5, color: "#383a37", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{l.lesson}</div>
+                  <div style={{ fontSize: 10.5, color: "#a69e91", marginTop: 3 }}>{scopeLabel(l.scope)}</div>
+                </div>
+                <button onClick={() => remove(l.id)} title="Remove this rule"
+                  style={{ background: "transparent", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 12, fontWeight: 600, flexShrink: 0, padding: "0 2px" }}>Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick, isAdmin }: Props) {
   const watchMap = useWatchlist();
   const watchImpact = computeWatchlistImpact(d, watchMap);
@@ -951,6 +1047,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
+  const [teachOpen, setTeachOpen] = useState(false);
   const [reanalyzeBusy, setReanalyzeBusy] = useState(false);
   const rerunPdfRef = useRef<HTMLInputElement>(null);
   const [rrBusy, setRrBusy] = useState(false);
@@ -1715,6 +1812,12 @@ ${text.slice(0, 60000)}`;
                     onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                     🧪 Export raw data (.json)
                   </button>
+                  <button onClick={() => { setActionsOpen(false); setTeachOpen(true); }}
+                    title="Teach the extractor a new rule so it handles files like this correctly next time"
+                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
+                    onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    🎓 Teach the extractor
+                  </button>
                 </>)}
                 <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
                 <button onClick={() => { setActionsOpen(false); setConfirmDel(true); }}
@@ -1913,6 +2016,8 @@ ${text.slice(0, 60000)}`;
           </div>
         </div>
       )}
+
+      {teachOpen && <TeachExtractorModal onClose={() => setTeachOpen(false)} />}
 
       {/* AI highlights — surfaced near the top, just below the cover photo */}
       {(d.notes || d.analysisStale) && (

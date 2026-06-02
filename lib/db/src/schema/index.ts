@@ -9,3 +9,4 @@ export * from "./feedback";
 export * from "./clientErrors";
 export * from "./users";
 export * from "./loginEvents";
+export * from "./extractionLessons";

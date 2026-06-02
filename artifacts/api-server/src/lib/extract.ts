@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { rebuildTenantIndex, parseLeaseDate } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
 import { ANALYSIS_VERSION } from "./analysisVersion";
+import { lessonGuidance } from "./extractionLessons";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -282,7 +283,11 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     return { raw, stopReason: data.stop_reason as string };
   };
 
-  const first = await callExtract(EXTRACTION_PROMPT + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText);
+  // Inject operator-taught extraction rules (admin "Teach the extractor" lessons)
+  // so the system applies past corrections to every new OM. Best-effort: never
+  // blocks extraction if the lessons table is unavailable.
+  const taughtRules = await lessonGuidance("om");
+  const first = await callExtract(EXTRACTION_PROMPT + taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText);
   let extracted = robustParseJSON(first.raw) as Record<string, unknown>;
   if (!extracted.tenants) extracted.tenants = [];
 

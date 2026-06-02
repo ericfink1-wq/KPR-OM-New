@@ -1,4 +1,4 @@
-import { apiAiMessages } from "./api";
+import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, toStepString, tenantKey, stripSuiteCode } from "./utils";
 import type { Deal, ReviewQuestion } from "./idb";
 
@@ -33,10 +33,11 @@ CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
 
 reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"human label e.g. 'Five Below — SF'","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string","target":{"kind":"tenant","fieldKey":"exact tenant field key (sf, rentPerSF, annualRent, leaseStart, leaseExpiry, remainingTermYears, salesPSF)","tenantName":"exact tenant name from the tenants array","valueType":"number|text"}}. ALWAYS set target when the question is about one tenant's field so the user can fix it in one click; set target null only for non-field questions (e.g. possible duplicate rows). Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
 
+  const taught = await lessonGuidanceClient("rent-roll");
   const res = await apiAiMessages({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 8000,
-    messages: [{ role: "user", content: prompt + "\n\nRENT ROLL TEXT:\n" + text }],
+    messages: [{ role: "user", content: prompt + taught + "\n\nRENT ROLL TEXT:\n" + text }],
   });
   const raw = res.content?.[0]?.text ?? "";
   let parsed: { asOf?: string | null; tenants?: unknown[]; reviewQuestions?: unknown[] };

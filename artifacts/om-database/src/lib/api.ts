@@ -109,6 +109,34 @@ export async function apiRejectMember(id: string): Promise<void> { await apiFetc
 export async function apiSetMemberAdmin(id: string, isAdmin: boolean): Promise<void> { await apiFetch(`/auth/users/${id}/set-admin`, { method: "POST", body: JSON.stringify({ isAdmin }) }); }
 export async function apiDeleteMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}`, { method: "DELETE" }); }
 
+// --- Extraction lessons (operator-taught rules) ---
+export type LessonScope = "all" | "om" | "rent-roll" | "sales";
+export interface ExtractionLesson { id: string; scope: LessonScope; lesson: string; createdAt: string; createdBy: string | null }
+export async function apiGetExtractionLessons(scope: LessonScope = "all"): Promise<ExtractionLesson[]> {
+  const resp = await apiFetch(`/extraction-lessons?scope=${encodeURIComponent(scope)}`);
+  if (!resp.ok) return [];
+  return await resp.json().catch(() => []) as ExtractionLesson[];
+}
+export async function apiAddExtractionLesson(scope: LessonScope, lesson: string): Promise<{ ok: boolean; error?: string }> {
+  const resp = await apiFetch("/extraction-lessons", { method: "POST", body: JSON.stringify({ scope, lesson }) });
+  if (resp.ok) return { ok: true };
+  const data = await resp.json().catch(() => ({})) as { error?: string };
+  return { ok: false, error: data.error || "Could not save the rule." };
+}
+export async function apiDeleteExtractionLesson(id: string): Promise<void> {
+  await apiFetch(`/extraction-lessons/${id}`, { method: "DELETE" });
+}
+
+// Build a prompt block from active lessons for a given document type, for the
+// client-side extractors (rent roll / sales) that call the AI proxy directly.
+export async function lessonGuidanceClient(scope: LessonScope): Promise<string> {
+  let rows: ExtractionLesson[] = [];
+  try { rows = await apiGetExtractionLessons(scope); } catch { return ""; }
+  if (rows.length === 0) return "";
+  const list = rows.map((r, i) => `${i + 1}. ${r.lesson.trim()}`).join("\n");
+  return `\n\nOPERATOR-TAUGHT RULES — HIGHEST PRIORITY (from real corrections; follow exactly):\n${list}\n`;
+}
+
 export async function apiAdminUnlock(password: string): Promise<void> {
   const resp = await apiFetch("/auth/admin-unlock", {
     method: "POST",

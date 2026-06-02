@@ -1,5 +1,5 @@
 import type { Deal, TenantSalesYear, OccBreakdown } from "./idb";
-import { apiAiMessages } from "./api";
+import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, tenantKey, stripSuiteCode, estimateRecoveries } from "./utils";
 
 export interface SalesExtractResult {
@@ -35,6 +35,7 @@ RULES:
 - Skip total/subtotal rows and blank rows.
 - Include all tenants that have any sales data, even if some fields are null.
 
+${await lessonGuidanceClient("sales")}
 SALES REPORT TEXT:
 ${text.slice(0, 40000)}`;
 
