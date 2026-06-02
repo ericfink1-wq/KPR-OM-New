@@ -212,6 +212,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSel, setMergeSel] = useState<Set<string>>(new Set());
   const [mergeVersion, setMergeVersion] = useState(0);
+  const [hideATMs, setHideATMs] = useState(false);
   // Pinned top search — jump straight to any tenant or parent company.
   const [navSearch, setNavSearch] = useState("");
   const [navFocused, setNavFocused] = useState(false);
@@ -362,11 +363,14 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
   // All tenants sorted by rent desc — searchable full list
   const allTenantsSorted = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent), [rows]);
+  // Only worth offering the ATM filter if this dataset actually contains ATMs.
+  const hasATMs = useMemo(() => rows.some(r => isATM(r.displayName, r.totalSF)), [rows]);
   const filteredAllTenants = useMemo(() => {
     const q = tenantSearch.trim().toLowerCase();
-    if (!q) return allTenantsSorted;
-    return allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q));
-  }, [allTenantsSorted, tenantSearch]);
+    let list = q ? allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q)) : allTenantsSorted;
+    if (hideATMs) list = list.filter(r => !isATM(r.displayName, r.totalSF));
+    return list;
+  }, [allTenantsSorted, tenantSearch, hideATMs]);
   // ── Manual tenant linking ───────────────────────────────────────────────────
   const toggleMergeSel = (key: string) => setMergeSel(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
   const selectedRows = useMemo(() => rows.filter(r => mergeSel.has(r.key)), [rows, mergeSel]);
@@ -811,6 +815,13 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 All Tenants ({rows.length})
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {hasATMs && (
+                  <button onClick={() => setHideATMs(h => !h)}
+                    title={hideATMs ? "ATMs are hidden — click to show them" : "Hide standalone ATMs from the list"}
+                    style={{ background: hideATMs ? "#2a2c27" : "transparent", border: `1px solid ${hideATMs ? "#2a2c27" : "#c8b89a"}`, color: hideATMs ? "#f6f2ea" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                    {hideATMs ? "Show ATMs" : "Hide ATMs"}
+                  </button>
+                )}
                 <button onClick={() => { setMergeMode(m => !m); setMergeSel(new Set()); setCanonKey(null); }}
                   title="Link tenants that are the same brand but spelled differently (e.g. Walmart / Wal-Mart)"
                   style={{ background: mergeMode ? "#2a2c27" : "transparent", border: `1px solid ${mergeMode ? "#2a2c27" : "#c8b89a"}`, color: mergeMode ? "#f6f2ea" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
