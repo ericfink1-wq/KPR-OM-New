@@ -17,18 +17,44 @@ import { isSupportedUpload } from "./lib/fileExtract";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
 // when first opened; a Suspense fallback covers the brief load.
-const DetailView = lazy(() => import("./components/DetailView"));
-const TenantView = lazy(() => import("./components/TenantView"));
-const LenderView = lazy(() => import("./components/LenderView"));
-const PortfolioAnalytics = lazy(() => import("./components/PortfolioAnalytics"));
-const RolloverYearView = lazy(() => import("./components/RolloverYearView"));
-const CompsSearch = lazy(() => import("./components/CompsSearch"));
-const ResetPassword = lazy(() => import("./components/ResetPassword"));
-const TenantAudit = lazy(() => import("./components/TenantAudit"));
-const TenantAnalytics = lazy(() => import("./components/TenantAnalytics"));
-const RetailerWatchlist = lazy(() => import("./components/RetailerWatchlist"));
-const ParentCompanyView = lazy(() => import("./components/ParentCompanyView"));
-const CompareView = lazy(() => import("./components/CompareView"));
+//
+// After a republish, a tab that loaded the OLD page references old chunk URLs
+// that no longer exist — opening one of these screens would then throw a
+// chunk-load error and hit the error screen. lazyWithReload catches that and
+// reloads the page ONCE to pull the fresh assets (self-healing); a genuinely
+// broken chunk still surfaces normally instead of looping.
+function lazyWithReload<T extends React.ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    const KEY = "kpr-chunk-reloaded";
+    try {
+      const mod = await factory();
+      try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
+      return mod;
+    } catch (err) {
+      try {
+        if (!sessionStorage.getItem(KEY)) {
+          sessionStorage.setItem(KEY, "1");
+          window.location.reload();
+          return await new Promise<{ default: T }>(() => {}); // hang while reloading
+        }
+      } catch { /* ignore */ }
+      throw err;
+    }
+  });
+}
+
+const DetailView = lazyWithReload(() => import("./components/DetailView"));
+const TenantView = lazyWithReload(() => import("./components/TenantView"));
+const LenderView = lazyWithReload(() => import("./components/LenderView"));
+const PortfolioAnalytics = lazyWithReload(() => import("./components/PortfolioAnalytics"));
+const RolloverYearView = lazyWithReload(() => import("./components/RolloverYearView"));
+const CompsSearch = lazyWithReload(() => import("./components/CompsSearch"));
+const ResetPassword = lazyWithReload(() => import("./components/ResetPassword"));
+const TenantAudit = lazyWithReload(() => import("./components/TenantAudit"));
+const TenantAnalytics = lazyWithReload(() => import("./components/TenantAnalytics"));
+const RetailerWatchlist = lazyWithReload(() => import("./components/RetailerWatchlist"));
+const ParentCompanyView = lazyWithReload(() => import("./components/ParentCompanyView"));
+const CompareView = lazyWithReload(() => import("./components/CompareView"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
