@@ -45,6 +45,7 @@ function lazyWithReload<T extends React.ComponentType<unknown>>(factory: () => P
 
 const DetailView = lazyWithReload(() => import("./components/DetailView"));
 const TenantView = lazyWithReload(() => import("./components/TenantView"));
+const TenantLink = lazyWithReload(() => import("./components/TenantLink"));
 const LenderView = lazyWithReload(() => import("./components/LenderView"));
 const PortfolioAnalytics = lazyWithReload(() => import("./components/PortfolioAnalytics"));
 const RolloverYearView = lazyWithReload(() => import("./components/RolloverYearView"));
@@ -70,7 +71,7 @@ function ViewLoading() {
 }
 
 type TabId = "analyst" | "portfolio" | "analytics" | "comps";
-type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string } | { type: "rollover-year"; year: string; scope: "all" | "owned" };
+type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-link" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string } | { type: "rollover-year"; year: string; scope: "all" | "owned" };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
@@ -127,6 +128,22 @@ function AppInner() {
     else if (dest === "analytics") { setTab("analytics"); setAnalyticsView("tenant"); }
     else if (dest === "analytics-watchlist") { setTab("analytics"); setAnalyticsView("watchlist"); }
   }, [resetToList]);
+
+  // Top-nav Analytics dropdowns → jump straight to a section.
+  const onAnalyticsNav = useCallback((dest: string) => {
+    setTab("analytics");
+    if (dest === "link-tenants") { navigate({ type: "tenant-link" }); return; }
+    if (dest === "tenant-audit") { navigate({ type: "tenant-audit" }); return; }
+    // Base analytics destinations show the segmented content; reset to the base
+    // view (mirrors handleHelpNavigate) then pick the section.
+    resetToList();
+    if (dest === "portfolio-overview" || dest === "lease-rollover") setAnalyticsView("portfolio");
+    else if (dest === "watchlist") setAnalyticsView("watchlist");
+    else setAnalyticsView("tenant");
+    if (dest === "lease-rollover") {
+      setTimeout(() => document.getElementById("section-lease-rollover")?.scrollIntoView({ behavior: "smooth", block: "start" }), 140);
+    }
+  }, [navigate, resetToList]);
   const [loaded, setLoaded] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | undefined>();
   const [dragging, setDragging] = useState(false);
@@ -354,6 +371,7 @@ function AppInner() {
         onDealsAdded={handleDealsAdded}
         isAdmin={isAdmin}
         onAdminChange={checkAuth}
+        onAnalyticsNav={onAnalyticsNav}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} />
       <AiProgressBar />
@@ -404,6 +422,13 @@ function AppInner() {
                   <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
                 </div>
                 <TenantAudit deals={activeDeals} onTenantClick={handleOpenTenant} onDealsChanged={handleReloadDeals} />
+              </div>
+            ) : view.type === "tenant-link" ? (
+              <div>
+                <div style={{ padding: "14px 24px 0" }}>
+                  <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+                </div>
+                <TenantLink deals={activeDeals} />
               </div>
             ) : view.type === "rollover-year" ? (
               <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} />

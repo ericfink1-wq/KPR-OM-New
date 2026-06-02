@@ -822,11 +822,6 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                     {hideATMs ? "Show ATMs" : "Hide ATMs"}
                   </button>
                 )}
-                <button onClick={() => { setMergeMode(m => !m); setMergeSel(new Set()); setCanonKey(null); }}
-                  title="Link tenants that are the same brand but spelled differently (e.g. Walmart / Wal-Mart)"
-                  style={{ background: mergeMode ? "#2a2c27" : "transparent", border: `1px solid ${mergeMode ? "#2a2c27" : "#c8b89a"}`, color: mergeMode ? "#f6f2ea" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-                  🔗 Link tenants
-                </button>
                 <button onClick={exportTenants} disabled={activeRows.length === 0}
                   title="Export the tenant analysis list to Excel"
                   style={{ background: "transparent", border: "1px solid #c8b89a", color: activeRows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: activeRows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
@@ -836,6 +831,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   value={tenantSearch}
                   onChange={e => setTenantSearch(e.target.value)}
                   placeholder="Search tenants…"
+                  autoComplete="off" autoCorrect="off" spellCheck={false}
                   style={{ fontSize: 12, padding: "5px 10px", border: "1px solid #e3dccd", borderRadius: 7, color: "#383a37", background: "#f9f6f0", fontFamily: "'Inter',sans-serif", maxWidth: 220, width: "100%", minWidth: 0, boxSizing: "border-box" }}
                 />
               </div>

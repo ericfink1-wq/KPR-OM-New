@@ -541,6 +541,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             marginBottom: 14,
           }}>
             <Card>
+              <div id="section-lease-rollover" style={{ scrollMarginTop: 80 }} />
               <SectionLabel>Lease Expiration Waterfall — % of Rent by Year</SectionLabel>
               {data.leaseExpiration.length === 0 ? (
                 <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No lease expiry data available.</div>

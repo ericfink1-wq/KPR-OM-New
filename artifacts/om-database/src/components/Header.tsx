@@ -18,9 +18,10 @@ interface Props {
   onDealsAdded?: (deals: Deal[]) => void;
   isAdmin?: boolean;
   onAdminChange?: () => void;
+  onAnalyticsNav?: (dest: string) => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -36,6 +37,11 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
   const [backupRect, setBackupRect] = useState<DOMRect | null>(null);
+  // Analytics nav dropdowns (Portfolio Analytics ▾ / Tenant Analytics ▾)
+  const [analyticsMenu, setAnalyticsMenu] = useState<null | "portfolio" | "tenant">(null);
+  const [analyticsRect, setAnalyticsRect] = useState<DOMRect | null>(null);
+  const pAnalyticsRef = useRef<HTMLDivElement>(null);
+  const tAnalyticsRef = useRef<HTMLDivElement>(null);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number; mergedNames?: string[] } | null>(null);
   const [snapshotModal, setSnapshotModal] = useState(false);
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
@@ -417,9 +423,45 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <button style={T(tab === "portfolio")} onClick={() => onTab("portfolio")}>
             Portfolio{active.length > 0 ? ` (${active.length})` : ""}
           </button>
-          <button style={T(tab === "analytics")} onClick={() => onTab("analytics")}>Analytics</button>
+          <div ref={pAnalyticsRef} style={{ position: "relative", display: "inline-flex" }}>
+            <button style={T(tab === "analytics")} onClick={() => {
+              if (pAnalyticsRef.current) setAnalyticsRect(pAnalyticsRef.current.getBoundingClientRect());
+              setAnalyticsMenu(m => m === "portfolio" ? null : "portfolio");
+            }}>Portfolio Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
+          </div>
+          <div ref={tAnalyticsRef} style={{ position: "relative", display: "inline-flex" }}>
+            <button style={T(tab === "analytics")} onClick={() => {
+              if (tAnalyticsRef.current) setAnalyticsRect(tAnalyticsRef.current.getBoundingClientRect());
+              setAnalyticsMenu(m => m === "tenant" ? null : "tenant");
+            }}>Tenant Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
+          </div>
           <button style={T(tab === "comps")} onClick={() => onTab("comps")}>Comps</button>
         </div>
+
+        {/* Analytics nav dropdown menu (shared portal for both triggers) */}
+        {analyticsMenu && analyticsRect && createPortal(
+          <>
+            <div onClick={() => setAnalyticsMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
+            <div style={{
+              position: "fixed", top: analyticsRect.bottom + 6, left: analyticsRect.left, zIndex: 9001,
+              background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+              boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden",
+            }}>
+              {(analyticsMenu === "portfolio"
+                ? [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"]]
+                : [["Tenant Analytics", "tenant-list"], ["Link Tenants", "link-tenants"], ["Tenant Name Audit", "tenant-audit"], ["Retailer Watchlist", "watchlist"]]
+              ).map(([label, dest], i, arr) => (
+                <button key={dest} onClick={() => { setAnalyticsMenu(null); onAnalyticsNav?.(dest); }}
+                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: i < arr.length - 1 ? "1px solid #f1eadc" : "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#383a37", fontWeight: 600, whiteSpace: "nowrap" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body
+        )}
 
         {/* Spacer pushes buttons to right on desktop; collapses on mobile */}
         <div style={{ flex: 1, minWidth: 16 }} />
