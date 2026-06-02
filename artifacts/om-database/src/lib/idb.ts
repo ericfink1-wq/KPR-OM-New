@@ -313,6 +313,7 @@ export interface Deal {
   centerType?: string;
   status?: string;
   uploadedAt?: string;
+  refreshedAt?: string | null; // last time an OM re-upload / merge refreshed this deal
   omDate?: string;
   pdfPages?: number;
   // Financials

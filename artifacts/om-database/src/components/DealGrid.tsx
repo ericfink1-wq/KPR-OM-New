@@ -208,6 +208,28 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
   );
 }
 
+// ── Section-aware merge helpers ──────────────────────────────────────────────
+const _ts = (s?: string | null) => { const t = s ? Date.parse(s) : NaN; return isNaN(t) ? 0 : t; };
+const dealFreshness = (d: Deal) => Math.max(_ts(d.refreshedAt), _ts(d.uploadedAt));
+const rosterDate = (d: Deal) => _ts(d.tenantsAsOf) || dealFreshness(d);
+const demoDate = (d: Deal) => Math.max(_ts(d.demoChecked), _ts((d.marketDemographics as { lookedUpAt?: string } | null)?.lookedUpAt)) || dealFreshness(d);
+
+// Merge sales-history snapshots across deals: newest-uploaded snapshot per year.
+function mergeSalesHistories(deals: Deal[]): Deal["tenantSalesHistory"] | undefined {
+  type Snap = NonNullable<Deal["tenantSalesHistory"]>[number];
+  const byYear = new Map<number, Snap>();
+  for (const d of deals) for (const snap of d.tenantSalesHistory || []) {
+    const cur = byYear.get(snap.year);
+    if (!cur || _ts(snap.uploadedAt) >= _ts(cur.uploadedAt)) byYear.set(snap.year, snap);
+  }
+  const out = [...byYear.values()].sort((a, b) => a.year - b.year);
+  return out.length ? out : undefined;
+}
+
+// Fields the user enters by hand — never overwritten with a blank on merge.
+const USER_EXTRA = new Set(["status", "statusSince", "autoPassed", "dealThesis", "ownershipStructure", "marketSale", "marketSaleChecked", "propertyGroupId", "broker", "seller"]);
+const isUserField = (k: string) => /^(acq|debt|pref|txn|disp)/.test(k) || USER_EXTRA.has(k);
+
 export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles }: Props) {
   const watchMap = useWatchlist();
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
@@ -450,56 +472,72 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     setMerging(true);
     const keeper = modal.deals.find(d => d.id === modal.keeperId)!;
     const others = modal.deals.filter(d => d.id !== modal.keeperId);
+    const all = modal.deals;
+    const nonEmpty = (v: unknown) => v != null && v !== "";
 
-    const absorbableFields: (keyof Deal)[] = [
-      "userNotes","status","txnPurchasePrice","txnSeller","txnLoiDate","txnCloseDate",
-      "txnSalePrice","txnBuyer","txnSaleDate","txnBroker",
-      "acqCapRate","acqNOIAtClose","acqEntity","acqBroker","acqContractDate","acqDDExpiration",
-      "acqDeposit","acqClosingCosts","acqFee","acqTitleCo","acqCounsel","acqPropManager",
-      "acqStrategy","acqHoldPeriod","acqTargetIRR","acqNotes",
-      "debtLender","debtType","debtLoanAmount","debtRate","debtMaturityDate","debtNotes",
-      "marketSale","marketDemographics",
-    ];
+    // Base = the freshest deal's record (newest OM financials + narrative + score).
+    const freshest = all.slice().sort((a, b) => dealFreshness(b) - dealFreshness(a))[0];
+    const merged: Deal = { ...freshest };
 
-    const merged: Partial<Deal> = {};
-    for (const f of absorbableFields) {
-      const keeperVal = keeper[f];
-      if (keeperVal == null || keeperVal === "") {
-        for (const o of others) {
-          const v = o[f];
-          if (v != null && v !== "") { (merged as Record<string, unknown>)[f] = v; break; }
-        }
-      }
+    // Roster (+ derived occupancy/WALT/avg rent) from the deal with the newest as-of date.
+    const rosterSrc = all.filter(d => (d.tenants || []).length).sort((a, b) => rosterDate(b) - rosterDate(a))[0];
+    if (rosterSrc) {
+      merged.tenants = rosterSrc.tenants;
+      merged.tenantsAsOf = rosterSrc.tenantsAsOf;
+      merged.tenantsManual = rosterSrc.tenantsManual;
+      merged.tenantsSource = rosterSrc.tenantsSource;
+      merged.occupancy = rosterSrc.occupancy;
+      merged.walt = rosterSrc.walt;
+      merged.weightedAvgRentPSF = rosterSrc.weightedAvgRentPSF;
     }
 
-    const mergedVerified = { ...(keeper.verified || {}) };
-    for (const o of others) {
-      for (const [k, v] of Object.entries(o.verified || {})) {
-        if (!mergedVerified[k]) mergedVerified[k] = v;
-      }
-    }
-    merged.verified = mergedVerified;
+    // Sales history merged across all deals, newest upload per year.
+    const sales = mergeSalesHistories(all);
+    if (sales) merged.tenantSalesHistory = sales;
 
-    if (!keeper.imageMeta?.cover) {
-      for (const o of others) {
-        if (o.imageMeta?.cover) { merged.imageMeta = o.imageMeta; break; }
-      }
+    // Demographics from the deal with the newest lookup.
+    const demoSrc = all.filter(d => d.marketDemographics || d.demoChecked).sort((a, b) => demoDate(b) - demoDate(a))[0];
+    if (demoSrc) {
+      merged.marketDemographics = demoSrc.marketDemographics;
+      merged.demoChecked = demoSrc.demoChecked;
     }
 
-    const otherNotes = others.map(o => o.userNotes).filter(Boolean).join("\n---\n");
-    if (otherNotes && !keeper.userNotes) merged.userNotes = otherNotes;
-    else if (otherNotes && keeper.userNotes) merged.userNotes = keeper.userNotes + "\n---\n" + otherNotes;
+    // User-entered fields: keeper wins, gap-filled from others, never blanked.
+    const userKeys = new Set<string>();
+    for (const d of all) for (const k of Object.keys(d)) if (isUserField(k)) userKeys.add(k);
+    for (const k of userKeys) {
+      const kk = k as keyof Deal;
+      let val: unknown = nonEmpty(keeper[kk]) ? keeper[kk] : undefined;
+      if (val === undefined) for (const d of all) { if (nonEmpty(d[kk])) { val = d[kk]; break; } }
+      if (val !== undefined) (merged as unknown as Record<string, unknown>)[k] = val;
+    }
 
-    const updatedKeeper: Deal = { ...keeper, ...merged };
-    await apiSaveDeal(updatedKeeper).catch(() => {});
-    onUpdate(keeper.id, merged);
+    // Verified flags: union across all. Notes: combine (de-duplicated).
+    const mergedVerified: Record<string, unknown> = {};
+    for (const d of all) for (const [k, v] of Object.entries(d.verified || {})) if (!mergedVerified[k]) mergedVerified[k] = v;
+    merged.verified = mergedVerified as Deal["verified"];
+    const allNotes = [...new Set(all.map(d => d.userNotes).filter((n): n is string => !!n))];
+    merged.userNotes = allNotes.length ? allNotes.join("\n---\n") : undefined;
 
+    // Cover image: keeper's, else first available.
+    if (!merged.imageMeta?.cover) {
+      const withCover = all.find(d => d.imageMeta?.cover);
+      if (withCover) merged.imageMeta = withCover.imageMeta;
+    }
+
+    // Keep the keeper's identity.
+    merged.id = keeper.id;
+    merged.uploadedAt = keeper.uploadedAt;
+    merged.refreshedAt = new Date().toISOString();
+
+    await apiSaveDeal(merged).catch(() => {});
+    onUpdate(keeper.id, merged as Partial<Deal>);
     for (const o of others) onUpdate(o.id, { trashedAt: new Date().toISOString() });
 
     setMerging(false);
     setModal(null);
     clearSelection();
-    setNotice(`Merged ${modal.deals.length} deals into one. The extras are in Trash if you need them back.`);
+    setNotice(`Merged ${modal.deals.length} deals into one — newest data kept per section, your underwriting preserved. Extras are in Trash.`);
   };
 
   // ── Bulk: change status ──────────────────────────────────────────────────
