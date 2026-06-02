@@ -72,6 +72,15 @@ export interface CompMatch {
   sf: number | null;
   anchor: string | null;
   source: "owned" | "broker" | "om";
+  // Extra "about the center" detail for the expandable row on the deal page.
+  address?: string | null;
+  state?: string | null;
+  occupancy?: number | null;
+  propertyType?: string | null;
+  buyer?: string | null;
+  seller?: string | null;
+  sourceNotes?: string | null;
+  sourceDealId?: string | null;
   /** True when manually excluded — still returned for display but not counted in stats */
   excluded: boolean;
   /** True when the user starred this comp (force-included + weighted in stats) */
@@ -315,6 +324,9 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
       id: r.id, name: r.name, sourceDealName: r.sourceDealName, market: r.market, saleDate: r.saleDate,
       salePrice: r.salePrice, capRate: r.capRate, pricePerSf: r.pricePerSf, sf: r.sf,
       anchor: r.anchor ?? null,
+      address: r.address ?? null, state: r.state ?? null, occupancy: r.occupancy ?? null,
+      propertyType: r.propertyType ?? null, buyer: r.buyer ?? null, seller: r.seller ?? null,
+      sourceNotes: r.sourceNotes ?? null, sourceDealId: r.sourceDealId ?? null,
       source: getSource(r),
       excluded: excSet.has(r.id),
       starred: starSet.has(r.id),

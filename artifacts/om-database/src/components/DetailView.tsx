@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
@@ -240,6 +240,9 @@ interface BmMatch {
   salePrice: number | null; capRate: number | null; pricePerSf: number | null;
   sf: number | null; anchor?: string | null; source: "owned" | "broker" | "om"; excluded: boolean;
   starred?: boolean; matchScore?: number; matchReasons?: string[];
+  address?: string | null; state?: string | null; occupancy?: number | null;
+  propertyType?: string | null; buyer?: string | null; seller?: string | null;
+  sourceNotes?: string | null; sourceDealId?: string | null;
 }
 interface BmResult {
   insufficient: boolean; tierLabel: string; relaxed: string[]; excludedInvalid: number;
@@ -250,6 +253,39 @@ interface BmResult {
   capDeltaBps: number | null; psfDeltaPct: number | null;
   comps: BmMatch[]; smartMatched: number; suggestions: BmMatch[];
   subject: { capRate: number | null; pricePerSf: number | null };
+}
+
+// Expandable "about the center" panel shown when a comp row is clicked.
+function CompDetail({ c }: { c: BmMatch }) {
+  const rows: Array<[string, string]> = [];
+  const push = (l: string, v: string | number | null | undefined, suffix = "") => { if (v != null && v !== "") rows.push([l, `${v}${suffix}`]); };
+  push("Address", c.address);
+  push("Market", c.market);
+  push("State", c.state);
+  push("Property type", c.propertyType);
+  push("Anchor", c.anchor);
+  if (c.occupancy != null) push("Occupancy", c.occupancy, "%");
+  push("Buyer", c.buyer);
+  push("Seller", c.seller);
+  if (c.sourceDealName && c.sourceDealName !== c.name) push("From deal", c.sourceDealName);
+  push("Source", c.source === "owned" ? "KPR owned transaction (verified)" : c.source === "broker" ? "Broker / manually entered" : "OM-sourced (seller-provided)");
+  return (
+    <div style={{ fontFamily: "'Inter',sans-serif" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 22px", marginTop: 6 }}>
+        {rows.map(([l, v]) => (
+          <div key={l} style={{ fontSize: 11.5 }}>
+            <span style={{ color: "#a89f8f", marginRight: 5 }}>{l}:</span>
+            <span style={{ color: "#383a37", fontWeight: 500 }}>{v}</span>
+          </div>
+        ))}
+      </div>
+      {c.matchReasons && c.matchReasons.length > 0 && (
+        <div style={{ fontSize: 11, color: "#3f7a1f", marginTop: 7 }}>Why it matched: {c.matchReasons.join(" · ")}</div>
+      )}
+      {c.sourceNotes && <div style={{ fontSize: 11, color: "#7d766a", marginTop: 6, lineHeight: 1.5 }}>{c.sourceNotes}</div>}
+      {rows.length === 0 && !c.sourceNotes && <div style={{ fontSize: 11.5, color: "#a89f8f", fontStyle: "italic", marginTop: 6 }}>No additional center detail on file for this comp.</div>}
+    </div>
+  );
 }
 
 function CompBenchmarkCard({ deal }: { deal: Deal }) {
@@ -266,6 +302,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [includeIds, setIncludeIds] = useState<number[]>(() => readLs().includeIds ?? []);
   const [dismissedSugIds, setDismissedSugIds] = useState<number[]>(() => readLs().dismissedSugIds ?? []);
   const [starredIds, setStarredIds] = useState<number[]>(() => readLs().starredIds ?? []);
+  const [expandedComp, setExpandedComp] = useState<number | null>(null);
   const [addQ, setAddQ] = useState("");
   const [tableQ, setTableQ] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "market" | "anchor" | "date" | "price" | "cap" | "psf" | "sf" | "source">("date");
@@ -620,8 +657,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                   <tbody>
                     {sorted.map(c => {
                       const isStar = starredIds.includes(c.id) || !!c.starred;
+                      const open = expandedComp === c.id;
                       return (
-                      <tr key={c.id} style={{ borderBottom: "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1, background: isStar && !c.excluded ? "#fffaf0" : undefined }}>
+                      <Fragment key={c.id}>
+                      <tr style={{ borderBottom: open ? "none" : "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1, background: open ? "#faf7f0" : (isStar && !c.excluded ? "#fffaf0" : undefined) }}>
                         <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                           <button onClick={() => toggleStar(c.id)}
                             title={isStar ? "Unstar — remove extra weight" : "Star — weight this comp more heavily"}
@@ -632,7 +671,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                                 title="Remove from benchmark"
                                 style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: "#dc2626", fontSize: 16, lineHeight: 1, display: "inline-flex", alignItems: "center", flexShrink: 0, fontFamily: "sans-serif" }}>×</button>}
                         </td>
-                        <td style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dispName(c)}</td>
+                        <td onClick={() => setExpandedComp(open ? null : c.id)} title="Click for center details"
+                          style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
+                          <span style={{ color: "#b3a994", fontSize: 9, marginRight: 4 }}>{open ? "▾" : "▸"}</span>{dispName(c)}
+                        </td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
                         <td style={{ padding: "6px 8px", color: c.anchor ? "#5c5850" : "#c9c2b8", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.anchor || "—"}</td>
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
@@ -642,6 +684,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                         <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(c.sf)}</td>
                         <td style={{ padding: "6px 8px" }}>{sourceBadge(c.source)}</td>
                       </tr>
+                      {open && (
+                        <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f5f1ea" }}>
+                          <td colSpan={10} style={{ padding: "2px 14px 12px 30px" }}>
+                            <CompDetail c={c} />
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                       );
                     })}
                     {sorted.length === 0 && (
