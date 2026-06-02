@@ -1123,6 +1123,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
   const [teachOpen, setTeachOpen] = useState(false);
+  const [editingAddr, setEditingAddr] = useState(false);
+  const [addrDraft, setAddrDraft] = useState({ address: "", city: "", state: "" });
   const [reanalyzeBusy, setReanalyzeBusy] = useState(false);
   const rerunPdfRef = useRef<HTMLInputElement>(null);
   const [rrBusy, setRrBusy] = useState(false);
@@ -1910,7 +1912,27 @@ ${text.slice(0, 60000)}`;
           </div>
         </div>
       </div>
-      <p style={{ color:"#6f6a5f", fontSize:12, margin:"0 0 12px 0" }}>{fullAddress || "—"}</p>
+      {editingAddr ? (
+        <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", margin:"0 0 12px 0" }}>
+          <input autoFocus value={addrDraft.address} onChange={e => setAddrDraft(a => ({ ...a, address: e.target.value }))} placeholder="Street address"
+            style={{ flex:"1 1 240px", minWidth:160, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
+          <input value={addrDraft.city} onChange={e => setAddrDraft(a => ({ ...a, city: e.target.value }))} placeholder="City"
+            style={{ flex:"0 1 140px", minWidth:90, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
+          <input value={addrDraft.state} onChange={e => setAddrDraft(a => ({ ...a, state: e.target.value.toUpperCase().slice(0,2) }))} placeholder="ST" maxLength={2}
+            style={{ width:46, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff", textTransform:"uppercase" }} />
+          <button onClick={() => { onUpdate(d.id, { address: addrDraft.address.trim() || null, city: addrDraft.city.trim() || null, state: addrDraft.state.trim().toUpperCase() || null }); setEditingAddr(false); }}
+            style={{ background:"#26281f", color:"#fff", border:"none", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Save</button>
+          <button onClick={() => setEditingAddr(false)}
+            style={{ background:"transparent", color:"#a89f8f", border:"none", padding:"6px 8px", fontSize:12, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+        </div>
+      ) : (
+        <p onClick={() => { setAddrDraft({ address: d.address || "", city: d.city || "", state: d.state || "" }); setEditingAddr(true); }}
+          title="Click to edit the address"
+          style={{ color: fullAddress ? "#6f6a5f" : "#b08a3c", fontSize:12, margin:"0 0 12px 0", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6 }}>
+          {fullAddress || "+ Add address (needed for closing costs)"}
+          <span style={{ fontSize:10, color:"#b3a994" }}>✎</span>
+        </p>
+      )}
 
       {/* Export buttons */}
       <div style={{ display:"flex", gap:8, marginBottom:12 }}>
