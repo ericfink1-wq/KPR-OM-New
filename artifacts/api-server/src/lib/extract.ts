@@ -306,9 +306,16 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   let extracted = robustParseJSON(first.raw) as Record<string, unknown>;
   if (!extracted.tenants) extracted.tenants = [];
 
+  // Hard budget so a problematic OM can never churn the model indefinitely and
+  // burn tokens. Once we pass the deadline, we stop the follow-up passes and
+  // return whatever we've captured (flagged incomplete) instead of looping.
+  const EXTRACTION_DEADLINE = Date.now() + 5 * 60 * 1000; // 5 min of model work
+  let budgetHit = false;
+
   let stopReason = first.stopReason;
   let rounds = 0;
   while (stopReason === "max_tokens" && rounds < 8) {
+    if (Date.now() > EXTRACTION_DEADLINE) { budgetHit = true; break; }
     rounds++;
     const tenants = extracted.tenants as Array<{ name?: string }>;
     const haveNames = tenants.map((t) => t.name).filter(Boolean);
@@ -343,6 +350,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     if (occPct > 0 && occPct <= 1.5) occPct *= 100; // fraction → percent
     let gapRounds = 0;
     while (gapRounds < 3 && totalSF > 0 && occPct > 0 && occPct <= 100) {
+      if (Date.now() > EXTRACTION_DEADLINE) { budgetHit = true; break; }
       const tenants = extracted.tenants as Array<{ name?: string; sf?: unknown; isNAP?: boolean }>;
       const capturedSF = tenants.reduce((s, t) => {
         const sf = Number(t?.sf);
@@ -387,7 +395,22 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     }
   }
 
-  return { data: extracted, tenantsComplete: stopReason !== "max_tokens" };
+  // If we stopped at the time budget, flag it loudly: log it and leave a review
+  // question so the roster is reviewed rather than silently trusted as complete.
+  if (budgetHit) {
+    const n = Array.isArray(extracted.tenants) ? (extracted.tenants as unknown[]).length : 0;
+    const rq = Array.isArray(extracted.reviewQuestions) ? extracted.reviewQuestions as unknown[] : [];
+    rq.push({
+      id: "ai-budget-stop", source: "ai", severity: "high",
+      field: "Tenant roster completeness",
+      question: `Extraction hit its time budget after capturing ${n} tenants — the roster may be incomplete. Review against the rent roll and re-run if tenants are missing.`,
+      detail: "The OM took unusually long to read (large/complex document); processing was capped to avoid runaway token cost.",
+      suggestedValue: null, target: null,
+    });
+    extracted.reviewQuestions = rq;
+  }
+
+  return { data: extracted, tenantsComplete: stopReason !== "max_tokens" && !budgetHit };
 }
 
 // ── Regenerate the ANALYSIS (summary, grade, strengths/risks, upside, red flags) from the
