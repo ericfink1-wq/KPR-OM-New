@@ -24,17 +24,19 @@ interface Props {
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const isMobile = useIsMobile();
 
   // Position the tooltip with FIXED coords from the trigger's rect (via a portal),
   // so it can't be clipped by the scrolling table and always tracks the cursor's row.
+  // Opens above by default, but flips BELOW when too close to the viewport top.
   const place = () => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
     const w = 240;
-    setPos({ top: r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w });
+    const flip = r.top < 220; // not enough room above → open downward instead
+    setPos({ top: flip ? r.bottom + 8 : r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w, flip });
   };
   const show = () => { place(); setOpen(true); };
 
@@ -66,7 +68,7 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
       </span>
       {open && pos && createPortal(
         <div style={{
-          position: "fixed", top: pos.top, left: pos.left, transform: "translateY(-100%)",
+          position: "fixed", top: pos.top, left: pos.left, transform: pos.flip ? "none" : "translateY(-100%)",
           background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
           zIndex: 10000, width: 240, maxWidth: "calc(100vw - 24px)",
@@ -118,13 +120,26 @@ function fmtAsOf(raw: string): string {
 
 function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; children: React.ReactNode; color?: string }) {
   const [open, setOpen] = useState(false);
+  // Desktop popover position, computed from the trigger's on-screen rect so it can
+  // be rendered in a portal (fixed) — escapes the scrolling table's clipping and
+  // flips ABOVE the icon when there isn't room below (e.g. the bottom-most row).
+  const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
   const showTimer = useRef<number | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const isMobile = useIsMobile();
 
+  const place = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const W = 320;
+    const flip = window.innerHeight - r.bottom < 180; // not enough room below → open upward
+    const left = Math.max(12, Math.min(r.left, window.innerWidth - W - 12));
+    setPos({ top: flip ? r.top - 6 : r.bottom + 6, left, flip });
+  };
+
   const showSoon = () => {
     if (showTimer.current) window.clearTimeout(showTimer.current);
-    showTimer.current = window.setTimeout(() => setOpen(true), 150);
+    showTimer.current = window.setTimeout(() => { place(); setOpen(true); }, 150);
   };
   const cancelHover = () => {
     if (showTimer.current) {
@@ -152,7 +167,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
       <span
         onMouseEnter={isMobile ? undefined : showSoon}
         onMouseLeave={isMobile ? undefined : cancelHover}
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        onClick={(e) => { e.stopPropagation(); if (!isMobile && !open) place(); setOpen(o => !o); }}
         style={{ color, cursor: "pointer", userSelect: "none" }}
         aria-label={content}
         role="button"
@@ -161,14 +176,16 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
         {children}
       </span>
 
-      {/* Desktop: right-of-icon popover */}
-      {open && !isMobile && (
+      {/* Desktop: portal popover (fixed) that flips above the icon near the
+          viewport bottom, so it's never clipped by the scrolling table. */}
+      {open && !isMobile && pos && createPortal(
         <span
           onClick={(e) => e.stopPropagation()}
           style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            transform: pos.flip ? "translateY(-100%)" : "none",
             background: "#26281f",
             color: "#f6f2ea",
             padding: "9px 13px",
@@ -176,14 +193,14 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
             fontSize: 12,
             lineHeight: 1.5,
             whiteSpace: "normal",
-            width: "max-content",
             maxWidth: 320,
             zIndex: 10000,
             boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
           }}
         >
           {content}
-        </span>
+        </span>,
+        document.body
       )}
 
       {/* Mobile: centered fixed modal */}

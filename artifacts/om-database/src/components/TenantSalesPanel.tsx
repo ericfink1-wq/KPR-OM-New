@@ -107,16 +107,18 @@ function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): 
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const isMobile = useIsMobile();
 
   // Fixed-position portal so the tooltip is never clipped by the scrolling table.
+  // Opens above by default, but flips BELOW when too close to the viewport top.
   const place = () => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
     const w = 240;
-    setPos({ top: r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w });
+    const flip = r.top < 220; // not enough room above → open downward instead
+    setPos({ top: flip ? r.bottom + 8 : r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w, flip });
   };
   const show = () => { place(); setOpen(true); };
 
@@ -148,7 +150,7 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
       </span>
       {open && pos && createPortal(
         <div style={{
-          position: "fixed", top: pos.top, left: pos.left, transform: "translateY(-100%)",
+          position: "fixed", top: pos.top, left: pos.left, transform: pos.flip ? "none" : "translateY(-100%)",
           background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
           zIndex: 10000, width: 240, maxWidth: "calc(100vw - 24px)",
