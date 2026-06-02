@@ -6,6 +6,7 @@ import { uid, buildCorrectionsNote } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { classifyDocument, matchDeal, type DocType } from "../lib/docClassify";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
+import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 
 interface QueueItem {
   id: string;
@@ -224,6 +225,39 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   };
 
+  // Apply an extracted sales report to a matched deal (auto-import, suite-aware).
+  const applySalesToDeal = async (itemId: string, deal: Deal, result: SalesExtractResult) => {
+    const patch = buildSalesHistoryPatch(deal, result);
+    const updated = { ...deal, ...patch } as Deal;
+    await apiSaveDeal(updated);
+    onDealUpdated?.(updated);
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: "sales",
+      matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      msg: `Sales (${result.year}) → ${deal.propertyName || deal.fileName || "matched deal"} · ${result.tenants.length} tenants applied`,
+    });
+  };
+
+  // Route a sales report: extract it, match to a deal, and either auto-apply the
+  // sales history (confident match) or ask which property it belongs to.
+  const routeSales = async (
+    itemId: string, text: string, fileName: string,
+    propertyName: string | null, address: string | null,
+  ) => {
+    updateItem(itemId, { msg: "Reading sales report…", progress: 55, routedType: "sales" });
+    const result = await extractSalesReport(text);
+    const m = matchDeal({ propertyName, address, fileName }, existingDeals);
+    if (m.deal && m.confidence !== "none") {
+      await applySalesToDeal(itemId, m.deal, result);
+    } else {
+      updateItem(itemId, {
+        status: "awaiting_match", routedType: "sales",
+        pendingExtracted: result as unknown as Record<string, unknown>,
+        msg: `Sales report (${result.tenants.length} tenants) — pick the property it belongs to`, progress: 100,
+      });
+    }
+  };
+
   // User manually assigns an awaiting doc to a property.
   const assignMatch = async (itemId: string, deal: Deal) => {
     const item = queue.find(q => q.id === itemId);
@@ -235,12 +269,13 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Roster update failed", error: err instanceof Error ? err.message : "failed" });
       }
-    } else if (item.routedType === "sales") {
-      updateItem(itemId, {
-        status: "done", progress: 100, deal,
-        matchedDealName: deal.propertyName || deal.fileName || "deal",
-        msg: `Sales report → ${deal.propertyName || deal.fileName || "deal"} · open the deal to import sales`,
-      });
+    } else if (item.routedType === "sales" && item.pendingExtracted) {
+      updateItem(itemId, { status: "extracting", msg: "Importing sales…", progress: 60 });
+      try {
+        await applySalesToDeal(itemId, deal, item.pendingExtracted as unknown as SalesExtractResult);
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Sales import failed", error: err instanceof Error ? err.message : "failed" });
+      }
     }
   };
 
@@ -270,17 +305,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         return;
       }
       if (cls.type === "sales") {
-        // Sales reports route to a matched property; the sales-history merge is
-        // completed on the deal page (open it from the queue).
-        const m = matchDeal({ propertyName: cls.propertyName, address: cls.address, fileName }, existingDeals);
-        if (m.deal) {
-          updateItem(itemId, {
-            status: "done", progress: 100, routedType: "sales", matchedDealName: m.deal.propertyName || m.deal.fileName || "deal",
-            deal: m.deal, msg: `Sales report → ${m.deal.propertyName || "matched deal"} · open the deal to import sales`,
-          });
-        } else {
-          updateItem(itemId, { status: "awaiting_match", routedType: "sales", pendingText2: text, msg: "Sales report — pick the property it belongs to", progress: 100 });
-        }
+        await routeSales(itemId, text, fileName, cls.propertyName, cls.address);
         return;
       }
       // Otherwise treat as an OM / deal package (the original flow, unchanged).

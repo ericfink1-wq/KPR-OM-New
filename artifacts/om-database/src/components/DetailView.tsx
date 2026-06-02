@@ -15,6 +15,7 @@ import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
 import RentRollPDF from "./RentRollPDF";
 import { extractAnyFile } from "../lib/fileExtract";
+import { extractSalesReport, buildSalesHistoryPatch } from "../lib/salesExtract";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
 import { PDFDownloadLink } from "@react-pdf/renderer";
@@ -1061,99 +1062,10 @@ ${text.slice(0, 60000)}`;
     setSalesError(null);
     try {
       const { text } = await extractAnyFile(file);
-      const prompt = `You are a CRE data extraction engine. Extract tenant sales data from this retail sales report.
-Return ONLY valid JSON — no markdown fences, no explanation — with this exact shape:
-{
-  "year": <integer — the sales year this report covers, e.g. 2023>,
-  "tenants": [
-    {
-      "name": "string",
-      "salesPSF": number_or_null,
-      "annualSales": number_or_null,
-      "sf": number_or_null,
-      "occupancyCost": number_or_null
-    }
-  ]
-}
-
-RULES:
-- year: infer from the header or period label of the report (e.g. "2023 Sales Report" → 2023). If truly ambiguous, use the most recent full calendar year mentioned.
-- salesPSF: sales per square foot (dollars). Often labeled "Sales/SF", "$/SF", or "PSF".
-- annualSales: total annual sales volume in dollars (not PSF). If shown in thousands, convert to full dollars.
-- sf: tenant GLA / leased SF for use in sales calculations.
-- occupancyCost: TOTAL occupancy cost percentage = (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled "Occ Cost %", "OC%", or "Occupancy Cost" — capture the report's stated total. Do NOT report a base-rent-only ratio.
-- Skip total/subtotal rows and blank rows.
-- Include all tenants that have any sales data, even if some fields are null.
-
-SALES REPORT TEXT:
-${text.slice(0, 40000)}`;
-
-      const res = await apiAiMessages({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 16000,
-        messages: [{ role: "user", content: prompt }],
-      });
-      const raw = res.content.find((c: { type: string }) => c.type === "text")?.text ?? "";
-      let parsed: { year?: number; tenants?: unknown[] };
-      try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't parse the AI response — try again."); }
-
-      const year = typeof parsed.year === "number" ? parsed.year : new Date().getFullYear() - 1;
-      const rawTenants = Array.isArray(parsed.tenants) ? parsed.tenants as TenantSalesYear["tenants"] : [];
-      if (rawTenants.length === 0) throw new Error("No tenant sales data found in the PDF.");
-
-      // Cross-derive sales PSF <-> gross annual sales so a report that gives only
-      // one of them still populates both (and the chart can show sales PSF / occ
-      // cost). The roster's SF fills in when the report omits it.
-      const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
-      // Index the roster by tenant for SF + rent components (to recompute occ cost
-      // from the report's gross sales using the full health-ratio formula).
-      const roster = new Map((d.tenants || []).map(t => [tenantKey(t.canonicalName || t.name), t]));
-      const recEst = estimateRecoveries(d).byName;
-      const tenants = rawTenants.map(t => {
-        const matchKey = tenantKey(stripSuiteCode(t.name));
-        const rt = roster.get(matchKey);
-        let sf = nv(t.sf);
-        if (sf == null) sf = nv(rt?.sf) ?? null;
-        let psf = nv(t.salesPSF);
-        let gross = nv(t.annualSales);
-        if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
-        if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
-
-        // Occupancy cost = (base + reimbursements + % rent + other) ÷ gross sales.
-        // Recompute from the roster's rent components against THIS report's gross
-        // sales when we can — more reliable than a possibly base-only stated ratio.
-        let occupancyCost = nv(t.occupancyCost);
-        let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
-        let occBreakdown: import("../lib/idb").OccBreakdown | null = null;
-        const base = nv(rt?.annualRent);
-        const estRec = recEst.get(matchKey);
-        const reimb = nv(rt?.expenseReimbursements) ?? (estRec ? estRec.value : null);
-        const reimbEstimated = nv(rt?.expenseReimbursements) == null && !!estRec?.estimated;
-        const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
-        if (base != null && reimb != null && gross != null && gross > 0) {
-          const total = base + reimb + pctRent + other;
-          occupancyCost = Math.round((total / gross) * 1000) / 10;
-          occSource = "computed";
-          occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
-        }
-        // Store the clean brand name — the matched roster name when we found one,
-        // else the suite-stripped name — so the roster Sales column and the sales
-        // table key off the same brand and the suite code never sticks around.
-        const cleanName = rt ? (rt.canonicalName || rt.name || stripSuiteCode(t.name)) : stripSuiteCode(t.name);
-        return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
-      });
-
-      const newSnap: TenantSalesYear = {
-        year,
-        uploadedAt: new Date().toISOString(),
-        source: "upload",
-        tenants,
-      };
-
-      // Replace any existing snapshot for the same year, append otherwise
-      const existing = (d.tenantSalesHistory || []).filter(s => s.year !== year);
-      onUpdate(d.id, { tenantSalesHistory: [...existing, newSnap] });
-      finishAiTask(taskId, "done", `Sales loaded — ${tenants.length} tenants (${year})`);
+      const result = await extractSalesReport(text);
+      const patch = buildSalesHistoryPatch(d, result);
+      onUpdate(d.id, patch);
+      finishAiTask(taskId, "done", `Sales loaded — ${result.tenants.length} tenants (${result.year})`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sales upload failed.";
       setSalesError(msg);
