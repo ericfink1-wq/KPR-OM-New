@@ -406,7 +406,7 @@ export const TENANT_ALIASES: Record<string, string> = {
   "burlington coat": "Burlington",
   "burlington coat factory": "Burlington",
   "suntrust": "Truist Bank", "suntrust bank": "Truist Bank", "truist": "Truist Bank",
-  "wal mart": "Walmart", "walmart": "Walmart", "wal mart supercenter": "Walmart", "walmart supercenter": "Walmart",
+  "wal mart": "Walmart", "wal mart supercenter": "Walmart", "walmart supercenter": "Walmart",
   "carters osh kosh": "Carter's",
   "carters babies and kids": "Carter's",
   "edward d jones": "Edward Jones",
