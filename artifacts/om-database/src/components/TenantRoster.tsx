@@ -286,7 +286,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   );
 
   const cols: [string, string, boolean][] = [
-    ["name","Tenant",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
+    ["name","Tenant",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
     ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
     ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["recentlyExercisedRenewal","Recent Renewal",false],
     ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
@@ -372,6 +372,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     </div>
                   )}
                 </td>
+                <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:"#837c6e", fontFamily:"'SF Mono',ui-monospace,monospace", fontSize:11 }}>{t.suite || "—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${Math.round(n(t.annualRent)!).toLocaleString()}`:"—"}</td>
