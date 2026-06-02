@@ -199,6 +199,105 @@ const REP_TITLE_NM: TitleSchedule = {
   ],
 };
 
+// ── Maryland — per-county local transfer + recordation taxes (FY2026) ────────────
+// Maryland deeds carry TWO local taxes on the PURCHASE PRICE, both customarily
+// split 50/50: (1) a county transfer tax (0%–1.5%; FIVE counties levy none) and
+// (2) a county recordation tax. The deed-of-trust recordation is exempt under MD's
+// purchase-money exemption when the loan ≤ price (the usual acquisition), so
+// recordation is charged once, on the deed. The exact county is auto-resolved from
+// the property address (US Census geocoder); the selector lists all 24 jurisdictions.
+//   t = county transfer-tax rate (fraction of price); r = recordation rate (fraction)
+// TRANSFER-tax rates are well-corroborated. RECORDATION rates change annually and
+// sources disagree (esp. the rural counties), so every recordation line is flagged
+// "confirm with title". Montgomery's recordation is tiered (handled separately).
+const MD_COUNTIES: Array<{ name: string; t: number; r: number; rNote?: string; tNote?: string }> = [
+  { name: "Baltimore City",         t: 0.015,  r: 0.0100 },
+  { name: "Baltimore County",       t: 0.015,  r: 0.0050 },
+  { name: "Prince George's County", t: 0.014,  r: 0.0055 },
+  { name: "Anne Arundel County",    t: 0.010,  r: 0.0070, tNote: "Plus a 0.5% county surcharge on transactions of $1,000,000+ (most commercial) — see the separate surcharge line." },
+  { name: "Howard County",          t: 0.010,  r: 0.0050 },
+  { name: "Harford County",         t: 0.010,  r: 0.0066 },
+  { name: "St. Mary's County",      t: 0.010,  r: 0.0080 },
+  { name: "Garrett County",         t: 0.010,  r: 0.0070, tNote: "First $50,000 of consideration exempt." },
+  { name: "Talbot County",          t: 0.010,  r: 0.0120 },
+  { name: "Dorchester County",      t: 0.0075, r: 0.0100 },
+  { name: "Allegany County",        t: 0.005,  r: 0.0099 },
+  { name: "Caroline County",        t: 0.005,  r: 0.0100 },
+  { name: "Cecil County",           t: 0.005,  r: 0.0099 },
+  { name: "Charles County",         t: 0.005,  r: 0.0140 },
+  { name: "Kent County",            t: 0.005,  r: 0.0099 },
+  { name: "Queen Anne's County",    t: 0.005,  r: 0.0100 },
+  { name: "Washington County",      t: 0.005,  r: 0.0076 },
+  { name: "Worcester County",       t: 0.005,  r: 0.0066 },
+  { name: "Calvert County",         t: 0,      r: 0.0100, tNote: "Calvert levies NO county transfer tax." },
+  { name: "Carroll County",         t: 0,      r: 0.0099, tNote: "Carroll levies NO county transfer tax." },
+  { name: "Frederick County",       t: 0,      r: 0.0140, tNote: "Frederick levies NO county transfer tax (but has one of the highest recordation rates)." },
+  { name: "Somerset County",        t: 0,      r: 0.0066, tNote: "Somerset levies NO county transfer tax." },
+  { name: "Wicomico County",        t: 0,      r: 0.0100, tNote: "Wicomico levies NO county transfer tax." },
+];
+// Default selection when no address resolves: Montgomery (largest MD jurisdiction).
+const MD_DEFAULT_COUNTY = "Montgomery County";
+// Every MD jurisdiction label (Montgomery + the table above) for the dropdown/geocoder.
+const MD_COUNTY_NAMES: string[] = [MD_DEFAULT_COUNTY, ...MD_COUNTIES.map((c) => c.name)];
+
+const fmtPctNote = (r: number) => `${(r * 100).toFixed(2).replace(/\.?0+$/, "")}%`;
+
+function buildMdLocalTaxLines(): TaxLineItem[] {
+  const lines: TaxLineItem[] = [];
+
+  // Montgomery County — 1.0% commercial transfer + tiered recordation.
+  lines.push({
+    name: "County Transfer Tax — Montgomery County", rate: 0.01, rateMin: 0, rateMax: 0.01,
+    altGroup: "MD-county", altLabel: "Montgomery County", altDefault: true,
+    base: "price", party: "split",
+    notes: "Montgomery County: 1.0% county transfer tax on commercial property (improved residential is tiered 0.25%/0.5%/1.0%). Split 50/50. Combined with the 0.5% state transfer tax = 1.5%.",
+  });
+  lines.push({
+    name: "Recordation Tax (on the deed / price) — Montgomery County",
+    rate: 0.0089, rateMin: 0.0089, rateMax: 0.0227, verify: true,
+    marginalTiers: [
+      { over: 0,       rate: 0.0089 },
+      { over: 500000,  rate: 0.0135 },
+      { over: 600000,  rate: 0.0204 },
+      { over: 750000,  rate: 0.02156 },
+      { over: 1000000, rate: 0.0227 },
+    ],
+    altGroup: "MD-county", altLabel: "Montgomery County", base: "price", party: "split",
+    notes: "Montgomery recordation is TIERED (premium climbs above $500K): ~$4.45/$500 (0.89%) up to $500K, rising to ~$11.35/$500 (2.27%) on the portion over $1M. Charged on the deed; purchase-money DoT exempt up to price. Split 50/50. CONFIRM the exact tiered rate with the county/title.",
+  });
+
+  for (const c of MD_COUNTIES) {
+    // Only emit a county transfer line when the county actually levies one — the
+    // five zero-tax counties would otherwise show a confusing "$0 / flat fee" row.
+    if (c.t > 0) {
+      lines.push({
+        name: `County Transfer Tax — ${c.name}`,
+        rate: c.t, rateMin: 0, rateMax: c.t,
+        altGroup: "MD-county", altLabel: c.name, base: "price", party: "split",
+        notes: `${c.name}: ${fmtPctNote(c.t)} county transfer tax.${c.tNote ? " " + c.tNote : ""} Combined with the 0.5% state transfer tax = ${fmtPctNote(c.t + 0.005)}. Split 50/50.`,
+      });
+    }
+    lines.push({
+      name: `Recordation Tax (on the deed / price) — ${c.name}`,
+      rate: c.r, rateMin: 0, rateMax: c.r, verify: true,
+      altGroup: "MD-county", altLabel: c.name, base: "price", party: "split",
+      notes: `${c.name} recordation ≈ $${(c.r * 1000).toFixed(2).replace(/\.?0+$/, "")} per $1,000 (${fmtPctNote(c.r)} of price).${c.t === 0 ? ` ${c.name.replace(" County", "")} levies NO county transfer tax (state 0.5% only).` : ""}${c.rNote ? " " + c.rNote : ""} Charged on the deed; purchase-money deed of trust exempt up to the price. Split 50/50. MD recordation rates change annually and sources disagree — CONFIRM with title.`,
+    });
+  }
+
+  // Anne Arundel $1M+ surcharge (cliff on the whole consideration; commercial).
+  lines.push({
+    name: "Anne Arundel $1M+ Transfer Surcharge",
+    rate: 0.005, rateMin: 0, rateMax: 0.005, verify: true,
+    tiers: [ { over: 0, rate: 0 }, { over: 1000000, rate: 0.005 } ],
+    altGroup: "MD-county", altLabel: "Anne Arundel County", base: "price", party: "split",
+    notes: "Anne Arundel adds a 0.5% transfer surcharge on transactions of $1,000,000 or more (most commercial deals). Modeled as 0.5% of the full price at/above $1M, so AA commercial transfer ≈ 1.5% county + 0.5% state = 2.0%. CONFIRM whether the county applies it to the whole price or only the portion over $1M.",
+  });
+
+  return lines;
+}
+const MD_LOCAL_TAX_LINES: TaxLineItem[] = buildMdLocalTaxLines();
+
 // ── All 50 states + DC: state, county, and major city/local transfer taxes ───────
 // THREE-LAYER SOURCING:
 //   1. WHO PAYS: Fidelity National Title Laws & Customs (Aug 2025)
@@ -450,51 +549,12 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     transferTaxes: [
       { name: "State Transfer Tax", rate: 0.005, base: "price", party: "split",
         notes: "0.5% state. Split equally by custom (buyer 0.25% + seller 0.25%). First-time homebuyers get exemption — not applicable to commercial." },
-      { name: "County Transfer Tax — Baltimore City", rate: 0.015, rateMin: 0, rateMax: 0.015,
-        altGroup: "MD-county", altLabel: "Baltimore City",
-        base: "price", party: "split",
-        notes: "Baltimore City ONLY: 1.5% city transfer tax. Split 50/50. Combined with state: 2.0% transfer tax total. PLUS Baltimore City recordation tax 1.0% (see mortgage recordation line). Grand total deed burden in Baltimore City: ~3.0%." },
-      { name: "County Transfer Tax — Baltimore County / Howard County", rate: 0.015, rateMin: 0, rateMax: 0.015,
-        altGroup: "MD-county", altLabel: "Baltimore Co./Howard Co.",
-        base: "price", party: "split",
-        notes: "Baltimore County (Towson) and Howard County (Columbia): 1.5% county transfer tax each. Split 50/50. Combined with state: 2.0% total transfer tax." },
-      { name: "County Transfer Tax — Prince George's County", rate: 0.014, rateMin: 0, rateMax: 0.014,
-        altGroup: "MD-county", altLabel: "Prince George's County",
-        base: "price", party: "split",
-        notes: "Prince George's County (Landover, Bowie, Hyattsville): 1.4% county. Split 50/50. Combined with state: 1.9% total." },
-      { name: "County Transfer Tax — Anne Arundel/Harford/Montgomery/St. Mary's",
-        rate: 0.01, rateMin: 0, rateMax: 0.01,
-        altGroup: "MD-county", altLabel: "Anne Arundel/Montgomery/etc.",
-        base: "price", party: "split",
-        notes: "Anne Arundel (Annapolis), Harford (Bel Air), Montgomery (Rockville, Bethesda, Silver Spring), St. Mary's: 1.0% county each. Split 50/50. Combined with state: 1.5% total." },
-      { name: "County Transfer Tax — All Other MD Counties",
-        rate: 0.005, rateMin: 0, rateMax: 0.005,
-        altGroup: "MD-county", altLabel: "All Other MD Counties", altDefault: true,
-        base: "price", party: "split",
-        notes: "Allegany, Calvert, Caroline, Carroll, Cecil, Charles, Dorchester, Frederick, Garrett, Kent, Queen Anne's, Somerset, Talbot, Washington, Wicomico, Worcester: 0.5% county each. Split 50/50. Combined with state: 1.0% total." },
-      // ── County recordation tax — charged on the DEED (purchase price), split
-      // 50/50. Region-aware via the same MD-county selector. The deed-of-trust
-      // recordation is EXEMPT under MD's purchase-money exemption when the loan
-      // does not exceed the price (the usual acquisition), so we charge it once,
-      // on the price — NOT on the loan as before.
-      { name: "Recordation Tax (on the deed / price)", rate: 0.01, rateMin: 0, rateMax: 0.01,
-        altGroup: "MD-county", altLabel: "Baltimore City", base: "price", party: "split",
-        notes: "Baltimore City recordation ≈ $5.00/$500 = 1.0% of price. Split 50/50. (Charged on the deed; purchase-money deed of trust exempt up to the price.)" },
-      { name: "Recordation Tax (on the deed / price)", rate: 0.005, rateMin: 0, rateMax: 0.005,
-        altGroup: "MD-county", altLabel: "Baltimore Co./Howard Co.", base: "price", party: "split",
-        notes: "Baltimore County & Howard County recordation ≈ $2.50/$500 = 0.50% of price (lowest in MD). Split 50/50." },
-      { name: "Recordation Tax (on the deed / price)", rate: 0.0055, rateMin: 0, rateMax: 0.0055,
-        altGroup: "MD-county", altLabel: "Prince George's County", base: "price", party: "split",
-        notes: "Prince George's recordation ≈ $5.50/$1,000 = 0.55% of price. Split 50/50. (Corrected — was wrongly 1.10%.)" },
-      { name: "Recordation Tax (on the deed / price)", rate: 0.007, rateMin: 0.007, rateMax: 0.009, verify: true,
-        altGroup: "MD-county", altLabel: "Anne Arundel/Montgomery/etc.", base: "price", party: "split",
-        notes: "Anne Arundel recordation ≈ $3.50/$500 = 0.70%. NOTE: Montgomery County is higher — ~$4.45/$500 = 0.89% base PLUS surcharges above $500K (up to ~1.35% on the portion over $1M); for a Montgomery deal verify the tiered rate. Split 50/50." },
-      { name: "Recordation Tax (on the deed / price)", rate: 0.0055, rateMin: 0.003, rateMax: 0.014, verify: true,
-        altGroup: "MD-county", altLabel: "All Other MD Counties", base: "price", party: "split",
-        notes: "Recordation varies widely by county (≈$3/$1K = 0.30% in Allegany/Garrett/Kent up to ~$7/$500 = 1.40% in Charles/Frederick); ~0.55% is a mid-range placeholder. ALWAYS verify the specific county's recordation rate. Split 50/50." },
+      // Per-county local transfer + recordation taxes (all 24 jurisdictions), built
+      // from MD_COUNTIES above. The exact county auto-resolves from the address.
+      ...MD_LOCAL_TAX_LINES,
     ],
     recordingFeesFlat: 100,
-    notes: "Maryland deeds carry BOTH a transfer tax (state 0.5% + county, varies) AND a county recordation tax — both on the PURCHASE PRICE, both split 50/50. The deed-of-trust recordation is exempt under the purchase-money exemption when the loan ≤ price (the usual case), so recordation is charged once on the deed. County recordation rates vary a lot (0.30%–1.40%) — VERIFY the exact county (esp. Montgomery's tiered surcharges) with the county/DLS table; values here are best-effort. Baltimore City ≈ 3.0% combined; Montgomery/PG ≈ 2.0–2.5%.",
+    notes: "Maryland deeds carry BOTH a transfer tax (state 0.5% + county, 0%–1.5%) AND a county recordation tax — both on the PURCHASE PRICE, both split 50/50. FIVE counties (Calvert, Carroll, Frederick, Somerset, Wicomico) levy NO county transfer tax. The deed-of-trust recordation is exempt under the purchase-money exemption when the loan ≤ price (the usual case), so recordation is charged once on the deed. Recordation rates change annually and vary a lot by county (≈0.50% in Baltimore/Howard up to ~1.40% in Charles/Frederick; Montgomery is tiered up to ~2.27%) — every recordation line is flagged to CONFIRM with title. Baltimore City ≈ 3.0% combined; Montgomery ≈ 2.4%+ on large deals.",
   },
 
   PA: {
@@ -1398,10 +1458,30 @@ const CITY_LOCALITY: Record<string, Array<{ group: string; label: string; cities
     { group: "CA-city", label: "Stockton",       cities: ["stockton"] },
   ],
   MD: [
-    { group: "MD-county", label: "Baltimore City",              cities: ["baltimore"] },
-    { group: "MD-county", label: "Baltimore Co./Howard Co.",    cities: ["towson", "dundalk", "columbia", "ellicott city"] },
-    { group: "MD-county", label: "Prince George's County",      cities: ["upper marlboro", "bowie", "hyattsville", "college park", "greenbelt", "laurel"] },
-    { group: "MD-county", label: "Anne Arundel/Montgomery/etc.", cities: ["annapolis", "rockville", "bethesda", "silver spring", "gaithersburg", "germantown"] },
+    { group: "MD-county", label: "Montgomery County",       cities: ["rockville", "bethesda", "silver spring", "gaithersburg", "germantown", "wheaton", "potomac", "chevy chase", "takoma park", "olney", "kensington"] },
+    { group: "MD-county", label: "Baltimore City",          cities: ["baltimore"] },
+    { group: "MD-county", label: "Baltimore County",        cities: ["towson", "dundalk", "catonsville", "essex", "owings mills", "pikesville", "parkville", "randallstown", "woodlawn", "reisterstown", "perry hall", "nottingham"] },
+    { group: "MD-county", label: "Howard County",           cities: ["columbia", "ellicott city", "elkridge", "fulton", "clarksville", "jessup"] },
+    { group: "MD-county", label: "Prince George's County",  cities: ["upper marlboro", "bowie", "hyattsville", "college park", "greenbelt", "laurel", "landover", "oxon hill", "clinton", "fort washington", "suitland", "largo", "lanham", "beltsville"] },
+    { group: "MD-county", label: "Anne Arundel County",     cities: ["annapolis", "glen burnie", "severna park", "pasadena", "odenton", "crofton", "arnold", "millersville", "severn", "linthicum"] },
+    { group: "MD-county", label: "Frederick County",        cities: ["frederick", "urbana", "mount airy", "brunswick", "walkersville", "thurmont"] },
+    { group: "MD-county", label: "Harford County",          cities: ["bel air", "aberdeen", "havre de grace", "edgewood", "abingdon", "joppa"] },
+    { group: "MD-county", label: "Charles County",          cities: ["waldorf", "la plata", "white plains", "indian head"] },
+    { group: "MD-county", label: "Carroll County",          cities: ["westminster", "eldersburg", "sykesville", "hampstead", "taneytown", "mount airy carroll"] },
+    { group: "MD-county", label: "Calvert County",          cities: ["prince frederick", "dunkirk", "lusby", "solomons", "huntingtown", "owings"] },
+    { group: "MD-county", label: "Cecil County",            cities: ["elkton", "north east", "rising sun", "perryville"] },
+    { group: "MD-county", label: "St. Mary's County",       cities: ["lexington park", "leonardtown", "mechanicsville", "hollywood"] },
+    { group: "MD-county", label: "Washington County",       cities: ["hagerstown", "williamsport", "boonsboro"] },
+    { group: "MD-county", label: "Wicomico County",         cities: ["salisbury", "fruitland", "delmar"] },
+    { group: "MD-county", label: "Allegany County",         cities: ["cumberland", "frostburg", "lavale"] },
+    { group: "MD-county", label: "Worcester County",        cities: ["ocean city", "berlin", "snow hill", "pocomoke city"] },
+    { group: "MD-county", label: "Queen Anne's County",     cities: ["centreville", "stevensville", "chester", "grasonville", "queenstown"] },
+    { group: "MD-county", label: "Talbot County",           cities: ["easton", "st. michaels", "oxford", "tilghman"] },
+    { group: "MD-county", label: "Dorchester County",       cities: ["cambridge", "hurlock"] },
+    { group: "MD-county", label: "Garrett County",          cities: ["oakland", "mountain lake park", "deep creek", "mc henry"] },
+    { group: "MD-county", label: "Caroline County",         cities: ["denton", "federalsburg", "ridgely", "greensboro"] },
+    { group: "MD-county", label: "Kent County",             cities: ["chestertown", "rock hall"] },
+    { group: "MD-county", label: "Somerset County",         cities: ["princess anne", "crisfield"] },
   ],
   NV: [
     { group: "NV-county", label: "Clark County (Las Vegas)", cities: ["las vegas", "north las vegas", "henderson", "paradise", "spring valley", "enterprise", "summerlin"] },
@@ -1471,12 +1551,9 @@ const COUNTY_LOCALITY: Record<string, Array<{ group: string; label: string; coun
   NY: [
     { group: "NY-local", label: "NYC", counties: ["new york county", "kings county", "queens county", "bronx county", "richmond county"] },
   ],
-  MD: [
-    { group: "MD-county", label: "Baltimore City",               counties: ["baltimore city"] },
-    { group: "MD-county", label: "Baltimore Co./Howard Co.",     counties: ["baltimore county", "howard county"] },
-    { group: "MD-county", label: "Prince George's County",       counties: ["prince george's county"] },
-    { group: "MD-county", label: "Anne Arundel/Montgomery/etc.", counties: ["anne arundel county", "montgomery county"] },
-  ],
+  // All 24 MD jurisdictions — the geocoded county name (Census form, lowercased)
+  // IS the dropdown label lowercased, so map each name to itself.
+  MD: MD_COUNTY_NAMES.map((name) => ({ group: "MD-county", label: name, counties: [name.toLowerCase()] })),
   DE: [
     { group: "DE-county", label: "Kent/Sussex County", counties: ["kent county", "sussex county"] },
   ],
