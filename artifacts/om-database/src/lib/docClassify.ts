@@ -89,6 +89,21 @@ export interface DealMatch {
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
+// Filler words common to shopping-center names that frequently differ between an
+// OM and its rent roll (e.g. "Haymarket Center" vs "Haymarket Village Center", or
+// "… Shopping Center" vs "… Marketplace"). Matching on the DISTINCTIVE tokens that
+// remain after dropping these lets those naming variants still link.
+const CENTER_FILLER = new Set([
+  "the", "at", "of", "and", "on", "a", "an",
+  "center", "centre", "shopping", "village", "plaza", "square", "mall", "marketplace",
+  "market", "commons", "common", "crossing", "crossings", "station", "shoppes", "shops",
+  "shoppe", "corner", "corners", "place", "park", "retail", "outlets", "outlet", "gateway",
+  "town", "towne", "pavilion", "promenade", "galleria", "court", "junction", "village",
+  "shoppingcenter", "shoppingcentre",
+]);
+const distinctiveTokens = (s: string): string[] =>
+  s.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length >= 3 && !CENTER_FILLER.has(t));
+
 /**
  * Match a classified document to an existing deal by property name / address /
  * file name. Returns a confidence so callers can auto-commit only when sure.
@@ -115,6 +130,22 @@ export function matchDeal(
     // Containment (e.g. "Maple Plaza" vs "Maple Plaza Shopping Center")
     const partial = active.find(d => { const p = norm(d.propertyName || ""); return p.length > 6 && (p.includes(np) || np.includes(p)); });
     if (partial) return { deal: partial, confidence: "medium" };
+  }
+
+  // 2b) Distinctive-token match — links naming variants that aren't substrings of
+  // each other ("Haymarket Center" vs "Haymarket Village Center"). Require every
+  // distinctive token of the shorter name to appear in the other, with at least one
+  // solid (≥4-char) shared token, so generic single-word overlaps don't false-match.
+  const htoks = distinctiveTokens(hint.propertyName || "");
+  if (htoks.length) {
+    const tokMatch = active.find(d => {
+      const dtoks = distinctiveTokens(d.propertyName || "");
+      if (!dtoks.length) return false;
+      const [short, long] = htoks.length <= dtoks.length ? [htoks, dtoks] : [dtoks, htoks];
+      const longSet = new Set(long);
+      return short.every(t => longSet.has(t)) && short.some(t => t.length >= 4);
+    });
+    if (tokMatch) return { deal: tokMatch, confidence: "medium" };
   }
 
   // 3) Address match.

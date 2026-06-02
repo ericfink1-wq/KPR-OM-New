@@ -136,7 +136,13 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   ];
   const blank = (v: unknown) => v == null || v === "";
   const nrm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-  const suiteN = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  // Canonical suite key: lowercase alphanumeric with leading zeros stripped from
+  // each segment, so an OM's zero-padded "16-005" and a rent roll's "16-5" (or
+  // "008A" vs "8a") resolve to the same suite and merge instead of duplicating.
+  const suiteN = (s: unknown) => String(s ?? "").toLowerCase()
+    .split(/[^a-z0-9]+/).filter(Boolean)
+    .map(part => part.replace(/^0+(?=[0-9])/, ""))
+    .join("");
 
   // Index the existing roster so a new row can be matched to it three ways, in
   // order of reliability: (1) same suite, (2) alias-aware tenant key, (3) same SF
