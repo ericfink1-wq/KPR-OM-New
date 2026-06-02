@@ -15,6 +15,7 @@ import snapshotsRouter from "./snapshots";
 import feedbackRouter from "./feedback";
 import clientErrorsRouter from "./clientErrors";
 import ratesRouter from "./rates";
+import uploadLogRouter from "./uploadLog";
 import extractionLessonsRouter from "./extractionLessons";
 
 const router: IRouter = Router();
@@ -34,6 +35,7 @@ router.use(snapshotsRouter);
 router.use(feedbackRouter);
 router.use(clientErrorsRouter);
 router.use(ratesRouter);
+router.use(uploadLogRouter);
 router.use(extractionLessonsRouter);
 router.use(aiRouter);
 

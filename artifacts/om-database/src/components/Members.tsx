@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiLoginEvents, type MemberAccount, type LoginEvent } from "../lib/api";
+import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
 
 // Admin-only screen to approve / decline account requests and manage members.
 export default function Members({ onClose }: { onClose: () => void }) {
@@ -10,11 +10,14 @@ export default function Members({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [events, setEvents] = useState<LoginEvent[] | null>(null);
   const [showActivity, setShowActivity] = useState(false);
+  const [uploads, setUploads] = useState<UploadLogEntry[] | null>(null);
+  const [showUploads, setShowUploads] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
     apiListMembers().then(setRows).catch(() => setError("Couldn't load members"));
     apiLoginEvents().then(setEvents).catch(() => { /* non-fatal */ });
+    apiUploadLog().then(setUploads).catch(() => { /* non-fatal */ });
   }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -126,6 +129,32 @@ export default function Members({ onClose }: { onClose: () => void }) {
                       <span style={{ color: "#383a37", minWidth: 0, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.email || "(unknown)"}</span>
                       <span style={{ color: ev.success ? "#6f6a5f" : "#c0392b", flexShrink: 0 }}>{ev.success ? "signed in" : "failed"}</span>
                       <span style={{ color: "#a89f8f", flexShrink: 0 }}>{new Date(ev.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Upload activity log */}
+          {uploads && uploads.length > 0 && (
+            <div style={{ marginTop: 18, borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
+              <button onClick={() => setShowUploads(s => !s)}
+                style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {showUploads ? "▾" : "▸"} Upload activity ({uploads.length})
+              </button>
+              {showUploads && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, maxHeight: 300, overflowY: "auto" }}>
+                  {uploads.map(u => (
+                    <div key={u.id} title={u.detail || ""} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "5px 2px", borderBottom: "1px solid #f4efe6" }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: u.status === "success" ? "#3f7a1f" : "#c0392b", flexShrink: 0 }} />
+                      <span style={{ color: "#383a37", minWidth: 0, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {u.fileName || "(file)"}
+                        {u.docType ? <span style={{ color: "#a89f8f", fontSize: 9.5, marginLeft: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>{u.docType}</span> : null}
+                      </span>
+                      <span style={{ color: u.status === "success" ? "#6f6a5f" : "#c0392b", flexShrink: 0 }}>{u.status === "success" ? "ok" : "failed"}</span>
+                      <span style={{ color: "#8a8579", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.userName || u.userEmail || "—"}</span>
+                      <span style={{ color: "#a89f8f", flexShrink: 0 }}>{new Date(u.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis } from "../lib/api";
+import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload } from "../lib/api";
 import { extractPdfImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
@@ -192,8 +192,26 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   }, [pendingFiles]);
 
+  // Record each file's FINAL outcome (success/failure) once, to the admin upload
+  // log. Centralized here so every routing path (OM, rent roll, options, sales,
+  // duplicate-refresh) is captured wherever it sets a terminal status.
+  const loggedRef = useRef<Set<string>>(new Set());
   const updateItem = (itemId: string, patch: Partial<QueueItem>) => {
     setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
+    if ((patch.status === "done" || patch.status === "error") && !loggedRef.current.has(itemId)) {
+      loggedRef.current.add(itemId);
+      const it = queueRef.current.find(x => x.id === itemId);
+      const detail = patch.status === "error"
+        ? (patch.error || it?.error || patch.msg || it?.msg || "")
+        : (patch.matchedDealName || (patch.deal as Deal | undefined)?.propertyName || it?.matchedDealName || it?.deal?.propertyName || patch.msg || it?.msg || "");
+      apiRecordUpload({
+        fileName: it?.name || "(file)",
+        docType: patch.routedType || it?.routedType || "om",
+        status: patch.status === "done" ? "success" : "failed",
+        detail,
+        dealId: (patch.deal as Deal | undefined)?.id || it?.deal?.id || it?.tempDealId || null,
+      });
+    }
   };
 
   // Warn before a hard page exit (refresh / close tab / browser-back) while work

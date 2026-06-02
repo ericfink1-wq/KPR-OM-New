@@ -98,6 +98,23 @@ export async function apiLoginEvents(): Promise<LoginEvent[]> {
   return await resp.json().catch(() => []) as LoginEvent[];
 }
 
+// --- Upload activity log ---
+export interface UploadLogEntry {
+  id: string; fileName: string | null; docType: string | null; status: string;
+  detail: string | null; dealId: string | null;
+  userEmail: string | null; userName: string | null; createdAt: string;
+}
+// Record one upload outcome (best-effort; the WHO is filled in server-side from
+// the session). Never throws — logging must never break the upload flow.
+export async function apiRecordUpload(e: { fileName: string; docType?: string | null; status: "success" | "failed"; detail?: string | null; dealId?: string | null }): Promise<void> {
+  try { await apiFetch("/upload-log", { method: "POST", body: JSON.stringify(e) }); } catch { /* non-fatal */ }
+}
+export async function apiUploadLog(): Promise<UploadLogEntry[]> {
+  const resp = await apiFetch("/upload-log");
+  if (!resp.ok) return [];
+  return await resp.json().catch(() => []) as UploadLogEntry[];
+}
+
 export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; createdAt: string; lastLoginAt: string | null }
 export async function apiListMembers(): Promise<MemberAccount[]> {
   const resp = await apiFetch("/auth/users");

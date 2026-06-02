@@ -4,6 +4,7 @@ import { ensureUsersTable } from "./routes/auth";
 import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
 import { ensureSessionTable } from "./lib/sessionStore";
+import { ensureUploadLogTable } from "./routes/uploadLog";
 
 const rawPort = process.env["PORT"];
 
@@ -52,6 +53,11 @@ ensureExtractionLessonsTable()
 ensureSessionTable()
   .then(() => logger.info("session table ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureSessionTable failed on startup (will retry on next boot)"));
+
+// Provision the upload-activity audit log (best-effort).
+ensureUploadLogTable()
+  .then(() => logger.info("upload_log table ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureUploadLogTable failed on startup (will retry on first use)"));
 
 // Allow long-running AI calls (AnalystChat, lookup endpoints) up to 5 minutes.
 // The PDF ingest route is not affected since it returns immediately.

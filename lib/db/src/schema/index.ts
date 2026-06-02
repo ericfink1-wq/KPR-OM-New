@@ -9,5 +9,6 @@ export * from "./feedback";
 export * from "./clientErrors";
 export * from "./users";
 export * from "./loginEvents";
+export * from "./uploadLog";
 export * from "./extractionLessons";
 export * from "./sessions";
