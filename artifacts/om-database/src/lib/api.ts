@@ -17,10 +17,10 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<Response> {
 
 // --- Auth ---
 
-export async function apiLogin(password: string): Promise<{ ok: boolean; error?: string }> {
+export async function apiLogin(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
   const resp = await apiFetch("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ email, password }),
   });
   if (!resp.ok) {
     const body = await resp.json().catch(() => ({})) as { error?: string };
@@ -29,20 +29,45 @@ export async function apiLogin(password: string): Promise<{ ok: boolean; error?:
   return { ok: true };
 }
 
+export async function apiRegister(name: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> {
+  const resp = await apiFetch("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password }),
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    return { ok: false, error: body.error || "Could not create account" };
+  }
+  return { ok: true };
+}
+
 export async function apiLogout(): Promise<void> {
   await apiFetch("/auth/logout", { method: "POST" });
 }
 
-export async function apiCheckAuth(): Promise<{ authenticated: boolean; isAdmin: boolean }> {
+export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null }
+export async function apiCheckAuth(): Promise<AuthState> {
   try {
     const resp = await apiFetch("/auth/me");
-    if (!resp.ok) return { authenticated: false, isAdmin: false };
-    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean };
-    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin };
+    if (!resp.ok) return { authenticated: false, isAdmin: false, email: null, name: null };
+    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null };
+    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null };
   } catch {
-    return { authenticated: false, isAdmin: false };
+    return { authenticated: false, isAdmin: false, email: null, name: null };
   }
 }
+
+// --- Admin: member accounts ---
+export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; createdAt: string; lastLoginAt: string | null }
+export async function apiListMembers(): Promise<MemberAccount[]> {
+  const resp = await apiFetch("/auth/users");
+  if (!resp.ok) return [];
+  return await resp.json().catch(() => []) as MemberAccount[];
+}
+export async function apiApproveMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/approve`, { method: "POST" }); }
+export async function apiRejectMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/reject`, { method: "POST" }); }
+export async function apiSetMemberAdmin(id: string, isAdmin: boolean): Promise<void> { await apiFetch(`/auth/users/${id}/set-admin`, { method: "POST", body: JSON.stringify({ isAdmin }) }); }
+export async function apiDeleteMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}`, { method: "DELETE" }); }
 
 export async function apiAdminUnlock(password: string): Promise<void> {
   const resp = await apiFetch("/auth/admin-unlock", {

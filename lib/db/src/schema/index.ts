@@ -7,3 +7,4 @@ export * from "./retailerWatchlist";
 export * from "./snapshots";
 export * from "./feedback";
 export * from "./clientErrors";
+export * from "./users";

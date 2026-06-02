@@ -1,0 +1,17 @@
+import { pgTable, text, boolean, timestamp } from "drizzle-orm/pg-core";
+
+// User accounts for per-user login with admin approval. Replaces the single
+// shared password. status: "pending" (awaiting admin approval) → "approved"
+// (can log in) | "rejected". isAdmin grants approval powers + admin features.
+export const usersTable = pgTable("users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  name: text("name"),
+  status: text("status").notNull().default("pending"),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approvedBy: text("approved_by"),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+});

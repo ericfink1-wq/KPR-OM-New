@@ -256,7 +256,7 @@ function AppInner() {
   }
 
   if (auth === "unauthenticated") {
-    return <Login onLogin={() => { setAuth("authenticated"); }} />;
+    return <Login onLogin={() => { checkAuth(); }} />;
   }
 
   if (!loaded) {

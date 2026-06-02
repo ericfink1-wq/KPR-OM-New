@@ -4,6 +4,7 @@ import type { Deal, ImageBundle } from "../lib/idb";
 import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
+import Members from "./Members";
 
 interface Props {
   tab: string;
@@ -28,6 +29,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [backupMenu, setBackupMenu] = useState(false);
   const [uploadMenu, setUploadMenu] = useState(false);
   const [ratesOpen, setRatesOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [uploadRect, setUploadRect] = useState<DOMRect | null>(null);
@@ -494,6 +496,15 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           </>,
           document.body
         )}
+
+        {/* Members (account approvals) — admin only */}
+        {isAdmin && (
+          <button onClick={() => setMembersOpen(true)}
+            style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+            Members
+          </button>
+        )}
+        {membersOpen && <Members onClose={() => setMembersOpen(false)} />}
 
         {/* Backup menu — admin only */}
         {isAdmin && <div ref={backupTriggerRef} style={{ position: "relative" }}>

@@ -1,104 +1,113 @@
 import { useState, FormEvent } from "react";
-import { apiLogin } from "../lib/api";
+import { apiLogin, apiRegister } from "../lib/api";
 
 interface Props {
   onLogin: () => void;
 }
 
+type Mode = "login" | "register";
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", boxSizing: "border-box", padding: "10px 14px",
+  border: "1.5px solid #e7e0d2", borderRadius: 8, fontSize: 14,
+  fontFamily: "'Inter', sans-serif", background: "#faf7f0", color: "#26281f", outline: "none",
+};
+const labelStyle: React.CSSProperties = {
+  display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+  color: "#a89f8f", textTransform: "uppercase", marginBottom: 6,
+};
+
 export default function Login({ onLogin }: Props) {
+  const [mode, setMode] = useState<Mode>("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const switchMode = (m: Mode) => { setMode(m); setError(null); setNotice(null); setPassword(""); };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!password.trim() || loading) return;
+    if (loading) return;
+    setError(null); setNotice(null);
+
+    if (mode === "login") {
+      if (!email.trim() || !password) return;
+      setLoading(true);
+      const result = await apiLogin(email.trim(), password);
+      setLoading(false);
+      if (result.ok) onLogin();
+      else setError(result.error || "Incorrect email or password");
+      return;
+    }
+
+    // register
+    if (!email.trim() || !password) return;
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
     setLoading(true);
-    setError(null);
-    const result = await apiLogin(password);
+    const result = await apiRegister(name.trim(), email.trim(), password);
     setLoading(false);
     if (result.ok) {
-      onLogin();
+      setMode("login");
+      setPassword("");
+      setNotice("Account requested! You'll be able to sign in once an administrator approves you.");
     } else {
-      setError(result.error || "Incorrect password");
+      setError(result.error || "Could not create account");
     }
   };
 
+  const canSubmit = mode === "login"
+    ? !!email.trim() && !!password
+    : !!email.trim() && password.length >= 8;
+
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f1ece1",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontFamily: "'Inter', sans-serif",
-    }}>
-      <div style={{
-        background: "#fff",
-        border: "1px solid #e7e0d2",
-        borderRadius: 14,
-        padding: "44px 48px",
-        width: 360,
-        boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
-      }}>
-        <div style={{ marginBottom: 28, textAlign: "center" }}>
+    <div style={{ minHeight: "100vh", background: "#f1ece1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 16 }}>
+      <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 14, padding: "40px 44px", width: "min(380px, 100%)", boxSizing: "border-box", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+        <div style={{ marginBottom: 24, textAlign: "center" }}>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 400, color: "#26281f", letterSpacing: "-0.01em" }}>
             KPR <span style={{ fontWeight: 600 }}>OM</span> Database
           </div>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 4 }}>Team access only</div>
+          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 4 }}>
+            {mode === "login" ? "Sign in to your account" : "Request an account"}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#a89f8f", textTransform: "uppercase", marginBottom: 6 }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoFocus
-              placeholder="Enter team password"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "10px 14px",
-                border: "1.5px solid #e7e0d2",
-                borderRadius: 8,
-                fontSize: 14,
-                fontFamily: "'Inter', sans-serif",
-                background: "#faf7f0",
-                color: "#26281f",
-                outline: "none",
-              }}
-            />
-          </div>
-
-          {error && (
-            <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 12 }}>{error}</div>
+          {mode === "register" && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Name</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} autoFocus placeholder="Your name" style={inputStyle} />
+            </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading || !password.trim()}
-            style={{
-              width: "100%",
-              padding: "10px 0",
-              background: "#26281f",
-              color: "#f1ece1",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 13,
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 600,
-              cursor: loading ? "wait" : "pointer",
-              opacity: (!password.trim() || loading) ? 0.5 : 1,
-              letterSpacing: "0.02em",
-            }}
-          >
-            {loading ? "Signing in…" : "Sign in"}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Email</label>
+            <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus={mode === "login"} placeholder="you@company.com" style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Password</label>
+            <input type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder={mode === "register" ? "At least 8 characters" : "Your password"} style={inputStyle} />
+          </div>
+
+          {notice && <div style={{ fontSize: 12.5, color: "#0f7a3d", background: "#eef7ee", border: "1px solid #cfe9c4", borderRadius: 8, padding: "9px 11px", marginBottom: 12, lineHeight: 1.4 }}>{notice}</div>}
+          {error && <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 12 }}>{error}</div>}
+
+          <button type="submit" disabled={loading || !canSubmit}
+            style={{ width: "100%", padding: "10px 0", background: "#26281f", color: "#f1ece1", border: "none", borderRadius: 8, fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 600, cursor: loading ? "wait" : "pointer", opacity: (!canSubmit || loading) ? 0.5 : 1, letterSpacing: "0.02em" }}>
+            {loading ? (mode === "login" ? "Signing in…" : "Submitting…") : (mode === "login" ? "Sign in" : "Request access")}
           </button>
         </form>
+
+        <div style={{ marginTop: 18, textAlign: "center", fontSize: 12, color: "#a89f8f" }}>
+          {mode === "login" ? (
+            <>New here? <button onClick={() => switchMode("register")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>Create an account</button></>
+          ) : (
+            <>Already have an account? <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>Sign in</button></>
+          )}
+        </div>
       </div>
     </div>
   );
