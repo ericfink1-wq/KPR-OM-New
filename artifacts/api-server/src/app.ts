@@ -2,8 +2,6 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -48,21 +46,13 @@ app.use(cors({
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Persist sessions in Postgres (reusing the app's pg pool) so logins survive
-// server restarts/deploys. Falls back to the in-memory store if the table can't
-// be set up — a session-store hiccup must never take the server down.
-let sessionStore: session.Store | undefined;
-try {
-  const PgSession = connectPgSimple(session);
-  sessionStore = new PgSession({ pool, createTableIfMissing: true, tableName: "user_sessions" });
-} catch (err) {
-  logger.error({ err }, "Postgres session store unavailable — using in-memory sessions");
-}
-
 const ABSOLUTE_SESSION_MAX_MS = 30 * 24 * 60 * 60 * 1000; // hard re-login cap: 30 days
 
+// In-memory session store (default). NOTE: kept in-memory deliberately — a
+// Postgres-backed store (connect-pg-simple) was attempted but crashed the
+// deployment on start, so sessions live in memory (users re-login after a
+// deploy/restart; accounts & approvals are always persisted in the DB).
 app.use(session({
-  store: sessionStore,
   secret: process.env.SESSION_SECRET || "kpr-om-database-secret",
   resave: false,
   saveUninitialized: false,
