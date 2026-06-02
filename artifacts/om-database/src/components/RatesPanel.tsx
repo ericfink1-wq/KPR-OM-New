@@ -31,14 +31,22 @@ export default function RatesPanel({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   const fmtPct = (v: number | null) => v == null ? "—" : `${v.toFixed(2)}%`;
+  // Benchmark rates are quoted in market (Eastern) time. Render every timestamp
+  // explicitly in America/New_York and label it "ET" so it never shifts with the
+  // viewer's own time zone (and there's no ambiguity about what 10:33 means).
+  const ET = "America/New_York";
   const fmtAsOf = (iso: string | null) => {
     if (!iso) return "—";
-    const d = new Date(iso.length <= 10 ? iso + "T00:00:00" : iso);
+    // Date-only sources (e.g. Treasury "2026-06-01") have no clock time → show the
+    // date. Anchor at noon UTC so the calendar date can't roll under tz conversion.
+    if (iso.length <= 10) {
+      const d = new Date(iso + "T12:00:00Z");
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: ET });
+    }
+    const d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
-    // Date-only sources → show the date; timestamped → date + time.
-    return iso.length <= 10
-      ? d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-      : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: ET }) + " ET";
   };
 
   const Section = ({ title, rows, asOf, source, note }: { title: string; rows: RateRow[]; asOf: string | null; source: string; note?: string }) => (
