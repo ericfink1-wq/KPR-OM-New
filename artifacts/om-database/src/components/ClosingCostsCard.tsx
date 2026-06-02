@@ -11,6 +11,16 @@ interface Props { deal: Deal; }
 const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 const fmtPct = (r: number) => `${(r * 100).toFixed(2)}%`;
 
+// Realized effective % of the amount against its measuring base (price or loan).
+// Computed from the actual dollars, so sliding/graduated/tiered taxes show their
+// true blended rate, not the bracket range. Returns null for $0 or no base.
+const effPct = (amt: number, baseAmt: number): string | null => {
+  if (!baseAmt || amt <= 0) return null;
+  const r = amt / baseAmt;
+  const d = r < 0.001 ? 4 : r < 0.01 ? 3 : 2;
+  return `${(r * 100).toFixed(d).replace(/\.?0+$/, "")}%`;
+};
+
 function commaFmt(v: string): string {
   const stripped = v.replace(/,/g, "");
   const num = parseFloat(stripped);
@@ -245,6 +255,10 @@ export default function ClosingCostsCard({ deal }: Props) {
             {breakdown.lines.map((l, i) => {
               const dormant = !!(l as any).inactive;
               const needsVerify = !!(l as any).verify && !dormant;
+              const baseAmt = l.base === "loan" ? loan : price;
+              const isFlat = l.rate === 0 && l.rateMin == null;
+              const buyerPct = isFlat ? null : effPct(l.buyer, baseAmt);
+              const sellerPct = isFlat ? null : effPct(l.seller, baseAmt);
               return (
                 <tr key={i} style={{ borderBottom: "1px solid #f5efe2", opacity: dormant ? 0.45 : 1 }}>
                   <td style={{ padding: "8px 8px", color: "#383a37", verticalAlign: "top" }}>
@@ -255,10 +269,14 @@ export default function ClosingCostsCard({ deal }: Props) {
                     {l.rate === 0 && l.rateMin == null ? (dormant ? "—" : `flat ${fmt(l.amount)}`) : formatRate(l)}
                   </td>
                   <td style={{ padding: "8px 8px", textAlign: "right", color: hasPrice && !dormant && l.buyer > 0 ? "#3f7a1f" : "#c9c2b3", fontWeight: hasPrice && !dormant && l.buyer > 0 ? 500 : 400, verticalAlign: "top" }}>
-                    {!hasPrice ? "—" : !dormant && l.buyer > 0 ? fmt(l.buyer) : "—"}
+                    {!hasPrice ? "—" : !dormant && l.buyer > 0 ? (
+                      <>{fmt(l.buyer)}{buyerPct && <div style={{ fontSize: 9.5, color: "#a69e91", fontWeight: 400, marginTop: 1 }}>({buyerPct})</div>}</>
+                    ) : "—"}
                   </td>
                   <td style={{ padding: "8px 8px", textAlign: "right", color: hasPrice && !dormant && l.seller > 0 ? "#8a5a14" : "#c9c2b3", fontWeight: hasPrice && !dormant && l.seller > 0 ? 500 : 400, verticalAlign: "top" }}>
-                    {!hasPrice ? "—" : !dormant && l.seller > 0 ? fmt(l.seller) : "—"}
+                    {!hasPrice ? "—" : !dormant && l.seller > 0 ? (
+                      <>{fmt(l.seller)}{sellerPct && <div style={{ fontSize: 9.5, color: "#a69e91", fontWeight: 400, marginTop: 1 }}>({sellerPct})</div>}</>
+                    ) : "—"}
                   </td>
                 </tr>
               );
@@ -266,8 +284,14 @@ export default function ClosingCostsCard({ deal }: Props) {
             {hasPrice && (
               <tr style={{ background: "#faf7f0" }}>
                 <td style={{ padding: "10px 8px", color: "#26281f", fontWeight: 700 }} colSpan={2}>Total</td>
-                <td style={{ padding: "10px 8px", textAlign: "right", color: "#3f7a1f", fontWeight: 700 }}>{fmt(breakdown.totals.buyer)}</td>
-                <td style={{ padding: "10px 8px", textAlign: "right", color: "#8a5a14", fontWeight: 700 }}>{fmt(breakdown.totals.seller)}</td>
+                <td style={{ padding: "10px 8px", textAlign: "right", color: "#3f7a1f", fontWeight: 700 }}>
+                  {fmt(breakdown.totals.buyer)}
+                  {effPct(breakdown.totals.buyer, price) && <div style={{ fontSize: 9.5, color: "#7d766a", fontWeight: 500, marginTop: 1 }}>({effPct(breakdown.totals.buyer, price)} of price)</div>}
+                </td>
+                <td style={{ padding: "10px 8px", textAlign: "right", color: "#8a5a14", fontWeight: 700 }}>
+                  {fmt(breakdown.totals.seller)}
+                  {effPct(breakdown.totals.seller, price) && <div style={{ fontSize: 9.5, color: "#7d766a", fontWeight: 500, marginTop: 1 }}>({effPct(breakdown.totals.seller, price)} of price)</div>}
+                </td>
               </tr>
             )}
           </tbody>
