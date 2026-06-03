@@ -492,6 +492,9 @@ export interface Deal {
   // Lender-provided amortization schedule (uploaded). When present it drives the
   // current-balance read instead of the generated schedule.
   customAmortSchedule?: AmortRow[] | null;
+  // Preferred-equity accrual schedule (uploaded). The running ending balance shows
+  // the current accrued/unreturned preferred balance over time.
+  prefSchedule?: AmortRow[] | null;
   // Preferred equity (second tranche, acts like a second loan)
   prefLender?: string | null;
   prefAmount?: number | null;

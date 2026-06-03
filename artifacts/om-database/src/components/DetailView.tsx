@@ -5,7 +5,7 @@ import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, api
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
-import { amortForDeal } from "../lib/amortize";
+import { amortForDeal, currentBalanceFromRows } from "../lib/amortize";
 import { extractAmortSchedule } from "../lib/amortExtract";
 import { extractPref, buildPrefPatch } from "../lib/prefExtract";
 import ImportReview from "./ImportReview";
@@ -2935,6 +2935,9 @@ ${text.slice(0, 60000)}`;
                         {f({ label:"Term", field:"prefTermYears", placeholder:"e.g. 3", suffix:"yrs" })}
                         {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
                         {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
+                        {d.prefSchedule && d.prefSchedule.length > 0 && (
+                          <div style={{ gridColumn:"1 / -1" }}><PrefScheduleCard deal={d} /></div>
+                        )}
                       </>
                     )}
                   </>
@@ -3208,9 +3211,19 @@ function PrefImportButton({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       const { text } = await extractAnyFile(file);
       const result = await extractPref(text);
       const patch = buildPrefPatch(deal, result);
+      // Also pull the accrual schedule (the running pref balance) when the file
+      // includes one — optional, so a missing/odd schedule never blocks the terms.
+      let sched = 0;
+      try {
+        const rows = await extractAmortSchedule(text);
+        if (rows.length) { (patch as Partial<Deal>).prefSchedule = rows; sched = rows.length; }
+      } catch { /* no schedule in this file — fine */ }
       const n = Object.keys(patch).length;
-      if (n) { onUpdate(deal.id, patch); setMsg(`Filled ${n} blank pref-equity field${n === 1 ? "" : "s"} — review and verify each.`); }
-      else { setMsg("Read the terms, but every pref-equity field already had a value (nothing overwritten)."); }
+      if (n) {
+        onUpdate(deal.id, patch);
+        const bits = [n - (sched ? 1 : 0) > 0 ? `${n - (sched ? 1 : 0)} field${n - (sched ? 1 : 0) === 1 ? "" : "s"}` : "", sched ? `a ${sched}-period balance schedule` : ""].filter(Boolean);
+        setMsg(`Filled ${bits.join(" + ")} — review and verify.`);
+      } else { setMsg("Read the terms, but every pref-equity field already had a value (nothing overwritten)."); }
     } catch (e) {
       setIsErr(true); setMsg(e instanceof Error ? e.message : "Couldn't read that file.");
     } finally {
@@ -3230,6 +3243,60 @@ function PrefImportButton({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       <span style={{ fontSize:11.5, color: isErr ? "#c0392b" : msg ? "#3f7a1f" : "#7d766a", lineHeight:1.4 }}>
         {msg || "Drop a JV agreement or pref term sheet — it fills the blank fields below."}
       </span>
+    </div>
+  );
+}
+
+// ── Preferred-equity accrual schedule / current accrued balance ──────────────
+function PrefScheduleCard({ deal }: { deal: Deal }) {
+  const [showAll, setShowAll] = useState(false);
+  const rows = deal.prefSchedule || [];
+  const { balance, row } = useMemo(() => currentBalanceFromRows(rows), [rows]);
+  const fmt$ = (v: number | null | undefined) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
+  const yearly = rows.filter((_, idx) => (idx + 1) % 12 === 0 || idx === rows.length - 1);
+  const shown = showAll ? rows : yearly;
+
+  return (
+    <div style={{ marginTop:8, background:"#faf8f3", border:"1px solid #efe8da", borderRadius:10, padding:"12px 14px" }}>
+      <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:8 }}>
+        <div>
+          <div style={{ fontSize:10.5, color:"#a69e91", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.04em", marginBottom:3 }}>Current Accrued Pref Balance (today)</div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:"#383a37" }}>{fmt$(balance)}</div>
+          {row?.date && <div style={{ fontSize:10, color:"#a69e91", marginTop:2 }}>as of {row.date}</div>}
+        </div>
+        <span style={{ fontSize:10, color:"#bcae97", maxWidth:240, lineHeight:1.4, textAlign:"right" }}>From the uploaded pref schedule — the unreturned preferred balance plus accrued return.</span>
+      </div>
+      {shown.length > 0 && (
+        <div style={{ overflowX:"auto", maxHeight: showAll ? 280 : undefined, overflowY: showAll ? "auto" : undefined, border:"1px solid #f0e9da", borderRadius:8 }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11.5 }}>
+            <thead>
+              <tr style={{ fontSize:9, color:"#a69e91", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#fff" }}>
+                <th style={{ textAlign:"left", padding:"6px 8px" }}>{showAll ? "Date" : "Year-End"}</th>
+                <th style={{ textAlign:"right", padding:"6px 8px" }}>Payment</th>
+                <th style={{ textAlign:"right", padding:"6px 8px" }}>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r, i) => {
+                const isCurrent = row && r.date === row.date;
+                return (
+                  <tr key={i} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#f4f8ef" : undefined }}>
+                    <td style={{ padding:"6px 8px", color:"#52554e", whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:600 }}> · now</span> : null}</td>
+                    <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.payment)}</td>
+                    <td style={{ padding:"6px 8px", textAlign:"right", color:"#383a37", fontWeight:500 }}>{fmt$(r.balance)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rows.length > yearly.length && (
+        <button onClick={() => setShowAll(s => !s)}
+          style={{ marginTop:8, background:"transparent", border:"none", color:"#6dba43", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
+          {showAll ? "▾ Show year-end only" : `▸ Show all ${rows.length} periods`}
+        </button>
+      )}
     </div>
   );
 }
