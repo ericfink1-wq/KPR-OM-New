@@ -45,17 +45,46 @@ CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
 reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"human label e.g. 'Five Below — SF'","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string","target":{"kind":"tenant","fieldKey":"exact tenant field key (sf, rentPerSF, annualRent, leaseStart, leaseExpiry, remainingTermYears, salesPSF)","tenantName":"exact tenant name from the tenants array","valueType":"number|text"}}. ALWAYS set target when the question is about one tenant's field so the user can fix it in one click; set target null only for non-field questions (e.g. possible duplicate rows). Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
 
   const taught = await lessonGuidanceClient("rent-roll");
-  const res = await apiAiMessages({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 8000,
-    messages: [{ role: "user", content: prompt + taught + "\n\nRENT ROLL TEXT:\n" + text }],
-  });
-  const raw = res.content?.[0]?.text ?? "";
+  const baseContent = prompt + taught + "\n\nRENT ROLL TEXT:\n" + text;
+  const callRoll = async (suffix: string) => {
+    const res = await apiAiMessages({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 16000,
+      messages: [{ role: "user", content: baseContent + suffix }],
+    });
+    return {
+      raw: res.content?.[0]?.text ?? "",
+      stop: (res as unknown as { stop_reason?: string }).stop_reason,
+    };
+  };
+
+  const first = await callRoll("");
   let parsed: { asOf?: string | null; tenants?: unknown[]; reviewQuestions?: unknown[] };
-  try { parsed = robustParseJSON(raw) as typeof parsed; }
+  try { parsed = robustParseJSON(first.raw) as typeof parsed; }
   catch { throw new Error("Couldn't parse the rent roll. Try a clearer file."); }
-  const tenants = (Array.isArray(parsed.tenants) ? parsed.tenants : []) as NonNullable<Deal["tenants"]>;
+  let tenants = (Array.isArray(parsed.tenants) ? parsed.tenants : []) as NonNullable<Deal["tenants"]>;
   if (tenants.length === 0) throw new Error("No tenants found in the rent roll.");
+
+  // Completeness backstop: big, detail-heavy rolls (long rent-step + option
+  // schedules per tenant) can overrun the output budget and truncate the tail of
+  // the tenant list. If the model stopped on the token limit, keep asking for the
+  // tenants we don't yet have so NONE are dropped. Mirrors the OM extractor.
+  let stop = first.stop;
+  let rounds = 0;
+  while (stop === "max_tokens" && rounds < 6) {
+    rounds++;
+    const have = (tenants as Array<{ name?: string }>).map(t => t?.name).filter(Boolean) as string[];
+    const cont = await callRoll(
+      `\n\nYour previous answer was TRUNCATED before the end of the rent roll. Return ONLY JSON {"tenants":[...]} containing ONLY the occupied or vacant suites NOT already in the list below — same per-tenant schema and same rules. If none remain, return {"tenants":[]}.\nAlready captured (${have.length}): ${have.join(", ")}`,
+    );
+    let more: unknown[] = [];
+    try { more = (robustParseJSON(cont.raw) as { tenants?: unknown[] }).tenants || []; } catch { break; }
+    const haveSet = new Set(have.map(n => n.toLowerCase()));
+    const fresh = (more as Array<{ name?: string }>).filter(t => t?.name && !haveSet.has(t.name.toLowerCase()));
+    if (fresh.length === 0) break;
+    tenants = tenants.concat(fresh as NonNullable<Deal["tenants"]>);
+    stop = cont.stop;
+  }
   const reviewQuestions = (Array.isArray(parsed.reviewQuestions) ? parsed.reviewQuestions : [])
     .map((q, i) => {
       const r = q as Record<string, unknown>;
