@@ -3112,34 +3112,75 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
     return String(v);
   };
   const [val, setVal] = useState(() => fmt(initial));
-  useEffect(() => { setVal(fmt(initial)); }, [initial, dealId]);
-  const commit = () => {
-    if (val === "" || val == null) { onUpdate(dealId, { [field]: null } as Partial<Deal>); return; }
-    if (isNum) {
-      const n = Number(String(val).replace(/[^0-9.\-]/g,""));
-      if (isNaN(n)) { onUpdate(dealId, { [field]: null } as Partial<Deal>); setVal(""); return; }
-      setVal(isMoney ? n.toLocaleString("en-US") : String(n));
-      onUpdate(dealId, { [field]: n } as Partial<Deal>);
-    } else {
-      onUpdate(dealId, { [field]: val } as Partial<Deal>);
-    }
+  const [saved, setSaved] = useState(false);
+  const valRef = useRef(val);
+  const dirtyRef = useRef(false);
+  const focusedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync down from the deal — but never yank the field out from under the user
+  // while they're actively typing in it.
+  useEffect(() => {
+    if (focusedRef.current) return;
+    const f = fmt(initial); setVal(f); valRef.current = f; dirtyRef.current = false;
+  }, [initial, dealId]);
+
+  // Persist the current value WITHOUT touching React state — safe to call on unmount.
+  const persistValue = (): unknown => {
+    if (!dirtyRef.current) return undefined;
+    dirtyRef.current = false;
+    const v = valRef.current;
+    let patchVal: unknown;
+    if (v === "" || v == null) patchVal = null;
+    else if (isNum) { const n = Number(String(v).replace(/[^0-9.\-]/g,"")); patchVal = isNaN(n) ? null : n; }
+    else patchVal = v;
+    onUpdate(dealId, { [field]: patchVal } as Partial<Deal>);
+    return patchVal;
   };
+
+  // Interactive save: persist, reflect in the UI, and flash a "saved" tick.
+  const commit = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (!dirtyRef.current) return;
+    const patchVal = persistValue();
+    if (!focusedRef.current) {
+      const disp = patchVal == null ? "" : isMoney ? (patchVal as number).toLocaleString("en-US") : String(patchVal);
+      setVal(disp); valRef.current = disp;
+    }
+    setSaved(true);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => setSaved(false), 1500);
+  };
+
+  const handleChange = (next: string) => {
+    setVal(next); valRef.current = next; dirtyRef.current = true; setSaved(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(commit, 600);   // auto-save shortly after you stop typing
+  };
+
+  // Flush any pending edit if the editor closes or the page navigates away.
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); persistValue(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:5, gridColumn: wide?"1 / -1":"auto" }}>
-      <label style={{ fontSize:11, color:"#a69e91", fontWeight:600, letterSpacing:"0.03em", textTransform:"uppercase" }}>{label}</label>
+      <label style={{ fontSize:11, color:"#a69e91", fontWeight:600, letterSpacing:"0.03em", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
+        {label}{saved && <span style={{ color:"#3f7a1f", fontSize:10, fontWeight:700 }}>✓ saved</span>}
+      </label>
       {options ? (
-        <select value={val} onChange={e => { setVal(e.target.value); onUpdate(dealId, { [field]: e.target.value || null } as Partial<Deal>); }}
+        <select value={val} onChange={e => { setVal(e.target.value); valRef.current = e.target.value; dirtyRef.current = true; commit(); }}
           style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"10px", fontSize:14, color:"#383a37", outline:"none" }}>
           <option value="">—</option>
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
-        <div style={{ display:"flex", alignItems:"center", background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"0 10px" }}>
+        <div style={{ display:"flex", alignItems:"center", background:"#f5f1e8", border:"1px solid "+(saved?"#8cbf63":"#e6dfd0"), borderRadius:8, padding:"0 10px", transition:"border-color 0.3s" }}>
           {prefix && <span style={{ color:"#a69e91", fontSize:14 }}>{prefix}</span>}
           <input
             value={val}
-            onChange={e => setVal(e.target.value)}
-            onBlur={commit}
+            onFocus={() => { focusedRef.current = true; }}
+            onChange={e => handleChange(e.target.value)}
+            onBlur={() => { focusedRef.current = false; commit(); }}
             onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
             placeholder={placeholder}
             style={{ flex:1, background:"transparent", border:"none", outline:"none", padding:"10px 6px", fontSize:14, color:"#383a37" }}/>
@@ -3181,7 +3222,7 @@ function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, 
       {open && (
         <div style={{ marginTop:11, background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"16px 18px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ fontSize:11, color:"#9a917f", marginBottom:13, lineHeight:1.5 }}>
-            Correct any figure that doesn't match the OM. Changes save automatically and are logged in this deal's edit history — and the fields you most often correct get flagged for extra care on future extractions.
+            Correct any figure that doesn't match the OM. Changes save automatically as you type — you'll see a green <b style={{ color:"#3f7a1f" }}>✓ saved</b> on each field — and are logged in this deal's edit history. The fields you most often correct get flagged for extra care on future extractions.
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(190px, 1fr))", gap:13 }}>
             {fields.map(f => (
