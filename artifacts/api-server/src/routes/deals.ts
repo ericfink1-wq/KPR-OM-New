@@ -93,6 +93,21 @@ const USER_PRESERVED_KEYS = new Set([
   "ownershipStructure",
 ]);
 
+// Known Deal fields that must be arrays. A malformed extraction can return one as
+// an object/string; coerce those to [] so the bad value can never persist and
+// later crash the UI with ".map is not a function". Null/undefined left as-is.
+const DEAL_ARRAY_FIELDS = ["tenants", "cashFlowProjection", "redFlags", "upsideItems", "keyAssumptions", "shadowAnchors", "comparableSales", "tenantSalesHistory", "reviewQuestions"];
+function coerceDealArrays(data: Record<string, unknown>): Record<string, unknown> {
+  let out = data;
+  for (const f of DEAL_ARRAY_FIELDS) {
+    if (data[f] != null && !Array.isArray(data[f])) {
+      if (out === data) out = { ...data };
+      out[f] = [];
+    }
+  }
+  return out;
+}
+
 // GET /api/deals — list all deals (excludes in-progress ingests)
 router.get("/deals", requireAuth, async (req, res) => {
   try {
@@ -122,7 +137,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
     // Sanitize helper — strips undefined and any non-JSON-safe values
     function sanitize(obj: Record<string, unknown>): Record<string, unknown> {
       try {
-        return JSON.parse(JSON.stringify(obj)) as Record<string, unknown>;
+        return coerceDealArrays(JSON.parse(JSON.stringify(obj)) as Record<string, unknown>);
       } catch (e) {
         console.error("[import] sanitize failed:", e);
         throw e;
@@ -250,11 +265,12 @@ router.post("/deals/import", requireAuth, async (req, res) => {
 // POST /api/deals — create a deal
 router.post("/deals", requireAuth, async (req, res) => {
   try {
-    const { id, ...rest } = req.body as Record<string, unknown>;
+    const { id, ...rest0 } = req.body as Record<string, unknown>;
     if (!id || typeof id !== "string") {
       res.status(400).json({ error: "id is required" });
       return;
     }
+    const rest = coerceDealArrays(rest0);
     await db.insert(dealsTable).values({ id, data: rest });
     res.status(201).json({ ok: true, id });
     setImmediate(() => { syncOwnTransactionComps(id, rest).catch(() => {}); });
@@ -268,7 +284,8 @@ router.post("/deals", requireAuth, async (req, res) => {
 router.put("/deals/:id", requireAuth, async (req, res) => {
   try {
     const id = req.params.id as string;
-    const { id: _bodyId, ...rest } = req.body as Record<string, unknown>;
+    const { id: _bodyId, ...rest0 } = req.body as Record<string, unknown>;
+    const rest = coerceDealArrays(rest0);
     await db.insert(dealsTable)
       .values({ id, data: rest })
       .onConflictDoUpdate({ target: dealsTable.id, set: { data: rest, updatedAt: new Date() } });

@@ -669,16 +669,22 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const dup = findDuplicate(fileName, extracted, candidates) || findRosterStubMatch(extracted, candidates);
 
       if (dup) {
+        // Auto-merge into the matched deal instead of pausing the queue to ask.
+        // The reconcile is conservative — keeps the existing deal's data, fills
+        // only its blanks from this upload, and flags any genuine conflicts for
+        // review — so a batch never stops and duplicates consolidate on their own.
+        await apiDeleteDeal(dealId).catch(() => {});   // drop the temp deal we were creating
+        const refreshed = reconcileRefresh(dup, { ...extracted, imageMeta, fileName, pdfPages: pages });
+        await apiSaveDeal(refreshed).catch(() => {});
+        await apiSaveSource(refreshed.id, text).catch(() => {});
+        if (imgs) await apiSaveImages(refreshed.id, imgs).catch(() => {});
         updateItem(itemId, {
-          status: "awaiting_dup",
-          msg: "Duplicate detected — choose action below",
-          progress: 100,
-          dupCandidate: dup,
-          pendingExtracted: { ...extracted, imageMeta, fileName, pdfPages: pages },
-          pendingImages: imgs,
-          pendingText: text,
-          tempDealId: dealId,
+          status: "done", progress: 100, deal: refreshed,
+          matchedDealName: refreshed.propertyName || refreshed.fileName,
+          msg: `Merged into existing “${refreshed.propertyName || refreshed.fileName || "deal"}” · review any flagged conflicts`,
         });
+        onDealUpdated?.(refreshed);
+        await registerCreatedDeal(refreshed);
         return;
       }
 
