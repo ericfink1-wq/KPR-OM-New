@@ -2920,45 +2920,6 @@ ${text.slice(0, 60000)}`;
               {f({ label:"Prepayment", field:"debtPrepay", placeholder:"e.g. Yield maintenance, defeasance, 5-4-3-2-1 step-down" })}
               {f({ label:"Escrows / Reserves", field:"debtEscrows", placeholder:"e.g. Tax, insurance, TI/LC, replacement" })}
               {f({ label:"Notes", field:"debtNotes", placeholder:"Anything else worth recording", wide:true })}
-              {(() => {
-                const hasPref = [d.prefLender, d.prefAmount, d.prefRateCurrent, d.prefRateAllIn, d.prefReturnType, d.prefOriginationDate, d.prefMaturityDate, d.prefTermYears, d.prefRecourse, d.prefNotes].some(v => v != null && v !== "");
-                const prefOpen = hasPref || showPrefManual;
-                return (
-                  <>
-                    <div onClick={() => { if (!hasPref) setShowPrefManual(v => !v); }}
-                      style={{ gridColumn:"1 / -1", fontSize:13, fontWeight:600, color:"#383a37", marginTop:6, marginBottom: prefOpen ? -2 : 0, display:"flex", alignItems:"center", gap:8, cursor: hasPref ? "default" : "pointer", userSelect:"none" }}>
-                      <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>
-                      Preferred Equity (if applicable)
-                      {!hasPref && <span style={{ fontSize:11, fontWeight:600, color:"#a69e91" }}>{prefOpen ? "▾ hide" : "▸ add"}</span>}
-                    </div>
-                    {prefOpen && (
-                      <>
-                        <div style={{ gridColumn:"1 / -1" }}><PrefImportButton deal={d} onUpdate={onUpdate} /></div>
-                        {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
-                        {d.prefLender && onTenantClick && (
-                          <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
-                            <button onClick={() => onTenantClick("__lender__" + d.prefLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
-                              View all loans with {lenderLabel(d.prefLender)} ›
-                            </button>
-                          </div>
-                        )}
-                        {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
-                        {f({ label:"Current Pay Rate", field:"prefRateCurrent", placeholder:"e.g. 8.0", suffix:"%" })}
-                        {f({ label:"All-In Rate (at sale/refi)", field:"prefRateAllIn", placeholder:"e.g. 9.25", suffix:"%" })}
-                        {f({ label:"Return Type", field:"prefReturnType", options:["Current Pay","Accruing","Hybrid"] })}
-                        {f({ label:"Origination Date", field:"prefOriginationDate", placeholder:"YYYY-MM-DD" })}
-                        {f({ label:"Maturity / Redemption Date", field:"prefMaturityDate", placeholder:"YYYY-MM-DD" })}
-                        {f({ label:"Term", field:"prefTermYears", placeholder:"e.g. 3", suffix:"yrs" })}
-                        {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
-                        {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
-                        {d.prefSchedule && d.prefSchedule.length > 0 && (
-                          <div style={{ gridColumn:"1 / -1" }}><PrefScheduleCard deal={d} /></div>
-                        )}
-                      </>
-                    )}
-                  </>
-                );
-              })()}
             </div>
             {(annualDS || dscrCalc) && (
               <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
@@ -2969,6 +2930,47 @@ ${text.slice(0, 60000)}`;
             <AmortizationCard deal={d} onUpdate={onUpdate} />
             <PrepayCalculator deal={d} onUpdate={onUpdate} />
             <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; DSCR uses the OM NOI). For reference only.</div>
+
+            {/* Preferred Equity — shown BELOW the senior mortgage details */}
+            {(() => {
+              const hasPref = [d.prefLender, d.prefAmount, d.prefRateCurrent, d.prefRateAllIn, d.prefReturnType, d.prefOriginationDate, d.prefMaturityDate, d.prefTermYears, d.prefRecourse, d.prefNotes].some(v => v != null && v !== "");
+              const prefOpen = hasPref || showPrefManual;
+              return (
+                <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
+                  <div onClick={() => { if (!hasPref) setShowPrefManual(v => !v); }}
+                    style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom: prefOpen ? 10 : 0, display:"flex", alignItems:"center", gap:8, cursor: hasPref ? "default" : "pointer", userSelect:"none" }}>
+                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>
+                    Preferred Equity (if applicable)
+                    {!hasPref && <span style={{ fontSize:11, fontWeight:600, color:"#a69e91" }}>{prefOpen ? "▾ hide" : "▸ add"}</span>}
+                  </div>
+                  {prefOpen && (
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
+                      <div style={{ gridColumn:"1 / -1" }}><PrefImportButton deal={d} onUpdate={onUpdate} /></div>
+                      {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
+                      {d.prefLender && onTenantClick && (
+                        <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
+                          <button onClick={() => onTenantClick("__lender__" + d.prefLender!)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#2d4ecf", textDecoration:"underline" }}>
+                            View all loans with {lenderLabel(d.prefLender)} ›
+                          </button>
+                        </div>
+                      )}
+                      {f({ label:"Pref Amount", field:"prefAmount", placeholder:"e.g. 5,000,000", prefix:"$" })}
+                      {f({ label:"Current Pay Rate", field:"prefRateCurrent", placeholder:"e.g. 8.0", suffix:"%" })}
+                      {f({ label:"All-In Rate (at sale/refi)", field:"prefRateAllIn", placeholder:"e.g. 9.25", suffix:"%" })}
+                      {f({ label:"Return Type", field:"prefReturnType", options:["Current Pay","Accruing","Hybrid"] })}
+                      {f({ label:"Origination Date", field:"prefOriginationDate", placeholder:"YYYY-MM-DD" })}
+                      {f({ label:"Maturity / Redemption Date", field:"prefMaturityDate", placeholder:"YYYY-MM-DD" })}
+                      {f({ label:"Term", field:"prefTermYears", placeholder:"e.g. 3", suffix:"yrs" })}
+                      {f({ label:"Recourse", field:"prefRecourse", options:["Non-Recourse","Recourse","Partial"] })}
+                      {f({ label:"Notes", field:"prefNotes", placeholder:"Key terms, promote structure, etc.", wide:true })}
+                      {d.prefSchedule && d.prefSchedule.length > 0 && (
+                        <div style={{ gridColumn:"1 / -1" }}><PrefScheduleCard deal={d} /></div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
@@ -3364,8 +3366,17 @@ function PrefScheduleCard({ deal }: { deal: Deal }) {
   const rows = deal.prefSchedule || [];
   const { balance, row } = useMemo(() => currentBalanceFromRows(rows), [rows]);
   const fmt$ = (v: number | null | undefined) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
-  const yearly = rows.filter((_, idx) => (idx + 1) % 12 === 0 || idx === rows.length - 1);
-  const shown = showAll ? rows : yearly;
+  // Monthly, windowed on the closest upcoming period; expand for the full schedule.
+  const nowMs = Date.now();
+  const currentIdx = (() => {
+    for (let i = 0; i < rows.length; i++) { const t = new Date(rows[i].date).getTime(); if (!isNaN(t) && t >= nowMs) return i; }
+    return rows.length ? rows.length - 1 : 0;
+  })();
+  const PREVIEW = 12;
+  const shown = showAll ? rows : rows.slice(currentIdx, currentIdx + PREVIEW);
+  const currentDate = rows[currentIdx]?.date;
+  const currentRowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => { if (showAll) currentRowRef.current?.scrollIntoView({ block: "center" }); }, [showAll]);
 
   return (
     <div style={{ marginTop:8, background:"#faf8f3", border:"1px solid #efe8da", borderRadius:10, padding:"12px 14px" }}>
@@ -3382,17 +3393,17 @@ function PrefScheduleCard({ deal }: { deal: Deal }) {
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11.5 }}>
             <thead>
               <tr style={{ fontSize:9, color:"#a69e91", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#fff" }}>
-                <th style={{ textAlign:"left", padding:"6px 8px" }}>{showAll ? "Date" : "Year-End"}</th>
+                <th style={{ textAlign:"left", padding:"6px 8px" }}>Date</th>
                 <th style={{ textAlign:"right", padding:"6px 8px" }}>Payment</th>
                 <th style={{ textAlign:"right", padding:"6px 8px" }}>Balance</th>
               </tr>
             </thead>
             <tbody>
               {shown.map((r, i) => {
-                const isCurrent = row && r.date === row.date;
+                const isCurrent = currentDate && r.date === currentDate;
                 return (
-                  <tr key={i} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#f4f8ef" : undefined }}>
-                    <td style={{ padding:"6px 8px", color:"#52554e", whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:600 }}> · now</span> : null}</td>
+                  <tr key={r.date + i} ref={isCurrent ? currentRowRef : undefined} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#eef5e8" : undefined }}>
+                    <td style={{ padding:"6px 8px", color: isCurrent ? "#2d5a0e" : "#52554e", fontWeight: isCurrent ? 700 : 400, whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:700 }}> · next</span> : null}</td>
                     <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.payment)}</td>
                     <td style={{ padding:"6px 8px", textAlign:"right", color:"#383a37", fontWeight:500 }}>{fmt$(r.balance)}</td>
                   </tr>
@@ -3402,10 +3413,10 @@ function PrefScheduleCard({ deal }: { deal: Deal }) {
           </table>
         </div>
       )}
-      {rows.length > yearly.length && (
+      {(rows.length > shown.length || showAll) && (
         <button onClick={() => setShowAll(s => !s)}
           style={{ marginTop:8, background:"transparent", border:"none", color:"#6dba43", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
-          {showAll ? "▾ Show year-end only" : `▸ Show all ${rows.length} periods`}
+          {showAll ? "▾ Show fewer" : `▸ Show all ${rows.length} periods (past & future)`}
         </button>
       )}
     </div>
@@ -3464,11 +3475,19 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   };
 
   const rows = result.rows;
-  // Yearly view (one row per year), capped to a short preview with an expander.
-  const yearly = rows.filter((_, idx) => (idx + 1) % 12 === 0 || idx === rows.length - 1);
-  const AMORT_PREVIEW = 6;
-  const shown = showAll ? yearly : yearly.slice(0, AMORT_PREVIEW);
-  const currentDate = result.currentRow?.date;
+  // Monthly view, windowed on the closest UPCOMING payment ("today"). Collapsed
+  // starts at that payment and shows the next ~12 months; expanding reveals the
+  // full schedule (past + future), scrolled to the current payment.
+  const nowMs = Date.now();
+  const currentIdx = (() => {
+    for (let i = 0; i < rows.length; i++) { const t = new Date(rows[i].date).getTime(); if (!isNaN(t) && t >= nowMs) return i; }
+    return rows.length ? rows.length - 1 : 0;
+  })();
+  const AMORT_PREVIEW = 12;
+  const shown = showAll ? rows : rows.slice(currentIdx, currentIdx + AMORT_PREVIEW);
+  const currentDate = rows[currentIdx]?.date;
+  const currentRowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => { if (showAll) currentRowRef.current?.scrollIntoView({ block: "center" }); }, [showAll]);
 
   return (
     <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
@@ -3519,7 +3538,7 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11.5 }}>
                 <thead>
                   <tr style={{ fontSize:9, color:"#a69e91", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#faf7f0" }}>
-                    <th style={{ textAlign:"left", padding:"6px 8px" }}>Year-End</th>
+                    <th style={{ textAlign:"left", padding:"6px 8px" }}>Payment Date</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Interest</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Principal</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Balance</th>
@@ -3529,8 +3548,8 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
                   {shown.map((r, i) => {
                     const isCurrent = currentDate && r.date === currentDate;
                     return (
-                      <tr key={i} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#f4f8ef" : undefined }}>
-                        <td style={{ padding:"6px 8px", color:"#52554e", whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:600 }}> · now</span> : null}</td>
+                      <tr key={r.date + i} ref={isCurrent ? currentRowRef : undefined} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#eef5e8" : undefined }}>
+                        <td style={{ padding:"6px 8px", color: isCurrent ? "#2d5a0e" : "#52554e", fontWeight: isCurrent ? 700 : 400, whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:700 }}> · next payment</span> : null}</td>
                         <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.interest)}</td>
                         <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.principal)}</td>
                         <td style={{ padding:"6px 8px", textAlign:"right", color:"#383a37", fontWeight:500 }}>{fmt$(r.balance)}</td>
@@ -3541,12 +3560,12 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
               </table>
             </div>
           )}
-          {yearly.length > AMORT_PREVIEW && (
+          {rows.length > shown.length || showAll ? (
             <button onClick={() => setShowAll(s => !s)}
               style={{ marginTop:8, background:"transparent", border:"none", color:"#6dba43", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
-              {showAll ? "▾ Show fewer" : `▸ Show all ${yearly.length} years`}
+              {showAll ? "▾ Show fewer" : `▸ Show all ${rows.length} payments (past & future)`}
             </button>
-          )}
+          ) : null}
           <div style={{ marginTop:10, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>
             {result.basis === "generated" ? "Estimate — assumes a fixed rate and level amortization. Upload the lender's schedule for the exact balance." : "Read from your uploaded schedule."}
           </div>
