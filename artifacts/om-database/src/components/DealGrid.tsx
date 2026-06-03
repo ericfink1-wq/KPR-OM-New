@@ -531,9 +531,12 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     const all = modal.deals;
     const nonEmpty = (v: unknown) => v != null && v !== "";
 
-    // Base = the freshest deal's record (newest OM financials + narrative + score).
-    const freshest = all.slice().sort((a, b) => dealFreshness(b) - dealFreshness(a))[0];
-    const merged: Deal = { ...freshest };
+    // Base = the KEEPER the user explicitly chose. Its name and every detail win;
+    // the other deal(s) only FILL the keeper's blanks (below), and roster / sales /
+    // demographics get their own most-current-source logic. Choosing a keeper is a
+    // stronger signal than upload recency, so it must not be overridden by a
+    // more-recently-uploaded duplicate.
+    const merged: Deal = { ...keeper };
 
     // Roster (+ derived occupancy/WALT/avg rent) from the most up-to-date source.
     // Judge by ACTUAL data date, not upload order: a real lease as-of date wins

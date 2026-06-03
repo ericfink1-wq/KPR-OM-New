@@ -307,6 +307,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [dismissedSugIds, setDismissedSugIds] = useState<number[]>(() => readLs().dismissedSugIds ?? []);
   const [starredIds, setStarredIds] = useState<number[]>(() => readLs().starredIds ?? []);
   const [expandedComp, setExpandedComp] = useState<number | null>(null);
+  const [showAllComps, setShowAllComps] = useState(false);
   const [addQ, setAddQ] = useState("");
   const [tableQ, setTableQ] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "market" | "anchor" | "date" | "price" | "cap" | "psf" | "sf" | "source">("date");
@@ -712,7 +713,13 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                   { key: "psf", label: "$/SF" }, { key: "sf", label: "SF" },
                   { key: "source", label: "Source" },
                 ];
+                // Keep the page short: show the first 5 unless expanded or actively
+                // filtering (a filter should reveal all of its matches).
+                const COMP_PREVIEW = 5;
+                const collapsed = !showAllComps && !q && sorted.length > COMP_PREVIEW;
+                const visible = collapsed ? sorted.slice(0, COMP_PREVIEW) : sorted;
                 return (
+                <>
                 <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
                   <thead>
@@ -728,7 +735,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {sorted.map(c => {
+                    {visible.map(c => {
                       const isStar = starredIds.includes(c.id) || !!c.starred;
                       const open = expandedComp === c.id;
                       return (
@@ -773,6 +780,13 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                   </tbody>
                 </table>
                 </div>
+                {sorted.length > COMP_PREVIEW && !q && (
+                  <button onClick={() => setShowAllComps(s => !s)}
+                    style={{ marginTop: 8, background: "transparent", border: "none", color: "#6dba43", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "2px 0" }}>
+                    {collapsed ? `▸ Show all ${sorted.length} comps` : "▾ Show fewer"}
+                  </button>
+                )}
+                </>
                 );
               })()}
               {(() => {
