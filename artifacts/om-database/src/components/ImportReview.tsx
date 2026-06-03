@@ -1,6 +1,65 @@
 import { useState, useMemo } from "react";
 import type { Deal, ReviewQuestion, Tenant } from "../lib/idb";
-import { buildReviewQuestions, tenantKey } from "../lib/utils";
+import { buildReviewQuestions, tenantKey, robustParseJSON } from "../lib/utils";
+import { apiAiMessages } from "../lib/api";
+
+// One structured edit to write back into the deal. Used by both the literal
+// "type the value" path and the AI-interpreted "type an instruction" path.
+type Edit = {
+  kind: "deal" | "tenant";
+  fieldKey: string;
+  tenantName?: string | null;
+  value: string | number | boolean | null;
+  label: string;   // human-readable, for the confirm panel + resolved log
+};
+
+// Whitelist of fields the AI path is allowed to write, with how to coerce them.
+// Keeps free-text interpretation from ever touching structured fields
+// (rentSchedule, cashFlowProjection, scores, etc.).
+const DEAL_FIELDS: Record<string, "number" | "text" | "boolean"> = {
+  propertyName: "text", address: "text", city: "text", state: "text", zip: "text",
+  market: "text", submarket: "text", assetType: "text", centerType: "text", omDate: "text",
+  askingPrice: "number", capRate: "number", noi: "number", pricePerSF: "number",
+  totalSF: "number", occupancy: "number", grossPotentialRent: "number",
+  effectiveGrossIncome: "number", operatingExpenses: "number", nnnRecoveries: "number",
+  weightedAvgRentPSF: "number", walt: "number", yearBuilt: "number", renovationYear: "number",
+  lotSizeAcres: "number", parkingRatio: "number", numberOfBuildings: "number",
+  loanBalance: "number", loanRate: "number", loanMaturity: "text", loanType: "text",
+  trafficCountVPD: "number", population3mi: "number", medianHHIncome3mi: "number",
+  avgHHIncome3mi: "number", broker: "text", seller: "text", notes: "text", shadowAnchors: "text",
+};
+const TENANT_FIELDS: Record<string, "number" | "text" | "boolean"> = {
+  name: "text", parentCompany: "text", suite: "text", sf: "number", rentPerSF: "number",
+  annualRent: "number", leaseStart: "text", leaseExpiry: "text", remainingTermYears: "number",
+  reimbursementMethod: "text", leaseType: "text", rentBumps: "text", renewalOptions: "text",
+  salesPSF: "number", occupancyCost: "number", expenseReimbursements: "number",
+  percentageRent: "number", otherRent: "number", creditRating: "text",
+  isAnchor: "boolean", isNAP: "boolean", isDark: "boolean", assumptionNote: "text", salesNotes: "text",
+};
+
+const coerceVal = (raw: unknown, type: "number" | "text" | "boolean"): string | number | boolean | null => {
+  if (type === "boolean") return raw === true || raw === "true" || raw === "yes" || raw === 1;
+  if (type === "text") { const s = raw == null ? "" : String(raw).trim(); return s === "" ? null : s; }
+  if (raw == null || raw === "") return null;
+  const n = Number(String(raw).replace(/[$,%\s]/g, ""));
+  return isNaN(n) ? null : n;
+};
+
+// Decide whether the user typed a plain value (drop it straight in) or a
+// natural-language instruction (hand it to the AI). Bias toward AI when unsure —
+// the AI path always asks for confirmation before writing, so a false "looks
+// like an instruction" only costs a confirm click, whereas mis-storing a
+// sentence as a literal value corrupts the field.
+const looksLikeInstruction = (draft: string, valueType: "number" | "text") => {
+  const v = draft.trim();
+  if (v === "") return false;
+  if (valueType === "number") {
+    // A clean number (after stripping $ , % and spaces) is a literal; anything else is an instruction.
+    return isNaN(Number(v.replace(/[$,%\s]/g, "")));
+  }
+  // Text field: a short value (a rating, a name, a date) is literal; a sentence is an instruction.
+  return v.split(/\s+/).length >= 4;
+};
 
 // Non-blocking post-import data-integrity review. Opened from the "N to confirm"
 // badge on the deal page. Each question is either an AI low-confidence capture or
@@ -35,57 +94,141 @@ export default function ImportReview({ deal, onClose, onUpdate }: {
   // Which question is currently being edited inline, and the draft value.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  // AI-interpretation state for the current edit.
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiErr, setAiErr] = useState<string | null>(null);
+  // A pending AI proposal awaiting the user's confirmation before it's written.
+  const [proposal, setProposal] = useState<{ questionId: string; summary: string; edits: Edit[] } | null>(null);
 
   const startFix = (q: ReviewQuestion) => {
     setEditingId(q.id);
     setDraft(q.suggestedValue ?? "");
+    setAiErr(null);
+    setProposal(null);
   };
+  const cancelFix = () => { setEditingId(null); setAiErr(null); setProposal(null); };
 
-  // Apply a correction to the actual deal/tenant field, then mark the question
-  // "fixed". Tenant SF edits also recompute occupancy/WALT (respecting verified
-  // locks), matching the rent-roll path.
-  const applyFix = (q: ReviewQuestion) => {
-    const t = q.target;
-    if (!t) return;
-    const coerce = (s: string): string | number | null => {
-      const v = s.trim();
-      if (v === "") return null;
-      if (t.valueType === "text") return v;
-      const num = Number(v.replace(/[$,%\s]/g, ""));
-      return isNaN(num) ? v : num;
-    };
-    const value = coerce(draft);
+  // Turn a list of structured edits into a deal patch, applying tenant edits by
+  // name and recomputing occupancy/WALT when SF or term changed (honoring locks).
+  const buildPatch = (edits: Edit[]): Partial<Deal> => {
     const patch: Partial<Deal> = {};
-
-    if (t.kind === "deal") {
-      (patch as Record<string, unknown>)[t.fieldKey] = value;
-    } else {
-      // tenant edit — find by name (canonical-insensitive), patch that row
-      const tenants = (deal.tenants || []) as Tenant[];
-      const wantKey = tenantKey(t.tenantName || "");
-      const idx = tenants.findIndex(tn => tenantKey(tn.canonicalName || tn.name) === wantKey || tn.name === t.tenantName);
-      if (idx < 0) return;
-      const newTenants = tenants.map((tn, i) => i === idx ? { ...tn, [t.fieldKey]: value } : tn);
-      patch.tenants = newTenants;
-      // Recompute occupancy + WALT when SF or term changed, honoring verified locks.
+    let tenants = (deal.tenants || []) as Tenant[];
+    let tenantsTouched = false, sfOrTermTouched = false;
+    for (const e of edits) {
+      if (e.kind === "deal") {
+        (patch as Record<string, unknown>)[e.fieldKey] = e.value;
+      } else {
+        const wantKey = tenantKey(e.tenantName || "");
+        const idx = tenants.findIndex(tn => tenantKey(tn.canonicalName || tn.name) === wantKey || tn.name === e.tenantName);
+        if (idx < 0) continue;
+        tenants = tenants.map((tn, i) => i === idx ? { ...tn, [e.fieldKey]: e.value } : tn);
+        tenantsTouched = true;
+        if (e.fieldKey === "sf" || e.fieldKey === "remainingTermYears") sfOrTermTouched = true;
+      }
+    }
+    if (tenantsTouched) {
+      patch.tenants = tenants;
       const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
-      if ((t.fieldKey === "sf") && !deal.verified?.occupancy && deal.totalSF) {
-        const occSF = newTenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
+      if (sfOrTermTouched && !deal.verified?.occupancy && deal.totalSF) {
+        const occSF = tenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
         const occ = Math.round(occSF / Number(deal.totalSF) * 1000) / 10;
         if (occ > 0 && occ <= 100) patch.occupancy = occ;
       }
-      if ((t.fieldKey === "sf" || t.fieldKey === "remainingTermYears") && !deal.verified?.walt) {
-        const sfT = newTenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
-        const wT = newTenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0) * (nv(tn.remainingTermYears) ?? 0), 0);
+      if (sfOrTermTouched && !deal.verified?.walt) {
+        const sfT = tenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
+        const wT = tenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0) * (nv(tn.remainingTermYears) ?? 0), 0);
         if (sfT > 0) patch.walt = Math.round(wT / sfT * 10) / 10;
       }
     }
+    return patch;
+  };
 
+  // Write the edits to the deal and mark the question "fixed".
+  const commitEdits = (q: ReviewQuestion, edits: Edit[], summary: string) => {
+    const patch = buildPatch(edits);
     patch.reviewQuestions = all.map(x => x.id === q.id
-      ? { ...x, suggestedValue: value == null ? null : String(value), resolvedAt: new Date().toISOString(), resolution: "fixed" as const }
+      ? { ...x, suggestedValue: summary, resolvedAt: new Date().toISOString(), resolution: "fixed" as const }
       : x);
     onUpdate(deal.id, patch);
-    setEditingId(null);
+    cancelFix();
+  };
+
+  // Ask the AI to turn a plain-English correction into structured edit(s).
+  const interpret = async (instruction: string, q: ReviewQuestion): Promise<Edit[]> => {
+    const tenantList = (deal.tenants || []).map(t => t.canonicalName || t.name).filter(Boolean).slice(0, 120);
+    const prompt = `You convert a user's plain-English correction about a commercial real-estate deal into structured field edits.
+Return ONLY JSON (no markdown, no prose): {"edits":[{"kind":"deal"|"tenant","tenantName":string_or_null,"fieldKey":"string","value": <number|string|boolean|null>}]}
+
+You may ONLY use these field keys.
+DEAL fields (kind:"deal", tenantName null): ${Object.keys(DEAL_FIELDS).join(", ")}
+TENANT fields (kind:"tenant", set tenantName to the matching tenant from the list): ${Object.keys(TENANT_FIELDS).join(", ")}
+
+Value rules:
+- Money/counts → plain number (e.g. "1.2 million" → 1200000, "$95k" → 95000). Percentages (capRate, occupancy, loanRate, occupancyCost) → the number only (e.g. "7.5%" → 7.5).
+- Dates → "YYYY-MM-DD".
+- Booleans (isAnchor, isNAP, isDark) → true/false. "went dark"/"closed but still paying" → isDark true.
+- Text → the corrected string.
+- To clear a field, use null.
+- Only output edits you are confident about. If the instruction doesn't clearly map to an allowed field, return {"edits":[]}.
+
+DEAL: ${deal.propertyName || "(unnamed)"} — ${[deal.city, deal.state].filter(Boolean).join(", ")}
+TENANTS: ${tenantList.join(" | ") || "(none)"}
+This correction concerns: ${q.question}${q.suggestedValue ? ` (currently captured as: ${q.suggestedValue})` : ""}
+USER CORRECTION: ${instruction}`;
+
+    const res = await apiAiMessages({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1200,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const raw = res.content.find(c => c.type === "text")?.text ?? "";
+    let parsed: { edits?: unknown[] };
+    try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't read the AI response — try rephrasing."); }
+    const rawEdits = Array.isArray(parsed.edits) ? parsed.edits as Array<Record<string, unknown>> : [];
+
+    const fmt = (v: string | number | boolean | null, type: string) =>
+      type === "boolean" ? (v ? "Yes" : "No") : v == null ? "—" : typeof v === "number" ? v.toLocaleString() : String(v);
+    const out: Edit[] = [];
+    for (const e of rawEdits) {
+      const kind = e.kind === "tenant" ? "tenant" : "deal";
+      const fieldKey = String(e.fieldKey || "");
+      const catalog = kind === "deal" ? DEAL_FIELDS : TENANT_FIELDS;
+      const type = catalog[fieldKey];
+      if (!type) continue; // not an allowed field — drop it
+      const value = coerceVal(e.value, type);
+      if (kind === "tenant") {
+        const wantKey = tenantKey(String(e.tenantName || ""));
+        const match = (deal.tenants || []).find(tn => tenantKey(tn.canonicalName || tn.name) === wantKey || tn.name === e.tenantName);
+        if (!match) continue; // can't resolve which tenant — drop it
+        out.push({ kind, fieldKey, tenantName: match.canonicalName || match.name, value, label: `${match.canonicalName || match.name} · ${fieldKey} → ${fmt(value, type)}` });
+      } else {
+        out.push({ kind, fieldKey, value, label: `${fieldKey} → ${fmt(value, type)}` });
+      }
+    }
+    return out;
+  };
+
+  // Save handler for the inline editor: literal value → write directly; an
+  // instruction → interpret via AI and show a confirmation proposal.
+  const onSave = async (q: ReviewQuestion) => {
+    const t = q.target;
+    if (!t) return;
+    const vt: "number" | "text" = t.valueType === "text" ? "text" : "number";
+    if (!looksLikeInstruction(draft, vt)) {
+      const value = coerceVal(draft, vt);
+      commitEdits(q, [{ kind: t.kind, fieldKey: t.fieldKey, tenantName: t.tenantName, value, label: `${t.fieldKey} → ${value ?? "—"}` }], value == null ? "(cleared)" : String(value));
+      return;
+    }
+    setAiBusy(true); setAiErr(null);
+    try {
+      const edits = await interpret(draft, q);
+      if (edits.length === 0) setAiErr("I couldn't tell which field to change. Try rephrasing, or just type the value itself.");
+      else setProposal({ questionId: q.id, summary: edits.map(e => e.label).join("; "), edits });
+    } catch (e) {
+      setAiErr(e instanceof Error ? e.message : "The AI couldn't interpret that.");
+    } finally {
+      setAiBusy(false);
+    }
   };
 
   const sevColor = (s: string) => s === "high" ? "#dc2626" : s === "medium" ? "#d9890c" : "#a89f8f";
@@ -100,7 +243,7 @@ export default function ImportReview({ deal, onClose, onUpdate }: {
             <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 600, color: "#26281f" }}>Confirm import details</div>
             <div style={{ fontSize: 12.5, color: "#8b8578", marginTop: 4, lineHeight: 1.5 }}>
               {open.length > 0
-                ? `${open.length} item${open.length === 1 ? "" : "s"} I wasn't fully sure I captured correctly from this document. Confirm it, or hit "Fix it" to correct the value right here — nothing is blocked.`
+                ? `${open.length} item${open.length === 1 ? "" : "s"} I wasn't fully sure I captured correctly from this document. Confirm it, or hit "Fix it" — type the value, or just describe the change in plain English and I'll set it for you.`
                 : "Everything checks out — no open data-integrity questions for this deal."}
             </div>
           </div>
@@ -125,34 +268,58 @@ export default function ImportReview({ deal, onClose, onUpdate }: {
               )}
 
               {editingId === q.id ? (
-                /* Inline correction editor */
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                    Corrected value{q.target?.kind === "tenant" && q.target.tenantName ? ` for ${q.target.tenantName}` : ""}:
+                proposal && proposal.questionId === q.id ? (
+                  /* AI proposal — confirm before writing */
+                  <div style={{ marginTop: 10, background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 8, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 11.5, color: "#3f7a1f", fontWeight: 700, marginBottom: 6 }}>I'll make {proposal.edits.length === 1 ? "this change" : "these changes"}:</div>
+                    {proposal.edits.map((e, i) => (
+                      <div key={i} style={{ fontSize: 12.5, color: "#2f3a24", padding: "3px 0", display: "flex", gap: 6 }}>
+                        <span style={{ color: "#6f9c47" }}>•</span><span>{e.label}</span>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                      <button onClick={() => commitEdits(q, proposal.edits, proposal.summary)} style={{ background: "#3f7a1f", border: "none", color: "#fff", padding: "7px 16px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>Apply</button>
+                      <button onClick={() => setProposal(null)} style={{ background: "#fff", border: "1px solid #c8b89a", color: "#7d766a", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Edit my wording</button>
+                      <button onClick={cancelFix} style={{ background: "transparent", border: "1px solid #d9d2c4", color: "#7d766a", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Cancel</button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      autoFocus
-                      value={draft}
-                      onChange={e => setDraft(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") applyFix(q); if (e.key === "Escape") setEditingId(null); }}
-                      placeholder={q.target?.valueType === "text" ? "Enter the correct value" : "Enter the correct number"}
-                      style={{ flex: 1, border: "1px solid #c8b89a", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif", outline: "none", background: "#fff" }}
-                    />
-                    <button onClick={() => applyFix(q)} style={{ background: "#3f7a1f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>Save</button>
-                    <button onClick={() => setEditingId(null)} style={{ background: "transparent", border: "1px solid #d9d2c4", color: "#7d766a", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Cancel</button>
+                ) : (
+                  /* Inline correction editor — type a value OR an instruction */
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
+                      Corrected value{q.target?.kind === "tenant" && q.target.tenantName ? ` for ${q.target.tenantName}` : ""}, or describe the change:
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        autoFocus
+                        value={draft}
+                        disabled={aiBusy}
+                        onChange={e => setDraft(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" && !aiBusy) onSave(q); if (e.key === "Escape") cancelFix(); }}
+                        placeholder={q.target?.valueType === "text" ? "Value, or e.g. “mark this tenant dark”" : "Number, or e.g. “NOI is about 1.2M”"}
+                        style={{ flex: 1, border: "1px solid #c8b89a", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif", outline: "none", background: aiBusy ? "#f6f3ec" : "#fff" }}
+                      />
+                      <button onClick={() => onSave(q)} disabled={aiBusy} style={{ background: aiBusy ? "#9bbf7e" : "#3f7a1f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: aiBusy ? "default" : "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{aiBusy ? "Reading…" : "Save"}</button>
+                      <button onClick={cancelFix} disabled={aiBusy} style={{ background: "transparent", border: "1px solid #d9d2c4", color: "#7d766a", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Cancel</button>
+                    </div>
+                    {aiErr && <div style={{ fontSize: 11, color: "#c0392b", marginTop: 5 }}>{aiErr}</div>}
+                    {!aiErr && (
+                      <div style={{ fontSize: 10.5, color: "#bcae97", marginTop: 5 }}>
+                        {q.target?.kind === "tenant" && (q.target.fieldKey === "sf" || q.target.fieldKey === "remainingTermYears")
+                          ? "Occupancy / WALT will recompute automatically. "
+                          : ""}
+                        Plain values save instantly; a sentence is interpreted and shown for your OK first.
+                      </div>
+                    )}
                   </div>
-                  {q.target?.kind === "tenant" && (q.target.fieldKey === "sf" || q.target.fieldKey === "remainingTermYears") && (
-                    <div style={{ fontSize: 10.5, color: "#bcae97", marginTop: 5 }}>Occupancy / WALT will recompute automatically.</div>
-                  )}
-                </div>
+                )
               ) : (
                 <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
                   <button onClick={() => resolve(q, "confirmed")} style={{ background: "#26281f", border: "none", color: "#e8e0cf", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✓ Looks right</button>
                   {q.target ? (
                     <button onClick={() => startFix(q)} style={{ background: "#fff", border: "1px solid #8cbf63", color: "#3f7a1f", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✎ Fix it</button>
                   ) : null}
-                  <button onClick={() => resolve(q, "dismissed")} style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#7d766a", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>Dismiss</button>
+                  <button onClick={() => resolve(q, "dismissed")} style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#7d766a", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Dismiss</button>
                   {!q.target && (
                     <span style={{ fontSize: 11, color: "#bcae97", alignSelf: "center", marginLeft: 2 }}>edit on the deal page if needed</span>
                   )}
