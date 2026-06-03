@@ -362,7 +362,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // Route a rent roll: extract its tenants, match to an existing deal, and either
   // auto-update that deal's roster (high/medium confidence) or ask which property.
   const routeRentRoll = async (
-    itemId: string, _dealId: string, text: string, fileName: string,
+    itemId: string, dealId: string, text: string, fileName: string,
     propertyName: string | null, address: string | null,
   ) => {
     updateItem(itemId, { msg: "Reading rent roll…", progress: 55, routedType: "rent-roll" });
@@ -373,11 +373,29 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const upd = await applyRosterToDeal(itemId, m.deal, result);
       await refreshAnalysisFor(itemId, upd);
     } else {
+      // No existing deal matches — CREATE a new stub property from the rent roll so
+      // the upload isn't lost. The roster (with computed occupancy/WALT) seeds it;
+      // the user fills in the OM/financials later, or a later OM upload merges into
+      // it by property/address match. Used for old owned deals that have no OM.
+      const base = {
+        id: dealId,
+        propertyName: propertyName || fileName || "Untitled property",
+        address: address || undefined,
+        fileName,
+        status: "Prospect",
+        uploadedAt: new Date().toISOString(),
+        tenants: [],
+      } as Deal;
+      const stub = { ...base, ...buildRosterPatch(base, result) } as Deal;
+      await apiSaveDeal(stub);
+      onDealsAdded([stub]);
       updateItem(itemId, {
-        status: "awaiting_match", routedType: "rent-roll", matchHint: hint,
-        pendingExtracted: result as unknown as Record<string, unknown>,
-        msg: `Rent roll (${result.tenants.length} tenants) — will attach when its deal finishes importing, or pick the property`, progress: 100,
+        status: "done", progress: 100, routedType: "rent-roll",
+        matchedDealName: stub.propertyName, deal: stub,
+        msg: `Rent roll (${result.tenants.length} tenants) → new property “${stub.propertyName}” created — add the OM / financials later`,
       });
+      const refreshed = await refreshAnalysisFor(itemId, stub);
+      await registerCreatedDeal(refreshed);
     }
   };
 
