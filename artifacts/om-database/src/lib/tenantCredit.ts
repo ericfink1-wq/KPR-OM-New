@@ -18,7 +18,39 @@ export const IG_TENANTS = [
   "IKEA", "Hobby Lobby",
 ];
 
+// Major operators that are NOT investment grade despite being large/well-known.
+// These override a tenant's recorded creditRating, because deal data is often
+// wrong (e.g. an Albertsons banner mistakenly tagged "BBB"/"Investment Grade").
+// Albertsons Companies (ACI) is rated ~BB+/Ba1 — one notch below IG.
+export const NON_IG_TENANTS = [
+  "Albertsons", "Safeway", "Vons", "Jewel-Osco", "Jewel", "Acme", "Shaw's",
+  "Star Market", "Tom Thumb", "Randalls", "Pavilions", "Carrs",
+  "United Supermarkets", "Haggen", "Andronico's", "Balducci's", "Kings Food Markets",
+];
+
+// Normalize a tenant name for brand matching (lowercase, drop store #, suffixes, punctuation).
+function cleanName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\(.*?\)/g, "")
+    .replace(/#\s*[\w-]+/g, "")
+    .replace(/\b(corporation|corp|inc|llc|ltd|co|stores?)\b\.?/g, "")
+    .replace(/[^\w\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function isInvestmentGrade(tenantName: string, creditRating?: string | null): boolean {
+  const cleaned = cleanName(tenantName || "");
+  // Ground-truth override: known non-IG operators are never IG, even if a deal's
+  // recorded credit field claims otherwise.
+  if (cleaned) {
+    for (const brand of NON_IG_TENANTS) {
+      const b = cleanName(brand);
+      if (!b) continue;
+      if (cleaned === b || (" " + cleaned + " ").includes(" " + b + " ")) return false;
+    }
+  }
   if (creditRating && typeof creditRating === "string") {
     const r = creditRating.toLowerCase();
     // Negated forms first — "Non-Investment Grade", "Not/Below/Sub Investment Grade"
@@ -29,15 +61,7 @@ export function isInvestmentGrade(tenantName: string, creditRating?: string | nu
     // Moody's scale, Baa3 and above
     if (/\b(Aaa|Aa[123]?|A[123]?|Baa[123]?)\b/.test(creditRating)) return true;
   }
-  if (!tenantName) return false;
-  const cleaned = tenantName
-    .toLowerCase()
-    .replace(/\(.*?\)/g, "")
-    .replace(/#\s*[\w-]+/g, "")
-    .replace(/\b(corporation|corp|inc|llc|ltd|co|stores?)\b\.?/g, "")
-    .replace(/[^\w\s']/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  if (!cleaned) return false;
   for (const brand of IG_TENANTS) {
     const b = brand.toLowerCase();
     if (cleaned === b) return true;
