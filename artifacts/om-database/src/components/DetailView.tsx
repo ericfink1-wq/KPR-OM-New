@@ -310,6 +310,11 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string | null; sourceDealName: string | null; salePrice: number | null; market: string | null; saleDate: string | null }>>([]);
   const [sugsLoading, setSugsLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  // Manual comp filters. null = automatic (smart relaxation). When set, exactly
+  // these filters apply (no auto-relax) and whatever count results is shown.
+  type CompFilters = { months: number | null; geography: "national" | "state" | "metro"; sameType: boolean; sizeBand: boolean };
+  const [compFilters, setCompFilters] = useState<CompFilters | null>(null);
+  const DEFAULT_FILTERS: CompFilters = { months: 36, geography: "national", sameType: true, sizeBand: false };
 
   useEffect(() => {
     try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds, dismissedSugIds, starredIds })); } catch { /* ignore */ }
@@ -378,6 +383,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       excludeCompIds: excludeIds,
       includeCompIds: includeIds,
       starCompIds: starredIds,
+      manual: compFilters,
     });
     setLoading(true); setErr(null); setBm(null);
 
@@ -411,7 +417,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
 
     run(0);
     return () => { cancelled = true; };
-  }, [deal.id, excludeOm, excludeIds, includeIds, starredIds, retryKey]);
+  }, [deal.id, excludeOm, excludeIds, includeIds, starredIds, retryKey, compFilters]);
 
   const fmtD = (s: string | null) => {
     if (!s) return "—";
@@ -497,6 +503,51 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
           <input type="checkbox" checked={excludeOm} onChange={e => setExcludeOm(e.target.checked)} style={{ accentColor: "#6dba43", width: 12, height: 12 }} />
           Exclude OM-sourced comps
         </label>
+      </div>
+
+      {/* Comp filters — Auto (smart relaxation) or Custom (locked exactly as set) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12, fontSize: 11.5 }}>
+        {compFilters === null ? (
+          <>
+            <span style={{ color: "#7d766a" }}>Comps: <b style={{ color: "#3f7a1f" }}>Auto</b> — smart match, widens if sparse</span>
+            <button onClick={() => setCompFilters(DEFAULT_FILTERS)}
+              style={{ background: "transparent", border: "1px solid #d8cfbd", color: "#5c5047", borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              Customize filters
+            </button>
+          </>
+        ) : (
+          <>
+            <span style={{ color: "#7d766a", fontWeight: 600 }}>Filters:</span>
+            <select value={String(compFilters.months ?? 0)} aria-label="Timing window"
+              onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), months: Number(e.target.value) || null }))}
+              style={{ fontSize: 11, padding: "3px 6px", border: "1px solid #d8cfbd", borderRadius: 6, background: "#fff", color: "#383a37", fontFamily: "'Inter',sans-serif" }}>
+              <option value="12">Last 12 mo</option>
+              <option value="24">Last 24 mo</option>
+              <option value="36">Last 36 mo</option>
+              <option value="60">Last 60 mo</option>
+              <option value="0">All dates</option>
+            </select>
+            <select value={compFilters.geography} aria-label="Geography"
+              onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), geography: e.target.value as CompFilters["geography"] }))}
+              style={{ fontSize: 11, padding: "3px 6px", border: "1px solid #d8cfbd", borderRadius: 6, background: "#fff", color: "#383a37", fontFamily: "'Inter',sans-serif" }}>
+              <option value="national">National</option>
+              <option value="state">Same state</option>
+              <option value="metro">Same metro</option>
+            </select>
+            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: "#5c5047" }}>
+              <input type="checkbox" checked={compFilters.sameType} onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), sameType: e.target.checked }))} style={{ accentColor: "#6dba43", width: 12, height: 12 }} />
+              Same type
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: "#5c5047" }}>
+              <input type="checkbox" checked={compFilters.sizeBand} onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), sizeBand: e.target.checked }))} style={{ accentColor: "#6dba43", width: 12, height: 12 }} />
+              Similar size
+            </label>
+            <button onClick={() => setCompFilters(null)}
+              style={{ background: "transparent", border: "none", color: "#3f7a1f", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              Reset to auto
+            </button>
+          </>
+        )}
       </div>
 
       {loading && <div style={{ fontSize: 12, color: "#a89f8f", padding: "12px 0" }}>Computing benchmark…</div>}

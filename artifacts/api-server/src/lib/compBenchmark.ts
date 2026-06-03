@@ -58,6 +58,15 @@ export interface BenchmarkRequest {
   anchor?: string | null;
   /** True if the subject's lead anchor is investment-grade */
   anchorIG?: boolean;
+  /** User-locked filters. When present, the auto-relaxation tiers are bypassed —
+   *  exactly these filters apply and whatever count results is shown (no MIN_N
+   *  suppression, no smart auto-include). */
+  manual?: {
+    months?: number | null;                       // timing window; null/0 = all-time
+    geography?: "national" | "state" | "metro";    // geographic scope
+    sameType?: boolean;                            // restrict to same property type
+    sizeBand?: boolean;                            // restrict to ±50% / 2× of subject SF
+  } | null;
 }
 
 export interface CompMatch {
@@ -164,6 +173,13 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     return r.sf >= req.sf * 0.5 && r.sf <= req.sf * 2;
   };
 
+  const marketOk = (r: Row) => {
+    if (!req.market) return true;
+    const m = req.market.toLowerCase();
+    return (r.market ?? "").toLowerCase().includes(m) ||
+           (r.sourceDealMarket ?? "").toLowerCase().includes(m);
+  };
+
   // ── Smart similarity scoring ──────────────────────────────────────────────
   // Ranks each comp against the subject on anchor, region, type, size,
   // occupancy, cap and recency. Strong matches auto-join the benchmark; medium
@@ -224,21 +240,42 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   let relaxed: string[] = [];
   let insufficient = false;
 
-  for (const t of TIERS) {
-    const c = pool.filter(t.fn);
-    if (c.length >= MIN_N) { chosen = c; tierLabel = t.label; relaxed = t.relaxed; break; }
-  }
-
-  if (chosen.length === 0) {
-    // Show directional data if < MIN_N found — but do NOT fall back to the full unfiltered pool
-    for (let i = TIERS.length - 1; i >= 0; i--) {
-      const c = pool.filter(TIERS[i].fn);
-      if (c.length > 0) { chosen = c; tierLabel = TIERS[i].label; relaxed = TIERS[i].relaxed; break; }
+  if (req.manual) {
+    // User-locked filters: apply EXACTLY what was set, no tier relaxation. Show
+    // whatever count results (verdicts aren't suppressed below MIN_N — the user
+    // chose these filters and is in control).
+    const man = req.manual;
+    const cutM = (man.months && man.months > 0) ? mAgo(man.months) : null;
+    const manFn = (r: Row) =>
+      (!cutM || inDate(r, cutM)) &&
+      (man.geography === "state" ? stateOk(r) : man.geography === "metro" ? marketOk(r) : true) &&
+      (!man.sameType || typeOk(r)) &&
+      (!man.sizeBand || sfOk(r));
+    chosen = pool.filter(manFn);
+    const parts = [man.geography === "state" ? "same state" : man.geography === "metro" ? "same metro" : "national"];
+    if (man.sameType) parts.push("same type");
+    if (man.sizeBand) parts.push("similar size");
+    parts.push(cutM ? `last ${man.months} months` : "all dates");
+    tierLabel = "your filters · " + parts.join(", ");
+    relaxed = [];
+    insufficient = chosen.length === 0;
+  } else {
+    for (const t of TIERS) {
+      const c = pool.filter(t.fn);
+      if (c.length >= MIN_N) { chosen = c; tierLabel = t.label; relaxed = t.relaxed; break; }
     }
-    // If still empty, n=0 empty state is returned (no pool fallback)
-    insufficient = true;
-  } else if (chosen.length < MIN_N) {
-    insufficient = true;
+
+    if (chosen.length === 0) {
+      // Show directional data if < MIN_N found — but do NOT fall back to the full unfiltered pool
+      for (let i = TIERS.length - 1; i >= 0; i--) {
+        const c = pool.filter(TIERS[i].fn);
+        if (c.length > 0) { chosen = c; tierLabel = TIERS[i].label; relaxed = TIERS[i].relaxed; break; }
+      }
+      // If still empty, n=0 empty state is returned (no pool fallback)
+      insufficient = true;
+    } else if (chosen.length < MIN_N) {
+      insufficient = true;
+    }
   }
 
   // Force-add specific comps from allRows (bypass tier logic). Starred comps are
@@ -256,14 +293,16 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   }
 
   // Auto-include strongly-similar comps (smart matching) beyond the tier set.
+  // Skipped in manual mode — the user's filters define the set exactly.
   const preStrongIds = new Set(chosen.map(r => r.id));
-  const strongMatches = pool.filter(r => !preStrongIds.has(r.id) && (scoreMap.get(r.id)?.score ?? 0) >= STRONG_SCORE);
+  const strongMatches = req.manual ? [] : pool.filter(r => !preStrongIds.has(r.id) && (scoreMap.get(r.id)?.score ?? 0) >= STRONG_SCORE);
   chosen = [...chosen, ...strongMatches];
   const smartMatched = strongMatches.length;
 
   // Suggestions = medium-similarity comps not already in the set (one-tap add).
+  // Suppressed in manual mode so the locked filter set stays exact.
   const chosenIds = new Set(chosen.map(r => r.id));
-  const suggestions: CompMatch[] = pool
+  const suggestions: CompMatch[] = (req.manual ? [] : pool)
     .filter(r => !chosenIds.has(r.id))
     .map(r => ({ r, s: scoreMap.get(r.id)?.score ?? 0 }))
     .filter(x => x.s >= MEDIUM_SCORE && x.s < STRONG_SCORE)
