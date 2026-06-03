@@ -1517,6 +1517,9 @@ ${text.slice(0, 60000)}`;
       const lib = await loadPdfJs();
       const buf = await file.arrayBuffer();
       const pdf = await lib.getDocument({ data: buf }).promise;
+      if (pdf.numPages > 5 && !window.confirm(
+        `This PDF has ${pdf.numPages} pages. Pulling a site plan from a large PDF loads the whole file and uses unnecessary bandwidth (and can be slow on a phone). For best results, extract just the page(s) you need into a smaller PDF first.\n\nUpload this ${pdf.numPages}-page PDF anyway?`
+      )) { return; }
       const pages = parsePageSpec(fixPage, pdf.numPages);
       if (pages.length === 0) { alert(`No valid pages found in "${fixPage}" (PDF has ${pdf.numPages} pages).`); return; }
       const imgs_raw: string[] = [];
@@ -1544,6 +1547,9 @@ ${text.slice(0, 60000)}`;
       const lib = await loadPdfJs();
       const buf = await file.arrayBuffer();
       const pdf = await lib.getDocument({ data: buf }).promise;
+      if (pdf.numPages > 5 && !window.confirm(
+        `This PDF has ${pdf.numPages} pages. Pulling a cover image from a large PDF loads the whole file and uses unnecessary bandwidth (and can be slow on a phone). For best results, extract just the page you need into a smaller PDF first.\n\nUpload this ${pdf.numPages}-page PDF anyway?`
+      )) { return; }
       if (page > pdf.numPages) { alert(`PDF has only ${pdf.numPages} pages.`); return; }
       const res = await _capturePagePhoto(pdf, page, lib, coverHalf);
       const current = (await apiLoadImages(d.id)) || {};
