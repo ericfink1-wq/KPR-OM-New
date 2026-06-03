@@ -348,6 +348,28 @@ router.delete("/deals/:id", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/deals/:id/cover-thumb — the cover as a cacheable BINARY image, so the
+// Deal Library can lazy-load covers via <img> (browser-cached, only visible rows)
+// instead of fetching the full image bundle per tile. Prefers the small thumb.
+router.get("/deals/:id/cover-thumb", requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const rows = await db.select({ cover: dealImagesTable.cover, coverThumb: dealImagesTable.coverThumb })
+      .from(dealImagesTable).where(eq(dealImagesTable.id, id));
+    const src = rows[0]?.coverThumb || rows[0]?.cover;
+    const m = src ? /^data:([^;]+);base64,([\s\S]*)$/.exec(src) : null;
+    if (!m) { res.status(404).end(); return; }
+    res.set("Content-Type", m[1]);
+    // Versioned by ?v=updatedAt on the client, so this can cache hard and still
+    // refresh when the cover changes.
+    res.set("Cache-Control", "private, max-age=86400");
+    res.send(Buffer.from(m[2], "base64"));
+  } catch (err) {
+    req.log.error({ err }, "Failed to load cover thumb");
+    res.status(500).end();
+  }
+});
+
 // GET /api/deals/:id/images
 router.get("/deals/:id/images", requireAuth, async (req, res) => {
   try {

@@ -56,19 +56,16 @@ function cityOnly(city: string | null | undefined, state: string | null | undefi
 }
 
 function RowThumb({ deal }: { deal: Deal }) {
-  const [src, setSrc] = useState<string | null>(null);
-  useEffect(() => {
-    let alive = true;
-    if (deal.imageMeta?.cover) {
-      apiLoadImages(deal.id).then(r => { if (alive) setSrc(r?.coverThumb || r?.cover || null); }).catch(() => {});
-    }
-    return () => { alive = false; };
-  }, [deal.id]);
+  // Load the cover as a native lazy <img> from a cacheable binary endpoint — the
+  // browser only fetches covers for visible rows and caches them, so a 1,000-deal
+  // list doesn't fire 1,000 requests and sorting/filtering doesn't re-fetch.
+  const [failed, setFailed] = useState(false);
   const initial = (deal.propertyName || deal.fileName || "?").charAt(0).toUpperCase();
+  const v = encodeURIComponent(deal.updatedAt || deal.uploadedAt || "");
   return (
     <div style={{ width: 64, height: 48, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "#eef3e6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      {src
-        ? <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {deal.imageMeta?.cover && !failed
+        ? <img src={`/api/deals/${deal.id}/cover-thumb?v=${v}`} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : <span style={{ fontSize: 17, fontWeight: 700, color: "#3f7a1f", fontFamily: "'Inter', sans-serif" }}>{initial}</span>}
     </div>
   );
