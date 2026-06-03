@@ -241,7 +241,11 @@ function AppInner() {
   }, []);
 
   const handleDealUpdated = useCallback((updated: Deal) => {
-    setDeals(prev => prev.map(d => d.id === updated.id ? updated : d));
+    // Upsert — if the deal isn't in the list yet (e.g. an auto-merge target that
+    // wasn't loaded), add it so the result shows immediately without a refresh.
+    setDeals(prev => prev.some(d => d.id === updated.id)
+      ? prev.map(d => d.id === updated.id ? updated : d)
+      : [...prev, updated]);
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {

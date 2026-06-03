@@ -65,7 +65,11 @@ function findDuplicate(fileName: string, extracted: Record<string, unknown>, exi
     },
     existing,
   );
-  return m.confidence !== "none" ? m.deal : null;
+  // Only treat as a duplicate to AUTO-MERGE on HIGH confidence (exact name+address,
+  // exact filename, or exact address). A fuzzy MEDIUM match — e.g. two different
+  // "Westwood … Center" properties sharing only the word "Westwood" — must NOT
+  // silently merge; it's saved as a separate deal instead.
+  return m.confidence === "high" ? m.deal : null;
 }
 
 // Content-based match for the rent-roll-stub → OM case, where names/addresses
