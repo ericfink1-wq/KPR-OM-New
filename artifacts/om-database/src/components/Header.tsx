@@ -19,9 +19,10 @@ interface Props {
   isAdmin?: boolean;
   onAdminChange?: () => void;
   onAnalyticsNav?: (dest: string) => void;
+  onClosingCalc?: () => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -454,6 +455,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             }}>Tenant Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
           </div>
           <button style={T(tab === "comps")} onClick={() => onTab("comps")}>Comps</button>
+          {onClosingCalc && <button style={T(false)} onClick={onClosingCalc}>Closing Costs</button>}
         </div>
 
         {/* Analytics nav dropdown menu (shared portal for both triggers) */}

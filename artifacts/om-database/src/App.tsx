@@ -12,6 +12,7 @@ import DealGrid from "./components/DealGrid";
 import AnalystChat from "./components/AnalystChat";
 import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
+import ClosingCostEstimator from "./components/ClosingCostEstimator";
 import AiProgressBar from "./components/AiProgressBar";
 import { isSupportedUpload } from "./lib/fileExtract";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
@@ -168,6 +169,7 @@ function AppInner() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadPanelH, setUploadPanelH] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [closingCalcOpen, setClosingCalcOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist">("tenant");
 
@@ -399,12 +401,14 @@ function AppInner() {
         onLogout={handleLogout}
         onFiles={handleFiles}
         onHelpOpen={() => setHelpOpen(true)}
+        onClosingCalc={() => setClosingCalcOpen(true)}
         onDealsAdded={handleDealsAdded}
         isAdmin={isAdmin}
         onAdminChange={checkAuth}
         onAnalyticsNav={onAnalyticsNav}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} />
+      {closingCalcOpen && <ClosingCostEstimator deals={deals} onClose={() => setClosingCalcOpen(false)} />}
       {/* The deal page is crowded top (fixed action bar + title) and the toast
           would cover them at scroll-top — anchor it to the bottom there, clear of
           the Ask/flag buttons. Other pages keep it pinned near the top. */}
