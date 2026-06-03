@@ -509,10 +509,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12, fontSize: 11.5 }}>
         {compFilters === null ? (
           <>
-            <span style={{ color: "#7d766a" }}>Comps: <b style={{ color: "#3f7a1f" }}>Auto</b> — smart match, widens if sparse</span>
+            <span style={{ color: "#7d766a" }}>Comps: <b style={{ color: "#3f7a1f" }}>Auto</b></span>
             <button onClick={() => setCompFilters(DEFAULT_FILTERS)}
               style={{ background: "transparent", border: "1px solid #d8cfbd", color: "#5c5047", borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-              Customize filters
+              Customize
             </button>
           </>
         ) : (
@@ -583,19 +583,22 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
           <>
             <div style={{ marginBottom: 6 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f" }}>
-                Based on {bm.n} comp{bm.n !== 1 ? "s" : ""} · {bm.tierLabel}
+                {bm.n} comp{bm.n !== 1 ? "s" : ""} · {(bm.tierLabel === "no matching comps" && bm.n > 0) ? "closest matches" : bm.tierLabel}
                 {bm.dateRange ? ` · ${fmtD(bm.dateRange.from)}–${fmtD(bm.dateRange.to)}` : ""}
               </span>
-              {bm.relaxed.length > 0 && (
-                <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>(relaxed: {bm.relaxed.join(", ")})</span>
-              )}
+              {(() => {
+                const mix = [
+                  bm.sourceMix.owned ? `${bm.sourceMix.owned} owned` : "",
+                  bm.sourceMix.broker ? `${bm.sourceMix.broker} broker` : "",
+                  bm.sourceMix.om ? `${bm.sourceMix.om} OM` : "",
+                ].filter(Boolean);
+                if (bm.excludedInvalid > 0) mix.push(`${bm.excludedInvalid} excluded`);
+                if (bm.relaxed.length > 0) mix.push(`relaxed ${bm.relaxed.join("/")}`);
+                return mix.length ? <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>· {mix.join(" · ")}</span> : null;
+              })()}
               {bm.smartMatched > 0 && (
                 <span style={{ fontSize: 11, color: "#3f7a1f", marginLeft: 6, fontWeight: 600 }}>· {bm.smartMatched} auto-matched</span>
               )}
-            </div>
-            <div style={{ fontSize: 11, color: "#7d766a", marginBottom: bm.insufficient ? 4 : 12 }}>
-              {bm.n} comp{bm.n !== 1 ? "s" : ""} — {bm.sourceMix.owned} owned, {bm.sourceMix.broker} broker/manual, {bm.sourceMix.om} OM-sourced
-              {bm.excludedInvalid > 0 && <span style={{ color: "#a89f8f" }}> · {bm.excludedInvalid} excluded (invalid data)</span>}
             </div>
 
             {bm.insufficient && (
@@ -646,11 +649,11 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
             {/* Comps list — always shown, no toggle */}
             <div style={{ marginTop: 10 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                <div style={{ fontSize: 11, color: "#7d766a" }}>
-                  <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length} comp{activeComps.length !== 1 ? "s" : ""}</span> in benchmark
-                  {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} manually excluded</span>}
-                  {starredIds.length > 0 && <span style={{ color: "#c98f1e", marginLeft: 5, fontWeight: 600 }}>· {starredIds.length} starred (weighted ×3)</span>}
-                  <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>— ★ stars a comp (weighted heavier) · × drops it · tap a header to sort</span>
+                <div style={{ fontSize: 11, color: "#7d766a" }} title="★ weights a comp heavier · × drops it · tap a column header to sort">
+                  <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length}</span> in benchmark
+                  {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} excluded</span>}
+                  {starredIds.length > 0 && <span style={{ color: "#c98f1e", marginLeft: 5, fontWeight: 600 }}>· {starredIds.length} starred</span>}
+                  <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>· ★ weight · × drop</span>
                 </div>
                 <input value={tableQ} onChange={e => setTableQ(e.target.value)}
                   placeholder="Filter comps…"
