@@ -1060,6 +1060,7 @@ const SCOPE_OPTS: Array<{ value: LessonScope; label: string }> = [
   { value: "rent-roll", label: "Rent rolls" },
   { value: "lease-options", label: "Lease options" },
   { value: "sales", label: "Sales reports" },
+  { value: "flyer", label: "Leasing flyers" },
 ];
 function TeachExtractorModal({ onClose }: { onClose: () => void }) {
   const [lessons, setLessons] = useState<ExtractionLesson[]>([]);

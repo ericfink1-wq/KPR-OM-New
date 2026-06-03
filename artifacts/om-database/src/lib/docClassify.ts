@@ -2,7 +2,7 @@ import type { Deal } from "./idb";
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
 
-export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "unknown";
+export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "unknown";
 
 // Deterministic detector for a lease-OPTIONS schedule (a renewal-option report,
 // not a full rent roll). These list option ladders but usually lack current SF /
@@ -21,6 +21,19 @@ export function detectLeaseOptions(text: string, fileName: string): boolean {
   return false;
 }
 
+// Deterministic detector for a LEASING FLYER (marketing one-pager for available
+// space) vs a sale OM. Distinct cues: it advertises space "for lease" / "available"
+// and lists a leasing contact, and is NOT a rent roll / sales / options file. Used
+// only to override an "om"/"unknown" guess, so we don't reclassify real OMs.
+export function detectFlyer(text: string, fileName: string): boolean {
+  const fn = fileName.toLowerCase();
+  if (/\b(rent\s*roll|sales|option)/.test(fn)) return false;
+  const t = text.slice(0, 5000).toLowerCase();
+  const fnHit = /flyer|leasing|availabilit|brochure/.test(fn);
+  const bodyHit = /(for lease|space available|available sf|leasing department|leasing@|propertycapsule)/.test(t);
+  return fnHit || bodyHit;
+}
+
 export interface Classification {
   type: DocType;
   propertyName: string | null;
@@ -35,13 +48,14 @@ export async function classifyDocument(text: string, fileName: string): Promise<
   const slice = text.slice(0, 6000);
   const prompt = `You are a commercial real estate document classifier. Given the START of a document (and its file name), identify what it is and which property it concerns.
 
-Return ONLY JSON: {"type":"om|rent-roll|lease-options|sales|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
+Return ONLY JSON: {"type":"om|rent-roll|lease-options|sales|flyer|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
 
 Definitions:
-- "om" = an Offering Memorandum / marketing package / investment sale brochure for a property (has sections like investment highlights, financials, demographics, lease abstracts).
+- "om" = an Offering Memorandum / investment-SALE package for a property being sold (has sections like investment highlights, sale financials/NOI/cap rate, rent abstracts, sale comps).
 - "rent-roll" = a tenant rent roll / lease schedule: a table of tenants with SF, rent, lease dates. NOT a marketing narrative.
 - "lease-options" = a renewal-OPTIONS schedule: rows of option periods per tenant (columns like Option Type, Option Date, Term To Date, Rate, Rate Descriptor, Option Notes). It lists option ladders, usually WITHOUT current SF/rent. Distinct from a rent roll.
-- "sales" = a tenant SALES report: tenant sales volumes / sales-per-SF / occupancy-cost figures, usually by year.
+- "sales" = a tenant SALES report: tenant sales volumes / sales-per-SF / occupancy-cost figures, usually by year or trailing 12 months.
+- "flyer" = a LEASING flyer / availability brochure: a short marketing one-pager advertising AVAILABLE space FOR LEASE at a center. Has property highlights, demographics, a co-tenant lineup, available suites, and a leasing-contact — but NO sale price/NOI/cap rate and NO per-tenant rents. Distinct from an "om" (which is for SELLING the whole property).
 - "unknown" = none of the above, or can't tell.
 
 Rules:
@@ -62,11 +76,15 @@ ${slice}`;
     });
     const raw = res.content?.[0]?.text ?? "";
     const parsed = robustParseJSON(raw) as Partial<Classification>;
-    let type = (["om", "rent-roll", "lease-options", "sales", "unknown"] as const).includes(parsed.type as DocType)
+    let type = (["om", "rent-roll", "lease-options", "sales", "flyer", "unknown"] as const).includes(parsed.type as DocType)
       ? (parsed.type as DocType) : "unknown";
     // Deterministic override: an options schedule must never be treated as a
     // roster-replacing rent roll, so trust the column/filename signal over the LLM.
     if ((type === "rent-roll" || type === "unknown") && detectLeaseOptions(text, fileName)) type = "lease-options";
+    // A leasing flyer must never be read as a sale OM (which would mine it for
+    // financials / treat available space as in-place tenants). Trust the strong
+    // flyer cues over an "om"/"unknown" guess.
+    if ((type === "om" || type === "unknown") && detectFlyer(text, fileName)) type = "flyer";
     const confidence = (["high", "medium", "low"] as const).includes(parsed.confidence as Classification["confidence"])
       ? (parsed.confidence as Classification["confidence"]) : "low";
     return {
@@ -169,4 +187,33 @@ export function matchDeal(
   }
 
   return { deal: null, confidence: "none" };
+}
+
+/**
+ * Is there a *possible* (but not confident) overlap between this document and an
+ * existing deal — i.e. a near-miss that's worth a human confirm? Broader than
+ * matchDeal's auto-merge tiers: it fires when the doc shares ANY distinctive
+ * name token, or a partial name/address overlap, with some existing property.
+ * Used to decide between "just create the new property" (no overlap at all) and
+ * "ask the user to match-or-create" (a near-miss exists).
+ */
+export function hasPossibleMatch(
+  hint: { propertyName?: string | null; address?: string | null; fileName?: string | null },
+  existing: Deal[],
+): boolean {
+  const active = existing.filter(d => !d.trashedAt);
+  const np = norm(hint.propertyName || "");
+  const na = norm(hint.address || "");
+  const htoks = distinctiveTokens(hint.propertyName || "");
+  for (const d of active) {
+    const p = norm(d.propertyName || "");
+    if (htoks.length) {
+      const dset = new Set(distinctiveTokens(d.propertyName || ""));
+      if (htoks.some(t => t.length >= 4 && dset.has(t))) return true;   // a shared distinctive token
+    }
+    if (np.length >= 4 && p.length >= 4 && (p.includes(np) || np.includes(p))) return true; // loose name overlap
+    const da = norm(d.address || "");
+    if (na.length >= 6 && da.length >= 6 && (na.includes(da) || da.includes(na))) return true; // address overlap
+  }
+  return false;
 }

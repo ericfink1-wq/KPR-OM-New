@@ -30,11 +30,18 @@ RULES:
 - salesPSF: sales per square foot (dollars). Often labeled "Sales/SF", "$/SF", "PSF", or "Per Square Foot".
 - annualSales: TOTAL annual sales volume in dollars (not PSF) for a FULL 12-month year. If shown in thousands, convert to full dollars.
 - sf: tenant GLA / leased SF used for sales calculations.
-- occupancyCost: TOTAL occupancy cost percentage = (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled "Occ Cost %", "OC%", or "Occupancy Cost" — capture the report's stated total. Do NOT report a base-rent-only ratio.
+- occupancyCost: TOTAL occupancy cost percentage = (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled "Occ Cost %", "OC%", "Occupancy Cost", or an "Occupancy Cost Ratio". Capture the report's stated total — but as a PERCENTAGE NUMBER: a ratio shown as a decimal (e.g. 0.0796) means 7.96, so multiply by 100. Do NOT report a base-rent-only ratio.
 - Skip total/subtotal rows and blank rows. Skip tenants whose sales are all zero / not reported.
 - Include all tenants that have any real sales data, even if some fields are null.
 
-CHOOSING THE YEAR — READ CAREFULLY. Many reports (e.g. "Gross Sales History", "MAX_GSALES") show MULTIPLE year columns per tenant (e.g. 12/25, 12/24, 12/23 …). The MOST RECENT column is frequently a PARTIAL / year-to-date year that is NOT yet complete — its total is far smaller than the prior year, or its later months are zero/blank, or the report is dated early in the following year. DO NOT use a partial year: it understates sales drastically (e.g. a grocer showing $5M for a part-year vs $51M full-year).
+R12 / TRAILING-12 FORMAT (common in property-management exports). If the report has columns named "R12 Total", "R12 Sales PSF", and an "R12 ... Occupancy Cost Ratio" (usually a spreadsheet with one column per month followed by these R12 summary columns), then for EACH occupant row use:
+- annualSales = the "R12 Total" column (this IS the last-twelve-months sales — use it directly even if some monthly cells are 0; do NOT re-sum the months yourself).
+- salesPSF = the "R12 Sales PSF" column.
+- occupancyCost = the "R12 ... Occupancy Cost Ratio" column as a percentage (decimal × 100).
+- sf = the "Sq. Ft." / "Square Feet" column. name = the "Occupant Name" column.
+- year = the calendar year the trailing-12 period ends in (the latest month column, or the report's as-of year). In this format you do NOT need the complete-vs-partial-year logic below — "R12 Total" is already the figure to use.
+
+CHOOSING THE YEAR — READ CAREFULLY (for multi-year column reports, NOT the R12 format above). Many reports (e.g. "Gross Sales History", "MAX_GSALES") show MULTIPLE year columns per tenant (e.g. 12/25, 12/24, 12/23 …). The MOST RECENT column is frequently a PARTIAL / year-to-date year that is NOT yet complete — its total is far smaller than the prior year, or its later months are zero/blank, or the report is dated early in the following year. DO NOT use a partial year: it understates sales drastically (e.g. a grocer showing $5M for a part-year vs $51M full-year).
 - Use the MOST RECENT *COMPLETE* full-year column for every tenant, and set the top-level "year" to that complete year. If the latest column is clearly partial (much lower than the prior year, trailing zero months, or report dated in Jan–Mar of the next year), step back to the last complete year.
 - A tenant's annualSales and salesPSF MUST come from the SAME chosen year and be internally consistent (annualSales ÷ sf ≈ salesPSF).
 

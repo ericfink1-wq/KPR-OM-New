@@ -4,9 +4,10 @@ import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal
 import { extractPdfImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
-import { classifyDocument, matchDeal, type DocType } from "../lib/docClassify";
+import { classifyDocument, matchDeal, hasPossibleMatch, type DocType } from "../lib/docClassify";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
+import { extractFlyer, buildFlyerPatch, type FlyerResult } from "../lib/flyerExtract";
 
 interface QueueItem {
   id: string;
@@ -243,6 +244,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const createdDealsRef = useRef<Deal[]>([]);
   const queueRef = useRef<QueueItem[]>([]);
   useEffect(() => { queueRef.current = queue; }, [queue]);
+  // Claims for in-flight auto-creates (nameKey → tempDealId), so two same-property
+  // files in one concurrent batch don't each spawn a duplicate property: the first
+  // claims the name and creates it; the rest wait for that deal and attach to it.
+  const pendingCreatesRef = useRef<Map<string, string>>(new Map());
 
   // Report the open panel's live height so the feedback flag can lift above it.
   useEffect(() => {
@@ -414,20 +419,24 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, { msg: "Reading rent roll…", progress: 55, routedType: "rent-roll" });
     const result = await extractRentRoll(text);
     const hint = { propertyName, address, fileName };
-    const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
+    const candidates = [...existingDeals, ...createdDealsRef.current];
+    const m = matchDeal(hint, candidates);
     if (m.deal && m.confidence !== "none") {
       const upd = await applyRosterToDeal(itemId, m.deal, result);
       await refreshAnalysisFor(itemId, upd);
-    } else {
-      // Not confident which property this belongs to — ASK: match to an existing
-      // property or create a new one (handled by the awaiting_match prompt below).
+    } else if (hasPossibleMatch(hint, candidates)) {
+      // A near-miss exists (shares a name token / partial address) — ASK so we
+      // don't accidentally fork a property that's already in the library.
       updateItem(itemId, {
         status: "awaiting_match", routedType: "rent-roll", matchHint: hint,
         pendingExtracted: result as unknown as Record<string, unknown>,
         tempDealId: dealId,
-        msg: `Rent roll (${result.tenants.length} tenants) — not sure which property this is. Match it to an existing one or create a new property.`,
+        msg: `Rent roll (${result.tenants.length} tenants) — could match an existing property. Match it or create a new one.`,
         progress: 100,
       });
+    } else {
+      // No overlap with anything in the library — just create the new property.
+      await autoCreateOrAttach(itemId, "rent-roll", result as unknown as Record<string, unknown>, hint, dealId);
     }
   };
 
@@ -468,16 +477,19 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, { msg: "Reading lease options…", progress: 55, routedType: "lease-options" });
     const result = await extractLeaseOptions(text);
     const hint = { propertyName, address, fileName };
-    const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
+    const candidates = [...existingDeals, ...createdDealsRef.current];
+    const m = matchDeal(hint, candidates);
     if (m.deal && m.confidence !== "none") {
       const upd = await applyOptionsToDeal(itemId, m.deal, result);
       await refreshAnalysisFor(itemId, upd);
-    } else {
+    } else if (hasPossibleMatch(hint, candidates)) {
       updateItem(itemId, {
         status: "awaiting_match", routedType: "lease-options", matchHint: hint,
         pendingExtracted: result as unknown as Record<string, unknown>,
-        msg: `Lease options (${result.tenants.length} tenants) — will attach when its deal finishes importing, or pick the property`, progress: 100,
+        msg: `Lease options (${result.tenants.length} tenants) — could match an existing property. Match it or create a new one.`, progress: 100,
       });
+    } else {
+      await autoCreateOrAttach(itemId, "lease-options", result as unknown as Record<string, unknown>, hint, undefined);
     }
   };
 
@@ -504,16 +516,64 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, { msg: "Reading sales report…", progress: 55, routedType: "sales" });
     const result = await extractSalesReport(text);
     const hint = { propertyName, address, fileName };
-    const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
+    const candidates = [...existingDeals, ...createdDealsRef.current];
+    const m = matchDeal(hint, candidates);
     if (m.deal && m.confidence !== "none") {
       const upd = await applySalesToDeal(itemId, m.deal, result);
       await refreshAnalysisFor(itemId, upd);
-    } else {
+    } else if (hasPossibleMatch(hint, candidates)) {
       updateItem(itemId, {
         status: "awaiting_match", routedType: "sales", matchHint: hint,
         pendingExtracted: result as unknown as Record<string, unknown>,
-        msg: `Sales report (${result.tenants.length} tenants) — will attach when its deal finishes importing, or pick the property`, progress: 100,
+        msg: `Sales report (${result.tenants.length} tenants) — could match an existing property. Match it or create a new one.`, progress: 100,
       });
+    } else {
+      await autoCreateOrAttach(itemId, "sales", result as unknown as Record<string, unknown>, hint, undefined);
+    }
+  };
+
+  // Apply a leasing flyer to a matched deal (ENRICH-ONLY: gap-fills property facts,
+  // demographics, co-tenancy + adds cover/site-plan images; never touches the roster).
+  const applyFlyerToDeal = async (itemId: string, deal: Deal, result: FlyerResult, imgs: ImageBundle | null): Promise<Deal> => {
+    const patch = buildFlyerPatch(deal, result);
+    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
+    await apiSaveDeal(updated);
+    if (imgs) await apiSaveImages(updated.id, imgs).catch(() => {});
+    onDealUpdated?.(updated);
+    const enriched = Object.keys(patch).filter(k => k !== "lastUploadAt").length;
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: "flyer",
+      matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      msg: `Flyer → ${deal.propertyName || deal.fileName || "matched deal"} · enriched ${enriched} field${enriched === 1 ? "" : "s"}${imgs?.cover ? " + cover" : ""}`,
+    });
+    return updated;
+  };
+
+  // Route a leasing flyer: extract its background data + images, match to a deal,
+  // and enrich it. With no confident match, create the property automatically when
+  // there's no possible overlap, or ask only on a near-miss.
+  const routeFlyer = async (
+    itemId: string, dealId: string, text: string, fileName: string,
+    propertyName: string | null, address: string | null, imgsPromise: Promise<ImageBundle | null>,
+  ) => {
+    updateItem(itemId, { msg: "Reading leasing flyer…", progress: 55, routedType: "flyer" });
+    const result = await extractFlyer(text);
+    const hint = { propertyName: propertyName || result.propertyName, address: address || result.address, fileName };
+    const candidates = [...existingDeals, ...createdDealsRef.current];
+    const m = matchDeal(hint, candidates);
+    const imgs = await imgsPromise.catch(() => null);
+    if (m.deal && m.confidence !== "none") {
+      const upd = await applyFlyerToDeal(itemId, m.deal, result, imgs);
+      await refreshAnalysisFor(itemId, upd);
+    } else if (hasPossibleMatch(hint, candidates)) {
+      updateItem(itemId, {
+        status: "awaiting_match", routedType: "flyer", matchHint: hint,
+        pendingExtracted: result as unknown as Record<string, unknown>,
+        pendingImages: imgs, tempDealId: dealId,
+        msg: `Leasing flyer — could be an existing property. Match it or create new.`, progress: 100,
+      });
+    } else {
+      await autoCreateOrAttach(itemId, "flyer", result as unknown as Record<string, unknown>, hint, dealId, imgs);
     }
   };
 
@@ -538,6 +598,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           lastApplied = it.id;
         } else if (it.routedType === "sales") {
           working = await applySalesToDeal(it.id, working, it.pendingExtracted as unknown as SalesExtractResult);
+          lastApplied = it.id;
+        } else if (it.routedType === "flyer") {
+          working = await applyFlyerToDeal(it.id, working, it.pendingExtracted as unknown as FlyerResult, it.pendingImages ?? null);
           lastApplied = it.id;
         }
       } catch (err) {
@@ -577,22 +640,35 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Sales import failed", error: err instanceof Error ? err.message : "failed" });
       }
+    } else if (item.routedType === "flyer" && item.pendingExtracted) {
+      updateItem(itemId, { status: "extracting", msg: "Enriching from flyer…", progress: 60 });
+      try {
+        const upd = await applyFlyerToDeal(itemId, deal, item.pendingExtracted as unknown as FlyerResult, item.pendingImages ?? null);
+        await refreshAnalysisFor(itemId, upd);
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Flyer enrichment failed", error: err instanceof Error ? err.message : "failed" });
+      }
     }
   };
 
-  // Create a NEW property from an awaiting doc (the "create new" choice). For a
-  // rent roll this seeds the roster; for sales/lease-options it makes the named
-  // property and applies what the doc has.
-  const createNewFromDoc = async (itemId: string) => {
-    const item = queueRef.current.find(q => q.id === itemId);
-    if (!item || !item.pendingExtracted) return;
-    const hint = item.matchHint;
+  // Create a NEW property from an attaching doc and apply its data. Used both by
+  // the "create new" button and by the auto-create path (a doc with no possible
+  // overlap with any existing deal). For a rent roll this seeds the roster; for
+  // sales/lease-options/flyer it makes the named property and applies what the doc has.
+  const createPropertyFromDoc = async (
+    itemId: string,
+    routedType: DocType | undefined,
+    pendingExtracted: Record<string, unknown>,
+    hint: QueueItem["matchHint"] | undefined,
+    tempDealId: string | undefined,
+    pendingImages?: ImageBundle | null,
+  ) => {
     const now = new Date().toISOString();
     const base = {
-      id: item.tempDealId || uid(),
-      propertyName: hint?.propertyName || (hint?.fileName || item.name).replace(/\.(pdf|xlsx?|xlsm|xlsb|csv)$/i, "") || "Untitled property",
+      id: tempDealId || uid(),
+      propertyName: hint?.propertyName || (hint?.fileName || "").replace(/\.(pdf|xlsx?|xlsm|xlsb|csv)$/i, "") || "Untitled property",
       address: hint?.address || undefined,
-      fileName: item.name,
+      fileName: hint?.fileName || undefined,
       status: "Prospect",
       uploadedAt: now,
       lastUploadAt: now,
@@ -600,23 +676,101 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     } as Deal;
     updateItem(itemId, { status: "extracting", msg: "Creating new property…", progress: 60 });
     try {
-      if (item.routedType === "rent-roll") {
-        const stub = { ...base, ...buildRosterPatch(base, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> }) } as Deal;
+      if (routedType === "rent-roll") {
+        const stub = { ...base, ...buildRosterPatch(base, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> }) } as Deal;
         await apiSaveDeal(stub);
         onDealsAdded([stub]);
         updateItem(itemId, { status: "done", progress: 100, deal: stub, matchedDealName: stub.propertyName, msg: `Created new property “${stub.propertyName}” from the rent roll` });
         const refreshed = await refreshAnalysisFor(itemId, stub);
         await registerCreatedDeal(refreshed);
+      } else if (routedType === "flyer") {
+        await apiSaveDeal(base);
+        onDealsAdded([base]);
+        const upd = await applyFlyerToDeal(itemId, base, pendingExtracted as unknown as FlyerResult, pendingImages ?? null);
+        updateItem(itemId, { matchedDealName: upd.propertyName, msg: `Created new property “${upd.propertyName}” from the leasing flyer` });
+        await registerCreatedDeal(upd);
       } else {
         await apiSaveDeal(base);
         onDealsAdded([base]);
-        if (item.routedType === "sales") await applySalesToDeal(itemId, base, item.pendingExtracted as unknown as SalesExtractResult);
-        else await applyOptionsToDeal(itemId, base, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        if (routedType === "sales") await applySalesToDeal(itemId, base, pendingExtracted as unknown as SalesExtractResult);
+        else await applyOptionsToDeal(itemId, base, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
         await registerCreatedDeal(base);
       }
     } catch (err) {
       updateItem(itemId, { status: "error", msg: "Couldn't create property", error: err instanceof Error ? err.message : "failed" });
     }
+  };
+
+  // The "create new" button on the match-or-create prompt.
+  const createNewFromDoc = async (itemId: string) => {
+    const item = queueRef.current.find(q => q.id === itemId);
+    if (!item || !item.pendingExtracted) return;
+    await createPropertyFromDoc(item.id, item.routedType, item.pendingExtracted, item.matchHint, item.tempDealId, item.pendingImages);
+  };
+
+  // Attach an already-extracted attaching-doc to a (just-created) deal, by type.
+  const attachDocToDeal = async (
+    itemId: string, routedType: DocType | undefined, deal: Deal,
+    pendingExtracted: Record<string, unknown>, imgs?: ImageBundle | null,
+  ) => {
+    if (routedType === "rent-roll") {
+      const u = await applyRosterToDeal(itemId, deal, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> }); await refreshAnalysisFor(itemId, u);
+    } else if (routedType === "sales") {
+      const u = await applySalesToDeal(itemId, deal, pendingExtracted as unknown as SalesExtractResult); await refreshAnalysisFor(itemId, u);
+    } else if (routedType === "lease-options") {
+      const u = await applyOptionsToDeal(itemId, deal, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> }); await refreshAnalysisFor(itemId, u);
+    } else if (routedType === "flyer") {
+      const u = await applyFlyerToDeal(itemId, deal, pendingExtracted as unknown as FlyerResult, imgs ?? null); await refreshAnalysisFor(itemId, u);
+    }
+  };
+
+  // Poll the just-created-deals mirror for a claimed dealId (used while waiting for
+  // a same-batch sibling to finish creating the property).
+  const waitForCreatedDeal = async (dealId: string): Promise<Deal | null> => {
+    for (let i = 0; i < 30; i++) {
+      const d = createdDealsRef.current.find(x => x.id === dealId);
+      if (d) return d;
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+  };
+
+  // Normalized name/address key for claiming an in-flight create.
+  const createKey = (hint: QueueItem["matchHint"] | undefined): string | null => {
+    const np = (hint?.propertyName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (np.length >= 4) return "n:" + np;
+    const na = (hint?.address || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (na.length >= 6) return "a:" + na;
+    return null;
+  };
+
+  // No confident match AND no possible overlap → create the property automatically.
+  // But if another file in this batch is already creating the SAME property, wait
+  // for that deal and attach to it instead of forking a duplicate.
+  const autoCreateOrAttach = async (
+    itemId: string, routedType: DocType | undefined,
+    pendingExtracted: Record<string, unknown>, hint: QueueItem["matchHint"] | undefined,
+    tempDealId: string | undefined, imgs?: ImageBundle | null,
+  ) => {
+    const key = createKey(hint);
+    if (key) {
+      const claimedId = pendingCreatesRef.current.get(key);
+      if (claimedId) {
+        // Someone else is creating this property right now — wait and attach.
+        // Keep status "extracting" (NOT awaiting_match) so registerCreatedDeal
+        // doesn't also grab this item and double-apply it.
+        updateItem(itemId, { status: "extracting", msg: "Waiting for the new property…", progress: 70, routedType, matchHint: hint, pendingExtracted, pendingImages: imgs ?? null });
+        const target = await waitForCreatedDeal(claimedId);
+        if (target) { await attachDocToDeal(itemId, routedType, target, pendingExtracted, imgs); return; }
+        // winner never materialized — fall through and create it ourselves.
+      } else {
+        const id = tempDealId || uid();
+        pendingCreatesRef.current.set(key, id);   // claim synchronously (no await before this)
+        await createPropertyFromDoc(itemId, routedType, pendingExtracted, hint, id, imgs);
+        return;
+      }
+    }
+    await createPropertyFromDoc(itemId, routedType, pendingExtracted, hint, tempDealId, imgs);
   };
 
   const processFile = async (file: File, itemId: string) => {
@@ -650,6 +804,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       }
       if (cls.type === "sales") {
         await routeSales(itemId, text, fileName, cls.propertyName, cls.address);
+        return;
+      }
+      if (cls.type === "flyer") {
+        await routeFlyer(itemId, dealId, text, fileName, cls.propertyName, cls.address, imgPromise);
         return;
       }
       // Otherwise treat as an OM / deal package (the original flow, unchanged).
