@@ -48,7 +48,7 @@ function Row({ task, now }: { task: AiTask; now: number }) {
   );
 }
 
-export default function AiProgressBar() {
+export default function AiProgressBar({ top = 84 }: { top?: number }) {
   const tasks = useAiProgress();
   const [now, setNow] = useState(Date.now());
 
@@ -66,7 +66,7 @@ export default function AiProgressBar() {
     <div
       style={{
         position: "fixed",
-        top: 84,
+        top,
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 600,

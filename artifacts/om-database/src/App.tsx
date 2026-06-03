@@ -396,7 +396,9 @@ function AppInner() {
         onAnalyticsNav={onAnalyticsNav}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} />
-      <AiProgressBar />
+      {/* On a deal page the fixed action bar sits at top:88; drop the progress
+          toast below it so it never covers the All / Asset Mgmt / Jump-to menu. */}
+      <AiProgressBar top={view.type === "detail" ? 168 : 84} />
 
       {/* Drag overlay */}
       {dragging && (
