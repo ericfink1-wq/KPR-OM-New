@@ -94,7 +94,7 @@ const USER_PRESERVED_KEYS = new Set([
   "tenants", "tenantsAsOf", "tenantsManual", "tenantsSource", "occupancy", "walt", "weightedAvgRentPSF",
   "marketSale", "marketSaleChecked",
   "marketDemographics", "demoChecked",
-  "verified", "propertyGroupId", "editHistory",
+  "verified", "propertyGroupId", "editHistory", "aka",
   "trashedAt", "uploadedAt", "fileName", "pdfPages", "imageMeta", "dealScore",
   "prefLender", "prefAmount", "prefRateCurrent", "prefRateAllIn", "prefReturnType", "prefOriginationDate", "prefMaturityDate", "prefTermYears", "prefRecourse", "prefNotes",
   "tenantSalesHistory",

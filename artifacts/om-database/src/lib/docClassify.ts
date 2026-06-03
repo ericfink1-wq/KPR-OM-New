@@ -167,6 +167,12 @@ const CENTER_FILLER = new Set([
 const distinctiveTokens = (s: string): string[] =>
   s.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length >= 3 && !CENTER_FILLER.has(t));
 
+// Every name a deal answers to: its propertyName plus any "also known as" aliases
+// (borrowing entity, broker's phase name, etc.). Lets a document under a different
+// name still route to the right deal.
+const dealNames = (d: Deal): string[] =>
+  [d.propertyName, ...(Array.isArray(d.aka) ? d.aka : [])].map(s => (s || "").trim()).filter(Boolean);
+
 /**
  * Match a classified document to an existing deal by property name / address /
  * file name. Returns a confidence so callers can auto-commit only when sure.
@@ -196,13 +202,14 @@ export function matchDeal(
     if (byFile) return { deal: byFile, confidence: "high" };
   }
 
-  // 2) Property-name match (rejected when the addresses clearly differ).
+  // 2) Property-name match (rejected when the addresses clearly differ) — checks
+  // the deal's propertyName AND any "also known as" alias.
   const np = norm(hint.propertyName || "");
   if (np.length > 4) {
-    const exact = active.find(d => { const p = norm(d.propertyName || ""); return p.length > 4 && p === np && !addrConflict(d); });
+    const exact = active.find(d => !addrConflict(d) && dealNames(d).some(n => { const p = norm(n); return p.length > 4 && p === np; }));
     if (exact) return { deal: exact, confidence: "high" };
     // Containment (e.g. "Maple Plaza" vs "Maple Plaza Shopping Center")
-    const partial = active.find(d => { const p = norm(d.propertyName || ""); return p.length > 6 && (p.includes(np) || np.includes(p)) && !addrConflict(d); });
+    const partial = active.find(d => !addrConflict(d) && dealNames(d).some(n => { const p = norm(n); return p.length > 6 && (p.includes(np) || np.includes(p)); }));
     if (partial) return { deal: partial, confidence: "medium" };
   }
 
@@ -210,15 +217,18 @@ export function matchDeal(
   // each other ("Haymarket Center" vs "Haymarket Village Center"). Require every
   // distinctive token of the shorter name to appear in the other, with at least one
   // solid (≥4-char) shared token, so generic single-word overlaps don't false-match.
+  // Checked against each of the deal's names (propertyName + aliases).
   const htoks = distinctiveTokens(hint.propertyName || "");
   if (htoks.length) {
     const tokMatch = active.find(d => {
       if (addrConflict(d)) return false;
-      const dtoks = distinctiveTokens(d.propertyName || "");
-      if (!dtoks.length) return false;
-      const [short, long] = htoks.length <= dtoks.length ? [htoks, dtoks] : [dtoks, htoks];
-      const longSet = new Set(long);
-      return short.every(t => longSet.has(t)) && short.some(t => t.length >= 4);
+      return dealNames(d).some(n => {
+        const dtoks = distinctiveTokens(n);
+        if (!dtoks.length) return false;
+        const [short, long] = htoks.length <= dtoks.length ? [htoks, dtoks] : [dtoks, htoks];
+        const longSet = new Set(long);
+        return short.every(t => longSet.has(t)) && short.some(t => t.length >= 4);
+      });
     });
     if (tokMatch) return { deal: tokMatch, confidence: "medium" };
   }
@@ -251,12 +261,14 @@ export function hasPossibleMatch(
   const na = norm(hint.address || "");
   const htoks = distinctiveTokens(hint.propertyName || "");
   for (const d of active) {
-    const p = norm(d.propertyName || "");
-    if (htoks.length) {
-      const dset = new Set(distinctiveTokens(d.propertyName || ""));
-      if (htoks.some(t => t.length >= 4 && dset.has(t))) return true;   // a shared distinctive token
+    for (const name of dealNames(d)) {                 // check propertyName + aliases
+      const p = norm(name);
+      if (htoks.length) {
+        const dset = new Set(distinctiveTokens(name));
+        if (htoks.some(t => t.length >= 4 && dset.has(t))) return true; // a shared distinctive token
+      }
+      if (np.length >= 4 && p.length >= 4 && (p.includes(np) || np.includes(p))) return true; // loose name overlap
     }
-    if (np.length >= 4 && p.length >= 4 && (p.includes(np) || np.includes(p))) return true; // loose name overlap
     const da = norm(d.address || "");
     if (na.length >= 6 && da.length >= 6 && (na.includes(da) || da.includes(na))) return true; // address overlap
   }

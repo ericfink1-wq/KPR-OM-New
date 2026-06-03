@@ -2607,6 +2607,7 @@ ${text.slice(0, 60000)}`;
       })()}
 
       {/* Edit metrics — below red flags */}
+      <AkaEditor deal={d} onUpdate={onUpdate}/>
       <MetricsEditor deal={d} onUpdate={onUpdate}/>
 
       {/* Financial grid */}
@@ -3209,6 +3210,60 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
 // ── Core metrics editor ───────────────────────────────────────────────────────
 // Toggle panel on the detail page to correct extracted numbers. Saves through the
 // normal onUpdate path so every change is logged in the deal's edit history.
+// ── "Also known as" aliases ──────────────────────────────────────────────────
+// Alternate names/entities (borrowing LLC, broker's phase name) that should route
+// documents to THIS deal — so a doc under a different name auto-attaches here
+// instead of forking a duplicate.
+function AkaEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const aka = Array.isArray(deal.aka) ? deal.aka : [];
+  const add = () => {
+    const v = draft.trim();
+    if (!v) return;
+    if (aka.some(a => a.toLowerCase() === v.toLowerCase()) || (deal.propertyName || "").toLowerCase() === v.toLowerCase()) { setDraft(""); return; }
+    onUpdate(deal.id, { aka: [...aka, v] });
+    setDraft("");
+  };
+  const remove = (name: string) => onUpdate(deal.id, { aka: aka.filter(a => a !== name) });
+
+  if (!open && aka.length === 0) {
+    return (
+      <div style={{ marginBottom: 12 }}>
+        <button onClick={() => setOpen(true)}
+          style={{ background: "transparent", border: "1px dashed #d8cfbd", color: "#7d766a", padding: "5px 11px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+          + Add "also known as" name
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div style={{ marginBottom: 12, background: "#fff", border: "1px solid #efe8da", borderRadius: 10, padding: "12px 14px" }}>
+      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#a69e91", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>Also Known As</div>
+      <div style={{ fontSize: 11, color: "#9a917f", marginBottom: 8, lineHeight: 1.5 }}>
+        Other names this property goes by — a borrowing entity (e.g. "Voorhees MZL LLC"), a broker's phase name, or an old name. Any uploaded document under one of these names will route straight to this deal.
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+        {aka.map(name => (
+          <span key={name} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 14, padding: "3px 6px 3px 10px", fontSize: 12, color: "#2f5a1f" }}>
+            {name}
+            <button onClick={() => remove(name)} title="Remove" style={{ background: "transparent", border: "none", color: "#7d9a5c", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>×</button>
+          </span>
+        ))}
+        {aka.length === 0 && <span style={{ fontSize: 11.5, color: "#bcae97" }}>No aliases yet.</span>}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input value={draft} autoFocus={open && aka.length === 0}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") add(); }}
+          placeholder='e.g. Voorhees MZL LLC'
+          style={{ flex: 1, border: "1px solid #c8b89a", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", outline: "none", background: "#fff" }} />
+        <button onClick={add} style={{ background: "#3f7a1f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Add</button>
+      </div>
+    </div>
+  );
+}
+
 function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
   const [open, setOpen] = useState(false);
   const fields: Array<{ field: keyof Deal; label: string; prefix?: string; suffix?: string; numeric?: boolean }> = [

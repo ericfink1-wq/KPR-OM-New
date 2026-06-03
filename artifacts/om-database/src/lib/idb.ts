@@ -332,6 +332,7 @@ export interface Deal {
   id: string;
   fileName?: string;
   propertyName?: string;
+  aka?: string[] | null;   // "also known as" — alternate names/entities (e.g. borrowing LLC, broker's phase name) that should route to THIS deal
   address?: string;
   city?: string;
   state?: string;
