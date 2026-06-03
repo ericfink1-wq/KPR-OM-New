@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
-import { tenantKey, stripSuiteCode } from "../lib/utils";
+import { tenantKey, stripSuiteCode, isVacant } from "../lib/utils";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploadBusy: boolean;
   uploadError: string | null;
+  onChangeSalesHistory?: (next: TenantSalesYear[]) => void; // persist link/remove edits
 }
 
 type SortKey = "name" | "salesPSF" | "annualSales" | "sf" | "occupancyCost";
@@ -196,6 +197,7 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
 
 interface MergedRow {
   name: string;
+  key: string;      // tenantKey of the sales name — used to match the roster + apply link/remove edits
   byYear: Record<number, TenantSalesRecord>;
 }
 
@@ -248,7 +250,7 @@ function mergeRows(
       const key = tenantKey(stripSuiteCode(raw.name));
       if (!key) continue;
       const t = deriveSalesRecord(raw, rosterByKey, recByKey);
-      if (!map[key]) map[key] = { name: t.name, byYear: {} };
+      if (!map[key]) map[key] = { name: t.name, key, byYear: {} };
       map[key].byYear[snap.year] = t;
     }
   }
@@ -261,7 +263,7 @@ function yearLabel(year: number, source: "om" | "upload"): string {
   return String(year);
 }
 
-export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError }: Props) {
+export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError, onChangeSalesHistory }: Props) {
   const rosterByKey = useMemo(() => new Map((omTenants || []).map(t => [tenantKey(t.canonicalName || t.name), t])), [omTenants]);
   const recByKey = recoveries ?? new Map();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -270,6 +272,34 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
   const [sortKey, setSortKey] = useState<SortKey>("salesPSF");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [collapsed, setCollapsed] = useState(false);
+  const [linkEditKey, setLinkEditKey] = useState<string | null>(null);
+
+  // Roster tenants a sales row can be linked to (the rent roll), alphabetized.
+  const rosterOptions = useMemo(() =>
+    (omTenants || [])
+      .filter(t => !isVacant(t.name))
+      .map(t => ({ key: tenantKey(t.canonicalName || t.name), label: (t.canonicalName || t.name || "").trim() }))
+      .filter(o => o.key && o.label)
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    [omTenants]);
+
+  // Link a sales row to a roster tenant (rename it so it matches), or remove it
+  // entirely (tenant no longer at the property). Applies across every uploaded
+  // year snapshot, then persists.
+  const applySalesEdit = (rowKey: string, action: { type: "link"; toName: string } | { type: "remove" }) => {
+    setLinkEditKey(null);
+    if (!onChangeSalesHistory) return;
+    const next = salesHistory.map(snap => ({
+      ...snap,
+      tenants: snap.tenants
+        .map(t => {
+          if (tenantKey(stripSuiteCode(t.name)) !== rowKey) return t;
+          return action.type === "remove" ? null : { ...t, name: action.toName };
+        })
+        .filter((t): t is TenantSalesRecord => t != null),
+    }));
+    onChangeSalesHistory(next);
+  };
 
   // Build OM snapshot if not already in history
   const omSnapshot = useMemo(() => {
@@ -306,7 +336,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
     if (selectedYear !== "all") {
       const snap = fullHistory.find(s => s.year === selectedYear);
       if (!snap) return [];
-      return snap.tenants.map(raw => { const t = deriveSalesRecord(raw, rosterByKey, recByKey); return { name: t.name, byYear: { [selectedYear]: t } as Record<number, TenantSalesRecord> }; });
+      return snap.tenants.map(raw => { const t = deriveSalesRecord(raw, rosterByKey, recByKey); return { name: t.name, key: tenantKey(stripSuiteCode(raw.name)), byYear: { [selectedYear]: t } as Record<number, TenantSalesRecord> }; });
     }
     return mergeRows(fullHistory, rosterByKey, recByKey);
   }, [fullHistory, selectedYear, rosterByKey, recByKey]);
@@ -538,7 +568,35 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                 <tbody>
                   {rows.map((row, i) => (
                     <tr key={row.name} style={{ background: i % 2 === 0 ? "#fff" : "#f8fbf5", borderBottom: "1px solid #eef0eb" }}>
-                      <td style={{ padding: "7px 10px", fontWeight: 600, color: "#262724", whiteSpace: "nowrap" }}>{row.name}</td>
+                      <td style={{ padding: "7px 10px", fontWeight: 600, color: "#262724", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span>{row.name}</span>
+                          {onChangeSalesHistory && (
+                            linkEditKey === row.key ? (
+                              <select autoFocus defaultValue=""
+                                onChange={e => {
+                                  const v = e.target.value;
+                                  if (!v) { setLinkEditKey(null); return; }
+                                  if (v === "__remove__") applySalesEdit(row.key, { type: "remove" });
+                                  else applySalesEdit(row.key, { type: "link", toName: v });
+                                }}
+                                onBlur={() => setLinkEditKey(null)}
+                                style={{ fontSize: 10, padding: "2px 4px", borderRadius: 5, border: "1px solid #c8ddb8", background: "#fff", color: "#383a37", maxWidth: 190 }}>
+                                <option value="">{rosterByKey.has(row.key) ? "Re-link to…" : "Link to tenant…"}</option>
+                                {rosterOptions.map(o => <option key={o.key} value={o.label}>{o.label}</option>)}
+                                <option value="__remove__">✕ Remove — no longer here</option>
+                              </select>
+                            ) : rosterByKey.has(row.key) ? (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                <span title="Matched to a tenant on the rent roll" style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.04em", color: "#0f9d63", background: "#e7f8f0", border: "1px solid #a7f3d0", borderRadius: 3, padding: "0 4px" }}>LINKED</span>
+                                <button onClick={() => setLinkEditKey(row.key)} title="Linked to the wrong tenant? Re-link or remove." style={{ background: "transparent", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 9.5, padding: 0, textDecoration: "underline" }}>edit</button>
+                              </span>
+                            ) : (
+                              <button onClick={() => setLinkEditKey(row.key)} title="Not matched to a rent-roll tenant — link it, or remove if it's gone." style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: "0.04em", color: "#b45309", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 3, padding: "1px 6px", cursor: "pointer" }}>UNLINKED ▾</button>
+                            )
+                          )}
+                        </div>
+                      </td>
                       {selectedYear === "all"
                         ? displayYears.map(y => {
                             const rec = row.byYear[y];

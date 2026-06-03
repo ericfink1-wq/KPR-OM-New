@@ -2501,6 +2501,7 @@ ${text.slice(0, 60000)}`;
             onUpload={handleSalesUpload}
             uploadBusy={salesBusy}
             uploadError={salesError}
+            onChangeSalesHistory={next => onUpdate(d.id, { tenantSalesHistory: next })}
           />
         </div>
       )}
