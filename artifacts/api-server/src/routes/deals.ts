@@ -111,22 +111,26 @@ function coerceDealArrays(data: Record<string, unknown>): Record<string, unknown
 // GET /api/deals — list all deals (excludes in-progress ingests)
 router.get("/deals", requireAuth, async (req, res) => {
   try {
-    const [rows, aliasMap, coverIdRows] = await Promise.all([
+    const [rows, aliasMap, coverIdRows, thumbIdRows] = await Promise.all([
       db.select().from(dealsTable).orderBy(dealsTable.createdAt),
       loadAliasMap(),
       // Which deals actually have a stored cover image (cheap — ids only). Lets us
       // keep imageMeta.cover accurate so the Deal Library tile always shows the
       // photo, even if the flag on the deal record was never set.
       db.select({ id: dealImagesTable.id }).from(dealImagesTable).where(isNotNull(dealImagesTable.cover)),
+      // …and which have a small thumbnail, so the client can backfill the ones
+      // that don't (those would otherwise serve the full-size cover).
+      db.select({ id: dealImagesTable.id }).from(dealImagesTable).where(isNotNull(dealImagesTable.coverThumb)),
     ]);
     const coverSet = new Set(coverIdRows.map(c => c.id));
+    const thumbSet = new Set(thumbIdRows.map(c => c.id));
     const deals = rows
       .filter(r => !r.data._processing)
       .map(r => {
         const { _processing: _p, _processingError: _e, ...rest } = r.data;
         const out = { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt } as Record<string, unknown>;
         if (coverSet.has(r.id)) {
-          out.imageMeta = { ...((out.imageMeta as Record<string, unknown>) || {}), cover: true };
+          out.imageMeta = { ...((out.imageMeta as Record<string, unknown>) || {}), cover: true, thumb: thumbSet.has(r.id) };
         }
         return out;
       });

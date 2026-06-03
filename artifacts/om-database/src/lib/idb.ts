@@ -380,7 +380,7 @@ export interface Deal {
   roofData?: RoofData | null;
   // Images meta. coverConfirmed / sitePlanConfirmed remember that the user has
   // verified the image so the confirmation box stays hidden on future opens.
-  imageMeta?: { cover?: boolean; sitePlan?: number; needsSitePlanPick?: boolean; coverConfirmed?: boolean; sitePlanConfirmed?: boolean } | null;
+  imageMeta?: { cover?: boolean; thumb?: boolean; sitePlan?: number; needsSitePlanPick?: boolean; coverConfirmed?: boolean; sitePlanConfirmed?: boolean } | null;
   // Staleness
   analysisStale?: boolean;
   analysisVersion?: number | null;  // scoring-logic version this deal's saved AI analysis was produced under

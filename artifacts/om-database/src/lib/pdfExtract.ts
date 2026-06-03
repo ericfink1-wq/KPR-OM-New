@@ -70,6 +70,29 @@ function _scaleCanvas(src: HTMLCanvasElement, targetW: number, quality: number):
   return url;
 }
 
+// Downscale any image data URL to a small thumbnail JPEG sized for the deal
+// library / tiles (used for raw cover uploads and the one-time backfill).
+export function dataUrlToThumb(dataUrl: string, width = 480, quality = 0.6): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1, width / (img.naturalWidth || width));
+      const w = Math.max(1, Math.round((img.naturalWidth || width) * ratio));
+      const h = Math.max(1, Math.round((img.naturalHeight || width) * ratio));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d");
+      if (!ctx) { reject(new Error("no canvas context")); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      const out = c.toDataURL("image/jpeg", quality);
+      c.width = c.height = 0;
+      resolve(out);
+    };
+    img.onerror = () => reject(new Error("image load failed"));
+    img.src = dataUrl;
+  });
+}
+
 // Capture a clean property photo from a page: extract the largest EMBEDDED image
 // (the actual photo) rather than screenshotting the page, which strips the broker
 // logos and text that are layered on top. Tracks the transform matrix so it can
@@ -104,7 +127,7 @@ export async function _capturePagePhoto(
   // extraction entirely (which would grab the aerial background only).
   if (preferPageRender && half === "full") {
     const cover = _scaleCanvas(pc, 1600, 0.8);
-    const thumb = _scaleCanvas(pc, 168, 0.5);
+    const thumb = _scaleCanvas(pc, 480, 0.6);
     pc.width = pc.height = 0;
     return { cover, thumb };
   }
@@ -185,7 +208,7 @@ export async function _capturePagePhoto(
     source = c;
   }
   const cover = _scaleCanvas(source, 1200, 0.74);
-  const thumb = _scaleCanvas(source, 168, 0.5);
+  const thumb = _scaleCanvas(source, 480, 0.6);
   pc.width = pc.height = 0;
   if (cleanCanvas) { cleanCanvas.width = cleanCanvas.height = 0; }
   if (source !== pc && source !== cleanCanvas) { source.width = source.height = 0; }

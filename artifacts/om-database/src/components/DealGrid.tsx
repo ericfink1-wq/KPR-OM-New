@@ -362,6 +362,35 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const shownCount = rows.length;
   useEffect(() => { onCountsChange?.(shownCount, deals.length); }, [shownCount, deals.length, onCountsChange]);
 
+  // One-time, throttled backfill: a deal with a cover but no thumbnail serves the
+  // full-size image (heavy). Generate a small tile-sized thumb for those in the
+  // background so the whole library stays lean; deals that already have a thumb
+  // are skipped.
+  const thumbBackfillRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    const todo = deals
+      .filter(d => d.imageMeta?.cover && !d.imageMeta?.thumb && !d.trashedAt && !thumbBackfillRef.current.has(d.id))
+      .map(d => d.id);
+    if (todo.length === 0) return;
+    (async () => {
+      const { dataUrlToThumb } = await import("../lib/pdfExtract");
+      for (const id of todo) {
+        if (cancelled) return;
+        thumbBackfillRef.current.add(id);
+        try {
+          const imgs = await apiLoadImages(id) as { cover?: string | null; coverThumb?: string | null } | null;
+          if (imgs?.cover && !imgs.coverThumb) {
+            const thumb = await dataUrlToThumb(imgs.cover);
+            await apiSaveImages(id, { ...(imgs as object), coverThumb: thumb } as Parameters<typeof apiSaveImages>[1]);
+          }
+        } catch { /* skip this one */ }
+        await new Promise(r => setTimeout(r, 500)); // throttle so the UI stays smooth
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [deals]);
+
   const toggleSort = (k: string) => {
     if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(k); setSortDir("desc"); }
