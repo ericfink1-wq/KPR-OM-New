@@ -57,6 +57,25 @@ export default function TenantLink({ deals }: Props) {
     return q ? rows.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q)) : rows;
   }, [rows, search]);
 
+  // Sort the (searched) list by any column. Default: rent, highest first.
+  const [sortKey, setSortKey] = useState<"name" | "locs" | "rent">("rent");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const d = sortKey === "name" ? tenantLabel(a.displayName).localeCompare(tenantLabel(b.displayName))
+        : sortKey === "locs" ? a.locationCount - b.locationCount
+        : a.totalAnnualRent - b.totalAnnualRent;
+      return sortDir === "asc" ? d : -d;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+  const toggleSort = (k: "name" | "locs" | "rent") => {
+    if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir(k === "name" ? "asc" : "desc"); }
+  };
+  const arrow = (k: "name" | "locs" | "rent") => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+
   const selectedRows = useMemo(() => rows.filter(r => sel.has(r.key)), [rows, sel]);
   const effectiveCanonKey = canonKey && sel.has(canonKey)
     ? canonKey
@@ -127,11 +146,18 @@ export default function TenantLink({ deals }: Props) {
 
       {/* Tenant list */}
       <div style={{ border: "1px solid #ece5d7", borderRadius: 10, overflow: "hidden", marginBottom: 22 }}>
+        {/* Sortable header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "8px 12px", background: "#f4f1ea", borderBottom: "1px solid #ece5d7" }}>
+          <span style={{ width: 15, flexShrink: 0 }} />
+          <button onClick={() => toggleSort("name")} style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "name" ? "#3f7a1f" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>Tenant{arrow("name")}</button>
+          <button onClick={() => toggleSort("locs")} style={{ width: 64, flexShrink: 0, textAlign: "right", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "locs" ? "#3f7a1f" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>Locs{arrow("locs")}</button>
+          <button onClick={() => toggleSort("rent")} style={{ width: 90, flexShrink: 0, textAlign: "right", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "rent" ? "#3f7a1f" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>Rent{arrow("rent")}</button>
+        </div>
         <div style={{ maxHeight: 460, overflowY: "auto" }}>
-          {filtered.length === 0 ? (
+          {sorted.length === 0 ? (
             <div style={{ padding: "26px 0", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>No tenants match &ldquo;{search}&rdquo;</div>
           ) : (
-            filtered.map((r, i) => {
+            sorted.map((r, i) => {
               const checked = sel.has(r.key);
               return (
                 <div
@@ -147,9 +173,8 @@ export default function TenantLink({ deals }: Props) {
                   <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13.5, color: "#383a37", fontWeight: checked ? 600 : 400 }}>
                     {tenantLabel(r.displayName)}
                   </span>
-                  <span style={{ fontSize: 11, color: "#a89f8f", flexShrink: 0, whiteSpace: "nowrap" }}>
-                    {r.locationCount} loc{r.locationCount !== 1 ? "s" : ""} · {fmtRent(r.totalAnnualRent)}
-                  </span>
+                  <span style={{ width: 64, flexShrink: 0, textAlign: "right", fontSize: 11.5, color: "#a89f8f", whiteSpace: "nowrap" }}>{r.locationCount}</span>
+                  <span style={{ width: 90, flexShrink: 0, textAlign: "right", fontSize: 11.5, color: "#6f6a5f", whiteSpace: "nowrap" }}>{fmtRent(r.totalAnnualRent)}</span>
                 </div>
               );
             })
