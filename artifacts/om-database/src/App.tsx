@@ -520,6 +520,7 @@ function AppInner() {
                   onCompare={handleCompare}
                   onDelete={handleDelete}
                   onAddFiles={files => setPendingFiles(prev => [...prev, ...files])}
+                  isAdmin={isAdmin}
                 />
               )}
             </>

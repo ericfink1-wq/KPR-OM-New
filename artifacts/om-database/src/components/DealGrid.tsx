@@ -21,6 +21,7 @@ interface Props {
   onCompare: (ids: string[]) => void;
   onDelete?: (id: string) => void;
   onAddFiles?: (files: File[]) => void;
+  isAdmin?: boolean;
 }
 
 // Largest anchor tenant's name — used for the portfolio "Anchor" column and sort.
@@ -245,7 +246,7 @@ const BULK_FIELDS: { key: keyof Deal; label: string; also?: (keyof Deal)[]; hint
   { key: "centerType", label: "Center Type" },
 ];
 
-export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles }: Props) {
+export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles, isAdmin }: Props) {
   const watchMap = useWatchlist();
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [filterStates, setFilterStates] = useState<string[]>([]);
@@ -263,6 +264,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const [bulkEditField, setBulkEditField] = useState<keyof Deal>("status");
   const [bulkEditValue, setBulkEditValue] = useState<string>(STATUS_OPTS[0] ?? "");
   const [confirmBulkDel, setConfirmBulkDel] = useState(false);
+  const [delConfirmText, setDelConfirmText] = useState("");
   const [confirmGate, setConfirmGate] = useState<ConfirmGate | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [lookingUp, setLookingUp] = useState<Set<string>>(new Set());
@@ -359,7 +361,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   };
   const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
   const toggleSel = (id: string) => setSelected(s => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
-  const clearSelection = () => { setSelected(new Set()); setConfirmBulkDel(false); setBulkEditOpen(false); };
+  const clearSelection = () => { setSelected(new Set()); setConfirmBulkDel(false); setDelConfirmText(""); setBulkEditOpen(false); };
 
   // ── Combine phases ───────────────────────────────────────────────────────
   const openCombine = () => {
@@ -573,6 +575,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
 
   // ── Bulk: permanently delete ─────────────────────────────────────────────
   const bulkDelete = () => {
+    // Gate: admins only, and the typed confirmation must read DELETE — so a
+    // "select all → delete" can't happen by a careless click or a non-admin.
+    if (!isAdmin || delConfirmText.trim().toUpperCase() !== "DELETE") return;
     const ids = Array.from(selected);
     if (onDelete) { for (const id of ids) onDelete(id); }
     else { const ts = new Date().toISOString(); for (const id of ids) onUpdate(id, { trashedAt: ts }); }
@@ -980,15 +985,35 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
 
           <div style={{ width: 1, height: 20, background: "#55574f", flexShrink: 0 }} />
 
-          {/* Delete */}
-          {confirmBulkDel ? (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ color: "#ffb3b3", fontSize: 11.5 }}>Delete {selected.size} permanently?</span>
-              <button onClick={bulkDelete} style={{ ...darkBtnDanger, padding: "5px 10px" }}>Yes, delete</button>
-              <button onClick={() => setConfirmBulkDel(false)} style={{ ...darkBtn, padding: "5px 10px" }}>Cancel</button>
-            </span>
+          {/* Delete — admins only, and requires typing DELETE to run */}
+          {isAdmin ? (
+            confirmBulkDel ? (
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#ffb3b3", fontSize: 11.5 }}>Type <b>DELETE</b> to remove {selected.size}:</span>
+                <input
+                  autoFocus
+                  value={delConfirmText}
+                  onChange={e => setDelConfirmText(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") bulkDelete(); }}
+                  placeholder="DELETE"
+                  style={{ width: 78, fontSize: 11.5, padding: "4px 8px", border: "1px solid #8a4b46", borderRadius: 6, background: "#2c2320", color: "#fff", fontFamily: "'Inter',sans-serif", outline: "none" }}
+                />
+                {(() => {
+                  const ok = delConfirmText.trim().toUpperCase() === "DELETE";
+                  return (
+                    <button onClick={bulkDelete} disabled={!ok}
+                      style={{ ...darkBtnDanger, padding: "5px 10px", opacity: ok ? 1 : 0.45, cursor: ok ? "pointer" : "not-allowed" }}>
+                      Yes, delete
+                    </button>
+                  );
+                })()}
+                <button onClick={() => { setConfirmBulkDel(false); setDelConfirmText(""); }} style={{ ...darkBtn, padding: "5px 10px" }}>Cancel</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmBulkDel(true)} style={{ ...darkBtnDanger }}>Delete</button>
+            )
           ) : (
-            <button onClick={() => setConfirmBulkDel(true)} style={{ ...darkBtnDanger }}>Delete</button>
+            <span title="Bulk delete is restricted to admins" style={{ color: "#8a8c84", fontSize: 11, fontStyle: "italic" }}>Delete — admins only</span>
           )}
 
           {/* Clear selection */}
