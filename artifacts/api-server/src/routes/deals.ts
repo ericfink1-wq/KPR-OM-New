@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { runOmExtraction, runRosterAnalysis } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
@@ -111,15 +111,24 @@ function coerceDealArrays(data: Record<string, unknown>): Record<string, unknown
 // GET /api/deals — list all deals (excludes in-progress ingests)
 router.get("/deals", requireAuth, async (req, res) => {
   try {
-    const [rows, aliasMap] = await Promise.all([
+    const [rows, aliasMap, coverIdRows] = await Promise.all([
       db.select().from(dealsTable).orderBy(dealsTable.createdAt),
       loadAliasMap(),
+      // Which deals actually have a stored cover image (cheap — ids only). Lets us
+      // keep imageMeta.cover accurate so the Deal Library tile always shows the
+      // photo, even if the flag on the deal record was never set.
+      db.select({ id: dealImagesTable.id }).from(dealImagesTable).where(isNotNull(dealImagesTable.cover)),
     ]);
+    const coverSet = new Set(coverIdRows.map(c => c.id));
     const deals = rows
       .filter(r => !r.data._processing)
       .map(r => {
         const { _processing: _p, _processingError: _e, ...rest } = r.data;
-        return { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt };
+        const out = { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt } as Record<string, unknown>;
+        if (coverSet.has(r.id)) {
+          out.imageMeta = { ...((out.imageMeta as Record<string, unknown>) || {}), cover: true };
+        }
+        return out;
       });
     res.json(deals);
   } catch (err) {
