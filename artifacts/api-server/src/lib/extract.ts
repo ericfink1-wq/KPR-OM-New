@@ -300,10 +300,15 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // OM, so mark it as a cached block. Across a batch of deals (within the cache
   // window) the schema/instructions prefix is a cache hit — cheaper + faster on
   // the Sonnet pass. The variable part (lessons + this OM's text) is uncached.
-  const first = await callExtract([
+  // Shared, byte-identical prefix for EVERY pass on this OM: the schema prompt
+  // and the OM text are both cached. Continuation/gap passes append only a small
+  // trailing instruction, so they reuse the cached document instead of re-reading
+  // the whole thing each round — the main cause of slow multi-pass extractions.
+  const cachedBlocks: Block[] = [
     { type: "text", text: EXTRACTION_PROMPT, cache_control: { type: "ephemeral" } },
-    { type: "text", text: taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText },
-  ]);
+    { type: "text", text: taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText, cache_control: { type: "ephemeral" } },
+  ];
+  const first = await callExtract(cachedBlocks);
   let extracted = robustParseJSON(first.raw) as Record<string, unknown>;
   if (!extracted.tenants) extracted.tenants = [];
 
@@ -320,15 +325,15 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     rounds++;
     const tenants = extracted.tenants as Array<{ name?: string }>;
     const haveNames = tenants.map((t) => t.name).filter(Boolean);
-    const contPrompt =
-      "From the Offering Memorandum text below, extract ONLY the tenants NOT already in this list:\n" +
+    const contInstruction =
+      "From the Offering Memorandum text above, extract ONLY the tenants NOT already in this list:\n" +
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
       "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, remainingTermYears}. " +
-      "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.\n\nOM TEXT:\n" + truncatedText;
+      "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
-      const cont = await callExtract(contPrompt);
+      const cont = await callExtract([...cachedBlocks, { type: "text", text: contInstruction }]);
       const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
       const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
         .filter((t) => t?.name && !haveNames.includes(t.name));
@@ -362,17 +367,17 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       if (capturedSF >= expectedOccSF * 0.9) break; // close enough — likely complete
       gapRounds++;
       const haveNames = tenants.map((t) => t.name).filter(Boolean);
-      const gapPrompt =
+      const gapInstruction =
         `This property has ${Math.round(expectedOccSF).toLocaleString()} SF of OCCUPIED space ` +
         `(${occPct}% of ${totalSF.toLocaleString()} SF), but the tenants captured so far only sum to ` +
         `${Math.round(capturedSF).toLocaleString()} SF — so OCCUPIED TENANTS ARE MISSING, likely one or more large anchors/junior anchors. ` +
-        `From the Offering Memorandum text below, extract ONLY the occupied tenants NOT already in this list (largest missing first):\n` +
+        `From the Offering Memorandum text above, extract ONLY the occupied tenants NOT already in this list (largest missing first):\n` +
         haveNames.join(", ") +
         `\n\nSame inclusion rule: actual lease occupants of THIS property only. Return ONLY {"tenants":[...]} with per-tenant schema ` +
         `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, remainingTermYears}. ` +
-        `If none remain, return {"tenants":[]}. Output must start with { and end with }.\n\nOM TEXT:\n` + truncatedText;
+        `If none remain, return {"tenants":[]}. Output must start with { and end with }.`;
       try {
-        const cont = await callExtract(gapPrompt);
+        const cont = await callExtract([...cachedBlocks, { type: "text", text: gapInstruction }]);
         const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
         const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
           .filter((t) => t?.name && !haveNames.includes(t.name));
