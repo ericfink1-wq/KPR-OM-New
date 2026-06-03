@@ -31,7 +31,7 @@ const DEAL_FIELDS: Record<string, "number" | "text" | "boolean"> = {
 const TENANT_FIELDS: Record<string, "number" | "text" | "boolean"> = {
   name: "text", parentCompany: "text", suite: "text", sf: "number", rentPerSF: "number",
   annualRent: "number", leaseStart: "text", leaseExpiry: "text", remainingTermYears: "number",
-  reimbursementMethod: "text", leaseType: "text", rentBumps: "text", renewalOptions: "text",
+  reimbursementMethod: "text", leaseType: "text", rentBumps: "text", rentSchedule: "text", renewalOptions: "text",
   salesPSF: "number", occupancyCost: "number", expenseReimbursements: "number",
   percentageRent: "number", otherRent: "number", creditRating: "text",
   isAnchor: "boolean", isNAP: "boolean", isDark: "boolean", assumptionNote: "text", salesNotes: "text",
@@ -176,12 +176,22 @@ TENANTS: ${tenantList.join(" | ") || "(none)"}
 This correction concerns: ${q.question}${q.suggestedValue ? ` (currently captured as: ${q.suggestedValue})` : ""}
 USER CORRECTION: ${instruction}`;
 
-    const res = await apiAiMessages({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1200,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const raw = res.content.find(c => c.type === "text")?.text ?? "";
+    // The AI proxy can briefly fail when the model is overloaded — retry once before giving up.
+    let res: { content: { type: string; text?: string }[] } | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        res = await apiAiMessages({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1200,
+          messages: [{ role: "user", content: prompt }],
+        });
+        break;
+      } catch (err) {
+        if (attempt === 1) throw new Error("The AI service was busy. Tap Save to try again — or just type the value directly.");
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+    const raw = res?.content.find(c => c.type === "text")?.text ?? "";
     let parsed: { edits?: unknown[] };
     try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't read the AI response — try rephrasing."); }
     const rawEdits = Array.isArray(parsed.edits) ? parsed.edits as Array<Record<string, unknown>> : [];
@@ -211,10 +221,13 @@ USER CORRECTION: ${instruction}`;
   // Save handler for the inline editor: literal value → write directly; an
   // instruction → interpret via AI and show a confirmation proposal.
   const onSave = async (q: ReviewQuestion) => {
+    if (!draft.trim()) { setAiErr("Type the correction first."); return; }
     const t = q.target;
-    if (!t) return;
-    const vt: "number" | "text" = t.valueType === "text" ? "text" : "number";
-    if (!looksLikeInstruction(draft, vt)) {
+    // A question tied to one editable field: a plain value writes directly; a
+    // sentence goes to the AI. A question with no single field (e.g. a totals
+    // reconciliation) can only be fixed by describing the change → always AI.
+    const vt: "number" | "text" = t?.valueType === "text" ? "text" : "number";
+    if (t && !looksLikeInstruction(draft, vt)) {
       const value = coerceVal(draft, vt);
       commitEdits(q, [{ kind: t.kind, fieldKey: t.fieldKey, tenantName: t.tenantName, value, label: `${t.fieldKey} → ${value ?? "—"}` }], value == null ? "(cleared)" : String(value));
       return;
@@ -287,7 +300,9 @@ USER CORRECTION: ${instruction}`;
                   /* Inline correction editor — type a value OR an instruction */
                   <div style={{ marginTop: 10 }}>
                     <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                      Corrected value{q.target?.kind === "tenant" && q.target.tenantName ? ` for ${q.target.tenantName}` : ""}, or describe the change:
+                      {q.target
+                        ? `Corrected value${q.target.kind === "tenant" && q.target.tenantName ? ` for ${q.target.tenantName}` : ""}, or describe the change:`
+                        : "Describe the correction in plain English and I'll set it:"}
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <input
@@ -296,7 +311,7 @@ USER CORRECTION: ${instruction}`;
                         disabled={aiBusy}
                         onChange={e => setDraft(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && !aiBusy) onSave(q); if (e.key === "Escape") cancelFix(); }}
-                        placeholder={q.target?.valueType === "text" ? "Value, or e.g. “mark this tenant dark”" : "Number, or e.g. “NOI is about 1.2M”"}
+                        placeholder={!q.target ? "e.g. “Suite 14 is 5,000 SF, not 3,000”" : q.target.valueType === "text" ? "Value, or e.g. “mark this tenant dark”" : "Number, or e.g. “NOI is about 1.2M”"}
                         style={{ flex: 1, border: "1px solid #c8b89a", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif", outline: "none", background: aiBusy ? "#f6f3ec" : "#fff" }}
                       />
                       <button onClick={() => onSave(q)} disabled={aiBusy} style={{ background: aiBusy ? "#9bbf7e" : "#3f7a1f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: aiBusy ? "default" : "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{aiBusy ? "Reading…" : "Save"}</button>
@@ -308,7 +323,9 @@ USER CORRECTION: ${instruction}`;
                         {q.target?.kind === "tenant" && (q.target.fieldKey === "sf" || q.target.fieldKey === "remainingTermYears")
                           ? "Occupancy / WALT will recompute automatically. "
                           : ""}
-                        Plain values save instantly; a sentence is interpreted and shown for your OK first.
+                        {q.target
+                          ? "Plain values save instantly; a sentence is interpreted and shown for your OK first."
+                          : "I'll interpret your wording and show the exact change for your OK before saving."}
                       </div>
                     )}
                   </div>
@@ -316,13 +333,8 @@ USER CORRECTION: ${instruction}`;
               ) : (
                 <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
                   <button onClick={() => resolve(q, "confirmed")} style={{ background: "#26281f", border: "none", color: "#e8e0cf", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✓ Looks right</button>
-                  {q.target ? (
-                    <button onClick={() => startFix(q)} style={{ background: "#fff", border: "1px solid #8cbf63", color: "#3f7a1f", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✎ Fix it</button>
-                  ) : null}
+                  <button onClick={() => startFix(q)} style={{ background: "#fff", border: "1px solid #8cbf63", color: "#3f7a1f", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✎ Fix it</button>
                   <button onClick={() => resolve(q, "dismissed")} style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#7d766a", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Dismiss</button>
-                  {!q.target && (
-                    <span style={{ fontSize: 11, color: "#bcae97", alignSelf: "center", marginLeft: 2 }}>edit on the deal page if needed</span>
-                  )}
                 </div>
               )}
             </div>
