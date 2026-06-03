@@ -108,7 +108,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library, organized by status (Prospect → Under Contract → Owned → Sold, or Passed) — active deals surface first.</p>
         <BriefList items={[
           <><B>Cards</B> show anchor, SF, occupancy, WALT, NOI, cap rate, market, and a red-flag count.</>,
-          <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches <B>every field</B> (name, location, tenants, lender, notes, thesis, flags), not just the name.</>,
+          <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches the <B>columns you see</B> (property, status, city, state, MSA, anchor, seller) so every result maps to something on screen.</>,
           <><B>Compare</B> — pick 2+ deals for a side-by-side: best value per metric highlighted, KPR's own economics next to the OM figures, shared tenants, an AI read, and Excel export.</>,
           <><B>Bulk actions</B> — checkboxes (on hover) to re-status or delete several at once.</>,
         ]} />
@@ -142,9 +142,10 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     detail: (
       <DetailList items={[
         <><B>Edit any field</B> via its pencil icon (auto-saved, logged); lock verified figures so a re-extraction won't overwrite them.</>,
-        <><B>Re-run extraction</B> re-reads the OM PDF; <B>Refresh Analysis</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste); <B>Refresh Score</B> re-benchmarks against your portfolio. All show live progress.</>,
+        <><B>Re-run extraction</B> re-reads the OM PDF; <B>Refresh Analysis</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste); <B>Refresh Score</B> re-benchmarks against your portfolio. All show live progress, and each asks a quick <B>"this uses tokens — continue?"</B> first so an accidental click can't spend.</>,
+        <><B>Re-uploading for an existing property never overwrites your data.</B> It recognizes the deal (even if the new file is named a little differently), <B>fills only blank fields</B>, and <B>flags any conflicting numbers</B> (price, cap, NOI, SF, occupancy…) as a review item — keep yours or apply the OM's in one click. Verified fields are left untouched.</>,
         <><B>Comp Benchmark</B> uses medians and tiers comps by relevance (same state/type/size within 24 months first, widening if needed); below a minimum sample it withholds a verdict rather than guess.</>,
-        <><B>Closing Costs</B> estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle) — a ballpark, confirm with title.</>,
+        <><B>Closing Costs</B> estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle), with each buyer/seller line showing its <B>effective % of price (or loan)</B> and a flag on anything to confirm with title — a ballpark, confirm with title.</>,
         <><B>Cover & site plan</B> fit to screen; each has a 🗑 (with confirm). Dark-store flags are read-only (set from the data). Section titles show their source (OM vs. Census).</>,
         <><B>Owned-deal Terms & Financing</B> (purchase price, going-in cap, lender, loan terms) are editable and feed the analytics. <B>Summary</B>, <B>Excel</B>, and <B>Find Sale</B> buttons export or research the deal.</>,
       ]} />
@@ -169,6 +170,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <DetailList items={[
         <><B>Be specific</B> and ask for tables/ranked lists — cross-deal questions (rollover concentration, credit exposure, anchor performance) are where it shines.</>,
         <><B>It only knows what's uploaded</B>; if a number looks off, the underlying deal data may need a fix. <B>Shift+Enter</B> for a line break, Enter to send.</>,
+        <><B>Stop anytime</B> — while a reply is generating, the send button turns into a red <B>■ Stop</B> that halts it instantly (handy if you fired off a question by accident).</>,
       ]} />
     ),
   },
@@ -178,14 +180,15 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "analytics", label: "Go to Analytics" },
     brief: (
       <>
-        <p style={{ margin:0 }}>The <B>Analytics</B> tab surfaces patterns across the library — rollover timelines, tenant/parent concentration, credit mix, and market exposure.</p>
+        <p style={{ margin:0 }}>Analytics now lives in <B>two dropdown menus</B> in the top bar — <B>Portfolio Analytics ▾</B> (Portfolio Overview, Lease Rollover) and <B>Tenant Analytics ▾</B> (Tenant Analytics, Retailer Watchlist, Tenant Name Audit, Link Tenants) — each jumping straight to its page.</p>
         <BriefList items={[
           <><B>Lease rollover chart</B> — GLA & rent expiring by year; click a year to drill into which tenants roll (sortable).</>,
           <><B>Tenant & Parent concentration</B> — top exposure by rent or store count; an eye-slash toggle excludes an outlier and stats recompute live.</>,
           <><B>Pinned search</B> (Tenant Analytics) — jump to any tenant or parent; tenant/parent pages show a description plus all locations.</>,
-          <><B>🔗 Link tenants</B> (All Tenants list) — tick two spellings of the same brand (e.g. <em>Walmart</em> / <em>Wal-Mart</em>), pick the name to keep, and they merge everywhere; unlink anytime.</>,
-          <><B>ATMs tracked separately</B> from bank branches (their own <B>ATM</B> badge) but still rolling up to the same parent bank. A <B>Hide/Show ATMs</B> toggle appears when a dataset has any.</>,
-          <><B>Tenant Name Audit</B> — review/merge brand-name variants that aren't grouping (auto-rejects store-vs-fuel/storage pads).</>,
+          <><B>🔗 Link Tenants</B> is now its <B>own page</B> (Tenant Analytics ▾ → Link Tenants): live-search the full tenant list, tick two spellings of the same brand (e.g. <em>Walmart</em> / <em>Wal-Mart</em>), pick the name to keep, and Link — they merge everywhere. Existing links are listed below with <B>Unlink</B>.</>,
+          <><B>Unlink on the spot</B> — on a tenant's detail page, an <B>unlink icon next to each row's eyeball</B> splits a stray that got wrongly grouped in, back out across the whole app.</>,
+          <><B>ATMs tracked separately</B> from bank branches (their own <B>ATM</B> badge) but still rolling up to the same parent bank. A <B>Hide ATMs</B> toggle appears only when the list you're viewing actually has ATMs.</>,
+          <><B>Tenant Name Audit</B> — review/merge the brand-name variants the app already suspects are the same (auto-rejects store-vs-fuel/storage pads).</>,
         ]} />
       </>
     ),
@@ -225,7 +228,8 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <>
         <BriefList items={[
           <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and an admin approves them under <B>Members</B> (they get an email that they're cleared). Logins now persist across updates.</>,
-          <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps (the 3-year is an estimate from the Treasury curve when not quoted directly).</>,
+          <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps, all stamped in <B>Eastern time (ET)</B> (the 3-year is an estimate from the Treasury curve when not quoted directly).</>,
+          <><B>Admin → Members</B> now includes an <B>Upload activity</B> log — every file uploaded, when, ok/failed, and who — with a <B>CSV export</B> and a red badge on the Members button when there have been recent failed uploads.</>,
           <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
           <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,
           <><B>Verified fields</B> — lock a confirmed figure against future re-extractions.</>,
