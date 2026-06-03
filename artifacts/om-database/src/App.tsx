@@ -396,9 +396,10 @@ function AppInner() {
         onAnalyticsNav={onAnalyticsNav}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} />
-      {/* On a deal page the fixed action bar sits at top:88; drop the progress
-          toast below it so it never covers the All / Asset Mgmt / Jump-to menu. */}
-      <AiProgressBar top={view.type === "detail" ? 168 : 84} />
+      {/* The deal page is crowded top (fixed action bar + title) and the toast
+          would cover them at scroll-top — anchor it to the bottom there, clear of
+          the Ask/flag buttons. Other pages keep it pinned near the top. */}
+      <AiProgressBar {...(view.type === "detail" ? { bottom: 96 } : { top: 84 })} />
 
       {/* Drag overlay */}
       {dragging && (
