@@ -44,7 +44,10 @@ export function buildAmortSchedule(opts: {
   const P = Number(opts.loanAmount);
   const ratePct = Number(opts.annualRatePct);
   if (!P || P <= 0 || isNaN(P)) return { ...base, error: "Enter the original loan amount." };
-  if (isNaN(ratePct)) return { ...base, error: "Enter the interest rate." };
+  // No usable rate → don't fabricate a $0-interest, straight-line schedule.
+  if (!ratePct || isNaN(ratePct) || ratePct <= 0) {
+    return { ...base, error: "Add the loan's interest rate — or import its swap confirmation / loan agreement — to generate the schedule." };
+  }
 
   const i = ratePct / 100 / 12;                 // monthly rate
   const amortYears = Number(opts.amortYears) || 0;
@@ -127,7 +130,7 @@ export function currentBalanceFromRows(rows: AmortRow[], asOf?: string | null): 
 
 // Pick the live schedule for a deal: an uploaded custom schedule wins; otherwise
 // generate from the debt fields.
-export function amortForDeal(deal: Deal, asOf?: string | null): AmortResult {
+export function amortForDeal(deal: Deal, asOf?: string | null, rateOverride?: number | null): AmortResult {
   const custom = deal.customAmortSchedule;
   if (custom && custom.length > 0) {
     const { balance, row } = currentBalanceFromRows(custom, asOf);
@@ -136,9 +139,19 @@ export function amortForDeal(deal: Deal, asOf?: string | null): AmortResult {
       basis: "uploaded", source: "Uploaded amortization schedule", assumptions: [], error: null,
     };
   }
+  // Rate priority: an explicit override (e.g. floating SOFR + spread, resolved by
+  // the caller) → the loan's stated rate → the hedging swap's fixed rate. This
+  // stops a swapped/floating loan with a blank debtRate from generating a wrong
+  // $0-interest schedule.
+  const dr = Number(deal.debtRate);
+  const swapRate = deal.interestRateSwap?.fixedRatePct;
+  const rate = (rateOverride != null && rateOverride > 0) ? rateOverride
+    : (!isNaN(dr) && dr > 0) ? dr
+    : (swapRate != null && swapRate > 0) ? swapRate
+    : null;
   return buildAmortSchedule({
     loanAmount: deal.debtLoanAmount ?? null,
-    annualRatePct: deal.debtRate ?? null,
+    annualRatePct: rate,
     amortYears: deal.debtAmortYears ?? null,
     ioMonths: deal.debtIOPeriod ?? null,
     originationDate: deal.debtOriginationDate ?? null,

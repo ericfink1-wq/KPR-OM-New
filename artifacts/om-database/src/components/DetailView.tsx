@@ -3366,8 +3366,31 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   const [showAll, setShowAll] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const result = useMemo(() => amortForDeal(deal), [
-    deal.customAmortSchedule, deal.debtLoanAmount, deal.debtRate, deal.debtAmortYears, deal.debtIOPeriod, deal.debtOriginationDate,
+  // Resolve the rate the generated schedule should use: the loan's stated rate,
+  // else the hedging swap's fixed rate, else (for a floating loan) current 1-mo
+  // SOFR + the loan's spread — so a blank debtRate never yields a $0-interest table.
+  const swapRate = deal.interestRateSwap?.fixedRatePct;
+  const loanRate = Number(deal.debtRate) > 0 ? Number(deal.debtRate) : null;
+  const baseRate = loanRate ?? (swapRate != null && swapRate > 0 ? swapRate : null);
+  const spreadPct = deal.debtSpread != null && !isNaN(Number(deal.debtSpread))
+    ? (Number(deal.debtSpread) > 25 ? Number(deal.debtSpread) / 100 : Number(deal.debtSpread)) // accept bps or %
+    : null;
+  const needSofr = baseRate == null && spreadPct != null;
+  const [sofr, setSofr] = useState<number | null>(null);
+  useEffect(() => {
+    if (!needSofr) return;
+    let alive = true;
+    apiGetRates().then(r => { if (!alive) return; const row = r.sofr?.rows?.[0]; if (row && typeof row.value === "number") setSofr(row.value); }).catch(() => {});
+    return () => { alive = false; };
+  }, [needSofr]);
+  const effRate = baseRate ?? (sofr != null && spreadPct != null ? Math.round((sofr + spreadPct) * 1000) / 1000 : null);
+  const rateNote = loanRate != null ? null
+    : (swapRate != null && swapRate > 0) ? `Interest computed from the swap's ${swapRate}% fixed rate.`
+    : (effRate != null) ? `No fixed rate on file — interest computed from current 1-mo SOFR + ${spreadPct}% spread ≈ ${effRate}% (floating, indicative).`
+    : null;
+
+  const result = useMemo(() => amortForDeal(deal, null, effRate), [
+    deal.customAmortSchedule, deal.debtLoanAmount, deal.debtRate, deal.debtAmortYears, deal.debtIOPeriod, deal.debtOriginationDate, deal.interestRateSwap, effRate,
   ]);
   const fmt$ = (v: number | null | undefined) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
 
@@ -3386,9 +3409,10 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   };
 
   const rows = result.rows;
-  // Yearly view: the last row of each 12-month block (+ the final row).
+  // Yearly view (one row per year), capped to a short preview with an expander.
   const yearly = rows.filter((_, idx) => (idx + 1) % 12 === 0 || idx === rows.length - 1);
-  const shown = showAll ? rows : yearly;
+  const AMORT_PREVIEW = 6;
+  const shown = showAll ? yearly : yearly.slice(0, AMORT_PREVIEW);
   const currentDate = result.currentRow?.date;
 
   return (
@@ -3431,6 +3455,7 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
 
           <div style={{ fontSize:10.5, color:"#a69e91", marginBottom:8 }}>
             {result.basis === "uploaded" ? "From your uploaded schedule." : "Generated from the loan terms."}
+            {result.basis !== "uploaded" && rateNote ? ` ${rateNote}` : ""}
             {result.assumptions.length > 0 && ` ${result.assumptions.join(" ")}`}
           </div>
 
@@ -3439,7 +3464,7 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11.5 }}>
                 <thead>
                   <tr style={{ fontSize:9, color:"#a69e91", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#faf7f0" }}>
-                    <th style={{ textAlign:"left", padding:"6px 8px" }}>{showAll ? "Date" : "Year-End"}</th>
+                    <th style={{ textAlign:"left", padding:"6px 8px" }}>Year-End</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Interest</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Principal</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Balance</th>
@@ -3461,10 +3486,10 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
               </table>
             </div>
           )}
-          {rows.length > yearly.length && (
+          {yearly.length > AMORT_PREVIEW && (
             <button onClick={() => setShowAll(s => !s)}
               style={{ marginTop:8, background:"transparent", border:"none", color:"#6dba43", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
-              {showAll ? "▾ Show year-end only" : `▸ Show all ${rows.length} payments`}
+              {showAll ? "▾ Show fewer" : `▸ Show all ${yearly.length} years`}
             </button>
           )}
           <div style={{ marginTop:10, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>
