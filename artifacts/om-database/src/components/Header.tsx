@@ -42,8 +42,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   useEffect(() => {
     if (!isAdmin) return;
     // Automatic backup: take a periodic snapshot whenever an admin opens the app.
-    // The server throttles "auto" snapshots to once every 12h and prunes old ones,
-    // so this is a safe set-and-forget backup that needs no scheduling.
+    // The server throttles "auto" snapshots to once a day and keeps the 30 most
+    // recent, so this is a safe set-and-forget backup that needs no scheduling.
     apiCreateSnapshot("auto").catch(() => { /* best-effort */ });
     apiUploadLog().then(list => {
       let lastView = 0;

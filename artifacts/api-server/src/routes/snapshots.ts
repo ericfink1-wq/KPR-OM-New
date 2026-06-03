@@ -19,7 +19,8 @@ async function createSnapshot(
       .limit(1);
     if (lastAuto.length > 0) {
       const ageMs = Date.now() - lastAuto[0].createdAt.getTime();
-      if (ageMs < 12 * 60 * 60 * 1000) return { skipped: true };
+      // Once a day: skip if the last auto snapshot is under 24h old.
+      if (ageMs < 24 * 60 * 60 * 1000) return { skipped: true };
     }
   }
 
