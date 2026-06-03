@@ -4,7 +4,7 @@ import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, api
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
-import { extractSwap } from "../lib/swapExtract";
+import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
@@ -1063,6 +1063,7 @@ const SCOPE_OPTS: Array<{ value: LessonScope; label: string }> = [
   { value: "sales", label: "Sales reports" },
   { value: "flyer", label: "Leasing flyers" },
   { value: "swap", label: "Swap confirmations" },
+  { value: "loan", label: "Loan documents" },
 ];
 function TeachExtractorModal({ onClose }: { onClose: () => void }) {
   const [lessons, setLessons] = useState<ExtractionLesson[]>([]);
@@ -3252,16 +3253,9 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
     try {
       const { text } = await extractAnyFile(file);
       const parsed = await extractSwap(text);
-      const patch: Partial<Deal> = { interestRateSwap: parsed };
-      // The swap defines the loan's all-in hedged rate — set it (stays editable in
-      // the Debt fields above if a value needs correcting).
-      if (parsed.fixedRatePct != null) { patch.debtRate = parsed.fixedRatePct; patch.debtRateType = "Fixed (swapped)"; }
-      if (deal.debtLoanAmount == null && parsed.notional != null) patch.debtLoanAmount = parsed.notional;
-      if (!deal.debtIndex && parsed.floatingIndex) patch.debtIndex = parsed.floatingIndex;
-      if (deal.debtSpread == null && parsed.floatingSpreadBps != null) patch.debtSpread = Math.round(parsed.floatingSpreadBps) / 100;
-      if (!deal.debtLender && parsed.counterparty) patch.debtLender = parsed.counterparty;
-      if (!deal.debtType) patch.debtType = "Senior";   // default: senior / acquisition loan
-      onUpdate(deal.id, patch);
+      // Sets the loan's all-in rate to the swap fixed rate (editable in the Debt
+      // fields above), defaults the loan to Senior, and gap-fills the rest.
+      onUpdate(deal.id, buildSwapPatch(deal, parsed));
     } catch (e) {
       setSwapErr(e instanceof Error ? e.message : "Couldn't read the swap confirmation.");
     } finally {

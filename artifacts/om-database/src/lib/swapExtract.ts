@@ -1,6 +1,24 @@
-import type { InterestRateSwap } from "./idb";
+import type { Deal, InterestRateSwap } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON } from "./utils";
+
+// Build the deal patch from an imported swap: store the terms, set the loan's
+// all-in rate to the swap's fixed rate (the confirmation's floating leg already
+// carries the credit spread, so the fixed IS the all-in), default the loan to
+// Senior, and gap-fill notional/index/spread/lender/maturity. Shared by the
+// per-deal "Import swap confirmation" button and the bulk uploader.
+export function buildSwapPatch(deal: Deal, swap: InterestRateSwap): Partial<Deal> {
+  const patch: Partial<Deal> = { interestRateSwap: swap };
+  const blank = (v: unknown) => v == null || v === "";
+  if (swap.fixedRatePct != null) { patch.debtRate = swap.fixedRatePct; patch.debtRateType = "Fixed (swapped)"; }
+  if (blank(deal.debtLoanAmount) && swap.notional != null) patch.debtLoanAmount = swap.notional;
+  if (blank(deal.debtIndex) && swap.floatingIndex) patch.debtIndex = swap.floatingIndex;
+  if (blank(deal.debtSpread) && swap.floatingSpreadBps != null) patch.debtSpread = Math.round(swap.floatingSpreadBps) / 100;
+  if (blank(deal.debtLender) && swap.counterparty) patch.debtLender = swap.counterparty;
+  if (blank(deal.debtMaturityDate) && swap.terminationDate) patch.debtMaturityDate = swap.terminationDate;
+  if (blank(deal.debtType)) patch.debtType = "Senior";
+  return patch;
+}
 
 // Extract the economic terms of an interest-rate swap confirmation (e.g. an ISDA
 // dealer confirmation). Feeds the swap-breakage estimate in the prepay calculator.

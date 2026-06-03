@@ -8,6 +8,9 @@ import { classifyDocument, matchDeal, hasPossibleMatch, type DocType } from "../
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 import { extractFlyer, buildFlyerPatch, type FlyerResult } from "../lib/flyerExtract";
+import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
+import { extractLoan, buildLoanPatch, type LoanResult } from "../lib/loanExtract";
+import type { InterestRateSwap } from "../lib/idb";
 
 interface QueueItem {
   id: string;
@@ -577,6 +580,82 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   };
 
+  // Apply an interest-rate swap confirmation to a matched deal (ENRICH-ONLY:
+  // stores swap terms + sets the loan's all-in rate; never touches the roster).
+  const applySwapToDeal = async (itemId: string, deal: Deal, swap: InterestRateSwap): Promise<Deal> => {
+    const updated = { ...deal, ...buildSwapPatch(deal, swap), lastUploadAt: new Date().toISOString() } as Deal;
+    await apiSaveDeal(updated);
+    onDealUpdated?.(updated);
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: "swap",
+      matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      msg: `Swap → ${deal.propertyName || deal.fileName || "matched deal"} · fixed ${swap.fixedRatePct ?? "—"}%${swap.notional ? ` on $${swap.notional.toLocaleString()}` : ""}`,
+    });
+    return updated;
+  };
+
+  const routeSwap = async (
+    itemId: string, dealId: string, text: string, fileName: string,
+    propertyName: string | null, address: string | null,
+  ) => {
+    updateItem(itemId, { msg: "Reading swap confirmation…", progress: 55, routedType: "swap" });
+    const swap = await extractSwap(text);
+    const hint = { propertyName, address, fileName };
+    const candidates = [...existingDeals, ...createdDealsRef.current];
+    const m = matchDeal(hint, candidates);
+    if (m.deal && m.confidence !== "none") {
+      const upd = await applySwapToDeal(itemId, m.deal, swap);
+      await refreshAnalysisFor(itemId, upd);
+    } else if (hasPossibleMatch(hint, candidates)) {
+      updateItem(itemId, {
+        status: "awaiting_match", routedType: "swap", matchHint: hint,
+        pendingExtracted: swap as unknown as Record<string, unknown>, tempDealId: dealId,
+        msg: `Swap confirmation — could match an existing property. Match it or create a new one.`, progress: 100,
+      });
+    } else {
+      await autoCreateOrAttach(itemId, "swap", swap as unknown as Record<string, unknown>, hint, dealId);
+    }
+  };
+
+  // Apply a loan document to a matched deal (ENRICH-ONLY: fills blank debt/acq
+  // fields + structured prepay terms; never touches the roster or financials).
+  const applyLoanToDeal = async (itemId: string, deal: Deal, result: LoanResult): Promise<Deal> => {
+    const patch = buildLoanPatch(deal, result);
+    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
+    await apiSaveDeal(updated);
+    onDealUpdated?.(updated);
+    const n = Object.keys(patch).filter(k => k !== "lastUploadAt").length;
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: "loan",
+      matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      msg: `Loan doc → ${deal.propertyName || deal.fileName || "matched deal"} · filled ${n} debt field${n === 1 ? "" : "s"}`,
+    });
+    return updated;
+  };
+
+  const routeLoan = async (
+    itemId: string, dealId: string, text: string, fileName: string,
+    propertyName: string | null, address: string | null,
+  ) => {
+    updateItem(itemId, { msg: "Reading loan document…", progress: 55, routedType: "loan" });
+    const result = await extractLoan(text);
+    const hint = { propertyName, address, fileName };
+    const candidates = [...existingDeals, ...createdDealsRef.current];
+    const m = matchDeal(hint, candidates);
+    if (m.deal && m.confidence !== "none") {
+      const upd = await applyLoanToDeal(itemId, m.deal, result);
+      await refreshAnalysisFor(itemId, upd);
+    } else if (hasPossibleMatch(hint, candidates)) {
+      updateItem(itemId, {
+        status: "awaiting_match", routedType: "loan", matchHint: hint,
+        pendingExtracted: result as unknown as Record<string, unknown>, tempDealId: dealId,
+        msg: `Loan document — could match an existing property. Match it or create a new one.`, progress: 100,
+      });
+    } else {
+      await autoCreateOrAttach(itemId, "loan", result as unknown as Record<string, unknown>, hint, dealId);
+    }
+  };
+
   // When an OM finishes creating/refreshing a deal, remember it and auto-attach
   // any rent roll / sales from the same drop that were waiting for their property.
   const registerCreatedDeal = async (deal: Deal) => {
@@ -601,6 +680,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           lastApplied = it.id;
         } else if (it.routedType === "flyer") {
           working = await applyFlyerToDeal(it.id, working, it.pendingExtracted as unknown as FlyerResult, it.pendingImages ?? null);
+          lastApplied = it.id;
+        } else if (it.routedType === "swap") {
+          working = await applySwapToDeal(it.id, working, it.pendingExtracted as unknown as InterestRateSwap);
+          lastApplied = it.id;
+        } else if (it.routedType === "loan") {
+          working = await applyLoanToDeal(it.id, working, it.pendingExtracted as unknown as LoanResult);
           lastApplied = it.id;
         }
       } catch (err) {
@@ -648,6 +733,22 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Flyer enrichment failed", error: err instanceof Error ? err.message : "failed" });
       }
+    } else if (item.routedType === "swap" && item.pendingExtracted) {
+      updateItem(itemId, { status: "extracting", msg: "Applying swap…", progress: 60 });
+      try {
+        const upd = await applySwapToDeal(itemId, deal, item.pendingExtracted as unknown as InterestRateSwap);
+        await refreshAnalysisFor(itemId, upd);
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Swap import failed", error: err instanceof Error ? err.message : "failed" });
+      }
+    } else if (item.routedType === "loan" && item.pendingExtracted) {
+      updateItem(itemId, { status: "extracting", msg: "Applying loan terms…", progress: 60 });
+      try {
+        const upd = await applyLoanToDeal(itemId, deal, item.pendingExtracted as unknown as LoanResult);
+        await refreshAnalysisFor(itemId, upd);
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Loan import failed", error: err instanceof Error ? err.message : "failed" });
+      }
     }
   };
 
@@ -693,6 +794,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         await apiSaveDeal(base);
         onDealsAdded([base]);
         if (routedType === "sales") await applySalesToDeal(itemId, base, pendingExtracted as unknown as SalesExtractResult);
+        else if (routedType === "swap") await applySwapToDeal(itemId, base, pendingExtracted as unknown as InterestRateSwap);
+        else if (routedType === "loan") await applyLoanToDeal(itemId, base, pendingExtracted as unknown as LoanResult);
         else await applyOptionsToDeal(itemId, base, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
         await registerCreatedDeal(base);
       }
@@ -721,6 +824,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const u = await applyOptionsToDeal(itemId, deal, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> }); await refreshAnalysisFor(itemId, u);
     } else if (routedType === "flyer") {
       const u = await applyFlyerToDeal(itemId, deal, pendingExtracted as unknown as FlyerResult, imgs ?? null); await refreshAnalysisFor(itemId, u);
+    } else if (routedType === "swap") {
+      const u = await applySwapToDeal(itemId, deal, pendingExtracted as unknown as InterestRateSwap); await refreshAnalysisFor(itemId, u);
+    } else if (routedType === "loan") {
+      const u = await applyLoanToDeal(itemId, deal, pendingExtracted as unknown as LoanResult); await refreshAnalysisFor(itemId, u);
     }
   };
 
@@ -808,6 +915,14 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       }
       if (cls.type === "flyer") {
         await routeFlyer(itemId, dealId, text, fileName, cls.propertyName, cls.address, imgPromise);
+        return;
+      }
+      if (cls.type === "swap") {
+        await routeSwap(itemId, dealId, text, fileName, cls.propertyName, cls.address);
+        return;
+      }
+      if (cls.type === "loan") {
+        await routeLoan(itemId, dealId, text, fileName, cls.propertyName, cls.address);
         return;
       }
       // Otherwise treat as an OM / deal package (the original flow, unchanged).
