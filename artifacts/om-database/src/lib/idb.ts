@@ -183,6 +183,24 @@ export interface OccBreakdown {
   reimbEstimated?: boolean; // true when recoveries were estimated, not OM-disclosed
 }
 
+// Interest-rate swap hedging a (usually floating-rate) loan, captured from a
+// dealer swap confirmation (e.g. an ISDA confirmation). Drives the swap-breakage
+// (early-termination mark-to-market) estimate in the prepay calculator.
+export interface InterestRateSwap {
+  counterparty?: string | null;      // dealer bank, e.g. "BankUnited, N.A."
+  notional?: number | null;          // notional amount ($)
+  fixedRatePct?: number | null;      // the contracted fixed rate, e.g. 5.10
+  payFixed?: boolean | null;         // true = client pays fixed / receives floating (the usual hedge)
+  floatingIndex?: string | null;     // e.g. "USD-SOFR CME Term 1M"
+  floatingSpreadBps?: number | null; // spread over the floating index, in bps
+  tradeDate?: string | null;         // ISO
+  effectiveDate?: string | null;     // ISO
+  terminationDate?: string | null;   // ISO — swap maturity
+  dayCount?: string | null;          // e.g. "30/360"
+  confirmationRef?: string | null;   // dealer confirmation number
+  notes?: string | null;
+}
+
 // Structured prepayment terms for the prepay calculator.
 export interface PrepayTerms {
   type: "stepdown" | "yield_maintenance" | "defeasance" | "lockout_open" | "none" | "other";
@@ -459,6 +477,9 @@ export interface Deal {
   // Structured prepayment terms — drives the prepay calculator. Extracted from a
   // loan doc / term sheet, or entered by hand.
   prepayTerms?: PrepayTerms | null;
+  // Interest-rate swap hedging this loan (captured from a dealer swap confirmation).
+  // Drives the swap-breakage estimate in the prepay calculator.
+  interestRateSwap?: InterestRateSwap | null;
   // Preferred equity (second tranche, acts like a second loan)
   prefLender?: string | null;
   prefAmount?: number | null;

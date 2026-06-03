@@ -84,6 +84,7 @@ const USER_PRESERVED_KEYS = new Set([
   "acqDeposit", "acqClosingCosts", "acqFee", "acqTitleCo", "acqCounsel", "acqPropManager",
   "acqStrategy", "acqHoldPeriod", "acqTargetIRR", "acqNotes",
   "debtLender", "debtType", "debtLoanAmount", "debtRate", "debtMaturityDate", "debtNotes",
+  "prepayTerms", "interestRateSwap",
   "marketSale", "marketSaleChecked",
   "marketDemographics", "demoChecked",
   "verified", "propertyGroupId", "editHistory",

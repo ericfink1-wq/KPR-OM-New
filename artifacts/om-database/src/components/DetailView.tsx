@@ -3,7 +3,8 @@ import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales } from "../lib/utils";
-import { calcPrepay, prepayInputsFromDeal } from "../lib/prepay";
+import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
+import { extractSwap } from "../lib/swapExtract";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
@@ -1061,6 +1062,7 @@ const SCOPE_OPTS: Array<{ value: LessonScope; label: string }> = [
   { value: "lease-options", label: "Lease options" },
   { value: "sales", label: "Sales reports" },
   { value: "flyer", label: "Leasing flyers" },
+  { value: "swap", label: "Swap confirmations" },
 ];
 function TeachExtractorModal({ onClose }: { onClose: () => void }) {
   const [lessons, setLessons] = useState<ExtractionLesson[]>([]);
@@ -3216,8 +3218,66 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   const setType = (type: NonNullable<Deal["prepayTerms"]>["type"]) =>
     onUpdate(deal.id, { prepayTerms: { ...(terms || {}), type } });
 
+  // ── Interest-rate swap breakage ────────────────────────────────────────────
+  const swap = deal.interestRateSwap || null;
+  const [swapRate, setSwapRate] = useState<number | null>(null);
+  const [swapRateTouched, setSwapRateTouched] = useState(false);
+  const swapFileRef = useRef<HTMLInputElement>(null);
+  const [swapBusy, setSwapBusy] = useState(false);
+  const [swapErr, setSwapErr] = useState<string | null>(null);
+
+  // Seed the market swap rate with a matching-tenor Treasury proxy from Today's
+  // Rates (until the user types their bank's actual swap quote).
+  useEffect(() => {
+    if (!swap?.terminationDate || swapRateTouched) return;
+    let alive = true;
+    apiGetRates().then(r => {
+      if (!alive) return;
+      const term = new Date(swap.terminationDate!);
+      const yrsLeft = Math.max(0, (term.getTime() - new Date(payoff).getTime()) / (365.25 * 864e5));
+      const tenors: Array<[string, number]> = [["1-Yr",1],["2-Yr",2],["3-Yr",3],["5-Yr",5],["7-Yr",7],["10-Yr",10],["30-Yr",30]];
+      const best = tenors.reduce((a, b) => Math.abs(b[1]-yrsLeft) < Math.abs(a[1]-yrsLeft) ? b : a);
+      const row = r.treasuries.rows.find(x => x.label === best[0]);
+      // Compare apples-to-apples with the all-in swap fixed rate: a new swap on the
+      // same floating leg (SOFR + credit spread) would price at the current swap
+      // rate PLUS that spread, so add it to the Treasury proxy.
+      const spread = (swap.floatingSpreadBps ?? 0) / 100;
+      if (row?.value != null) setSwapRate(Math.round((row.value + spread) * 100) / 100);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [swap?.terminationDate, swap?.floatingSpreadBps, payoff, swapRateTouched]);
+
+  const importSwap = async (file: File) => {
+    setSwapBusy(true); setSwapErr(null);
+    try {
+      const { text } = await extractAnyFile(file);
+      const parsed = await extractSwap(text);
+      const patch: Partial<Deal> = { interestRateSwap: parsed };
+      // The swap defines the loan's all-in hedged rate — set it (stays editable in
+      // the Debt fields above if a value needs correcting).
+      if (parsed.fixedRatePct != null) { patch.debtRate = parsed.fixedRatePct; patch.debtRateType = "Fixed (swapped)"; }
+      if (deal.debtLoanAmount == null && parsed.notional != null) patch.debtLoanAmount = parsed.notional;
+      if (!deal.debtIndex && parsed.floatingIndex) patch.debtIndex = parsed.floatingIndex;
+      if (deal.debtSpread == null && parsed.floatingSpreadBps != null) patch.debtSpread = Math.round(parsed.floatingSpreadBps) / 100;
+      if (!deal.debtLender && parsed.counterparty) patch.debtLender = parsed.counterparty;
+      if (!deal.debtType) patch.debtType = "Senior";   // default: senior / acquisition loan
+      onUpdate(deal.id, patch);
+    } catch (e) {
+      setSwapErr(e instanceof Error ? e.message : "Couldn't read the swap confirmation.");
+    } finally {
+      setSwapBusy(false);
+      if (swapFileRef.current) swapFileRef.current.value = "";
+    }
+  };
+  const breakage = calcSwapBreakage(swap, { valuationDate: payoff, marketSwapRatePct: swapRate });
+  // Net cost to exit the loan = prepay penalty (a cost) minus any swap breakage
+  // credit (a positive breakage value is cash TO the borrower).
+  const exitCost = (result.penalty ?? 0) - (breakage.value ?? 0);
+  const showExit = swap != null && breakage.value != null && (result.penalty != null);
+
   const fmt$ = (v: number | null) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
   const basisColor = result.basis === "exact" ? "#0f9d63" : result.basis === "estimate" ? "#b08a3e" : result.basis === "locked" ? "#dc2626" : "#7d766a";
+  const swapColor = breakage.direction === "credit" ? "#0f9d63" : breakage.direction === "cost" ? "#c0392b" : "#7d766a";
 
   return (
     <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
@@ -3266,6 +3326,68 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
         </div>
       )}
       <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>Step-down is exact; yield-maintenance & defeasance are indicative estimates (servicer conventions vary — confirm before payoff).</div>
+
+      {/* ── Interest-rate swap breakage ──────────────────────────────────────── */}
+      <div style={{ marginTop:18, paddingTop:14, borderTop:"1px dashed #ece4d4" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:8 }}>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Interest-Rate Swap Breakage</div>
+          <div>
+            <input ref={swapFileRef} type="file" accept=".pdf" style={{ display:"none" }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) importSwap(f); }} />
+            <button onClick={() => swapFileRef.current?.click()} disabled={swapBusy}
+              style={{ background: swapBusy ? "#e9e3d6" : "#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor: swapBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
+              {swapBusy ? "Reading…" : swap ? "Replace swap confirmation" : "Import swap confirmation"}
+            </button>
+          </div>
+        </div>
+        {swapErr && <div style={{ fontSize:11, color:"#c0392b", marginBottom:6 }}>{swapErr}</div>}
+
+        {!swap ? (
+          <div style={{ fontSize:11.5, color:"#9a917f", lineHeight:1.5 }}>Drop the dealer swap confirmation to capture the terms and estimate what it would cost (or pay) to break the swap on an early payoff.</div>
+        ) : (
+          <>
+            {/* Swap terms summary */}
+            <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:11.5, color:"#6f6a5f", marginBottom:10 }}>
+              <span>Notional <b style={{ color:"#383a37" }}>{fmt$(swap.notional ?? null)}</b></span>
+              <span>Fixed <b style={{ color:"#383a37" }}>{swap.fixedRatePct != null ? `${swap.fixedRatePct}%` : "—"}</b></span>
+              {swap.floatingIndex && <span>Float <b style={{ color:"#383a37" }}>{swap.floatingIndex}{swap.floatingSpreadBps != null ? ` + ${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""}</b></span>}
+              <span>Matures <b style={{ color:"#383a37" }}>{swap.terminationDate || "—"}</b></span>
+              {swap.counterparty && <span>Dealer <b style={{ color:"#383a37" }}>{swap.counterparty}</b></span>}
+            </div>
+
+            <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:10 }}>
+              <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+                Current market swap rate (%)
+                <input type="number" step="0.01" value={swapRate ?? ""} onChange={e => { setSwapRateTouched(true); setSwapRate(e.target.value === "" ? null : Number(e.target.value)); }}
+                  style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
+              </label>
+              <div style={{ fontSize:10, color:"#bcae97", maxWidth:300, lineHeight:1.5 }}>
+                All-in rate (current swap rate + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from Today's Rates as a proxy — replace with your bank's actual quote for the remaining term for a tighter estimate.
+              </div>
+            </div>
+
+            <div style={{ background:"#faf7f0", border:`1px solid ${swapColor}33`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+                <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{breakage.label}</span>
+                <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:swapColor }}>
+                  {breakage.value == null ? "—" : `${breakage.value > 0 ? "+" : breakage.value < 0 ? "−" : ""}${fmt$(Math.abs(breakage.value))}`}
+                </span>
+              </div>
+              {breakage.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{breakage.detail}</div>}
+              {breakage.direction === "credit" && <div style={{ fontSize:11, color:"#0f9d63", marginTop:4 }}>Rates rose above your locked fixed rate — breaking the swap would pay you.</div>}
+              {breakage.direction === "cost" && <div style={{ fontSize:11, color:"#c0392b", marginTop:4 }}>Rates fell below your locked fixed rate — breaking the swap would cost you.</div>}
+              {breakage.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
+            </div>
+
+            {showExit && (
+              <div style={{ marginTop:8, fontSize:12, color:"#5c5047" }}>
+                Estimated total cost to exit (prepay penalty {fmt$(result.penalty)} {exitCost >= (result.penalty ?? 0) ? "+" : "−"} swap {breakage.direction === "credit" ? "credit" : "cost"} {fmt$(Math.abs(breakage.value ?? 0))}):
+                {" "}<b style={{ color: exitCost > 0 ? "#c0392b" : "#0f9d63", fontFamily:"'Fraunces',serif", fontSize:15 }}>{exitCost > 0 ? "" : "net credit "}{fmt$(Math.abs(exitCost))}</b>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

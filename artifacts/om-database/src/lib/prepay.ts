@@ -1,4 +1,4 @@
-import type { PrepayTerms, Deal } from "./idb";
+import type { PrepayTerms, Deal, InterestRateSwap } from "./idb";
 
 export interface PrepayResult {
   penalty: number | null;        // estimated $ penalty (0 = par, no penalty)
@@ -109,6 +109,75 @@ export function calcPrepay(
   }
 
   return { penalty: null, pct: null, basis: "unknown", label: terms.notes ? "See prepay language" : "Prepay terms unclear", detail: terms.notes || "Add structured prepay terms to calculate.", warnings };
+}
+
+export interface SwapBreakageResult {
+  value: number | null;          // signed $ to the CLIENT: positive = client RECEIVES (gain on unwind), negative = client PAYS (breakage cost)
+  direction: "cost" | "credit" | "zero" | null;
+  marketRatePct: number | null;  // the current market swap rate used
+  remainingYears: number | null;
+  basis: "estimate" | "unknown";
+  label: string;
+  detail: string;
+  warnings: string[];
+}
+
+/**
+ * Estimate the early-termination value (breakage) of an interest-rate swap as of
+ * a payoff/valuation date. A swap's unwind value is its mark-to-market: the PV of
+ * the difference between the contracted fixed rate and the CURRENT market swap
+ * rate for the remaining term, on the notional.
+ *
+ *   MTM to the fixed-rate payer ≈ Notional × (marketRate − fixedRate) × Annuity(T)
+ *
+ * For a pay-fixed hedge: if market rates have RISEN above the locked fixed rate,
+ * the swap is in-the-money and the client RECEIVES cash on unwind (a credit); if
+ * rates have FALLEN, the client PAYS the breakage cost. Indicative only — the
+ * exact figure is the dealer's mark using their discount curve and day-count.
+ */
+export function calcSwapBreakage(
+  swap: InterestRateSwap | null | undefined,
+  opts: { valuationDate: string | null; marketSwapRatePct: number | null },
+): SwapBreakageResult {
+  const warnings: string[] = [];
+  const none = (label: string, detail: string): SwapBreakageResult =>
+    ({ value: null, direction: null, marketRatePct: opts.marketSwapRatePct, remainingYears: null, basis: "unknown", label, detail, warnings });
+
+  if (!swap || swap.notional == null || swap.fixedRatePct == null || !swap.terminationDate) {
+    return none("Swap terms incomplete", "Need notional, fixed rate, and termination date to estimate breakage.");
+  }
+  const val = opts.valuationDate ? new Date(opts.valuationDate) : null;
+  const term = new Date(swap.terminationDate);
+  if (!val || isNaN(val.getTime()) || isNaN(term.getTime())) return none("Enter a payoff date", "Set the payoff/valuation date.");
+
+  const T = Math.max(0, yearsBetween(val, term));
+  if (T <= 0) {
+    return { value: 0, direction: "zero", marketRatePct: opts.marketSwapRatePct, remainingYears: 0, basis: "estimate",
+      label: "Swap already matured", detail: "Payoff is on/after the swap termination date — no breakage.", warnings };
+  }
+  const S = opts.marketSwapRatePct;
+  if (S == null) {
+    warnings.push("Enter the current market swap rate for the remaining term (your bank can quote it) to estimate breakage.");
+    return { value: null, direction: null, marketRatePct: null, remainingYears: T, basis: "unknown",
+      label: "Needs current swap rate", detail: `~${T.toFixed(1)}y left; locked fixed ${swap.fixedRatePct}%.`, warnings };
+  }
+
+  const K = swap.fixedRatePct;
+  const s = Math.max(0.0001, S / 100);
+  const annuity = (1 - Math.pow(1 + s, -T)) / s;        // PV of $1/yr for T years at the market rate
+  const payFixed = swap.payFixed !== false;             // default to the usual pay-fixed hedge
+  let mtm = swap.notional * ((S - K) / 100) * annuity;  // MTM to the fixed-rate payer
+  if (!payFixed) mtm = -mtm;
+  const value = Math.round(mtm);
+  const direction: SwapBreakageResult["direction"] = value > 0 ? "credit" : value < 0 ? "cost" : "zero";
+
+  warnings.push("Estimate only — the exact breakage is your swap dealer's mark-to-market (their discount curve & day-count). Confirm with the bank before payoff.");
+  return {
+    value, direction, marketRatePct: S, remainingYears: T, basis: "estimate",
+    label: direction === "credit" ? "Swap breakage — credit to you" : direction === "cost" ? "Swap breakage — cost to you" : "Swap at par",
+    detail: `${payFixed ? "Pay-fixed" : "Receive-fixed"} ${K}% vs current market ${S.toFixed(2)}% over ~${T.toFixed(1)}y on $${swap.notional.toLocaleString()} notional.`,
+    warnings,
+  };
 }
 
 // Build calculator inputs from a deal's debt fields.
