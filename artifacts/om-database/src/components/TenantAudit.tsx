@@ -3,7 +3,7 @@ import type { Deal } from "../lib/idb";
 import { saveTenantDecision, removeTenantDecision } from "../lib/idb";
 import {
   tenantKey, addUserMerge, removeUserMerge, getUserMerges, _normTenant, isVacant,
-  fetchServerDecisions, saveServerDecision, deleteServerDecision, applyServerMerges,
+  fetchServerDecisions, saveServerDecision, deleteServerDecision, applyServerMerges, applyServerParentLinks,
 } from "../lib/utils";
 
 interface Props {
@@ -49,6 +49,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
   useEffect(() => {
     fetchServerDecisions().then(decisions => {
       applyServerMerges(decisions); // hydrate confirmed merges into the alias map
+      applyServerParentLinks(decisions); // hydrate parent-company links too
       const serverDismissed = decisions.filter(d => d.type === "dismiss").map(d => d.id);
       const lsItems = loadDismissed();
       const all = Array.from(new Set([...serverDismissed, ...lsItems]));

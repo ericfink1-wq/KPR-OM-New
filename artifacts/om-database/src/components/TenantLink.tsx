@@ -3,7 +3,8 @@ import type { Deal } from "../lib/idb";
 import {
   tenantKey, tenantLabel, isVacant, isNAPTenant,
   addUserMerge, removeUserMerge, getUserMerges, type UserMerge,
-  fetchServerDecisions, applyServerMerges,
+  addUserParentLink, removeUserParentLink, getUserParentLinks, type ParentLink,
+  fetchServerDecisions, applyServerMerges, applyServerParentLinks,
 } from "../lib/utils";
 
 interface Props {
@@ -22,12 +23,16 @@ export default function TenantLink({ deals }: Props) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [canonKey, setCanonKey] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
+  // "merge" = same brand spelled differently (collapse). "parent" = different
+  // brands under one owner (keep separate, just roll up).
+  const [linkMode, setLinkMode] = useState<"merge" | "parent">("merge");
+  const [parentName, setParentName] = useState("");
 
   // Hydrate confirmed links from the DB (source of truth) so existing groups and
   // their effect on the list show immediately, on any browser.
   useEffect(() => {
     let alive = true;
-    fetchServerDecisions().then(decs => { if (!alive) return; applyServerMerges(decs); setVersion(v => v + 1); });
+    fetchServerDecisions().then(decs => { if (!alive) return; applyServerMerges(decs); applyServerParentLinks(decs); setVersion(v => v + 1); });
     return () => { alive = false; };
   }, []);
 
@@ -96,14 +101,44 @@ export default function TenantLink({ deals }: Props) {
   const unlink = (id: string) => { removeUserMerge(id); setVersion(v => v + 1); };
   const userMerges: UserMerge[] = getUserMerges();
 
+  // Parent-company links: tick the brands, type the owner, link. Brands stay
+  // distinct (unlike a merge) — this only sets their parent company.
+  const doLinkParent = () => {
+    const p = parentName.trim();
+    if (selectedRows.length < 1 || !p) return;
+    const brands = selectedRows.map(r => r.displayName);
+    const existing = getUserParentLinks().find(l => l.parent.trim().toLowerCase() === p.toLowerCase());
+    if (existing) {
+      const merged = Array.from(new Set([...existing.brands, ...brands]));
+      addUserParentLink({ id: existing.id, parent: existing.parent, brands: merged });
+    } else {
+      addUserParentLink({ id: `parent-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, parent: p, brands });
+    }
+    setSel(new Set()); setParentName(""); setVersion(v => v + 1);
+  };
+  const unlinkParent = (id: string) => { removeUserParentLink(id); setVersion(v => v + 1); };
+  const parentLinks: ParentLink[] = getUserParentLinks();
+
   const fmtRent = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : n > 0 ? `$${Math.round(n).toLocaleString()}` : "—";
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "18px 18px 40px", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
       <div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em", marginBottom: 4 }}>Link Tenants</div>
-      <div style={{ fontSize: 12.5, color: "#7d766a", lineHeight: 1.5, marginBottom: 16 }}>
-        Combine the same brand spelled different ways (e.g. <i>Walmart</i> and <i>Wal-Mart</i>) so they group as one across analytics.
-        Search to filter, tick the rows that are the same tenant, choose the name to keep, then Link.
+      <div style={{ fontSize: 12.5, color: "#7d766a", lineHeight: 1.5, marginBottom: 12 }}>
+        {linkMode === "merge"
+          ? <>Combine the <b>same brand</b> spelled different ways (e.g. <i>Walmart</i> and <i>Wal-Mart</i>) so they group as one across analytics. Tick the rows that are the same tenant, choose the name to keep, then Link.</>
+          : <>Group <b>different brands</b> under their <b>parent company</b> (e.g. <i>TJ Maxx</i>, <i>Marshalls</i>, <i>HomeGoods</i> → <i>TJX</i>). The brands stay separate everywhere — this only lets you roll them up by owner. Tick the brands, type the parent, then Link.</>}
+      </div>
+
+      {/* Mode toggle: same-brand merge vs parent-company link */}
+      <div style={{ display: "flex", background: "#ede8df", borderRadius: 8, padding: 3, gap: 2, marginBottom: 14, width: "fit-content" }}>
+        {([["merge", "Same brand"], ["parent", "Parent company"]] as const).map(([m, label]) => (
+          <button key={m} onClick={() => { setLinkMode(m); setSel(new Set()); setCanonKey(null); setParentName(""); }}
+            style={{ padding: "6px 16px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
+              background: linkMode === m ? "#383a37" : "transparent", color: linkMode === m ? "#fff" : "#7d766a", whiteSpace: "nowrap" }}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Live search */}
@@ -120,27 +155,50 @@ export default function TenantLink({ deals }: Props) {
 
       {/* Selection / link bar */}
       <div style={{ background: "#f4f8ef", border: "1px solid #d6e7c4", borderRadius: 10, padding: "11px 13px", marginBottom: 12 }}>
-        {selectedRows.length < 2 ? (
-          <div style={{ fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
-            Tick <b>two or more</b> rows that are the same tenant.
-            {selectedRows.length === 1 && <span style={{ color: "#3f7a1f" }}> 1 selected — pick at least one more.</span>}
-          </div>
+        {linkMode === "merge" ? (
+          selectedRows.length < 2 ? (
+            <div style={{ fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
+              Tick <b>two or more</b> rows that are the same tenant.
+              {selectedRows.length === 1 && <span style={{ color: "#3f7a1f" }}> 1 selected — pick at least one more.</span>}
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, color: "#5c5047", fontWeight: 600 }}>Link {selectedRows.length} into:</span>
+              <select value={effectiveCanonKey ?? ""} onChange={e => setCanonKey(e.target.value)}
+                style={{ fontSize: 13, padding: "6px 9px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: 260 }}>
+                {selectedRows.map(r => <option key={r.key} value={r.key}>{tenantLabel(r.displayName)}</option>)}
+              </select>
+              <button onClick={doLink}
+                style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                Link tenants
+              </button>
+              <button onClick={() => { setSel(new Set()); setCanonKey(null); }}
+                style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 8px", fontSize: 12.5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                Clear
+              </button>
+            </div>
+          )
         ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12.5, color: "#5c5047", fontWeight: 600 }}>Link {selectedRows.length} into:</span>
-            <select value={effectiveCanonKey ?? ""} onChange={e => setCanonKey(e.target.value)}
-              style={{ fontSize: 13, padding: "6px 9px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: 260 }}>
-              {selectedRows.map(r => <option key={r.key} value={r.key}>{tenantLabel(r.displayName)}</option>)}
-            </select>
-            <button onClick={doLink}
-              style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-              Link tenants
-            </button>
-            <button onClick={() => { setSel(new Set()); setCanonKey(null); }}
-              style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 8px", fontSize: 12.5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-              Clear
-            </button>
-          </div>
+          selectedRows.length < 1 ? (
+            <div style={{ fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
+              Tick <b>one or more</b> brands, then name the parent company they belong to.
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, color: "#5c5047", fontWeight: 600 }}>Put {selectedRows.length} brand{selectedRows.length !== 1 ? "s" : ""} under:</span>
+              <input value={parentName} onChange={e => setParentName(e.target.value)} placeholder="Parent company (e.g. TJX)"
+                onKeyDown={e => { if (e.key === "Enter") doLinkParent(); }}
+                style={{ fontSize: 13, padding: "6px 9px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", width: 200 }} />
+              <button onClick={doLinkParent} disabled={!parentName.trim()}
+                style={{ background: parentName.trim() ? "#3f7a1f" : "#b9c7ab", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: parentName.trim() ? "pointer" : "not-allowed", fontFamily: "'Inter',sans-serif" }}>
+                Link to parent
+              </button>
+              <button onClick={() => { setSel(new Set()); setParentName(""); }}
+                style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 8px", fontSize: 12.5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                Clear
+              </button>
+            </div>
+          )
         )}
       </div>
 
@@ -182,27 +240,55 @@ export default function TenantLink({ deals }: Props) {
         </div>
       </div>
 
-      {/* Existing links */}
-      <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8aa56b", fontWeight: 700, marginBottom: 8 }}>
-        Linked tenants ({userMerges.length})
-      </div>
-      {userMerges.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: "#a89f8f" }}>No manual links yet.</div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {userMerges.map(m => (
-            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "9px 12px" }}>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
-                <b style={{ color: "#26281f" }}>{m.canonical}</b>
-                <span style={{ color: "#a89f8f" }}> ← {m.variants.filter(v => tenantLabel(v) !== m.canonical).map(v => tenantLabel(v)).join(", ") || "(variants)"}</span>
-              </span>
-              <button onClick={() => unlink(m.id)} title="Unlink — split these names back apart"
-                style={{ background: "transparent", border: "1px solid #e7c9bf", color: "#c0392b", cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "5px 11px", flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
-                Unlink
-              </button>
+      {/* Existing links — merges or parent links, matching the current mode */}
+      {linkMode === "merge" ? (
+        <>
+          <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8aa56b", fontWeight: 700, marginBottom: 8 }}>
+            Linked tenants ({userMerges.length})
+          </div>
+          {userMerges.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: "#a89f8f" }}>No manual links yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {userMerges.map(m => (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "9px 12px" }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
+                    <b style={{ color: "#26281f" }}>{m.canonical}</b>
+                    <span style={{ color: "#a89f8f" }}> ← {m.variants.filter(v => tenantLabel(v) !== m.canonical).map(v => tenantLabel(v)).join(", ") || "(variants)"}</span>
+                  </span>
+                  <button onClick={() => unlink(m.id)} title="Unlink — split these names back apart"
+                    style={{ background: "transparent", border: "1px solid #e7c9bf", color: "#c0392b", cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "5px 11px", flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                    Unlink
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8aa56b", fontWeight: 700, marginBottom: 8 }}>
+            Parent-company links ({parentLinks.length})
+          </div>
+          {parentLinks.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: "#a89f8f" }}>No parent-company links yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {parentLinks.map(l => (
+                <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "9px 12px" }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
+                    <b style={{ color: "#26281f" }}>{l.parent}</b>
+                    <span style={{ color: "#a89f8f" }}> ← {l.brands.map(b => tenantLabel(b)).join(", ") || "(brands)"}</span>
+                  </span>
+                  <button onClick={() => unlinkParent(l.id)} title="Unlink — remove this parent-company grouping"
+                    style={{ background: "transparent", border: "1px solid #e7c9bf", color: "#c0392b", cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "5px 11px", flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                    Unlink
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

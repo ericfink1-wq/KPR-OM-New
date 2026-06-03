@@ -20,10 +20,10 @@ function openDb(): Promise<IDBDatabase> {
 
 export interface TenantDecision {
   id: string;
-  type: "merge" | "dismiss";
-  nameA: string;
+  type: "merge" | "dismiss" | "parent";
+  nameA: string;        // for type="parent": the parent-company name
   nameB: string;
-  variants?: string[]; // only for type="merge" — stores all variant names
+  variants?: string[]; // merge: all variant names · parent: the brands under it
 }
 
 export async function getTenantDecisions(): Promise<TenantDecision[]> {

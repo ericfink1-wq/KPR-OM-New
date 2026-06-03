@@ -279,15 +279,24 @@ async function _seedFromIdb() {
       rebuildUserAliases();
       try { localStorage.setItem(_USER_MERGES_KEY, JSON.stringify(_userMerges)); } catch { /**/ }
     }
+    // Same for parent-company links (type "parent").
+    let changedP = false;
+    for (const d of decisions.filter(d => d.type === "parent")) {
+      if (!_userParentLinks.find(l => l.id === d.id)) {
+        _userParentLinks.push({ id: d.id, parent: d.nameA, brands: d.variants ?? [] });
+        changedP = true;
+      }
+    }
+    if (changedP) { rebuildParentLinks(); _persistParentLinks(); }
   } catch { /**/ }
 }
 
-Promise.resolve().then(rebuildUserAliases).then(_seedFromIdb);
+Promise.resolve().then(rebuildUserAliases).then(rebuildParentLinks).then(_seedFromIdb);
 
 // ── Server-persisted tenant decisions (source of truth, DB-backed) ────────────
 export interface TenantDecisionRecord {
   id: string;
-  type: "merge" | "dismiss";
+  type: "merge" | "dismiss" | "parent";
   nameA?: string | null;
   nameB?: string | null;
   canonical?: string | null;
@@ -370,6 +379,80 @@ export function removeUserMerge(id: string): void {
 
 export function getUserMerges(): UserMerge[] {
   return _userMerges;
+}
+
+// ── User-defined parent-company links ─────────────────────────────────────────
+// A parent link groups DIFFERENT brands under a shared owner (e.g. TJ Maxx,
+// Marshalls, HomeGoods → TJX). Unlike a merge it does NOT collapse the brands —
+// they stay distinct in tenantKey/analytics — it only feeds parentCompany(), so
+// you can roll up by owner without losing the individual brands. Persisted to
+// the same tenant-decisions store (type "parent") for cross-device sync.
+const _USER_PARENT_LINKS_KEY = "kpr_user_parent_links";
+
+export interface ParentLink {
+  id: string;
+  parent: string;    // parent-company name (e.g. "TJX")
+  brands: string[];  // brand names that roll up to it
+}
+
+let _userParentLinks: ParentLink[] = (() => {
+  try {
+    const raw = localStorage.getItem(_USER_PARENT_LINKS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+})();
+
+// brand key (tenantKey) -> parent name. Built from _userParentLinks.
+let _parentByBrandKey: Record<string, string> = {};
+
+function rebuildParentLinks() {
+  _parentByBrandKey = {};
+  for (const l of _userParentLinks) {
+    if (!l.parent || !l.parent.trim()) continue;
+    for (const b of l.brands) {
+      const k = tenantKey(b);
+      if (k) _parentByBrandKey[k] = l.parent.trim();
+    }
+  }
+}
+
+function _persistParentLinks() {
+  try { localStorage.setItem(_USER_PARENT_LINKS_KEY, JSON.stringify(_userParentLinks)); } catch { /**/ }
+}
+
+export function getUserParentLinks(): ParentLink[] {
+  return _userParentLinks;
+}
+
+export function addUserParentLink(link: ParentLink): void {
+  _userParentLinks = _userParentLinks.filter(l => l.id !== link.id);
+  _userParentLinks.push(link);
+  rebuildParentLinks();
+  _persistParentLinks();
+  saveTenantDecision({ id: link.id, type: "parent", nameA: link.parent, nameB: "", variants: link.brands }).catch(() => { /**/ });
+  saveServerDecision({ id: link.id, type: "parent", nameA: link.parent, canonical: link.parent, variants: link.brands });
+}
+
+export function removeUserParentLink(id: string): void {
+  _userParentLinks = _userParentLinks.filter(l => l.id !== id);
+  rebuildParentLinks();
+  _persistParentLinks();
+  removeTenantDecision(id).catch(() => { /**/ });
+  deleteServerDecision(id);
+}
+
+// Hydrate parent links from server decisions (called next to applyServerMerges).
+export function applyServerParentLinks(decisions: TenantDecisionRecord[]): void {
+  let changed = false;
+  for (const d of decisions) {
+    if (d.type !== "parent") continue;
+    if (!_userParentLinks.find(l => l.id === d.id)) {
+      _userParentLinks.push({ id: d.id, parent: d.canonical ?? d.nameA ?? "", brands: d.variants ?? [] });
+      changed = true;
+    }
+  }
+  if (changed) { rebuildParentLinks(); _persistParentLinks(); }
 }
 
 // Split a single tenant name back out of whatever group it's in — used by the
@@ -604,6 +687,8 @@ export function parentCompany(name: unknown, storedParent?: string | null): stri
   // aren't split by inconsistent AI-extracted parent strings. Fall back to the
   // stored value only for brands the map doesn't know.
   const key = tenantKey(name);
+  // A user-defined parent link wins over everything — it's an explicit decision.
+  if (_parentByBrandKey[key]) return _parentByBrandKey[key];
   if (PARENT_COMPANIES[key]) return PARENT_COMPANIES[key];
   // An ATM rolls up to the SAME parent as the branch brand (it's tracked as its
   // own tenant, but belongs to e.g. JPMorgan Chase just like a Chase branch).

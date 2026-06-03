@@ -25,8 +25,8 @@ router.post("/tenant-decisions", requireAuth, async (req, res) => {
       id?: string; type?: string; nameA?: string | null; nameB?: string | null;
       canonical?: string | null; variants?: string[] | null;
     };
-    if (!b.id || (b.type !== "merge" && b.type !== "dismiss")) {
-      res.status(400).json({ error: "id and type ('merge'|'dismiss') are required" });
+    if (!b.id || (b.type !== "merge" && b.type !== "dismiss" && b.type !== "parent")) {
+      res.status(400).json({ error: "id and type ('merge'|'dismiss'|'parent') are required" });
       return;
     }
     const values = {
