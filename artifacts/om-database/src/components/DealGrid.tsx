@@ -1153,8 +1153,12 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                     Seller{arrow("seller")}
                   </th>
                   <th onClick={() => toggleSort("uploadedAt")}
-                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "uploadedAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "uploadedAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Uploaded{arrow("uploadedAt")}
+                  </th>
+                  <th onClick={() => toggleSort("updatedAt")}
+                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "updatedAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Last Modified{arrow("updatedAt")}
                   </th>
                 </tr>
               </thead>
@@ -1197,7 +1201,8 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#0f9d63", whiteSpace: "nowrap" }}>{d.capRate != null ? `${d.capRate}%` : "—"}</td>
                       <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.askingPrice)}</td>
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.seller ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{d.seller || "—"}</td>
-                      <td style={{ padding: "8px 14px 8px 10px", fontSize: 11, color: d.uploadedAt ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
+                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.uploadedAt ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
+                      <td style={{ padding: "8px 14px 8px 10px", fontSize: 11, color: d.updatedAt ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.updatedAt ? new Date(d.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
                     </tr>
                   );
                 })}

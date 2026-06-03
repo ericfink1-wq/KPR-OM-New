@@ -2520,7 +2520,7 @@ ${text.slice(0, 60000)}`;
 
 
       {/* Upside items */}
-      {showAcq && (d.upsideItems && d.upsideItems.length > 0) && (() => {
+      {showAcq && Array.isArray(d.upsideItems) && d.upsideItems.length > 0 && (() => {
         const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const sorted = [...d.upsideItems!].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
         return (

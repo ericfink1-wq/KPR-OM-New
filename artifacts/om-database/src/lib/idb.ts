@@ -315,6 +315,7 @@ export interface Deal {
   centerType?: string;
   status?: string;
   uploadedAt?: string;
+  updatedAt?: string | null;   // server-maintained: any save to this deal (last modified)
   refreshedAt?: string | null; // last time an OM re-upload / merge refreshed this deal
   omDate?: string;
   pdfPages?: number;

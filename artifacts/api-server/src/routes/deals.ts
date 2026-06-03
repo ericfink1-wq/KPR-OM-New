@@ -104,7 +104,7 @@ router.get("/deals", requireAuth, async (req, res) => {
       .filter(r => !r.data._processing)
       .map(r => {
         const { _processing: _p, _processingError: _e, ...rest } = r.data;
-        return { ...enrichTenants(rest, aliasMap), id: r.id };
+        return { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt };
       });
     res.json(deals);
   } catch (err) {
