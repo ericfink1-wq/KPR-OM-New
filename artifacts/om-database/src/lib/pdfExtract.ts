@@ -215,6 +215,108 @@ export async function _capturePagePhoto(
   return { cover, thumb };
 }
 
+// Crop a rendered canvas to the bounding box of its non-white content, trimming
+// the surrounding page margins/whitespace. Returns the original if there's
+// nothing meaningful to trim.
+function _autoCropCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
+  try {
+    const ctx = src.getContext("2d")!;
+    const w = src.width, h = src.height;
+    const data = ctx.getImageData(0, 0, w, h).data;
+    let minX = w, minY = h, maxX = 0, maxY = 0, found = false;
+    const step = Math.max(1, Math.floor(Math.min(w, h) / 700)); // subsample for speed
+    for (let y = 0; y < h; y += step) {
+      for (let x = 0; x < w; x += step) {
+        const i = (y * w + x) * 4;
+        if (data[i + 3] > 10 && (data[i] < 244 || data[i + 1] < 244 || data[i + 2] < 244)) {
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+          found = true;
+        }
+      }
+    }
+    if (!found) return src;
+    const pad = Math.round(Math.min(w, h) * 0.012);
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+    maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+    const cw = maxX - minX + 1, ch = maxY - minY + 1;
+    if (cw <= 0 || ch <= 0 || (cw >= w * 0.97 && ch >= h * 0.97)) return src; // nothing to trim
+    const c = document.createElement("canvas");
+    c.width = cw; c.height = ch;
+    c.getContext("2d")!.drawImage(src, minX, minY, cw, ch, 0, 0, cw, ch);
+    return c;
+  } catch { return src; }
+}
+
+// Capture a SITE PLAN from a page: prefer the actual embedded site-plan graphic
+// (a large placed raster — the marketing site plan), cleanly cropped. When the
+// plan is drawn as vectors instead (no big embedded image), fall back to the page
+// render auto-cropped to its content, so we never store a page of whitespace with
+// a tiny plan in the corner.
+export async function _captureSitePlan(pdf: any, pageNum: number, lib: any): Promise<string | null> {
+  const page = await pdf.getPage(pageNum);
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.min(1600 / base.width, 2.2);
+  const viewport = page.getViewport({ scale });
+  const pc = document.createElement("canvas");
+  pc.width = Math.round(viewport.width);
+  pc.height = Math.round(viewport.height);
+  const pctx = pc.getContext("2d")!;
+  pctx.fillStyle = "#ffffff";
+  pctx.fillRect(0, 0, pc.width, pc.height);
+  await page.render({ canvasContext: pctx, viewport }).promise; // also resolves image objects
+
+  // Find the largest embedded raster image on the page.
+  let best: { img: any; w: number; h: number } | null = null;
+  let bestArea = 0;
+  try {
+    const OPS = lib.OPS;
+    const opList = await page.getOperatorList();
+    const names = new Set<string>();
+    for (let i = 0; i < opList.fnArray.length; i++) {
+      const fn = opList.fnArray[i], args = opList.argsArray[i];
+      if ((fn === OPS.paintImageXObject || fn === OPS.paintJpegXObject) && typeof args[0] === "string") names.add(args[0]);
+    }
+    for (const name of names) {
+      let img: any = null;
+      try { img = page.objs.get(name); } catch { img = null; }
+      if (!img) continue;
+      const w = img.width || (img.bitmap && img.bitmap.width) || 0;
+      const h = img.height || (img.bitmap && img.bitmap.height) || 0;
+      if (w * h > bestArea) { bestArea = w * h; best = { img, w, h }; }
+    }
+  } catch {}
+
+  // A large embedded image IS the site-plan graphic — extract it directly.
+  if (best && best.w >= 500 && best.h >= 320) {
+    const ic = document.createElement("canvas");
+    ic.width = best.w; ic.height = best.h;
+    const ictx = ic.getContext("2d")!;
+    const im = best.img;
+    let ok = false;
+    if (im.bitmap) { ictx.drawImage(im.bitmap, 0, 0); ok = true; }
+    else if (im.data) {
+      const out = new Uint8ClampedArray(best.w * best.h * 4);
+      const d = im.data;
+      if (im.kind === 3) { out.set(d.subarray(0, out.length)); ok = true; }
+      else if (im.kind === 2) {
+        for (let p = 0, q = 0; q < out.length; p += 3, q += 4) { out[q] = d[p]; out[q + 1] = d[p + 1]; out[q + 2] = d[p + 2]; out[q + 3] = 255; }
+        ok = true;
+      }
+      if (ok) ictx.putImageData(new ImageData(out, best.w, best.h), 0, 0);
+    }
+    if (ok) { const url = _scaleCanvas(ic, 1600, 0.82); ic.width = ic.height = 0; pc.width = pc.height = 0; return url; }
+    ic.width = ic.height = 0;
+  }
+
+  // Vector site plan — auto-crop the page render to its content.
+  const cropped = _autoCropCanvas(pc);
+  const url = _scaleCanvas(cropped, 1500, 0.78);
+  if (cropped !== pc) { cropped.width = cropped.height = 0; }
+  pc.width = pc.height = 0;
+  return url;
+}
+
 // Extract all text from a PDF file (ArrayBuffer), using position-aware line assembly.
 export async function extractPdfText(buffer: ArrayBuffer): Promise<{ text: string; pages: number }> {
   const lib = await loadPdfJs();
@@ -325,7 +427,8 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
 
     for (const p of chosen) {
       try {
-        const img = await _renderPdfPage(pdf, p, 1500, 0.74);
+        // Pull the actual site-plan graphic (cropped), not a whole-page screenshot.
+        const img = await _captureSitePlan(pdf, p, lib);
         if (img) result.sitePlan.push(img);
       } catch {}
     }
