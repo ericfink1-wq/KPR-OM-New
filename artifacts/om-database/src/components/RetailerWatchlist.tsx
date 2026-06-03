@@ -21,10 +21,11 @@ interface WatchlistArticle {
 }
 
 interface Exposure {
-  centers: Array<{ dealId: string; propertyName: string; sf: number; annualRent: number; isDark: boolean; status?: string }>;
+  centers: Array<{ dealId: string; propertyName: string; tenantName: string; sf: number; annualRent: number; isDark: boolean; status?: string }>;
   totalSF: number;
   totalRent: number;
   darkCount: number;
+  names: Set<string>;   // distinct tenant names (as written at properties) that fold into this brand group
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string; rank: number }> = {
@@ -112,10 +113,11 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
         const rent = Number(t.annualRent) || 0;
         const isDark = t.isDark === true;
         let exp = map.get(key);
-        if (!exp) { exp = { centers: [], totalSF: 0, totalRent: 0, darkCount: 0 }; map.set(key, exp); }
+        if (!exp) { exp = { centers: [], totalSF: 0, totalRent: 0, darkCount: 0, names: new Set() }; map.set(key, exp); }
+        exp.names.add(String(t.name).trim());   // every naming variant that grouped under this key
         if (!seenInDeal.has(key)) {
           seenInDeal.add(key);
-          exp.centers.push({ dealId: d.id, propertyName: d.propertyName || d.fileName || "Untitled", sf, annualRent: rent, isDark, status: d.status });
+          exp.centers.push({ dealId: d.id, propertyName: d.propertyName || d.fileName || "Untitled", tenantName: String(t.name).trim(), sf, annualRent: rent, isDark, status: d.status });
           exp.totalSF += sf;
           exp.totalRent += rent;
           if (isDark) exp.darkCount += 1;
@@ -129,7 +131,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
     if (!rows) return [];
     return rows.map(w => {
       const exp = exposureByKey.get(tenantKey(w.brand));
-      return { ...w, exp: exp || { centers: [], totalSF: 0, totalRent: 0, darkCount: 0 } };
+      return { ...w, exp: exp || { centers: [], totalSF: 0, totalRent: 0, darkCount: 0, names: new Set<string>() } };
     }).sort((a, b) => {
       // Exposed first, then by status severity, then by rent at risk
       const aExposed = a.exp.centers.length > 0 ? 1 : 0;
@@ -217,6 +219,18 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
             <button onClick={e => { e.stopPropagation(); remove(w.id, w.brand); }} style={{ background: "transparent", border: "none", color: "#c98", cursor: "pointer", fontSize: 11 }}>remove</button>
           </div>
         </div>
+        {/* Transparency: show which property naming variants this brand is grouping together. */}
+        {exposed && (() => {
+          const names = Array.from(w.exp.names);
+          const brandLc = w.brand.trim().toLowerCase();
+          const differs = names.some(n => n.toLowerCase() !== brandLc);
+          if (names.length <= 1 && !differs) return null;
+          return (
+            <div style={{ fontSize: 11, color: "#8b8578", padding: "0 14px 8px", marginTop: -2 }}>
+              Counting {names.length} name{names.length !== 1 ? "s" : ""} as this brand: <span style={{ color: "#5c5047" }}>{names.join(", ")}</span>
+            </div>
+          );
+        })()}
         {exposed && (
           <div style={{ display: "flex", justifyContent: "center", padding: "2px 0 8px" }}>
             <button onClick={() => toggle(w.id)}
@@ -233,6 +247,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
                 style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: onOpenDeal ? "pointer" : "default", borderTop: i === 0 ? "none" : "1px solid #f6f2ea", flexWrap: "wrap" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: "#383a37", textDecoration: onOpenDeal ? "underline" : "none", textDecorationColor: "#d8cfbd" }}>{c.propertyName}</span>
+                {c.tenantName && c.tenantName.toLowerCase() !== w.brand.trim().toLowerCase() && <span style={{ fontSize: 11, color: "#9a9384", fontStyle: "italic" }}>as “{c.tenantName}”</span>}
                 {c.isDark && <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: "#3a342b", borderRadius: 10, padding: "1px 6px" }}>DARK</span>}
                 {c.status && <span style={{ fontSize: 10, color: "#a69e91", textTransform: "capitalize" }}>{c.status}</span>}
                 <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6f6a5f" }}>{fmtSF(c.sf)} · {fmtMoney(c.annualRent)} rent</span>
