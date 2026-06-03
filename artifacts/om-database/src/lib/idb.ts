@@ -183,6 +183,15 @@ export interface OccBreakdown {
   reimbEstimated?: boolean; // true when recoveries were estimated, not OM-disclosed
 }
 
+// One row of a loan amortization schedule (generated or lender-provided).
+export interface AmortRow {
+  date: string;                 // ISO payment date, or "M1"/"M2"… when no origination date
+  payment?: number | null;
+  interest?: number | null;
+  principal?: number | null;
+  balance: number;             // ending balance after this payment
+}
+
 // Interest-rate swap hedging a (usually floating-rate) loan, captured from a
 // dealer swap confirmation (e.g. an ISDA confirmation). Drives the swap-breakage
 // (early-termination mark-to-market) estimate in the prepay calculator.
@@ -480,6 +489,9 @@ export interface Deal {
   // Interest-rate swap hedging this loan (captured from a dealer swap confirmation).
   // Drives the swap-breakage estimate in the prepay calculator.
   interestRateSwap?: InterestRateSwap | null;
+  // Lender-provided amortization schedule (uploaded). When present it drives the
+  // current-balance read instead of the generated schedule.
+  customAmortSchedule?: AmortRow[] | null;
   // Preferred equity (second tranche, acts like a second loan)
   prefLender?: string | null;
   prefAmount?: number | null;

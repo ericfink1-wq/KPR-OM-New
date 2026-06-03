@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
+import { amortForDeal } from "../lib/amortize";
+import { extractAmortSchedule } from "../lib/amortExtract";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
@@ -2943,6 +2945,7 @@ ${text.slice(0, 60000)}`;
                 {dscrCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied DSCR (NOI)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:dscrCalc<1.2?"#dc2626":"#0f9d63" }}>{dscrCalc.toFixed(2)}x</div></div>}
               </div>
             )}
+            <AmortizationCard deal={d} onUpdate={onUpdate} />
             <PrepayCalculator deal={d} onUpdate={onUpdate} />
             <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; DSCR uses the OM NOI). For reference only.</div>
           </div>
@@ -3183,6 +3186,125 @@ function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, 
             ))}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Amortization schedule / current balance ──────────────────────────────────
+// Builds a level-payment schedule from the loan terms to show today's balance,
+// or uses a lender-provided schedule when one is uploaded.
+function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const result = useMemo(() => amortForDeal(deal), [
+    deal.customAmortSchedule, deal.debtLoanAmount, deal.debtRate, deal.debtAmortYears, deal.debtIOPeriod, deal.debtOriginationDate,
+  ]);
+  const fmt$ = (v: number | null | undefined) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
+
+  const upload = async (file: File) => {
+    setBusy(true); setErr(null);
+    try {
+      const { text } = await extractAnyFile(file);
+      const rows = await extractAmortSchedule(text);
+      onUpdate(deal.id, { customAmortSchedule: rows });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn't read that schedule.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const rows = result.rows;
+  // Yearly view: the last row of each 12-month block (+ the final row).
+  const yearly = rows.filter((_, idx) => (idx + 1) % 12 === 0 || idx === rows.length - 1);
+  const shown = showAll ? rows : yearly;
+  const currentDate = result.currentRow?.date;
+
+  return (
+    <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:10 }}>
+        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Amortization &amp; Current Balance</div>
+        <div>
+          <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display:"none" }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); }} />
+          <button onClick={() => fileRef.current?.click()} disabled={busy}
+            style={{ background: busy ? "#e9e3d6" : "#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor: busy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
+            {busy ? "Reading…" : deal.customAmortSchedule?.length ? "Replace schedule" : "Upload amortization schedule"}
+          </button>
+        </div>
+      </div>
+      {err && <div style={{ fontSize:11, color:"#c0392b", marginBottom:6 }}>{err}</div>}
+
+      {result.error ? (
+        <div style={{ fontSize:12, color:"#9a917f", lineHeight:1.5 }}>{result.error} (or upload the lender's amortization schedule).</div>
+      ) : (
+        <>
+          <div style={{ display:"flex", gap:24, flexWrap:"wrap", alignItems:"flex-end", marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:3 }}>Current Balance (today)</div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:24, fontWeight:600, color:"#383a37" }}>{fmt$(result.currentBalance)}</div>
+            </div>
+            {result.payment != null && (
+              <div>
+                <div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:3 }}>{Number(deal.debtIOPeriod) > 0 ? "Payment (post-IO)" : "Monthly Payment"}</div>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, fontWeight:600, color:"#52554e" }}>{fmt$(result.payment)}</div>
+              </div>
+            )}
+            {result.currentBalance != null && Number(deal.debtLoanAmount) > 0 && (
+              <button onClick={() => onUpdate(deal.id, { loanBalance: Math.round(result.currentBalance!) })}
+                style={{ background:"#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, alignSelf:"center" }}>
+                Set as loan balance
+              </button>
+            )}
+          </div>
+
+          <div style={{ fontSize:10.5, color:"#a69e91", marginBottom:8 }}>
+            {result.basis === "uploaded" ? "From your uploaded schedule." : "Generated from the loan terms."}
+            {result.assumptions.length > 0 && ` ${result.assumptions.join(" ")}`}
+          </div>
+
+          {shown.length > 0 && (
+            <div style={{ overflowX:"auto", maxHeight: showAll ? 320 : undefined, overflowY: showAll ? "auto" : undefined, border:"1px solid #f0e9da", borderRadius:8 }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11.5 }}>
+                <thead>
+                  <tr style={{ fontSize:9, color:"#a69e91", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#faf7f0" }}>
+                    <th style={{ textAlign:"left", padding:"6px 8px" }}>{showAll ? "Date" : "Year-End"}</th>
+                    <th style={{ textAlign:"right", padding:"6px 8px" }}>Interest</th>
+                    <th style={{ textAlign:"right", padding:"6px 8px" }}>Principal</th>
+                    <th style={{ textAlign:"right", padding:"6px 8px" }}>Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((r, i) => {
+                    const isCurrent = currentDate && r.date === currentDate;
+                    return (
+                      <tr key={i} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#f4f8ef" : undefined }}>
+                        <td style={{ padding:"6px 8px", color:"#52554e", whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:600 }}> · now</span> : null}</td>
+                        <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.interest)}</td>
+                        <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.principal)}</td>
+                        <td style={{ padding:"6px 8px", textAlign:"right", color:"#383a37", fontWeight:500 }}>{fmt$(r.balance)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {rows.length > yearly.length && (
+            <button onClick={() => setShowAll(s => !s)}
+              style={{ marginTop:8, background:"transparent", border:"none", color:"#6dba43", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
+              {showAll ? "▾ Show year-end only" : `▸ Show all ${rows.length} payments`}
+            </button>
+          )}
+          <div style={{ marginTop:10, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>
+            {result.basis === "generated" ? "Estimate — assumes a fixed rate and level amortization. Upload the lender's schedule for the exact balance." : "Read from your uploaded schedule."}
+          </div>
+        </>
       )}
     </div>
   );
