@@ -1167,6 +1167,13 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
             onChange={setFilterTypes}
           />
         )}
+        {(q || filterStatuses.length > 0 || filterStates.length > 0 || filterTypes.length > 0) && (
+          <button onClick={() => { setQ(""); setFilterStatuses([]); setFilterStates([]); setFilterTypes([]); }}
+            title="Clear the search and all filters"
+            style={{ background: "transparent", border: "1px solid #e0c3b3", color: "#b3593b", padding: "6px 11px", borderRadius: 8, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+            ✕ Clear all
+          </button>
+        )}
         <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
         <button onClick={async () => { const { exportPortfolioToExcel } = await import("../lib/exportExcel"); exportPortfolioToExcel(rows, filterStatuses.length === 1 ? filterStatuses[0].replace(/\s+/g, "") : "All"); }} disabled={rows.length === 0}
           title="Export the current (filtered) deal list to Excel"
