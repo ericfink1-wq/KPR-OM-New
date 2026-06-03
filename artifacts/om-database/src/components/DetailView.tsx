@@ -1671,6 +1671,16 @@ ${text.slice(0, 60000)}`;
     setSitePlanFinalized(false);
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: 0, needsSitePlanPick: false } });
   };
+  // Remove ONE site-plan page (when the OM pulled several) without dropping the rest.
+  const deleteSitePlanPage = async (index: number) => {
+    const current = (await apiLoadImages(d.id)) || {};
+    const arr = (current.sitePlan || []).filter((_, i) => i !== index);
+    const next: ImageBundle = { ...current, sitePlan: arr };
+    setImgs(next);
+    await apiSaveImages(d.id, next);
+    if (arr.length === 0) setSitePlanFinalized(false);
+    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: arr.length } });
+  };
 
   const applyParsed = (parsed: { asOf?: string | null; tenants?: unknown[] }) => {
     const newTenants = Array.isArray(parsed.tenants) ? parsed.tenants as Deal["tenants"] : [];
@@ -2252,8 +2262,11 @@ ${text.slice(0, 60000)}`;
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
-                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
-                  <img src={src} alt={`Site plan ${i+1}`} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block" }}/>
+                <div key={i} style={{ position:"relative", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
+                  <img src={src} alt={`Site plan ${i+1}`} onClick={() => setLightbox(src)} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block", cursor:"zoom-in" }}/>
+                  <button onClick={(e) => { e.stopPropagation(); if (window.confirm(`Remove site-plan page ${i+1}?`)) deleteSitePlanPage(i); }}
+                    title="Remove this page"
+                    style={{ position:"absolute", top:6, right:6, width:24, height:24, borderRadius:"50%", border:"none", background:"rgba(38,40,31,0.62)", color:"#fff", fontSize:15, lineHeight:1, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
                 </div>
               ))}
             </div>
@@ -2266,8 +2279,11 @@ ${text.slice(0, 60000)}`;
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
-                <div key={i} onClick={() => setLightbox(src)} style={{ cursor:"zoom-in", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
-                  <img src={src} alt={`Site plan ${i+1}`} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block" }}/>
+                <div key={i} style={{ position:"relative", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
+                  <img src={src} alt={`Site plan ${i+1}`} onClick={() => setLightbox(src)} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block", cursor:"zoom-in" }}/>
+                  <button onClick={(e) => { e.stopPropagation(); if (window.confirm(`Remove site-plan page ${i+1}?`)) deleteSitePlanPage(i); }}
+                    title="Remove this page"
+                    style={{ position:"absolute", top:6, right:6, width:24, height:24, borderRadius:"50%", border:"none", background:"rgba(38,40,31,0.62)", color:"#fff", fontSize:15, lineHeight:1, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
                 </div>
               ))}
             </div>
