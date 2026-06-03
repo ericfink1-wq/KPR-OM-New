@@ -892,7 +892,13 @@ export function tenantLabel(name: unknown, canonicalName?: string | null): strin
   const n = _normTenant(name);
   if (_userAliases[n]) return stripStoreNumber(_userAliases[n]);
   if (TENANT_ALIASES[n]) return stripStoreNumber(TENANT_ALIASES[n]);
-  return stripStoreNumber(n.replace(/\b\w/g, c => c.toUpperCase())) || stripStoreNumber(String(name || ""));
+  // Never return an empty string — if store-number stripping or normalization
+  // empties the label (e.g. a name that's basically just "#1234"), fall back to
+  // the raw name so a tenant never renders nameless on its detail/rollup pages.
+  return stripStoreNumber(n.replace(/\b\w/g, c => c.toUpperCase()))
+    || stripStoreNumber(String(name || ""))
+    || String(name ?? "").trim()
+    || (canonicalName ?? "").trim();
 }
 
 // ── Lender-name normalisation ─────────────────────────────────────────────────
