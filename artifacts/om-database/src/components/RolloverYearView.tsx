@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 interface RolloverTenant {
   name: string;
   dealName: string;
+  dealId?: string | null;
   sf: number | null;
   annualRent: number | null;
   expiryDate: string | null;
@@ -80,13 +81,15 @@ interface Props {
   initialScope?: "all" | "owned";
   ownedDealIds?: string[];
   onBack: () => void;
+  onOpenDeal?: (dealId: string) => void;
+  onTenantClick?: (name: string) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function RolloverYearView({ year, filterDealIds, initialScope = "all", ownedDealIds, onBack }: Props) {
+export default function RolloverYearView({ year, filterDealIds, initialScope = "all", ownedDealIds, onBack, onOpenDeal, onTenantClick }: Props) {
   const [data, setData] = useState<RolloverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -241,10 +244,14 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
                 {sortedTenants.map((t, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid #f5f1ea" }}>
                     <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 10.5, color: "#c9c2b8" }}>{i + 1}</td>
-                    <td style={{ padding: "10px 14px", fontWeight: 600, fontSize: 12, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "10px 14px", fontWeight: 600, fontSize: 12, color: onTenantClick ? "#3f7a1f" : "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onTenantClick ? "pointer" : "default", textDecoration: onTenantClick ? "underline" : "none", textDecorationColor: "#cfe0bd", textUnderlineOffset: 2 }}
+                      onClick={onTenantClick ? () => onTenantClick(t.name) : undefined}
+                      title={onTenantClick ? `View ${t.name} across the portfolio` : undefined}>
                       {t.name}
                     </td>
-                    <td style={{ padding: "10px 14px", fontSize: 11, color: "#6f6a5f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "10px 14px", fontSize: 11, color: (onOpenDeal && t.dealId) ? "#4f7aac" : "#6f6a5f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: (onOpenDeal && t.dealId) ? "pointer" : "default", textDecoration: (onOpenDeal && t.dealId) ? "underline" : "none", textDecorationColor: "#cdd9e8", textUnderlineOffset: 2 }}
+                      onClick={(onOpenDeal && t.dealId) ? () => onOpenDeal(t.dealId!) : undefined}
+                      title={(onOpenDeal && t.dealId) ? `Open ${t.dealName}` : undefined}>
                       {t.dealName || "—"}
                     </td>
                     <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 12, color: "#383a37", fontWeight: 600 }}>{fmtRent(t.annualRent)}</td>

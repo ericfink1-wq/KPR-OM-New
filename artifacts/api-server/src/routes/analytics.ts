@@ -180,6 +180,7 @@ router.get("/analytics/rollover-detail", requireAuth, async (req, res) => {
       .map(r => ({
         name: r.canonicalName || r.rawName || "Unknown",
         dealName: r.dealName || "",
+        dealId: r.dealId,
         sf: r.sf ?? null,
         annualRent: r.annualRent ?? null,
         expiryDate: r.leaseExpiryDate ? String(r.leaseExpiryDate) : null,

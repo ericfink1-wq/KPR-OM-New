@@ -431,7 +431,7 @@ function AppInner() {
                 <TenantLink deals={activeDeals} />
               </div>
             ) : view.type === "rollover-year" ? (
-              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} />
+              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={id => { navigate({ type: "detail", dealId: id }); setTab("portfolio"); }} onTenantClick={handleOpenTenant} />
             ) : (
               <>
                 {/* Segmented toggle */}
