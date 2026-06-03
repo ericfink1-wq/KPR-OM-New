@@ -84,7 +84,14 @@ const USER_PRESERVED_KEYS = new Set([
   "acqDeposit", "acqClosingCosts", "acqFee", "acqTitleCo", "acqCounsel", "acqPropManager",
   "acqStrategy", "acqHoldPeriod", "acqTargetIRR", "acqNotes",
   "debtLender", "debtType", "debtLoanAmount", "debtRate", "debtMaturityDate", "debtNotes",
+  // Full loan record (term sheet / loan doc) — a staler OM must never wipe these.
+  "debtRateType", "debtIndex", "debtSpread", "debtOriginationDate", "debtTermYears",
+  "debtAmortYears", "debtIOPeriod", "debtLTV", "debtDSCR", "debtRecourse", "debtPrepay",
+  "debtExtensions", "debtEscrows", "debtAssumable", "debtLoanNumber", "debtContact", "loanBalance",
   "prepayTerms", "interestRateSwap", "customAmortSchedule", "prefSchedule",
+  // Tenant roster + roster-derived metrics: post-closing rent rolls are authoritative,
+  // so re-running the OM keeps them (rent-roll/manual roster wins over the OM's tenants).
+  "tenants", "tenantsAsOf", "tenantsManual", "tenantsSource", "occupancy", "walt", "weightedAvgRentPSF",
   "marketSale", "marketSaleChecked",
   "marketDemographics", "demoChecked",
   "verified", "propertyGroupId", "editHistory",
