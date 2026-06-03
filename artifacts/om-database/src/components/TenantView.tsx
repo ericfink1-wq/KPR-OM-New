@@ -310,6 +310,17 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                           {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
                           {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
                           {isNAPTenant(r.t) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
+                          {(() => {
+                            // The tenant name actually recorded at this property — so a wrong
+                            // grouping stands out (amber) and can be unlinked from this row.
+                            const used = r.t.name || "";
+                            const differs = tenantLabel(used).toLowerCase() !== tenantLabel(tenantName).toLowerCase();
+                            return used ? (
+                              <div style={{ fontSize:10.5, fontWeight:500, marginTop:2, color: differs ? "#b3593b" : "#a59a86" }}>
+                                {differs ? "⚠ " : ""}as “{used}”
+                              </div>
+                            ) : null;
+                          })()}
                         </td>
                         <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
