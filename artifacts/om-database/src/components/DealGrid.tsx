@@ -584,6 +584,51 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       for (const d of byFresh) { const v = (d as unknown as Record<string, unknown>)[k]; if (nonEmpty(v)) { mm[k] = v; break; } }
     }
 
+    // Flag conflicts for review — where the merged deals disagreed on a key
+    // factual field, keep the chosen (recency-based) value but surface the
+    // alternative so it can be reviewed/overridden, like the upload path does.
+    const CONFLICT_FIELDS: { key: keyof Deal; label: string; num: boolean; sev: "high" | "medium" | "low" }[] = [
+      { key: "capRate", label: "Cap Rate", num: true, sev: "high" },
+      { key: "noi", label: "NOI", num: true, sev: "high" },
+      { key: "askingPrice", label: "Asking Price", num: true, sev: "high" },
+      { key: "totalSF", label: "Total SF", num: true, sev: "high" },
+      { key: "occupancy", label: "Occupancy %", num: true, sev: "medium" },
+      { key: "grossPotentialRent", label: "Gross Potential Rent", num: true, sev: "medium" },
+      { key: "walt", label: "WALT", num: true, sev: "low" },
+      { key: "address", label: "Address", num: false, sev: "medium" },
+      { key: "city", label: "City", num: false, sev: "low" },
+      { key: "state", label: "State", num: false, sev: "low" },
+    ];
+    const numClose2 = (a: number, b: number) => { const m = Math.max(Math.abs(a), Math.abs(b), 1); return Math.abs(a - b) / m < 0.02; };
+    const mmF = merged as unknown as Record<string, unknown>;
+    const stamp = Date.now().toString(36);
+    const conflictFlags: NonNullable<Deal["reviewQuestions"]> = [];
+    for (const f of CONFLICT_FIELDS) {
+      const win = mmF[f.key as string];
+      if (!nonEmpty(win)) continue;
+      const alt = all.find(d => {
+        const v = (d as unknown as Record<string, unknown>)[f.key as string];
+        if (!nonEmpty(v)) return false;
+        return f.num
+          ? !isNaN(Number(win)) && !isNaN(Number(v)) && !numClose2(Number(win), Number(v))
+          : String(win).trim().toLowerCase() !== String(v).trim().toLowerCase();
+      });
+      if (!alt) continue;
+      const altV = (alt as unknown as Record<string, unknown>)[f.key as string];
+      const fmt = (v: unknown) => f.num ? Number(v).toLocaleString() : String(v);
+      conflictFlags.push({
+        id: `merge-${f.key as string}-${stamp}`, source: "check", severity: f.sev, field: f.label,
+        question: `The merged deals had different ${f.label} values — keep the one shown or use the other?`,
+        detail: `Kept: ${fmt(win)} · the other deal had: ${fmt(altV)}. The more recent value was kept; apply to switch.`,
+        suggestedValue: String(altV),
+        target: { kind: "deal", fieldKey: f.key as string, tenantName: null, valueType: f.num ? "number" : "text" },
+      });
+    }
+    if (conflictFlags.length) {
+      const prior = (merged.reviewQuestions || []).filter(q => !(q.id || "").startsWith("merge-"));
+      merged.reviewQuestions = [...prior, ...conflictFlags];
+    }
+
     // Keep the keeper's identity.
     merged.id = keeper.id;
     merged.uploadedAt = keeper.uploadedAt;

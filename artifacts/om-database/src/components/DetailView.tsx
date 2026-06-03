@@ -1240,7 +1240,17 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     let alive = true;
     setImgs({});
     if (d.imageMeta && (d.imageMeta.cover || d.imageMeta.sitePlan)) {
-      apiLoadImages(d.id).then(res => { if (alive) setImgs(res || {}); }).catch(() => {});
+      apiLoadImages(d.id).then(res => {
+        if (!alive) return;
+        setImgs(res || {});
+        // Self-heal: if a cover image is actually stored but the deal's imageMeta
+        // flag says otherwise, fix it so the Deal Library tile shows the cover
+        // (the list only loads the image when imageMeta.cover is set).
+        const hasCover = !!res?.cover;
+        if (hasCover && !d.imageMeta?.cover) {
+          onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
+        }
+      }).catch(() => {});
     }
     return () => { alive = false; };
   }, [d.id]);
