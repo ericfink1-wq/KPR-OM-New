@@ -12,6 +12,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
   const [showActivity, setShowActivity] = useState(false);
   const [uploads, setUploads] = useState<UploadLogEntry[] | null>(null);
   const [showUploads, setShowUploads] = useState(false);
+  const [openMember, setOpenMember] = useState<string | null>(null); // member whose sign-in history is expanded
 
   const load = useCallback(() => {
     setError(null);
@@ -84,13 +85,19 @@ export default function Members({ onClose }: { onClose: () => void }) {
       style={{ background: "transparent", border: `1px solid ${color}44`, color, borderRadius: 6, padding: "4px 9px", fontSize: 11, fontWeight: 600, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap", fontFamily: "'Inter',sans-serif" }}>{label}</button>
   );
 
-  const row = (u: MemberAccount) => (
-    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1px solid #ece5d7", borderRadius: 9, background: "#fff", flexWrap: "wrap" }}>
-      <div style={{ minWidth: 0, flex: "1 1 200px" }}>
+  const row = (u: MemberAccount) => {
+    const open = openMember === u.id;
+    const myEvents = (events || []).filter(ev => (ev.email || "").toLowerCase() === u.email.toLowerCase());
+    return (
+    <div key={u.id} style={{ border: "1px solid #ece5d7", borderRadius: 9, background: "#fff", overflow: "hidden" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", flexWrap: "wrap" }}>
+      <div onClick={() => setOpenMember(open ? null : u.id)} title="Show this member's sign-in activity"
+        style={{ minWidth: 0, flex: "1 1 200px", cursor: "pointer" }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#26281f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <span style={{ color: "#a69e91", marginRight: 5 }}>{open ? "▾" : "▸"}</span>
           {u.name || u.email}{u.isAdmin && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#5c5047", background: "#f1eadc", border: "1px solid #ddd4c2", borderRadius: 4, padding: "1px 5px" }}>ADMIN</span>}
         </div>
-        {u.name && <div style={{ fontSize: 11, color: "#8b8578", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.email}</div>}
+        {u.name && <div style={{ fontSize: 11, color: "#8b8578", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingLeft: 16 }}>{u.email}</div>}
       </div>
       {statusChip(u.status)}
       <span title={u.emailVerified ? "This email address has been verified" : "This email address has NOT been verified — don't approve until it is"}
@@ -109,7 +116,28 @@ export default function Members({ onClose }: { onClose: () => void }) {
         {btn("Remove", () => { if (window.confirm(`Remove ${u.email}? They'll lose access and would have to request a new account.`)) act(u.id, () => apiDeleteMember(u.id)); }, "#c0392b", busy === u.id)}
       </div>
     </div>
-  );
+    {open && (
+      <div style={{ borderTop: "1px solid #f1ece1", background: "#fbf9f4", padding: "8px 12px" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Sign-in activity</div>
+        {myEvents.length === 0 ? (
+          <div style={{ fontSize: 11.5, color: "#a89f8f", fontStyle: "italic" }}>No recent sign-in activity recorded for {u.email}.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 220, overflowY: "auto" }}>
+            {myEvents.map(ev => (
+              <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "4px 2px", borderBottom: "1px solid #f4efe6" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.success ? "#3f7a1f" : "#c0392b", flexShrink: 0 }} />
+                <span style={{ color: ev.success ? "#6f6a5f" : "#c0392b", flex: "1 1 auto" }}>{ev.success ? "signed in" : "failed sign-in"}</span>
+                {ev.ip && <span style={{ color: "#b8b0a2", flexShrink: 0 }}>{ev.ip}</span>}
+                <span style={{ color: "#a89f8f", flexShrink: 0 }}>{new Date(ev.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+    </div>
+    );
+  };
 
   return createPortal(
     <>
