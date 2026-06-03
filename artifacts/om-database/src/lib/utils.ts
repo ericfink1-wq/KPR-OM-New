@@ -1228,7 +1228,7 @@ export function robustParseJSON(raw: string): unknown {
   if (first !== -1) {
     try { return _repairTruncatedJSON(s.slice(first)); } catch {}
   }
-  throw new Error("All parse strategies failed");
+  throw new Error("The AI's response couldn't be read as structured data — it came back incomplete or not in the expected format.");
 }
 function _repairTruncatedJSON(s: string): unknown {
   let inStr = false, esc = false;

@@ -7,6 +7,7 @@ import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepa
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import { amortForDeal } from "../lib/amortize";
 import { extractAmortSchedule } from "../lib/amortExtract";
+import { extractPref, buildPrefPatch } from "../lib/prefExtract";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
@@ -2916,6 +2917,7 @@ ${text.slice(0, 60000)}`;
                     </div>
                     {prefOpen && (
                       <>
+                        <div style={{ gridColumn:"1 / -1" }}><PrefImportButton deal={d} onUpdate={onUpdate} /></div>
                         {f({ label:"Pref Equity Provider", field:"prefLender", placeholder:"e.g. Basis, Cerberus, family office" })}
                         {d.prefLender && onTenantClick && (
                           <div style={{ gridColumn:"1 / -1", marginTop:-8 }}>
@@ -3187,6 +3189,47 @@ function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, 
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Preferred-equity terms importer ──────────────────────────────────────────
+// Drop a JV agreement / pref-equity term sheet / schedule to auto-fill the
+// blank pref-equity fields. Never overwrites a value you've already entered.
+function PrefImportButton({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [isErr, setIsErr] = useState(false);
+
+  const handle = async (file: File) => {
+    setBusy(true); setMsg(null); setIsErr(false);
+    try {
+      const { text } = await extractAnyFile(file);
+      const result = await extractPref(text);
+      const patch = buildPrefPatch(deal, result);
+      const n = Object.keys(patch).length;
+      if (n) { onUpdate(deal.id, patch); setMsg(`Filled ${n} blank pref-equity field${n === 1 ? "" : "s"} — review and verify each.`); }
+      else { setMsg("Read the terms, but every pref-equity field already had a value (nothing overwritten)."); }
+    } catch (e) {
+      setIsErr(true); setMsg(e instanceof Error ? e.message : "Couldn't read that file.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:10, background:"#f4f8ef", border:"1px dashed #cfe3b8", borderRadius:8, padding:"8px 12px" }}>
+      <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display:"none" }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) handle(f); }} />
+      <button onClick={() => fileRef.current?.click()} disabled={busy}
+        style={{ background: busy ? "#dfe9d3" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"6px 12px", borderRadius:7, cursor: busy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+        {busy ? "Reading…" : "⬆ Import pref-equity terms (PDF / Excel)"}
+      </button>
+      <span style={{ fontSize:11.5, color: isErr ? "#c0392b" : msg ? "#3f7a1f" : "#7d766a", lineHeight:1.4 }}>
+        {msg || "Drop a JV agreement or pref term sheet — it fills the blank fields below."}
+      </span>
     </div>
   );
 }

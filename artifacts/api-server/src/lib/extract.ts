@@ -194,7 +194,7 @@ export function robustParseJSON(raw: string): unknown {
   if (first !== -1) {
     try { return repairTruncatedJSON(s.slice(first)); } catch {}
   }
-  throw new Error("All parse strategies failed");
+  throw new Error("The AI's response couldn't be read as structured data — it came back incomplete or not in the expected format.");
 }
 
 function repairTruncatedJSON(s: string): unknown {
@@ -311,8 +311,22 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     { type: "text", text: EXTRACTION_PROMPT, cache_control: { type: "ephemeral" } },
     { type: "text", text: taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText, cache_control: { type: "ephemeral" } },
   ];
-  const first = await callExtract(cachedBlocks);
-  let extracted = robustParseJSON(first.raw) as Record<string, unknown>;
+  let first = await callExtract(cachedBlocks);
+  // The first pass must return valid JSON. On a very large/dense OM the model can
+  // truncate or wrap its output so the parser (and its repair) can't recover it.
+  // Retry the first pass once; if it still won't parse, fail with a plain-English
+  // message instead of the cryptic "All parse strategies failed".
+  let extracted: Record<string, unknown>;
+  try {
+    extracted = robustParseJSON(first.raw) as Record<string, unknown>;
+  } catch {
+    first = await callExtract(cachedBlocks);
+    try {
+      extracted = robustParseJSON(first.raw) as Record<string, unknown>;
+    } catch {
+      throw new Error("The AI read this OM but returned its answer in a form we couldn't process (the response came back incomplete or not as structured data — this usually happens on very large, image-heavy, or scanned OMs). Try re-uploading it; if it keeps failing, the OM likely needs to be split into smaller files or saved as a text-based PDF.");
+    }
+  }
   if (!extracted.tenants) extracted.tenants = [];
 
   // Hard budget so a problematic OM can never churn the model indefinitely and
