@@ -22,6 +22,7 @@ interface Props {
   onDelete?: (id: string) => void;
   onAddFiles?: (files: File[]) => void;
   isAdmin?: boolean;
+  onCountsChange?: (shown: number, total: number) => void;
 }
 
 // Largest anchor tenant's name — used for the portfolio "Anchor" column and sort.
@@ -245,7 +246,7 @@ const BULK_FIELDS: { key: keyof Deal; label: string; also?: (keyof Deal)[]; hint
   { key: "centerType", label: "Center Type" },
 ];
 
-export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles, isAdmin }: Props) {
+export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles, isAdmin, onCountsChange }: Props) {
   const watchMap = useWatchlist();
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [filterStates, setFilterStates] = useState<string[]>([]);
@@ -358,6 +359,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     const bv = String(b[sortKey as keyof Deal] || "");
     return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
   });
+
+  // Report how many deals are showing vs the total, so the header can read
+  // "39 of 94 …" while a search/filter is active.
+  const shownCount = rows.length;
+  useEffect(() => { onCountsChange?.(shownCount, deals.length); }, [shownCount, deals.length, onCountsChange]);
 
   const toggleSort = (k: string) => {
     if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");

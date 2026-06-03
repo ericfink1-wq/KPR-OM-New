@@ -98,6 +98,11 @@ function AppInner() {
     return null;
   });
   const [isAdmin, setIsAdmin] = useState(false);
+  // Filtered vs total deal count from DealGrid, for the "39 of 94 …" header.
+  const [dealCounts, setDealCounts] = useState<{ shown: number; total: number } | null>(null);
+  const handleDealCounts = useCallback((shown: number, total: number) => {
+    setDealCounts(prev => (prev && prev.shown === shown && prev.total === total) ? prev : { shown, total });
+  }, []);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [tab, setTab] = useState<TabId>("analyst");
   // Right-side AI chat drawer (opened from the ask bar / "Ask about this property").
@@ -501,7 +506,11 @@ function AppInner() {
                   Deal Library
                 </div>
                 <div style={{ fontSize: 13, color: "#a89f8f", marginTop: 4 }}>
-                  {activeDeals.length > 0 ? `${activeDeals.length} offering memorand${activeDeals.length === 1 ? "um" : "a"} on file` : "No deals uploaded yet"}
+                  {activeDeals.length === 0
+                    ? "No deals uploaded yet"
+                    : (dealCounts && dealCounts.shown < dealCounts.total)
+                      ? `${dealCounts.shown} of ${dealCounts.total} offering memorand${dealCounts.total === 1 ? "um" : "a"} on file`
+                      : `${activeDeals.length} offering memorand${activeDeals.length === 1 ? "um" : "a"} on file`}
                 </div>
               </div>
               {activeDeals.length === 0 ? (
@@ -519,6 +528,7 @@ function AppInner() {
                   onDelete={handleDelete}
                   onAddFiles={files => setPendingFiles(prev => [...prev, ...files])}
                   isAdmin={isAdmin}
+                  onCountsChange={handleDealCounts}
                 />
               )}
             </>
