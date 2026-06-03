@@ -1910,12 +1910,13 @@ ${text.slice(0, 60000)}`;
         </div>
       </div>
 
+      {/* Back — own line above the title so it never crowds the title/actions row */}
+      <div style={{ marginBottom:8 }}>
+        <button onClick={onBack} title="Back" aria-label="Back" style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fff", border:"1px solid #e0d8c8", color:"#5c5047", borderRadius:20, padding:"5px 13px 5px 10px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif", boxShadow:"0 1px 3px rgba(56,58,55,0.1)" }}>← Back</button>
+      </div>
       {/* Property name + Actions + Jump To */}
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, margin:"0 0 4px 0" }}>
-        <div style={{ display:"flex", alignItems:"flex-start", gap:10, flex:"1 1 auto", minWidth:0 }}>
-          <button onClick={onBack} title="Back" aria-label="Back" style={{ marginTop:6, flexShrink:0, display:"flex", alignItems:"center", gap:4, background:"#fff", border:"1px solid #e0d8c8", color:"#5c5047", borderRadius:20, padding:"5px 12px 5px 9px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif", boxShadow:"0 1px 3px rgba(56,58,55,0.1)" }}>← Back</button>
-          <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
-        </div>
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, margin:"0 0 4px 0", flexWrap:"wrap" }}>
+        <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
         <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
           <div style={{ position:"relative" }}>
             <button onClick={() => setActionsOpen(o => { if (o) setActionsHelpOpen(false); return !o; })}
