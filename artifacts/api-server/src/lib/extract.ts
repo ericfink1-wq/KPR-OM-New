@@ -273,9 +273,12 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // model for materially fewer misreads on complex rent rolls / financials. The
   // lighter rent-roll and sales passes stay on Haiku.
   type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
-  const callExtract = async (content: string | Block[]) => {
+  // First pass + the anchor-finding gap-fill use Sonnet (accuracy); the overflow
+  // "continuation" passes on very long rosters use the faster Haiku model.
+  const FAST_MODEL = "claude-haiku-4-5-20251001";
+  const callExtract = async (content: string | Block[], model = "claude-sonnet-4-6") => {
     const upstream = await callAnthropicOnce({
-      model: "claude-sonnet-4-6",
+      model,
       max_tokens: 32000,
       messages: [{ role: "user", content }],
     });
@@ -333,7 +336,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
-      const cont = await callExtract([...cachedBlocks, { type: "text", text: contInstruction }]);
+      const cont = await callExtract([...cachedBlocks, { type: "text", text: contInstruction }], FAST_MODEL);
       const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
       const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
         .filter((t) => t?.name && !haveNames.includes(t.name));
