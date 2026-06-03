@@ -69,6 +69,12 @@ export function ensureUsersTable(): Promise<void> {
       `);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash text`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires timestamptz`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token_hash text`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token_expires timestamptz`);
+      // Grandfather: anyone already approved predates email verification — treat
+      // them as verified so the new check never locks out an existing user.
+      await db.execute(sql`UPDATE users SET email_verified = true WHERE status = 'approved' AND email_verified = false`);
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS login_events (
           id text PRIMARY KEY,
@@ -134,6 +140,19 @@ async function sendResetEmail(email: string, link: string): Promise<void> {
     `We received a request to reset your password.\n\nReset it here (this link expires in 1 hour):\n${link}\n\nIf you didn't request this, you can safely ignore this email.`);
 }
 
+// Best-effort: email an address-verification link. Never throws.
+async function sendVerifyEmail(email: string, link: string): Promise<void> {
+  await sendEmail(email, "Verify your email — KPR OM Database",
+    `Welcome to the KPR OM Database.\n\nPlease confirm this email address by clicking the link below (it expires in 24 hours):\n\n${link}\n\nAfter you verify, an administrator will review and approve your access.\n\nIf you didn't request an account, you can safely ignore this email.`);
+}
+
+// The app origin for building emailed links (reset / verify).
+function appOrigin(req: Request): string {
+  return (typeof req.headers.origin === "string" && req.headers.origin) || `https://${req.headers.host}`;
+}
+
+const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+
 // POST /api/auth/register — create a pending account
 router.post("/auth/register", async (req, res) => {
   try {
@@ -147,11 +166,17 @@ router.post("/auth/register", async (req, res) => {
     if (pwErr) { res.status(400).json({ error: pwErr }); return; }
     const existing = (await db.select().from(usersTable).where(eq(usersTable.email, email)))[0];
     if (existing) { res.status(409).json({ error: "An account with that email already exists. Try signing in." }); return; }
+    // Generate an email-verification token; the account stays unverified until the
+    // person clicks the emailed link, and can't be approved until then.
+    const verifyToken = randomBytes(32).toString("hex");
     await db.insert(usersTable).values({
       id: genId(), email, passwordHash: hashPassword(password), name, status: "pending", isAdmin: false,
+      emailVerified: false, verifyTokenHash: sha256(verifyToken), verifyTokenExpires: new Date(Date.now() + VERIFY_TTL_MS),
     });
+    const link = `${appOrigin(req)}/?verify=1&email=${encodeURIComponent(email)}&token=${verifyToken}`;
+    void sendVerifyEmail(email, link).catch(() => { /* best-effort */ });
     void notifyNewSignup(email, name).catch(() => { /* best-effort */ });
-    res.status(201).json({ ok: true, status: "pending" });
+    res.status(201).json({ ok: true, status: "pending", needsVerification: true });
   } catch (err) {
     req.log.error({ err }, "Registration failed");
     res.status(500).json({ error: "Registration failed — please try again." });
@@ -180,6 +205,11 @@ router.post("/auth/login", async (req, res) => {
     if (!user || !verifyPassword(password, user.passwordHash)) {
       await recordLoginEvent(req, email, user?.id ?? null, false);
       res.status(401).json({ error: "Incorrect email or password." });
+      return;
+    }
+    if (!user.emailVerified) {
+      await recordLoginEvent(req, email, user.id, false);
+      res.status(403).json({ needsVerification: true, error: "Please verify your email first — check your inbox for the verification link (or request a new one below)." });
       return;
     }
     if (user.status !== "approved") {
@@ -259,6 +289,53 @@ router.post("/auth/change-password", requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/auth/verify-email — confirm an address from the emailed token.
+router.post("/auth/verify-email", async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const body = req.body as Record<string, unknown>;
+    const email = normEmail(body.email);
+    const token = typeof body.token === "string" ? body.token : "";
+    const user = (await db.select().from(usersTable).where(eq(usersTable.email, email)))[0];
+    if (user && user.emailVerified) { res.json({ ok: true, already: true }); return; }
+    if (!user || !user.verifyTokenHash || !user.verifyTokenExpires ||
+        user.verifyTokenExpires.getTime() < Date.now() || sha256(token) !== user.verifyTokenHash) {
+      res.status(400).json({ error: "This verification link is invalid or has expired. Request a new one from the sign-in screen." });
+      return;
+    }
+    await db.update(usersTable)
+      .set({ emailVerified: true, verifyTokenHash: null, verifyTokenExpires: null })
+      .where(eq(usersTable.id, user.id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Verify-email failed");
+    res.status(500).json({ error: "Verification failed — please try again." });
+  }
+});
+
+// POST /api/auth/resend-verification — re-email the link (generic response).
+router.post("/auth/resend-verification", async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const email = normEmail((req.body as Record<string, unknown>).email);
+    if (EMAIL_RE.test(email)) {
+      const user = (await db.select().from(usersTable).where(eq(usersTable.email, email)))[0];
+      if (user && !user.emailVerified) {
+        const token = randomBytes(32).toString("hex");
+        await db.update(usersTable)
+          .set({ verifyTokenHash: sha256(token), verifyTokenExpires: new Date(Date.now() + VERIFY_TTL_MS) })
+          .where(eq(usersTable.id, user.id));
+        const link = `${appOrigin(req)}/?verify=1&email=${encodeURIComponent(email)}&token=${token}`;
+        void sendVerifyEmail(email, link).catch(() => { /* best-effort */ });
+      }
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Resend-verification failed");
+    res.json({ ok: true });
+  }
+});
+
 // POST /api/auth/forgot-password — email a reset link (generic response always,
 // so it never reveals whether an email is registered).
 router.post("/auth/forgot-password", async (req, res) => {
@@ -326,13 +403,32 @@ router.get("/auth/users", requireAdmin, async (_req, res) => {
   rows.sort((a, b) => rank(a.status) - rank(b.status) || a.email.localeCompare(b.email));
   res.json(rows.map(u => ({
     id: u.id, email: u.email, name: u.name, status: u.status, isAdmin: u.isAdmin,
+    emailVerified: u.emailVerified,
     createdAt: u.createdAt, lastLoginAt: u.lastLoginAt,
   })));
+});
+
+// POST /api/auth/users/:id/verify — admin override to mark an email verified
+// (safety valve when the verification email can't be delivered).
+router.post("/auth/users/:id/verify", requireAdmin, async (req, res) => {
+  await ensureUsersTable();
+  await db.update(usersTable)
+    .set({ emailVerified: true, verifyTokenHash: null, verifyTokenExpires: null })
+    .where(eq(usersTable.id, String(req.params.id)));
+  res.json({ ok: true });
 });
 
 // POST /api/auth/users/:id/approve
 router.post("/auth/users/:id/approve", requireAdmin, async (req, res) => {
   await ensureUsersTable();
+  // Don't approve an account whose email hasn't been verified — that's the whole
+  // point of verification. (Admin can override via the Mark-verified action.)
+  const target = (await db.select().from(usersTable).where(eq(usersTable.id, String(req.params.id))))[0];
+  if (!target) { res.status(404).json({ error: "Not found" }); return; }
+  if (!target.emailVerified) {
+    res.status(400).json({ error: "This user hasn't verified their email yet — they must click the verification link first, or use “Mark verified” if you've confirmed the address another way." });
+    return;
+  }
   const [row] = await db.update(usersTable)
     .set({ status: "approved", approvedAt: new Date(), approvedBy: req.session.userEmail || "admin" })
     .where(eq(usersTable.id, String(req.params.id))).returning();

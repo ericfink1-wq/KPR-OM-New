@@ -1,5 +1,5 @@
 import { useState, FormEvent } from "react";
-import { apiLogin, apiRegister, apiForgotPassword } from "../lib/api";
+import { apiLogin, apiRegister, apiForgotPassword, apiResendVerification } from "../lib/api";
 
 interface Props {
   onLogin: () => void;
@@ -25,8 +25,18 @@ export default function Login({ onLogin }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Show a "resend verification" prompt when sign-in is blocked on an unverified
+  // email, or right after requesting an account.
+  const [needsVerify, setNeedsVerify] = useState(false);
 
-  const switchMode = (m: Mode) => { setMode(m); setError(null); setNotice(null); setPassword(""); };
+  const switchMode = (m: Mode) => { setMode(m); setError(null); setNotice(null); setPassword(""); setNeedsVerify(false); };
+
+  const resendVerify = async () => {
+    if (!email.trim()) return;
+    await apiResendVerification(email.trim());
+    setNeedsVerify(false);
+    setNotice("Sent — check your inbox for a fresh verification link (it may take a minute).");
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -39,7 +49,7 @@ export default function Login({ onLogin }: Props) {
       const result = await apiLogin(email.trim(), password);
       setLoading(false);
       if (result.ok) onLogin();
-      else setError(result.error || "Incorrect email or password");
+      else { setError(result.error || "Incorrect email or password"); setNeedsVerify(!!result.needsVerification); }
       return;
     }
 
@@ -62,7 +72,8 @@ export default function Login({ onLogin }: Props) {
     if (result.ok) {
       setMode("login");
       setPassword("");
-      setNotice("Account requested! You'll be able to sign in once an administrator approves you.");
+      setNeedsVerify(true);
+      setNotice("Account requested! Check your email and click the verification link to confirm your address — then an administrator will approve your access.");
     } else {
       setError(result.error || "Could not create account");
     }
@@ -111,6 +122,13 @@ export default function Login({ onLogin }: Props) {
 
           {notice && <div style={{ fontSize: 12.5, color: "#0f7a3d", background: "#eef7ee", border: "1px solid #cfe9c4", borderRadius: 8, padding: "9px 11px", marginBottom: 12, lineHeight: 1.4 }}>{notice}</div>}
           {error && <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 12 }}>{error}</div>}
+          {needsVerify && email.trim() && (
+            <div style={{ marginBottom: 12, textAlign: "center" }}>
+              <button type="button" onClick={resendVerify} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 12.5, fontWeight: 600, padding: 0 }}>
+                Resend verification email
+              </button>
+            </div>
+          )}
 
           <button type="submit" disabled={loading || !canSubmit}
             style={{ width: "100%", padding: "10px 0", background: "#26281f", color: "#f1ece1", border: "none", borderRadius: 8, fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 600, cursor: loading ? "wait" : "pointer", opacity: (!canSubmit || loading) ? 0.5 : 1, letterSpacing: "0.02em" }}>

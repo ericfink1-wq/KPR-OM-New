@@ -17,15 +17,15 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<Response> {
 
 // --- Auth ---
 
-export async function apiLogin(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
+export async function apiLogin(email: string, password: string): Promise<{ ok: boolean; error?: string; needsVerification?: boolean }> {
   try {
     const resp = await apiFetch("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
     if (!resp.ok) {
-      const body = await resp.json().catch(() => ({})) as { error?: string };
-      return { ok: false, error: body.error || "Login failed" };
+      const body = await resp.json().catch(() => ({})) as { error?: string; needsVerification?: boolean };
+      return { ok: false, error: body.error || "Login failed", needsVerification: body.needsVerification };
     }
     return { ok: true };
   } catch {
@@ -81,6 +81,18 @@ export async function apiForgotPassword(email: string): Promise<void> {
   await apiFetch("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
 }
 
+export async function apiVerifyEmail(email: string, token: string): Promise<{ ok: boolean; error?: string }> {
+  const resp = await apiFetch("/auth/verify-email", { method: "POST", body: JSON.stringify({ email, token }) });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    return { ok: false, error: body.error || "Verification failed" };
+  }
+  return { ok: true };
+}
+export async function apiResendVerification(email: string): Promise<void> {
+  await apiFetch("/auth/resend-verification", { method: "POST", body: JSON.stringify({ email }) }).catch(() => { /* generic */ });
+}
+export async function apiVerifyMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/verify`, { method: "POST" }); }
 export async function apiResetPassword(email: string, token: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
   const resp = await apiFetch("/auth/reset-password", { method: "POST", body: JSON.stringify({ email, token, newPassword }) });
   if (!resp.ok) {
@@ -115,7 +127,7 @@ export async function apiUploadLog(): Promise<UploadLogEntry[]> {
   return await resp.json().catch(() => []) as UploadLogEntry[];
 }
 
-export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; createdAt: string; lastLoginAt: string | null }
+export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; emailVerified?: boolean; createdAt: string; lastLoginAt: string | null }
 export async function apiListMembers(): Promise<MemberAccount[]> {
   const resp = await apiFetch("/auth/users");
   if (!resp.ok) return [];

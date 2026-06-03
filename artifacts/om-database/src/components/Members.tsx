@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
+import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
 
 // Admin-only screen to approve / decline account requests and manage members.
 export default function Members({ onClose }: { onClose: () => void }) {
@@ -93,10 +93,18 @@ export default function Members({ onClose }: { onClose: () => void }) {
         {u.name && <div style={{ fontSize: 11, color: "#8b8578", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.email}</div>}
       </div>
       {statusChip(u.status)}
+      <span title={u.emailVerified ? "This email address has been verified" : "This email address has NOT been verified — don't approve until it is"}
+        style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.04em", padding: "2px 7px", borderRadius: 20, whiteSpace: "nowrap",
+          color: u.emailVerified ? "#0f7a3d" : "#9a5b12", background: u.emailVerified ? "#eef7ee" : "#fdf2e0", border: `1px solid ${u.emailVerified ? "#cfe9c4" : "#ecd2a8"}` }}>
+        {u.emailVerified ? "✓ Email verified" : "Email unverified"}
+      </span>
       <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto", flexWrap: "wrap" }}>
-        {u.status === "pending" && btn("✓ Approve", () => approve(u), "#0f7a3d", busy === u.id)}
+        {/* Approval requires a verified email; if it can't be delivered, the admin can override with Mark verified. */}
+        {(u.status === "pending" || u.status === "rejected") && !u.emailVerified
+          && btn("Mark verified", () => act(u.id, () => apiVerifyMember(u.id)), "#9a5b12", busy === u.id)}
+        {u.status === "pending" && u.emailVerified && btn("✓ Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "pending" && btn("Decline", () => act(u.id, () => apiRejectMember(u.id)), "#b3261e", busy === u.id)}
-        {u.status === "rejected" && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
+        {u.status === "rejected" && u.emailVerified && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#5c5047", busy === u.id)}
         {btn("Remove", () => { if (window.confirm(`Remove ${u.email}? They'll lose access and would have to request a new account.`)) act(u.id, () => apiDeleteMember(u.id)); }, "#c0392b", busy === u.id)}
       </div>

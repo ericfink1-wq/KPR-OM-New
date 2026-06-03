@@ -51,6 +51,7 @@ const PortfolioAnalytics = lazyWithReload(() => import("./components/PortfolioAn
 const RolloverYearView = lazyWithReload(() => import("./components/RolloverYearView"));
 const CompsSearch = lazyWithReload(() => import("./components/CompsSearch"));
 const ResetPassword = lazyWithReload(() => import("./components/ResetPassword"));
+const VerifyEmail = lazyWithReload(() => import("./components/VerifyEmail"));
 const TenantAudit = lazyWithReload(() => import("./components/TenantAudit"));
 const TenantAnalytics = lazyWithReload(() => import("./components/TenantAnalytics"));
 const RetailerWatchlist = lazyWithReload(() => import("./components/RetailerWatchlist"));
@@ -81,6 +82,16 @@ function AppInner() {
     try {
       const p = new URLSearchParams(window.location.search);
       if (p.get("reset") === "1" && p.get("token") && p.get("email")) {
+        return { email: p.get("email") as string, token: p.get("token") as string };
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
+  // Email-verification deep link (?verify=1&email=…&token=…) from the verify email.
+  const [verifyParams, setVerifyParams] = useState<{ email: string; token: string } | null>(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("verify") === "1" && p.get("token") && p.get("email")) {
         return { email: p.get("email") as string, token: p.get("token") as string };
       }
     } catch { /* ignore */ }
@@ -317,6 +328,17 @@ function AppInner() {
         <ResetPassword email={resetParams.email} token={resetParams.token} onDone={() => {
           try { window.history.replaceState({}, "", window.location.pathname); } catch { /* ignore */ }
           setResetParams(null);
+        }} />
+      </Suspense>
+    );
+  }
+
+  if (verifyParams) {
+    return (
+      <Suspense fallback={<ViewLoading />}>
+        <VerifyEmail email={verifyParams.email} token={verifyParams.token} onDone={() => {
+          try { window.history.replaceState({}, "", window.location.pathname); } catch { /* ignore */ }
+          setVerifyParams(null);
         }} />
       </Suspense>
     );

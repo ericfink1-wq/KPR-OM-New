@@ -16,4 +16,9 @@ export const usersTable = pgTable("users", {
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   resetTokenHash: text("reset_token_hash"),
   resetTokenExpires: timestamp("reset_token_expires", { withTimezone: true }),
+  // Email verification — proves the registrant controls the address before an
+  // admin can approve them. Existing approved users are grandfathered as verified.
+  emailVerified: boolean("email_verified").notNull().default(false),
+  verifyTokenHash: text("verify_token_hash"),
+  verifyTokenExpires: timestamp("verify_token_expires", { withTimezone: true }),
 });
