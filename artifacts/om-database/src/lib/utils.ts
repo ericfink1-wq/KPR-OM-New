@@ -832,7 +832,7 @@ export function estimateRecoveries(deal: {
   // 1) Property-level recovery pool — first available reliable source.
   const ib = deal.incomeBreakdown || {};
   const ibSum = (_num(ib.camReimbursements) ?? 0) + (_num(ib.realEstateTaxReimbursements) ?? 0) + (_num(ib.insuranceReimbursements) ?? 0);
-  const cfReimb = (deal.cashFlowProjection || []).map(r => _num(r?.reimbursements)).find(v => v != null) ?? null;
+  const cfReimb = (Array.isArray(deal.cashFlowProjection) ? deal.cashFlowProjection : []).map(r => _num(r?.reimbursements)).find(v => v != null) ?? null;
   let pool: number | null = null;
   let poolSource: string | null = null;
   if (_num(deal.nnnRecoveries) != null) { pool = _num(deal.nnnRecoveries); poolSource = "OM recovery income"; }

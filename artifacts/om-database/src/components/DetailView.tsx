@@ -2035,7 +2035,7 @@ ${text.slice(0, 60000)}`;
 
       {/* Export buttons */}
       <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-        {((d.tenants||[]).length > 0 || (d.cashFlowProjection||[]).length > 0) && (
+        {((d.tenants||[]).length > 0 || (Array.isArray(d.cashFlowProjection) && d.cashFlowProjection.length > 0)) && (
           <button onClick={() => exportDealToExcel(d)}
             style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"8px 16px", borderRadius:6, cursor:"pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
             <span style={{ fontSize:13 }}>⬇</span> Excel
@@ -2639,7 +2639,7 @@ ${text.slice(0, 60000)}`;
       {showAcq && <ClosingCostsCard deal={d} />}
 
       {/* Cash flow */}
-      {showAcq && (d.cashFlowProjection||[]).length > 0 && (
+      {showAcq && Array.isArray(d.cashFlowProjection) && d.cashFlowProjection.length > 0 && (
         <div id="section-cashflow" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
           <div style={{ overflowX:"auto" }}>
