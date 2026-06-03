@@ -108,6 +108,21 @@ function coerceDealArrays(data: Record<string, unknown>): Record<string, unknown
   return out;
 }
 
+// Title-case an ALL-CAPS name (OM covers are often all-caps) for display, leaving
+// any name that already has lowercase letters untouched. Small connector words
+// stay lowercase except as the first word. Does not change stored data.
+const TITLE_SMALL_WORDS = new Set(["of", "the", "and", "at", "in", "on", "to", "for", "a", "an", "by", "vs"]);
+function prettyName(name: unknown): unknown {
+  if (typeof name !== "string" || name.trim().length < 2 || /[a-z]/.test(name)) return name;
+  let wi = 0;
+  return name.toLowerCase().split(/(\s+)/).map(tok => {
+    if (/^\s*$/.test(tok)) return tok;
+    const first = wi++ === 0;
+    if (!first && TITLE_SMALL_WORDS.has(tok)) return tok;
+    return tok.charAt(0).toUpperCase() + tok.slice(1);
+  }).join("");
+}
+
 // GET /api/deals — list all deals (excludes in-progress ingests)
 router.get("/deals", requireAuth, async (req, res) => {
   try {
@@ -129,6 +144,7 @@ router.get("/deals", requireAuth, async (req, res) => {
       .map(r => {
         const { _processing: _p, _processingError: _e, ...rest } = r.data;
         const out = { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt } as Record<string, unknown>;
+        out.propertyName = prettyName(out.propertyName);   // tidy ALL-CAPS names for display/exports (stored value unchanged)
         if (coverSet.has(r.id)) {
           out.imageMeta = { ...((out.imageMeta as Record<string, unknown>) || {}), cover: true, thumb: thumbSet.has(r.id) };
         }
