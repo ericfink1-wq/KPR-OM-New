@@ -14,7 +14,7 @@ export async function extractSalesReport(text: string): Promise<SalesExtractResu
   const prompt = `You are a CRE data extraction engine. Extract tenant sales data from this retail sales report.
 Return ONLY valid JSON — no markdown fences, no explanation — with this exact shape:
 {
-  "year": <integer — the sales year this report covers, e.g. 2023>,
+  "year": <integer — the sales year your figures below represent, e.g. 2024>,
   "tenants": [
     {
       "name": "string",
@@ -27,20 +27,25 @@ Return ONLY valid JSON — no markdown fences, no explanation — with this exac
 }
 
 RULES:
-- year: infer from the header or period label of the report (e.g. "2023 Sales Report" → 2023). If truly ambiguous, use the most recent full calendar year mentioned.
-- salesPSF: sales per square foot (dollars). Often labeled "Sales/SF", "$/SF", or "PSF".
-- annualSales: total annual sales volume in dollars (not PSF). If shown in thousands, convert to full dollars.
-- sf: tenant GLA / leased SF for use in sales calculations.
+- salesPSF: sales per square foot (dollars). Often labeled "Sales/SF", "$/SF", "PSF", or "Per Square Foot".
+- annualSales: TOTAL annual sales volume in dollars (not PSF) for a FULL 12-month year. If shown in thousands, convert to full dollars.
+- sf: tenant GLA / leased SF used for sales calculations.
 - occupancyCost: TOTAL occupancy cost percentage = (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled "Occ Cost %", "OC%", or "Occupancy Cost" — capture the report's stated total. Do NOT report a base-rent-only ratio.
-- Skip total/subtotal rows and blank rows.
-- Include all tenants that have any sales data, even if some fields are null.
+- Skip total/subtotal rows and blank rows. Skip tenants whose sales are all zero / not reported.
+- Include all tenants that have any real sales data, even if some fields are null.
+
+CHOOSING THE YEAR — READ CAREFULLY. Many reports (e.g. "Gross Sales History", "MAX_GSALES") show MULTIPLE year columns per tenant (e.g. 12/25, 12/24, 12/23 …). The MOST RECENT column is frequently a PARTIAL / year-to-date year that is NOT yet complete — its total is far smaller than the prior year, or its later months are zero/blank, or the report is dated early in the following year. DO NOT use a partial year: it understates sales drastically (e.g. a grocer showing $5M for a part-year vs $51M full-year).
+- Use the MOST RECENT *COMPLETE* full-year column for every tenant, and set the top-level "year" to that complete year. If the latest column is clearly partial (much lower than the prior year, trailing zero months, or report dated in Jan–Mar of the next year), step back to the last complete year.
+- A tenant's annualSales and salesPSF MUST come from the SAME chosen year and be internally consistent (annualSales ÷ sf ≈ salesPSF).
+
+SQUARE FOOTAGE — IMPORTANT. If the report's "Square Feet (GLA)" prints as 0 or blank but it DOES state a "Per Square Foot" sales figure, DERIVE sf = round(annualSales ÷ salesPSF). Never report sf as 0 when sales and PSF are both present.
 
 ${await lessonGuidanceClient("sales")}
 SALES REPORT TEXT:
 ${text.slice(0, 40000)}`;
 
   const res = await apiAiMessages({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-6",
     max_tokens: 16000,
     messages: [{ role: "user", content: prompt }],
   });
@@ -68,10 +73,12 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
   const tenants = result.tenants.map(t => {
     const matchKey = tenantKey(stripSuiteCode(t.name as string));
     const rt = roster.get(matchKey);
-    let sf = nv(t.sf);
-    if (sf == null) sf = nv(rt?.sf) ?? null;
     let psf = nv(t.salesPSF);
     let gross = nv(t.annualSales);
+    let sf = nv(t.sf);
+    if (sf == null) sf = nv(rt?.sf) ?? null;
+    // Derive SF from sales ÷ PSF when GLA wasn't disclosed (common in "Gross Sales History" reports that print GLA as 0).
+    if (sf == null && psf != null && psf > 0 && gross != null) sf = Math.round(gross / psf);
     if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
     if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
 
