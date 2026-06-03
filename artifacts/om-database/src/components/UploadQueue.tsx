@@ -15,6 +15,7 @@ interface QueueItem {
   status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "done" | "error";
   msg: string;
   progress: number;
+  startedAt?: number;   // ms when ACTIVE processing began (not queue/wait time)
   error?: string;
   deal?: Deal;
   tempDealId?: string;
@@ -47,6 +48,14 @@ interface Props {
 // Village Center") is still recognized — and offers Refresh — instead of quietly
 // forking a second deal. A match only opens the duplicate PROMPT (Refresh vs Keep
 // both), so even a fuzzy hit is user-confirmed, never silently merged.
+// Format an elapsed duration (ms) compactly: "12s" under a minute, "1m 05s" over.
+function fmtElapsed(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60), r = s % 60;
+  return `${m}m ${r.toString().padStart(2, "0")}s`;
+}
+
 function findDuplicate(fileName: string, extracted: Record<string, unknown>, existing: Deal[]): Deal | null {
   const m = matchDeal(
     {
@@ -207,6 +216,15 @@ const MAX_CONCURRENT = 3;
 export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, onOpenDeal, existingDeals, onPanelHeightChange }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [queueOpen, setQueueOpen] = useState(true);
+  // Tick once a second while anything is actively processing, to drive each
+  // item's live elapsed-time readout.
+  const [nowTick, setNowTick] = useState(Date.now());
+  const anyProcessing = queue.some(it => it.status === "extracting");
+  useEffect(() => {
+    if (!anyProcessing) return;
+    const iv = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, [anyProcessing]);
   const panelRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef<File[]>([]);
   const activeCountRef = useRef(0);
@@ -573,7 +591,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
   const processFile = async (file: File, itemId: string) => {
     const dealId = uid();
-    updateItem(itemId, { tempDealId: dealId });
+    updateItem(itemId, { tempDealId: dealId, startedAt: Date.now() });
 
     try {
       const xls = isSpreadsheet(file);
@@ -831,6 +849,11 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                             <div style={{ width: `${item.progress}%`, height: "100%", background: "#6dba43", borderRadius: 3, transition: "width 0.4s ease" }} />
                           </div>
                           <span style={{ fontSize: 10, color: "#a69e91", fontWeight: 600, minWidth: 30, textAlign: "right" }}>{item.progress}%</span>
+                          {item.status === "extracting" && item.startedAt && (
+                            <span style={{ fontSize: 10, color: "#a69e91", fontVariantNumeric: "tabular-nums", minWidth: 34, textAlign: "right" }}>
+                              {fmtElapsed(nowTick - item.startedAt)}
+                            </span>
+                          )}
                         </div>
                       )}
                       {item.error && <div style={{ fontSize: 11, color: "#c0563b", marginTop: 3, lineHeight: 1.4, wordBreak: "break-word" }}>{item.error}</div>}
