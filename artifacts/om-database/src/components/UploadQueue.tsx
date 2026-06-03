@@ -10,7 +10,9 @@ import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } f
 import { extractFlyer, buildFlyerPatch, type FlyerResult } from "../lib/flyerExtract";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import { extractLoan, buildLoanPatch, type LoanResult } from "../lib/loanExtract";
-import type { InterestRateSwap } from "../lib/idb";
+import { extractAmortSchedule } from "../lib/amortExtract";
+import { currentBalanceFromRows } from "../lib/amortize";
+import type { InterestRateSwap, AmortRow } from "../lib/idb";
 
 interface QueueItem {
   id: string;
@@ -669,6 +671,46 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   };
 
+  // Apply an amortization schedule to a matched deal (ENRICH-ONLY: stores the
+  // schedule + gap-fills the current loan balance; never touches the roster).
+  const applyAmortToDeal = async (itemId: string, deal: Deal, rows: AmortRow[]): Promise<Deal> => {
+    const patch: Partial<Deal> = { customAmortSchedule: rows };
+    const { balance } = currentBalanceFromRows(rows);
+    if (deal.loanBalance == null && balance != null) patch.loanBalance = Math.round(balance);
+    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
+    await apiSaveDeal(updated);
+    onDealUpdated?.(updated);
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: "amort",
+      matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: { rows } as unknown as Record<string, unknown>,
+      msg: `Amortization → ${deal.propertyName || deal.fileName || "matched deal"} · ${rows.length} periods${balance != null ? ` · balance $${Math.round(balance).toLocaleString()}` : ""}`,
+    });
+    return updated;
+  };
+
+  const routeAmort = async (
+    itemId: string, dealId: string, text: string, fileName: string,
+    propertyName: string | null, address: string | null,
+  ) => {
+    updateItem(itemId, { msg: "Reading amortization schedule…", progress: 55, routedType: "amort" });
+    const rows = await extractAmortSchedule(text);
+    const hint = { propertyName, address, fileName };
+    const candidates = [...existingDeals, ...createdDealsRef.current];
+    const m = matchDeal(hint, candidates);
+    if (m.deal && m.confidence !== "none") {
+      await applyAmortToDeal(itemId, m.deal, rows);
+    } else if (hasPossibleMatch(hint, candidates)) {
+      updateItem(itemId, {
+        status: "awaiting_match", routedType: "amort", matchHint: hint,
+        pendingExtracted: { rows } as unknown as Record<string, unknown>, tempDealId: dealId,
+        msg: `Amortization schedule (${rows.length} periods) — which property's loan is this? Match it or create a new one.`, progress: 100,
+      });
+    } else {
+      await autoCreateOrAttach(itemId, "amort", { rows } as unknown as Record<string, unknown>, hint, dealId);
+    }
+  };
+
   // When an OM finishes creating/refreshing a deal, remember it and auto-attach
   // any rent roll / sales from the same drop that were waiting for their property.
   const registerCreatedDeal = async (deal: Deal) => {
@@ -699,6 +741,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           lastApplied = it.id;
         } else if (it.routedType === "loan") {
           working = await applyLoanToDeal(it.id, working, it.pendingExtracted as unknown as LoanResult);
+          lastApplied = it.id;
+        } else if (it.routedType === "amort") {
+          working = await applyAmortToDeal(it.id, working, (it.pendingExtracted as unknown as { rows: AmortRow[] }).rows);
           lastApplied = it.id;
         }
       } catch (err) {
@@ -762,6 +807,13 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Loan import failed", error: err instanceof Error ? err.message : "failed" });
       }
+    } else if (item.routedType === "amort" && item.pendingExtracted) {
+      updateItem(itemId, { status: "extracting", msg: "Applying amortization schedule…", progress: 60 });
+      try {
+        await applyAmortToDeal(itemId, deal, (item.pendingExtracted as unknown as { rows: AmortRow[] }).rows);
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Schedule import failed", error: err instanceof Error ? err.message : "failed" });
+      }
     }
   };
 
@@ -809,6 +861,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         if (routedType === "sales") await applySalesToDeal(itemId, base, pendingExtracted as unknown as SalesExtractResult);
         else if (routedType === "swap") await applySwapToDeal(itemId, base, pendingExtracted as unknown as InterestRateSwap);
         else if (routedType === "loan") await applyLoanToDeal(itemId, base, pendingExtracted as unknown as LoanResult);
+        else if (routedType === "amort") await applyAmortToDeal(itemId, base, (pendingExtracted as unknown as { rows: AmortRow[] }).rows);
         else await applyOptionsToDeal(itemId, base, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
         await registerCreatedDeal(base);
       }
@@ -880,6 +933,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const u = await applySwapToDeal(itemId, deal, pendingExtracted as unknown as InterestRateSwap); await refreshAnalysisFor(itemId, u);
     } else if (routedType === "loan") {
       const u = await applyLoanToDeal(itemId, deal, pendingExtracted as unknown as LoanResult); await refreshAnalysisFor(itemId, u);
+    } else if (routedType === "amort") {
+      await applyAmortToDeal(itemId, deal, (pendingExtracted as unknown as { rows: AmortRow[] }).rows);
     }
   };
 
@@ -975,6 +1030,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       }
       if (cls.type === "loan") {
         await routeLoan(itemId, dealId, text, fileName, cls.propertyName, cls.address);
+        return;
+      }
+      if (cls.type === "amort") {
+        await routeAmort(itemId, dealId, text, fileName, cls.propertyName, cls.address);
         return;
       }
       // Otherwise treat as an OM / deal package (the original flow, unchanged).

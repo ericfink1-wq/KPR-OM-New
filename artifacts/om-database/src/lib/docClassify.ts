@@ -2,7 +2,7 @@ import type { Deal } from "./idb";
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
 
-export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan" | "unknown";
+export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan" | "amort" | "unknown";
 
 // Deterministic detector for a lease-OPTIONS schedule (a renewal-option report,
 // not a full rent roll). These list option ladders but usually lack current SF /
@@ -44,12 +44,25 @@ export function detectSwap(text: string, fileName: string): boolean {
   return fnHit || bodyHit;
 }
 
+// Deterministic detector for an AMORTIZATION schedule: a table of periodic
+// payments with a running principal balance. Distinct from a loan agreement
+// (legal prose) — this is the numeric schedule itself.
+export function detectAmort(text: string, fileName: string): boolean {
+  const fn = fileName.toLowerCase();
+  if (/\b(rent\s*roll|sales|flyer|swap|isda|offering|memorandum)/.test(fn)) return false;
+  const fnHit = /amort|payment schedule|loan schedule/.test(fn);
+  const t = text.slice(0, 4000).toLowerCase();
+  const bodyHit = /amortization schedule/.test(t)
+    || (/(beginning|ending|remaining|principal)\s+balance/.test(t) && /(payment|principal|interest)/.test(t) && /(period|payment\s*(no|#|date)|month)/.test(t));
+  return fnHit || bodyHit;
+}
+
 // Deterministic detector for a LOAN agreement / credit agreement / promissory
 // note / loan term sheet / closing statement. Uses unambiguous loan-doc phrases
 // so it won't steal a sale OM (which markets a property, not a financing).
 export function detectLoan(text: string, fileName: string): boolean {
   const fn = fileName.toLowerCase();
-  if (/\b(rent\s*roll|sales|option|flyer|swap|isda|offering|memorandum)/.test(fn)) return false;
+  if (/\b(rent\s*roll|sales|option|flyer|swap|isda|offering|memorandum|amort)/.test(fn)) return false;
   const fnHit = /loan|credit agreement|promissory|term sheet|mortgage|deed of trust|financing|closing statement/.test(fn);
   const t = text.slice(0, 6000).toLowerCase();
   const bodyHit = /(loan agreement|credit agreement|promissory note|loan and security agreement|deed of trust|loan term sheet|closing (statement|disbursement)|principal amount of the loan)/.test(t);
@@ -70,7 +83,7 @@ export async function classifyDocument(text: string, fileName: string): Promise<
   const slice = text.slice(0, 6000);
   const prompt = `You are a commercial real estate document classifier. Given the START of a document (and its file name), identify what it is and which property it concerns.
 
-Return ONLY JSON: {"type":"om|rent-roll|lease-options|sales|flyer|swap|loan|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
+Return ONLY JSON: {"type":"om|rent-roll|lease-options|sales|flyer|swap|loan|amort|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
 
 Definitions:
 - "om" = an Offering Memorandum / investment-SALE package for a property being sold (has sections like investment highlights, sale financials/NOI/cap rate, rent abstracts, sale comps).
@@ -80,6 +93,7 @@ Definitions:
 - "flyer" = a LEASING flyer / availability brochure: a short marketing one-pager advertising AVAILABLE space FOR LEASE at a center. Has property highlights, demographics, a co-tenant lineup, available suites, and a leasing-contact — but NO sale price/NOI/cap rate and NO per-tenant rents. Distinct from an "om" (which is for SELLING the whole property).
 - "swap" = an interest-rate SWAP confirmation (e.g. an ISDA dealer confirmation): a notional amount, fixed rate, floating rate option (SOFR), spread, trade/effective/termination dates, and a Fixed/Floating Rate Payer.
 - "loan" = a LOAN document: a loan agreement, credit agreement, promissory note, loan term sheet, or closing statement — the FINANCING terms (lender, loan amount, rate, maturity, LTV, prepayment). Distinct from an "om" (a sale-marketing package, not a loan).
+- "amort" = an AMORTIZATION SCHEDULE: a table of periodic payments with a running principal balance (columns like Period/Date, Payment, Interest, Principal, Balance). The numeric schedule itself, not a legal loan agreement.
 - "unknown" = none of the above, or can't tell.
 
 Rules:
@@ -100,7 +114,7 @@ ${slice}`;
     });
     const raw = res.content?.[0]?.text ?? "";
     const parsed = robustParseJSON(raw) as Partial<Classification>;
-    let type = (["om", "rent-roll", "lease-options", "sales", "flyer", "swap", "loan", "unknown"] as const).includes(parsed.type as DocType)
+    let type = (["om", "rent-roll", "lease-options", "sales", "flyer", "swap", "loan", "amort", "unknown"] as const).includes(parsed.type as DocType)
       ? (parsed.type as DocType) : "unknown";
     // Deterministic override: an options schedule must never be treated as a
     // roster-replacing rent roll, so trust the column/filename signal over the LLM.
@@ -108,6 +122,9 @@ ${slice}`;
     // Swap and loan docs are financing, never a sale OM — trust their unambiguous
     // cues over an "om"/"unknown" guess (swap is checked first, it's more specific).
     if ((type === "om" || type === "unknown") && detectSwap(text, fileName)) type = "swap";
+    // An amortization schedule (numeric payment table) is checked before "loan" so
+    // a "loan schedule" file isn't grabbed by the loan detector.
+    if ((type === "om" || type === "loan" || type === "unknown") && detectAmort(text, fileName)) type = "amort";
     if ((type === "om" || type === "unknown") && detectLoan(text, fileName)) type = "loan";
     // A leasing flyer must never be read as a sale OM (which would mine it for
     // financials / treat available space as in-place tenants). Trust the strong
