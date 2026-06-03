@@ -756,9 +756,19 @@ export function isVacant(name: unknown): boolean {
   return false;
 }
 
-export function isNAPTenant(t: { name?: string | null; sf?: number | string | null; annualRent?: number | string | null; rentPerSF?: number | string | null; isNAP?: boolean | null }): boolean {
+export function isNAPTenant(t: { name?: string | null; sf?: number | string | null; annualRent?: number | string | null; rentPerSF?: number | string | null; isNAP?: boolean | null; leaseStart?: string | null; leaseExpiry?: string | null; rentSchedule?: string | null }): boolean {
   if (t.isNAP === true) return true;
   if (isVacant(t.name)) return false;
+  // A signed lease (lease dates or a rent schedule) means a REAL tenant even when
+  // current rent shows $0 — they're PRE-COMMENCEMENT (rent starts on a future
+  // date / build-out / free-rent), not a Not-A-Part parcel. Only treat $0-rent
+  // occupied space as NAP when there's no lease at all (a ground-leased pad).
+  const hasLease = !!(
+    (typeof t.leaseStart === "string" && t.leaseStart.trim()) ||
+    (typeof t.leaseExpiry === "string" && t.leaseExpiry.trim()) ||
+    (typeof t.rentSchedule === "string" && t.rentSchedule.trim())
+  );
+  if (hasLease) return false;
   const sf = t.sf == null || t.sf === "" ? null : Number(t.sf);
   const rent = t.annualRent == null || t.annualRent === "" ? null : Number(t.annualRent);
   const rentPSF = t.rentPerSF == null || t.rentPerSF === "" ? null : Number(t.rentPerSF);

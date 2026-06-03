@@ -106,7 +106,7 @@ REQUIRED SCHEMA:
       "occupancyCost": "number or null — TOTAL occupancy cost as a percentage of gross sales, defined as (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled 'Occ Cost %', 'OC%', or 'Occupancy Cost'. Use the OM's stated total occ-cost % when given. If the OM only states base rent ÷ sales (not the full health ratio), note that in salesNotes instead and leave this null.",
       "assumptionNote": "string or null — any footnote/assumption for this tenant",
       "isAnchor": "true|false",
-      "isNAP": "true if this tenant is on an adjacent parcel NOT part of this sale/ownership (marked NAP, Not A Part, or outparcel on the site plan). false or null otherwise.",
+      "isNAP": "true if this tenant is on an adjacent parcel NOT part of this sale/ownership (marked NAP, Not A Part, or outparcel on the site plan). false or null otherwise. IMPORTANT: a signed inline tenant whose rent has NOT yet commenced (future rent-commencement / lease-start date, $0 or blank current rent, in build-out/free-rent) is a REAL tenant, NOT NAP — set isNAP false, set leaseStart to the commencement date, and capture their contractual base rent (not $0).",
       "isDark": "true if this tenant is a 'dark' store — they still hold the lease and are paying rent, but the store is closed / no longer operating (look for words like 'dark', 'closed but paying', 'gone dark', 'not operating', 'vacated but obligated', 'lease in place, store closed'). false or null otherwise. Do NOT mark a unit dark just because it is vacant with no tenant — dark specifically means a paying tenant whose store is closed.",
       "originalLeaseDate": "string or null",
       "remainingTermYears": "number or null"
