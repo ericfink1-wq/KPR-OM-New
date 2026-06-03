@@ -314,7 +314,22 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   // these filters apply (no auto-relax) and whatever count results is shown.
   type CompFilters = { months: number | null; geography: "national" | "state" | "metro"; sameType: boolean; sizeBand: boolean };
   const [compFilters, setCompFilters] = useState<CompFilters | null>(null);
-  const DEFAULT_FILTERS: CompFilters = { months: 36, geography: "national", sameType: true, sizeBand: false };
+  const DEFAULT_FILTERS: CompFilters = { months: 36, geography: "national", sameType: false, sizeBand: false };
+  // Seed "Customize" from what AUTO just used, so it opens showing the SAME comps
+  // (then the user tightens/loosens) — instead of a fixed default that can match
+  // nothing (e.g. requiring same-type when the comps carry no property type).
+  const filtersFromAuto = (): CompFilters => {
+    const label = bm?.tierLabel || "";
+    const relaxed = bm?.relaxed ?? [];
+    // No real tier matched (comps came from smart-match) → start inclusive.
+    if (!bm || label.includes("no matching")) return { months: 36, geography: "national", sameType: false, sizeBand: false };
+    return {
+      months: /24 month/i.test(label) ? 24 : 36,
+      geography: relaxed.includes("geography") ? "national" : "state",
+      sameType: !relaxed.includes("property type"),
+      sizeBand: !relaxed.includes("size"),
+    };
+  };
 
   useEffect(() => {
     try { localStorage.setItem(lsKey, JSON.stringify({ excludeIds, includeIds, dismissedSugIds, starredIds })); } catch { /* ignore */ }
@@ -510,7 +525,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
         {compFilters === null ? (
           <>
             <span style={{ color: "#7d766a" }}>Comps: <b style={{ color: "#3f7a1f" }}>Auto</b></span>
-            <button onClick={() => setCompFilters(DEFAULT_FILTERS)}
+            <button onClick={() => setCompFilters(filtersFromAuto())}
               style={{ background: "transparent", border: "1px solid #d8cfbd", color: "#5c5047", borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
               Customize
             </button>
