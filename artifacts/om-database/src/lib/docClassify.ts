@@ -115,20 +115,31 @@ export function matchDeal(
 ): DealMatch {
   const active = existing.filter(d => !d.trashedAt);
 
-  // 1) Exact file-name match (strong).
+  // Address guard: when BOTH sides have an address, they must be compatible —
+  // otherwise two different properties that share a NAME (e.g. "Crossroads Plaza"
+  // in two states) would wrongly match. If either address is missing/too short we
+  // can't tell, so we don't block (fall back to the name/token signals).
+  const na = norm(hint.address || "");
+  const addrConflict = (d: Deal) => {
+    const da = norm(d.address || "");
+    if (na.length < 6 || da.length < 6) return false;
+    return !(na === da || na.includes(da) || da.includes(na));
+  };
+
+  // 1) Exact file-name match (strong) — but never across conflicting addresses.
   const cleanFile = (hint.fileName || "").replace(/\.(pdf|xlsx?|xlsm|xlsb|csv)$/i, "").toLowerCase().trim();
   if (cleanFile) {
-    const byFile = active.find(d => (d.fileName || "").toLowerCase() === cleanFile);
+    const byFile = active.find(d => (d.fileName || "").toLowerCase() === cleanFile && !addrConflict(d));
     if (byFile) return { deal: byFile, confidence: "high" };
   }
 
-  // 2) Property-name match.
+  // 2) Property-name match (rejected when the addresses clearly differ).
   const np = norm(hint.propertyName || "");
   if (np.length > 4) {
-    const exact = active.find(d => { const p = norm(d.propertyName || ""); return p.length > 4 && p === np; });
+    const exact = active.find(d => { const p = norm(d.propertyName || ""); return p.length > 4 && p === np && !addrConflict(d); });
     if (exact) return { deal: exact, confidence: "high" };
     // Containment (e.g. "Maple Plaza" vs "Maple Plaza Shopping Center")
-    const partial = active.find(d => { const p = norm(d.propertyName || ""); return p.length > 6 && (p.includes(np) || np.includes(p)); });
+    const partial = active.find(d => { const p = norm(d.propertyName || ""); return p.length > 6 && (p.includes(np) || np.includes(p)) && !addrConflict(d); });
     if (partial) return { deal: partial, confidence: "medium" };
   }
 
@@ -139,6 +150,7 @@ export function matchDeal(
   const htoks = distinctiveTokens(hint.propertyName || "");
   if (htoks.length) {
     const tokMatch = active.find(d => {
+      if (addrConflict(d)) return false;
       const dtoks = distinctiveTokens(d.propertyName || "");
       if (!dtoks.length) return false;
       const [short, long] = htoks.length <= dtoks.length ? [htoks, dtoks] : [dtoks, htoks];
@@ -148,8 +160,7 @@ export function matchDeal(
     if (tokMatch) return { deal: tokMatch, confidence: "medium" };
   }
 
-  // 3) Address match.
-  const na = norm(hint.address || "");
+  // 3) Address match (positive signal).
   if (na.length > 8) {
     const exact = active.find(d => { const a = norm(d.address || ""); return a.length > 8 && a === na; });
     if (exact) return { deal: exact, confidence: "high" };
