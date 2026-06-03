@@ -42,8 +42,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   useEffect(() => {
     if (!isAdmin) return;
     apiUploadLog().then(list => {
-      const since = Date.now() - 24 * 60 * 60 * 1000;
-      setUploadFails(list.filter(u => u.status === "failed" && new Date(u.createdAt).getTime() >= since).length);
+      let lastView = 0;
+      try { lastView = Number(localStorage.getItem("uploadlog-last-view")) || 0; } catch { /* ignore */ }
+      // Count only failures NEWER than the last time the log was opened (and never
+      // surface ones older than a week on a fresh browser), so viewing the log
+      // dismisses the badge for good — it only returns when a NEW upload fails.
+      const floor = Math.max(lastView, Date.now() - 7 * 24 * 60 * 60 * 1000);
+      setUploadFails(list.filter(u => u.status === "failed" && new Date(u.createdAt).getTime() > floor).length);
     }).catch(() => { /* non-fatal */ });
   }, [isAdmin]);
   // Analytics nav dropdowns (Portfolio Analytics ▾ / Tenant Analytics ▾)
@@ -553,12 +558,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         {/* Members (account approvals) — admin only */}
         {isAdmin && (
           <div style={{ position: "relative", display: "inline-flex" }}>
-            <button onClick={() => { setMembersOpen(true); setUploadFails(0); }}
+            <button onClick={() => { setMembersOpen(true); setUploadFails(0); try { localStorage.setItem("uploadlog-last-view", String(Date.now())); } catch { /* ignore */ } }}
               style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
               Members
             </button>
             {uploadFails > 0 && (
-              <span title={`${uploadFails} failed upload${uploadFails === 1 ? "" : "s"} in the last 24h`}
+              <span title={`${uploadFails} new failed upload${uploadFails === 1 ? "" : "s"} since you last viewed the log`}
                 style={{ position: "absolute", top: -6, right: -6, minWidth: 17, height: 17, padding: "0 4px", boxSizing: "border-box", background: "#c0392b", color: "#fff", borderRadius: 9, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif", border: "2px solid #faf7f0" }}>
                 {uploadFails}
               </span>
