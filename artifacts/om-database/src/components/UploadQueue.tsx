@@ -621,7 +621,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       } : undefined;
 
       const extracted = resolvedDeal as unknown as Record<string, unknown>;
-      const dup = findDuplicate(fileName, extracted, existingDeals);
+      // Include deals created earlier in THIS drop (e.g. a stub made from a rent
+      // roll that finished before this OM) so the OM merges into it via the dup
+      // flow instead of creating a second deal for the same property.
+      const dup = findDuplicate(fileName, extracted, [...existingDeals, ...createdDealsRef.current]);
 
       if (dup) {
         updateItem(itemId, {
