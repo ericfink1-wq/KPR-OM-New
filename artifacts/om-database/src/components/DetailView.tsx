@@ -1945,7 +1945,7 @@ ${text.slice(0, 60000)}`;
               Actions <span style={{ fontSize:9 }}>▾</span>
             </button>
             {actionsOpen && (
-              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210 }}>
+              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, right:"auto", background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210, maxWidth:"calc(100vw - 24px)", maxHeight:"70vh", overflowY:"auto" }}>
                 {actionsHelpOpen ? (
                   <div>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"4px 8px 6px 12px" }}>
