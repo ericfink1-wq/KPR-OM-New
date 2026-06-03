@@ -1304,21 +1304,33 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
             const adjScore = computeWatchlistImpact(d, watchMap).adjustScore(d.dealScore);
             return (
               <button key={d.id} onClick={() => onOpen(d.id)}
-                style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 14, padding: "16px 18px", textAlign: "left", cursor: "pointer", boxShadow: "0 1px 2px rgba(56,58,55,0.04)", transition: "transform .2s ease" }}
-                onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
-                onMouseLeave={e => (e.currentTarget.style.transform = "none")}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: sc, flexShrink: 0 }} />
-                  <span style={{ fontSize: 9, color: sc, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{d.status}</span>
+                style={{ position: "relative", height: 172, borderRadius: 14, overflow: "hidden", cursor: "pointer", border: "1px solid #ece5d7", textAlign: "left", padding: 0,
+                  boxShadow: "0 1px 2px rgba(56,58,55,0.05), 0 14px 30px -24px rgba(56,58,55,0.6)",
+                  background: d.imageMeta?.cover ? "#26281f" : "linear-gradient(135deg,#43463b,#26281f)", transition: "transform .2s ease" }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "scale(1.06)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "none"; }}>
+                {d.imageMeta?.cover && (
+                  <img src={`/api/deals/${d.id}/cover-thumb?v=${encodeURIComponent(d.updatedAt || d.uploadedAt || "")}`} alt="" loading="lazy" decoding="async"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transition: "transform .45s ease" }} />
+                )}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(38,40,31,0.10) 0%, rgba(38,40,31,0.34) 42%, rgba(38,40,31,0.86) 100%)" }} />
+                <div style={{ position: "absolute", top: 11, left: 12, right: 12, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.93)", padding: "3px 9px", borderRadius: 20 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: sc }} />
+                    <span style={{ fontSize: 9, color: sc, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{d.status || "—"}</span>
+                  </span>
                   <ScoreBadge score={adjScore} size={11} />
                   <RecencyBadge deal={d} />
                 </div>
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 500, color: "#26281f", marginBottom: 2, lineHeight: 1.2 }}>{d.propertyName || d.fileName || "Untitled"}</div>
-                {loc && <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 10 }}>{loc}</div>}
-                <div style={{ display: "flex", gap: 14 }}>
-                  {d.noi && <div><div style={{ fontSize: 8, color: "#a89f8f", letterSpacing: "0.05em" }}>NOI</div><div style={{ fontSize: 13, color: "#0f9d63", fontWeight: 600 }}>${(Number(d.noi)/1e6).toFixed(1)}M</div></div>}
-                  {d.capRate && <div><div style={{ fontSize: 8, color: "#a89f8f", letterSpacing: "0.05em" }}>CAP</div><div style={{ fontSize: 13, color: "#0f9d63", fontWeight: 600 }}>{d.capRate}%</div></div>}
-                  {d.walt && <div><div style={{ fontSize: 8, color: "#a89f8f", letterSpacing: "0.05em" }}>WALT</div><div style={{ fontSize: 13, color: Number(d.walt) < 3 ? "#dc2626" : "#383a37", fontWeight: 600 }}>{d.walt}y</div></div>}
+                <div style={{ position: "absolute", left: 13, right: 13, bottom: 11, color: "#fff" }}>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600, lineHeight: 1.18, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{d.propertyName || d.fileName || "Untitled"}</div>
+                  {loc && <div style={{ fontSize: 11, opacity: 0.86, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loc}</div>}
+                  <div style={{ display: "flex", gap: 12, marginTop: 5 }}>
+                    {d.noi != null && <span style={{ fontSize: 11, color: "#9fe08a", fontWeight: 600 }}>${(Number(d.noi)/1e6).toFixed(1)}M NOI</span>}
+                    {d.capRate != null && <span style={{ fontSize: 11, color: "#fff", opacity: 0.92, fontWeight: 600 }}>{d.capRate}% cap</span>}
+                    {d.walt != null && <span style={{ fontSize: 11, color: Number(d.walt) < 3 ? "#ffb3b3" : "#fff", opacity: 0.92, fontWeight: 600 }}>{d.walt}y WALT</span>}
+                  </div>
                 </div>
               </button>
             );
