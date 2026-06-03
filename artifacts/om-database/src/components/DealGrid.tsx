@@ -55,7 +55,7 @@ function cityOnly(city: string | null | undefined, state: string | null | undefi
   return c.replace(/,\s*[A-Za-z]{2}\.?$/, "").trim() || c;
 }
 
-function RowThumb({ deal }: { deal: Deal }) {
+function RowThumb({ deal, bust }: { deal: Deal; bust?: number }) {
   // Load the cover as a native lazy <img> from a cacheable binary endpoint — the
   // browser only fetches covers for visible rows and caches them, so a 1,000-deal
   // list doesn't fire 1,000 requests and sorting/filtering doesn't re-fetch.
@@ -65,7 +65,7 @@ function RowThumb({ deal }: { deal: Deal }) {
   return (
     <div style={{ width: 64, height: 48, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "#eef3e6", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {deal.imageMeta?.cover && !failed
-        ? <img src={`/api/deals/${deal.id}/cover-thumb?v=${v}`} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ? <img src={`/api/deals/${deal.id}/cover-thumb?v=${v}${bust ? `&b=${bust}` : ""}`} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : <span style={{ fontSize: 17, fontWeight: 700, color: "#3f7a1f", fontFamily: "'Inter', sans-serif" }}>{initial}</span>}
     </div>
   );
@@ -362,30 +362,34 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const shownCount = rows.length;
   useEffect(() => { onCountsChange?.(shownCount, deals.length); }, [shownCount, deals.length, onCountsChange]);
 
-  // One-time, throttled backfill: a deal with a cover but no thumbnail serves the
-  // full-size image (heavy). Generate a small tile-sized thumb for those in the
-  // background so the whole library stays lean; deals that already have a thumb
-  // are skipped.
-  const thumbBackfillRef = useRef<Set<string>>(new Set());
+  // One-time, throttled backfill: (re)generate a crisp tile-sized (600px) thumbnail
+  // for every deal that has a cover, so old tiny 168px thumbs and full-size covers
+  // are all replaced. A localStorage marker (versioned) makes it run only once per
+  // deal; thumbBust busts the image cache so the sharper thumb shows immediately.
+  const THUMB_BACKFILL_KEY = "kpr_thumb_backfill_v2";
+  const [thumbBust, setThumbBust] = useState<Record<string, number>>({});
   useEffect(() => {
+    let done: Set<string>;
+    try { done = new Set(JSON.parse(localStorage.getItem(THUMB_BACKFILL_KEY) || "[]")); } catch { done = new Set(); }
     let cancelled = false;
-    const todo = deals
-      .filter(d => d.imageMeta?.cover && !d.imageMeta?.thumb && !d.trashedAt && !thumbBackfillRef.current.has(d.id))
-      .map(d => d.id);
+    const todo = deals.filter(d => d.imageMeta?.cover && !d.trashedAt && !done.has(d.id)).map(d => d.id);
     if (todo.length === 0) return;
     (async () => {
       const { dataUrlToThumb } = await import("../lib/pdfExtract");
+      const { apiSetCoverThumb } = await import("../lib/api");
       for (const id of todo) {
         if (cancelled) return;
-        thumbBackfillRef.current.add(id);
         try {
-          const imgs = await apiLoadImages(id) as { cover?: string | null; coverThumb?: string | null } | null;
-          if (imgs?.cover && !imgs.coverThumb) {
-            const thumb = await dataUrlToThumb(imgs.cover);
-            await apiSaveImages(id, { ...(imgs as object), coverThumb: thumb } as Parameters<typeof apiSaveImages>[1]);
-          }
+          const d = deals.find(x => x.id === id);
+          const v = encodeURIComponent(d?.updatedAt || d?.uploadedAt || "");
+          // Downscale the FULL cover (?full=1) to a 600px thumb and save just the thumb.
+          const thumb = await dataUrlToThumb(`/api/deals/${id}/cover-thumb?full=1&v=${v}`, 600, 0.7);
+          await apiSetCoverThumb(id, thumb);
+          if (!cancelled) setThumbBust(b => ({ ...b, [id]: Date.now() }));
         } catch { /* skip this one */ }
-        await new Promise(r => setTimeout(r, 500)); // throttle so the UI stays smooth
+        done.add(id);
+        try { localStorage.setItem(THUMB_BACKFILL_KEY, JSON.stringify([...done])); } catch { /* ignore */ }
+        await new Promise(r => setTimeout(r, 450)); // throttle so the UI stays smooth
       }
     })();
     return () => { cancelled = true; };
@@ -1258,7 +1262,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                         <input type="checkbox" checked={selected.has(d.id)} onChange={() => {}} />
                       </td>
                       <td style={{ padding: "8px 8px" }}>
-                        <RowThumb deal={d} />
+                        <RowThumb deal={d} bust={thumbBust[d.id]} />
                       </td>
                       <td style={{ padding: "8px 10px" }}>
                         <div
@@ -1310,7 +1314,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "scale(1.06)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "none"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "none"; }}>
                 {d.imageMeta?.cover && (
-                  <img src={`/api/deals/${d.id}/cover-thumb?v=${encodeURIComponent(d.updatedAt || d.uploadedAt || "")}`} alt="" loading="lazy" decoding="async"
+                  <img src={`/api/deals/${d.id}/cover-thumb?v=${encodeURIComponent(d.updatedAt || d.uploadedAt || "")}${thumbBust[d.id] ? `&b=${thumbBust[d.id]}` : ""}`} alt="" loading="lazy" decoding="async"
                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transition: "transform .45s ease" }} />
                 )}

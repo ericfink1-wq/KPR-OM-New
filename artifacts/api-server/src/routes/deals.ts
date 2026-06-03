@@ -360,7 +360,9 @@ router.get("/deals/:id/cover-thumb", requireAuth, async (req, res) => {
     const id = req.params.id as string;
     const rows = await db.select({ cover: dealImagesTable.cover, coverThumb: dealImagesTable.coverThumb })
       .from(dealImagesTable).where(eq(dealImagesTable.id, id));
-    const src = rows[0]?.coverThumb || rows[0]?.cover;
+    // ?full=1 forces the full cover (used by the thumbnail backfill to regenerate
+    // a crisp thumb); otherwise prefer the small thumb.
+    const src = req.query.full ? (rows[0]?.cover || rows[0]?.coverThumb) : (rows[0]?.coverThumb || rows[0]?.cover);
     const m = src ? /^data:([^;]+);base64,([\s\S]*)$/.exec(src) : null;
     if (!m) { res.status(404).end(); return; }
     res.set("Content-Type", m[1]);
@@ -371,6 +373,21 @@ router.get("/deals/:id/cover-thumb", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to load cover thumb");
     res.status(500).end();
+  }
+});
+
+// PUT /api/deals/:id/cover-thumb — update ONLY the coverThumb column (used by the
+// thumbnail backfill to upgrade small/legacy thumbs without rewriting the bundle).
+router.put("/deals/:id/cover-thumb", requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const thumb = (req.body as { coverThumb?: string }).coverThumb;
+    if (typeof thumb !== "string" || !thumb) { res.status(400).json({ error: "coverThumb required" }); return; }
+    await db.update(dealImagesTable).set({ coverThumb: thumb }).where(eq(dealImagesTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update cover thumb");
+    res.status(500).json({ error: "Failed to update cover thumb" });
   }
 });
 

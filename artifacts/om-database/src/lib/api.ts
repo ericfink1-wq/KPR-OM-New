@@ -245,6 +245,11 @@ export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<vo
   if (!resp.ok) throw new Error("Failed to save images");
 }
 
+// Update only the cover thumbnail (used by the library's thumbnail backfill).
+export async function apiSetCoverThumb(id: string, coverThumb: string): Promise<void> {
+  await apiFetch(`/deals/${id}/cover-thumb`, { method: "PUT", body: JSON.stringify({ coverThumb }) });
+}
+
 export async function apiLoadImages(id: string): Promise<ImageBundle | null> {
   const resp = await apiFetch(`/deals/${id}/images`);
   if (!resp.ok) return null;
