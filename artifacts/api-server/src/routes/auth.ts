@@ -209,7 +209,7 @@ router.post("/auth/login", async (req, res) => {
     }
     if (!user.emailVerified) {
       await recordLoginEvent(req, email, user.id, false);
-      res.status(403).json({ needsVerification: true, error: "Please verify your email first — check your inbox for the verification link (or request a new one below)." });
+      res.status(403).json({ error: "Your account is awaiting review by an administrator. You'll be able to sign in once it's approved." });
       return;
     }
     if (user.status !== "approved") {

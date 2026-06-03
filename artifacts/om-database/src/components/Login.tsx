@@ -72,8 +72,7 @@ export default function Login({ onLogin }: Props) {
     if (result.ok) {
       setMode("login");
       setPassword("");
-      setNeedsVerify(true);
-      setNotice("Account requested! Check your email and click the verification link to confirm your address — then an administrator will approve your access.");
+      setNotice("Account requested! An administrator will review and confirm your access — you'll be able to sign in once you're approved.");
     } else {
       setError(result.error || "Could not create account");
     }
