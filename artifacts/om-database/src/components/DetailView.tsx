@@ -1857,7 +1857,7 @@ ${text.slice(0, 60000)}`;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"32px 24px 20px 24px" }}>
+    <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"44px 24px 20px 24px" }}>
       <div style={{
         position: "fixed",
         top: 88,
@@ -1907,10 +1907,6 @@ ${text.slice(0, 60000)}`;
             <SectionJump deal={d} scrollRef={scrollContainerRef} viewMode={viewMode} />
           </div>
         </div>
-      </div>
-      {/* Back */}
-      <div style={{ marginBottom:10 }}>
-        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
       </div>
 
       {/* Property name + Actions + Jump To */}

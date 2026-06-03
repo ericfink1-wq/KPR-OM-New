@@ -410,6 +410,19 @@ function AppInner() {
           the Ask/flag buttons. Other pages keep it pinned near the top. */}
       <AiProgressBar {...(view.type === "detail" ? { bottom: 96 } : { top: 84 })} />
 
+      {/* Pinned back button — floats top-left on every sub-page so it's always
+          reachable while scrolling (browser back also works via popstate). */}
+      {viewStack.length > 1 && (
+        <button onClick={goBack} title="Back" aria-label="Back"
+          style={{ position: "fixed", top: 84, left: 12, zIndex: 120, display: "flex", alignItems: "center", gap: 5,
+            background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+            border: "1px solid #e0d8c8", color: "#5c5047", borderRadius: 20, padding: "5px 13px 5px 10px",
+            fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif",
+            boxShadow: "0 2px 10px rgba(56,58,55,0.16)" }}>
+          ← Back
+        </button>
+      )}
+
       {/* Drag overlay */}
       {dragging && (
         <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(56,58,55,0.55)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>

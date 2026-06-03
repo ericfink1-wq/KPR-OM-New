@@ -72,7 +72,7 @@ function _scaleCanvas(src: HTMLCanvasElement, targetW: number, quality: number):
 
 // Downscale any image data URL to a small thumbnail JPEG sized for the deal
 // library / tiles (used for raw cover uploads and the one-time backfill).
-export function dataUrlToThumb(dataUrl: string, width = 480, quality = 0.6): Promise<string> {
+export function dataUrlToThumb(dataUrl: string, width = 600, quality = 0.7): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -127,7 +127,7 @@ export async function _capturePagePhoto(
   // extraction entirely (which would grab the aerial background only).
   if (preferPageRender && half === "full") {
     const cover = _scaleCanvas(pc, 1600, 0.8);
-    const thumb = _scaleCanvas(pc, 480, 0.6);
+    const thumb = _scaleCanvas(pc, 600, 0.7);
     pc.width = pc.height = 0;
     return { cover, thumb };
   }
@@ -208,7 +208,7 @@ export async function _capturePagePhoto(
     source = c;
   }
   const cover = _scaleCanvas(source, 1200, 0.74);
-  const thumb = _scaleCanvas(source, 480, 0.6);
+  const thumb = _scaleCanvas(source, 600, 0.7);
   pc.width = pc.height = 0;
   if (cleanCanvas) { cleanCanvas.width = cleanCanvas.height = 0; }
   if (source !== pc && source !== cleanCanvas) { source.width = source.height = 0; }
