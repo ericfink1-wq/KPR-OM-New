@@ -1211,6 +1211,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [demoBusy, setDemoBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [tab, setTab] = useState<"overview" | "ai" | "tenants" | "transaction" | "financing" | "market">("overview");
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
   const [teachOpen, setTeachOpen] = useState(false);
   const [editingAddr, setEditingAddr] = useState(false);
@@ -1926,7 +1927,6 @@ ${text.slice(0, 60000)}`;
           </div>
           <div style={{ display:"flex", gap:8, flexShrink: 0 }}>
             <ViewToggle mode={viewMode} onChange={setViewMode} />
-            <SectionJump deal={d} scrollRef={scrollContainerRef} viewMode={viewMode} />
           </div>
         </div>
       </div>
@@ -2038,7 +2038,6 @@ ${text.slice(0, 60000)}`;
           </div>
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
             <ViewToggle mode={viewMode} onChange={setViewMode} />
-            <SectionJump deal={d} scrollRef={scrollContainerRef} viewMode={viewMode} />
           </div>
         </div>
       </div>
@@ -2147,6 +2146,20 @@ ${text.slice(0, 60000)}`;
       })()}
       {reviewOpen && <ImportReview deal={d} onClose={() => setReviewOpen(false)} onUpdate={onUpdate} />}
 
+      {/* ── Sub-page tabs ─────────────────────────────────────────────────────── */}
+      <div style={{ display:"flex", gap:4, overflowX:"auto", borderBottom:"1.5px solid #e7e0d2", marginBottom:14, WebkitOverflowScrolling:"touch" }}>
+        {([
+          ["overview","Overview"],["ai","AI Analysis"],["tenants","Tenants & Sales"],
+          ["transaction","Transaction Details"],["financing","Financing"],["market","Market & Comps"],
+        ] as const).map(([k,label]) => (
+          <button key={k} onClick={() => setTab(k)}
+            style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3f7a1f" : "2px solid transparent", color: tab===k ? "#26281f" : "#8b8578", padding:"8px 12px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Inter',sans-serif" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (<>
       {/* Cover hero — fit the whole photo to the window (cap to viewport height,
           contain so nothing is cropped or overflows), centered on a soft backdrop. */}
       {imgs?.cover && (
@@ -2202,6 +2215,8 @@ ${text.slice(0, 60000)}`;
         )
       )}
 
+      </>)}
+
       {/* Lightbox */}
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, zIndex:600, background:"rgba(26,28,22,0.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, cursor:"zoom-out" }}>
@@ -2246,6 +2261,7 @@ ${text.slice(0, 60000)}`;
 
       {teachOpen && <TeachExtractorModal onClose={() => setTeachOpen(false)} />}
 
+      {tab === "ai" && (<>
       {/* AI highlights — surfaced near the top, just below the cover photo */}
       {(d.notes || d.analysisStale) && (
         <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
@@ -2259,6 +2275,8 @@ ${text.slice(0, 60000)}`;
 
       <ExtractionQuality deal={d}/>
 
+      </>)}
+      {tab === "market" && (<>
       {/* Market sale */}
       {d.marketSale && (
         <div style={{ background:"#0d948810", border:"1px solid #0d948840", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
@@ -2285,6 +2303,8 @@ ${text.slice(0, 60000)}`;
         </div>
       )}
 
+      </>)}
+      {tab === "ai" && (<>
       {/* KPR thesis / assumptions — folded into the AI grade on re-grade. Placed
           above the site plan. Hidden in Asset Management view. */}
       {showAcq && (
@@ -2293,6 +2313,8 @@ ${text.slice(0, 60000)}`;
       </div>
       )}
 
+      </>)}
+      {tab === "overview" && (<>
       {/* Site plan (all states wrapped in one jump anchor; rendered only when the
           image bundle has loaded so the menu entry tracks the visible section) */}
       {imgs != null && (
@@ -2411,6 +2433,8 @@ ${text.slice(0, 60000)}`;
       </div>
       )}
 
+      </>)}
+      {tab === "tenants" && (<>
       {/* Tenant roster */}
       {(d.tenants||[]).length > 0 && (
         <div id="section-tenants">
@@ -2511,6 +2535,8 @@ ${text.slice(0, 60000)}`;
         <div id="section-rollover"><LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} /></div>
       )}
 
+      </>)}
+      {tab === "ai" && (<>
       {/* Deal score */}
       {showAcq && (d.dealScore || d.analysisStale) && (
         <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
@@ -2606,6 +2632,8 @@ ${text.slice(0, 60000)}`;
         );
       })()}
 
+      </>)}
+      {tab === "overview" && (<>
       {/* Edit metrics — below red flags */}
       <AkaEditor deal={d} onUpdate={onUpdate}/>
       <MetricsEditor deal={d} onUpdate={onUpdate}/>
@@ -2662,15 +2690,23 @@ ${text.slice(0, 60000)}`;
         );
       })()}
 
+      </>)}
+      {tab === "ai" && (<>
       {/* Key assumptions — above My Underwriting. Hidden in Asset Management view. */}
       {showAcq && <div id="section-assumptions"><KeyAssumptions deal={d} /></div>}
 
+      </>)}
+      {tab === "transaction" && (<>
       {/* My Underwriting */}
       <div id="section-underwriting" data-jump="My Underwriting"><MyUnderwritingPanel deal={d} onUpdate={onUpdate}/></div>
 
+      </>)}
+      {tab === "market" && (<>
       {/* Comp Benchmark — below My Underwriting */}
       <CompBenchmarkCard deal={d} />
 
+      </>)}
+      {tab === "transaction" && (<>
       {showAcq && <ClosingCostsCard deal={d} />}
 
       {/* Cash flow */}
@@ -2847,6 +2883,8 @@ ${text.slice(0, 60000)}`;
         );
       })()}
 
+      </>)}
+      {tab === "financing" && (<>
       {/* FINANCING & DEBT — loan record / term sheet for deals Under Contract, Owned, or Sold */}
       {(() => {
         const owned = d.status === "Owned" || d.status === "Sold" || d.status === "Under Contract";
@@ -2980,6 +3018,8 @@ ${text.slice(0, 60000)}`;
         <OwnershipStructure deal={d} onUpdate={onUpdate} />
       )}
 
+      </>)}
+      {tab === "market" && (<>
       {/* Property info */}
       <div style={{ marginBottom:12 }}>
         <Card title="PROPERTY INFO">
@@ -3069,6 +3109,8 @@ ${text.slice(0, 60000)}`;
         )}
       </div>
 
+      </>)}
+      {tab === "overview" && (<>
       {/* User notes */}
       <div id="section-notes" style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
@@ -3090,6 +3132,8 @@ ${text.slice(0, 60000)}`;
           <p style={{ fontSize:13, color: d.userNotes?"#383a37":"#c4bba7", lineHeight:1.65, margin:0, whiteSpace:"pre-wrap" }}>{d.userNotes || "No notes yet. Click Edit to add."}</p>
         )}
       </div>
+
+      </>)}
 
       <PropertyChat deal={d} />
     </div>
