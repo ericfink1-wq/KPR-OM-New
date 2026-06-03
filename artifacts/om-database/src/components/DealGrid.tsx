@@ -343,6 +343,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       const bv = leadAnchorName(b).toLowerCase();
       return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
     }
+    if (sortKey === "lastUploadAt") {
+      const av = _ts(a.lastUploadAt) || _ts(a.uploadedAt);
+      const bv = _ts(b.lastUploadAt) || _ts(b.uploadedAt);
+      return sortDir === "asc" ? av - bv : bv - av;
+    }
     const numKeys = ["capRate","noi","askingPrice","totalSF","occupancy","walt"];
     if (numKeys.includes(sortKey)) {
       const av = n(a[sortKey as keyof Deal]) ?? -Infinity;
@@ -1156,9 +1161,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                     style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "uploadedAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Uploaded{arrow("uploadedAt")}
                   </th>
-                  <th onClick={() => toggleSort("updatedAt")}
-                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "updatedAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
-                    Last Modified{arrow("updatedAt")}
+                  <th onClick={() => toggleSort("lastUploadAt")}
+                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "lastUploadAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Last Upload{arrow("lastUploadAt")}
                   </th>
                 </tr>
               </thead>
@@ -1202,7 +1207,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.askingPrice)}</td>
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.seller ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{d.seller || "—"}</td>
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.uploadedAt ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
-                      <td style={{ padding: "8px 14px 8px 10px", fontSize: 11, color: d.updatedAt ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.updatedAt ? new Date(d.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
+                      {(() => { const lu = d.lastUploadAt || d.uploadedAt; return (
+                        <td style={{ padding: "8px 14px 8px 10px", fontSize: 11, color: lu ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{lu ? new Date(lu).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
+                      ); })()}
                     </tr>
                   );
                 })}

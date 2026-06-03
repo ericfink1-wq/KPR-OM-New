@@ -389,7 +389,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     itemId: string, deal: Deal, result: { asOf: string | null; tenants: NonNullable<Deal["tenants"]> },
   ): Promise<Deal> => {
     const patch = buildRosterPatch(deal, result);
-    const updated = { ...deal, ...patch } as Deal;
+    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
     await apiSaveDeal(updated);
     onDealUpdated?.(updated);
     updateItem(itemId, {
@@ -427,7 +427,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         uploadedAt: new Date().toISOString(),
         tenants: [],
       } as Deal;
-      const stub = { ...base, ...buildRosterPatch(base, result) } as Deal;
+      const stub = { ...base, ...buildRosterPatch(base, result), lastUploadAt: new Date().toISOString() } as Deal;
       await apiSaveDeal(stub);
       onDealsAdded([stub]);
       updateItem(itemId, {
@@ -456,7 +456,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       });
       return deal;
     }
-    const upd = { ...deal, ...patch } as Deal;
+    const upd = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
     await apiSaveDeal(upd);
     onDealUpdated?.(upd);
     updateItem(itemId, {
@@ -493,7 +493,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // Apply an extracted sales report to a matched deal (auto-import, suite-aware).
   const applySalesToDeal = async (itemId: string, deal: Deal, result: SalesExtractResult): Promise<Deal> => {
     const patch = buildSalesHistoryPatch(deal, result);
-    const updated = { ...deal, ...patch } as Deal;
+    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
     await apiSaveDeal(updated);
     onDealUpdated?.(updated);
     updateItem(itemId, {
@@ -675,6 +675,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         // review — so a batch never stops and duplicates consolidate on their own.
         await apiDeleteDeal(dealId).catch(() => {});   // drop the temp deal we were creating
         const refreshed = reconcileRefresh(dup, { ...extracted, imageMeta, fileName, pdfPages: pages });
+        refreshed.lastUploadAt = new Date().toISOString();
         await apiSaveDeal(refreshed).catch(() => {});
         await apiSaveSource(refreshed.id, text).catch(() => {});
         if (imgs) await apiSaveImages(refreshed.id, imgs).catch(() => {});
@@ -688,7 +689,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         return;
       }
 
-      const finalDeal: Deal = { ...resolvedDeal, imageMeta };
+      const finalDeal: Deal = { ...resolvedDeal, imageMeta, lastUploadAt: new Date().toISOString() };
       await apiSaveDeal(finalDeal).catch(() => {});
 
       updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal });

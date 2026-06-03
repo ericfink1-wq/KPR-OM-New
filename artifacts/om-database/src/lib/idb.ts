@@ -315,7 +315,8 @@ export interface Deal {
   centerType?: string;
   status?: string;
   uploadedAt?: string;
-  updatedAt?: string | null;   // server-maintained: any save to this deal (last modified)
+  updatedAt?: string | null;   // server-maintained: any save to this deal
+  lastUploadAt?: string | null; // last time a FILE (OM/rent roll/sales/lease options) was uploaded to this deal
   refreshedAt?: string | null; // last time an OM re-upload / merge refreshed this deal
   omDate?: string;
   pdfPages?: number;
