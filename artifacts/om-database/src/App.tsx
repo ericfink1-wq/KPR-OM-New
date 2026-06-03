@@ -410,9 +410,10 @@ function AppInner() {
           the Ask/flag buttons. Other pages keep it pinned near the top. */}
       <AiProgressBar {...(view.type === "detail" ? { bottom: 96 } : { top: 84 })} />
 
-      {/* Pinned back button — floats top-left on every sub-page so it's always
-          reachable while scrolling (browser back also works via popstate). */}
-      {viewStack.length > 1 && (
+      {/* Pinned back button — floats top-left on sub-pages so it's always reachable
+          while scrolling. The detail page renders its own (in its header bar) to sit
+          beside the property name without overlapping it. */}
+      {viewStack.length > 1 && view.type !== "detail" && (
         <button onClick={goBack} title="Back" aria-label="Back"
           style={{ position: "fixed", top: 84, left: 12, zIndex: 120, display: "flex", alignItems: "center", gap: 5,
             background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
