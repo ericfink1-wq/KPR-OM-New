@@ -30,6 +30,13 @@ interface QueueItem {
   // Smart-routing (rent roll / sales)
   routedType?: DocType;
   matchedDealName?: string;            // the property we routed this doc to
+  // Undo / reassign support: the target's state BEFORE this doc applied (so we can
+  // restore it), whether the doc CREATED the property (undo = delete), and the id
+  // it landed on. Set when an item finishes applying.
+  priorDeal?: Deal | null;
+  appliedDealId?: string;
+  createdNew?: boolean;
+  undone?: boolean;
   pendingRosterPatch?: Partial<Deal>;  // staged roster update awaiting a property choice
   pendingText2?: string;               // extracted text, kept for re-routing after manual pick
   matchHint?: { propertyName: string | null; address: string | null; fileName: string | null }; // for auto-attaching to a same-drop deal
@@ -408,6 +415,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "rent-roll",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: result as unknown as Record<string, unknown>,
       msg: `Rent roll → ${deal.propertyName || deal.fileName || "matched deal"} · roster updated (${result.tenants.length} tenants)`,
     });
     return updated;
@@ -465,6 +473,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "lease-options",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: upd,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: result as unknown as Record<string, unknown>,
       msg: `Lease options → ${deal.propertyName || deal.fileName || "matched deal"} · option schedules updated on ${updated} tenant${updated === 1 ? "" : "s"}`,
     });
     return upd;
@@ -505,6 +514,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "sales",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: result as unknown as Record<string, unknown>,
       msg: `Sales (${result.year}) → ${deal.propertyName || deal.fileName || "matched deal"} · ${result.tenants.length} tenants applied`,
     });
     return updated;
@@ -547,6 +557,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "flyer",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: result as unknown as Record<string, unknown>, pendingImages: imgs,
       msg: `Flyer → ${deal.propertyName || deal.fileName || "matched deal"} · enriched ${enriched} field${enriched === 1 ? "" : "s"}${imgs?.cover ? " + cover" : ""}`,
     });
     return updated;
@@ -589,6 +600,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "swap",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: swap as unknown as Record<string, unknown>,
       msg: `Swap → ${deal.propertyName || deal.fileName || "matched deal"} · fixed ${swap.fixedRatePct ?? "—"}%${swap.notional ? ` on $${swap.notional.toLocaleString()}` : ""}`,
     });
     return updated;
@@ -628,6 +640,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "loan",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: result as unknown as Record<string, unknown>,
       msg: `Loan doc → ${deal.propertyName || deal.fileName || "matched deal"} · filled ${n} debt field${n === 1 ? "" : "s"}`,
     });
     return updated;
@@ -799,9 +812,48 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         else await applyOptionsToDeal(itemId, base, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
         await registerCreatedDeal(base);
       }
+      // Mark as a freshly-created property so Undo deletes it (overrides the
+      // applyX stamp, which assumes it enriched an existing deal).
+      updateItem(itemId, { createdNew: true, priorDeal: null, appliedDealId: base.id, pendingExtracted, pendingImages: pendingImages ?? null });
     } catch (err) {
       updateItem(itemId, { status: "error", msg: "Couldn't create property", error: err instanceof Error ? err.message : "failed" });
     }
+  };
+
+  // Undo a finished item: delete the property it created, or restore the property
+  // it changed to its exact prior state. Lets the user reverse a bad auto-match the
+  // moment the upload finishes, before any poor data sticks.
+  const undoItem = async (itemId: string) => {
+    const item = queueRef.current.find(q => q.id === itemId);
+    if (!item || !item.appliedDealId) return;
+    updateItem(itemId, { msg: "Undoing…" });
+    try {
+      if (item.createdNew && item.deal) {
+        await apiDeleteDeal(item.appliedDealId).catch(() => {});
+        createdDealsRef.current = createdDealsRef.current.filter(d => d.id !== item.appliedDealId);
+        onDealUpdated?.({ ...item.deal, trashedAt: new Date().toISOString() } as Deal);
+      } else if (item.priorDeal) {
+        await apiSaveDeal(item.priorDeal);
+        // Keep the in-memory mirror consistent for later same-batch matches.
+        createdDealsRef.current = createdDealsRef.current.map(d => d.id === item.priorDeal!.id ? item.priorDeal! : d);
+        onDealUpdated?.(item.priorDeal);
+      }
+      updateItem(itemId, { undone: true, msg: `Undone — ${item.matchedDealName || "reverted"}` });
+    } catch (err) {
+      updateItem(itemId, { msg: "Undo failed", error: err instanceof Error ? err.message : "failed" });
+    }
+  };
+
+  // Reassign a finished attaching-doc to a different property: undo it, then drop
+  // it back into the match-or-create prompt so it can be applied to the right deal.
+  const reassignItem = async (itemId: string) => {
+    const item = queueRef.current.find(q => q.id === itemId);
+    if (!item || !item.pendingExtracted) return;
+    await undoItem(itemId);
+    updateItem(itemId, {
+      status: "awaiting_match", undone: false, progress: 100,
+      msg: "Pick the correct property for this document.",
+    });
   };
 
   // The "create new" button on the match-or-create prompt.
@@ -1004,8 +1056,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         await apiSaveSource(refreshed.id, text).catch(() => {});
         if (imgs) await apiSaveImages(refreshed.id, imgs).catch(() => {});
         updateItem(itemId, {
-          status: "done", progress: 100, deal: refreshed,
+          status: "done", progress: 100, deal: refreshed, routedType: "om",
           matchedDealName: refreshed.propertyName || refreshed.fileName,
+          priorDeal: dup, appliedDealId: refreshed.id, createdNew: false,
           msg: `Merged into existing “${refreshed.propertyName || refreshed.fileName || "deal"}” · review any flagged conflicts`,
         });
         onDealUpdated?.(refreshed);
@@ -1016,7 +1069,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const finalDeal: Deal = { ...resolvedDeal, imageMeta, lastUploadAt: new Date().toISOString() };
       await apiSaveDeal(finalDeal).catch(() => {});
 
-      updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal });
+      updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal,
+        routedType: "om", matchedDealName: finalDeal.propertyName || finalDeal.fileName, createdNew: true, priorDeal: null, appliedDealId: finalDeal.id });
       onDealsAdded([finalDeal]);
       await registerCreatedDeal(finalDeal);
     } catch (err: unknown) {
@@ -1212,8 +1266,26 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                         </div>
                       )}
                       {item.error && <div style={{ fontSize: 11, color: "#c0563b", marginTop: 3, lineHeight: 1.4, wordBreak: "break-word" }}>{item.error}</div>}
+                      {item.status === "done" && !item.undone && item.appliedDealId && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 7, flexWrap: "wrap", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, color: "#7d766a" }}>→ <b style={{ color: "#383a37" }}>{item.matchedDealName || "property"}</b>{item.createdNew ? " (new)" : ""}</span>
+                          <button onClick={() => undoItem(item.id)}
+                            style={{ background: "#fff", border: "1px solid #e0c9c0", color: "#b5503a", padding: "3px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                            Undo
+                          </button>
+                          {item.routedType && item.routedType !== "om" && (
+                            <button onClick={() => reassignItem(item.id)}
+                              style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#6f6a5f", padding: "3px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                              Reassign
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {item.status === "done" && item.undone && (
+                        <div style={{ fontSize: 11, color: "#a69e91", marginTop: 5 }}>↩ Reverted.</div>
+                      )}
                     </div>
-                    {item.status === "done" && item.deal && (
+                    {item.status === "done" && item.deal && !item.undone && (
                       <button
                         onClick={() => { onOpenDeal(item.deal!.id); setQueueOpen(false); }}
                         style={{ background: "#f3f5f6", border: "none", color: "#52554e", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
