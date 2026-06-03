@@ -418,29 +418,15 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const upd = await applyRosterToDeal(itemId, m.deal, result);
       await refreshAnalysisFor(itemId, upd);
     } else {
-      // No existing deal matches — CREATE a new stub property from the rent roll so
-      // the upload isn't lost. The roster (with computed occupancy/WALT) seeds it;
-      // the user fills in the OM/financials later, or a later OM upload merges into
-      // it by property/address match. Used for old owned deals that have no OM.
-      const base = {
-        id: dealId,
-        propertyName: propertyName || fileName || "Untitled property",
-        address: address || undefined,
-        fileName,
-        status: "Prospect",
-        uploadedAt: new Date().toISOString(),
-        tenants: [],
-      } as Deal;
-      const stub = { ...base, ...buildRosterPatch(base, result), lastUploadAt: new Date().toISOString() } as Deal;
-      await apiSaveDeal(stub);
-      onDealsAdded([stub]);
+      // Not confident which property this belongs to — ASK: match to an existing
+      // property or create a new one (handled by the awaiting_match prompt below).
       updateItem(itemId, {
-        status: "done", progress: 100, routedType: "rent-roll",
-        matchedDealName: stub.propertyName, deal: stub,
-        msg: `Rent roll (${result.tenants.length} tenants) → new property “${stub.propertyName}” created — add the OM / financials later`,
+        status: "awaiting_match", routedType: "rent-roll", matchHint: hint,
+        pendingExtracted: result as unknown as Record<string, unknown>,
+        tempDealId: dealId,
+        msg: `Rent roll (${result.tenants.length} tenants) — not sure which property this is. Match it to an existing one or create a new property.`,
+        progress: 100,
       });
-      const refreshed = await refreshAnalysisFor(itemId, stub);
-      await registerCreatedDeal(refreshed);
     }
   };
 
@@ -590,6 +576,45 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       } catch (err) {
         updateItem(itemId, { status: "error", msg: "Sales import failed", error: err instanceof Error ? err.message : "failed" });
       }
+    }
+  };
+
+  // Create a NEW property from an awaiting doc (the "create new" choice). For a
+  // rent roll this seeds the roster; for sales/lease-options it makes the named
+  // property and applies what the doc has.
+  const createNewFromDoc = async (itemId: string) => {
+    const item = queueRef.current.find(q => q.id === itemId);
+    if (!item || !item.pendingExtracted) return;
+    const hint = item.matchHint;
+    const now = new Date().toISOString();
+    const base = {
+      id: item.tempDealId || uid(),
+      propertyName: hint?.propertyName || (hint?.fileName || item.name).replace(/\.(pdf|xlsx?|xlsm|xlsb|csv)$/i, "") || "Untitled property",
+      address: hint?.address || undefined,
+      fileName: item.name,
+      status: "Prospect",
+      uploadedAt: now,
+      lastUploadAt: now,
+      tenants: [],
+    } as Deal;
+    updateItem(itemId, { status: "extracting", msg: "Creating new property…", progress: 60 });
+    try {
+      if (item.routedType === "rent-roll") {
+        const stub = { ...base, ...buildRosterPatch(base, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> }) } as Deal;
+        await apiSaveDeal(stub);
+        onDealsAdded([stub]);
+        updateItem(itemId, { status: "done", progress: 100, deal: stub, matchedDealName: stub.propertyName, msg: `Created new property “${stub.propertyName}” from the rent roll` });
+        const refreshed = await refreshAnalysisFor(itemId, stub);
+        await registerCreatedDeal(refreshed);
+      } else {
+        await apiSaveDeal(base);
+        onDealsAdded([base]);
+        if (item.routedType === "sales") await applySalesToDeal(itemId, base, item.pendingExtracted as unknown as SalesExtractResult);
+        else await applyOptionsToDeal(itemId, base, item.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        await registerCreatedDeal(base);
+      }
+    } catch (err) {
+      updateItem(itemId, { status: "error", msg: "Couldn't create property", error: err instanceof Error ? err.message : "failed" });
     }
   };
 
@@ -862,6 +887,30 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                       <button onClick={() => handleDupCancel(item.id)}
                         style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
                         Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : item.status === "awaiting_match" ? (
+                  <div style={{ padding: "14px 28px", borderBottom: "1px solid #f4f6f7", background: "#fffbf0" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#a06208", marginBottom: 4 }}>Which property is this for?</div>
+                    <div style={{ fontSize: 12.5, color: "#5f5a50", marginBottom: 9, lineHeight: 1.4 }}>
+                      <strong style={{ color: "#383a37" }}>{item.name}</strong> — {item.msg}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <select defaultValue="" onChange={e => { const d = existingDeals.find(x => x.id === e.target.value); if (d) assignMatch(item.id, d); }}
+                        style={{ fontSize: 12, padding: "7px 10px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: 240 }}>
+                        <option value="" disabled>Match to existing property…</option>
+                        {[...existingDeals].filter(d => !d.trashedAt).sort((a, b) => (a.propertyName || a.fileName || "").localeCompare(b.propertyName || b.fileName || "")).map(d => (
+                          <option key={d.id} value={d.id}>{d.propertyName || d.fileName || "Untitled"}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => createNewFromDoc(item.id)}
+                        style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        + Create new property
+                      </button>
+                      <button onClick={() => setQueue(q => q.filter(x => x.id !== item.id))}
+                        style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        Dismiss
                       </button>
                     </div>
                   </div>
