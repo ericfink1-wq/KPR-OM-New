@@ -65,11 +65,12 @@ function findDuplicate(fileName: string, extracted: Record<string, unknown>, exi
     },
     existing,
   );
-  // Only treat as a duplicate to AUTO-MERGE on HIGH confidence (exact name+address,
-  // exact filename, or exact address). A fuzzy MEDIUM match — e.g. two different
-  // "Westwood … Center" properties sharing only the word "Westwood" — must NOT
-  // silently merge; it's saved as a separate deal instead.
-  return m.confidence === "high" ? m.deal : null;
+  // Merge on a confident match (high OR a good fuzzy 'medium' — substring or
+  // distinctive-token name match, or a matching address). The address guard in
+  // matchDeal already blocks two different properties that merely share a name
+  // (different street/city), so this stays broad without wrongly fusing distinct
+  // deals. (Being HIGH-only here caused too many re-uploads to split off.)
+  return m.confidence !== "none" ? m.deal : null;
 }
 
 // Content-based match for the rent-roll-stub → OM case, where names/addresses
