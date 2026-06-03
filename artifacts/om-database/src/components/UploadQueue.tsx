@@ -640,10 +640,24 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
       let resolvedDeal: Deal | null = null;
       let pollError: string | null = null;
+      let connLost = false;
+      let consecutiveErrors = 0;
       const POLL_ITERS = 240; // 240 × 2.5s = 10 min
       for (let i = 0; i < POLL_ITERS; i++) {
         await new Promise(r => setTimeout(r, 2500));
-        const status = await apiPollDealStatus(dealId);
+        let status: { processing: boolean; deal?: Deal; error?: string };
+        try {
+          status = await apiPollDealStatus(dealId);
+          consecutiveErrors = 0;
+        } catch {
+          // A status check failed — almost always a transient server/network blip
+          // (e.g. an instance restarting mid-extraction). The extraction is very
+          // likely still running, so keep waiting instead of failing the upload.
+          // Only give up after ~30s of continuous failures.
+          consecutiveErrors++;
+          if (consecutiveErrors >= 12) { connLost = true; break; }
+          continue;
+        }
         if (!status.processing) {
           if (status.error) { pollError = status.error; break; }
           resolvedDeal = (status.deal as Deal) ?? null;
@@ -653,6 +667,13 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         updateItem(itemId, { progress: pct });
       }
 
+      if (connLost) {
+        // Don't delete the temp deal — it may still finish on the server. It'll
+        // appear after the connection recovers and the list reloads.
+        updateItem(itemId, { status: "error", progress: 0, msg: "Connection lost",
+          error: "Lost connection while it was processing — the deal may still finish. Refresh in a minute; if it's not there, re-upload." });
+        return;
+      }
       if (pollError || !resolvedDeal) {
         throw new Error(pollError || "Extraction timed out — please retry");
       }
