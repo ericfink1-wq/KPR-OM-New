@@ -456,33 +456,6 @@ function AppInner() {
               <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={id => { navigate({ type: "detail", dealId: id }); setTab("portfolio"); }} onTenantClick={handleOpenTenant} />
             ) : (
               <>
-                {/* Segmented toggle */}
-                <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 0" }}>
-                  <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
-                    {(["tenant", "portfolio", "watchlist"] as const).map(v => (
-                      <button
-                        key={v}
-                        onClick={() => setAnalyticsView(v)}
-                        style={{
-                          padding: "7px 18px",
-                          borderRadius: 7,
-                          border: "none",
-                          background: analyticsView === v ? "#2a2c27" : "transparent",
-                          color: analyticsView === v ? "#f6f2ea" : "#8a8579",
-                          fontSize: 12.5,
-                          fontWeight: analyticsView === v ? 600 : 500,
-                          cursor: "pointer",
-                          fontFamily: "'Inter',sans-serif",
-                          letterSpacing: "-0.01em",
-                          boxShadow: analyticsView === v ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {v === "portfolio" ? "Portfolio Analytics" : v === "watchlist" ? "Watchlist" : "Tenant Analytics"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 {analyticsView === "portfolio" ? (
                   <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
                 ) : analyticsView === "watchlist" ? (
