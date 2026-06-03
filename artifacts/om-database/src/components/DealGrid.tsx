@@ -214,7 +214,6 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
 // ── Section-aware merge helpers ──────────────────────────────────────────────
 const _ts = (s?: string | null) => { const t = s ? Date.parse(s) : NaN; return isNaN(t) ? 0 : t; };
 const dealFreshness = (d: Deal) => Math.max(_ts(d.refreshedAt), _ts(d.uploadedAt));
-const rosterDate = (d: Deal) => _ts(d.tenantsAsOf) || dealFreshness(d);
 const demoDate = (d: Deal) => Math.max(_ts(d.demoChecked), _ts((d.marketDemographics as { lookedUpAt?: string } | null)?.lookedUpAt)) || dealFreshness(d);
 
 // Merge sales-history snapshots across deals: newest-uploaded snapshot per year.
@@ -495,8 +494,19 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     const freshest = all.slice().sort((a, b) => dealFreshness(b) - dealFreshness(a))[0];
     const merged: Deal = { ...freshest };
 
-    // Roster (+ derived occupancy/WALT/avg rent) from the deal with the newest as-of date.
-    const rosterSrc = all.filter(d => (d.tenants || []).length).sort((a, b) => rosterDate(b) - rosterDate(a))[0];
+    // Roster (+ derived occupancy/WALT/avg rent) from the most up-to-date source.
+    // Judge by ACTUAL data date, not upload order: a real lease as-of date wins
+    // (newest first), then a rent-roll/manual roster beats an OM-extracted one,
+    // and only then fall back to overall freshness. This stops a later-uploaded
+    // but OLDER OM from overwriting a newer rent roll's roster.
+    const rosterSrc = all.filter(d => (d.tenants || []).length).sort((a, b) => {
+      const aAsOf = _ts(a.tenantsAsOf), bAsOf = _ts(b.tenantsAsOf);
+      if (aAsOf !== bAsOf) return bAsOf - aAsOf;            // newest real as-of first (none = 0 → last)
+      const aRR = (a.tenantsManual || a.tenantsSource === "rent-roll") ? 1 : 0;
+      const bRR = (b.tenantsManual || b.tenantsSource === "rent-roll") ? 1 : 0;
+      if (aRR !== bRR) return bRR - aRR;                    // rent-roll / manual roster wins
+      return dealFreshness(b) - dealFreshness(a);
+    })[0];
     if (rosterSrc) {
       merged.tenants = rosterSrc.tenants;
       merged.tenantsAsOf = rosterSrc.tenantsAsOf;
@@ -539,6 +549,28 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     if (!merged.imageMeta?.cover) {
       const withCover = all.find(d => d.imageMeta?.cover);
       if (withCover) merged.imageMeta = withCover.imageMeta;
+    }
+
+    // Older-fills-blanks: for any factual field still empty on the survivor,
+    // borrow it from the other deals (newest first). The newer source already
+    // won every field it has; this pulls in the basics an older OM carries that a
+    // rent roll never would (NOI, cap rate, address, narrative). Roster, sales,
+    // demographics, verified flags and user-entered fields were resolved above
+    // and are left untouched.
+    const SKIP_GAPFILL = new Set<string>([
+      "id", "uploadedAt", "refreshedAt", "trashedAt", "reviewQuestions",
+      "tenants", "tenantsAsOf", "tenantsManual", "tenantsSource",
+      "occupancy", "walt", "weightedAvgRentPSF",
+      "tenantSalesHistory", "marketDemographics", "demoChecked",
+      "verified", "userNotes",
+    ]);
+    const byFresh = all.slice().sort((a, b) => dealFreshness(b) - dealFreshness(a));
+    const factKeys = new Set<string>();
+    for (const d of all) for (const k of Object.keys(d)) if (!SKIP_GAPFILL.has(k) && !isUserField(k)) factKeys.add(k);
+    for (const k of factKeys) {
+      const mm = merged as unknown as Record<string, unknown>;
+      if (nonEmpty(mm[k])) continue;
+      for (const d of byFresh) { const v = (d as unknown as Record<string, unknown>)[k]; if (nonEmpty(v)) { mm[k] = v; break; } }
     }
 
     // Keep the keeper's identity.

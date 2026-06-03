@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle, ReviewQuestion } from "../lib/idb";
 import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload } from "../lib/api";
 import { extractPdfImages } from "../lib/pdfExtract";
-import { uid, buildCorrectionsNote } from "../lib/utils";
+import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { classifyDocument, matchDeal, type DocType } from "../lib/docClassify";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
@@ -57,6 +57,29 @@ function findDuplicate(fileName: string, extracted: Record<string, unknown>, exi
     existing,
   );
   return m.confidence !== "none" ? m.deal : null;
+}
+
+// Content-based match for the rent-roll-stub → OM case, where names/addresses
+// often differ (the stub's name came from a filename). If an incoming OM shares a
+// strong majority of its tenants with an existing rent-roll-only stub (no OM
+// financials yet), they're the same property — route it through the duplicate
+// flow so the OM merges into the stub (keeping the newer rent-roll roster).
+function findRosterStubMatch(extracted: Record<string, unknown>, existing: Deal[]): Deal | null {
+  const omT = Array.isArray(extracted.tenants) ? (extracted.tenants as Array<{ name?: string }>) : [];
+  const omKeys = new Set(omT.map(t => tenantKey(t?.name)).filter(Boolean));
+  if (omKeys.size < 3) return null;                       // too few tenants to be confident
+  for (const d of existing) {
+    if (d.trashedAt) continue;
+    const isStub = d.tenantsSource === "rent-roll" && d.noi == null && d.capRate == null;
+    if (!isStub) continue;
+    const dKeys = new Set((d.tenants || []).map(t => tenantKey(t?.name)).filter(Boolean));
+    if (dKeys.size < 3) continue;
+    let shared = 0;
+    for (const k of dKeys) if (omKeys.has(k)) shared++;
+    const smaller = Math.min(dKeys.size, omKeys.size);
+    if (shared >= 3 && shared / smaller >= 0.5) return d;  // same tenants → same property
+  }
+  return null;
 }
 
 function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): Deal {
@@ -624,7 +647,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       // Include deals created earlier in THIS drop (e.g. a stub made from a rent
       // roll that finished before this OM) so the OM merges into it via the dup
       // flow instead of creating a second deal for the same property.
-      const dup = findDuplicate(fileName, extracted, [...existingDeals, ...createdDealsRef.current]);
+      const candidates = [...existingDeals, ...createdDealsRef.current];
+      const dup = findDuplicate(fileName, extracted, candidates) || findRosterStubMatch(extracted, candidates);
 
       if (dup) {
         updateItem(itemId, {
