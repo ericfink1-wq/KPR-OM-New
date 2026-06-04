@@ -435,6 +435,13 @@ router.get("/deals/:id/images", requireAuth, async (req, res) => {
   }
 });
 
+// Ring buffer of the most recent image-save attempts, so the diagnostic can show
+// whether the real (large) request even reached the server, its body size, how long
+// the server spent, and the outcome — pinpointing browser→server transport vs server.
+type ImgSaveLog = { at: string; id: string; reqBytes: number; ms: number; outcome: string; code?: string };
+const recentImageSaves: ImgSaveLog[] = [];
+function logImgSave(e: ImgSaveLog) { recentImageSaves.unshift(e); if (recentImageSaves.length > 15) recentImageSaves.length = 15; }
+
 // GET /api/image-save-diag — open this URL in the browser (while logged in) to see
 // EXACTLY why image saves hang: pool stats, what's running/stuck in the DB, locks on
 // deal_images, and a real probe write (same shape as a cover save) with its timing
@@ -483,13 +490,37 @@ router.get("/image-save-diag", requireAuth, async (_req, res) => {
     out.probeWrite = "FAILED";
     out.probeError = { code: err?.code ?? null, message: String(err?.message ?? e).slice(0, 300) };
   }
+
+  // LARGE probe — write a ~400KB cover value (like a real photo) to see if a big
+  // write through the pooler is the slow part (the tiny probe above can't reveal that).
+  try {
+    const big = "x".repeat(400_000);
+    const t = Date.now();
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+      await tx.execute(sql`SET LOCAL statement_timeout = '18s'`);
+      await tx.execute(sql`INSERT INTO deal_images (id, cover) VALUES ('__diag_probe_big__', ${big}) ON CONFLICT (id) DO UPDATE SET cover = ${big}`);
+      await tx.execute(sql`DELETE FROM deal_images WHERE id = '__diag_probe_big__'`);
+    });
+    out.largeProbeWrite = "OK";
+    out.largeProbeWriteMs = Date.now() - t;
+  } catch (e) {
+    const err = e as { code?: string; message?: string };
+    out.largeProbeWrite = "FAILED";
+    out.largeProbeError = { code: err?.code ?? null, message: String(err?.message ?? e).slice(0, 300) };
+  }
+
+  // The most recent REAL save attempts (did the big request reach the server at all?).
+  out.recentImageSaves = recentImageSaves;
   res.json(out);
 });
 
 // PUT /api/deals/:id/images
 router.put("/deals/:id/images", requireAuth, async (req, res) => {
+  const t0 = Date.now();
+  const reqBytes = Number(req.headers["content-length"] || 0);
+  const id = req.params.id as string;
   try {
-    const id = req.params.id as string;
     const body = req.body as {
       cover?: string | null;
       coverThumb?: string | null;
@@ -551,8 +582,10 @@ router.put("/deals/:id/images", requireAuth, async (req, res) => {
         throw err;
       }
     }
+    logImgSave({ at: new Date().toISOString(), id, reqBytes, ms: Date.now() - t0, outcome: "ok" });
     res.json({ ok: true });
   } catch (err) {
+    logImgSave({ at: new Date().toISOString(), id, reqBytes, ms: Date.now() - t0, outcome: "error", code: (err as { code?: string })?.code });
     req.log.error({ err }, "Failed to save images");
     res.status(500).json({ error: "Failed to save images" });
   }
