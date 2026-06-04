@@ -775,6 +775,89 @@ export function isNAPTenant(t: { name?: string | null; sf?: number | string | nu
   return sf != null && sf > 0 && (rent == null || rent === 0) && (rentPSF == null || rentPSF === 0);
 }
 
+const MONTH_MAP: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+// Parse a lease date string into a Date at local noon (so a bare date never
+// shifts a day across time zones). Handles ISO YYYY-MM-DD, YYYY-MM, MM/DD/YYYY,
+// M/YY month-year, "Mon-YYYY"/"January 2030", and bare YYYY. Returns null when
+// unparseable. Shared so roster math, WALT, and the rollover chart all agree.
+export function parseLeaseDate(raw: unknown): Date | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const d = new Date(s + "T12:00:00"); return isNaN(d.getTime()) ? null : d; }
+  if (/^\d{4}-\d{2}$/.test(s)) { const [y, m] = s.split("-").map(Number); return new Date(y, m, 0, 12); }
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) {
+    const [mo, d, y] = s.split("/").map(Number);
+    const fy = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+    const dt = new Date(fy, mo - 1, d, 12); return isNaN(dt.getTime()) ? null : dt;
+  }
+  if (/^\d{1,2}\/\d{2,4}$/.test(s)) {
+    const [mo, y] = s.split("/").map(Number);
+    const fy = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+    if (mo >= 1 && mo <= 12) return new Date(fy, mo, 0, 12);
+  }
+  const monYear = s.match(/^([A-Za-z]{3,9})[-\s](\d{2}|\d{4})$/);
+  if (monYear) {
+    const mon = MONTH_MAP[monYear[1].toLowerCase().slice(0, 3)];
+    const ry = parseInt(monYear[2], 10);
+    const yr = ry < 100 ? (ry < 50 ? 2000 + ry : 1900 + ry) : ry;
+    if (mon !== undefined && !isNaN(yr)) return new Date(yr, mon + 1, 0, 12);
+  }
+  if (/^\d{4}$/.test(s)) return new Date(parseInt(s, 10), 11, 31, 12);
+  return null;
+}
+
+// Recompute the roster-derived deal metrics (occupancy, WALT, weighted-avg rent
+// PSF) from a fresh tenant list + as-of date. Used by the deal page's roster
+// paste and rent-roll refresh. Key correctness points:
+//  - WALT term is derived from each tenant's leaseExpiry vs the as-of date — the
+//    pasted/extracted JSON usually omits a fresh remainingTermYears, so trusting
+//    it wrote a 0 WALT over a good one.
+//  - Vacant and NAP/outparcel rows are excluded from occupancy and WALT.
+//  - Never writes a 0/empty metric over an existing value, and respects the
+//    deal's verified locks.
+export function recomputeRosterMetrics(
+  tenants: Array<Record<string, unknown>>,
+  asOf: string | null | undefined,
+  deal: { totalSF?: number | string | null; verified?: Record<string, unknown> | null | undefined },
+): { occupancy?: number; walt?: number; weightedAvgRentPSF?: number } {
+  const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+  const ref = parseLeaseDate(asOf) ?? new Date();
+  const verified = (deal.verified || {}) as Record<string, unknown>;
+  const out: { occupancy?: number; walt?: number; weightedAvgRentPSF?: number } = {};
+  const occ = tenants.filter(t => !isVacant(t.name) && !isNAPTenant(t as Parameters<typeof isNAPTenant>[0]));
+  const totalSF = nv(deal.totalSF);
+
+  if (!verified.occupancy && totalSF && totalSF > 0) {
+    const occupiedSF = occ.reduce((s, t) => s + (nv(t.sf) ?? 0), 0);
+    const o = Math.round(occupiedSF / totalSF * 1000) / 10;
+    if (o > 0 && o <= 100) out.occupancy = o;
+  }
+  if (!verified.walt) {
+    let sfT = 0, wT = 0;
+    for (const t of occ) {
+      const sf = nv(t.sf); if (!sf || sf <= 0) continue;
+      const exp = parseLeaseDate(t.leaseExpiry);
+      const yr = exp ? Math.max(0, (exp.getTime() - ref.getTime()) / (365.25 * 86_400_000)) : nv(t.remainingTermYears);
+      if (yr == null) continue;
+      sfT += sf; wT += sf * yr;
+    }
+    if (wT > 0 && sfT > 0) out.walt = Math.round(wT / sfT * 10) / 10;
+  }
+  if (!verified.weightedAvgRentPSF) {
+    let sfR = 0, wR = 0;
+    for (const t of occ) {
+      const sf = nv(t.sf), r = nv(t.rentPerSF);
+      if (sf && sf > 0 && r && r > 0) { sfR += sf; wR += sf * r; }
+    }
+    if (sfR > 0) out.weightedAvgRentPSF = Math.round(wR / sfR * 100) / 100;
+  }
+  return out;
+}
+
 // Distinguish a standalone ATM (a kiosk/license, operationally trivial) from a
 // real bank BRANCH. Two tells: the name often says "ATM", and the footprint is
 // tiny (a kiosk is well under a branch's few-thousand SF). Tracked separately

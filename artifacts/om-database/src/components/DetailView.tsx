@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "rea
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import { amortForDeal, currentBalanceFromRows } from "../lib/amortize";
@@ -1440,30 +1440,10 @@ ${text.slice(0, 60000)}`;
 
       const asOf = parsed.asOf || new Date().toISOString().slice(0, 10);
 
-      const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
-      const recomputed: Partial<Deal> = {};
-
-      if (!d.verified?.occupancy && d.totalSF) {
-        const occupiedSF = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
-        const occ = Math.round(occupiedSF / Number(d.totalSF) * 1000) / 10;
-        if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
-      }
-      if (!d.verified?.walt) {
-        const sfT = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
-        const wT = newTenants.reduce((s, t) => {
-          const sf = nv((t as Record<string,unknown>).sf), yr = nv((t as Record<string,unknown>).remainingTermYears);
-          return s + (sf ?? 0) * (yr ?? 0);
-        }, 0);
-        if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
-      }
-      if (!d.verified?.weightedAvgRentPSF) {
-        const sfR = newTenants.filter(t => nv((t as Record<string,unknown>).sf) && nv((t as Record<string,unknown>).rentPerSF)).reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
-        const wR = newTenants.reduce((s, t) => {
-          const sf = nv((t as Record<string,unknown>).sf), r = nv((t as Record<string,unknown>).rentPerSF);
-          return s + (sf && r ? sf * r : 0);
-        }, 0);
-        if (sfR > 0) recomputed.weightedAvgRentPSF = Math.round(wR / sfR * 100) / 100;
-      }
+      // Occupancy / WALT / weighted-avg rent recomputed from the fresh roster:
+      // WALT from leaseExpiry vs asOf (not the often-missing remainingTermYears),
+      // vacant/NAP excluded, never overwriting a good value with 0.
+      const recomputed = recomputeRosterMetrics(newTenants as Array<Record<string, unknown>>, asOf, d);
 
       onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", tenantsManual: true, analysisStale: true, ...recomputed });
       finishAiTask(taskId, "done", `Roster updated — ${newTenants.length} tenants from the rent roll`);
@@ -1789,21 +1769,10 @@ ${text.slice(0, 60000)}`;
     const newTenants = Array.isArray(parsed.tenants) ? parsed.tenants as Deal["tenants"] : [];
     if (!newTenants || newTenants.length === 0) { setPasteError("No tenants found — check the pasted text."); return; }
     const asOf = parsed.asOf || new Date().toISOString().slice(0, 10);
-    const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
-    const recomputed: Partial<Deal> = {};
-    if (!d.verified?.occupancy && d.totalSF) {
-      const occupiedSF = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
-      const occ = Math.round(occupiedSF / Number(d.totalSF) * 1000) / 10;
-      if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
-    }
-    if (!d.verified?.walt) {
-      const sfT = newTenants.reduce((s, t) => s + (nv((t as Record<string,unknown>).sf) ?? 0), 0);
-      const wT = newTenants.reduce((s, t) => {
-        const sf = nv((t as Record<string,unknown>).sf), yr = nv((t as Record<string,unknown>).remainingTermYears);
-        return s + (sf ?? 0) * (yr ?? 0);
-      }, 0);
-      if (sfT > 0) recomputed.walt = Math.round(wT / sfT * 10) / 10;
-    }
+    // WALT is derived from leaseExpiry vs asOf (the paste JSON keys off expiry
+    // dates and rarely carries a fresh remainingTermYears), vacant/NAP excluded,
+    // and never overwrites a good WALT with 0. See recomputeRosterMetrics.
+    const recomputed = recomputeRosterMetrics(newTenants as Array<Record<string, unknown>>, asOf, d);
     onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", tenantsManual: true, analysisStale: true, ...recomputed });
     setPastePanelOpen(false);
     setPasteText("");
