@@ -1936,14 +1936,19 @@ ${text.slice(0, 60000)}`;
   // The sub-page nav (tabs + jump-menus). Rendered in two spots: in-flow under the
   // title, and inside the floating compact header so it stays pinned (incl. at the
   // very bottom of the page, where a sticky bar would detach).
-  const renderSubNav = () => (
+  // Both copies share one `navMenu` state, so gate each so only the currently
+  // visible nav renders the open dropdown — otherwise the floating header and the
+  // in-flow bar both show the same menu, stacked on top of each other.
+  const renderSubNav = (floating: boolean) => {
+   const showMenu = floating ? titleScrolled : !titleScrolled;
+   return (
     isMobileNav ? (
       <div style={{ position:"relative" }}>
         <button onClick={() => setNavMenu(m => m ? null : "toc")}
           style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", border:"1px solid #e3dccd", borderRadius:8, padding:"9px 13px", fontSize:13, fontWeight:700, color:"#26281f", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
           <span>{PAGE_TAB_LABEL[tab]}</span><span style={{ fontSize:11, color:"#a69e91", fontWeight:600 }}>☰ sections ▾</span>
         </button>
-        {navMenu && (
+        {navMenu && showMenu && (
           <div style={{ position:"absolute", left:0, right:0, top:"calc(100% + 4px)", background:"#fff", border:"1px solid #e3dccd", borderRadius:10, boxShadow:"0 14px 34px rgba(0,0,0,0.2)", zIndex:70, maxHeight:"68vh", overflowY:"auto", padding:6 }}>
             {PAGE_TABS.map(([k,label]) => (
               <div key={k} style={{ marginBottom:2 }}>
@@ -1970,7 +1975,7 @@ ${text.slice(0, 60000)}`;
               style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3f7a1f" : "2px solid transparent", color: tab===k ? "#26281f" : "#8b8578", padding:"8px 11px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Inter',sans-serif" }}>
               {label} <span style={{ fontSize:8, opacity:0.55 }}>▾</span>
             </button>
-            {navMenu === k && (TAB_SECTIONS[k] || []).length > 0 && (
+            {navMenu === k && showMenu && (TAB_SECTIONS[k] || []).length > 0 && (
               <div style={{ position:"absolute", top:"100%", left:0, marginTop:2, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, boxShadow:"0 10px 26px rgba(0,0,0,0.14)", zIndex:70, minWidth:190, padding:5 }}>
                 {(TAB_SECTIONS[k] || []).map(s => (
                   <button key={s.id} onClick={() => { setTab(k); setNavMenu(null); setTimeout(() => scrollToSection(s.id), 60); }}
@@ -1984,7 +1989,8 @@ ${text.slice(0, 60000)}`;
         ))}
       </div>
     )
-  );
+   );
+  };
 
   return (
     <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"20px 24px 20px 24px" }}>
@@ -2039,7 +2045,7 @@ ${text.slice(0, 60000)}`;
         </div>
         {/* Tabs live inside the floating header so they stay pinned all the way down */}
         <div onClick={e => e.stopPropagation()} style={{ marginTop:8 }}>
-          {renderSubNav()}
+          {renderSubNav(true)}
         </div>
       </div>
 
@@ -2261,7 +2267,7 @@ ${text.slice(0, 60000)}`;
       {/* ── Sub-page nav — sticky under the property name. Desktop: a row of tabs,
           each opening a jump-menu of its sections. Mobile: one compact dropdown. ── */}
       <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top:0, zIndex:55, background:"#f6f2ea", margin:"0 -24px 14px", padding:"6px 24px 0" }}>
-        {renderSubNav()}
+        {renderSubNav(false)}
       </div>
 
       {tab === "overview" && (<>
