@@ -2210,6 +2210,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <div style={{ position:"absolute", left:18, bottom:14, color:"#fff", fontSize:9, letterSpacing:"0.18em", textTransform:"uppercase", opacity:0.9, fontWeight:600, pointerEvents:"none", textShadow:"0 1px 3px rgba(0,0,0,0.6)" }}>From the offering memorandum</div>
           <button onClick={() => setConfirmDelImg("cover")} title="Remove cover photo"
             style={{ position:"absolute", top:10, right:10, background:"rgba(38,40,31,0.62)", border:"none", color:"#fff", width:30, height:30, borderRadius:8, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>🗑</button>
+          {(coverSave === "saving" || coverSave === "error") && (
+            <div style={{ position:"absolute", inset:0, background: coverSave==="saving" ? "rgba(38,40,31,0.55)" : "rgba(120,30,20,0.55)", display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
+              <div style={{ background:"#fff", borderRadius:10, padding:"12px 20px", fontSize:14, fontWeight:700, fontFamily:"'Inter',sans-serif", color: coverSave==="saving" ? "#9a6a1e" : "#c0392b", boxShadow:"0 8px 24px rgba(0,0,0,0.35)", display:"flex", alignItems:"center", gap:8 }}>
+                {coverSave === "saving" ? "⏳ Saving — don't leave this page yet…" : "⚠ Not saved — please try again"}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
