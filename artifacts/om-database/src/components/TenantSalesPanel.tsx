@@ -446,6 +446,21 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
   const hasUploadedData = salesHistory.length > 0;
   const omOnly = !hasUploadedData && omSnapshot != null;
 
+  // Erase every UPLOADED sales snapshot for this property — the escape hatch when a
+  // bad sales file was imported. Clears all uploaded years so you can re-upload from
+  // scratch. OM-derived figures (which live on the roster, not here) are untouched.
+  const eraseUploadedSales = () => {
+    if (!onChangeSalesHistory || !hasUploadedData) return;
+    const yrs = [...new Set(salesHistory.map(s => s.year).filter(Boolean))].sort((a, b) => a - b);
+    const label = yrs.length ? ` (${yrs.join(", ")})` : "";
+    if (!window.confirm(
+      `Erase ALL uploaded tenant sales${label} for this property?\n\n` +
+      `This removes every uploaded sales year so you can start clean and re-upload. ` +
+      `Sales figures that came from the OM roster are kept. This can't be undone.`
+    )) return;
+    onChangeSalesHistory([]);
+  };
+
   return (
     <div style={{ background: "#f5f9f2", border: "1.5px solid #b8d9a0", borderRadius: 10, marginBottom: 16, overflow: "hidden" }}>
       {/* Header */}
@@ -534,6 +549,15 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
             }}>
               {uploadBusy ? "Uploading…" : "⬆ Update Sales"}
             </button>
+            {hasUploadedData && onChangeSalesHistory && (
+              <button onClick={eraseUploadedSales} disabled={uploadBusy} title="Remove all uploaded sales years (e.g. after a bad upload), then re-upload" style={{
+                background: "#fff", color: "#c0563b", border: "1px solid #e7c3b8", borderRadius: 6,
+                padding: "5px 11px", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                opacity: uploadBusy ? 0.6 : 1, whiteSpace: "nowrap",
+              }}>
+                🗑 Erase Sales
+              </button>
+            )}
             <input ref={fileRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display: "none" }} onChange={onUpload} />
           </div>
 
