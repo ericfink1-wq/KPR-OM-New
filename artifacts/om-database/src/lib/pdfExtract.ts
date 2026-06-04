@@ -417,14 +417,19 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
     const strong = /site\s*plan|site\s*map|leasing\s*plan|leasing\s*map|site\s*layout|plot\s*plan|lease\s*plan|overall\s*plan|parcel\s*map|tax\s*parcel|key\s*plan/i;
     const weak = /aerial|site\s*aerial|asset\s*overview/i;
 
-    // Collect per-page text for scoring
+    // Collect per-page text for scoring (parallelised in small batches — doing this
+    // one page at a time was a needless serial wait on long PDFs).
     const pageTexts: Record<number, string> = {};
-    for (let p = 2; p <= pagesToExtract; p++) {
-      try {
-        const page = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        pageTexts[p] = content.items.map((it: any) => it.str).join(" ");
-      } catch {}
+    const textPages = Array.from({ length: Math.max(0, pagesToExtract - 1) }, (_, i) => i + 2);
+    const TEXT_CONC = 6;
+    for (let i = 0; i < textPages.length; i += TEXT_CONC) {
+      await Promise.all(textPages.slice(i, i + TEXT_CONC).map(async p => {
+        try {
+          const page = await pdf.getPage(p);
+          const content = await page.getTextContent();
+          pageTexts[p] = content.items.map((it: any) => it.str).join(" ");
+        } catch {}
+      }));
     }
 
     const score = (p: number) => {
@@ -449,14 +454,20 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
       } catch {}
     }
 
-    // No site plan found → render page thumbnails for manual pick
+    // No site plan found → render page thumbnails for the manual picker. This is the
+    // single slowest step in an upload: rendering up to 24 full pages. Render them in
+    // small parallel batches at a lighter resolution (720px is plenty for a picker
+    // thumbnail) so it finishes in a fraction of the old one-at-a-time-at-900px time.
     if (result.sitePlan.length === 0) {
       const limit = Math.min(pagesToExtract, 24);
-      for (let p = 1; p <= limit; p++) {
-        try {
-          const thumb = await _renderPdfPage(pdf, p, 900, 0.6);
-          if (thumb) result.pagePicks.push({ page: p, img: thumb });
-        } catch {}
+      const pickPages = Array.from({ length: limit }, (_, i) => i + 1);
+      const PICK_CONC = 4;
+      for (let i = 0; i < pickPages.length; i += PICK_CONC) {
+        const rendered = await Promise.all(pickPages.slice(i, i + PICK_CONC).map(async p => {
+          try { const thumb = await _renderPdfPage(pdf, p, 720, 0.6); return thumb ? { page: p, img: thumb } : null; }
+          catch { return null; }
+        }));
+        for (const r of rendered) if (r) result.pagePicks.push(r);
       }
       if (result.pagePicks.length) result.needsSitePlanPick = true;
     }

@@ -1015,6 +1015,31 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     await createPropertyFromDoc(itemId, routedType, pendingExtracted, hint, tempDealId, imgs);
   };
 
+  // Attach cover/site-plan images to a deal that's ALREADY saved. Used when image
+  // rendering runs long (big PDFs) so it never holds up finishing the upload. Images
+  // live in their own table keyed by deal id, so saving them is clobber-free; the
+  // imageMeta flag (drives the grid cover) is patched via read-modify-write so a
+  // concurrent edit to the fresh deal isn't overwritten.
+  const attachImagesLater = (id: string, p: Promise<ImageBundle | null>, itemId: string) => {
+    p.then(async late => {
+      if (!late || isCancelled(itemId)) return;
+      await apiSaveImages(id, late).catch(() => {});
+      try {
+        const st = await apiPollDealStatus(id);
+        if (st && !st.processing && st.deal) {
+          const merged = { ...st.deal, imageMeta: {
+            ...(st.deal.imageMeta || {}),
+            cover: !!late.cover,
+            sitePlan: late.sitePlan ? late.sitePlan.length : 0,
+            needsSitePlanPick: late.needsSitePlanPick || false,
+          } } as Deal;
+          await apiSaveDeal(merged).catch(() => {});
+          onDealUpdated?.(merged);
+        }
+      } catch {}
+    }).catch(() => {});
+  };
+
   const processFile = async (file: File, itemId: string) => {
     const dealId = uid();
     updateItem(itemId, { tempDealId: dealId, startedAt: Date.now() });
@@ -1074,9 +1099,20 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages, correctionsNote: buildCorrectionsNote(existingDeals) });
 
       updateItem(itemId, { msg: "Processing images…", progress: 55 });
-      const imgs = await imgPromise;
-      if (imgs) await apiSaveImages(dealId, imgs).catch(() => {});
       await apiSaveSource(dealId, text).catch(() => {});
+      // Cover/site-plan rendering runs in the browser and can take a while for long
+      // PDFs (no detectable site plan → many page thumbnails get rendered). Wait only
+      // briefly; if it isn't ready, finish the deal now and attach the images in the
+      // background. They're loaded independently by the deal page/grid, so deferring
+      // them costs nothing but stops the upload from stalling for minutes.
+      let imgs: Awaited<typeof imgPromise> = null;
+      let imagesDeferred = false;
+      const imgRace = await Promise.race([
+        imgPromise.then(v => ({ ready: true as const, v })),
+        new Promise<{ ready: false }>(r => setTimeout(() => r({ ready: false }), 8000)),
+      ]);
+      if (imgRace.ready) imgs = imgRace.v; else imagesDeferred = true;
+      if (imgs) await apiSaveImages(dealId, imgs).catch(() => {});
 
       updateItem(itemId, { msg: "Claude is extracting deal data…", progress: 65 });
 
@@ -1156,6 +1192,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         });
         onDealUpdated?.(refreshed);
         await registerCreatedDeal(refreshed);
+        if (imagesDeferred) attachImagesLater(refreshed.id, imgPromise, itemId);
         return;
       }
 
@@ -1166,6 +1203,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         routedType: "om", matchedDealName: finalDeal.propertyName || finalDeal.fileName, createdNew: true, priorDeal: null, appliedDealId: finalDeal.id });
       onDealsAdded([finalDeal]);
       await registerCreatedDeal(finalDeal);
+      if (imagesDeferred) attachImagesLater(dealId, imgPromise, itemId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Extraction failed";
       updateItem(itemId, { status: "error", msg: "Failed", error: msg, progress: 0 });
