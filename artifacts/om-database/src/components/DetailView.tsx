@@ -2625,12 +2625,15 @@ ${text.slice(0, 60000)}`;
             onUpload={handleSalesUpload}
             uploadBusy={salesBusy}
             uploadError={salesError}
-            onChangeSalesHistory={next => onUpdate(d.id, next.length === 0
-              // Full erase (only the panel's "Erase Sales" empties the list — link/
-              // remove never do) → also drop the sales-specific review flags so a
-              // stale "unlinked sales rows" banner doesn't linger with no data behind it.
-              ? { tenantSalesHistory: [], reviewQuestions: (d.reviewQuestions ?? []).filter(q => !(q.id ?? "").startsWith("ai-sales-")) }
-              : { tenantSalesHistory: next })}
+            onChangeSalesHistory={next => onUpdate(d.id, { tenantSalesHistory: next })}
+            onEraseAllSales={() => onUpdate(d.id, {
+              // Wipe uploaded snapshots AND the OM-derived sales that live on the
+              // roster (salesPSF drives the OM snapshot; clear the related fields too),
+              // and drop the sales review flags so no stale banner lingers.
+              tenantSalesHistory: [],
+              tenants: (d.tenants || []).map(t => ({ ...t, salesPSF: null, salesYear: null, occupancyCost: null, salesNotes: null })),
+              reviewQuestions: (d.reviewQuestions ?? []).filter(q => !(q.id ?? "").startsWith("ai-sales-")),
+            })}
             onLinkRoster={(rosterName, salesPSF, salesYear) => {
               const rk = tenantKey(rosterName);
               const tenants = (d.tenants || []).map(t => tenantKey(t.canonicalName || t.name) === rk ? { ...t, salesPSF: salesPSF ?? t.salesPSF, salesYear: salesYear ?? t.salesYear } : t);

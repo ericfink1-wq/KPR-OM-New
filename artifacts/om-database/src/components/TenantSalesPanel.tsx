@@ -14,6 +14,7 @@ interface Props {
   uploadError: string | null;
   onChangeSalesHistory?: (next: TenantSalesYear[]) => void; // persist link/remove edits
   onLinkRoster?: (rosterName: string, salesPSF: number | null, salesYear: number | null) => void; // relay a link to the roster above
+  onEraseAllSales?: () => void; // wipe ALL sales — uploaded snapshots AND OM-derived roster figures
 }
 
 type SortKey = "name" | "salesPSF" | "annualSales" | "sf" | "occupancyCost";
@@ -266,7 +267,7 @@ function yearLabel(year: number, source: "om" | "upload"): string {
   return String(year);
 }
 
-export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError, onChangeSalesHistory, onLinkRoster }: Props) {
+export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError, onChangeSalesHistory, onLinkRoster, onEraseAllSales }: Props) {
   // Key the roster the SAME way deriveSalesRecord/mergeRows look it up (suite-stripped)
   // so a freshly-linked sales row actually registers as linked.
   const rosterByKey = useMemo(() => new Map((omTenants || []).map(t => [tenantKey(stripSuiteCode(t.canonicalName || t.name)), t])), [omTenants]);
@@ -446,19 +447,20 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
   const hasUploadedData = salesHistory.length > 0;
   const omOnly = !hasUploadedData && omSnapshot != null;
 
-  // Erase every UPLOADED sales snapshot for this property — the escape hatch when a
-  // bad sales file was imported. Clears all uploaded years so you can re-upload from
-  // scratch. OM-derived figures (which live on the roster, not here) are untouched.
-  const eraseUploadedSales = () => {
-    if (!onChangeSalesHistory || !hasUploadedData) return;
-    const yrs = [...new Set(salesHistory.map(s => s.year).filter(Boolean))].sort((a, b) => a - b);
+  // Erase ALL tenant sales for this property — the escape hatch after a bad import.
+  // Covers BOTH sources shown in this box: uploaded sales-year snapshots AND figures
+  // pulled from the OM roster (so it works even on an OM-only property like the one
+  // that has no uploaded file). Clears everything so you can re-upload from scratch.
+  const eraseSales = () => {
+    if (!onEraseAllSales) return;
+    const yrs = [...new Set(fullHistory.map(s => s.year).filter(Boolean))].sort((a, b) => a - b);
     const label = yrs.length ? ` (${yrs.join(", ")})` : "";
     if (!window.confirm(
-      `Erase ALL uploaded tenant sales${label} for this property?\n\n` +
-      `This removes every uploaded sales year so you can start clean and re-upload. ` +
-      `Sales figures that came from the OM roster are kept. This can't be undone.`
+      `Erase ALL tenant sales${label} for this property?\n\n` +
+      `This clears every sales figure shown here — uploaded sales years AND figures ` +
+      `pulled from the OM — so you can start clean and re-upload. This can't be undone.`
     )) return;
-    onChangeSalesHistory([]);
+    onEraseAllSales();
   };
 
   return (
@@ -549,8 +551,8 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
             }}>
               {uploadBusy ? "Uploading…" : "⬆ Update Sales"}
             </button>
-            {hasUploadedData && onChangeSalesHistory && (
-              <button onClick={eraseUploadedSales} disabled={uploadBusy} title="Remove all uploaded sales years (e.g. after a bad upload), then re-upload" style={{
+            {hasAnySales && onEraseAllSales && (
+              <button onClick={eraseSales} disabled={uploadBusy} title="Remove ALL tenant sales (uploaded + OM-pulled) so you can re-upload clean" style={{
                 background: "#fff", color: "#c0563b", border: "1px solid #e7c3b8", borderRadius: 6,
                 padding: "5px 11px", fontSize: 11, fontWeight: 600, cursor: "pointer",
                 opacity: uploadBusy ? 0.6 : 1, whiteSpace: "nowrap",
