@@ -179,7 +179,7 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   // prior rent-roll AI flags (ids prefixed "ai-rr-") and append the new batch,
   // keeping OM-extraction and resolved questions intact.
   const fresh = result.reviewQuestions ?? [];
-  const prior = (deal.reviewQuestions ?? []).filter(q => !(q.source === "ai" && q.id.startsWith("ai-rr-")));
+  const prior = (deal.reviewQuestions ?? []).filter(q => !(q.source === "ai" && (q.id ?? "").startsWith("ai-rr-")));
   const reviewQuestions = [...prior, ...fresh];
 
   // Fields that an options-focused or partial rent roll often omits. When the new

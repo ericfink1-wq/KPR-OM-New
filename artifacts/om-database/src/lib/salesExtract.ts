@@ -152,7 +152,9 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
   // on the rent roll (their sales won't attach until the name/roster is fixed).
   // Drop this upload's prior sales flags so a re-upload doesn't pile up; keep
   // every other doc type's flags untouched.
-  const priorFlags = (deal.reviewQuestions ?? []).filter(q => !q.id.startsWith("ai-sales-"));
+  // NB: id ?? "" — OM-extracted reviewQuestions are stored without an id, so a
+  // bare q.id.startsWith() throws ("undefined is not an object") and kills the upload.
+  const priorFlags = (deal.reviewQuestions ?? []).filter(q => !(q.id ?? "").startsWith("ai-sales-"));
   const unmatchedFlag: ReviewQuestion[] = unmatched.length > 0 ? [{
     id: "ai-sales-unmatched",
     source: "ai", severity: "medium",

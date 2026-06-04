@@ -134,11 +134,12 @@ export function buildLoanPatch(deal: Deal, result: LoanResult): Partial<Deal> {
   }
 
   const newLoanFlags = [...(result.reviewQuestions ?? []), ...det];
-  const hadLoanFlags = (deal.reviewQuestions ?? []).some(q => q.id.startsWith("ai-loan-"));
+  // id ?? "" — OM-extracted reviewQuestions carry no id; a bare .startsWith throws.
+  const hadLoanFlags = (deal.reviewQuestions ?? []).some(q => (q.id ?? "").startsWith("ai-loan-"));
   // Only touch reviewQuestions when there are new loan flags to add or stale ones
   // to clear — keeps an enrich-only loan upload from rewriting the array needlessly.
   if (newLoanFlags.length || hadLoanFlags) {
-    const priorFlags = (deal.reviewQuestions ?? []).filter(q => !q.id.startsWith("ai-loan-"));
+    const priorFlags = (deal.reviewQuestions ?? []).filter(q => !(q.id ?? "").startsWith("ai-loan-"));
     patch.reviewQuestions = [...priorFlags, ...newLoanFlags];
   }
   return patch as Partial<Deal>;

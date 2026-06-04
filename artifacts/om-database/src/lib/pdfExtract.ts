@@ -432,9 +432,21 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
       }));
     }
 
+    // The Table of Contents lists "Site Plan … 12" as a line item, so it matches
+    // the strong keyword but is NOT the plan — exclude it so we don't grab the TOC.
+    const toc = /table\s+of\s+contents/i;
+    // Design-heavy OMs (NMRK, JLL, CBRE) bake the "Site Plan" title INTO the page
+    // artwork, so the keyword is unsearchable — but the page is unmistakably dense
+    // with tenant footprint labels like "27,169 SF" / "10,000 SF". A cluster of
+    // those "<number> SF" labels is the reliable tell for the site-plan / stacking
+    // diagram when the title text is missing. (Decorative high-image pages — maps,
+    // demographics — have zero such labels, so this doesn't false-positive on them.)
+    const sfLabel = /\b\d{1,3}(?:,\d{3})?\s*SF\b/gi;
     const score = (p: number) => {
       const t = pageTexts[p] || "";
-      if (strong.test(t)) return 2;
+      if (toc.test(t)) return 0;
+      if (strong.test(t)) return 3;
+      if ((t.match(sfLabel) || []).length >= 5) return 2;
       if (weak.test(t)) return 1;
       return 0;
     };
