@@ -13,6 +13,7 @@ interface Props {
   uploadBusy: boolean;
   uploadError: string | null;
   onChangeSalesHistory?: (next: TenantSalesYear[]) => void; // persist link/remove edits
+  onLinkRoster?: (rosterName: string, salesPSF: number | null, salesYear: number | null) => void; // relay a link to the roster above
 }
 
 type SortKey = "name" | "salesPSF" | "annualSales" | "sf" | "occupancyCost";
@@ -199,6 +200,7 @@ interface MergedRow {
   name: string;
   key: string;      // tenantKey of the sales name — used to match the roster + apply link/remove edits
   byYear: Record<number, TenantSalesRecord>;
+  removed?: boolean; // soft-deleted — render at the bottom struck-through, re-addable
 }
 
 // Re-derive sales PSF (from gross) and occupancy cost (from the roster's rent
@@ -251,6 +253,7 @@ function mergeRows(
       if (!key) continue;
       const t = deriveSalesRecord(raw, rosterByKey, recByKey);
       if (!map[key]) map[key] = { name: t.name, key, byYear: {} };
+      if (raw.removed) map[key].removed = true;
       map[key].byYear[snap.year] = t;
     }
   }
@@ -263,8 +266,10 @@ function yearLabel(year: number, source: "om" | "upload"): string {
   return String(year);
 }
 
-export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError, onChangeSalesHistory }: Props) {
-  const rosterByKey = useMemo(() => new Map((omTenants || []).map(t => [tenantKey(t.canonicalName || t.name), t])), [omTenants]);
+export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError, onChangeSalesHistory, onLinkRoster }: Props) {
+  // Key the roster the SAME way deriveSalesRecord/mergeRows look it up (suite-stripped)
+  // so a freshly-linked sales row actually registers as linked.
+  const rosterByKey = useMemo(() => new Map((omTenants || []).map(t => [tenantKey(stripSuiteCode(t.canonicalName || t.name)), t])), [omTenants]);
   const recByKey = recoveries ?? new Map();
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedYear, setSelectedYear] = useState<number | "all">("all");
@@ -286,17 +291,32 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
   // Link a sales row to a roster tenant (rename it so it matches), or remove it
   // entirely (tenant no longer at the property). Applies across every uploaded
   // year snapshot, then persists.
-  const applySalesEdit = (rowKey: string, action: { type: "link"; toName: string } | { type: "remove" }) => {
+  const applySalesEdit = (rowKey: string, action: { type: "link"; toName: string } | { type: "remove" } | { type: "readd" }) => {
     setLinkEditKey(null);
+    // On link, relay the sales figure to the matching roster tenant above.
+    if (action.type === "link" && onLinkRoster) {
+      let best: { year: number; rec: TenantSalesRecord } | null = null;
+      for (const snap of salesHistory) for (const t of snap.tenants) {
+        if (tenantKey(stripSuiteCode(t.name)) === rowKey && (!best || snap.year > best.year)) best = { year: snap.year, rec: t };
+      }
+      if (best) {
+        const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+        let psf = nv(best.rec.salesPSF);
+        const gross = nv(best.rec.annualSales), sf = nv(best.rec.sf);
+        if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
+        onLinkRoster(action.toName, psf, best.year || null);
+      }
+    }
     if (!onChangeSalesHistory) return;
+    // Soft delete: mark removed (kept, shown struck-through) rather than dropping.
     const next = salesHistory.map(snap => ({
       ...snap,
-      tenants: snap.tenants
-        .map(t => {
-          if (tenantKey(stripSuiteCode(t.name)) !== rowKey) return t;
-          return action.type === "remove" ? null : { ...t, name: action.toName };
-        })
-        .filter((t): t is TenantSalesRecord => t != null),
+      tenants: snap.tenants.map(t => {
+        if (tenantKey(stripSuiteCode(t.name)) !== rowKey) return t;
+        if (action.type === "remove") return { ...t, removed: true };
+        if (action.type === "readd") return { ...t, removed: false };
+        return { ...t, name: action.toName, removed: false }; // link
+      }),
     }));
     onChangeSalesHistory(next);
   };
@@ -336,7 +356,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
     if (selectedYear !== "all") {
       const snap = fullHistory.find(s => s.year === selectedYear);
       if (!snap) return [];
-      return snap.tenants.map(raw => { const t = deriveSalesRecord(raw, rosterByKey, recByKey); return { name: t.name, key: tenantKey(stripSuiteCode(raw.name)), byYear: { [selectedYear]: t } as Record<number, TenantSalesRecord> }; });
+      return snap.tenants.map(raw => { const t = deriveSalesRecord(raw, rosterByKey, recByKey); return { name: t.name, key: tenantKey(stripSuiteCode(raw.name)), removed: !!raw.removed, byYear: { [selectedYear]: t } as Record<number, TenantSalesRecord> }; });
     }
     return mergeRows(fullHistory, rosterByKey, recByKey);
   }, [fullHistory, selectedYear, rosterByKey, recByKey]);
@@ -368,7 +388,8 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
       if (bv == null) return -1;
       return sortDir === "desc" ? bv - av : av - bv;
     });
-    return r;
+    // Removed (soft-deleted) tenants always sink to the bottom.
+    return [...r.filter(x => !x.removed), ...r.filter(x => x.removed)];
   }, [allRows, filter, sortKey, sortDir, displayYears]);
 
   const toggleSort = (key: SortKey) => {
@@ -567,12 +588,14 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                 </thead>
                 <tbody>
                   {rows.map((row, i) => (
-                    <tr key={row.name} style={{ background: i % 2 === 0 ? "#fff" : "#f8fbf5", borderBottom: "1px solid #eef0eb" }}>
+                    <tr key={row.name} style={{ background: row.removed ? "#f6f4ef" : (i % 2 === 0 ? "#fff" : "#f8fbf5"), borderBottom: "1px solid #eef0eb", opacity: row.removed ? 0.65 : 1 }}>
                       <td style={{ padding: "7px 10px", fontWeight: 600, color: "#262724", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span>{row.name}</span>
+                          <span style={row.removed ? { textDecoration: "line-through", color: "#a89f8f", fontWeight: 500 } : undefined}>{row.name}</span>
                           {onChangeSalesHistory && (
-                            linkEditKey === row.key ? (
+                            row.removed ? (
+                              <button onClick={() => applySalesEdit(row.key, { type: "readd" })} title="Removed — click to re-add if that was a mistake / the tenant is back" style={{ fontSize: 9, fontWeight: 700, color: "#3f7a1f", background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 3, padding: "1px 6px", cursor: "pointer" }}>↩ Re-add</button>
+                            ) : linkEditKey === row.key ? (
                               <select autoFocus defaultValue=""
                                 onChange={e => {
                                   const v = e.target.value;

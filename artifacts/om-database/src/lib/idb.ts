@@ -237,6 +237,7 @@ export interface TenantSalesRecord {
   occIsEst?: boolean;            // legacy — kept for type compat; no longer set to true
   occSource?: "stated" | "computed"; // how occupancyCost was resolved
   occBreakdown?: OccBreakdown | null; // breakdown for computed values
+  removed?: boolean | null;     // soft-deleted (tenant no longer at the property) — shown struck-through, re-addable
 }
 
 // A year's worth of per-tenant sales data for a deal

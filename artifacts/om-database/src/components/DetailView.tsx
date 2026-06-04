@@ -2613,6 +2613,11 @@ ${text.slice(0, 60000)}`;
             uploadBusy={salesBusy}
             uploadError={salesError}
             onChangeSalesHistory={next => onUpdate(d.id, { tenantSalesHistory: next })}
+            onLinkRoster={(rosterName, salesPSF, salesYear) => {
+              const rk = tenantKey(rosterName);
+              const tenants = (d.tenants || []).map(t => tenantKey(t.canonicalName || t.name) === rk ? { ...t, salesPSF: salesPSF ?? t.salesPSF, salesYear: salesYear ?? t.salesYear } : t);
+              onUpdate(d.id, { tenants });
+            }}
           />
         </div>
       )}
