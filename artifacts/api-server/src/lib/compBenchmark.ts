@@ -161,8 +161,14 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     if (!req.state) return true;
     const s = req.state.toLowerCase();
     if (r.state) return r.state.toLowerCase() === s;
-    return (r.market ?? "").toLowerCase().includes(s) ||
-           (r.sourceDealMarket ?? "").toLowerCase().includes(s);
+    // No structured state on the comp — read the trailing "City, ST" code off the
+    // market label. A raw substring test wrongly matched a state code inside a
+    // city name (e.g. "in"/Indiana inside "Arlington", "Washington").
+    const trailingState = (m: string | null | undefined) => {
+      const mm = (m ?? "").match(/,\s*([A-Za-z]{2})\.?\s*$/);
+      return mm ? mm[1].toLowerCase() : null;
+    };
+    return trailingState(r.market) === s || trailingState(r.sourceDealMarket) === s;
   };
 
   const typeOk = (r: Row) =>
@@ -341,7 +347,9 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   const l12    = activeForStats.filter(r => inDate(r, cut12));
   const l12cap = weighted(l12, r => r.capRate);
   const l12psf = weighted(l12, r => r.pricePerSf);
-  const last12 = l12.length >= 3 ? { n: l12.length, capRate: triStats(l12cap), pricePerSf: triStats(l12psf) } : null;
+  // Hold the 12-month sub-benchmark to the same MIN_N gate as the main set, so a
+  // thin recent sample doesn't publish a median the primary gate would suppress.
+  const last12 = l12.length >= MIN_N ? { n: l12.length, capRate: triStats(l12cap), pricePerSf: triStats(l12psf) } : null;
 
   const sourceMix = { owned: 0, broker: 0, om: 0 };
   for (const r of activeForStats) sourceMix[getSource(r)]++;

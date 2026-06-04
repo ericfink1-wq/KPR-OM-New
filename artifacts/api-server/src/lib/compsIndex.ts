@@ -4,6 +4,15 @@ import { eq, and } from "drizzle-orm";
 import { parseLeaseDate } from "./tenantIndex";
 import { toFloat, toStr } from "./parsers";
 
+// Normalize a cap rate that may have been ingested as a fraction (0.065) to
+// percent (6.5), mirroring the occupancy fraction guard. Without this a comp
+// stored as 0.06 is silently dropped by the benchmark's 3–12% validity filter.
+function normCapRate(v: unknown): number | null {
+  const n = toFloat(v);
+  if (n == null) return n;
+  return n > 0 && n < 1 ? Math.round(n * 100 * 100) / 100 : n;
+}
+
 // ---------------------------------------------------------------------------
 // Sale-date parser — extends parseLeaseDate with year-only and quarter formats
 // ---------------------------------------------------------------------------
@@ -69,7 +78,7 @@ export async function syncOwnTransactionComps(
       const acqSalePrice = toFloat(data.txnPurchasePrice);
       const acqSaleDate  = parseSaleDate(data.txnCloseDate);
       if (acqSalePrice && acqSalePrice > 0 && acqSaleDate) {
-        const acqCapRate = toFloat(data.acqCapRate) ?? toFloat(data.capRate);
+        const acqCapRate = normCapRate(data.acqCapRate) ?? normCapRate(data.capRate);
         const acqPsf     = sf && sf > 0 ? Math.round(acqSalePrice / sf) : toFloat(data.pricePerSF);
         const seller     = toStr(data.txnSeller);
         const dealState = toStr(data.state);
@@ -97,7 +106,7 @@ export async function syncOwnTransactionComps(
       const dispSalePrice = toFloat(data.txnSalePrice);
       const dispSaleDate  = parseSaleDate(data.txnSaleDate);
       if (dispSalePrice && dispSalePrice > 0 && dispSaleDate) {
-        const dispCapRate = toFloat(data.dispExitCap);
+        const dispCapRate = normCapRate(data.dispExitCap);
         const dispPsf     = sf && sf > 0 ? Math.round(dispSalePrice / sf) : null;
         const buyer       = toStr(data.txnBuyer);
         const dealState = toStr(data.state);
@@ -160,7 +169,7 @@ export async function rebuildCompsIndex(
           saleDateRaw,
           saleDate: parseSaleDate(saleDateRaw),
           salePrice: toFloat(c.salePrice),
-          capRate: toFloat(c.capRate),
+          capRate: normCapRate(c.capRate),
           pricePerSf: toFloat(c.pricePerSF),
           sf: toFloat(c.sf),
           occupancy: toFloat(c.occupancy),
