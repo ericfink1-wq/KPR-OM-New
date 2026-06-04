@@ -250,6 +250,13 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const stopRef = useRef(false);
   const pausedRef = useRef(false);
   const [paused, setPaused] = useState(false);
+  // IDs the user has cancelled (individually or via Stop). In-flight processing
+  // checks this at each await boundary and bails; updateItem ignores any further
+  // updates so a cancelled file stays "Stopped" even if its background work
+  // finishes. (We can't abort an already-sent server request, but the client
+  // stops waiting on it and applies none of its results.)
+  const cancelledRef = useRef<Set<string>>(new Set());
+  const isCancelled = (id: string) => cancelledRef.current.has(id);
   // Deals created/refreshed by OMs during this session, so a rent roll / sales
   // report dropped alongside a NEW deal can attach to it (it isn't in
   // existingDeals yet). Plus a live mirror of the queue for async resolution.
@@ -297,7 +304,22 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     pausedRef.current = false;
     setPaused(false);
     waitingFilesRef.current = [];
-    setQueue(prev => prev.map(it => it.status === "pending" ? { ...it, status: "error", msg: "Stopped", error: "Stopped by user" } : it));
+    // Cancel EVERYTHING still in flight — not just the not-yet-started ones. Mark
+    // each non-terminal item cancelled (so its background work is ignored) and
+    // flip it to "Stopped".
+    setQueue(prev => prev.map(it => {
+      if (it.status === "done" || it.status === "error") return it;
+      cancelledRef.current.add(it.id);
+      return { ...it, status: "error", msg: "Stopped", error: "Stopped by user" };
+    }));
+  };
+
+  // Cancel one file (pending, processing, or awaiting input). Removes it from the
+  // wait list and freezes it at "Stopped"; in-flight work bails at its next check.
+  const cancelItem = (itemId: string) => {
+    cancelledRef.current.add(itemId);
+    waitingFilesRef.current = waitingFilesRef.current.filter(w => w.itemId !== itemId);
+    setQueue(prev => prev.map(it => it.id === itemId ? { ...it, status: "error", msg: "Stopped", error: "Cancelled by user" } : it));
   };
 
   const togglePause = () => {
@@ -337,6 +359,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // duplicate-refresh) is captured wherever it sets a terminal status.
   const loggedRef = useRef<Set<string>>(new Set());
   const updateItem = (itemId: string, patch: Partial<QueueItem>) => {
+    // A cancelled file is frozen at "Stopped" — drop any late updates from its
+    // still-settling background work so it can't reappear as processing/done.
+    if (cancelledRef.current.has(itemId)) return;
     setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
     if ((patch.status === "done" || patch.status === "error") && !loggedRef.current.has(itemId)) {
       loggedRef.current.add(itemId);
@@ -1006,10 +1031,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
       updateItem(itemId, { msg: "Extracting text…", progress: 18 });
       const { text, pages } = await extractAnyFile(file);
+      if (isCancelled(itemId)) return;
 
       // ── Smart routing: what KIND of document is this? ──────────────────────
       updateItem(itemId, { msg: "Identifying document…", progress: 30 });
       const cls = await classifyDocument(text, file.name);
+      if (isCancelled(itemId)) return;
 
       if (cls.type === "rent-roll") {
         await routeRentRoll(itemId, dealId, text, fileName, cls.propertyName, cls.address);
@@ -1042,6 +1069,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       }
       // Otherwise treat as an OM / deal package (the original flow, unchanged).
 
+      if (isCancelled(itemId)) return;
       updateItem(itemId, { msg: "Sending to Claude AI…", progress: 40 });
       await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages, correctionsNote: buildCorrectionsNote(existingDeals) });
 
@@ -1058,7 +1086,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       let consecutiveErrors = 0;
       const POLL_ITERS = 240; // 240 × 2.5s = 10 min
       for (let i = 0; i < POLL_ITERS; i++) {
+        if (isCancelled(itemId)) return; // user stopped this file — quit waiting
         await new Promise(r => setTimeout(r, 2500));
+        if (isCancelled(itemId)) return;
         let status: { processing: boolean; deal?: Deal; error?: string };
         try {
           status = await apiPollDealStatus(dealId);
@@ -1348,6 +1378,14 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                         <div style={{ fontSize: 11, color: "#a69e91", marginTop: 5 }}>↩ Reverted.</div>
                       )}
                     </div>
+                    {(item.status === "extracting" || item.status === "pending") && (
+                      <button
+                        onClick={() => cancelItem(item.id)}
+                        title="Cancel this file"
+                        style={{ background: "#fff", border: "1px solid #e0c9c0", color: "#b5503a", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                        ✕ Cancel
+                      </button>
+                    )}
                     {item.status === "done" && item.deal && !item.undone && (
                       <button
                         onClick={() => { onOpenDeal(item.deal!.id); setQueueOpen(false); }}
