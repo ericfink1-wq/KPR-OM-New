@@ -435,12 +435,16 @@ router.get("/deals/:id/images", requireAuth, async (req, res) => {
   }
 });
 
-// Ring buffer of the most recent image-save attempts, so the diagnostic can show
-// whether the real (large) request even reached the server, its body size, how long
-// the server spent, and the outcome — pinpointing browser→server transport vs server.
-type ImgSaveLog = { at: string; id: string; reqBytes: number; ms: number; outcome: string; code?: string };
-const recentImageSaves: ImgSaveLog[] = [];
-function logImgSave(e: ImgSaveLog) { recentImageSaves.unshift(e); if (recentImageSaves.length > 15) recentImageSaves.length = 15; }
+// Persist a compact trace of each image-save attempt to the DB (NOT in-memory), so
+// it's reliable across Autoscale instances — the only way to know whether the real
+// (large) request actually reached the server. Best-effort; never blocks the save.
+async function logImgSave(e: { id: string; reqBytes: number; ms: number; outcome: string; code?: string }): Promise<void> {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS img_trace (id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), data jsonb NOT NULL)`);
+    await pool.query(`INSERT INTO img_trace(data) VALUES ($1::jsonb)`, [JSON.stringify(e)]);
+    await pool.query(`DELETE FROM img_trace WHERE id <= (SELECT max(id) FROM img_trace) - 50`);
+  } catch { /* tracing must never break a save */ }
+}
 
 // GET /api/image-save-diag — open this URL in the browser (while logged in) to see
 // EXACTLY why image saves hang: pool stats, what's running/stuck in the DB, locks on
@@ -511,7 +515,11 @@ router.get("/image-save-diag", requireAuth, async (_req, res) => {
   }
 
   // The most recent REAL save attempts (did the big request reach the server at all?).
-  out.recentImageSaves = recentImageSaves;
+  // Read from the DB so it's consistent across all Autoscale instances.
+  try {
+    const tr = await pool.query(`SELECT at, data FROM img_trace ORDER BY id DESC LIMIT 15`);
+    out.recentImageSaves = tr.rows;
+  } catch (e) { out.recentImageSaves = []; out.traceError = String(e); }
   res.json(out);
 });
 
@@ -582,10 +590,10 @@ router.put("/deals/:id/images", requireAuth, async (req, res) => {
         throw err;
       }
     }
-    logImgSave({ at: new Date().toISOString(), id, reqBytes, ms: Date.now() - t0, outcome: "ok" });
+    void logImgSave({ id, reqBytes, ms: Date.now() - t0, outcome: "ok" });
     res.json({ ok: true });
   } catch (err) {
-    logImgSave({ at: new Date().toISOString(), id, reqBytes, ms: Date.now() - t0, outcome: "error", code: (err as { code?: string })?.code });
+    void logImgSave({ id, reqBytes, ms: Date.now() - t0, outcome: "error", code: (err as { code?: string })?.code });
     req.log.error({ err }, "Failed to save images");
     res.status(500).json({ error: "Failed to save images" });
   }
