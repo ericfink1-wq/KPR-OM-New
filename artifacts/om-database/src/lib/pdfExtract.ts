@@ -395,7 +395,12 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
 }> {
   const lib = await loadPdfJs();
   const pdf = await lib.getDocument({ data: buffer }).promise;
-  const pagesToExtract = Math.min(pdf.numPages, 120);
+  // Bound the (main-thread, canvas-heavy) site-plan search to the FRONT of the
+  // document. OMs always place the site plan in the first section, so scanning the
+  // whole book is pointless — and the back-of-book map/demographics pages are
+  // image-dense (hundreds of XObjects each) and extremely slow to parse, which is
+  // what was freezing the tab for minutes on large OMs. 40 pages is plenty.
+  const scanPages = Math.min(pdf.numPages, 40);
 
   const result = {
     cover: null as string | null,
@@ -420,7 +425,7 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
     // Collect per-page text for scoring (parallelised in small batches — doing this
     // one page at a time was a needless serial wait on long PDFs).
     const pageTexts: Record<number, string> = {};
-    const textPages = Array.from({ length: Math.max(0, pagesToExtract - 1) }, (_, i) => i + 2);
+    const textPages = Array.from({ length: Math.max(0, scanPages - 1) }, (_, i) => i + 2);
     const TEXT_CONC = 6;
     for (let i = 0; i < textPages.length; i += TEXT_CONC) {
       await Promise.all(textPages.slice(i, i + TEXT_CONC).map(async p => {
@@ -452,7 +457,7 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
     };
 
     const matches: number[] = [];
-    for (let p = 2; p <= pagesToExtract; p++) {
+    for (let p = 2; p <= scanPages; p++) {
       if (score(p) > 0) matches.push(p);
     }
     matches.sort((a, b) => score(b) - score(a) || a - b);
@@ -471,7 +476,10 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
     // small parallel batches at a lighter resolution (720px is plenty for a picker
     // thumbnail) so it finishes in a fraction of the old one-at-a-time-at-900px time.
     if (result.sitePlan.length === 0) {
-      const limit = Math.min(pagesToExtract, 24);
+      // Only the FIRST pages can plausibly hold a site plan; rendering 24 full pages
+      // was the single slowest step and the main cause of multi-minute "processing
+      // images". Cap it hard.
+      const limit = Math.min(scanPages, 14);
       const pickPages = Array.from({ length: limit }, (_, i) => i + 1);
       const PICK_CONC = 4;
       for (let i = 0; i < pickPages.length; i += PICK_CONC) {
