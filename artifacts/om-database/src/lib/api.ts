@@ -257,16 +257,22 @@ export async function apiCreateDeal(deal: Deal): Promise<void> {
 // --- Images ---
 
 // PUT a SUBSET of image fields. The server applies a partial update, so omitted
-// fields are left untouched. Reports the precise HTTP status + payload size on
-// failure (the old silent .catch hid why covers "wouldn't save").
-async function putImageFields(id: string, fields: Partial<ImageBundle>): Promise<void> {
+// fields are left untouched. A hard timeout (via AbortController) means a stalled
+// request FAILS instead of hanging forever — the cause of "processing images" /
+// "attaching cover & site plan" spinning for minutes and a cover silently never
+// reaching the DB. Reports the precise status + payload size on failure.
+async function putImageFields(id: string, fields: Partial<ImageBundle>, timeoutMs = 45000): Promise<void> {
   const body = JSON.stringify(fields);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   let resp: Response;
   try {
-    resp = await apiFetch(`/deals/${id}/images`, { method: "PUT", body });
+    resp = await apiFetch(`/deals/${id}/images`, { method: "PUT", body, signal: ctrl.signal });
   } catch (e) {
-    reportClientError(`apiSaveImages network error (${body.length} bytes)`, String(e));
+    reportClientError(`apiSaveImages network/timeout (${body.length} bytes)`, String(e));
     throw e;
+  } finally {
+    clearTimeout(timer);
   }
   if (!resp.ok) {
     const serverMsg = await resp.text().catch(() => "");
@@ -276,14 +282,25 @@ async function putImageFields(id: string, fields: Partial<ImageBundle>): Promise
 }
 
 export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
-  // The cover + site plan are small and MUST persist. pagePicks (up to 24 full-page
-  // thumbnails — a transient aid for manually picking a site plan) can be several MB
-  // and is the usual reason a save blows past the platform's request-body limit. So
-  // save the essentials FIRST (must succeed), then pagePicks separately, best-effort:
-  // if the picker thumbnails are too big to store, the cover/site plan are already
-  // safely saved rather than dragged down with them.
-  const { pagePicks, ...essential } = bundle;
-  await putImageFields(id, essential);
+  // Save in THREE isolated requests, smallest/most-important first, so the big parts
+  // can never slow down or hang the part that matters:
+  //   1) cover + thumb  — tiny, the thing the user actually sees; MUST persist.
+  //   2) site plan      — best-effort, separate request.
+  //   3) pagePicks      — up to 24 page thumbnails (multi-MB picker aid); best-effort.
+  // Before, all three rode in one request, so a large site plan / pagePicks (or a
+  // stalled connection with no timeout) made the cover save hang and never land —
+  // which is why a just-uploaded cover vanished on return.
+  const { cover, coverThumb, sitePlan, pagePicks, needsSitePlanPick } = bundle;
+  if (cover !== undefined || coverThumb !== undefined) {
+    await putImageFields(id, { cover, coverThumb });
+  }
+  if (sitePlan !== undefined || needsSitePlanPick !== undefined) {
+    try {
+      await putImageFields(id, { sitePlan, needsSitePlanPick });
+    } catch {
+      reportClientError(`sitePlan save skipped`, `deal ${id}`);
+    }
+  }
   if (Array.isArray(pagePicks) && pagePicks.length) {
     try {
       await putImageFields(id, { pagePicks });
