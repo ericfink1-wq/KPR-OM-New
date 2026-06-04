@@ -82,7 +82,12 @@ interface Props {
 // Cover photos straight off a phone can be 10MB+ and slow to load; this caps the
 // longest edge and re-encodes to JPEG, falling back to the original on anything
 // it can't safely shrink (small images keep their original bytes/format).
-async function downscaleImageFile(file: File, maxDim = 1600, quality = 0.82): Promise<string> {
+// Downscale an image File to a JPEG data URL. `maxBytes` (when set) HARD-CAPS the
+// output by stepping quality, then dimensions, down until the data URL fits — so a
+// cover/site-plan upload can't exceed the platform proxy's request-body limit (the
+// real reason a 450KB cover's PUT never reached the server). For tiles/headers a
+// ~1000px JPEG is plenty.
+async function downscaleImageFile(file: File, maxDim = 1600, quality = 0.82, maxBytes = 0): Promise<string> {
   const readAsDataUrl = (f: File) => new Promise<string>((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result as string);
@@ -100,17 +105,34 @@ async function downscaleImageFile(file: File, maxDim = 1600, quality = 0.82): Pr
     });
     const longest = Math.max(img.width, img.height);
     const tooBig = longest > maxDim;
-    const heavy = dataUrl.length > 600_000; // already-lean images keep their original bytes
-    if (!tooBig && !heavy) return dataUrl;
-    const scale = Math.min(1, maxDim / longest);
-    const w = Math.max(1, Math.round(img.width * scale));
-    const h = Math.max(1, Math.round(img.height * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return dataUrl;
-    ctx.drawImage(img, 0, 0, w, h);
-    const out = canvas.toDataURL("image/jpeg", quality);
+    const heavy = dataUrl.length > 600_000;
+    const overCap = !!maxBytes && dataUrl.length > maxBytes;
+    if (!tooBig && !heavy && !overCap) return dataUrl;
+    const render = (dim: number, q: number): string => {
+      const scale = Math.min(1, dim / longest);
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return dataUrl;
+      ctx.drawImage(img, 0, 0, w, h);
+      const url = canvas.toDataURL("image/jpeg", q);
+      canvas.width = canvas.height = 0;
+      return url;
+    };
+    let dim = Math.min(longest, maxDim);
+    let q = quality;
+    let out = render(dim, q);
+    // Step quality down (to 0.4), then dimensions down, until under the byte cap.
+    if (maxBytes) {
+      let guard = 0;
+      while (out.length > maxBytes && guard++ < 10) {
+        if (q > 0.42) q = Math.max(0.4, q - 0.1);
+        else { dim = Math.round(dim * 0.82); q = 0.6; }
+        out = render(dim, q);
+      }
+    }
     return out.length > 0 && out.length < dataUrl.length ? out : dataUrl;
   } catch {
     return dataUrl;

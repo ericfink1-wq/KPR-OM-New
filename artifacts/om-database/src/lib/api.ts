@@ -297,22 +297,72 @@ async function putImageFields(id: string, fields: Partial<ImageBundle>, timeoutM
   }
 }
 
+// Re-encode a base64 image data URL down to <= maxBytes by stepping JPEG quality,
+// then dimensions, down. This is THE fix for "the cover/site-plan upload never
+// reaches the server": the platform proxy silently drops a request whose body is too
+// large, so we guarantee every image payload is small BEFORE sending — regardless of
+// whether it came from a manual upload or OM extraction. Browser-only; returns the
+// input unchanged if it's already small, not an image, or can't be processed.
+async function capImageDataUrl(url: string | null | undefined, maxBytes: number): Promise<string | null | undefined> {
+  if (!url || typeof url !== "string" || !url.startsWith("data:image") || url.length <= maxBytes) return url;
+  if (typeof document === "undefined") return url;
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error("decode failed"));
+      im.src = url;
+    });
+    const longest = Math.max(img.width, img.height);
+    const render = (dim: number, q: number): string => {
+      const s = Math.min(1, dim / longest);
+      const w = Math.max(1, Math.round(img.width * s)), h = Math.max(1, Math.round(img.height * s));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const cx = c.getContext("2d");
+      if (!cx) return url;
+      cx.drawImage(img, 0, 0, w, h);
+      const u = c.toDataURL("image/jpeg", q);
+      c.width = c.height = 0;
+      return u;
+    };
+    let dim = Math.min(longest, 1200);
+    let q = 0.7;
+    let out = render(dim, q);
+    let guard = 0;
+    while (out.length > maxBytes && guard++ < 12) {
+      if (q > 0.42) q = Math.max(0.4, q - 0.1);
+      else { dim = Math.round(dim * 0.82); q = 0.6; }
+      out = render(dim, q);
+    }
+    return out.length < url.length ? out : url;
+  } catch {
+    return url;
+  }
+}
+
+// Conservative cap, comfortably under common proxy request-body limits.
+const COVER_CAP = 180_000;   // ~135 KB
+const THUMB_CAP = 70_000;    // ~52 KB
+const PLAN_CAP = 240_000;    // ~180 KB
+
 export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
-  // Save in THREE isolated requests, smallest/most-important first, so the big parts
-  // can never slow down or hang the part that matters:
-  //   1) cover + thumb  — tiny, the thing the user actually sees; MUST persist.
-  //   2) site plan      — best-effort, separate request.
-  //   3) pagePicks      — up to 24 page thumbnails (multi-MB picker aid); best-effort.
-  // Before, all three rode in one request, so a large site plan / pagePicks (or a
-  // stalled connection with no timeout) made the cover save hang and never land —
-  // which is why a just-uploaded cover vanished on return.
+  // Save in isolated requests, smallest/most-important first (cover, then site plan,
+  // then pagePicks), and CAP each image's size so the request body can't exceed the
+  // platform proxy's limit (which was silently dropping the upload before it ever
+  // reached the server — covers/site plans "saved nothing").
   const { cover, coverThumb, sitePlan, pagePicks, needsSitePlanPick } = bundle;
   if (cover !== undefined || coverThumb !== undefined) {
-    await putImageFields(id, { cover, coverThumb });
+    const c = await capImageDataUrl(cover, COVER_CAP);
+    const ct = await capImageDataUrl(coverThumb, THUMB_CAP);
+    await putImageFields(id, { cover: c, coverThumb: ct });
   }
   if (sitePlan !== undefined || needsSitePlanPick !== undefined) {
     try {
-      await putImageFields(id, { sitePlan, needsSitePlanPick });
+      const plan = Array.isArray(sitePlan)
+        ? (await Promise.all(sitePlan.map(u => capImageDataUrl(u, PLAN_CAP)))).filter((u): u is string => typeof u === "string")
+        : sitePlan;
+      await putImageFields(id, { sitePlan: plan, needsSitePlanPick });
     } catch {
       reportClientError(`sitePlan save skipped`, `deal ${id}`);
     }
