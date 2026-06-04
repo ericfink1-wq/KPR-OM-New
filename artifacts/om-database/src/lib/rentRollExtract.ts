@@ -46,10 +46,10 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
 
   const taught = await lessonGuidanceClient("rent-roll");
   const baseContent = prompt + taught + "\n\nRENT ROLL TEXT:\n" + text;
-  const callRoll = async (suffix: string) => {
+  const callRoll = async (suffix: string, maxTokens: number) => {
     const res = await apiAiMessages({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 16000,
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: baseContent + suffix }],
     });
     return {
@@ -58,7 +58,9 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
     };
   };
 
-  const first = await callRoll("");
+  // Big roomy first pass so even a 100+-tenant mall roll comes back in ONE call
+  // (no slow continuation rounds for the common case).
+  const first = await callRoll("", 32000);
   let parsed: { asOf?: string | null; tenants?: unknown[]; reviewQuestions?: unknown[] };
   try { parsed = robustParseJSON(first.raw) as typeof parsed; }
   catch { throw new Error("Couldn't parse the rent roll. Try a clearer file."); }
@@ -76,6 +78,7 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
     const have = (tenants as Array<{ name?: string }>).map(t => t?.name).filter(Boolean) as string[];
     const cont = await callRoll(
       `\n\nYour previous answer was TRUNCATED before the end of the rent roll. Return ONLY JSON {"tenants":[...]} containing ONLY the occupied or vacant suites NOT already in the list below — same per-tenant schema and same rules. If none remain, return {"tenants":[]}.\nAlready captured (${have.length}): ${have.join(", ")}`,
+      24000,
     );
     let more: unknown[] = [];
     try { more = (robustParseJSON(cont.raw) as { tenants?: unknown[] }).tenants || []; } catch { break; }
