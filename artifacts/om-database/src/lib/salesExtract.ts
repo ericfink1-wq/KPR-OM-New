@@ -1,10 +1,11 @@
-import type { Deal, TenantSalesYear, OccBreakdown } from "./idb";
+import type { Deal, TenantSalesYear, OccBreakdown, ReviewQuestion } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
-import { robustParseJSON, tenantKey, stripSuiteCode, estimateRecoveries } from "./utils";
+import { robustParseJSON, tenantKey, stripSuiteCode, estimateRecoveries, parseAiReviewQuestions } from "./utils";
 
 export interface SalesExtractResult {
   year: number;
   tenants: Array<Record<string, unknown>>;
+  reviewQuestions?: ReviewQuestion[];
 }
 
 // Extract tenant sales rows from a sales-report document (Haiku). Shared by the
@@ -22,6 +23,16 @@ Return ONLY valid JSON — no markdown fences, no explanation — with this exac
       "annualSales": number_or_null,
       "sf": number_or_null,
       "occupancyCost": number_or_null
+    }
+  ],
+  "reviewQuestions": [
+    {
+      "severity": "high|medium|low",
+      "field": "human label, e.g. 'Sales year' or 'Starbucks — sales PSF'",
+      "question": "a short plain-English question asking the user to confirm a value you were NOT confident about",
+      "detail": "1 sentence on why it was ambiguous",
+      "suggestedValue": "the value you captured, as a string",
+      "target": {"kind": "tenant", "fieldKey": "salesPSF|annualSales|sf|occupancyCost", "tenantName": "exact tenant name from your tenants array above", "valueType": "number"}
     }
   ]
 }
@@ -47,6 +58,8 @@ CHOOSING THE YEAR — READ CAREFULLY (for multi-year column reports, NOT the R12
 
 SQUARE FOOTAGE — IMPORTANT. If the report's "Square Feet (GLA)" prints as 0 or blank but it DOES state a "Per Square Foot" sales figure, DERIVE sf = round(annualSales ÷ salesPSF). Never report sf as 0 when sales and PSF are both present.
 
+reviewQuestions — FLAG DOUBT so the user can confirm/fix it. Add an item ONLY when you genuinely could not capture a value with confidence, e.g.: the year you chose was ambiguous (the latest column might be partial and you had to step back a year); a sales/PSF figure was blurry, split oddly, or in unclear units (thousands vs whole dollars); a tenant's salesPSF and annual sales don't tie (annualSales ÷ sf should ≈ salesPSF); or a column was unlabeled and you weren't sure it was sales vs PSF vs occupancy cost. ALWAYS set target to the exact tenant + field when the doubt is about one tenant's number. Do NOT flag values simply absent from the report (those are just null). Empty array if the report was clean. Cap at the ~4 most important.
+
 ${await lessonGuidanceClient("sales")}
 SALES REPORT TEXT:
 ${text.slice(0, 40000)}`;
@@ -63,7 +76,8 @@ ${text.slice(0, 40000)}`;
   const year = typeof parsed.year === "number" ? parsed.year : new Date().getFullYear() - 1;
   const tenants = Array.isArray(parsed.tenants) ? parsed.tenants as Array<Record<string, unknown>> : [];
   if (tenants.length === 0) throw new Error("No tenant sales data found in the report.");
-  return { year, tenants };
+  const reviewQuestions = parseAiReviewQuestions((parsed as { reviewQuestions?: unknown }).reviewQuestions, "ai-sales-");
+  return { year, tenants, reviewQuestions };
 }
 
 // Build the tenantSalesHistory patch for a deal from an extracted sales report:
@@ -76,10 +90,14 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
   const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
   const roster = new Map((deal.tenants || []).map(t => [tenantKey(t.canonicalName || t.name), t]));
   const recEst = estimateRecoveries(deal).byName;
+  const hasRoster = (deal.tenants || []).length > 0;
+  const unmatched: string[] = [];
+  const inconsistent: ReviewQuestion[] = [];
 
   const tenants = result.tenants.map(t => {
     const matchKey = tenantKey(stripSuiteCode(t.name as string));
     const rt = roster.get(matchKey);
+    if (hasRoster && !rt) unmatched.push(stripSuiteCode(t.name as string) || String(t.name ?? "this tenant"));
     let psf = nv(t.salesPSF);
     let gross = nv(t.annualSales);
     let sf = nv(t.sf);
@@ -107,10 +125,44 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
       occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
     }
     const cleanName = rt ? (rt.canonicalName || rt.name || stripSuiteCode(t.name as string)) : stripSuiteCode(t.name as string);
+    // Internal-consistency check: stated PSF should tie to annual sales ÷ SF. A
+    // >20% gap means one of the three numbers was misread — flag the PSF to fix.
+    if (psf != null && psf > 0 && gross != null && gross > 0 && sf != null && sf > 0) {
+      const impliedPsf = gross / sf;
+      if (Math.abs(impliedPsf - psf) / psf > 0.2) {
+        inconsistent.push({
+          id: `ai-sales-tie-${tenantKey(cleanName)}`,
+          source: "ai", severity: "medium",
+          field: `${cleanName} — sales PSF`,
+          question: `Confirm ${cleanName}'s ${year} sales — the PSF and total don't tie.`,
+          detail: `Stated $${psf.toFixed(0)}/SF, but $${Math.round(gross).toLocaleString()} ÷ ${Math.round(sf).toLocaleString()} SF ≈ $${impliedPsf.toFixed(0)}/SF.`,
+          suggestedValue: `$${psf.toFixed(2)}/SF`,
+          target: { kind: "tenant", fieldKey: "salesPSF", tenantName: cleanName, valueType: "number" },
+        });
+      }
+    }
     return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
   });
 
   const newSnap: TenantSalesYear = { year, uploadedAt: new Date().toISOString(), source: "upload", tenants: tenants as TenantSalesYear["tenants"] };
   const existing = (deal.tenantSalesHistory || []).filter(s => s.year !== year);
-  return { tenantSalesHistory: [...existing, newSnap] };
+
+  // Surface doubt for one-tap review/fix: the model's low-confidence flags, the
+  // PSF↔total mismatches, and any sales rows that couldn't be linked to a tenant
+  // on the rent roll (their sales won't attach until the name/roster is fixed).
+  // Drop this upload's prior sales flags so a re-upload doesn't pile up; keep
+  // every other doc type's flags untouched.
+  const priorFlags = (deal.reviewQuestions ?? []).filter(q => !q.id.startsWith("ai-sales-"));
+  const unmatchedFlag: ReviewQuestion[] = unmatched.length > 0 ? [{
+    id: "ai-sales-unmatched",
+    source: "ai", severity: "medium",
+    field: "Unlinked sales rows",
+    question: `${unmatched.length} sales row${unmatched.length === 1 ? "" : "s"} couldn't be matched to a tenant on the rent roll — their sales won't show until linked.`,
+    detail: `No roster match for: ${unmatched.slice(0, 8).join(", ")}${unmatched.length > 8 ? `, +${unmatched.length - 8} more` : ""}. Check the tenant name spelling on the roster, or update the roster.`,
+    suggestedValue: null,
+    target: null,
+  }] : [];
+  const reviewQuestions = [...priorFlags, ...(result.reviewQuestions ?? []), ...inconsistent, ...unmatchedFlag];
+
+  return { tenantSalesHistory: [...existing, newSnap], reviewQuestions };
 }

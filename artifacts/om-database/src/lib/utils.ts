@@ -151,6 +151,38 @@ export function reconcileDeal(deal: Deal) {
 // returned list is sorted high → low severity. Pure/idempotent — safe to call
 // on every deal render and after each (re)upload.
 const SEV_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
+// Normalize a model-produced reviewQuestions array (OM/rent-roll/sales/loan
+// extraction) into typed ReviewQuestions with stable, prefixed ids. The prefix
+// (e.g. "ai-sales-", "ai-loan-") lets a re-upload drop its own prior flags
+// without touching flags from other document types. Mirrors the OM extractor's
+// shape so every doc type flags doubt the same way.
+export function parseAiReviewQuestions(raw: unknown, idPrefix: string): ReviewQuestion[] {
+  return (Array.isArray(raw) ? raw : [])
+    .map((q, i) => {
+      const r = q as Record<string, unknown>;
+      const t = r.target as Record<string, unknown> | null | undefined;
+      const target = t && (t.kind === "deal" || t.kind === "tenant") && typeof t.fieldKey === "string"
+        ? {
+            kind: t.kind as "deal" | "tenant",
+            fieldKey: t.fieldKey as string,
+            tenantName: typeof t.tenantName === "string" ? t.tenantName : null,
+            valueType: (t.valueType === "text" ? "text" : "number") as "number" | "text",
+          }
+        : null;
+      return {
+        id: `${idPrefix}${i}-${String(r.field ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}`,
+        source: "ai" as const,
+        severity: (["high", "medium", "low"].includes(r.severity as string) ? r.severity : "medium") as ReviewQuestion["severity"],
+        field: typeof r.field === "string" ? r.field : null,
+        question: typeof r.question === "string" ? r.question : "",
+        detail: typeof r.detail === "string" ? r.detail : null,
+        suggestedValue: r.suggestedValue != null ? String(r.suggestedValue) : null,
+        target,
+      } as ReviewQuestion;
+    })
+    .filter(q => q.question);
+}
+
 export function buildReviewQuestions(deal: Deal): ReviewQuestion[] {
   const prior = Array.isArray(deal.reviewQuestions) ? deal.reviewQuestions : [];
   const resolvedById = new Map(prior.filter(q => q.resolvedAt).map(q => [q.id, q]));
