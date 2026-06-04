@@ -417,5 +417,50 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
     result.coverThumb = c.thumb;
   } catch {}
 
+  // AUTO SITE-PLAN DETECTION (re-enabled per Eric). Bounded for speed: scan only the
+  // FRONT ~40 pages (OM site plans always live in the first section) and DON'T render
+  // the slow 24-page picker fallback — if nothing is detected we just leave it empty
+  // for the user to set manually. The heavy part that caused old slowdowns is gone.
+  try {
+    const scanPages = Math.min(pdf.numPages, 40);
+    const strong = /site\s*plan|site\s*map|leasing\s*plan|leasing\s*map|site\s*layout|plot\s*plan|lease\s*plan|overall\s*plan|parcel\s*map|tax\s*parcel|key\s*plan/i;
+    const weak = /aerial|site\s*aerial|asset\s*overview/i;
+    const toc = /table\s+of\s+contents/i;
+    const sfLabel = /\b\d{1,3}(?:,\d{3})?\s*SF\b/gi;
+
+    const pageTexts: Record<number, string> = {};
+    const textPages = Array.from({ length: Math.max(0, scanPages - 1) }, (_, i) => i + 2);
+    const TEXT_CONC = 6;
+    for (let i = 0; i < textPages.length; i += TEXT_CONC) {
+      await Promise.all(textPages.slice(i, i + TEXT_CONC).map(async p => {
+        try {
+          const page = await pdf.getPage(p);
+          const content = await page.getTextContent();
+          pageTexts[p] = content.items.map((it: any) => it.str).join(" ");
+        } catch {}
+      }));
+    }
+    // Score each page: the real plan is dense with "<n> SF" tenant labels even when the
+    // "Site Plan" title is baked into artwork; the TOC matches the keyword but isn't one.
+    const score = (p: number) => {
+      const t = pageTexts[p] || "";
+      if (toc.test(t)) return 0;
+      if (strong.test(t)) return 3;
+      if ((t.match(sfLabel) || []).length >= 5) return 2;
+      if (weak.test(t)) return 1;
+      return 0;
+    };
+    const matches: number[] = [];
+    for (let p = 2; p <= scanPages; p++) if (score(p) > 0) matches.push(p);
+    matches.sort((a, b) => score(b) - score(a) || a - b);
+    const chosen = matches.slice(0, 3).sort((a, b) => a - b);
+    for (const p of chosen) {
+      try {
+        const img = await _captureSitePlan(pdf, p, lib);
+        if (img) result.sitePlan.push(img);
+      } catch {}
+    }
+  } catch {}
+
   return result;
 }

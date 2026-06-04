@@ -461,8 +461,11 @@ async function logUploadTiming(e: Record<string, unknown>): Promise<void> {
 // rounds, and scoring. Pinpoints why a given OM was slow.
 router.get("/upload-timing", requireAuth, async (_req, res) => {
   try {
+    // Create-if-missing so the endpoint works before the first OM is uploaded
+    // (the table is otherwise created lazily on the first ingest).
+    await pool.query(`CREATE TABLE IF NOT EXISTS upload_trace (id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), data jsonb NOT NULL)`);
     const r = await pool.query(`SELECT at, data FROM upload_trace ORDER BY id DESC LIMIT 20`);
-    res.json({ recentUploads: r.rows });
+    res.json({ recentUploads: r.rows, note: r.rows.length ? undefined : "No OM uploaded yet on this deployment — upload one, then refresh." });
   } catch (e) {
     res.json({ recentUploads: [], error: String(e) });
   }
