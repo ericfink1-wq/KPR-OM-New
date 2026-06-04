@@ -52,7 +52,9 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
   const baseContent = prompt + taught + "\n\nRENT ROLL TEXT:\n" + text;
   const callRoll = async (suffix: string, maxTokens: number) => {
     const res = await apiAiMessages({
-      model: "claude-haiku-4-5-20251001",
+      // Sonnet (not Haiku) — rent rolls are dense and accuracy-critical (suites,
+      // rent steps vs options, tricky multi-line layouts). Worth the extra cost.
+      model: "claude-sonnet-4-6",
       max_tokens: maxTokens,
       messages: [{ role: "user", content: baseContent + suffix }],
     });
@@ -139,7 +141,7 @@ LEASE OPTIONS TEXT:
 ${text.slice(0, 60000)}`;
   const taught = await lessonGuidanceClient("lease-options");
   const res = await apiAiMessages({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-6",
     max_tokens: 8000,
     messages: [{ role: "user", content: prompt + taught }],
   });
