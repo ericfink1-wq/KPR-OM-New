@@ -19,6 +19,17 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: 8000,
 });
+
+// CRITICAL: a pg Pool with no 'error' listener CRASHES the whole process when an
+// IDLE pooled connection errors (a network blip, an SSL renegotiation, the managed
+// pooler dropping a backend). That presents as "app built but failed to start"
+// (the process dies seconds after boot). Handle it so a transient connection error
+// is logged, not fatal — the pool just opens a fresh connection on the next query.
+pool.on("error", (err) => {
+  // eslint-disable-next-line no-console
+  console.error("pg pool idle-client error (non-fatal, connection will be re-established):", err?.message ?? err);
+});
+
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
