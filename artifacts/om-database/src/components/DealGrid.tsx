@@ -315,9 +315,12 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     // hidden/deep data (street address, notes, thesis, the full tenant roster,
     // lenders, red flags), which made the box feel over-sensitive (e.g. "floriss"
     // matching a street address). Results now always map to something on screen.
+    // Exception: aliases (`aka`) — searched even though not shown, so an alternate
+    // name (borrowing LLC, broker's phase name) still routes you to the deal.
     const hay = (d: Deal): string => {
       const parts: (string | null | undefined)[] = [
         d.propertyName, d.status, d.city, d.state, d.market, d.seller, leadAnchorName(d),
+        ...(d.aka || []),
       ];
       return parts.filter(Boolean).join(" ").toLowerCase();
     };
