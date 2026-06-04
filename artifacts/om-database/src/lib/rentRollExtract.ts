@@ -152,6 +152,22 @@ ${text.slice(0, 60000)}`;
   return { asOf: new Date().toISOString().slice(0, 10), tenants, reviewQuestions: [] };
 }
 
+// Parse a lease date (ISO YYYY-MM-DD preferred; MM/DD/YYYY and YYYY-MM
+// fallbacks) to a Date at local noon so a bare date never shifts a day across
+// time zones. Returns null when unparseable.
+function parseRollDate(raw: unknown): Date | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const d = new Date(s + "T12:00:00"); return isNaN(d.getTime()) ? null : d; }
+  if (/^\d{4}-\d{2}$/.test(s)) { const [y, m] = s.split("-").map(Number); return new Date(y, m, 0, 12); }
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) {
+    const [mo, d, y] = s.split("/").map(Number);
+    const fy = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+    const dt = new Date(fy, mo - 1, d, 12); return isNaN(dt.getTime()) ? null : dt;
+  }
+  const d = new Date(s); return isNaN(d.getTime()) ? null : d;
+}
+
 // Recompute occupancy + WALT from a fresh roster, respecting verified locks.
 // Returns the full patch to apply to a deal (tenants + recomputed metrics).
 export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<Deal> {
@@ -234,10 +250,28 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   const keptExisting = existing.filter((_, idx) => !matched.has(idx));
   const tenants = [...newRows, ...keptExisting] as NonNullable<Deal["tenants"]>;
 
+  // Freshen each tenant's remaining term from its lease-expiry against THIS
+  // roll's as-of date. The model's stored remainingTermYears can be stale from
+  // an earlier as-of (a lease with 5y left a year ago still said 5y), which made
+  // WALT drift after a roster paste. Recompute deterministically wherever a
+  // lease-expiry exists; leave the model's value only when the date is missing.
+  const asOfRef = parseRollDate(result.asOf) ?? new Date();
+  for (const t of tenants as Array<Record<string, unknown>>) {
+    const exp = parseRollDate(t.leaseExpiry);
+    if (exp) {
+      const yrs = Math.max(0, (exp.getTime() - asOfRef.getTime()) / (365.25 * 86_400_000));
+      t.remainingTermYears = Math.round(yrs * 10) / 10;
+    }
+  }
+
   // Recompute occupancy / WALT from the FULL merged roster (not just the new
   // rows), so a partial file doesn't understate occupancy.
-  // Vacant rows count toward total SF but NOT toward occupied SF or WALT.
-  const occTenants = tenants.filter(t => !isVacant((t as Record<string, unknown>).name));
+  // Vacant rows count toward total SF but NOT toward occupied SF or WALT, and
+  // NAP/outparcel rows (not part of this property) count toward neither.
+  const occTenants = tenants.filter(t => {
+    const r = t as Record<string, unknown>;
+    return !isVacant(r.name) && r.isNAP !== true;
+  });
   if (!deal.verified?.occupancy && deal.totalSF) {
     const occupiedSF = occTenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
     const occ = Math.round(occupiedSF / Number(deal.totalSF) * 1000) / 10;
