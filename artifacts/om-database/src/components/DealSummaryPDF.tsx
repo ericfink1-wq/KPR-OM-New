@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { isInvestmentGrade } from "../lib/tenantCredit";
-import { isVacant } from "../lib/utils";
+import { isVacant, formatFullAddress } from "../lib/utils";
 
 const C = {
   ink: "#2a2c28", body: "#383a37", muted: "#6f6a5f",
@@ -191,7 +191,7 @@ export default function DealSummaryPDF({ deal: d, imgs, logoUrl }: DealSummaryPD
           <View style={{ flex: 1, paddingRight: 12 }}>
             <Text style={s.propName}>{d.propertyName || d.fileName || "Untitled"}</Text>
             {(d.address || d.city) && (
-              <Text style={s.addr}>{[d.address, d.city, d.state].filter(Boolean).join(", ")}</Text>
+              <Text style={s.addr}>{formatFullAddress(d)}</Text>
             )}
           </View>
           {d.status && (

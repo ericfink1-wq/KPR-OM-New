@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "rea
 import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
@@ -1847,16 +1847,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     return warns;
   })();
 
-  const fullAddress = (() => {
-    const street = (d.address || "").trim();
-    const city = (d.city || "").trim();
-    const state = (d.state || "").trim();
-    const zip = (d.zip || "").trim();
-    const stateZip = [state, zip].filter(Boolean).join(" ");
-    if (state && new RegExp(`\\b${state}\\b`, "i").test(street)) return [street, zip].filter(Boolean).join(" ");
-    const parts = [street, city, stateZip].filter(Boolean);
-    return parts.join(", ");
-  })();
+  const fullAddress = formatFullAddress(d);
 
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [titleScrolled, setTitleScrolled] = useState(false);

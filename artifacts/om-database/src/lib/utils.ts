@@ -1330,6 +1330,23 @@ export function cityState(d: Deal): string {
   return d.market || "";
 }
 
+// Compose a clean "street, city, ST zip" line WITHOUT duplicating any piece the
+// street field already carries. OMs often capture the whole address line into
+// `address` (e.g. "1114 S 17th Street, Kokomo, IN 46902") while city/state/zip are
+// ALSO stored separately — naively joining them yields "…Kokomo, IN 46902 46902".
+// This only appends the structured pieces the street doesn't already contain.
+export function formatFullAddress(d: { address?: string | null; city?: string | null; state?: string | null; zip?: string | null }): string {
+  const street = (d.address || "").trim().replace(/[\s,]+$/, "");
+  const city = (d.city || "").trim();
+  const state = (d.state || "").trim();
+  const zip = (d.zip || "").trim();
+  if (!street) return [city, [state, zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const inStreet = (v: string) => !!v && new RegExp(`\\b${esc(v)}\\b`, "i").test(street);
+  const stateZip = [inStreet(state) ? "" : state, inStreet(zip) ? "" : zip].filter(Boolean).join(" ");
+  return [street, inStreet(city) ? "" : city, stateZip].filter(Boolean).join(", ");
+}
+
 // Robust AI-response JSON parser — strips markdown fences, trailing commas, and
 // recovers gracefully from truncated output (the same strategy used server-side
 // in extract.ts). Use this whenever parsing a raw AI text response.

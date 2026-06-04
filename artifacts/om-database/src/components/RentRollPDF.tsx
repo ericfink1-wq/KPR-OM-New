@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import type { Deal } from "../lib/idb";
-import { isVacant, isNAPTenant, fmtLeaseDate } from "../lib/utils";
+import { isVacant, isNAPTenant, fmtLeaseDate, formatFullAddress } from "../lib/utils";
 
 // Branded, presentation-quality rent roll PDF — same KPR header/footer language
 // as DealSummaryPDF. One clean table that paginates automatically.
@@ -79,7 +79,7 @@ function Footer() {
 
 export default function RentRollPDF({ deal: d }: { deal: Deal }) {
   const tenants = (d.tenants || []);
-  const addr = [d.address, [d.city, d.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+  const addr = formatFullAddress(d);
   const totSF = tenants.reduce((a, t) => a + toN(t.sf), 0);
   const totRent = tenants.reduce((a, t) => a + toN(t.annualRent), 0);
   const occupied = tenants.filter(t => !isVacant(t.name)).length;
