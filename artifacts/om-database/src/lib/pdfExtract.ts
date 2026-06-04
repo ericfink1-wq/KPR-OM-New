@@ -395,12 +395,6 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
 }> {
   const lib = await loadPdfJs();
   const pdf = await lib.getDocument({ data: buffer }).promise;
-  // Bound the (main-thread, canvas-heavy) site-plan search to the FRONT of the
-  // document. OMs always place the site plan in the first section, so scanning the
-  // whole book is pointless — and the back-of-book map/demographics pages are
-  // image-dense (hundreds of XObjects each) and extremely slow to parse, which is
-  // what was freezing the tab for minutes on large OMs. 40 pages is plenty.
-  const scanPages = Math.min(pdf.numPages, 40);
 
   const result = {
     cover: null as string | null,
@@ -410,87 +404,17 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
     needsSitePlanPick: false,
   };
 
-  // Cover: extract embedded image from page 1
+  // COVER ONLY (page 1) — fast and the single piece worth doing automatically.
+  // The old AUTO site-plan detection (scanning dozens of pages for keywords, then
+  // rendering up to ~14–24 full pages as picker thumbnails) ran on the browser's
+  // main thread and was the cause of multi-minute "processing images" hangs on big
+  // OMs. Per Eric's call, we no longer auto-hunt the site plan here: the user sets
+  // one on demand via the deal page's "Site plan → Choose PDF & set / Upload image"
+  // (which renders just the one chosen page). Keeps OM uploads fast and predictable.
   try {
     const c = await _capturePagePhoto(pdf, 1, lib);
     result.cover = c.cover;
     result.coverThumb = c.thumb;
-  } catch {}
-
-  // Site plan: scan page text with strong/weak keyword sets
-  try {
-    const strong = /site\s*plan|site\s*map|leasing\s*plan|leasing\s*map|site\s*layout|plot\s*plan|lease\s*plan|overall\s*plan|parcel\s*map|tax\s*parcel|key\s*plan/i;
-    const weak = /aerial|site\s*aerial|asset\s*overview/i;
-
-    // Collect per-page text for scoring (parallelised in small batches — doing this
-    // one page at a time was a needless serial wait on long PDFs).
-    const pageTexts: Record<number, string> = {};
-    const textPages = Array.from({ length: Math.max(0, scanPages - 1) }, (_, i) => i + 2);
-    const TEXT_CONC = 6;
-    for (let i = 0; i < textPages.length; i += TEXT_CONC) {
-      await Promise.all(textPages.slice(i, i + TEXT_CONC).map(async p => {
-        try {
-          const page = await pdf.getPage(p);
-          const content = await page.getTextContent();
-          pageTexts[p] = content.items.map((it: any) => it.str).join(" ");
-        } catch {}
-      }));
-    }
-
-    // The Table of Contents lists "Site Plan … 12" as a line item, so it matches
-    // the strong keyword but is NOT the plan — exclude it so we don't grab the TOC.
-    const toc = /table\s+of\s+contents/i;
-    // Design-heavy OMs (NMRK, JLL, CBRE) bake the "Site Plan" title INTO the page
-    // artwork, so the keyword is unsearchable — but the page is unmistakably dense
-    // with tenant footprint labels like "27,169 SF" / "10,000 SF". A cluster of
-    // those "<number> SF" labels is the reliable tell for the site-plan / stacking
-    // diagram when the title text is missing. (Decorative high-image pages — maps,
-    // demographics — have zero such labels, so this doesn't false-positive on them.)
-    const sfLabel = /\b\d{1,3}(?:,\d{3})?\s*SF\b/gi;
-    const score = (p: number) => {
-      const t = pageTexts[p] || "";
-      if (toc.test(t)) return 0;
-      if (strong.test(t)) return 3;
-      if ((t.match(sfLabel) || []).length >= 5) return 2;
-      if (weak.test(t)) return 1;
-      return 0;
-    };
-
-    const matches: number[] = [];
-    for (let p = 2; p <= scanPages; p++) {
-      if (score(p) > 0) matches.push(p);
-    }
-    matches.sort((a, b) => score(b) - score(a) || a - b);
-    const chosen = matches.slice(0, 3).sort((a, b) => a - b);
-
-    for (const p of chosen) {
-      try {
-        // Pull the actual site-plan graphic (cropped), not a whole-page screenshot.
-        const img = await _captureSitePlan(pdf, p, lib);
-        if (img) result.sitePlan.push(img);
-      } catch {}
-    }
-
-    // No site plan found → render page thumbnails for the manual picker. This is the
-    // single slowest step in an upload: rendering up to 24 full pages. Render them in
-    // small parallel batches at a lighter resolution (720px is plenty for a picker
-    // thumbnail) so it finishes in a fraction of the old one-at-a-time-at-900px time.
-    if (result.sitePlan.length === 0) {
-      // Only the FIRST pages can plausibly hold a site plan; rendering 24 full pages
-      // was the single slowest step and the main cause of multi-minute "processing
-      // images". Cap it hard.
-      const limit = Math.min(scanPages, 14);
-      const pickPages = Array.from({ length: limit }, (_, i) => i + 1);
-      const PICK_CONC = 4;
-      for (let i = 0; i < pickPages.length; i += PICK_CONC) {
-        const rendered = await Promise.all(pickPages.slice(i, i + PICK_CONC).map(async p => {
-          try { const thumb = await _renderPdfPage(pdf, p, 720, 0.6); return thumb ? { page: p, img: thumb } : null; }
-          catch { return null; }
-        }));
-        for (const r of rendered) if (r) result.pagePicks.push(r);
-      }
-      if (result.pagePicks.length) result.needsSitePlanPick = true;
-    }
   } catch {}
 
   return result;
