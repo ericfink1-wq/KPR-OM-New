@@ -1721,29 +1721,40 @@ ${text.slice(0, 60000)}`;
     const coverThumb = await dataUrlToThumb(dataUrl).catch(() => null);
     // Read the latest stored bundle first so saving a cover never clobbers an
     // existing site plan (state can be stale across back-to-back uploads).
-    const current: ImageBundle = (await apiLoadImages(d.id)) || imgs || {};
+    const current: ImageBundle = (await apiLoadImages(d.id).catch(() => null)) || imgs || {};
     const next: ImageBundle = { ...current, cover: dataUrl, coverThumb };
     setImgs(next);
-    await apiSaveImages(d.id, next);
-    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
+    // A failed save used to be swallowed — the cover showed locally but never
+    // reached the DB, so it vanished on return. Revert + tell the user instead.
+    try {
+      await apiSaveImages(d.id, next);
+      onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
+    } catch {
+      setImgs(current);
+      alert("Couldn't save the cover photo — it may be too large. Try a smaller image.");
+    }
   };
 
   const handleSitePlanImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (e.target) e.target.value = "";
     if (!files.length) return;
-    const urls = await Promise.all(files.map(f => new Promise<string>(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(f);
-    })));
+    // Downscale each image like the cover does. Raw phone photos are several MB
+    // each; an oversized request body was being rejected, so the save silently
+    // failed and the site plan disappeared on return. Keep them readable but lean.
+    const urls = await Promise.all(files.map(f => downscaleImageFile(f, 2000, 0.82)));
     // Read the latest stored bundle first so saving a site plan never clobbers an
     // existing cover (state can be stale across back-to-back uploads).
-    const current: ImageBundle = (await apiLoadImages(d.id)) || imgs || {};
+    const current: ImageBundle = (await apiLoadImages(d.id).catch(() => null)) || imgs || {};
     const next: ImageBundle = { ...current, sitePlan: urls, pagePicks: [], needsSitePlanPick: false };
     setImgs(next);
-    await apiSaveImages(d.id, next);
-    onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: urls.length, needsSitePlanPick: false } });
+    try {
+      await apiSaveImages(d.id, next);
+      onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: urls.length, needsSitePlanPick: false } });
+    } catch {
+      setImgs(current);
+      alert("Couldn't save the site plan — the images may be too large. Try fewer or smaller files.");
+    }
   };
 
   // Remove the cover or site plan without uploading a replacement (with a confirm).
