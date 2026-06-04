@@ -105,7 +105,11 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
   const occupied = tenants.filter(t => !isVacant(t.name));
   if (occupied.length === 0) return null;
 
-  const refDate = tenantsAsOf ? new Date(tenantsAsOf) : new Date();
+  // Parse the as-of date the same way as lease dates (local noon) — a bare
+  // "YYYY-MM-DD" via new Date() is UTC midnight, which in US time zones lands on
+  // the prior day and could shift the whole rollover bucketing by a year at a
+  // year boundary.
+  const refDate = (tenantsAsOf && parseLeaseDate(tenantsAsOf)) || new Date();
   const refYear = refDate.getFullYear();
 
   const withExpiry = occupied

@@ -1336,6 +1336,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     };
   }, [actionsOpen]);
 
+  // DetailView stays mounted as you move between deals, so the one-shot guard
+  // below must reset per deal — otherwise only the FIRST deal opened in a session
+  // could ever auto-rescore.
+  useEffect(() => { autoRescoreTriggered.current = false; }, [d.id]);
   // Auto-rescore when ≥10 new deals have been added to the portfolio since this deal was last scored
   useEffect(() => {
     const lastCount = d.lastScoredDealCount ?? 0;

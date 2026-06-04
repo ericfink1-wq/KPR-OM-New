@@ -53,6 +53,10 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
   const fmt$ = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v).toLocaleString()}`;
   const isStated = source === "stated";
 
+  // A non-finite occ-cost (e.g. a NaN slipping through from sales data) would
+  // render as "NaN%" — show a dash instead. (After hooks, so order is stable.)
+  if (!isFinite(val)) return <span style={{ color: "#a69e91" }}>—</span>;
+
   return (
     <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 3 }}>
       <span
