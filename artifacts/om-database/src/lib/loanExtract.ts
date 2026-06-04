@@ -8,6 +8,8 @@ import { robustParseJSON, parseAiReviewQuestions } from "./utils";
 const LOAN_SCHEMA: Record<string, string> = {
   txnPurchasePrice: "purchase price (number)", txnSeller: "seller / counterparty", txnCloseDate: "closing date YYYY-MM-DD",
   acqEntity: "acquiring entity / borrower", acqClosingCosts: "closing costs (number)", acqTitleCo: "title company", acqCounsel: "legal counsel",
+  acqCapRate: "going-in cap rate %", acqNOIAtClose: "in-place NOI at close (number)", acqBroker: "broker", acqDeposit: "earnest money / deposit (number)",
+  acqFee: "acquisition fee (number)", acqStrategy: "strategy (Core/Core-Plus/Value-Add/Opportunistic)", acqHoldPeriod: "target hold years", acqTargetIRR: "target IRR %",
   debtLender: "lender", debtType: "loan type (Senior, Mezzanine, Construction, Bridge…)", debtLoanAmount: "loan amount (number)",
   debtRate: "interest rate %", debtRateType: "Fixed or Floating", debtIndex: "floating index (e.g. SOFR)", debtSpread: "spread in bps (number)",
   debtOriginationDate: "origination/closing date YYYY-MM-DD", debtMaturityDate: "maturity date YYYY-MM-DD", debtTermYears: "term years",
@@ -16,8 +18,8 @@ const LOAN_SCHEMA: Record<string, string> = {
   debtEscrows: "escrows / reserves", debtAssumable: "assumable", debtLoanNumber: "loan number", debtContact: "lender contact",
 };
 const NUMERIC = new Set([
-  "txnPurchasePrice", "acqClosingCosts", "debtLoanAmount", "debtRate", "debtSpread",
-  "debtTermYears", "debtAmortYears", "debtIOPeriod", "debtLTV", "debtDSCR",
+  "txnPurchasePrice", "acqClosingCosts", "acqCapRate", "acqNOIAtClose", "acqDeposit", "acqFee", "acqHoldPeriod", "acqTargetIRR",
+  "debtLoanAmount", "debtRate", "debtSpread", "debtTermYears", "debtAmortYears", "debtIOPeriod", "debtLTV", "debtDSCR",
 ]);
 
 export interface LoanResult {

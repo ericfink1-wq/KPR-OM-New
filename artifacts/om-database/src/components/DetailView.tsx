@@ -6,6 +6,7 @@ import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCor
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
+import { extractLoan, buildLoanPatch } from "../lib/loanExtract";
 import { amortForDeal, currentBalanceFromRows } from "../lib/amortize";
 import { extractAmortSchedule } from "../lib/amortExtract";
 import { extractPref, buildPrefPatch } from "../lib/prefExtract";
@@ -3885,18 +3886,6 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
-  const { mutateAsync: sendMessage } = useCreateAiMessage();
-
-  const SCHEMA: Record<string, string> = {
-    txnPurchasePrice:"purchase price (number)", txnSeller:"seller / counterparty", txnCloseDate:"closing date YYYY-MM-DD",
-    acqCapRate:"going-in cap rate %", acqNOIAtClose:"in-place NOI at close (number)", acqEntity:"acquiring entity / borrower",
-    acqBroker:"broker", acqDeposit:"earnest money / deposit (number)", acqClosingCosts:"closing costs (number)", acqFee:"acquisition fee (number)",
-    acqCounsel:"legal counsel", acqStrategy:"strategy (Core/Core-Plus/Value-Add/Opportunistic)", acqHoldPeriod:"target hold years", acqTargetIRR:"target IRR %",
-    debtLender:"lender", debtType:"loan type", debtLoanAmount:"loan amount (number)", debtRate:"interest rate %", debtRateType:"Fixed or Floating",
-    debtIndex:"floating index", debtSpread:"spread in bps (number)", debtOriginationDate:"origination date YYYY-MM-DD", debtMaturityDate:"maturity date YYYY-MM-DD",
-    debtTermYears:"term years", debtAmortYears:"amortization years", debtIOPeriod:"interest-only months", debtLTV:"LTV %", debtRecourse:"recourse",
-    debtPrepay:"prepayment terms", debtExtensions:"extension options", debtEscrows:"escrows / reserves", debtAssumable:"assumable", debtContact:"lender contact",
-  };
 
   async function handle(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -3905,42 +3894,22 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
     const taskId = startAiTask(`Reading term sheet — ${deal.propertyName || deal.fileName || "deal"}`, file.name);
     setBusy(true); setStatus("Reading term sheet…");
     try {
-      const buf = await file.arrayBuffer();
-      const { text } = await extractPdfText(buf);
+      const { text } = await extractAnyFile(file);
       setStatus("Extracting deal terms with AI…");
-      const sys = `You extract acquisition and financing terms from a commercial real estate term sheet, loan term sheet, or closing statement. Output ONLY a single JSON object with exactly these keys; use null for anything not clearly stated. For money use plain numbers (no $ or commas); for percentages use numbers (6.25 not "6.25%"). Keys and meanings: ${JSON.stringify(SCHEMA)}
-ALSO include a "prepayTerms" object with the structured PREPAYMENT penalty terms:
-{"type":"stepdown|yield_maintenance|defeasance|lockout_open|none|other","stepdown":[declining penalty %s by loan year, e.g. [3,2,1] for 3-2-1, else null],"lockoutEnd":"YYYY-MM-DD first date prepay is allowed, else null","openDate":"YYYY-MM-DD first date prepayable at par/no penalty, else null","reinvestmentSpreadBps":"bps over the matching Treasury for YM/defeasance, else null","floorPenaltyPct":"minimum penalty % (e.g. 'greater of YM or 1%'), else null","prepayPremiumPct":"a single flat premium % if that's the whole penalty, else null","notes":"the verbatim prepay language"}.
-Pick the type that matches: a declining %% schedule = stepdown; make-whole vs Treasuries = yield_maintenance; defeasance = defeasance; lockout then open/par = lockout_open; freely prepayable = none. If the doc doesn't address prepayment, set prepayTerms to null.`;
-      const resp = await sendMessage({ data: {
-        system: sys,
-        messages: [{ role: "user", content: `Term sheet / closing document text:\n${(text||"").slice(0,60000)}\n\nReturn ONLY the JSON object, no prose.` }],
-        max_tokens: 1500,
-      }});
-      const raw = ((resp as any)?.content || []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n");
-      let out: Record<string, unknown> | null = null;
-      try {
-        const m = raw.match(/\{[\s\S]+\}/);
-        if (m) out = JSON.parse(m[0]);
-      } catch {}
-      if (!out) { setStatus("Couldn't read terms from that PDF — try a clearer term sheet."); finishAiTask(taskId, "error", "Couldn't read terms from that term sheet"); setBusy(false); return; }
-      const patch: Partial<Deal> = {};
-      for (const k of Object.keys(SCHEMA)) {
-        const v = out[k];
-        if (v == null || v === "") continue;
-        if ((deal as any)[k] != null && (deal as any)[k] !== "") continue;
-        (patch as any)[k] = NUMERIC_TXN_FIELDS.has(k) && !isNaN(Number(v)) ? Number(v) : v;
-      }
-      // Structured prepay terms (separate object — fill if we don't already have one).
-      if (out.prepayTerms && typeof out.prepayTerms === "object" && !deal.prepayTerms) {
-        const pt = out.prepayTerms as Record<string, unknown>;
-        if (pt.type) (patch as Partial<Deal>).prepayTerms = pt as unknown as Deal["prepayTerms"];
-      }
-      const n = Object.keys(patch).length;
-      if (n) onUpdate(deal.id, patch);
+      // SHARED loan/term-sheet extractor — identical to the global Upload path. Gets
+      // the stronger model, the same acquisition + financing schema, structured
+      // prepay terms, conflict detection and review flags. buildLoanPatch fills BLANK
+      // fields only (never overwrites). (Was a drifted duplicate prompt before.)
+      const result = await extractLoan(text);
+      const patch = buildLoanPatch(deal, result);
+      const n = Object.keys(patch).filter(k => k !== "reviewQuestions").length;
+      if (Object.keys(patch).length) onUpdate(deal.id, patch);
       setStatus(n ? `✓ Filled ${n} blank field${n>1?"s":""} from the term sheet — review and verify each before relying on it.` : "No new blank fields found to fill (existing entries were left untouched).");
       finishAiTask(taskId, "done", n ? `Term sheet — filled ${n} blank field${n>1?"s":""}` : "Term sheet read — no new blank fields to fill");
-    } catch { setStatus("Couldn't read that PDF — try again."); finishAiTask(taskId, "error", "Couldn't read that term sheet PDF"); }
+    } catch (err) {
+      const m = err instanceof Error ? err.message : "Couldn't read that file — try again.";
+      setStatus(m); finishAiTask(taskId, "error", "Couldn't read that term sheet");
+    }
     setBusy(false);
   }
 
