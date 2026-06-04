@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable } from "@workspace/db";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq, isNotNull, sql } from "drizzle-orm";
 import { runOmExtraction, runRosterAnalysis } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
@@ -458,16 +458,48 @@ router.put("/deals/:id/images", requireAuth, async (req, res) => {
     if ("pagePicks" in body) set.pagePicks = body.pagePicks ?? null;
     if ("needsSitePlanPick" in body) set.needsSitePlanPick = body.needsSitePlanPick ?? false;
     if (Object.keys(set).length === 0) { res.json({ ok: true }); return; }
-    await db.insert(dealImagesTable)
-      .values({
-        id,
-        cover: (set.cover as string | null) ?? null,
-        coverThumb: (set.coverThumb as string | null) ?? null,
-        sitePlan: (set.sitePlan as string[] | null) ?? null,
-        pagePicks: (set.pagePicks as { page: number; img: string }[] | null) ?? null,
-        needsSitePlanPick: (set.needsSitePlanPick as boolean | undefined) ?? false,
-      })
-      .onConflictDoUpdate({ target: dealImagesTable.id, set });
+
+    // Do the upsert inside a transaction that sets a SHORT lock_timeout via SET
+    // LOCAL. Unlike pool/session-level params, SET LOCAL is honored even through a
+    // transaction-mode connection pooler — so the write can NEVER hang: if a stuck
+    // connection is holding the row lock, this fails fast (code 55P03) instead of
+    // the client waiting 20–45s. The actual write is milliseconds.
+    const writeOnce = () => db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL lock_timeout = '6s'`);
+      await tx.execute(sql`SET LOCAL statement_timeout = '15s'`);
+      await tx.insert(dealImagesTable)
+        .values({
+          id,
+          cover: (set.cover as string | null) ?? null,
+          coverThumb: (set.coverThumb as string | null) ?? null,
+          sitePlan: (set.sitePlan as string[] | null) ?? null,
+          pagePicks: (set.pagePicks as { page: number; img: string }[] | null) ?? null,
+          needsSitePlanPick: (set.needsSitePlanPick as boolean | undefined) ?? false,
+        })
+        .onConflictDoUpdate({ target: dealImagesTable.id, set });
+    });
+
+    try {
+      await writeOnce();
+    } catch (err: unknown) {
+      const e = err as { code?: string; cause?: { code?: string }; message?: string };
+      // 55P03 = lock_not_available: a zombie/stuck connection is holding the
+      // deal_images lock (the root cause of image saves "timing out"). Kill the
+      // blocker(s) and retry ONCE so the save self-heals with no user action.
+      const isLock = e?.code === "55P03" || e?.cause?.code === "55P03" || /lock timeout/i.test(e?.message || "");
+      if (isLock) {
+        const killed = await db.execute(sql`
+          SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+          WHERE pid <> pg_backend_pid() AND datname = current_database()
+            AND ( (state = 'active' AND query ILIKE '%deal_images%' AND now() - query_start > interval '5 seconds')
+               OR (state = 'idle in transaction' AND now() - state_change > interval '10 seconds') )
+        `).catch(() => null);
+        req.log.warn({ killed: (killed as { rowCount?: number } | null)?.rowCount ?? 0 }, "Image save blocked on lock — terminated blockers, retrying");
+        await writeOnce(); // if this still fails, fall through to the catch below
+      } else {
+        throw err;
+      }
+    }
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to save images");
