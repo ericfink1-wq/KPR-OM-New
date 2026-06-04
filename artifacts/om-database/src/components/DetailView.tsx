@@ -3019,8 +3019,9 @@ ${text.slice(0, 60000)}`;
         );
 
         return (
-          <div id="section-financing" data-jump="Financing & Debt" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Financing & Debt</div>
+          <div id="section-financing">
+            <div id="section-senior-loan" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Senior Loan</div>
             <TermSheetImport deal={d} onUpdate={onUpdate}/>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
               <Group title="Lender & Loan"/>
@@ -3061,16 +3062,25 @@ ${text.slice(0, 60000)}`;
                 {dscrCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied DSCR (NOI)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:dscrCalc<1.2?"#dc2626":"#0f9d63" }}>{dscrCalc.toFixed(2)}x</div></div>}
               </div>
             )}
-            <AmortizationCard deal={d} onUpdate={onUpdate} />
-            <PrepayCalculator deal={d} onUpdate={onUpdate} />
             <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; DSCR uses the OM NOI). For reference only.</div>
+            </div>{/* /Senior Loan box */}
 
-            {/* Preferred Equity — shown BELOW the senior mortgage details */}
+            {/* Amortization schedule — its own box */}
+            <div id="section-amortization" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+              <AmortizationCard deal={d} onUpdate={onUpdate} />
+            </div>
+
+            {/* Prepayment & swap breakage — its own box */}
+            <div id="section-prepay" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+              <PrepayCalculator deal={d} onUpdate={onUpdate} />
+            </div>
+
+            {/* Preferred Equity — its own box, below the senior mortgage details */}
             {(() => {
               const hasPref = [d.prefLender, d.prefAmount, d.prefRateCurrent, d.prefRateAllIn, d.prefReturnType, d.prefOriginationDate, d.prefMaturityDate, d.prefTermYears, d.prefRecourse, d.prefNotes].some(v => v != null && v !== "");
               const prefOpen = hasPref || showPrefManual;
               return (
-                <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
+                <div id="section-pref-equity" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
                   <div onClick={() => { if (!hasPref) setShowPrefManual(v => !v); }}
                     style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom: prefOpen ? 10 : 0, display:"flex", alignItems:"center", gap:8, cursor: hasPref ? "default" : "pointer", userSelect:"none" }}>
                     <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>
@@ -3625,7 +3635,7 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   useEffect(() => { if (showAll) currentRowRef.current?.scrollIntoView({ block: "center" }); }, [showAll]);
 
   return (
-    <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
+    <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:10 }}>
         <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Amortization &amp; Current Balance</div>
         <div>
@@ -3796,7 +3806,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   const swapColor = breakage.direction === "credit" ? "#0f9d63" : breakage.direction === "cost" ? "#c0392b" : "#7d766a";
 
   return (
-    <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc" }}>
+    <div>
       <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:10 }}>Prepayment Penalty Calculator</div>
       <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:12 }}>
         <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
