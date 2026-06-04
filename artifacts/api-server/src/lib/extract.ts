@@ -1,6 +1,6 @@
 // Shared Anthropic extraction logic — used by both the ai route and the ingest route
 import type { Logger } from "pino";
-import { db, dealsTable } from "@workspace/db";
+import { db, dealsTable, pool } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { rebuildTenantIndex, parseLeaseDate } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
@@ -588,11 +588,23 @@ export async function runBackgroundExtraction(
   extraGuidance = "",
 ): Promise<void> {
   try {
-    const { data: rawExtracted } = await runOmExtraction(text, extraGuidance);
+    const { data: rawExtracted, timings } = await runOmExtraction(text, extraGuidance);
+    const _scoreStart = Date.now();
     const [augmented, totalCount] = await Promise.all([
       augmentScoringWithBenchmarks(id, rawExtracted, log),
       getTotalDealCount(),
     ]);
+    const scoreMs = Date.now() - _scoreStart;
+    // Record the per-OM extraction timing breakdown (measurement only) so it's
+    // visible at /api/upload-timing. Best-effort; never affects the upload.
+    void (async () => {
+      try {
+        await pool.query(`CREATE TABLE IF NOT EXISTS upload_trace (id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), data jsonb NOT NULL)`);
+        await pool.query(`INSERT INTO upload_trace(data) VALUES ($1::jsonb)`, [JSON.stringify({ id, fileName, scoreMs, ...timings, ts: new Date().toISOString() })]);
+        await pool.query(`DELETE FROM upload_trace WHERE id <= (SELECT max(id) FROM upload_trace) - 30`);
+      } catch { /* tracing must never break an upload */ }
+    })();
+    log.info({ id, timings, scoreMs }, "OM extraction timing");
     const computedWalt = computeWaltFromRoster(
       (augmented as Record<string, unknown>).tenants,
       (augmented as Record<string, unknown>).tenantsAsOf,
