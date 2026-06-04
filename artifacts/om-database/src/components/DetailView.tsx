@@ -1282,6 +1282,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // on the deal so the box doesn't reappear every time they reopen it).
   const [coverFinalized, setCoverFinalized] = useState(!!d.imageMeta?.coverConfirmed);
   const [sitePlanFinalized, setSitePlanFinalized] = useState(!!d.imageMeta?.sitePlanConfirmed);
+  // Cover-save status so the user can SEE whether it's safe to leave the page.
+  const [coverSave, setCoverSave] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   // Persist the confirmation onto the deal so it survives remounts / reopens.
   const finalizeCover = (v: boolean) => {
@@ -1323,6 +1325,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   useEffect(() => {
     setCoverFinalized(!!d.imageMeta?.coverConfirmed);
     setSitePlanFinalized(!!d.imageMeta?.sitePlanConfirmed);
+    setCoverSave("idle");
   }, [d.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close Actions dropdown on any outside click
@@ -1635,7 +1638,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     const file = e.target.files?.[0];
     if (e.target) e.target.value = "";
     if (!file) return;
-    const dataUrl = await downscaleImageFile(file);
+    setCoverSave("saving");
+    // Keep the cover lean (1280px) so the save is a small, fast request.
+    const dataUrl = await downscaleImageFile(file, 1280, 0.72);
     const coverThumb = await dataUrlToThumb(dataUrl).catch(() => null);
     // Read the latest stored bundle first so saving a cover never clobbers an
     // existing site plan (state can be stale across back-to-back uploads).
@@ -1643,16 +1648,18 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     const next: ImageBundle = { ...current, cover: dataUrl, coverThumb };
     setImgs(next);
     // A failed save used to be swallowed — the cover showed locally but never
-    // reached the DB, so it vanished on return. Revert + tell the user instead.
-    // Save ONLY the cover fields: the server preserves the rest, so we never re-send
-    // the deal's (potentially multi-MB) site plan / page-picker thumbnails — which is
-    // what was pushing a tiny cover photo past the platform's upload-size limit.
+    // reached the DB, so it vanished on return. Now the status chip shows Saving →
+    // Saved ✓ (so the user knows when it's safe to leave), and a real failure shows
+    // its actual reason (HTTP status / timeout) instead of a misleading "too large".
+    // Save ONLY the cover fields: the server preserves the rest.
     try {
       await apiSaveImages(d.id, { cover: dataUrl, coverThumb });
       onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
-    } catch {
+      setCoverSave("saved");
+    } catch (err) {
       setImgs(current);
-      alert("Couldn't save the cover photo. Please try again, or use a smaller image.");
+      setCoverSave("error");
+      alert(`Couldn't save the cover photo — ${err instanceof Error ? err.message : "unknown error"}.\n\nPlease try again. If it keeps failing, tell me the message above.`);
     }
   };
 
@@ -2226,6 +2233,16 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 Upload a photo
               </button>
               <input ref={coverPhotoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleCoverImageFile}/>
+              {coverSave !== "idle" && (
+                <span style={{
+                  fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:5, fontFamily:"'Inter',sans-serif",
+                  color: coverSave==="saved" ? "#0f9d63" : coverSave==="error" ? "#c0392b" : "#9a6a1e",
+                  background: coverSave==="saved" ? "#e7f8f0" : coverSave==="error" ? "#fdecea" : "#fff7e8",
+                  border: `1px solid ${coverSave==="saved" ? "#a7f3d0" : coverSave==="error" ? "#f3c0b8" : "#f0d9a8"}`,
+                }}>
+                  {coverSave==="saving" ? "⏳ Saving — don't leave yet…" : coverSave==="saved" ? "✓ Saved" : "⚠ Not saved — try again"}
+                </span>
+              )}
               <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
               <span style={{ fontSize:11, color:"#7d766a" }}>{imgs.cover ? "Wrong cover? Set from" : "Set from"}</span>
               <span style={{ fontSize:11, color:"#a69e91" }}>page</span>

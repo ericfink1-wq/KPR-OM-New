@@ -269,15 +269,18 @@ async function putImageFields(id: string, fields: Partial<ImageBundle>, timeoutM
   try {
     resp = await apiFetch(`/deals/${id}/images`, { method: "PUT", body, signal: ctrl.signal });
   } catch (e) {
-    reportClientError(`apiSaveImages network/timeout (${body.length} bytes)`, String(e));
-    throw e;
+    const aborted = e instanceof DOMException && e.name === "AbortError";
+    reportClientError(`apiSaveImages ${aborted ? "timeout" : "network error"} (${body.length} bytes)`, String(e));
+    throw new Error(aborted ? `timed out after ${Math.round(timeoutMs / 1000)}s` : "network error — check your connection");
   } finally {
     clearTimeout(timer);
   }
   if (!resp.ok) {
-    const serverMsg = await resp.text().catch(() => "");
+    const serverMsg = (await resp.text().catch(() => "")).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     reportClientError(`apiSaveImages failed: HTTP ${resp.status} (${body.length} bytes)`, serverMsg.slice(0, 500));
-    throw new Error("Failed to save images");
+    // Surface the real reason (status + server message) so a failure is diagnosable
+    // instead of a generic "try a smaller image" that sends everyone down a dead end.
+    throw new Error(`HTTP ${resp.status}${serverMsg ? ` — ${serverMsg.slice(0, 140)}` : ""}`);
   }
 }
 
