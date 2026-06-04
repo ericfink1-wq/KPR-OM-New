@@ -269,7 +269,7 @@ function mergePhaseDuplicates(tenants: Array<Record<string, unknown>>): Array<Re
 }
 
 // Full OM extraction — retries truncated tenant lists automatically
-export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean }> {
+export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean; timings: { totalMs: number; firstPassMs: number; continuationRounds: number; continuationMs: number; gapFillRounds: number; gapFillMs: number; tenantCount: number; budgetHit: boolean } }> {
   const truncatedText = text.length > 180000
     ? text.slice(0, 120000) + "\n...[middle truncated]...\n" + text.slice(-40000)
     : text;
@@ -316,7 +316,12 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     { type: "text", text: EXTRACTION_PROMPT, cache_control: { type: "ephemeral" } },
     { type: "text", text: taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText, cache_control: { type: "ephemeral" } },
   ];
+  // Per-phase timing (measurement only — does not change extraction behavior).
+  const _extractStart = Date.now();
+  let firstPassMs = 0, continuationMs = 0, gapFillMs = 0, gapRoundsTotal = 0;
+  const _fpStart = Date.now();
   let first = await callExtract(cachedBlocks);
+  firstPassMs = Date.now() - _fpStart;
   // The first pass must return valid JSON. On a very large/dense OM the model can
   // truncate or wrap its output so the parser (and its repair) can't recover it.
   // Retry the first pass once; if it still won't parse, fail with a plain-English
@@ -325,7 +330,9 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   try {
     extracted = robustParseJSON(first.raw) as Record<string, unknown>;
   } catch {
+    const _fpRetry = Date.now();
     first = await callExtract(cachedBlocks);
+    firstPassMs += Date.now() - _fpRetry;
     try {
       extracted = robustParseJSON(first.raw) as Record<string, unknown>;
     } catch {
@@ -355,7 +362,9 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
+      const _cStart = Date.now();
       const cont = await callExtract([...cachedBlocks, { type: "text", text: contInstruction }], FAST_MODEL);
+      continuationMs += Date.now() - _cStart;
       const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
       const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
         .filter((t) => t?.name && !haveNames.includes(t.name));
@@ -399,7 +408,9 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, remainingTermYears}. ` +
         `If none remain, return {"tenants":[]}. Output must start with { and end with }.`;
       try {
+        const _gStart = Date.now();
         const cont = await callExtract([...cachedBlocks, { type: "text", text: gapInstruction }]);
+        gapFillMs += Date.now() - _gStart;
         const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
         const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
           .filter((t) => t?.name && !haveNames.includes(t.name));
@@ -409,6 +420,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         break;
       }
     }
+    gapRoundsTotal = gapRounds;
   }
 
   extracted.tenants = mergePhaseDuplicates(extracted.tenants as Array<Record<string, unknown>>);
@@ -438,7 +450,18 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     extracted.reviewQuestions = rq;
   }
 
-  return { data: extracted, tenantsComplete: stopReason !== "max_tokens" && !budgetHit };
+  const tenantCount = Array.isArray(extracted.tenants) ? (extracted.tenants as unknown[]).length : 0;
+  const timings = {
+    totalMs: Date.now() - _extractStart,
+    firstPassMs,
+    continuationRounds: rounds,
+    continuationMs,
+    gapFillRounds: gapRoundsTotal,
+    gapFillMs,
+    tenantCount,
+    budgetHit,
+  };
+  return { data: extracted, tenantsComplete: stopReason !== "max_tokens" && !budgetHit, timings };
 }
 
 // ── Regenerate the ANALYSIS (summary, grade, strengths/risks, upside, red flags) from the

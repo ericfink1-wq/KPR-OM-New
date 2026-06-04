@@ -446,6 +446,28 @@ async function logImgSave(e: { id: string; reqBytes: number; ms: number; outcome
   } catch { /* tracing must never break a save */ }
 }
 
+// Record a per-OM-upload extraction timing breakdown to the DB (so it's visible
+// across Autoscale instances). Best-effort; never affects the upload.
+async function logUploadTiming(e: Record<string, unknown>): Promise<void> {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS upload_trace (id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), data jsonb NOT NULL)`);
+    await pool.query(`INSERT INTO upload_trace(data) VALUES ($1::jsonb)`, [JSON.stringify({ ...e, ts: new Date().toISOString() })]);
+    await pool.query(`DELETE FROM upload_trace WHERE id <= (SELECT max(id) FROM upload_trace) - 30`);
+  } catch { /* tracing must never break an upload */ }
+}
+
+// GET /api/upload-timing — open in the browser (while logged in) to see where recent
+// OM uploads spent their time: first AI pass, roster-continuation rounds, gap-fill
+// rounds, and scoring. Pinpoints why a given OM was slow.
+router.get("/upload-timing", requireAuth, async (_req, res) => {
+  try {
+    const r = await pool.query(`SELECT at, data FROM upload_trace ORDER BY id DESC LIMIT 20`);
+    res.json({ recentUploads: r.rows });
+  } catch (e) {
+    res.json({ recentUploads: [], error: String(e) });
+  }
+});
+
 // GET /api/image-save-diag — open this URL in the browser (while logged in) to see
 // EXACTLY why image saves hang: pool stats, what's running/stuck in the DB, locks on
 // deal_images, and a real probe write (same shape as a cover save) with its timing
@@ -803,11 +825,17 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
     setImmediate(() => {
       (async () => {
         try {
-          const { data: rawExtracted } = await runOmExtraction(sourceText);
+          const { data: rawExtracted, timings } = await runOmExtraction(sourceText);
+          const _scoreStart = Date.now();
           const [augmented, totalCount] = await Promise.all([
             augmentScoringWithBenchmarks(id, rawExtracted, req.log),
             getTotalDealCount(),
           ]);
+          const scoreMs = Date.now() - _scoreStart;
+          // Record a per-upload timing breakdown (measurement only) so it's visible
+          // at /api/upload-timing — shows where a slow OM spends its minutes.
+          void logUploadTiming({ id, fileName: existing.fileName || "Unknown", scoreMs, ...timings });
+          req.log.info({ id, timings, scoreMs }, "OM extraction timing");
           const dealData: Record<string, unknown> = {
             ...augmented,
             ...userFields,
