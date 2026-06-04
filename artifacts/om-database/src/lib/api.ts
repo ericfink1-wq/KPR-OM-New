@@ -15,6 +15,25 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<Response> {
   return resp;
 }
 
+// Fire-and-forget telemetry to the same store the ErrorBoundary uses, so failures
+// that the UI otherwise swallows (e.g. image saves wrapped in .catch) still leave a
+// readable trace at GET /api/client-errors/recent (admin). Never throws.
+export function reportClientError(message: string, detail?: string): void {
+  try {
+    fetch(`${BASE}/client-errors`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: message.slice(0, 2000),
+        stack: (detail ?? "").slice(0, 8000),
+        route: typeof window !== "undefined" ? window.location.pathname : null,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
+      }),
+    }).catch(() => undefined);
+  } catch { /* never throw from the reporter */ }
+}
+
 // --- Auth ---
 
 export async function apiLogin(email: string, password: string): Promise<{ ok: boolean; error?: string; needsVerification?: boolean }> {
@@ -238,11 +257,23 @@ export async function apiCreateDeal(deal: Deal): Promise<void> {
 // --- Images ---
 
 export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
-  const resp = await apiFetch(`/deals/${id}/images`, {
-    method: "PUT",
-    body: JSON.stringify(bundle),
-  });
-  if (!resp.ok) throw new Error("Failed to save images");
+  // Measure the payload — base64 image bundles can be several MB, and a platform
+  // proxy/DB limit (smaller than Express's 50mb) is a prime suspect when covers/
+  // site plans silently fail to persist. Capturing the byte size + server status
+  // turns that invisible failure into a one-line diagnosis.
+  const body = JSON.stringify(bundle);
+  let resp: Response;
+  try {
+    resp = await apiFetch(`/deals/${id}/images`, { method: "PUT", body });
+  } catch (e) {
+    reportClientError(`apiSaveImages network error (${body.length} bytes)`, String(e));
+    throw e;
+  }
+  if (!resp.ok) {
+    const serverMsg = await resp.text().catch(() => "");
+    reportClientError(`apiSaveImages failed: HTTP ${resp.status} (${body.length} bytes)`, serverMsg.slice(0, 500));
+    throw new Error("Failed to save images");
+  }
 }
 
 // Update only the cover thumbnail (used by the library's thumbnail backfill).
@@ -252,7 +283,10 @@ export async function apiSetCoverThumb(id: string, coverThumb: string): Promise<
 
 export async function apiLoadImages(id: string): Promise<ImageBundle | null> {
   const resp = await apiFetch(`/deals/${id}/images`);
-  if (!resp.ok) return null;
+  if (!resp.ok) {
+    reportClientError(`apiLoadImages failed: HTTP ${resp.status}`, `deal ${id}`);
+    return null;
+  }
   return resp.json() as Promise<ImageBundle | null>;
 }
 

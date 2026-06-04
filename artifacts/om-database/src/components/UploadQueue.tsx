@@ -379,6 +379,23 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   };
 
+  // Save a deal's cover/site-plan bundle, but make a FAILURE VISIBLE instead of
+  // silently swallowing it (the old `.catch(() => {})` hid why images "wouldn't
+  // pull/save"). On failure we append a short warning to the file's status line and
+  // log the precise HTTP status + payload size via apiSaveImages' telemetry, so the
+  // cause (size limit vs server error) is diagnosable. Never throws.
+  const saveImagesNoting = async (id: string, bundle: ImageBundle, itemId: string): Promise<boolean> => {
+    try {
+      await apiSaveImages(id, bundle);
+      return true;
+    } catch {
+      const cur = queueRef.current.find(x => x.id === itemId);
+      const base = (cur?.msg || "Saved").replace(/ · ⚠ cover\/site plan didn’t save.*$/, "");
+      updateItem(itemId, { msg: `${base} · ⚠ cover/site plan didn’t save (see Help if this repeats)` });
+      return false;
+    }
+  };
+
   // Warn before a hard page exit (refresh / close tab / browser-back) while work
   // is still in flight — a reload wipes the visible queue and its per-file status.
   // Only guards genuinely-active items; finished / awaiting-input / errored ones
@@ -581,7 +598,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       : deal.imageMeta;
     const updated = { ...deal, imageMeta, lastUploadAt: new Date().toISOString() } as Deal;
     await apiSaveDeal(updated);
-    if (imgs) await apiSaveImages(updated.id, imgs).catch(() => {});
+    if (imgs) await saveImagesNoting(updated.id, imgs, itemId);
     onDealUpdated?.(updated);
     const got = [imgs?.cover ? "cover photo" : "", imgs?.sitePlan?.length ? "site plan" : ""].filter(Boolean).join(" + ") || "no images found";
     updateItem(itemId, {
@@ -1023,7 +1040,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const attachImagesLater = (id: string, p: Promise<ImageBundle | null>, itemId: string) => {
     p.then(async late => {
       if (!late || isCancelled(itemId)) return;
-      await apiSaveImages(id, late).catch(() => {});
+      await saveImagesNoting(id, late, itemId);
       try {
         const st = await apiPollDealStatus(id);
         if (st && !st.processing && st.deal) {
@@ -1112,7 +1129,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         new Promise<{ ready: false }>(r => setTimeout(() => r({ ready: false }), 8000)),
       ]);
       if (imgRace.ready) imgs = imgRace.v; else imagesDeferred = true;
-      if (imgs) await apiSaveImages(dealId, imgs).catch(() => {});
+      if (imgs) await saveImagesNoting(dealId, imgs, itemId);
 
       updateItem(itemId, { msg: "Claude is extracting deal data…", progress: 65 });
 
@@ -1183,7 +1200,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         refreshed.lastUploadAt = new Date().toISOString();
         await apiSaveDeal(refreshed).catch(() => {});
         await apiSaveSource(refreshed.id, text).catch(() => {});
-        if (imgs) await apiSaveImages(refreshed.id, imgs).catch(() => {});
+        if (imgs) await saveImagesNoting(refreshed.id, imgs, itemId);
         updateItem(itemId, {
           status: "done", progress: 100, deal: refreshed, routedType: "om",
           matchedDealName: refreshed.propertyName || refreshed.fileName,
@@ -1218,7 +1235,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const refreshed = reconcileRefresh(item.dupCandidate, item.pendingExtracted);
     await apiSaveDeal(refreshed).catch(() => {});
     if (item.pendingText) await apiSaveSource(refreshed.id, item.pendingText).catch(() => {});
-    if (item.pendingImages) await apiSaveImages(refreshed.id, item.pendingImages).catch(() => {});
+    if (item.pendingImages) await saveImagesNoting(refreshed.id, item.pendingImages, itemId);
     updateItem(itemId, { status: "done", msg: refreshed.propertyName || refreshed.fileName || "Updated", progress: 100, deal: refreshed });
     onDealUpdated?.(refreshed);
     await registerCreatedDeal(refreshed);
