@@ -1,4 +1,20 @@
-import { pgTable, text, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, jsonb, timestamp, boolean, bigserial } from "drizzle-orm/pg-core";
+
+// Diagnostic trace tables (operational telemetry, not deal data): img_trace records
+// recent image-save attempts (/api/image-save-diag), upload_trace records per-OM
+// extraction timing (/api/upload-timing). Declared here so the deploy's schema-diff
+// recognizes them and stops proposing to DROP the runtime-created versions.
+export const imgTraceTable = pgTable("img_trace", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  data: jsonb("data").notNull(),
+});
+
+export const uploadTraceTable = pgTable("upload_trace", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  data: jsonb("data").notNull(),
+});
 
 export const dealsTable = pgTable("deals", {
   id: text("id").primaryKey(),
