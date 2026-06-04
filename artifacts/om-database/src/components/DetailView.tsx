@@ -3032,7 +3032,7 @@ ${text.slice(0, 60000)}`;
                   </button>
                 </div>
               )}
-              {f({ label:"Loan Type", field:"debtType", options:["Senior / Acquisition","Permanent","Bridge","Construction","Mezzanine","CMBS","Agency (Fannie/Freddie)","Life Co","Bank","Other"] })}
+              <TxnField key="debtType" label="Loan Type" field="debtType" options={["Senior / Acquisition","Permanent","Bridge","Construction","Mezzanine","CMBS","Agency (Fannie/Freddie)","Life Co","Bank","Other"]} initial={d.debtType ?? "Senior / Acquisition"} dealId={d.id} onUpdate={onUpdate} />
               {f({ label:"Original Loan Amount", field:"debtLoanAmount", placeholder:"e.g. 30,000,000", prefix:"$" })}
               {f({ label:"Lender Contact", field:"debtContact", placeholder:"Name / email / phone", wide:true })}
               <Group title="Rate"/>
@@ -3507,7 +3507,7 @@ function PrefScheduleCard({ deal }: { deal: Deal }) {
     for (let i = 0; i < rows.length; i++) { const t = new Date(rows[i].date).getTime(); if (!isNaN(t) && t >= nowMs) return i; }
     return rows.length ? rows.length - 1 : 0;
   })();
-  const PREVIEW = 12;
+  const PREVIEW = 6;
   const shown = showAll ? rows : rows.slice(currentIdx, currentIdx + PREVIEW);
   const currentDate = rows[currentIdx]?.date;
   const currentRowRef = useRef<HTMLTableRowElement>(null);
@@ -3618,7 +3618,7 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
     for (let i = 0; i < rows.length; i++) { const t = new Date(rows[i].date).getTime(); if (!isNaN(t) && t >= nowMs) return i; }
     return rows.length ? rows.length - 1 : 0;
   })();
-  const AMORT_PREVIEW = 12;
+  const AMORT_PREVIEW = 6;
   const shown = showAll ? rows : rows.slice(currentIdx, currentIdx + AMORT_PREVIEW);
   const currentDate = rows[currentIdx]?.date;
   const currentRowRef = useRef<HTMLTableRowElement>(null);

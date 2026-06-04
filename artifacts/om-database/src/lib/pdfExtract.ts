@@ -215,6 +215,22 @@ export async function _capturePagePhoto(
   return { cover, thumb };
 }
 
+// Fast, image-only extraction for a leasing FLYER (a known marketing format):
+// the cover is the big hero photo on page 1, and the site plan is the map graphic
+// on page 2 — both large embedded images, pulled directly (cropped) without any
+// AI text passes. Much faster than the generic OM path.
+export async function extractFlyerImages(buffer: ArrayBuffer): Promise<{ cover: string | null; coverThumb: string | null; sitePlan: string[] }> {
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data: buffer }).promise;
+  let cover: string | null = null, coverThumb: string | null = null;
+  try { const c = await _capturePagePhoto(pdf, 1, lib); cover = c.cover; coverThumb = c.thumb; } catch {}
+  const sitePlan: string[] = [];
+  if (pdf.numPages >= 2) {
+    try { const sp = await _captureSitePlan(pdf, 2, lib); if (sp) sitePlan.push(sp); } catch {}
+  }
+  return { cover, coverThumb, sitePlan };
+}
+
 // Crop a rendered canvas to the bounding box of its non-white content, trimming
 // the surrounding page margins/whitespace. Returns the original if there's
 // nothing meaningful to trim.

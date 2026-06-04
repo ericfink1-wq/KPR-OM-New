@@ -1,13 +1,13 @@
 import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle, ReviewQuestion } from "../lib/idb";
 import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload } from "../lib/api";
-import { extractPdfImages } from "../lib/pdfExtract";
+import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { classifyDocument, matchDeal, hasPossibleMatch, type DocType } from "../lib/docClassify";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
-import { extractFlyer, buildFlyerPatch, type FlyerResult } from "../lib/flyerExtract";
+import type { FlyerResult } from "../lib/flyerExtract";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import { extractLoan, buildLoanPatch, type LoanResult } from "../lib/loanExtract";
 import { extractAmortSchedule } from "../lib/amortExtract";
@@ -547,34 +547,37 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }
   };
 
-  // Apply a leasing flyer to a matched deal (ENRICH-ONLY: gap-fills property facts,
-  // demographics, co-tenancy + adds cover/site-plan images; never touches the roster).
-  const applyFlyerToDeal = async (itemId: string, deal: Deal, result: FlyerResult, imgs: ImageBundle | null): Promise<Deal> => {
-    const patch = buildFlyerPatch(deal, result);
-    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
+  // Apply a leasing flyer to a matched deal — IMAGE-ONLY: attach the cover photo
+  // and cropped site plan. (Flyers are used for their imagery; we skip the slow AI
+  // text extraction.) Never touches the roster or financials.
+  const applyFlyerToDeal = async (itemId: string, deal: Deal, _result: FlyerResult, imgs: ImageBundle | null): Promise<Deal> => {
+    const imageMeta = imgs
+      ? { ...(deal.imageMeta || {}), cover: !!imgs.cover || !!deal.imageMeta?.cover, sitePlan: (imgs.sitePlan?.length || 0) || deal.imageMeta?.sitePlan || 0 }
+      : deal.imageMeta;
+    const updated = { ...deal, imageMeta, lastUploadAt: new Date().toISOString() } as Deal;
     await apiSaveDeal(updated);
     if (imgs) await apiSaveImages(updated.id, imgs).catch(() => {});
     onDealUpdated?.(updated);
-    const enriched = Object.keys(patch).filter(k => k !== "lastUploadAt").length;
+    const got = [imgs?.cover ? "cover photo" : "", imgs?.sitePlan?.length ? "site plan" : ""].filter(Boolean).join(" + ") || "no images found";
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "flyer",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
-      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: result as unknown as Record<string, unknown>, pendingImages: imgs,
-      msg: `Flyer → ${deal.propertyName || deal.fileName || "matched deal"} · enriched ${enriched} field${enriched === 1 ? "" : "s"}${imgs?.cover ? " + cover" : ""}`,
+      priorDeal: deal, appliedDealId: deal.id, createdNew: false, pendingExtracted: {}, pendingImages: imgs,
+      msg: `Flyer → ${deal.propertyName || deal.fileName || "matched deal"} · ${got}`,
     });
     return updated;
   };
 
-  // Route a leasing flyer: extract its background data + images, match to a deal,
-  // and enrich it. With no confident match, create the property automatically when
-  // there's no possible overlap, or ask only on a near-miss.
+  // Route a leasing flyer: pull its cover + cropped site plan (no AI text pass),
+  // match to a deal, and attach. Auto-create when there's no possible overlap; ask
+  // only on a near-miss.
   const routeFlyer = async (
-    itemId: string, dealId: string, text: string, fileName: string,
+    itemId: string, dealId: string, fileName: string,
     propertyName: string | null, address: string | null, imgsPromise: Promise<ImageBundle | null>,
   ) => {
-    updateItem(itemId, { msg: "Reading leasing flyer…", progress: 55, routedType: "flyer" });
-    const result = await extractFlyer(text);
-    const hint = { propertyName: propertyName || result.propertyName, address: address || result.address, fileName };
+    updateItem(itemId, { msg: "Extracting cover & site plan…", progress: 55, routedType: "flyer" });
+    const result = {} as FlyerResult;
+    const hint = { propertyName, address, fileName };
     const candidates = [...existingDeals, ...createdDealsRef.current];
     const m = matchDeal(hint, candidates);
     const imgs = await imgsPromise.catch(() => null);
@@ -1021,7 +1024,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         return;
       }
       if (cls.type === "flyer") {
-        await routeFlyer(itemId, dealId, text, fileName, cls.propertyName, cls.address, imgPromise);
+        const flyerImgs = xls ? Promise.resolve(null) : extractFlyerImages(buf.slice(0)).then(i => i as unknown as ImageBundle).catch(() => null);
+        await routeFlyer(itemId, dealId, fileName, cls.propertyName, cls.address, flyerImgs);
         return;
       }
       if (cls.type === "swap") {

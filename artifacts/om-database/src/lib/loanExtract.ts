@@ -77,6 +77,6 @@ export function buildLoanPatch(deal: Deal, result: LoanResult): Partial<Deal> {
     if (!blank(result.fields[k]) && blank(ex[k])) patch[k] = result.fields[k];
   }
   if (result.prepayTerms && blank(deal.prepayTerms)) patch.prepayTerms = result.prepayTerms;
-  if (blank(deal.debtType) && blank(patch.debtType)) patch.debtType = "Senior";
+  if (blank(deal.debtType) && blank(patch.debtType)) patch.debtType = "Senior / Acquisition";
   return patch as Partial<Deal>;
 }

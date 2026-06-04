@@ -16,7 +16,7 @@ export function buildSwapPatch(deal: Deal, swap: InterestRateSwap): Partial<Deal
   if (blank(deal.debtSpread) && swap.floatingSpreadBps != null) patch.debtSpread = Math.round(swap.floatingSpreadBps) / 100;
   if (blank(deal.debtLender) && swap.counterparty) patch.debtLender = swap.counterparty;
   if (blank(deal.debtMaturityDate) && swap.terminationDate) patch.debtMaturityDate = swap.terminationDate;
-  if (blank(deal.debtType)) patch.debtType = "Senior";
+  if (blank(deal.debtType)) patch.debtType = "Senior / Acquisition";
   return patch;
 }
 
