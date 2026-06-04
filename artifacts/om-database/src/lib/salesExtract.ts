@@ -88,15 +88,65 @@ ${text.slice(0, 40000)}`;
 export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): Partial<Deal> {
   const { year } = result;
   const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
-  const roster = new Map((deal.tenants || []).map(t => [tenantKey(t.canonicalName || t.name), t]));
+  const rosterList = deal.tenants || [];
+  const roster = new Map(rosterList.map(t => [tenantKey(t.canonicalName || t.name), t] as const));
+  // Fuzzy fallback for when an exact normalized-name match misses — sales reports
+  // routinely abbreviate, reorder, or add/drop words vs the roster brand ("Panera
+  // Bread Co" vs "Panera Bread", "TJ Maxx" vs "TJMAXX", "ATT" vs "AT&T"). We index
+  // each roster tenant by its DISTINCTIVE tokens and match on a token subset or a
+  // containment, but only when the winner is UNIQUE — so a loose name can never be
+  // mis-linked to two tenants. This is what cuts the "too many unlinked" rows.
+  const TENANT_FILLER = new Set([
+    "the", "and", "co", "inc", "llc", "lp", "ltd", "store", "stores", "shop", "shops",
+    "of", "at", "group", "company", "corp", "restaurant", "cafe", "grill", "bar",
+  ]);
+  const distinct = (name: unknown): string[] =>
+    tenantKey(name).split(" ").filter(w => w.length >= 3 && !TENANT_FILLER.has(w));
+  const rosterIdx = rosterList.map(t => ({
+    t, key: tenantKey(t.canonicalName || t.name), toks: distinct(t.canonicalName || t.name),
+  }));
+  type RT = NonNullable<Deal["tenants"]>[number];
+  const matchRoster = (rawName: string): RT | null => {
+    const k = tenantKey(stripSuiteCode(rawName));
+    const exact = roster.get(k);
+    if (exact) return exact;
+    // 1) Distinctive-token subset: every token of the shorter name appears in the
+    //    other, with ≥1 solid (≥4-char) shared token, and a single best match.
+    const st = distinct(stripSuiteCode(rawName));
+    if (st.length) {
+      let best: RT | null = null, bestScore = 0, tie = false;
+      for (const r of rosterIdx) {
+        if (!r.toks.length) continue;
+        const [shortArr, longSet] = st.length <= r.toks.length
+          ? [st, new Set(r.toks)] : [r.toks, new Set(st)];
+        if (!shortArr.every(x => longSet.has(x))) continue;
+        const shared = st.filter(x => r.toks.includes(x));
+        if (!shared.some(x => x.length >= 4)) continue;
+        if (shared.length > bestScore) { best = r.t; bestScore = shared.length; tie = false; }
+        else if (shared.length === bestScore) tie = true;
+      }
+      if (best && !tie) return best;
+    }
+    // 2) Whole-key containment (incl. space-collapsed, e.g. "tjmaxx" ⊆ "tj maxx"),
+    //    again only when exactly one roster tenant qualifies.
+    const ksp = k.replace(/ /g, "");
+    if (ksp.length >= 5) {
+      const hits = rosterIdx.filter(r => {
+        const rsp = r.key.replace(/ /g, "");
+        return rsp.length >= 5 && (rsp.includes(ksp) || ksp.includes(rsp));
+      });
+      if (hits.length === 1) return hits[0].t;
+    }
+    return null;
+  };
   const recEst = estimateRecoveries(deal).byName;
-  const hasRoster = (deal.tenants || []).length > 0;
+  const hasRoster = rosterList.length > 0;
   const unmatched: string[] = [];
   const inconsistent: ReviewQuestion[] = [];
 
   const tenants = result.tenants.map(t => {
-    const matchKey = tenantKey(stripSuiteCode(t.name as string));
-    const rt = roster.get(matchKey);
+    const rt = matchRoster(t.name as string);
+    const matchKey = rt ? tenantKey(rt.canonicalName || rt.name) : tenantKey(stripSuiteCode(t.name as string));
     if (hasRoster && !rt) unmatched.push(stripSuiteCode(t.name as string) || String(t.name ?? "this tenant"));
     let psf = nv(t.salesPSF);
     let gross = nv(t.annualSales);
