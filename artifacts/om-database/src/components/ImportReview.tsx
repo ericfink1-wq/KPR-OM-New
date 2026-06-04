@@ -27,6 +27,12 @@ const DEAL_FIELDS: Record<string, "number" | "text" | "boolean"> = {
   loanBalance: "number", loanRate: "number", loanMaturity: "text", loanType: "text",
   trafficCountVPD: "number", population3mi: "number", medianHHIncome3mi: "number",
   avgHHIncome3mi: "number", broker: "text", seller: "text", notes: "text", shadowAnchors: "text",
+  // Financing / acquisition fields (loan-document flags target these).
+  debtLender: "text", debtType: "text", debtLoanAmount: "number", debtRate: "number",
+  debtRateType: "text", debtIndex: "text", debtSpread: "number", debtOriginationDate: "text",
+  debtMaturityDate: "text", debtTermYears: "number", debtAmortYears: "number", debtIOPeriod: "number",
+  debtLTV: "number", debtDSCR: "number", debtRecourse: "text",
+  txnPurchasePrice: "number", txnSeller: "text", txnCloseDate: "text", acqEntity: "text", acqClosingCosts: "number",
 };
 const TENANT_FIELDS: Record<string, "number" | "text" | "boolean"> = {
   name: "text", parentCompany: "text", suite: "text", sf: "number", rentPerSF: "number",
