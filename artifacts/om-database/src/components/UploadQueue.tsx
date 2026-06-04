@@ -582,8 +582,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const m = matchDeal(hint, candidates);
     const imgs = await imgsPromise.catch(() => null);
     if (m.deal && m.confidence !== "none") {
-      const upd = await applyFlyerToDeal(itemId, m.deal, result, imgs);
-      await refreshAnalysisFor(itemId, upd);
+      await applyFlyerToDeal(itemId, m.deal, result, imgs); // image-only — no analysis re-run needed
     } else if (hasPossibleMatch(hint, candidates)) {
       updateItem(itemId, {
         status: "awaiting_match", routedType: "flyer", matchHint: hint,
@@ -737,8 +736,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           working = await applySalesToDeal(it.id, working, it.pendingExtracted as unknown as SalesExtractResult);
           lastApplied = it.id;
         } else if (it.routedType === "flyer") {
+          // Image-only — don't mark as the refresh trigger (a roster/sales/loan in
+          // the same drop will still trigger one refresh after the merge).
           working = await applyFlyerToDeal(it.id, working, it.pendingExtracted as unknown as FlyerResult, it.pendingImages ?? null);
-          lastApplied = it.id;
         } else if (it.routedType === "swap") {
           working = await applySwapToDeal(it.id, working, it.pendingExtracted as unknown as InterestRateSwap);
           lastApplied = it.id;
@@ -787,12 +787,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         updateItem(itemId, { status: "error", msg: "Sales import failed", error: err instanceof Error ? err.message : "failed" });
       }
     } else if (item.routedType === "flyer" && item.pendingExtracted) {
-      updateItem(itemId, { status: "extracting", msg: "Enriching from flyer…", progress: 60 });
+      updateItem(itemId, { status: "extracting", msg: "Attaching cover & site plan…", progress: 60 });
       try {
-        const upd = await applyFlyerToDeal(itemId, deal, item.pendingExtracted as unknown as FlyerResult, item.pendingImages ?? null);
-        await refreshAnalysisFor(itemId, upd);
+        // Image-only — just attach the photos; no AI analysis re-run needed.
+        await applyFlyerToDeal(itemId, deal, item.pendingExtracted as unknown as FlyerResult, item.pendingImages ?? null);
       } catch (err) {
-        updateItem(itemId, { status: "error", msg: "Flyer enrichment failed", error: err instanceof Error ? err.message : "failed" });
+        updateItem(itemId, { status: "error", msg: "Flyer attach failed", error: err instanceof Error ? err.message : "failed" });
       }
     } else if (item.routedType === "swap" && item.pendingExtracted) {
       updateItem(itemId, { status: "extracting", msg: "Applying swap…", progress: 60 });
@@ -931,7 +931,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     } else if (routedType === "lease-options") {
       const u = await applyOptionsToDeal(itemId, deal, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> }); await refreshAnalysisFor(itemId, u);
     } else if (routedType === "flyer") {
-      const u = await applyFlyerToDeal(itemId, deal, pendingExtracted as unknown as FlyerResult, imgs ?? null); await refreshAnalysisFor(itemId, u);
+      await applyFlyerToDeal(itemId, deal, pendingExtracted as unknown as FlyerResult, imgs ?? null); // image-only, no analysis re-run
     } else if (routedType === "swap") {
       const u = await applySwapToDeal(itemId, deal, pendingExtracted as unknown as InterestRateSwap); await refreshAnalysisFor(itemId, u);
     } else if (routedType === "loan") {
