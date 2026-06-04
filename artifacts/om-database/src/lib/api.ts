@@ -261,7 +261,7 @@ export async function apiCreateDeal(deal: Deal): Promise<void> {
 // request FAILS instead of hanging forever — the cause of "processing images" /
 // "attaching cover & site plan" spinning for minutes and a cover silently never
 // reaching the DB. Reports the precise status + payload size on failure.
-async function putImageFields(id: string, fields: Partial<ImageBundle>, timeoutMs = 45000): Promise<void> {
+async function putImageFields(id: string, fields: Partial<ImageBundle>, timeoutMs = 20000): Promise<void> {
   const body = JSON.stringify(fields);
   // A timeout / network error on the FIRST try is almost always a cold-starting
   // server (the app waking from idle), which the very next request resolves. So we
