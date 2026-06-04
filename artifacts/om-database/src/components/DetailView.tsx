@@ -3763,7 +3763,10 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
     return () => { alive = false; };
   }, [needsRate, payoff, deal.debtMaturityDate]);
 
-  const result = calcPrepay(terms, prepayInputsFromDeal(deal, payoff, reinvest));
+  // Penalty is assessed on the OUTSTANDING balance at payoff, not the original
+  // loan — for an amortizing loan those differ (IO loans are unchanged).
+  const payoffBalance = useMemo(() => amortForDeal(deal, payoff).currentBalance, [deal, payoff]);
+  const result = calcPrepay(terms, prepayInputsFromDeal(deal, payoff, reinvest, payoffBalance));
   const setType = (type: NonNullable<Deal["prepayTerms"]>["type"]) =>
     onUpdate(deal.id, { prepayTerms: { ...(terms || {}), type } });
 

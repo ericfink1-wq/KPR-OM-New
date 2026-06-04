@@ -180,10 +180,13 @@ export function calcSwapBreakage(
   };
 }
 
-// Build calculator inputs from a deal's debt fields.
-export function prepayInputsFromDeal(deal: Deal, payoffDate: string | null, reinvestmentRatePct: number | null) {
+// Build calculator inputs from a deal's debt fields. balanceOverride, when
+// provided, is the OUTSTANDING balance at payoff (from the amortization
+// schedule) — the correct base for a prepay penalty on an amortizing loan;
+// falls back to the original loan amount.
+export function prepayInputsFromDeal(deal: Deal, payoffDate: string | null, reinvestmentRatePct: number | null, balanceOverride?: number | null) {
   return {
-    balance: deal.debtLoanAmount ?? null,
+    balance: balanceOverride ?? deal.debtLoanAmount ?? null,
     payoffDate,
     originationDate: deal.debtOriginationDate ?? null,
     maturityDate: deal.debtMaturityDate ?? null,
