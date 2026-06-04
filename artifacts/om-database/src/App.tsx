@@ -520,7 +520,12 @@ function AppInner() {
 
       {/* Portfolio tab */}
       {tab === "portfolio" && (
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
+        <div style={view.type === "detail"
+          // Deal page: a plain flex column (NOT a scroll container) so DetailView
+          // owns the single scroll. Nesting its own scroller inside an outer
+          // overflow:auto made the page's bottom unreachable ("gets stuck").
+          ? { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }
+          : { flex: 1, overflowY: "auto", paddingBottom: 88 }}>
           {view.type === "list" && (
             <>
               <div style={{ padding: "28px 28px 4px" }}>
@@ -557,7 +562,7 @@ function AppInner() {
           )}
 
           {view.type === "detail" && currentDeal && (
-            <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 72px)" }}>
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
               <DetailView
                 deal={currentDeal}
                 allDeals={deals}

@@ -1993,7 +1993,7 @@ ${text.slice(0, 60000)}`;
   };
 
   return (
-    <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"20px 24px 20px 24px" }}>
+    <div ref={scrollContainerRef} style={{ flex:1, minHeight:0, overflowY:"auto", padding:"20px 24px 96px 24px" }}>
       <div style={{
         position: "fixed",
         top: 88,
