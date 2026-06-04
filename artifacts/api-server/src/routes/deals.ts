@@ -451,7 +451,9 @@ async function logImgSave(e: { id: string; reqBytes: number; ms: number; outcome
 // deal_images, and a real probe write (same shape as a cover save) with its timing
 // and exact error code. Read-only except the probe, which cleans up after itself.
 router.get("/image-save-diag", requireAuth, async (_req, res) => {
-  const out: Record<string, unknown> = { ts: new Date().toISOString() };
+  // version marker — bump when image-save code changes, so we can confirm from the
+  // diagnostic output EXACTLY which build is live (deploys have been unreliable).
+  const out: Record<string, unknown> = { ts: new Date().toISOString(), version: "imgcap-2-dbtrace" };
   const p = pool as unknown as { totalCount?: number; idleCount?: number; waitingCount?: number };
   out.pool = { total: p.totalCount ?? null, idle: p.idleCount ?? null, waiting: p.waitingCount ?? null };
 
