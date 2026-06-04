@@ -5,13 +5,12 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { mockupPreviewPlugin } from "./mockupPreviewPlugin";
 
-const rawPort = process.env.PORT;
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+// PORT / BASE_PATH are RUNTIME values (used by the dev/preview server). They are
+// frequently absent during a production BUILD, and a build must never depend on
+// runtime env vars — throwing here failed `pnpm -r run build`, which fails the whole
+// deployment and leaves the live app on stale code. Default at build time; the real
+// values are still picked up at runtime when present.
+const rawPort = process.env.PORT || "5173";
 
 const port = Number(rawPort);
 
@@ -19,13 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+const basePath = process.env.BASE_PATH || "/";
 
 export default defineConfig({
   base: basePath,

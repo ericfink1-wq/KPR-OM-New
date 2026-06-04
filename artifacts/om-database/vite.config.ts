@@ -4,13 +4,12 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-const rawPort = process.env.PORT;
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+// PORT / BASE_PATH are RUNTIME values (dev/preview server). They are frequently
+// absent during a production BUILD — and throwing here made `vite build` (and thus
+// the whole deployment) FAIL, so Replit kept serving stale code and none of the
+// shipped fixes went live. A build must not depend on runtime env vars: default
+// them at build time; the real values are still used at runtime when present.
+const rawPort = process.env.PORT || "5173";
 
 const port = Number(rawPort);
 
@@ -18,13 +17,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+const basePath = process.env.BASE_PATH || "/";
 
 export default defineConfig({
   base: basePath,
