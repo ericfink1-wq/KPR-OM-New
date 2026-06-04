@@ -253,6 +253,10 @@ function mergePhaseDuplicates(tenants: Array<Record<string, unknown>>): Array<Re
     };
     const sumSF = numSum("sf"); if (sumSF != null) result.sf = sumSF;
     const sumRent = numSum("annualRent"); if (sumRent != null) result.annualRent = sumRent;
+    // Recompute the blended rent PSF off the combined SF + base rent, so the
+    // merged row stays internally consistent (a single phase's PSF no longer
+    // contradicts the summed SF/rent: rentPerSF × sf == annualRent).
+    if (sumSF != null && sumSF > 0 && sumRent != null) result.rentPerSF = Math.round((sumRent / sumSF) * 100) / 100;
     // For any field that's null in the base, fill from other entries
     for (const t of group) {
       for (const k of Object.keys(t)) {

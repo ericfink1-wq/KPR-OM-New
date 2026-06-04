@@ -41,8 +41,9 @@ interface TenantBenchmark {
 // signed lease is fresher market evidence and counts more.
 function recencyWeight(vintage: string | null): number {
   if (!vintage) return 0.5; // unknown vintage — conservative middle weight
-  const yearsAgo =
-    (Date.now() - new Date(vintage).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  const ms = new Date(vintage).getTime();
+  if (isNaN(ms)) return 0.5; // unparseable date → treat as unknown, not oldest
+  const yearsAgo = (Date.now() - ms) / (365.25 * 24 * 60 * 60 * 1000);
   if (yearsAgo <= 3) return 1.0;
   if (yearsAgo <= 7) return 0.5;
   return 0.25;
@@ -270,14 +271,18 @@ export async function rescoreDeal(
     : [];
   const strippedFlags = existingFlags.filter((f) => {
     const desc = typeof f.description === "string" ? f.description.toLowerCase() : "";
-    return (
-      !desc.includes("database avg") &&
-      !desc.includes("portfolio avg") && // legacy wording — keep so old stored flags still strip
-      !desc.includes("weighted avg") &&
-      !desc.includes("database data from") &&
-      !desc.includes("benchmark") &&
-      !desc.includes("data point — directional")
-    );
+    // Identify auto-injected benchmark flags by their machine phrasing. The bare
+    // word "benchmark" alone is NOT enough — a human/OM red flag can legitimately
+    // say "rent above submarket benchmark" and must not be deleted on rescore.
+    // The injected flags always name "the database", so require that pairing.
+    const isInjected =
+      desc.includes("database avg") ||
+      desc.includes("portfolio avg") || // legacy wording — keep so old stored flags still strip
+      desc.includes("weighted avg") ||
+      desc.includes("database data from") ||
+      desc.includes("data point — directional") ||
+      (desc.includes("benchmark") && desc.includes("database"));
+    return !isInjected;
   });
 
   const freshData: Record<string, unknown> = { ...dealData, redFlags: strippedFlags };
