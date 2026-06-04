@@ -453,7 +453,7 @@ async function logImgSave(e: { id: string; reqBytes: number; ms: number; outcome
 router.get("/image-save-diag", requireAuth, async (_req, res) => {
   // version marker — bump when image-save code changes, so we can confirm from the
   // diagnostic output EXACTLY which build is live (deploys have been unreliable).
-  const out: Record<string, unknown> = { ts: new Date().toISOString(), version: "imgcap-2-dbtrace" };
+  const out: Record<string, unknown> = { ts: new Date().toISOString(), version: "imgcap-3-tiny" };
   const p = pool as unknown as { totalCount?: number; idleCount?: number; waitingCount?: number };
   out.pool = { total: p.totalCount ?? null, idle: p.idleCount ?? null, waiting: p.waitingCount ?? null };
 

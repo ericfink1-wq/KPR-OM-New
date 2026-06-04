@@ -341,10 +341,13 @@ async function capImageDataUrl(url: string | null | undefined, maxBytes: number)
   }
 }
 
-// Conservative cap, comfortably under common proxy request-body limits.
-const COVER_CAP = 180_000;   // ~135 KB
-const THUMB_CAP = 70_000;    // ~52 KB
-const PLAN_CAP = 240_000;    // ~180 KB
+// Aggressive caps — a ~250KB image PUT was being dropped before reaching the server
+// route (proven: the route's trace table was never created), while smaller deal-save
+// PUTs work. Keep each image well under any plausible threshold so the request lands.
+// Still fine for tiles/headers on screen.
+const COVER_CAP = 70_000;    // ~52 KB
+const THUMB_CAP = 22_000;    // ~16 KB
+const PLAN_CAP = 110_000;    // ~82 KB
 
 export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
   // Save in isolated requests, smallest/most-important first (cover, then site plan,
