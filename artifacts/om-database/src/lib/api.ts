@@ -341,17 +341,17 @@ async function capImageDataUrl(url: string | null | undefined, maxBytes: number)
   }
 }
 
-// Aggressive caps — a ~250KB image PUT was being dropped before reaching the server
-// route (proven: the route's trace table was never created), while smaller deal-save
-// PUTs work. Keep each image well under any plausible threshold so the request lands.
-// Still fine for tiles/headers on screen.
-const COVER_CAP = 70_000;    // ~52 KB
-const THUMB_CAP = 22_000;    // ~16 KB
-const PLAN_CAP = 110_000;    // ~82 KB
+// Generous caps for QUALITY. The earlier tiny caps were to dodge a size threshold,
+// but the real blocker was the WAF rejecting base64-in-JSON — which raw-binary upload
+// now sidesteps entirely. So images can be full quality again (only genuinely huge
+// ones get trimmed). These are data-URL char lengths (~75% is the actual byte size).
+const COVER_CAP = 500_000;   // ~1200px sharp cover
+const THUMB_CAP = 120_000;   // crisp 600px tile thumbnail
+const PLAN_CAP = 650_000;    // detailed site plan
 
 // Upload one image as RAW BINARY (not base64-in-JSON). The platform WAF was 403-ing
 // the JSON body because of the long base64 blob; raw JPEG bytes pass straight through.
-async function putImageRaw(id: string, field: "cover" | "coverThumb", dataUrl: string): Promise<void> {
+async function putImageRaw(id: string, field: "cover" | "coverThumb" | "sitePlanSet" | "sitePlanAdd", dataUrl: string): Promise<void> {
   const comma = dataUrl.indexOf(",");
   const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
   const binStr = atob(b64);
@@ -399,15 +399,25 @@ export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<vo
     if (coverThumb !== undefined && !ctIsImg) clearFields.coverThumb = ct ?? null;
     if (Object.keys(clearFields).length) await putImageFields(id, clearFields);
   }
-  if (sitePlan !== undefined || needsSitePlanPick !== undefined) {
+  if (sitePlan !== undefined) {
     try {
-      const plan = Array.isArray(sitePlan)
-        ? (await Promise.all(sitePlan.map(u => capImageDataUrl(u, PLAN_CAP)))).filter((u): u is string => typeof u === "string")
-        : sitePlan;
-      await putImageFields(id, { sitePlan: plan, needsSitePlanPick });
+      const imgs = Array.isArray(sitePlan)
+        ? (await Promise.all(sitePlan.map(u => capImageDataUrl(u, PLAN_CAP)))).filter((u): u is string => typeof u === "string" && u.startsWith("data:"))
+        : [];
+      if (imgs.length) {
+        // Send each plan image as raw binary (WAF-safe): first replaces the array, rest append.
+        for (let i = 0; i < imgs.length; i++) await putImageRaw(id, i === 0 ? "sitePlanSet" : "sitePlanAdd", imgs[i]);
+      } else {
+        // Empty array = clear the site plan → small JSON (no base64) is fine.
+        await putImageFields(id, { sitePlan: Array.isArray(sitePlan) ? [] : sitePlan });
+      }
     } catch {
       reportClientError(`sitePlan save skipped`, `deal ${id}`);
     }
+  }
+  if (needsSitePlanPick !== undefined) {
+    // No image data → small JSON request, never tripped the WAF.
+    await putImageFields(id, { needsSitePlanPick }).catch(() => reportClientError(`needsSitePlanPick save skipped`, `deal ${id}`));
   }
   if (Array.isArray(pagePicks) && pagePicks.length) {
     try {

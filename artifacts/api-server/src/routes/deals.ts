@@ -453,7 +453,7 @@ async function logImgSave(e: { id: string; reqBytes: number; ms: number; outcome
 router.get("/image-save-diag", requireAuth, async (_req, res) => {
   // version marker — bump when image-save code changes, so we can confirm from the
   // diagnostic output EXACTLY which build is live (deploys have been unreliable).
-  const out: Record<string, unknown> = { ts: new Date().toISOString(), version: "imgcap-4-rawbinary" };
+  const out: Record<string, unknown> = { ts: new Date().toISOString(), version: "imgcap-5-siteplan-raw" };
   const p = pool as unknown as { totalCount?: number; idleCount?: number; waitingCount?: number };
   out.pool = { total: p.totalCount ?? null, idle: p.idleCount ?? null, waiting: p.waitingCount ?? null };
 
@@ -537,15 +537,22 @@ router.put("/deals/:id/image-raw/:field", requireAuth, rawImageBody, async (req,
   const buf = req.body as Buffer;
   const reqBytes = Buffer.isBuffer(buf) ? buf.length : 0;
   try {
-    if (field !== "cover" && field !== "coverThumb") { res.status(400).json({ error: "bad field" }); return; }
+    const ALLOWED = ["cover", "coverThumb", "sitePlanSet", "sitePlanAdd"];
+    if (!ALLOWED.includes(field)) { res.status(400).json({ error: "bad field" }); return; }
     const dataUrl = reqBytes > 0 ? `data:image/jpeg;base64,${buf.toString("base64")}` : null;
     await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL lock_timeout = '6s'`);
       await tx.execute(sql`SET LOCAL statement_timeout = '15s'`);
       if (field === "cover") {
         await tx.execute(sql`INSERT INTO deal_images (id, cover) VALUES (${id}, ${dataUrl}) ON CONFLICT (id) DO UPDATE SET cover = ${dataUrl}`);
-      } else {
+      } else if (field === "coverThumb") {
         await tx.execute(sql`INSERT INTO deal_images (id, cover_thumb) VALUES (${id}, ${dataUrl}) ON CONFLICT (id) DO UPDATE SET cover_thumb = ${dataUrl}`);
+      } else if (field === "sitePlanSet") {
+        // First image of an upload — replace the whole array and clear the picker flag.
+        await tx.execute(sql`INSERT INTO deal_images (id, site_plan, needs_site_plan_pick) VALUES (${id}, to_jsonb(ARRAY[${dataUrl}]::text[]), false) ON CONFLICT (id) DO UPDATE SET site_plan = to_jsonb(ARRAY[${dataUrl}]::text[]), needs_site_plan_pick = false`);
+      } else {
+        // sitePlanAdd — append to the existing array.
+        await tx.execute(sql`INSERT INTO deal_images (id, site_plan) VALUES (${id}, to_jsonb(ARRAY[${dataUrl}]::text[])) ON CONFLICT (id) DO UPDATE SET site_plan = COALESCE(deal_images.site_plan, '[]'::jsonb) || to_jsonb(${dataUrl}::text)`);
       }
     });
     void logImgSave({ id, reqBytes, ms: Date.now() - t0, outcome: `ok-raw-${field}` });
