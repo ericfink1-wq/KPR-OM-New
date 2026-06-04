@@ -1936,7 +1936,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         borderBottom: "1px solid #e7e0d2",
         padding: "12px 16px",
         boxShadow: titleScrolled ? "0 6px 18px -10px rgba(56,58,55,0.25)" : "none",
-        transform: titleScrolled ? "translateY(0)" : "translateY(-110%)",
+        // Hidden state must clear the top:88 offset too — translateY(-110%) only moved
+        // it up by its own height, leaving its bottom edge stuck visible at the top
+        // before any scroll. Move up its full height PLUS the offset so it's fully gone.
+        transform: titleScrolled ? "translateY(0)" : "translateY(calc(-100% - 96px))",
         transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
         pointerEvents: titleScrolled ? "auto" : "none",
       }}>

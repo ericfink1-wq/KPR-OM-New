@@ -287,10 +287,33 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   if (q.trim()) { const s = q.toLowerCase(); rows = rows.filter(t => (t.name||"").toLowerCase().includes(s)); }
 
   const numKeys = new Set(["sf","rentPerSF","annualRent","salesPSF","occupancyCost"]);
+  // Sales and Occ Cost are DISPLAYED from the resolved latest-sales figure (or the
+  // computed rent-stack value), not the raw tenant field — so sort by that SAME
+  // value, else the two columns appear unsorted. Mirrors the cell render exactly.
+  const tk = (t: Tenant) => tenantKey(t.canonicalName || t.name);
+  const effSalesPSF = (t: Tenant): number | null => (latestSales?.get(tk(t))?.salesPSF ?? null) ?? n(t.salesPSF);
+  const effOccCost = (t: Tenant): number | null => {
+    const ls = latestSales?.get(tk(t));
+    if (ls && ls.occupancyCost != null && ls.occSource) return ls.occupancyCost;
+    const stated = n(t.occupancyCost);
+    if (stated != null) return stated;
+    const base = n(t.annualRent);
+    const disclosedReimb = n(t.expenseReimbursements);
+    const est = estimatedRecoveries?.get(tk(t));
+    const reimb = disclosedReimb ?? (est ? est.value : null);
+    const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
+    const other = n(t.otherRent) ?? 0;
+    const sp = n(t.salesPSF), sfn = n(t.sf);
+    const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
+    if (base != null && reimb != null && sales != null && sales > 0) return ((base + reimb + pctRent + other) / sales) * 100;
+    return null;
+  };
+  const sortVal = (t: Tenant): number | null =>
+    sortKey === "salesPSF" ? effSalesPSF(t) : sortKey === "occupancyCost" ? effOccCost(t) : n((t as any)[sortKey]);
   if (sortKey) {
     rows = rows.slice().sort((a, b) => {
       if (numKeys.has(sortKey)) {
-        let av = n((a as any)[sortKey]), bv = n((b as any)[sortKey]);
+        let av = sortVal(a), bv = sortVal(b);
         av = av==null?-Infinity:av; bv = bv==null?-Infinity:bv;
         return sortDir==="asc" ? av-bv : bv-av;
       }
