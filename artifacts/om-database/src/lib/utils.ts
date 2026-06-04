@@ -1347,6 +1347,30 @@ export function formatFullAddress(d: { address?: string | null; city?: string | 
   return [street, inStreet(city) ? "" : city, stateZip].filter(Boolean).join(", ");
 }
 
+// One-time data-cleanup companion to formatFullAddress: when the stored `address`
+// has the city/state/zip tacked onto the end AND those also live in their own
+// fields, strip the trailing duplicates so `address` holds just the street.
+// Conservative — it only peels a trailing piece that exactly matches a structured
+// field (never re-parses free-form text, never invents city/state/zip), and returns
+// null when there's nothing to clean so callers can count/preview the real changes.
+export function dedupeStoredAddress(d: { address?: string | null; city?: string | null; state?: string | null; zip?: string | null }): string | null {
+  const orig = (d.address || "").trim();
+  if (!orig) return null;
+  const city = (d.city || "").trim();
+  const state = (d.state || "").trim();
+  const zip = (d.zip || "").trim();
+  const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let s = orig;
+  // Peel trailing zip, then state, then city — the order they appear at the end of
+  // a "street, city, ST zip" line — each only if it matches the structured field.
+  if (zip) s = s.replace(new RegExp(`[\\s,]*${esc(zip)}\\s*$`), "");
+  if (state) s = s.replace(new RegExp(`[\\s,]*\\b${esc(state)}\\b\\s*$`, "i"), "");
+  if (city) s = s.replace(new RegExp(`[\\s,]*\\b${esc(city)}\\b\\s*$`, "i"), "");
+  s = s.replace(/[\s,]+$/, "").trim();
+  if (!s || s === orig) return null;   // nothing to strip, or it would empty the field
+  return s;
+}
+
 // Robust AI-response JSON parser — strips markdown fences, trailing commas, and
 // recovers gracefully from truncated output (the same strategy used server-side
 // in extract.ts). Use this whenever parsing a raw AI text response.

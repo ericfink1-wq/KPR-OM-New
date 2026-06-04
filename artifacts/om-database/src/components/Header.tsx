@@ -6,6 +6,7 @@ import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
 import ChangePassword from "./ChangePassword";
+import { dedupeStoredAddress } from "../lib/utils";
 
 interface Props {
   tab: string;
@@ -318,6 +319,43 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     }
   };
 
+  // One-time maintenance: strip the city/state/zip that some older deals have
+  // duplicated onto the end of their street field (e.g. "…Kokomo, IN 46902 46902").
+  // Only touches deals where the trailing piece matches the separate city/state/zip
+  // fields; city/state/zip themselves are never changed. Snapshots first.
+  const handleCleanupAddresses = async () => {
+    setBackupMenu(false);
+    const changes = deals
+      .map(d => { const cleaned = dedupeStoredAddress(d); return cleaned ? { d, cleaned } : null; })
+      .filter((x): x is { d: Deal; cleaned: string } => x !== null);
+    if (changes.length === 0) {
+      alert("All addresses are already clean — nothing to fix.");
+      return;
+    }
+    const preview = changes.slice(0, 8)
+      .map(({ d, cleaned }) => `• ${d.propertyName || d.fileName || "Untitled"}\n     “${d.address}”\n     → “${cleaned}”`)
+      .join("\n");
+    const more = changes.length > 8 ? `\n…and ${changes.length - 8} more.` : "";
+    if (!window.confirm(
+      `Clean up ${changes.length} address${changes.length !== 1 ? "es" : ""}?\n\n` +
+      `This trims the city/state/zip that's already stored separately off the end of the street field. ` +
+      `City, state and zip are NOT changed, and a backup snapshot is taken first.\n\n${preview}${more}`
+    )) return;
+    try {
+      await apiCreateSnapshot("before-address-cleanup").catch(() => {});
+      const updated: Deal[] = [];
+      for (const { d, cleaned } of changes) {
+        const next = { ...d, address: cleaned };
+        await apiSaveDeal(next);
+        updated.push(next);
+      }
+      onDealsAdded?.(updated);
+      alert(`Cleaned up ${updated.length} address${updated.length !== 1 ? "es" : ""}.`);
+    } catch (err) {
+      alert("Cleanup failed: " + (err instanceof Error ? err.message : "error"));
+    }
+  };
+
   const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (e.target) e.target.value = "";
@@ -616,6 +654,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
               {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals")}
               {menuBtn(openSnapshotModal, "Restore a snapshot…", "Auto-saved before imports, deletes & restores")}
+              {menuBtn(handleCleanupAddresses, "Clean up addresses", "Trim duplicated city/state/zip off street fields")}
               {menuBtn(openFeedbackInbox, `Feedback${feedbackUnresolved ? ` (${feedbackUnresolved})` : ""}`, "Bug reports, ideas & comments", false)}
             </div>
           </>,
