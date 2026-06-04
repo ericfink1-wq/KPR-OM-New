@@ -1298,19 +1298,22 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   useEffect(() => {
     let alive = true;
     setImgs({});
-    if (d.imageMeta && (d.imageMeta.cover || d.imageMeta.sitePlan)) {
-      apiLoadImages(d.id).then(res => {
-        if (!alive) return;
-        setImgs(res || {});
-        // Self-heal: if a cover image is actually stored but the deal's imageMeta
-        // flag says otherwise, fix it so the Deal Library tile shows the cover
-        // (the list only loads the image when imageMeta.cover is set).
-        const hasCover = !!res?.cover;
-        if (hasCover && !d.imageMeta?.cover) {
-          onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
-        }
-      }).catch(() => {});
-    }
+    // ALWAYS load — don't gate on imageMeta flags. Those flags can drift out of
+    // sync with what's actually stored (a manually-uploaded cover/site plan was
+    // disappearing on return because its flag hadn't been set), which made stored
+    // images look "gone." apiLoadImages returns empty when nothing's stored, so
+    // this is cheap. Then self-heal the flags from what's really there.
+    apiLoadImages(d.id).then(res => {
+      if (!alive) return;
+      setImgs(res || {});
+      const hasCover = !!res?.cover;
+      const planCount = res?.sitePlan?.length || 0;
+      const metaCover = !!d.imageMeta?.cover;
+      const metaPlan = Number(d.imageMeta?.sitePlan) || 0;
+      if (hasCover !== metaCover || planCount !== metaPlan) {
+        onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: hasCover, sitePlan: planCount } });
+      }
+    }).catch(() => {});
     return () => { alive = false; };
   }, [d.id]);
 
@@ -1716,7 +1719,9 @@ ${text.slice(0, 60000)}`;
     if (!file) return;
     const dataUrl = await downscaleImageFile(file);
     const coverThumb = await dataUrlToThumb(dataUrl).catch(() => null);
-    const current: ImageBundle = imgs || {};
+    // Read the latest stored bundle first so saving a cover never clobbers an
+    // existing site plan (state can be stale across back-to-back uploads).
+    const current: ImageBundle = (await apiLoadImages(d.id)) || imgs || {};
     const next: ImageBundle = { ...current, cover: dataUrl, coverThumb };
     setImgs(next);
     await apiSaveImages(d.id, next);
@@ -1732,7 +1737,9 @@ ${text.slice(0, 60000)}`;
       reader.onload = () => resolve(reader.result as string);
       reader.readAsDataURL(f);
     })));
-    const current: ImageBundle = imgs || {};
+    // Read the latest stored bundle first so saving a site plan never clobbers an
+    // existing cover (state can be stale across back-to-back uploads).
+    const current: ImageBundle = (await apiLoadImages(d.id)) || imgs || {};
     const next: ImageBundle = { ...current, sitePlan: urls, pagePicks: [], needsSitePlanPick: false };
     setImgs(next);
     await apiSaveImages(d.id, next);
@@ -3635,13 +3642,21 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   // starts at that payment and shows the next ~12 months; expanding reveals the
   // full schedule (past + future), scrolled to the current payment.
   const nowMs = Date.now();
+  // The "current" row = first payment dated today-or-later. If no row carries a
+  // real date (e.g. no origination date on file), there's no "next payment" to
+  // highlight — start the window at the first payment instead.
+  const hasDates = rows.some(r => !isNaN(new Date(r.date).getTime()));
   const currentIdx = (() => {
+    if (!hasDates) return 0;
     for (let i = 0; i < rows.length; i++) { const t = new Date(rows[i].date).getTime(); if (!isNaN(t) && t >= nowMs) return i; }
     return rows.length ? rows.length - 1 : 0;
   })();
   const AMORT_PREVIEW = 6;
-  const shown = showAll ? rows : rows.slice(currentIdx, currentIdx + AMORT_PREVIEW);
-  const currentDate = rows[currentIdx]?.date;
+  // Always show a full window of AMORT_PREVIEW rows around the current payment —
+  // clamp the start so we don't end up with a single row near the end.
+  const windowStart = Math.min(currentIdx, Math.max(0, rows.length - AMORT_PREVIEW));
+  const shown = showAll ? rows : rows.slice(windowStart, windowStart + AMORT_PREVIEW);
+  const currentDate = hasDates ? rows[currentIdx]?.date : undefined;
   const currentRowRef = useRef<HTMLTableRowElement>(null);
   useEffect(() => { if (showAll) currentRowRef.current?.scrollIntoView({ block: "center" }); }, [showAll]);
 
@@ -3807,124 +3822,119 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
     }
   };
   const breakage = calcSwapBreakage(swap, { valuationDate: payoff, marketSwapRatePct: swapRate });
-  // Net cost to exit the loan = prepay penalty (a cost) minus any swap breakage
-  // credit (a positive breakage value is cash TO the borrower).
-  const exitCost = (result.penalty ?? 0) - (breakage.value ?? 0);
-  const showExit = swap != null && breakage.value != null && (result.penalty != null);
-
   const fmt$ = (v: number | null) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
   const basisColor = result.basis === "exact" ? "#0f9d63" : result.basis === "estimate" ? "#b08a3e" : result.basis === "locked" ? "#dc2626" : "#7d766a";
   const swapColor = breakage.direction === "credit" ? "#0f9d63" : breakage.direction === "cost" ? "#c0392b" : "#7d766a";
 
+  // A swapped loan's early-payoff economics ARE the swap breakage — the underlying
+  // floating note is prepayable at par — so we show ONE of the two, never both (and
+  // never a combined total that would double-count). Swap present → swap breakage;
+  // otherwise → the prepayment penalty from the loan doc's structured terms.
   return (
     <div>
-      <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:10 }}>Prepayment Penalty Calculator</div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:10 }}>
+        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
+          {swap ? "Swap Breakage — Early Payoff" : "Prepayment Penalty"}
+        </div>
+        <div>
+          <input ref={swapFileRef} type="file" accept=".pdf" style={{ display:"none" }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) importSwap(f); }} />
+          <button onClick={() => swapFileRef.current?.click()} disabled={swapBusy}
+            style={{ background: swapBusy ? "#e9e3d6" : "#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor: swapBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
+            {swapBusy ? "Reading…" : swap ? "Replace swap confirmation" : "Import swap confirmation"}
+          </button>
+        </div>
+      </div>
+      {swapErr && <div style={{ fontSize:11, color:"#c0392b", marginBottom:6 }}>{swapErr}</div>}
+
+      {/* Shared payoff date; prepay-type selector only when there's no swap. */}
       <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:12 }}>
         <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
           Payoff date
           <input type="date" value={payoff} onChange={e => setPayoff(e.target.value)}
             style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
         </label>
-        <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
-          Prepay type
-          <select value={terms?.type || "none"} onChange={e => setType(e.target.value as NonNullable<Deal["prepayTerms"]>["type"])}
-            style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}>
-            <option value="none">None / open</option>
-            <option value="stepdown">Step-down %</option>
-            <option value="yield_maintenance">Yield maintenance</option>
-            <option value="defeasance">Defeasance</option>
-            <option value="lockout_open">Lockout then open</option>
-            <option value="other">Other</option>
-          </select>
-        </label>
-        {needsRate && (
+        {!swap && (
+          <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            Prepay type (from loan docs)
+            <select value={terms?.type || "none"} onChange={e => setType(e.target.value as NonNullable<Deal["prepayTerms"]>["type"])}
+              style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}>
+              <option value="none">None / open</option>
+              <option value="stepdown">Step-down %</option>
+              <option value="yield_maintenance">Yield maintenance</option>
+              <option value="defeasance">Defeasance</option>
+              <option value="lockout_open">Lockout then open</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+        )}
+        {!swap && needsRate && (
           <div style={{ fontSize:11, color:"#7d766a" }}>
             Reinvestment (Treasury): <span style={{ fontWeight:600, color:"#383a37" }}>{reinvest != null ? `${reinvest.toFixed(2)}%` : "loading…"}</span>
           </div>
         )}
       </div>
-      <div style={{ background:"#faf7f0", border:`1px solid ${basisColor}33`, borderRadius:10, padding:"12px 14px" }}>
-        <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-          <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{result.label}</span>
-          <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:basisColor }}>
-            {fmt$(result.penalty)}{result.pct != null ? <span style={{ fontSize:13, color:"#a69e91", marginLeft:6 }}>({result.pct}%)</span> : null}
-          </span>
-        </div>
-        {result.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{result.detail}</div>}
-        {result.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
-      </div>
-      {terms?.type === "stepdown" && (
-        <div style={{ marginTop:8, fontSize:11, color:"#7d766a" }}>
-          Step-down schedule (%, by loan year):
-          <input value={(terms.stepdown || []).join(", ")}
-            onChange={e => onUpdate(deal.id, { prepayTerms: { ...terms, stepdown: e.target.value.split(",").map(s => Number(s.trim())).filter(n => !isNaN(n)) } })}
-            placeholder="e.g. 5, 4, 3, 2, 1"
-            style={{ marginLeft:8, background:"#fff", border:"1px solid #e6dfd0", borderRadius:7, padding:"5px 9px", fontSize:12, width:180 }}/>
-        </div>
-      )}
-      <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>Step-down is exact; yield-maintenance & defeasance are indicative estimates (servicer conventions vary — confirm before payoff).</div>
 
-      {/* ── Interest-rate swap breakage ──────────────────────────────────────── */}
-      <div style={{ marginTop:18, paddingTop:14, borderTop:"1px dashed #ece4d4" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:8 }}>
-          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Interest-Rate Swap Breakage</div>
-          <div>
-            <input ref={swapFileRef} type="file" accept=".pdf" style={{ display:"none" }}
-              onChange={e => { const f = e.target.files?.[0]; if (f) importSwap(f); }} />
-            <button onClick={() => swapFileRef.current?.click()} disabled={swapBusy}
-              style={{ background: swapBusy ? "#e9e3d6" : "#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor: swapBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
-              {swapBusy ? "Reading…" : swap ? "Replace swap confirmation" : "Import swap confirmation"}
-            </button>
+      {!swap ? (
+        <>
+          <div style={{ background:"#faf7f0", border:`1px solid ${basisColor}33`, borderRadius:10, padding:"12px 14px" }}>
+            <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+              <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{result.label}</span>
+              <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:basisColor }}>
+                {fmt$(result.penalty)}{result.pct != null ? <span style={{ fontSize:13, color:"#a69e91", marginLeft:6 }}>({result.pct}%)</span> : null}
+              </span>
+            </div>
+            {result.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{result.detail}</div>}
+            {result.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
           </div>
-        </div>
-        {swapErr && <div style={{ fontSize:11, color:"#c0392b", marginBottom:6 }}>{swapErr}</div>}
-
-        {!swap ? (
-          <div style={{ fontSize:11.5, color:"#9a917f", lineHeight:1.5 }}>Drop the dealer swap confirmation to capture the terms and estimate what it would cost (or pay) to break the swap on an early payoff.</div>
-        ) : (
-          <>
-            {/* Swap terms summary */}
-            <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:11.5, color:"#6f6a5f", marginBottom:10 }}>
-              <span>Notional <b style={{ color:"#383a37" }}>{fmt$(swap.notional ?? null)}</b></span>
-              <span>Fixed <b style={{ color:"#383a37" }}>{swap.fixedRatePct != null ? `${swap.fixedRatePct}%` : "—"}</b></span>
-              {swap.floatingIndex && <span>Float <b style={{ color:"#383a37" }}>{swap.floatingIndex}{swap.floatingSpreadBps != null ? ` + ${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""}</b></span>}
-              <span>Matures <b style={{ color:"#383a37" }}>{swap.terminationDate || "—"}</b></span>
-              {swap.counterparty && <span>Dealer <b style={{ color:"#383a37" }}>{swap.counterparty}</b></span>}
+          {terms?.type === "stepdown" && (
+            <div style={{ marginTop:8, fontSize:11, color:"#7d766a" }}>
+              Step-down schedule (%, by loan year):
+              <input value={(terms.stepdown || []).join(", ")}
+                onChange={e => onUpdate(deal.id, { prepayTerms: { ...terms, stepdown: e.target.value.split(",").map(s => Number(s.trim())).filter(n => !isNaN(n)) } })}
+                placeholder="e.g. 5, 4, 3, 2, 1"
+                style={{ marginLeft:8, background:"#fff", border:"1px solid #e6dfd0", borderRadius:7, padding:"5px 9px", fontSize:12, width:180 }}/>
             </div>
+          )}
+          <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>Reflects the prepayment terms in the loan documents. Step-down is exact; yield-maintenance & defeasance are indicative estimates (servicer conventions vary — confirm before payoff). No swap on file — import a swap confirmation above if this loan is hedged.</div>
+        </>
+      ) : (
+        <>
+          {/* Swap terms summary */}
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:11.5, color:"#6f6a5f", marginBottom:10 }}>
+            <span>Notional <b style={{ color:"#383a37" }}>{fmt$(swap.notional ?? null)}</b></span>
+            <span>Fixed <b style={{ color:"#383a37" }}>{swap.fixedRatePct != null ? `${swap.fixedRatePct}%` : "—"}</b></span>
+            {swap.floatingIndex && <span>Float <b style={{ color:"#383a37" }}>{swap.floatingIndex}{swap.floatingSpreadBps != null ? ` + ${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""}</b></span>}
+            <span>Matures <b style={{ color:"#383a37" }}>{swap.terminationDate || "—"}</b></span>
+            {swap.counterparty && <span>Dealer <b style={{ color:"#383a37" }}>{swap.counterparty}</b></span>}
+          </div>
 
-            <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:10 }}>
-              <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
-                Current market swap rate (%)
-                <input type="number" step="0.01" value={swapRate ?? ""} onChange={e => { setSwapRateTouched(true); setSwapRate(e.target.value === "" ? null : Number(e.target.value)); }}
-                  style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
-              </label>
-              <div style={{ fontSize:10, color:"#bcae97", maxWidth:300, lineHeight:1.5 }}>
-                All-in rate (current swap rate + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from Today's Rates as a proxy — replace with your bank's actual quote for the remaining term for a tighter estimate.
-              </div>
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:10 }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Current market swap rate (%)
+              <input type="number" step="0.01" value={swapRate ?? ""} onChange={e => { setSwapRateTouched(true); setSwapRate(e.target.value === "" ? null : Number(e.target.value)); }}
+                style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
+            </label>
+            <div style={{ fontSize:10, color:"#bcae97", maxWidth:300, lineHeight:1.5 }}>
+              All-in rate (current swap rate + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from Today's Rates as a proxy — replace with your bank's actual quote for the remaining term for a tighter estimate.
             </div>
+          </div>
 
-            <div style={{ background:"#faf7f0", border:`1px solid ${swapColor}33`, borderRadius:10, padding:"12px 14px" }}>
-              <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-                <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{breakage.label}</span>
-                <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:swapColor }}>
-                  {breakage.value == null ? "—" : `${breakage.value > 0 ? "+" : breakage.value < 0 ? "−" : ""}${fmt$(Math.abs(breakage.value))}`}
-                </span>
-              </div>
-              {breakage.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{breakage.detail}</div>}
-              {breakage.direction === "credit" && <div style={{ fontSize:11, color:"#0f9d63", marginTop:4 }}>Rates rose above your locked fixed rate — breaking the swap would pay you.</div>}
-              {breakage.direction === "cost" && <div style={{ fontSize:11, color:"#c0392b", marginTop:4 }}>Rates fell below your locked fixed rate — breaking the swap would cost you.</div>}
-              {breakage.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
+          <div style={{ background:"#faf7f0", border:`1px solid ${swapColor}33`, borderRadius:10, padding:"12px 14px" }}>
+            <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+              <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{breakage.label}</span>
+              <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:swapColor }}>
+                {breakage.value == null ? "—" : `${breakage.value > 0 ? "+" : breakage.value < 0 ? "−" : ""}${fmt$(Math.abs(breakage.value))}`}
+              </span>
             </div>
-
-            {showExit && (
-              <div style={{ marginTop:8, fontSize:12, color:"#5c5047" }}>
-                Estimated total cost to exit (prepay penalty {fmt$(result.penalty)} {exitCost >= (result.penalty ?? 0) ? "+" : "−"} swap {breakage.direction === "credit" ? "credit" : "cost"} {fmt$(Math.abs(breakage.value ?? 0))}):
-                {" "}<b style={{ color: exitCost > 0 ? "#c0392b" : "#0f9d63", fontFamily:"'Fraunces',serif", fontSize:15 }}>{exitCost > 0 ? "" : "net credit "}{fmt$(Math.abs(exitCost))}</b>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+            {breakage.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{breakage.detail}</div>}
+            {breakage.direction === "credit" && <div style={{ fontSize:11, color:"#0f9d63", marginTop:4 }}>Rates rose above your locked fixed rate — breaking the swap would pay you.</div>}
+            {breakage.direction === "cost" && <div style={{ fontSize:11, color:"#c0392b", marginTop:4 }}>Rates fell below your locked fixed rate — breaking the swap would cost you.</div>}
+            {breakage.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
+          </div>
+          <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>Swapped loan — the underlying note is prepayable at par, so the early-payoff economics are the swap breakage above (the exact figure is your dealer's mark-to-market). Confirm with the bank before payoff.</div>
+        </>
+      )}
     </div>
   );
 }
