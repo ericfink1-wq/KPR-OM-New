@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
 import { ensureUsersTable } from "./routes/auth";
 import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
@@ -58,6 +59,21 @@ ensureSessionTable()
 ensureUploadLogTable()
   .then(() => logger.info("upload_log table ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureUploadLogTable failed on startup (will retry on first use)"));
+
+// Clear ZOMBIE database connections on every boot. A stuck/idle-in-transaction
+// connection (left by an earlier hung request, and kept alive across app restarts
+// by the managed pooler) holds a row lock on deal_images, which makes every later
+// image save (cover / site plan) hang until the client times out. Terminating those
+// backends on startup unjams the table — so a redeploy reliably fixes a stuck save.
+// Best-effort and self-excluding; never blocks or crashes startup.
+pool.query(`
+  SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+  WHERE pid <> pg_backend_pid() AND datname = current_database()
+    AND ( (state = 'idle in transaction' AND now() - state_change > interval '15 seconds')
+       OR (state = 'active' AND query ILIKE '%deal_images%' AND now() - query_start > interval '15 seconds') )
+`)
+  .then((r) => logger.info({ cleared: r.rowCount ?? 0 }, "Cleared stuck DB connections on startup"))
+  .catch((err) => logger.error({ err }, "Startup DB-unjam query failed (non-fatal)"));
 
 // Allow long-running AI calls (AnalystChat, lookup endpoints) up to 5 minutes.
 // The PDF ingest route is not affected since it returns immediately.
