@@ -1018,7 +1018,10 @@ export function buildLatestSales(deal: {
     const reimb = disclosed ?? (est ? est.value : null);
     const reimbEstimated = disclosed == null && !!est?.estimated;
     const pctRent = _num(rt?.percentageRent) ?? 0, other = _num(rt?.otherRent) ?? 0;
-    if (base != null && reimb != null && gross != null && gross > 0) {
+    // Compute occ-cost only when it wasn't stated on the report — a disclosed
+    // figure is authoritative and isn't overwritten by a derived (possibly
+    // estimated-reimbursement) one.
+    if (occupancyCost == null && base != null && reimb != null && gross != null && gross > 0) {
       const total = base + reimb + pctRent + other;
       occupancyCost = Math.round((total / gross) * 1000) / 10;
       occSource = "computed";

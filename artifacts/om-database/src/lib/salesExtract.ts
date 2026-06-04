@@ -97,7 +97,10 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
     const reimb = nv(rt?.expenseReimbursements) ?? (estRec ? estRec.value : null);
     const reimbEstimated = nv(rt?.expenseReimbursements) == null && !!estRec?.estimated;
     const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
-    if (base != null && reimb != null && gross != null && gross > 0) {
+    // Only COMPUTE the occ-cost when it wasn't already stated on the report — a
+    // disclosed figure is authoritative and must not be overwritten by a derived
+    // one (whose reimbursements may even be an estimate).
+    if (occupancyCost == null && base != null && reimb != null && gross != null && gross > 0) {
       const total = base + reimb + pctRent + other;
       occupancyCost = Math.round((total / gross) * 1000) / 10;
       occSource = "computed";
