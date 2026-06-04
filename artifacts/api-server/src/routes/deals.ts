@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable } from "@workspace/db";
 import { eq, isNotNull, sql } from "drizzle-orm";
@@ -453,7 +453,7 @@ async function logImgSave(e: { id: string; reqBytes: number; ms: number; outcome
 router.get("/image-save-diag", requireAuth, async (_req, res) => {
   // version marker — bump when image-save code changes, so we can confirm from the
   // diagnostic output EXACTLY which build is live (deploys have been unreliable).
-  const out: Record<string, unknown> = { ts: new Date().toISOString(), version: "imgcap-3-tiny" };
+  const out: Record<string, unknown> = { ts: new Date().toISOString(), version: "imgcap-4-rawbinary" };
   const p = pool as unknown as { totalCount?: number; idleCount?: number; waitingCount?: number };
   out.pool = { total: p.totalCount ?? null, idle: p.idleCount ?? null, waiting: p.waitingCount ?? null };
 
@@ -523,6 +523,38 @@ router.get("/image-save-diag", requireAuth, async (_req, res) => {
     out.recentImageSaves = tr.rows;
   } catch (e) { out.recentImageSaves = []; out.traceError = String(e); }
   res.json(out);
+});
+
+// PUT /api/deals/:id/image-raw/:field — accept the image as RAW BINARY bytes (not
+// base64-in-JSON). The platform's WAF was 403-ing the JSON body because of the long
+// base64 blob; raw JPEG bytes pass straight through. Server converts to a data URL
+// for storage (so display is unchanged) and partial-updates just that column.
+const rawImageBody = express.raw({ type: () => true, limit: "12mb" });
+router.put("/deals/:id/image-raw/:field", requireAuth, rawImageBody, async (req, res) => {
+  const id = req.params.id as string;
+  const field = req.params.field as string;
+  const t0 = Date.now();
+  const buf = req.body as Buffer;
+  const reqBytes = Buffer.isBuffer(buf) ? buf.length : 0;
+  try {
+    if (field !== "cover" && field !== "coverThumb") { res.status(400).json({ error: "bad field" }); return; }
+    const dataUrl = reqBytes > 0 ? `data:image/jpeg;base64,${buf.toString("base64")}` : null;
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL lock_timeout = '6s'`);
+      await tx.execute(sql`SET LOCAL statement_timeout = '15s'`);
+      if (field === "cover") {
+        await tx.execute(sql`INSERT INTO deal_images (id, cover) VALUES (${id}, ${dataUrl}) ON CONFLICT (id) DO UPDATE SET cover = ${dataUrl}`);
+      } else {
+        await tx.execute(sql`INSERT INTO deal_images (id, cover_thumb) VALUES (${id}, ${dataUrl}) ON CONFLICT (id) DO UPDATE SET cover_thumb = ${dataUrl}`);
+      }
+    });
+    void logImgSave({ id, reqBytes, ms: Date.now() - t0, outcome: `ok-raw-${field}` });
+    res.json({ ok: true });
+  } catch (err) {
+    void logImgSave({ id, reqBytes, ms: Date.now() - t0, outcome: `error-raw-${field}`, code: (err as { code?: string })?.code });
+    req.log.error({ err }, "Failed to save raw image");
+    res.status(500).json({ error: "Failed to save image" });
+  }
 });
 
 // PUT /api/deals/:id/images

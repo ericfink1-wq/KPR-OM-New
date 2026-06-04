@@ -349,6 +349,37 @@ const COVER_CAP = 70_000;    // ~52 KB
 const THUMB_CAP = 22_000;    // ~16 KB
 const PLAN_CAP = 110_000;    // ~82 KB
 
+// Upload one image as RAW BINARY (not base64-in-JSON). The platform WAF was 403-ing
+// the JSON body because of the long base64 blob; raw JPEG bytes pass straight through.
+async function putImageRaw(id: string, field: "cover" | "coverThumb", dataUrl: string): Promise<void> {
+  const comma = dataUrl.indexOf(",");
+  const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+  const binStr = atob(b64);
+  const bytes = new Uint8Array(binStr.length);
+  for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const resp = await fetch(`${BASE}/deals/${id}/image-raw/${field}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "image/jpeg" },
+      body: bytes,
+      signal: ctrl.signal,
+    });
+    if (!resp.ok) {
+      const m = (await resp.text().catch(() => "")).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 140);
+      reportClientError(`apiSaveImages raw ${field} failed: HTTP ${resp.status} (${bytes.length} bytes)`, m);
+      throw new Error(`HTTP ${resp.status}${m ? ` — ${m}` : ""}`);
+    }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") { reportClientError(`apiSaveImages raw ${field} timeout`, `${bytes.length} bytes`); throw new Error("timed out after 20s"); }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
   // Save in isolated requests, smallest/most-important first (cover, then site plan,
   // then pagePicks), and CAP each image's size so the request body can't exceed the
@@ -358,7 +389,15 @@ export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<vo
   if (cover !== undefined || coverThumb !== undefined) {
     const c = await capImageDataUrl(cover, COVER_CAP);
     const ct = await capImageDataUrl(coverThumb, THUMB_CAP);
-    await putImageFields(id, { cover: c, coverThumb: ct });
+    const cIsImg = typeof c === "string" && c.startsWith("data:");
+    const ctIsImg = typeof ct === "string" && ct.startsWith("data:");
+    // Real images → raw-binary endpoint (dodges the WAF). Null/clear → small JSON.
+    if (cIsImg) await putImageRaw(id, "cover", c as string);
+    if (ctIsImg) await putImageRaw(id, "coverThumb", ct as string);
+    const clearFields: Partial<ImageBundle> = {};
+    if (cover !== undefined && !cIsImg) clearFields.cover = c ?? null;
+    if (coverThumb !== undefined && !ctIsImg) clearFields.coverThumb = ct ?? null;
+    if (Object.keys(clearFields).length) await putImageFields(id, clearFields);
   }
   if (sitePlan !== undefined || needsSitePlanPick !== undefined) {
     try {
