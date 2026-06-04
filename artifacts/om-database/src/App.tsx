@@ -414,19 +414,9 @@ function AppInner() {
           the Ask/flag buttons. Other pages keep it pinned near the top. */}
       <AiProgressBar {...(view.type === "detail" ? { bottom: 96 } : { top: 84 })} />
 
-      {/* Pinned back button — floats top-left on sub-pages so it's always reachable
-          while scrolling. The detail page renders its own (in its header bar) to sit
-          beside the property name without overlapping it. */}
-      {viewStack.length > 1 && view.type !== "detail" && (
-        <button onClick={goBack} title="Back" aria-label="Back"
-          style={{ position: "fixed", top: 84, left: 12, zIndex: 120, display: "flex", alignItems: "center", gap: 5,
-            background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid #e0d8c8", color: "#5c5047", borderRadius: 20, padding: "5px 13px 5px 10px",
-            fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif",
-            boxShadow: "0 2px 10px rgba(56,58,55,0.16)" }}>
-          ← Back
-        </button>
-      )}
+      {/* Each sub-page (tenant, parent, rollover, lender, compare, audits, detail)
+          renders its own "← Back" in its header, so there is no global pinned one
+          here — a second floating Back used to stack on top of theirs on mobile. */}
 
       {/* Drag overlay */}
       {dragging && (
