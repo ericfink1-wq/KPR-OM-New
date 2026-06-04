@@ -1703,9 +1703,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     try {
       await apiSaveImages(d.id, { sitePlan: urls, pagePicks: [], needsSitePlanPick: false });
       onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: urls.length, needsSitePlanPick: false } });
-    } catch {
+    } catch (err) {
       setImgs(current);
-      alert("Couldn't save the site plan — the images may be too large. Try fewer or smaller files.");
+      alert(`Couldn't save the site plan — ${err instanceof Error ? err.message : "unknown error"}.\n\nPlease try again. If it keeps failing, tell me the message above.`);
     }
   };
 

@@ -400,19 +400,16 @@ export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<vo
     if (Object.keys(clearFields).length) await putImageFields(id, clearFields);
   }
   if (sitePlan !== undefined) {
-    try {
-      const imgs = Array.isArray(sitePlan)
-        ? (await Promise.all(sitePlan.map(u => capImageDataUrl(u, PLAN_CAP)))).filter((u): u is string => typeof u === "string" && u.startsWith("data:"))
-        : [];
-      if (imgs.length) {
-        // Send each plan image as raw binary (WAF-safe): first replaces the array, rest append.
-        for (let i = 0; i < imgs.length; i++) await putImageRaw(id, i === 0 ? "sitePlanSet" : "sitePlanAdd", imgs[i]);
-      } else {
-        // Empty array = clear the site plan → small JSON (no base64) is fine.
-        await putImageFields(id, { sitePlan: Array.isArray(sitePlan) ? [] : sitePlan });
-      }
-    } catch {
-      reportClientError(`sitePlan save skipped`, `deal ${id}`);
+    const imgs = Array.isArray(sitePlan)
+      ? (await Promise.all(sitePlan.map(u => capImageDataUrl(u, PLAN_CAP)))).filter((u): u is string => typeof u === "string" && u.startsWith("data:"))
+      : [];
+    if (imgs.length) {
+      // Send each plan image as raw binary (WAF-safe): first replaces the array, rest append.
+      // Errors propagate so the caller can show the real reason (no silent swallow).
+      for (let i = 0; i < imgs.length; i++) await putImageRaw(id, i === 0 ? "sitePlanSet" : "sitePlanAdd", imgs[i]);
+    } else {
+      // Empty array = clear the site plan → small JSON (no base64) is fine.
+      await putImageFields(id, { sitePlan: Array.isArray(sitePlan) ? [] : sitePlan });
     }
   }
   if (needsSitePlanPick !== undefined) {
