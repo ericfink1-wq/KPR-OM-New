@@ -5,6 +5,7 @@ import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, api
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
+import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
 import { amortForDeal, currentBalanceFromRows } from "../lib/amortize";
 import { extractAmortSchedule } from "../lib/amortExtract";
 import { extractPref, buildPrefPatch } from "../lib/prefExtract";
@@ -1374,83 +1375,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     setRrError(null);
     try {
       const { text } = await extractAnyFile(file);
-      const prompt = `You are a CRE data extraction engine. Extract every occupied tenant from this rent roll.
-Return ONLY valid JSON — no markdown fences, no explanation — with this exact shape:
-{
-  "asOf": "<'as of' date printed on the rent roll header as YYYY-MM-DD, or null if not shown>",
-  "tenants": [
-    {
-      "name": "string",
-      "sf": number_or_null,
-      "rentPerSF": number_or_null,
-      "annualRent": number_or_null,
-      "leaseStart": "string_or_null",
-      "leaseExpiry": "string_or_null",
-      "remainingTermYears": number_or_null,
-      "reimbursementMethod": "string_or_null",
-      "leaseType": "string_or_null",
-      "rentBumps": "string_or_null",
-      "renewalOptions": "string_or_null",
-      "isAnchor": boolean
-    }
-  ]
-}
-
-COLUMN MAPPING RULES (apply to Yardi/MRI and similar property-management exports):
-- annualRent  → use the "Annual Rent" column (base rent only). NEVER use "Gross Annual Rent", "Gross Monthly Rent", "Annual Rent Increase", or "Annual Option Rent".
-- rentPerSF   → use the "Rent/SF" column (base rent per SF). Never use a gross or option PSF figure.
-- leaseStart  → "Term Comm. Date" or "Commencement Date" (not option dates).
-- leaseExpiry → "Term Exp. Date" or "Expiration Date" (not option expiry).
-- reimbursementMethod → infer from expense columns: if CAM, tax, and insurance are billed separately to the tenant → "NNN"; if the tenant pays a fixed lump or nothing for expenses → "Gross" or "Modified Gross". Use the actual column label when present.
-
-RENT STEPS (rentBumps field):
-- The "Annual Rent Increase" (or "Rent Steps" / "Scheduled Increases") block lists each future in-term step as one row with columns: [ Effective Date | New Annual Rent | Incr/SF (or $/SF) ].
-- Read ACROSS each row — every date MUST be paired with the Incr/SF dollar amount from that same row. Never emit a date without its amount.
-- Format as a semicolon-separated list of per-SF rate + month-year: "$19.06 Jan-28; $19.63 Jan-29; $20.22 Jan-30"
-- Use the per-SF value (Incr/SF column). If only an annual total is given, divide by the tenant's SF and round to 2 decimal places.
-- If there are no in-term scheduled steps, set rentBumps to null. Never output a bare date with no dollar amount.
-
-RENEWAL OPTIONS (renewalOptions field):
-- Capture option counts, term lengths, and option-period rents ONLY in renewalOptions (e.g. "2 × 5yr @ $21.50/SF").
-- NEVER copy renewal-option dates or option rents into rentBumps.
-- Option rents are NOT current rents — never use them for rentPerSF or annualRent.
-
-TENANT NAME RULES:
-- Take only the primary trade name from the first line of the tenant cell.
-- Strip any parenthetical echo that repeats the name (e.g. "Tenant Name (Tenant Name)").
-- Strip guarantor, DBA, or legal-entity lines that appear on subsequent lines beneath the tenant name.
-
-ROW FILTERING — skip these rows entirely (do not include them in the output):
-- Total, Subtotal, and Grand Total summary rows.
-- Artifact rows where both SF and Annual Rent are 0 or null (data-entry placeholders).
-- KEEP real gross-lease tenants that have $0 CAM but positive base rent — those are legitimate occupied suites.
-
-Return only the JSON object.
-
-RENT ROLL TEXT:
-${text.slice(0, 60000)}`;
-
-      const res = await apiAiMessages({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 32000,
-        messages: [{ role: "user", content: prompt }],
-      });
-      const raw = res.content.find(c => c.type === "text")?.text ?? "";
-      let parsed: { asOf?: string | null; tenants?: unknown[] };
-      try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't parse the AI response — try again."); }
-
-      const newTenants = Array.isArray(parsed.tenants) ? parsed.tenants as Deal["tenants"] : [];
-      if (!newTenants || newTenants.length === 0) throw new Error("No tenants found in the rent roll. Check the PDF.");
-
-      const asOf = parsed.asOf || new Date().toISOString().slice(0, 10);
-
-      // Occupancy / WALT / weighted-avg rent recomputed from the fresh roster:
-      // WALT from leaseExpiry vs asOf (not the often-missing remainingTermYears),
-      // vacant/NAP excluded, never overwriting a good value with 0.
-      const recomputed = recomputeRosterMetrics(newTenants as Array<Record<string, unknown>>, asOf, d);
-
-      onUpdate(d.id, { tenants: newTenants, tenantsAsOf: asOf, tenantsSource: "rent-roll", tenantsManual: true, analysisStale: true, ...recomputed });
-      finishAiTask(taskId, "done", `Roster updated — ${newTenants.length} tenants from the rent roll`);
+      // Use the SHARED rent-roll extractor — the SAME path as the bulk uploader —
+      // so this button gets suite capture, the stronger model, vacant suites, the
+      // rent-step-vs-option split, the truncation backstop, the suite-aware merge,
+      // and review flags. (It previously ran a stale duplicate prompt that had no
+      // "suite" field, which is why suites never pulled from this button.)
+      const result = await extractRentRoll(text);
+      const patch = buildRosterPatch(d, result);
+      onUpdate(d.id, patch);
+      finishAiTask(taskId, "done", `Roster updated — ${result.tenants.length} tenants from the rent roll`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Rent roll import failed.";
       setRrError(msg);
