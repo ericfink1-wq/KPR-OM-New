@@ -326,6 +326,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   const [starredIds, setStarredIds] = useState<number[]>(() => readLs().starredIds ?? []);
   const [expandedComp, setExpandedComp] = useState<number | null>(null);
   const [showAllComps, setShowAllComps] = useState(false);
+  const [showAllSugs, setShowAllSugs] = useState(false);
   const [addQ, setAddQ] = useState("");
   const [tableQ, setTableQ] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "market" | "anchor" | "date" | "price" | "cap" | "psf" | "sf" | "source">("date");
@@ -808,13 +809,23 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 );
               })()}
               {(() => {
-                const sugs = bm.suggestions.filter(s => !dismissedSugIds.includes(s.id) && !includeIds.includes(s.id));
+                const sugs = bm.suggestions
+                  .filter(s => !dismissedSugIds.includes(s.id) && !includeIds.includes(s.id))
+                  // Rank most-similar first: matchScore, then number of match reasons, then recency.
+                  .sort((a, b) => {
+                    const sa = a.matchScore ?? (a.matchReasons?.length ?? 0);
+                    const sb = b.matchScore ?? (b.matchReasons?.length ?? 0);
+                    if (sb !== sa) return sb - sa;
+                    return (b.saleDate || "").localeCompare(a.saleDate || "");
+                  });
                 if (sugs.length === 0) return null;
+                const SUG_PREVIEW = 5;
+                const visibleSugs = showAllSugs ? sugs : sugs.slice(0, SUG_PREVIEW);
                 return (
                   <div style={{ marginTop: 14, borderTop: "1px solid #f1eadc", paddingTop: 12 }}>
-                    <div style={{ fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Suggested comps — similar deals you can add</div>
+                    <div style={{ fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Suggested comps — most similar first</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {sugs.map(s => (
+                      {visibleSugs.map(s => (
                         <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #ece5d7", borderRadius: 9, padding: "8px 10px", background: "#faf7f0", flexWrap: "wrap" }}>
                           <div style={{ minWidth: 0, flex: "1 1 220px" }}>
                             <div style={{ fontSize: 12.5, fontWeight: 600, color: "#26281f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name || s.sourceDealName || s.market || "Comp"}</div>
@@ -827,6 +838,12 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                         </div>
                       ))}
                     </div>
+                    {sugs.length > SUG_PREVIEW && (
+                      <button onClick={() => setShowAllSugs(s => !s)}
+                        style={{ marginTop: 8, background: "transparent", border: "none", color: "#6dba43", cursor: "pointer", fontSize: 11.5, fontWeight: 600, padding: 0 }}>
+                        {showAllSugs ? "▾ Show fewer" : `▸ Show all ${sugs.length} suggestions`}
+                      </button>
+                    )}
                   </div>
                 );
               })()}
