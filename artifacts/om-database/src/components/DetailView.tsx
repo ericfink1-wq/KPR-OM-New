@@ -2196,7 +2196,7 @@ ${text.slice(0, 60000)}`;
 
       {/* ── Sub-page nav — sticky under the property name. Desktop: a row of tabs,
           each opening a jump-menu of its sections. Mobile: one compact dropdown. ── */}
-      <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top:0, zIndex:60, background:"#f6f2ea", margin:"0 -24px 14px", padding:"6px 24px 0" }}>
+      <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top: titleScrolled ? 62 : 0, zIndex:60, background:"#f6f2ea", margin:"0 -24px 14px", padding:"6px 24px 0", boxShadow: titleScrolled ? "0 8px 14px -12px rgba(56,58,55,0.35)" : "none", transition:"top 180ms ease" }}>
         {isMobileNav ? (
           <div style={{ position:"relative" }}>
             <button onClick={() => setNavMenu(m => m ? null : "toc")}
