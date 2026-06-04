@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable } from "@workspace/db";
 import { eq, isNotNull, sql } from "drizzle-orm";
 import { runOmExtraction, runRosterAnalysis } from "../lib/extract";
@@ -433,6 +433,57 @@ router.get("/deals/:id/images", requireAuth, async (req, res) => {
     req.log.error({ err }, "Failed to load images");
     res.status(500).json({ error: "Failed to load images" });
   }
+});
+
+// GET /api/image-save-diag — open this URL in the browser (while logged in) to see
+// EXACTLY why image saves hang: pool stats, what's running/stuck in the DB, locks on
+// deal_images, and a real probe write (same shape as a cover save) with its timing
+// and exact error code. Read-only except the probe, which cleans up after itself.
+router.get("/image-save-diag", requireAuth, async (_req, res) => {
+  const out: Record<string, unknown> = { ts: new Date().toISOString() };
+  const p = pool as unknown as { totalCount?: number; idleCount?: number; waitingCount?: number };
+  out.pool = { total: p.totalCount ?? null, idle: p.idleCount ?? null, waiting: p.waitingCount ?? null };
+
+  try {
+    const act = await pool.query(
+      `SELECT pid, state, wait_event_type, wait_event,
+              round(extract(epoch from (now()-query_start)))::int AS query_age_s,
+              round(extract(epoch from (now()-state_change)))::int AS state_age_s,
+              left(regexp_replace(query, '\\s+', ' ', 'g'), 90) AS query
+         FROM pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid()
+        ORDER BY query_start NULLS LAST LIMIT 30`);
+    out.activity = act.rows;
+  } catch (e) { out.activityError = String(e); }
+
+  try {
+    const locks = await pool.query(
+      `SELECT l.pid, l.mode, l.granted, a.state,
+              round(extract(epoch from (now()-a.query_start)))::int AS age_s,
+              left(regexp_replace(a.query, '\\s+', ' ', 'g'), 90) AS query
+         FROM pg_locks l
+         JOIN pg_class c ON c.oid = l.relation
+         LEFT JOIN pg_stat_activity a ON a.pid = l.pid
+        WHERE c.relname = 'deal_images'`);
+    out.dealImagesLocks = locks.rows;
+  } catch (e) { out.locksError = String(e); }
+
+  try {
+    const t = Date.now();
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL lock_timeout = '3s'`);
+      await tx.execute(sql`SET LOCAL statement_timeout = '8s'`);
+      await tx.execute(sql`INSERT INTO deal_images (id, cover) VALUES ('__diag_probe__', 'x') ON CONFLICT (id) DO UPDATE SET cover = 'x'`);
+      await tx.execute(sql`DELETE FROM deal_images WHERE id = '__diag_probe__'`);
+    });
+    out.probeWrite = "OK";
+    out.probeWriteMs = Date.now() - t;
+  } catch (e) {
+    const err = e as { code?: string; message?: string };
+    out.probeWrite = "FAILED";
+    out.probeError = { code: err?.code ?? null, message: String(err?.message ?? e).slice(0, 300) };
+  }
+  res.json(out);
 });
 
 // PUT /api/deals/:id/images
