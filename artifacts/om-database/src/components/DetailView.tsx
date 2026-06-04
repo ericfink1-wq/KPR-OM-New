@@ -33,6 +33,24 @@ import ClosingCostsCard from "./ClosingCostsCard";
 import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
+import { useIsMobile } from "../hooks/use-mobile";
+
+// Sub-page tabs and the jump-list shown when a tab is clicked.
+const PAGE_TABS = [
+  ["overview","Overview"],["ai","AI Analysis"],["tenants","Tenants & Sales"],
+  ["transaction","Transaction Details"],["financing","Financing"],
+  ["market","Market & Comps"],["underwriting","Underwriting"],
+] as const;
+const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
+const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
+  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Also known as",id:"section-aliases"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Your notes",id:"section-notes"}],
+  ai: [{label:"Highlights",id:"section-highlights"},{label:"Our thesis",id:"section-thesis"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
+  tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease rollover & WALT",id:"section-rollover"}],
+  transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Ownership structure",id:"section-ownership"}],
+  financing: [{label:"Senior loan",id:"section-senior-loan"},{label:"Amortization",id:"section-amortization"},{label:"Prepay & swap",id:"section-prepay"},{label:"Preferred equity",id:"section-pref-equity"}],
+  market: [{label:"Market sale",id:"section-market-sale"},{label:"Comp benchmark",id:"section-comp-benchmark"},{label:"Property info",id:"section-property-info"},{label:"Demographics",id:"section-demographics"},{label:"Trade-area demographics",id:"section-trade-area"}],
+  underwriting: [{label:"My underwriting",id:"section-underwriting"},{label:"Cash-flow projection",id:"section-cashflow"}],
+};
 
 // Renders **bold** segments in AI text (highlights, deal-score rationale) so key
 // figures/terms stand out. Plain text otherwise.
@@ -1211,7 +1229,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [demoBusy, setDemoBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [tab, setTab] = useState<"overview" | "ai" | "tenants" | "transaction" | "financing" | "market">("overview");
+  const [tab, setTab] = useState<"overview" | "ai" | "tenants" | "transaction" | "financing" | "market" | "underwriting">("overview");
+  const [navMenu, setNavMenu] = useState<string | null>(null);  // open jump-dropdown (a tab key, or "toc" on mobile)
+  const isMobileNav = useIsMobile();
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
   const [teachOpen, setTeachOpen] = useState(false);
   const [editingAddr, setEditingAddr] = useState(false);
@@ -1877,6 +1897,17 @@ ${text.slice(0, 60000)}`;
   }, []);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    const c = scrollContainerRef.current;
+    if (el && c) { const y = el.getBoundingClientRect().top - c.getBoundingClientRect().top + c.scrollTop - 56; c.scrollTo({ top: y, behavior: "smooth" }); }
+  };
+  useEffect(() => {
+    if (!navMenu) return;
+    const h = () => setNavMenu(null);
+    document.addEventListener("click", h);
+    return () => document.removeEventListener("click", h);
+  }, [navMenu]);
 
   return (
     <div ref={scrollContainerRef} style={{ flex:1, overflowY:"auto", padding:"20px 24px 20px 24px" }}>
@@ -2146,17 +2177,56 @@ ${text.slice(0, 60000)}`;
       })()}
       {reviewOpen && <ImportReview deal={d} onClose={() => setReviewOpen(false)} onUpdate={onUpdate} />}
 
-      {/* ── Sub-page tabs ─────────────────────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:4, overflowX:"auto", borderBottom:"1.5px solid #e7e0d2", marginBottom:14, WebkitOverflowScrolling:"touch" }}>
-        {([
-          ["overview","Overview"],["ai","AI Analysis"],["tenants","Tenants & Sales"],
-          ["transaction","Transaction Details"],["financing","Financing"],["market","Market & Comps"],
-        ] as const).map(([k,label]) => (
-          <button key={k} onClick={() => setTab(k)}
-            style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3f7a1f" : "2px solid transparent", color: tab===k ? "#26281f" : "#8b8578", padding:"8px 12px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Inter',sans-serif" }}>
-            {label}
-          </button>
-        ))}
+      {/* ── Sub-page nav — sticky under the property name. Desktop: a row of tabs,
+          each opening a jump-menu of its sections. Mobile: one compact dropdown. ── */}
+      <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top:0, zIndex:60, background:"#f6f2ea", margin:"0 -24px 14px", padding:"6px 24px 0" }}>
+        {isMobileNav ? (
+          <div style={{ position:"relative" }}>
+            <button onClick={() => setNavMenu(m => m ? null : "toc")}
+              style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", border:"1px solid #e3dccd", borderRadius:8, padding:"9px 13px", fontSize:13, fontWeight:700, color:"#26281f", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
+              <span>{PAGE_TAB_LABEL[tab]}</span><span style={{ fontSize:11, color:"#a69e91", fontWeight:600 }}>☰ sections ▾</span>
+            </button>
+            {navMenu && (
+              <div style={{ position:"absolute", left:0, right:0, top:"calc(100% + 4px)", background:"#fff", border:"1px solid #e3dccd", borderRadius:10, boxShadow:"0 14px 34px rgba(0,0,0,0.2)", zIndex:70, maxHeight:"68vh", overflowY:"auto", padding:6 }}>
+                {PAGE_TABS.map(([k,label]) => (
+                  <div key={k} style={{ marginBottom:2 }}>
+                    <button onClick={() => { setTab(k); setNavMenu(null); }}
+                      style={{ width:"100%", textAlign:"left", background: tab===k ? "#eef5e8" : "transparent", border:"none", padding:"8px 10px", fontSize:12.5, fontWeight:700, color: tab===k ? "#2d5a0e" : "#383a37", cursor:"pointer", borderRadius:6 }}>
+                      {label}
+                    </button>
+                    {(TAB_SECTIONS[k] || []).map(s => (
+                      <button key={s.id} onClick={() => { setTab(k); setNavMenu(null); setTimeout(() => scrollToSection(s.id), 60); }}
+                        style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"5px 10px 5px 26px", fontSize:11.5, color:"#6f6a5f", cursor:"pointer" }}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ display:"flex", gap:2, borderBottom:"1.5px solid #e7e0d2", flexWrap:"wrap" }}>
+            {PAGE_TABS.map(([k,label]) => (
+              <div key={k} style={{ position:"relative" }}>
+                <button onClick={() => { setTab(k); setNavMenu(m => m === k ? null : k); }}
+                  style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3f7a1f" : "2px solid transparent", color: tab===k ? "#26281f" : "#8b8578", padding:"8px 11px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Inter',sans-serif" }}>
+                  {label} <span style={{ fontSize:8, opacity:0.55 }}>▾</span>
+                </button>
+                {navMenu === k && (TAB_SECTIONS[k] || []).length > 0 && (
+                  <div style={{ position:"absolute", top:"100%", left:0, marginTop:2, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, boxShadow:"0 10px 26px rgba(0,0,0,0.14)", zIndex:70, minWidth:190, padding:5 }}>
+                    {(TAB_SECTIONS[k] || []).map(s => (
+                      <button key={s.id} onClick={() => { setTab(k); setNavMenu(null); setTimeout(() => scrollToSection(s.id), 60); }}
+                        style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 10px", fontSize:12, color:"#383a37", cursor:"pointer", borderRadius:6 }}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {tab === "overview" && (<>
@@ -2279,7 +2349,7 @@ ${text.slice(0, 60000)}`;
       {tab === "market" && (<>
       {/* Market sale */}
       {d.marketSale && (
-        <div style={{ background:"#0d948810", border:"1px solid #0d948840", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
+        <div id="section-market-sale" style={{ background:"#0d948810", border:"1px solid #0d948840", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:9, gap:10, flexWrap:"wrap" }}>
             <div style={{ fontSize:9, letterSpacing:"0.1em", color:"#0d9488", fontWeight:700 }}>↗ MARKET SALE — FOUND ONLINE</div>
             <button onClick={() => onLookupSale(d.id)} disabled={saleBusy} style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"3px 9px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:9, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"RE-CHECK"}</button>
@@ -2314,7 +2384,7 @@ ${text.slice(0, 60000)}`;
       )}
 
       </>)}
-      {tab === "overview" && (<>
+      {(tab === "overview" || tab === "tenants") && (<>
       {/* Site plan (all states wrapped in one jump anchor; rendered only when the
           image bundle has loaded so the menu entry tracks the visible section) */}
       {imgs != null && (
@@ -2635,8 +2705,8 @@ ${text.slice(0, 60000)}`;
       </>)}
       {tab === "overview" && (<>
       {/* Edit metrics — below red flags */}
-      <AkaEditor deal={d} onUpdate={onUpdate}/>
-      <MetricsEditor deal={d} onUpdate={onUpdate}/>
+      <div id="section-aliases"><AkaEditor deal={d} onUpdate={onUpdate}/></div>
+      <div id="section-metriceditor"><MetricsEditor deal={d} onUpdate={onUpdate}/></div>
 
       {/* Financial grid */}
       <div id="section-financials" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
@@ -2696,7 +2766,7 @@ ${text.slice(0, 60000)}`;
       {showAcq && <div id="section-assumptions"><KeyAssumptions deal={d} /></div>}
 
       </>)}
-      {tab === "transaction" && (<>
+      {tab === "underwriting" && (<>
       {/* My Underwriting */}
       <div id="section-underwriting" data-jump="My Underwriting"><MyUnderwritingPanel deal={d} onUpdate={onUpdate}/></div>
 
@@ -2706,9 +2776,7 @@ ${text.slice(0, 60000)}`;
       <CompBenchmarkCard deal={d} />
 
       </>)}
-      {tab === "transaction" && (<>
-      {showAcq && <ClosingCostsCard deal={d} />}
-
+      {tab === "underwriting" && (<>
       {/* Cash flow */}
       {showAcq && Array.isArray(d.cashFlowProjection) && d.cashFlowProjection.length > 0 && (
         <div id="section-cashflow" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
@@ -2736,6 +2804,8 @@ ${text.slice(0, 60000)}`;
         </div>
       )}
 
+      </>)}
+      {tab === "transaction" && (<>
       {/* TRANSACTION DETAILS — acquisition record (LOI → close) and disposition */}
       {(() => {
         const owned = d.status === "Owned" || d.status === "Sold";
@@ -2883,6 +2953,10 @@ ${text.slice(0, 60000)}`;
         );
       })()}
 
+      {showAcq && <ClosingCostsCard deal={d} />}
+      {(d.status === "Owned" || d.status === "Sold") && (
+        <div id="section-ownership"><OwnershipStructure deal={d} onUpdate={onUpdate} /></div>
+      )}
       </>)}
       {tab === "financing" && (<>
       {/* FINANCING & DEBT — loan record / term sheet for deals Under Contract, Owned, or Sold */}
@@ -3013,15 +3087,10 @@ ${text.slice(0, 60000)}`;
         );
       })()}
 
-      {/* Ownership Structure — owned/sold deals only (below Financing & Debt) */}
-      {(d.status === "Owned" || d.status === "Sold") && (
-        <OwnershipStructure deal={d} onUpdate={onUpdate} />
-      )}
-
       </>)}
       {tab === "market" && (<>
       {/* Property info */}
-      <div style={{ marginBottom:12 }}>
+      <div id="section-property-info" style={{ marginBottom:12 }}>
         <Card title="PROPERTY INFO">
           <Row l="MARKET" v={d.market}/>
           <Row l="SUBMARKET" v={d.submarket}/>
