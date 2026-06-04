@@ -1710,12 +1710,15 @@ ${text.slice(0, 60000)}`;
     setImgs(next);
     // A failed save used to be swallowed — the cover showed locally but never
     // reached the DB, so it vanished on return. Revert + tell the user instead.
+    // Save ONLY the cover fields: the server preserves the rest, so we never re-send
+    // the deal's (potentially multi-MB) site plan / page-picker thumbnails — which is
+    // what was pushing a tiny cover photo past the platform's upload-size limit.
     try {
-      await apiSaveImages(d.id, next);
+      await apiSaveImages(d.id, { cover: dataUrl, coverThumb });
       onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), cover: true } });
     } catch {
       setImgs(current);
-      alert("Couldn't save the cover photo — it may be too large. Try a smaller image.");
+      alert("Couldn't save the cover photo. Please try again, or use a smaller image.");
     }
   };
 
@@ -1732,8 +1735,10 @@ ${text.slice(0, 60000)}`;
     const current: ImageBundle = (await apiLoadImages(d.id).catch(() => null)) || imgs || {};
     const next: ImageBundle = { ...current, sitePlan: urls, pagePicks: [], needsSitePlanPick: false };
     setImgs(next);
+    // Save ONLY the site-plan fields (server preserves the cover) — and clearing
+    // pagePicks here shrinks the deal's stored bundle, freeing future saves.
     try {
-      await apiSaveImages(d.id, next);
+      await apiSaveImages(d.id, { sitePlan: urls, pagePicks: [], needsSitePlanPick: false });
       onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: urls.length, needsSitePlanPick: false } });
     } catch {
       setImgs(current);

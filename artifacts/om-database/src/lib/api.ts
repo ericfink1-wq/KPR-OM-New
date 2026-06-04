@@ -256,12 +256,11 @@ export async function apiCreateDeal(deal: Deal): Promise<void> {
 
 // --- Images ---
 
-export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
-  // Measure the payload — base64 image bundles can be several MB, and a platform
-  // proxy/DB limit (smaller than Express's 50mb) is a prime suspect when covers/
-  // site plans silently fail to persist. Capturing the byte size + server status
-  // turns that invisible failure into a one-line diagnosis.
-  const body = JSON.stringify(bundle);
+// PUT a SUBSET of image fields. The server applies a partial update, so omitted
+// fields are left untouched. Reports the precise HTTP status + payload size on
+// failure (the old silent .catch hid why covers "wouldn't save").
+async function putImageFields(id: string, fields: Partial<ImageBundle>): Promise<void> {
+  const body = JSON.stringify(fields);
   let resp: Response;
   try {
     resp = await apiFetch(`/deals/${id}/images`, { method: "PUT", body });
@@ -273,6 +272,24 @@ export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<vo
     const serverMsg = await resp.text().catch(() => "");
     reportClientError(`apiSaveImages failed: HTTP ${resp.status} (${body.length} bytes)`, serverMsg.slice(0, 500));
     throw new Error("Failed to save images");
+  }
+}
+
+export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
+  // The cover + site plan are small and MUST persist. pagePicks (up to 24 full-page
+  // thumbnails — a transient aid for manually picking a site plan) can be several MB
+  // and is the usual reason a save blows past the platform's request-body limit. So
+  // save the essentials FIRST (must succeed), then pagePicks separately, best-effort:
+  // if the picker thumbnails are too big to store, the cover/site plan are already
+  // safely saved rather than dragged down with them.
+  const { pagePicks, ...essential } = bundle;
+  await putImageFields(id, essential);
+  if (Array.isArray(pagePicks) && pagePicks.length) {
+    try {
+      await putImageFields(id, { pagePicks });
+    } catch {
+      reportClientError(`pagePicks save skipped (likely too large)`, `${pagePicks.length} page picks`);
+    }
   }
 }
 

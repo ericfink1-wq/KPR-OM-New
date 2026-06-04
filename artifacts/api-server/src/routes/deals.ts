@@ -446,13 +446,28 @@ router.put("/deals/:id/images", requireAuth, async (req, res) => {
       pagePicks?: { page: number; img: string }[] | null;
       needsSitePlanPick?: boolean;
     };
-    const { cover, coverThumb, sitePlan, pagePicks, needsSitePlanPick } = body;
+    // PARTIAL update: only touch the columns actually present in the request.
+    // This lets a small targeted save (e.g. just the cover) avoid re-sending the
+    // whole bundle — important because the bundle can carry a multi-MB pagePicks
+    // array that pushes the request past the platform's body-size limit. A field
+    // that's present-but-null clears that column; an ABSENT field is left alone.
+    const set: Record<string, unknown> = {};
+    if ("cover" in body) set.cover = body.cover ?? null;
+    if ("coverThumb" in body) set.coverThumb = body.coverThumb ?? null;
+    if ("sitePlan" in body) set.sitePlan = body.sitePlan ?? null;
+    if ("pagePicks" in body) set.pagePicks = body.pagePicks ?? null;
+    if ("needsSitePlanPick" in body) set.needsSitePlanPick = body.needsSitePlanPick ?? false;
+    if (Object.keys(set).length === 0) { res.json({ ok: true }); return; }
     await db.insert(dealImagesTable)
-      .values({ id, cover: cover ?? null, coverThumb: coverThumb ?? null, sitePlan: sitePlan ?? null, pagePicks: pagePicks ?? null, needsSitePlanPick: needsSitePlanPick ?? false })
-      .onConflictDoUpdate({
-        target: dealImagesTable.id,
-        set: { cover: cover ?? null, coverThumb: coverThumb ?? null, sitePlan: sitePlan ?? null, pagePicks: pagePicks ?? null, needsSitePlanPick: needsSitePlanPick ?? false },
-      });
+      .values({
+        id,
+        cover: (set.cover as string | null) ?? null,
+        coverThumb: (set.coverThumb as string | null) ?? null,
+        sitePlan: (set.sitePlan as string[] | null) ?? null,
+        pagePicks: (set.pagePicks as { page: number; img: string }[] | null) ?? null,
+        needsSitePlanPick: (set.needsSitePlanPick as boolean | undefined) ?? false,
+      })
+      .onConflictDoUpdate({ target: dealImagesTable.id, set });
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to save images");
