@@ -263,24 +263,37 @@ export async function apiCreateDeal(deal: Deal): Promise<void> {
 // reaching the DB. Reports the precise status + payload size on failure.
 async function putImageFields(id: string, fields: Partial<ImageBundle>, timeoutMs = 45000): Promise<void> {
   const body = JSON.stringify(fields);
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  let resp: Response;
-  try {
-    resp = await apiFetch(`/deals/${id}/images`, { method: "PUT", body, signal: ctrl.signal });
-  } catch (e) {
-    const aborted = e instanceof DOMException && e.name === "AbortError";
-    reportClientError(`apiSaveImages ${aborted ? "timeout" : "network error"} (${body.length} bytes)`, String(e));
-    throw new Error(aborted ? `timed out after ${Math.round(timeoutMs / 1000)}s` : "network error — check your connection");
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!resp.ok) {
-    const serverMsg = (await resp.text().catch(() => "")).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    reportClientError(`apiSaveImages failed: HTTP ${resp.status} (${body.length} bytes)`, serverMsg.slice(0, 500));
-    // Surface the real reason (status + server message) so a failure is diagnosable
-    // instead of a generic "try a smaller image" that sends everyone down a dead end.
-    throw new Error(`HTTP ${resp.status}${serverMsg ? ` — ${serverMsg.slice(0, 140)}` : ""}`);
+  // A timeout / network error on the FIRST try is almost always a cold-starting
+  // server (the app waking from idle), which the very next request resolves. So we
+  // retry the transient cases ONCE before giving up. We do NOT retry a real HTTP
+  // error response — that's a genuine rejection that a retry won't fix.
+  const attempts = 2;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    let resp: Response;
+    try {
+      resp = await apiFetch(`/deals/${id}/images`, { method: "PUT", body, signal: ctrl.signal });
+    } catch (e) {
+      const aborted = e instanceof DOMException && e.name === "AbortError";
+      if (attempt < attempts) {
+        reportClientError(`apiSaveImages ${aborted ? "timeout" : "network error"} — retrying (${body.length} bytes)`, String(e));
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
+      reportClientError(`apiSaveImages ${aborted ? "timeout" : "network error"} (${body.length} bytes)`, String(e));
+      throw new Error(aborted ? `timed out after ${Math.round(timeoutMs / 1000)}s` : "network error — check your connection");
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!resp.ok) {
+      const serverMsg = (await resp.text().catch(() => "")).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      reportClientError(`apiSaveImages failed: HTTP ${resp.status} (${body.length} bytes)`, serverMsg.slice(0, 500));
+      // Surface the real reason (status + server message) so a failure is diagnosable
+      // instead of a generic "try a smaller image" that sends everyone down a dead end.
+      throw new Error(`HTTP ${resp.status}${serverMsg ? ` — ${serverMsg.slice(0, 140)}` : ""}`);
+    }
+    return;
   }
 }
 
