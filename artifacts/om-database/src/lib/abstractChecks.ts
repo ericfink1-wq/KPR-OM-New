@@ -18,7 +18,12 @@ export interface AbstractChecks {
 
 export function pnum(v: unknown): number | null {
   if (v == null || v === "") return null;
-  const n = typeof v === "number" ? v : Number(String(v).replace(/[^0-9.-]/g, ""));
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  // Extract the FIRST number only — strings like "$750,603/yr ($62,550.25/mo)"
+  // must parse to 750603, not concatenate both numbers.
+  const m = String(v).match(/-?\$?\s*[\d,]*\.?\d+/);
+  if (!m) return null;
+  const n = Number(m[0].replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : null;
 }
 
