@@ -3244,6 +3244,37 @@ const NUMERIC_TXN_FIELDS = new Set<string>([
   "acqHoldPeriod","acqTargetIRR","dispExitCap","dispCosts","dispLoanPayoff",
 ]);
 
+// Coerce a loosely-typed date the user typed (3/12/26, 3-12-2026, "March 12, 2026")
+// into ISO YYYY-MM-DD, which is what every date calc in the app expects. Returns the
+// input unchanged if it can't confidently parse it — never mangle what they typed.
+function normalizeDateInput(raw: string): string {
+  const s = raw.trim();
+  if (!s || /^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // blank or already ISO
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fixYr = (y: number) => y >= 100 ? y : (y < 70 ? 2000 + y : 1900 + y); // 2-digit → century
+  // US order M/D/Y (also - or . separators)
+  let m = s.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})$/);
+  if (m) {
+    const mo = +m[1], da = +m[2], yr = fixYr(+m[3]);
+    if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) return `${yr}-${pad(mo)}-${pad(da)}`;
+    return s;
+  }
+  // ISO-ish with slashes: Y/M/D
+  m = s.match(/^(\d{4})[/.\-](\d{1,2})[/.\-](\d{1,2})$/);
+  if (m) {
+    const yr = +m[1], mo = +m[2], da = +m[3];
+    if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) return `${yr}-${pad(mo)}-${pad(da)}`;
+    return s;
+  }
+  // Month-name formats ("March 12, 2026", "12 Mar 2026") — only when a 4-digit year
+  // is present, so we never guess a century from an ambiguous string.
+  if (/\d{4}/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  return s;
+}
+
 interface TxnFieldProps {
   label: string;
   field: keyof Deal;
@@ -3264,6 +3295,7 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
   const isMoney = prefix === "$";
   const isPct   = suffix === "%";
   const isNum   = !!(numeric || isMoney || isPct || NUMERIC_TXN_FIELDS.has(field as string));
+  const isDate  = !isNum && (placeholder === "YYYY-MM-DD" || /date$/i.test(String(field)));
   const fmt = (v: unknown): string => {
     if (v == null || v === "") return "";
     if (isMoney) { const n = Number(String(v).replace(/[^0-9.\-]/g,"")); return isNaN(n) ? String(v) : n.toLocaleString("en-US"); }
@@ -3292,6 +3324,7 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
     let patchVal: unknown;
     if (v === "" || v == null) patchVal = null;
     else if (isNum) { const n = Number(String(v).replace(/[^0-9.\-]/g,"")); patchVal = isNaN(n) ? null : n; }
+    else if (isDate) patchVal = normalizeDateInput(String(v));
     else patchVal = v;
     onUpdate(dealId, { [field]: patchVal } as Partial<Deal>);
     return patchVal;
@@ -3338,7 +3371,15 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
             value={val}
             onFocus={() => { focusedRef.current = true; }}
             onChange={e => handleChange(e.target.value)}
-            onBlur={() => { focusedRef.current = false; commit(); }}
+            onBlur={() => {
+              focusedRef.current = false;
+              // Convert a loosely-typed date (3/12/26) to ISO and reflect it in the box.
+              if (isDate && valRef.current.trim()) {
+                const norm = normalizeDateInput(valRef.current);
+                if (norm !== valRef.current) { setVal(norm); valRef.current = norm; dirtyRef.current = true; }
+              }
+              commit();
+            }}
             onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
             placeholder={placeholder}
             style={{ flex:1, background:"transparent", border:"none", outline:"none", padding:"10px 6px", fontSize:14, color:"#383a37" }}/>
