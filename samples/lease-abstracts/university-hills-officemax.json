@@ -1,0 +1,101 @@
+{
+  "tenantName": "OfficeMax",
+  "dba": "OfficeMax / Office Depot (OfficeMax North America, Inc., f/k/a OfficeMax, Inc.; store #0416)",
+  "status": "final",
+  "asOf": "2026-06-05",
+  "center": "University Hills",
+  "suite": "61",
+  "mriNumber": "-",
+  "premisesGLA": 30000,
+  "currentSF": 16724,
+  "documents": [
+    { "name": "Lease", "date": "1996-07-19", "type": "lease", "description": "Black Cherry LLC / OfficeMax, Inc. Unit 61; ~30,000 SF (max 30,300 for rent calc). 15-yr initial term + four 5-yr options." },
+    { "name": "Memorandum of Lease", "date": "1996-07-19", "type": "lease", "description": "Recordable short-form memorandum." },
+    { "name": "First Amendment to Lease", "date": "1998-10-02", "type": "amendment", "description": "Adds use restrictions binding OfficeMax to the Just For Feet (athletic footwear ≤15%), HomePlace (home-furnishings/'Protected Products' ≤1,000 SF/5%) and King Soopers (grocery/pharmacy) exclusives; and REPLACES Article 26 with a co-tenancy (King Soopers + one 30,000+ SF major tenant). Landlord paid Tenant $25,000 consideration." },
+    { "name": "Confirmation of Option (renewal)", "date": "2012-02-24", "type": "letter", "description": "Acknowledges Tenant's 1/11/2012 option exercise: first extended term 9/1/2012–8/31/2017 at $454,500/yr ($15.15/SF); THREE 5-yr options remaining thereafter." }
+  ],
+  "tenantChain": [
+    { "entity": "OfficeMax, Inc., an Ohio corporation", "role": "tenant", "effectiveDate": "1996-07-19", "instrument": "Lease", "cite": { "doc": "Lease" } },
+    { "entity": "OfficeMax North America, Inc. (f/k/a OfficeMax, Inc.; now part of Office Depot / The ODP Corporation)", "role": "tenant", "effectiveDate": "2012-02-24", "instrument": "named as Tenant in the Confirmation of Option", "cite": { "doc": "Confirmation of Option" } }
+  ],
+  "landlordChain": [
+    { "entity": "Black Cherry Limited Liability Company (Colorado LLC; Gold UH, LLC member)", "role": "landlord", "effectiveDate": "1996-07-19", "instrument": "Lease", "cite": { "doc": "Lease; First Amendment" } },
+    { "entity": "SK University Hills Owner MZL, LLC (KPR; current owner of the Center)", "role": "landlord", "effectiveDate": "2024", "instrument": "current owner of University Hills (per KPR acquisition; same entity named as Landlord in the King Soopers Third Amendment and Marshalls 2nd Amendment)", "cite": { "doc": "property ownership" } }
+  ],
+  "guaranties": [],
+  "dates": {
+    "leaseDate": { "value": "1996-07-19", "cite": { "doc": "Lease" } },
+    "openDate": { "value": "1997-09-01", "cite": { "doc": "approx — initial 15-yr term ended 8/31/2012 per the 2012 Confirmation of Option" } },
+    "leaseCommencement": { "value": "1997-09-01", "cite": { "doc": "approx — derived from the 8/31/2012 initial-term expiry" } },
+    "cancelDate": { "value": "Not Provided" },
+    "leaseExpiration": { "value": "2026-09-30", "cite": { "doc": "rent roll (current short-term occupancy) — governing short-term document not in folder; see flag" } },
+    "rentStartDate": { "value": "1997-09-01", "cite": { "doc": "Lease Art. 3 (Rent Commencement Date)" } }
+  },
+  "deposit": { "cashDeposit": "None", "nonCashDeposit": "None", "interestBearing": "N/A" },
+  "noticeAddresses": [
+    { "type": "Tenant", "name": "OfficeMax North America, Inc.", "attn": "Sr. Vice President, Real Estate (copy: General Counsel)", "address1": "263 Shuman Blvd", "city": "Naperville", "state": "IL", "zip": "60563", "cite": { "doc": "Confirmation of Option" } },
+    { "type": "Landlord (current — KPR)", "name": "SK University Hills Owner MZL, LLC", "attn": "c/o KPR Centers LLC", "address1": "535 Fifth Avenue, 12th Floor", "city": "New York", "state": "NY", "zip": "10017", "email": "officialnotice@kprcenters.com", "cite": { "doc": "current owner — confirm against any KPR assignment/SNDA for this lease" } }
+  ],
+  "commencement": "1997-09-01",
+  "expiration": "2026-09-30",
+  "term": { "value": "Lease 7/19/1996; 15-year Initial Term (~9/1/1997–8/31/2012) plus four 5-year options (Article 13). Tenant exercised the first option (9/1/2012–8/31/2017 at $15.15/SF). At some point AFTER 2012, OfficeMax left the original option track and downsized: it is now in possession of ~16,724 SF (not the original ~30,000 SF) on a SHORT-TERM basis — the rent roll shows a one-year term 10/1/2025–9/30/2026 at $19.50/SF. The document that downsized the premises and set the short-term terms is NOT in the lease folder (see flag).", "cite": { "doc": "Lease Art. 13; Confirmation of Option; rent roll", "section": "13" } },
+  "options": [
+    { "number": "1", "ordinal": 1, "length": "5 years", "status": "exercised", "optionType": "REN", "windowStart": "2012-09-01", "suiteId": "61", "squareFeet": 30000, "termMonths": 60, "ratePSF": 15.15, "rateDescriptor": "PSF", "expireDate": "2017-08-31", "rent": "$454,500/yr", "note": "Exercised (2012 Confirmation of Option). Original 30,000 SF basis.", "cite": { "doc": "Lease Art. 13; Confirmation of Option" } },
+    { "number": "2", "ordinal": 2, "length": "5 years", "status": "superseded", "optionType": "REN", "windowStart": "2017-09-01", "suiteId": "61", "squareFeet": 30000, "termMonths": 60, "ratePSF": 16.15, "rateDescriptor": "PSF", "expireDate": "2022-08-31", "rent": "$484,500/yr", "note": "Original option rent; OfficeMax appears to have restructured to a downsized short-term occupancy rather than continue on this track.", "cite": { "doc": "Lease Art. 13" } },
+    { "number": "3", "ordinal": 3, "length": "5 years", "status": "superseded", "optionType": "REN", "windowStart": "2022-09-01", "suiteId": "61", "squareFeet": 30000, "termMonths": 60, "ratePSF": 17.65, "rateDescriptor": "PSF", "expireDate": "2027-08-31", "rent": "$529,500/yr", "cite": { "doc": "Lease Art. 13" } },
+    { "number": "4", "ordinal": 4, "length": "5 years", "status": "superseded", "optionType": "REN", "windowStart": "2027-09-01", "suiteId": "61", "squareFeet": 30000, "termMonths": 60, "ratePSF": 19.65, "rateDescriptor": "PSF", "expireDate": "2032-08-31", "rent": "$589,500/yr", "cite": { "doc": "Lease Art. 13" } }
+  ],
+  "optionNotes": "Original lease: four 5-year options at $15.15 / $16.15 / $17.65 / $19.65/SF (on the 30,000 SF basis), exercisable on 6 months' notice, plus a 'January-31' fractional-period extension option (§13(b)). Only the first option (2012–2017) is documented as exercised. OfficeMax subsequently downsized to ~16,724 SF and is in possession on a short-term basis at $19.50/SF (1-year term 10/1/2025–9/30/2026 per the rent roll) — so the original $16.15/$17.65/$19.65 option track no longer governs. The governing short-term/downsizing document is not in the folder.",
+  "rentSchedule": [
+    { "incomeCategory": "RNT", "periodStart": "2025-10-01", "periodEnd": "2026-09-30", "amountPerSF": 19.50, "annualRent": 326118.00, "monthlyRent": 27176.50, "note": "current — short-term occupancy on ~16,724 SF (per the April-2026 rent roll). Governing short-term document not in folder.", "cite": { "doc": "rent roll" } }
+  ],
+  "percentageRent": { "value": "None in the base lease (minimum rent only). Any percentage rent under the current short-term arrangement is unknown (document not available).", "cite": { "doc": "Lease Art. 3" } },
+  "securityDeposit": { "value": "None noted", "cite": { "doc": "Lease" } },
+  "exclusives": [
+    { "description": "OFFICE-SUPPLY exclusive (Lease, Prohibited Uses): no other Center space may be used for the sale of office/home-office/school/business products, computers and computer products, office supplies/equipment, office furniture, or office/home-office electronics (e.g. Office Depot, Staples, Workplace), or as a copy center / 'Kinko' operation. Carve-outs: incidental use ≤ the lesser of 2,000 SF or 10% of a user's floor (18% if the store is ≤2,000 SF), and ≤5,000 SF in the aggregate across the Center. (Whether this exclusive survives under the current short-term arrangement is unconfirmed — document not available.)", "cite": { "doc": "Lease", "section": "Prohibited Uses (a)–(c)" } }
+  ],
+  "coTenancy": { "value": "OfficeMax holds its OWN co-tenancy (Article 26, as replaced by the 1998 First Amendment): King Soopers OR one additional single-user retail tenant occupying >30,000 SF (the 'Major Tenants'), or permitted Replacement Tenants, must be open and operating at all times. If both Major Tenants AND the Replacement Tenants go dark (a 'Cotenancy Event'), OfficeMax may abate minimum rent and/or terminate. King Soopers is operating, so this co-tenancy is currently satisfied. (Likely modified/waived under the current short-term arrangement — unconfirmed.)", "cite": { "doc": "First Amendment §2 (replaces Art. 26)" } },
+  "camTax": { "value": "Real Estate Taxes (Art. 5): the Premises are not separately assessed, so Tenant pays a proportionate share of the Shopping Center's ad valorem taxes (excluding development/on-site special assessments). CAM (Art. 14): Tenant pays its proportionate share of common-area costs; Landlord maintains the roof, structure, exterior/demising walls, foundation and canopies. (Current short-term CAM/tax basis unconfirmed — document not available.)", "cite": { "doc": "Lease Art. 5, 14" } },
+  "governingLaw": "Colorado",
+  "leaseNotes": [
+    { "code": "SECDEP", "label": "Security Deposit", "value": "None noted" },
+    { "code": "USE", "label": "Use Clause", "value": "Retail (office-supply superstore) plus general retail. Subject to the use restrictions added by the 1998 First Amendment: no athletic-footwear sales exceeding 15% of gross sales (while a Just For Feet lease is in effect); no home-furnishings/'Protected Products' beyond 1,000 SF or 5% (while a HomePlace lease is in effect); and no grocery/bakery/meat/seafood/pharmacy/deli/supermarket use (while the King Soopers lease is in effect).", "cite": { "doc": "Lease; First Amendment §1 (Art. 21)" } },
+    { "code": "RADIUS", "label": "Radius", "value": "None noted" },
+    { "code": "LL RADIUS", "label": "LL Radius", "value": "None noted" },
+    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Office-supply exclusive: no other Center space for office/school/business products, computers, office supplies/equipment, office furniture, office electronics, or a copy/Kinko center (e.g. Office Depot, Staples). Incidental carve-out ≤2,000 SF or 10% (18% if ≤2,000 SF), ≤5,000 SF Center-wide aggregate.", "cite": { "doc": "Lease", "section": "Prohibited Uses (a)–(c)" } },
+    { "code": "COTENCY", "label": "Co-tenancy", "value": "OfficeMax's own co-tenancy (Art. 26 per 1998 Amendment): King Soopers + one 30,000+ SF major tenant (or Replacement Tenants) must operate; a 'Cotenancy Event' (both dark) lets OfficeMax abate rent and/or terminate. Currently satisfied (King Soopers operating).", "cite": { "doc": "First Amendment §2 (Art. 26)" } },
+    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Per the base lease casualty/condemnation provisions; current short-term arrangement likely governs early exit (document not available)." },
+    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Co-tenancy termination on a Cotenancy Event (Art. 26); plus casualty/condemnation rights." },
+    { "code": "NBNC", "label": "LL Restrictions", "value": "Landlord bound by the office-supply exclusive (above) and the Center's recorded Declaration of Restrictions and Reciprocal Easement Agreement(s) (REAs, Exhibit F).", "cite": { "doc": "Lease Art. 1; Prohibited Uses" } },
+    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "OfficeMax must honor the Just For Feet (athletic footwear ≤15%), HomePlace ('Protected Products' ≤1,000 SF/5%) and King Soopers (grocery/pharmacy) exclusives, plus the REAs / Declaration of Restrictions.", "cite": { "doc": "First Amendment §1 (Art. 21)" } },
+    { "code": "CAM", "label": "CAM Method", "value": "Pro-rata proportionate share of common-area costs (Art. 14). Landlord maintains roof/structure/exterior/foundation/canopies. Current short-term CAM basis unconfirmed.", "cite": { "doc": "Lease", "section": "Art. 14" } },
+    { "code": "RETX", "label": "Tax Method", "value": "Pro-rata share of Center ad valorem taxes (Premises not separately assessed); excludes development/on-site special assessments (Art. 5).", "cite": { "doc": "Lease", "section": "Art. 5" } },
+    { "code": "INS", "label": "Insurance Method", "value": "Per the base lease insurance provisions (proportionate share); current short-term basis unconfirmed.", "cite": { "doc": "Lease" } },
+    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Per the base lease assignment provisions (not separately extracted in this pass).", "cite": { "doc": "Lease" } },
+    { "code": "ALTERTN", "label": "Alterations", "value": "Per the base lease; Landlord maintains structure/roof/exterior (Art. 14).", "cite": { "doc": "Lease", "section": "Art. 14" } },
+    { "code": "OPC", "label": "Operating Covenant", "value": "Office-supply superstore operation contemplated; co-tenancy (Art. 26) presumes a Major Tenant operating. (Current short-term operating terms unconfirmed.)", "cite": { "doc": "Lease; First Amendment" } },
+    { "code": "GO DARK", "label": "Go Dark Option", "value": "Not separately extracted from the base lease; the current short-term arrangement (document not available) likely governs go-dark/early exit." },
+    { "code": "DEFAULT", "label": "Default", "value": "Per the base lease default provisions (not separately extracted in this pass)." },
+    { "code": "GUARANT", "label": "Guaranty", "value": "None noted." },
+    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "Center governed by recorded Declaration of Restrictions and Reciprocal Easement Agreement(s) (Exhibit F); outparcels per the REAs.", "cite": { "doc": "Lease", "section": "Art. 1" } },
+    { "code": "PURCHSE", "label": "Purchase Option / ROFR", "value": "None noted in the base lease." },
+    { "code": "HOLDOVR", "label": "Holdover", "value": "Per the base lease general provisions (not separately extracted); the tenant is effectively in a short-term/holdover posture now." },
+    { "code": "RELOCAT", "label": "Relocation", "value": "None noted." },
+    { "code": "UTILITY", "label": "Utilities", "value": "Per the base lease (separately metered / tenant-paid); current short-term basis unconfirmed.", "cite": { "doc": "Lease" } },
+    { "code": "HVAC", "label": "HVAC / Maintenance", "value": "Landlord maintains roof, structure, exterior/demising walls, foundation and canopies (Art. 14); Tenant maintains the interior/its HVAC.", "cite": { "doc": "Lease", "section": "Art. 14" } },
+    { "code": "PYLON", "label": "Pylon / Signage", "value": "OfficeMax historically held monument/pylon panel rights (it is referenced as a panel holder in other tenants' leases). Specific signage terms per the base lease.", "cite": { "doc": "Lease" } },
+    { "code": "SUBORD", "label": "Subordination / SNDA", "value": "Per the base lease subordination/non-disturbance provisions (not separately extracted).", "cite": { "doc": "Lease" } },
+    { "code": "ESTOPPEL", "label": "Estoppel", "value": "Per the base lease general provisions." }
+  ],
+  "flags": [
+    { "severity": "watch", "issue": "Current short-term occupancy document is NOT in the folder — terms taken from the rent roll", "detail": "OfficeMax/Office Depot is in possession on a SHORT-TERM basis (per Eric), and the April-2026 rent roll shows ~16,724 SF on a one-year term 10/1/2025–9/30/2026 at $19.50/SF ($326,118/yr). The folder only contains the 1996 lease, 1998 amendment and the 2012 Confirmation of Option — there is NO document that (a) downsized the premises from ~30,000 SF to ~16,724 SF or (b) set the current short-term rent/term. Per the document-completeness rules, I'm flagging this rather than assuming: please provide the governing short-term agreement (extension/holdover/downsizing letter) so the abstract can be made source-verified. The original lease economics and exclusives above may be partly superseded by that document." },
+    { "severity": "watch", "issue": "Bearing on Michaels' co-tenancy — OfficeMax is a thin/temporary third anchor", "detail": "OfficeMax is one of Michaels' three named co-tenancy anchors (King Soopers, OfficeMax, PetSmart). Because OfficeMax itself is a named 'Other Required Lessee', its short-term operation likely keeps Michaels at 3 of 3 FOR NOW — but the occupancy is short-term (ending ~9/30/2026 on the roll) and downsized (~16,724 SF, below the 21,000 SF / 70%-of-OfficeMax threshold that a REPLACEMENT tenant would need). When OfficeMax departs, Michaels falls to 2 of 3 (King Soopers + PetSmart) with no cushion. Worth tracking alongside the Michaels co-tenancy flag." }
+  ],
+  "narrative": "OfficeMax (OfficeMax North America, Inc., f/k/a OfficeMax, Inc.; store #0416 — now part of Office Depot/The ODP Corporation) occupies Unit 61 at University Hills, Denver under a 7/19/1996 lease for ~30,000 SF. The original deal was a 15-year term (~9/1/1997–8/31/2012) at $12.65 → $14.15/SF, with four 5-year options ($15.15 / $16.15 / $17.65 / $19.65/SF); OfficeMax exercised the first option (to 8/31/2017). The lease carries an office-supply exclusive and gives OfficeMax its own co-tenancy (King Soopers + one 30,000+ SF major tenant), while binding OfficeMax to the King Soopers, HomePlace and Just For Feet exclusives. OfficeMax has since left that option track and downsized: it is in possession on a SHORT-TERM basis of ~16,724 SF, which the April-2026 rent roll reflects as a one-year term (10/1/2025–9/30/2026) at $19.50/SF ($326,118/yr). The document that downsized the premises and set those short-term terms is not in the lease folder — flagged for Eric to provide. Practically, OfficeMax's short-term presence currently keeps Michaels' co-tenancy at 3 of 3, but it is temporary; on its departure Michaels drops to 2 of 3 with no cushion.",
+  "sourceDocuments": [
+    { "name": "Lease", "date": "1996-07-19", "type": "lease" },
+    { "name": "Memorandum of Lease", "date": "1996-07-19", "type": "lease" },
+    { "name": "First Amendment to Lease", "date": "1998-10-02", "type": "amendment" },
+    { "name": "Confirmation of Option (renewal)", "date": "2012-02-24", "type": "letter" }
+  ]
+}
