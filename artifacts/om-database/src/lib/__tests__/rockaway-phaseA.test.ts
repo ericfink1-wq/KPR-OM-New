@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LeaseAbstract } from "../idb";
 import { rockawayOmDeal } from "./fixtures/rockaway-om";
 import { resolveTenantRisk, computeExposure, buildAnchorDependencyGraph, buildDiligenceList } from "../leaseRisk";
 
@@ -73,3 +74,37 @@ it("PHASE A REPORT", () => {
   console.log(lines.join("\n"));
   expect(true).toBe(true);
 });
+
+// Phase B mitigation — an executed Ulta abstract (Third Amendment removed Dick's)
+// overrides the OM clause, flips it verified, and de-links Ulta from the Dick's
+// scenario. This is exactly what the deal page's Lease Risk panel renders.
+describe("Rockaway Phase B — Ulta abstract mitigates the Dick's exposure", () => {
+  const ultaAbstract: LeaseAbstract = {
+    tenantName: "Ulta",
+    coTenancy: [{
+      type: "operating",
+      // Third Amendment: Dick's DELETED — now Target dark OR inline occupancy < 75%.
+      triggerLogic: { operator: "OR", conditions: [
+        { type: "named_anchor_dark", anchor: "Target" },
+        { type: "occupancy_threshold", scope: "inline <15000 SF", direction: "below", pct: 75 },
+      ] },
+      remedy: { mechanism: "percent_rent_reduction", value: 50 },
+      sourceDocument: "Ulta Third Amendment (executed)", verifiedAgainstExecutedDoc: true,
+    }],
+  };
+
+  it("Ulta drops out of the Dick's scenario; Tier-1 falls $514,403 → $156,410", () => {
+    const before = computeExposure(resolveTenantRisk(rockawayOmDeal), "Dick's Sporting Goods");
+    expect(before.tier1Rent).toBe(514403);
+
+    const after = computeExposure(resolveTenantRisk(rockawayOmDeal, [ultaAbstract]), "Dick's Sporting Goods");
+    expect(after.clauses.find((c) => c.tenant === "Ulta")).toBeUndefined(); // no longer linked to Dick's
+    expect(after.tier1Rent).toBe(156410); // only Carter's remains
+  });
+
+  it("the resolved Ulta clause is now verified against the executed lease", () => {
+    const ulta = resolveTenantRisk(rockawayOmDeal, [ultaAbstract]).find((r) => r.tenant === "Ulta");
+    expect(ulta?.coTenancy[0].verifiedAgainstExecutedDoc).toBe(true);
+    expect(ulta?.hasUnverified).toBe(false);
+  });
+})
