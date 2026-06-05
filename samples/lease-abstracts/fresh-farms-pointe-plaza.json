@@ -1,75 +1,151 @@
 {
   "tenantName": "Fresh Farms International Market",
-  "dba": "Fresh Farms International Market (tenant of record: Niles Grand LLC)",
+  "dba": "Fresh Farms International Market",
   "status": "final",
   "asOf": "2026-06-05",
+  "center": "Pointe Plaza",
+  "suite": "5740",
+  "mriNumber": "-",
+  "premisesGLA": 58000,
   "currentSF": 58000,
   "sizeHistory": [
-    { "sf": "58,000 (deemed 58,000–62,000 for rent/pro-rata; building ~60,481)", "asOf": "2000-03-15", "cite": { "doc": "Supplement to Lease", "section": "§3", "page": "1" } }
+    { "sf": 58000, "asOf": "2000-03-15", "cite": { "doc": "Supplement to Lease", "section": "3", "page": "1" } }
+  ],
+  "documents": [
+    { "name": "Lease Agreement", "date": "1999-02-11", "type": "lease", "description": "Shopping Center Lease (Supervalu Holdings / TDC Niles)" },
+    { "name": "Guaranty Agreement", "date": "1999-02-11", "type": "guaranty", "description": "Supervalu Inc. guaranty of Tenant's obligations" },
+    { "name": "Supplement to Lease", "date": "2000-03-15", "type": "amendment", "description": "Confirms the Lease Dates and certain other terms of the Lease" },
+    { "name": "Letter", "date": "2006-01-23", "type": "letter", "description": "Supervalu decided to sell 26 Cub Foods stores to Cerberus Capital Management" },
+    { "name": "Letter", "date": "2006-02-09", "type": "letter", "description": "Specifies the assignment of Lease to Hawk Operations, LLC" },
+    { "name": "Assignment and Assumption of Lease", "date": "2007-01-29", "type": "assignment", "description": "Assignment of Lease to MS-Grand Niles" },
+    { "name": "Assignment and Assumption of Lease", "date": "2008-03-04", "type": "assignment", "description": "Assignment of Lease to Niles Grand LLC" },
+    { "name": "Option Letter", "date": "2019-03-01", "type": "option", "description": "Exercise of first option, 01/01/2021 to 12/31/2025" },
+    { "name": "Letter", "date": "2022-02-01", "type": "waiver", "description": "Waiver of the Use restriction (Crumbl Cookies)" },
+    { "name": "Storage License Agreement", "date": "2023-11-17", "type": "license", "description": "Temporary license of 5660B, 15,456 SF" },
+    { "name": "Letter", "date": "2025-03-05", "type": "option", "description": "Extends 2nd renewal option, 01/01/2026 to 12/31/2030" }
   ],
   "tenantChain": [
-    { "entity": "SUPERVALU Holdings, Inc. (Missouri corp; d/b/a Cub Foods)", "role": "tenant", "effectiveDate": "1999-02-11", "instrument": "Shopping Center Lease", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "intro", "page": "1" } },
-    { "entity": "Hawk Operations LLC (Delaware; Cerberus Capital)", "role": "tenant", "effectiveDate": "2006-01-22", "instrument": "Assignment & Assumption (Supervalu → Hawk)", "cite": { "doc": "Cub Foods Assignment to Hawk Operations", "section": "§2", "page": "2" } },
-    { "entity": "MS-Grand Niles, Inc. (Illinois; Grand Mart / Kang)", "role": "tenant", "effectiveDate": "2007-01-29", "instrument": "Assignment & Assumption (Hawk → MS-Grand Niles)", "cite": { "doc": "Cub Foods Notice of Assignment 1-29-07", "section": "§1", "page": "1" } },
-    { "entity": "Niles Grand LLC (Illinois; Svigos, d/b/a Fresh Farms)", "role": "tenant", "effectiveDate": "2008-03-04", "instrument": "Assignment & Assumption (MS-Grand → Niles Grand)", "cite": { "doc": "Grand Mart Assignment to Niles Grand LLC", "section": "§1", "page": "1" } }
+    { "entity": "SUPERVALU Holdings, Inc. (Missouri; d/b/a Cub Foods)", "role": "tenant", "effectiveDate": "1999-02-11", "instrument": "Shopping Center Lease", "cite": { "doc": "Cub Foods Lease", "section": "intro", "page": "1" } },
+    { "entity": "Hawk Operations LLC (Delaware; Cerberus Capital)", "role": "tenant", "effectiveDate": "2006-01-22", "instrument": "Assignment & Assumption", "cite": { "doc": "Assignment to Hawk Operations", "section": "2", "page": "2" } },
+    { "entity": "MS-Grand Niles, Inc. (Illinois; Grand Mart / Kang)", "role": "tenant", "effectiveDate": "2007-01-29", "instrument": "Assignment & Assumption", "cite": { "doc": "Assignment to MS-Grand Niles", "section": "1", "page": "1" } },
+    { "entity": "Niles Grand LLC (Illinois; Svigos, d/b/a Fresh Farms)", "role": "tenant", "effectiveDate": "2008-03-04", "instrument": "Assignment & Assumption", "cite": { "doc": "Assignment to Niles Grand LLC", "section": "1", "page": "1" } }
   ],
   "landlordChain": [
-    { "entity": "TDC Niles, LLC (Tucker Development Corp.)", "role": "landlord", "effectiveDate": "1999-02-11", "instrument": "Shopping Center Lease", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "intro", "page": "1" } },
-    { "entity": "TDC Ocean Pointe LLC (successor to TDC Niles)", "role": "landlord", "effectiveDate": "2008-03-04", "instrument": "named as Landlord in 2008 assignment recitals", "cite": { "doc": "Grand Mart Assignment to Niles Grand LLC", "section": "Recital A", "page": "1" } },
-    { "entity": "TMT Pointe Plaza, Inc. (Delaware; c/o Stockbridge Capital)", "role": "landlord", "effectiveDate": "2022-02-01", "instrument": "named as Landlord in Crumbl waiver", "cite": { "doc": "Fresh Farms waiver ltr for Crumbl", "section": "intro", "page": "1" } }
+    { "entity": "TDC Niles, LLC (Tucker Development Corp.)", "role": "landlord", "effectiveDate": "1999-02-11", "instrument": "Shopping Center Lease", "cite": { "doc": "Cub Foods Lease", "section": "intro", "page": "1" } },
+    { "entity": "TDC Ocean Pointe LLC (successor to TDC Niles)", "role": "landlord", "effectiveDate": "2008-03-04", "cite": { "doc": "Assignment to Niles Grand LLC", "section": "Recital A", "page": "1" } },
+    { "entity": "TMT Pointe Plaza, Inc. (c/o Stockbridge Capital)", "role": "landlord", "effectiveDate": "2022-02-01", "cite": { "doc": "Crumbl waiver letter", "section": "intro", "page": "1" } }
   ],
   "guaranties": [
-    { "guarantor": "SUPERVALU Inc. (Delaware corp; parent of original tenant)", "scope": "Absolute, unconditional guaranty of payment and performance of ALL Tenant obligations (payment, not collection); survives amendments and assignments", "cap": null, "inForce": null, "cite": { "doc": "SUPERVALU Inc. Guaranty Agreement", "section": "¶¶1, 4", "page": "1" } },
-    { "guarantor": "Min Sik Kang & Man Sun Kang (personal)", "scope": "Personal guaranty of full performance of Tenant obligations, required as a condition of the 2007 assignment to MS-Grand Niles", "cap": null, "inForce": null, "cite": { "doc": "Cub Foods Notice of Assignment 1-29-07", "section": "§5", "page": "2" } },
-    { "guarantor": "John & Anastasia Svigos (personal)", "scope": "Personal guaranty of full performance of Tenant obligations, required as a condition of the 2008 assignment to Niles Grand LLC; Anastasia's obligation limited to her interest in property jointly held with John", "cap": "Anastasia limited to jointly-held property", "inForce": true, "cite": { "doc": "Grand Mart Assignment to Niles Grand LLC", "section": "§5", "page": "2" } }
+    { "guarantor": "SUPERVALU Inc. (Delaware; parent of original tenant)", "scope": "Absolute, unconditional guaranty of payment and performance of all Tenant obligations (payment, not collection); survives amendments and assignments", "cap": null, "inForce": null, "cite": { "doc": "Guaranty Agreement", "section": "1, 4", "page": "1" } },
+    { "guarantor": "Min Sik Kang & Man Sun Kang (personal)", "scope": "Personal guaranty required as a condition of the 2007 assignment to MS-Grand Niles", "cap": null, "inForce": null, "cite": { "doc": "Assignment to MS-Grand Niles", "section": "5", "page": "2" } },
+    { "guarantor": "John & Anastasia Svigos (personal)", "scope": "Personal guaranty required as a condition of the 2008 assignment to Niles Grand LLC; Anastasia limited to jointly-held property", "cap": "Anastasia limited to jointly-held property", "inForce": true, "cite": { "doc": "Assignment to Niles Grand LLC", "section": "5", "page": "2" } }
+  ],
+  "dates": {
+    "leaseDate": { "value": "1999-02-11", "cite": { "doc": "Cub Foods Lease" } },
+    "openDate": { "value": "Not Provided" },
+    "leaseCommencement": { "value": "1999-02-11", "cite": { "doc": "Supplement to Lease", "section": "1" } },
+    "cancelDate": { "value": "Not Provided" },
+    "leaseExpiration": { "value": "2030-12-31", "cite": { "doc": "Letter dated 03/05/2025" } },
+    "rentStartDate": { "value": "2000-02-23", "cite": { "doc": "Supplement to Lease", "section": "2" } }
+  },
+  "deposit": {
+    "cashDeposit": "None",
+    "nonCashDeposit": "None",
+    "interestBearing": "N/A",
+    "interestStartDate": "None",
+    "lastInterestEarnedDate": "None",
+    "vendorId": "None",
+    "insuranceCertExp": "Not Provided"
+  },
+  "noticeAddresses": [
+    { "type": "Legal (Tenant)", "name": "Niles Grand LLC", "attn": "Dino Svigos and John Svigos", "address1": "5740 W Touhy", "city": "Niles", "state": "IL", "zip": "60714", "cite": { "doc": "Letter dated 03/05/2025" } },
+    { "type": "Guarantor", "name": "Supervalu Inc.", "attn": "Legal Department", "address1": "11840 Valley View Road", "city": "Eden Prairie", "state": "MN", "zip": "55344", "cite": { "doc": "Guaranty Agreement", "section": "9" } }
   ],
   "commencement": "2000-02-23",
   "expiration": "2030-12-31",
-  "term": { "value": "Initial term: 20 Lease Years from the Rent Commencement Date (2/23/2000) → expired 12/31/2020. Four 5-year options; first two exercised, so the lease currently runs through 12/31/2030.", "cite": { "doc": "Supplement to Lease", "section": "§§1–2", "page": "1" } },
+  "term": { "value": "Initial 20 Lease Years from the 2/23/2000 rent commencement (expired 12/31/2020). Four 5-year options; first two exercised, so the lease currently runs through 12/31/2030.", "cite": { "doc": "Supplement to Lease", "section": "1, 2" } },
   "options": [
-    { "ordinal": 1, "length": "5 years", "status": "exercised", "windowStart": "2021-01-01", "windowEnd": "2025-12-31", "rent": "$812,000/yr", "exercisedDate": "2019-03-01", "exerciseConditions": "270-day notice (§3.2); §18(c) requires SUPERVALU Holdings' signature; 2007/2008 assignments add a >$25M tangible-net-worth test while Supervalu remains contingently liable", "cite": { "doc": "Club Foods Notice of Exercise of Option 03062019", "section": "ref §3.2", "page": "1" } },
-    { "ordinal": 2, "length": "5 years", "status": "exercised", "windowStart": "2026-01-01", "windowEnd": "2030-12-31", "rent": "$841,000/yr", "exercisedDate": "2025-03-08", "exerciseConditions": "Same as 1st option", "cite": { "doc": "Option to Extend 3-5-25 (Mid-America)", "section": "ref §3.2", "page": "1" } },
-    { "ordinal": 3, "length": "5 years", "status": "available", "windowStart": "2031-01-01", "windowEnd": "2035-12-31", "rent": "$870,000/yr", "exerciseConditions": "270-day notice (§3.2)", "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } },
-    { "ordinal": 4, "length": "5 years", "status": "available", "windowStart": "2036-01-01", "windowEnd": "2040-12-31", "rent": "$899,000/yr", "exerciseConditions": "270-day notice (§3.2)", "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } }
+    { "number": "3rd", "ordinal": 3, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2031-01-01", "noticeDate": "2030-04-05", "suiteId": "5740", "squareFeet": 58000, "termMonths": 60, "ratePSF": 15.00, "rateDescriptor": "PSF", "expireDate": "2035-12-31", "windowEnd": "2035-12-31", "rent": "$870,000/yr", "cite": { "doc": "Supplement to Lease", "section": "4" } },
+    { "number": "4th", "ordinal": 4, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2036-01-01", "noticeDate": "2035-04-05", "suiteId": "5740", "squareFeet": 58000, "termMonths": 60, "ratePSF": 15.50, "rateDescriptor": "PSF", "expireDate": "2040-12-31", "windowEnd": "2040-12-31", "rent": "$899,000/yr", "cite": { "doc": "Cub Foods Lease", "section": "3.2" } }
   ],
+  "optionNotes": "2 – 5-Yr options, by providing written notice at least 270 days in advance of the commencement date of the applicable extension period. (1st option exercised 3/1/2019 → 1/1/2021–12/31/2025; 2nd option exercised 3/5/2025 → 1/1/2026–12/31/2030.)",
   "rentSchedule": [
-    { "periodStart": "2000-02-23", "periodEnd": "2010-12-31", "annualRent": 696000, "monthlyRent": 58000, "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } },
-    { "periodStart": "2011-01-01", "periodEnd": "2020-12-31", "annualRent": 783000, "monthlyRent": 65250, "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } },
-    { "periodStart": "2021-01-01", "periodEnd": "2025-12-31", "annualRent": 812000, "monthlyRent": 67666.67, "note": "1st option", "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } },
-    { "periodStart": "2026-01-01", "periodEnd": "2030-12-31", "annualRent": 841000, "monthlyRent": 70083.33, "note": "2nd option (current)", "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } },
-    { "periodStart": "2031-01-01", "periodEnd": "2035-12-31", "annualRent": 870000, "monthlyRent": 72500, "note": "3rd option", "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } },
-    { "periodStart": "2036-01-01", "periodEnd": "2040-12-31", "annualRent": 899000, "monthlyRent": 74916.67, "note": "4th option", "cite": { "doc": "Supplement to Lease", "section": "§4", "page": "1" } }
+    { "incomeCategory": "RNT", "periodStart": "2000-02-23", "periodEnd": "2010-12-31", "amountPerSF": 12.00, "annualRent": 696000, "monthlyRent": 58000, "cite": { "doc": "Supplement to Lease", "section": "4" } },
+    { "incomeCategory": "RNT", "periodStart": "2011-01-01", "periodEnd": "2020-12-31", "amountPerSF": 13.50, "annualRent": 783000, "monthlyRent": 65250, "cite": { "doc": "Supplement to Lease", "section": "4" } },
+    { "incomeCategory": "RNT", "periodStart": "2021-01-01", "periodEnd": "2025-12-31", "amountPerSF": 14.00, "annualRent": 812000, "monthlyRent": 67666.67, "note": "1st option", "cite": { "doc": "Supplement to Lease", "section": "4" } },
+    { "incomeCategory": "RNT", "periodStart": "2026-01-01", "periodEnd": "2030-12-31", "amountPerSF": 14.50, "annualRent": 841000, "monthlyRent": 70083.33, "note": "2nd option (current)", "cite": { "doc": "Supplement to Lease", "section": "4" } },
+    { "incomeCategory": "RNT", "periodStart": "2031-01-01", "periodEnd": "2035-12-31", "amountPerSF": 15.00, "annualRent": 870000, "monthlyRent": 72500, "note": "Option 3", "cite": { "doc": "Cub Foods Lease", "section": "10.1" } },
+    { "incomeCategory": "RNT", "periodStart": "2036-01-01", "periodEnd": "2040-12-31", "amountPerSF": 15.50, "annualRent": 899000, "monthlyRent": 74916.67, "note": "Option 4", "cite": { "doc": "Cub Foods Lease", "section": "10.1" } }
   ],
-  "percentageRent": { "value": "1% of Gross Sales above the Breakpoint (Breakpoint = 100× the annual Minimum Rent), reduced by Tenant's Pro-Rata Share of CAM + Taxes. Paid annually within 120 days of Lease-Year end.", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§10", "page": "17 of 49" } },
-  "securityDeposit": { "value": "None", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§10", "page": "17 of 49" } },
+  "percentageRent": { "value": "1% of Gross Sales over a natural breakpoint (100× minimum rent), paid within 120 days after each Lease Year end.", "cite": { "doc": "Cub Foods Lease", "section": "3.1, 10.2, Exh G" } },
+  "percentageRentDetail": {
+    "summary": "1% of Gross Sales above a natural breakpoint",
+    "reportingFrequency": "Annual (within 90 days)",
+    "naturalBreakpoint": true,
+    "inLieuOfMinimum": false,
+    "salesYearEnd": "12/31",
+    "paymentTiming": "Within 120 days after the end of each Lease Year",
+    "breakpoints": [
+      { "startDate": "2000-02-23", "percentage": "1%", "breakpoint": 69600000 },
+      { "startDate": "2011-01-01", "percentage": "1%", "breakpoint": 78300000 },
+      { "startDate": "2021-01-01", "percentage": "1%", "breakpoint": 81200000 },
+      { "startDate": "2026-01-01", "percentage": "1%", "breakpoint": 84100000 }
+    ],
+    "cite": { "doc": "Cub Foods Lease", "section": "3.1, 10.2, Exh G" }
+  },
+  "securityDeposit": { "value": "None", "cite": { "doc": "Cub Foods Lease", "section": "10" } },
   "exclusives": [
-    { "description": "Food exclusive: no other store/department in the center for the sale of food, groceries, fruit, produce, dairy, vegetables, bakery, meats, or deli. Carve-outs: (a) incidental bakery up to 30% of an occupant's sales; (b) 'Retail H' while the 60-year Walgreens lease is in effect.", "modifications": [ { "change": "Waived to permit a Crumbl Cookies (~2,000 SF) to sell cookies + ancillary ice cream", "date": "2022-02-01", "cite": { "doc": "Fresh Farms waiver ltr for Crumbl", "section": "ref §9.3", "page": "1" } } ], "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§9.3.1", "page": "19 of 49" } },
-    { "description": "Restaurant exclusive: no restaurant within 250 ft of the Building (Outlot A / Shops exceptions)", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§9.3.2", "page": "19 of 49" } },
-    { "description": "Liquor-store exclusive: no off-premises liquor store (Walgreens 'Retail H' exception)", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§9.3.3", "page": "19 of 49" } },
-    { "description": "Pharmacy exclusive: no drug store / pharmacy (Walgreens 'Retail H' exception)", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§9.3.4", "page": "19 of 49" } }
+    { "description": "Food/grocery/produce/dairy/bakery/meat/deli exclusive; restaurant within 250 ft; liquor store; and pharmacy — each with the Walgreens 'Retail H' carve-out and a 30% incidental-bakery allowance.", "modifications": [ { "change": "Waived to permit a Crumbl Cookies (~2,000 SF) to sell cookies + ancillary ice cream", "date": "2022-02-01", "cite": { "doc": "Crumbl waiver letter" } } ], "cite": { "doc": "Cub Foods Lease", "section": "9.3, 9.5" } }
   ],
-  "goDark": { "value": "Permitted — NOT a default. The Premises 'Go Dark' after 365 consecutive days with no business (excluding casualty/repair/remodel/force majeure). Landlord's ONLY remedy: within 365 days, notice to terminate unless reopened within 180 days; if it terminates, Landlord must PAY Tenant the unamortized cost of leasehold improvements/FF&E (prorated by remaining term). Miss the 365-day window and the termination right lapses (revives on the next dark).", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§9.6", "page": "20 of 49" } },
-  "assignment": { "value": "Tenant may assign or sublet WITHOUT Landlord consent (≤ 2 units; a non-supermarket assignee may not violate an existing >20,000 SF occupant's exclusive). Landlord RECAPTURE applies only if the whole Premises is assigned/subleased to a 'Nonsupermarket Operator' — Landlord then has a 30-day election to terminate. §18(c): no option exercise is effective unless signed by SUPERVALU Holdings, Inc.; no assignment releases Tenant or any guarantor.", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§18", "page": "40 of 49" } },
-  "camTax": { "value": "Tenant pays Pro-Rata Share of CAM and Taxes. CAM = direct out-of-pocket only, with capped categories and broad exclusions; arm's-length contracts terminable on 30 days; competitive bids every 2 years for sweeping/snow/landscaping; Tenant audit rights. Taxes = Pro-Rata Share of general real estate taxes + special-assessment installments.", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§§11–12, 16.3", "page": "18–22 of 49" } },
-  "defaultTerms": { "value": "Monetary default: 10 business days after Landlord's notice. Non-monetary: 30 days after notice (extended if not reasonably curable and Tenant is diligently curing). No implied obligations — Tenant is only in default for an uncured breach of an express provision.", "cite": { "doc": "Cub Foods (Supervalu Holdings) Lease", "section": "§19.1", "page": "39 of 49" } },
+  "goDark": { "value": "Permitted — not a default. 'Go Dark' = 365 consecutive days with no business. Landlord's only remedy: within 365 days, notice to terminate unless reopened within 180 days; if it terminates, Landlord pays Tenant the unamortized cost of improvements/FF&E (prorated by remaining term).", "cite": { "doc": "Cub Foods Lease", "section": "9.6" } },
+  "assignment": { "value": "Tenant may assign/sublet without Landlord consent (≤2 units; non-supermarket assignee may not violate an existing >20,000 SF exclusive). Landlord recapture only if the whole premises is assigned/subleased to a Nonsupermarket Operator (30-day termination election). §18(c): option exercises require SUPERVALU Holdings' signature; no assignment releases Tenant or any guarantor.", "cite": { "doc": "Cub Foods Lease", "section": "18" } },
+  "camTax": { "value": "CAM: Pro-Rata Share (Building Area ÷ all S/C buildings, denominator ≥ Building Area + 50,000 SF; Wal-Mart Parcel & Outlots excluded); 5% admin fee, management fee & capital excluded; monthly estimate + annual reconciliation; audit right (overstatement >3% → Landlord pays audit). Taxes: Pro-Rata Share with construction/TIF and Wal-Mart/Outlot exclusions.", "cite": { "doc": "Cub Foods Lease", "section": "11, 12, 16.3" } },
+  "defaultTerms": { "value": "Monetary default: 10 business days after notice. Non-monetary: 30 days after notice (extended if not reasonably curable). No implied obligations.", "cite": { "doc": "Cub Foods Lease", "section": "19.1" } },
   "governingLaw": "Illinois",
-  "flags": [
-    { "severity": "defect", "issue": "Option exercises may require SUPERVALU Holdings' signature (§18(c))", "detail": "§18(c) says no extension-option exercise is effective unless signed by SUPERVALU Holdings, Inc. The 2019 exercise letter only cc'd Supervalu and the 2025 exercise was signed by Niles Grand/Svigos. Confirm Supervalu countersigned both, or the exercises could be challengeable." },
-    { "severity": "watch", "issue": "Assignment-embedded $25M net-worth test on option exercises", "detail": "The 2007 and 2008 assignment instruments bar the assignee from exercising any option, while Supervalu remains contingently liable, unless it shows >$25M tangible net worth (audited/certified) and exercises within 90 days of the deadline. Confirm this was satisfied for the 2019 and 2025 exercises." },
-    { "severity": "info", "issue": "Current force of the SUPERVALU Inc. guaranty is uncertain", "detail": "The Supervalu corporate guaranty turned on Supervalu remaining in the tenant chain; after the 2006 Cerberus sale its continuing force should be verified. The Kang (2007) and Svigos (2008) personal guaranties remain the live credit support." }
+  "leaseNotes": [
+    { "code": "SECDEP", "label": "Security Deposit", "value": "None", "cite": { "doc": "Cub Foods Lease" } },
+    { "code": "USE", "label": "Use Clause", "value": "The Premises may be used for any lawful purpose.", "cite": { "doc": "Cub Foods Lease", "section": "9.1" } },
+    { "code": "RADIUS", "label": "Radius", "value": "None" },
+    { "code": "LL RADIUS", "label": "LL Radius", "value": "None" },
+    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "LL agrees that, with the exception of the Premises, no part of the S/C shall be used or operated for: (a) Food Sales — a supermarket or store/department selling food, groceries, fruit, produce, dairy, vegetables, bakery goods, meats or deli items (other tenants may sell bakery goods incidentally if ≤30% of their S/C sales; does not apply to 'Retail H' while the 60-yr Walgreens Lease is in effect); (b) Restaurant within 250 ft of a Building entrance/exit (Outlot A and Shops permitted; Shops entrances must face Touhy Ave); (c) Liquor store / off-premises beer-wine-liquor (except Retail H while Walgreens Lease in effect); (d) Drug store or pharmacy (except within Retail H). Remedy: injunctive or other equitable relief in addition to other remedies.", "cite": { "doc": "Cub Foods Lease", "section": "9.3, 9.5" } },
+    { "code": "COTENCY", "label": "Co-tenancy", "value": "None" },
+    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "None" },
+    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "None" },
+    { "code": "NBNC", "label": "LL Restrictions", "value": "LL not to erect any building/structure/kiosk or other improvement in the S/C except within the building envelopes (one building per Outlot permitted). No improvement other than the Building shall (a) exceed one story; (b) have rooftop equipment unless screened to Tenant's satisfaction; or (c) have a rooftop sign (building façade signage excepted).", "cite": { "doc": "Cub Foods Lease", "section": "15.3" } },
+    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "Tenant not to use the Premises for: (a) unlawful purposes; (b) hazardous activities; (c) nuisance/offensive conditions (permitted supermarket/floral/video/liquor/bank/pharmacy/gas-station/satellite uses excepted); (d) adult entertainment/obscene material; (e) bankruptcy/fire/auction sales (one 4-week GOB sale allowed); (f) auto/truck/trailer/RV sales, lease, display or repair; (g) bars/taverns (incidental restaurant alcohol excepted); (h) pawn/flea/second-hand/surplus/thrift; (i) health/fitness/sports/dance within 250 ft or >10,000 SF in aggregate; (j) theaters, carnivals, car washes, game rooms, betting, bowling, vet hospitals, funeral parlors, schools, post offices, lawn & garden centers.", "cite": { "doc": "Cub Foods Lease", "section": "9.2" } },
+    { "code": "CAM", "label": "CAM Method", "value": "Pro-Rata = Building Area ÷ rentable feet of all S/C buildings (mezzanines for non-sales excluded; denominator never less than Building Area + 50,000 SF; Wal-Mart Parcel and Outlots excluded). 5% administrative fee; no additional admin/management/overhead/profit fees. Monthly estimate with annual reconciliation. Management fee and capital repairs excluded. Audit: Tenant may audit; overstatement >3% → Landlord reimburses audit cost.", "cite": { "doc": "Cub Foods Lease", "section": "1.3, 1.19, 1.29, 12, 16.3" } },
+    { "code": "RETX", "label": "Tax Method", "value": "Pro-Rata Share (same method as CAM). Excludes construction-related special assessments; TIF/special-district taxes (except under the 10/27/1998 Redevelopment Agreement, TIF up to $4,000,000); and taxes on the Wal-Mart Parcel or any Outlot.", "cite": { "doc": "Cub Foods Lease", "section": "1.19, 1.29, 11" } },
+    { "code": "INS", "label": "Insurance Method", "value": "Standard insurance clause (Sec. 13). Liability $2M CSL (deductible not to exceed $1M); Property: All Risk, 100% replacement value. Tenant may use a blanket policy or self-insure only if Tenant and any guarantor have a combined net worth ≥ $100,000,000. Carrier rating ≥ A- / Class X. 30-day cancellation notice; certificate ≥30 days before expiry.", "cite": { "doc": "Cub Foods Lease", "section": "13" } },
+    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Assign/sublet without Landlord consent (≤2 units; a non-supermarket assignee may not breach an existing >20,000 SF exclusive). Landlord recapture only on assignment/sublease of the whole premises to a Nonsupermarket Operator (30-day termination election). §18(c): option exercises require SUPERVALU Holdings' signature; no assignment releases Tenant or guarantor.", "cite": { "doc": "Cub Foods Lease", "section": "18" } },
+    { "code": "OPC", "label": "Operating Covenant", "value": "None — Tenant may go dark (see Go Dark).", "cite": { "doc": "Cub Foods Lease", "section": "9.6" } },
+    { "code": "GO DARK", "label": "Go Dark Option", "value": "Permitted; not a default. 'Go Dark' = 365 consecutive days with no business. Landlord may, within 365 days, notice termination unless reopened within 180 days; on termination Landlord pays Tenant the unamortized cost of improvements/FF&E (prorated by remaining term). Miss the 365-day window and the termination right lapses.", "cite": { "doc": "Cub Foods Lease", "section": "9.6" } },
+    { "code": "DEFAULT", "label": "Default", "value": "Monetary: 10 business days after notice. Non-monetary: 30 days after notice (extended if not reasonably curable and Tenant is diligently curing).", "cite": { "doc": "Cub Foods Lease", "section": "19.1" } },
+    { "code": "GUARANT", "label": "Guaranty", "value": "SUPERVALU Inc. corporate guaranty (payment, not collection; survives assignment); plus personal guaranties from Min Sik & Man Sun Kang (2007) and John & Anastasia Svigos (2008).", "cite": { "doc": "Guaranty Agreement", "section": "1, 4" } },
+    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "Outlots: one building each, ≤8,000 SF; self-contained parking; monument signs only (≤5 ft as built, never >8 ft); roof/parapet ≤28 ft; building separation rules.", "cite": { "doc": "Cub Foods Lease", "section": "Memo. 7" } },
+    { "code": "PURCHSE", "label": "Purchase Option", "value": "None" },
+    { "code": "HOLDOVR", "label": "Holdover", "value": "Per lease holdover provision." },
+    { "code": "PYLON", "label": "Pylon Sign", "value": "Tenant has pylon/monument sign rights per the Lease and Site Plan." },
+    { "code": "SUBORD", "label": "Subordination", "value": "Subordination subject to delivery of a Subordination and Non-Disturbance Agreement (SNDA)." },
+    { "code": "RELOCAT", "label": "Relocation", "value": "None" },
+    { "code": "UTILITY", "label": "Utilities", "value": "Included in CAM.", "cite": { "doc": "Cub Foods Lease", "section": "16.3.1" } },
+    { "code": "HVAC", "label": "HVAC", "value": "No HVAC contract required; Tenant responsible for replacement.", "cite": { "doc": "Cub Foods Lease", "section": "16.2" } }
   ],
-  "narrative": "Fresh Farms International Market (tenant of record Niles Grand LLC) anchors Pointe Plaza in Niles, IL under a 2/11/1999 Shopping Center Lease originally signed by SUPERVALU Holdings (Cub Foods) and guaranteed by SUPERVALU Inc. The lease passed through three assignments — to Hawk Operations/Cerberus (2006), MS-Grand Niles/Kang (2007), and Niles Grand LLC/Svigos (2008) — each adding a guaranty layer. 58,000 SF; 20-year initial term from a 2/23/2000 rent commencement, with four 5-year options (first two exercised, running the lease through 12/31/2030 at $841,000/yr). The tenant holds strong protections: a broad food/grocery/dairy/bakery exclusive (§9.3, narrowed by a 2022 Crumbl waiver), a tenant-favorable right to go dark with the landlord's only remedy being termination plus a buy-out of unamortized improvements, and a no-consent assignment right with landlord recapture only if the box stops being a supermarket. Watch items: §18(c) requires SUPERVALU Holdings to sign option exercises, and the assignment documents impose a $25M net-worth test — both should be confirmed for the 2019/2025 exercises.",
+  "flags": [
+    { "severity": "defect", "issue": "Option exercises may require SUPERVALU Holdings' signature (§18(c))", "detail": "§18(c) says no extension-option exercise is effective unless signed by SUPERVALU Holdings, Inc. The 2019 exercise letter only cc'd Supervalu and the 2025 exercise was signed by Niles Grand/Svigos. Confirm Supervalu countersigned both." },
+    { "severity": "watch", "issue": "Assignment-embedded $25M net-worth test on option exercises", "detail": "The 2007/2008 assignment instruments bar option exercise, while Supervalu remains contingently liable, unless the assignee shows >$25M tangible net worth. Confirm satisfied for the 2019 and 2025 exercises." },
+    { "severity": "info", "issue": "Current force of the SUPERVALU Inc. guaranty is uncertain", "detail": "Verify the corporate guaranty's continuing force after the 2006 Cerberus sale; the Kang and Svigos personal guaranties remain live." }
+  ],
+  "narrative": "Fresh Farms International Market (tenant of record Niles Grand LLC) anchors Pointe Plaza in Niles, IL under a 2/11/1999 Shopping Center Lease originally signed by SUPERVALU Holdings (Cub Foods) and guaranteed by SUPERVALU Inc. The lease passed through three assignments — Hawk/Cerberus (2006), MS-Grand/Kang (2007), and Niles Grand/Svigos (2008) — each adding a guaranty layer. 58,000 SF; 20-year initial term from a 2/23/2000 rent commencement, four 5-year options (first two exercised → through 12/31/2030 at $841,000/yr; $/SF steps to $15.50 by the 4th option). Strong tenant protections: a broad food/grocery/dairy/bakery exclusive (§9.3, narrowed by a 2022 Crumbl waiver), a go-dark right with the landlord's only remedy being termination plus a buy-out of unamortized improvements, and a no-consent assignment right with recapture only if the box stops being a supermarket. Percentage rent is 1% over a natural breakpoint. Watch items: §18(c) requires SUPERVALU Holdings to sign option exercises, and the assignment documents impose a $25M net-worth test — both should be confirmed for the 2019/2025 exercises.",
   "sourceDocuments": [
     { "name": "Cub Foods (Supervalu Holdings) Lease", "date": "1999-02-11", "type": "lease" },
-    { "name": "Memorandum of Lease", "date": "1999-02-11", "type": "lease" },
-    { "name": "SUPERVALU Inc. Guaranty Agreement", "date": "1999-02-11", "type": "guaranty" },
+    { "name": "Guaranty Agreement (Supervalu Inc.)", "date": "1999-02-11", "type": "guaranty" },
     { "name": "Supplement to Lease", "date": "2000-03-15", "type": "amendment" },
-    { "name": "Cub Foods Assignment to Hawk Operations", "date": "2006-01-22", "type": "assignment" },
-    { "name": "Cub Foods Notice of Assignment 1-29-07 (Hawk → MS-Grand)", "date": "2007-01-29", "type": "assignment" },
-    { "name": "Grand Mart Assignment to Niles Grand LLC", "date": "2008-03-04", "type": "assignment" },
-    { "name": "Club Foods Notice of Exercise of Option (1st)", "date": "2019-03-01", "type": "option" },
-    { "name": "Fresh Farms waiver ltr for Crumbl", "date": "2022-02-01", "type": "waiver" },
+    { "name": "Assignment to Hawk Operations", "date": "2006-01-22", "type": "assignment" },
+    { "name": "Assignment to MS-Grand Niles", "date": "2007-01-29", "type": "assignment" },
+    { "name": "Assignment to Niles Grand LLC", "date": "2008-03-04", "type": "assignment" },
+    { "name": "Option Letter (1st option)", "date": "2019-03-01", "type": "option" },
+    { "name": "Crumbl waiver letter", "date": "2022-02-01", "type": "waiver" },
     { "name": "Storage License Agreement", "date": "2023-11-17", "type": "license" },
-    { "name": "Option to Extend 3-5-25 (2nd)", "date": "2025-03-05", "type": "option" }
+    { "name": "Option to Extend letter (2nd option)", "date": "2025-03-05", "type": "option" }
   ]
 }
