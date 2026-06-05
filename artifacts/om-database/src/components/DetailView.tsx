@@ -2628,6 +2628,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           abstract={abstractModal.mode === "view" ? (abstractsByTenant.get(abstractModal.tenantName.trim().toLowerCase()) ?? null) : null}
           dealId={d.id}
           tenantName={abstractModal.tenantName}
+          tenants={d.tenants}
           isAdmin={isAdmin}
           onSaved={() => reloadAbstracts()}
           onDeleted={() => reloadAbstracts()}

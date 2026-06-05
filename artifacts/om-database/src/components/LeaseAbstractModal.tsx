@@ -3,9 +3,10 @@ import { createPortal } from "react-dom";
 import type {
   LeaseAbstract, AbstractCitation, AbstractField, GuarantyEntry,
   PartyChainEntry, AbstractOption, AbstractRentStep, AbstractExclusive,
-  AbstractFlag, AbstractDocRef, AbstractNoticeAddress, LeaseNote,
+  AbstractFlag, AbstractDocRef, AbstractNoticeAddress, LeaseNote, Tenant,
 } from "../lib/idb";
 import { LEASE_NOTE_SECTIONS } from "../lib/idb";
+import { useWatchlist, type WatchMap } from "../lib/useWatchlist";
 import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract } from "../lib/api";
 import { exportLeaseAbstract } from "../lib/abstractExcel";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -81,8 +82,59 @@ function KV({ label, value, cite, indent }: { label: string; value?: React.React
 }
 const dval = (f?: AbstractField | null): string => (f && f.value != null ? String(f.value) : "");
 
-function AbstractBody({ a }: { a: LeaseAbstract }) {
+// ── Live, token-free checks: roster-vs-lease discrepancies + co-tenancy risk ──
+function pnum(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(String(v).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+function currentAnnualRent(a: LeaseAbstract): number | null {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const o of a.options ?? []) {
+    if (o.status === "exercised" && o.windowStart && o.windowEnd && String(o.windowStart) <= today && today <= String(o.windowEnd)) { const n = pnum(o.rent); if (n) return n; }
+  }
+  const rs = a.rentSchedule ?? [];
+  for (const r of rs) {
+    const s = r.periodStart ? String(r.periodStart) : ""; const e = r.periodEnd ? String(r.periodEnd) : "";
+    if (s && e && s <= today && today <= e) { const n = pnum(r.annualRent); if (n) return n; }
+  }
+  for (let i = rs.length - 1; i >= 0; i--) { const n = pnum(rs[i].annualRent); if (n) return n; }
+  return null;
+}
+interface AbstractChecks { discrepancies: string[]; risks: string[] }
+function computeChecks(a: LeaseAbstract, tenants: Tenant[], watchMap: WatchMap): AbstractChecks {
+  const discrepancies: string[] = []; const risks: string[] = [];
+  const k = (s?: string | null) => (s || "").trim().toLowerCase();
+  const t = tenants.find((x) => x.name && (k(x.name) === k(a.tenantName) || (a.dba && k(a.dba).includes(k(x.name)) && k(x.name).length > 3)));
+  // Roster vs. lease — the lease (abstract) is authoritative; flag what to investigate.
+  if (t) {
+    const aSF = pnum(a.premisesGLA ?? a.currentSF); const rSF = pnum(t.sf);
+    if (aSF && rSF && Math.abs(aSF - rSF) / rSF > 0.015) discrepancies.push(`SF — roster shows ${rSF.toLocaleString()}, lease shows ${aSF.toLocaleString()}.`);
+    const aRent = currentAnnualRent(a); const rRent = pnum(t.annualRent);
+    if (aRent && rRent && Math.abs(aRent - rRent) / rRent > 0.02) discrepancies.push(`Current annual rent — roster shows $${Math.round(rRent).toLocaleString()}, lease shows $${Math.round(aRent).toLocaleString()}.`);
+    const aExp = a.expiration ? String(a.expiration).slice(0, 10) : ""; const rExp = t.leaseExpiry ? String(t.leaseExpiry).slice(0, 10) : "";
+    if (aExp && rExp && aExp !== rExp) discrepancies.push(`Lease expiration — roster shows ${rExp}, lease shows ${aExp}.`);
+  }
+  // Co-tenancy / operating-covenant clauses that lean on a distressed/unowned/dark tenant.
+  const clause = (a.leaseNotes ?? []).filter((n) => ["COTENCY", "OPC", "KICKTN"].includes(String(n.code))).map((n) => n.value || "").join("  ").toLowerCase();
+  if (clause && !/^none\.?$/.test(clause.trim())) {
+    const seen = new Set<string>();
+    for (const e of watchMap.values()) {
+      const b = (e.brand || "").trim();
+      if (b.length >= 3 && clause.includes(b.toLowerCase()) && !seen.has(b.toLowerCase())) { seen.add(b.toLowerCase()); risks.push(`Co-tenancy references ${b} — on the retailer watchlist (${e.status}). A dependence on a distressed retailer weakens this clause.`); }
+    }
+    for (const x of tenants) {
+      const nm = (x.name || "").trim();
+      if (nm.length >= 3 && (x.isNAP || x.isDark) && clause.includes(nm.toLowerCase()) && !seen.has(nm.toLowerCase())) { seen.add(nm.toLowerCase()); risks.push(`Co-tenancy references ${nm} — ${x.isNAP ? "an unowned (NAP) tenant KPR doesn't control" : "a dark store"}.`); }
+    }
+  }
+  return { discrepancies, risks };
+}
+
+function AbstractBody({ a, tenants }: { a: LeaseAbstract; tenants?: Tenant[] }) {
   const isMobile = useIsMobile();
+  const watchMap = useWatchlist();
+  const checks = computeChecks(a, tenants ?? [], watchMap);
   const guaranties = (a.guaranties ?? []) as GuarantyEntry[];
   const tChain = (a.tenantChain ?? []) as PartyChainEntry[];
   const lChain = (a.landlordChain ?? []) as PartyChainEntry[];
@@ -105,6 +157,23 @@ function AbstractBody({ a }: { a: LeaseAbstract }) {
 
   return (
     <div>
+      {(checks.discrepancies.length > 0 || checks.risks.length > 0) && (
+        <Section title="Checks — review (live)">
+          {checks.discrepancies.length > 0 && (
+            <div style={{ background:C.amberBg, border:`1px solid ${C.amberBorder}`, borderRadius:8, padding:"8px 10px", marginBottom: checks.risks.length ? 7 : 0 }}>
+              <div style={{ fontSize:11, fontWeight:800, color:C.amber, letterSpacing:"0.04em", marginBottom:3 }}>ROSTER vs. LEASE — INVESTIGATE</div>
+              <div style={{ fontSize:11.5, color:C.sub, marginBottom:4 }}>The roster figures came from a broker/OM/rent-roll. The lease (this abstract) is authoritative — please verify and correct the roster:</div>
+              {checks.discrepancies.map((dsc, i) => <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.45 }}>• {dsc}</div>)}
+            </div>
+          )}
+          {checks.risks.map((rk, i) => (
+            <div key={i} style={{ background:C.redBg, border:`1px solid ${C.redBorder}`, borderRadius:8, padding:"8px 10px", marginBottom:6 }}>
+              <div style={{ fontSize:11, fontWeight:800, color:C.red, letterSpacing:"0.04em", marginBottom:2 }}>CO-TENANCY / WATCHLIST RISK</div>
+              <div style={{ fontSize:12.5, color:C.ink, lineHeight:1.45 }}>{rk}</div>
+            </div>
+          ))}
+        </Section>
+      )}
       {flags.length > 0 && (
         <Section title="Flags — verify these" count={flags.length}>
           <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
@@ -383,12 +452,13 @@ interface Props {
   abstract?: LeaseAbstract | null;
   dealId: string;
   tenantName?: string | null;
+  tenants?: Tenant[];
   isAdmin?: boolean;
   onSaved?: (a: LeaseAbstract) => void;
   onDeleted?: (id: string) => void;
 }
 
-export default function LeaseAbstractModal({ open, onClose, mode, abstract, dealId, tenantName, isAdmin, onSaved, onDeleted }: Props) {
+export default function LeaseAbstractModal({ open, onClose, mode, abstract, dealId, tenantName, tenants, isAdmin, onSaved, onDeleted }: Props) {
   // "view" can flip into an inline update (paste) without closing.
   const [updating, setUpdating] = useState(false);
   const isMobile = useIsMobile();
@@ -459,7 +529,7 @@ export default function LeaseAbstractModal({ open, onClose, mode, abstract, deal
               <PasteBody dealId={dealId} lockTenant={lockTenant} onSaved={(a) => { onSaved?.(a); onClose(); }} />
             </div>
           ) : abstract ? (
-            <AbstractBody a={abstract} />
+            <AbstractBody a={abstract} tenants={tenants} />
           ) : (
             <div style={{ padding:"20px 0", color:C.faint }}>No abstract.</div>
           )}
