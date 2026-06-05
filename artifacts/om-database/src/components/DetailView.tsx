@@ -3854,7 +3854,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       notional: deal.debtLoanAmount != null ? String(deal.debtLoanAmount) : "",
       fixedRatePct: deal.debtRate != null ? String(deal.debtRate) : "",
       terminationDate: deal.debtMaturityDate || "",
-      floatingSpreadBps: deal.debtSpread != null ? String(Math.round(Number(deal.debtSpread) * 100)) : "",
+      floatingSpreadBps: deal.debtSpread != null ? String(Math.round(Number(deal.debtSpread))) : "", // debtSpread is already in bps
     });
     setManualOpen(true);
   };

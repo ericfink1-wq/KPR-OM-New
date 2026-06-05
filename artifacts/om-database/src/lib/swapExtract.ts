@@ -13,7 +13,7 @@ export function buildSwapPatch(deal: Deal, swap: InterestRateSwap): Partial<Deal
   if (swap.fixedRatePct != null) { patch.debtRate = swap.fixedRatePct; patch.debtRateType = "Fixed (swapped)"; }
   if (blank(deal.debtLoanAmount) && swap.notional != null) patch.debtLoanAmount = swap.notional;
   if (blank(deal.debtIndex) && swap.floatingIndex) patch.debtIndex = swap.floatingIndex;
-  if (blank(deal.debtSpread) && swap.floatingSpreadBps != null) patch.debtSpread = Math.round(swap.floatingSpreadBps) / 100;
+  if (blank(deal.debtSpread) && swap.floatingSpreadBps != null) patch.debtSpread = Math.round(swap.floatingSpreadBps); // debtSpread is in bps
   if (blank(deal.debtLender) && swap.counterparty) patch.debtLender = swap.counterparty;
   if (blank(deal.debtMaturityDate) && swap.terminationDate) patch.debtMaturityDate = swap.terminationDate;
   if (blank(deal.debtType)) patch.debtType = "Senior / Acquisition";
