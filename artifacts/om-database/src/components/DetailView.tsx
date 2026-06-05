@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap } from "../lib/idb";
+import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
-  apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
+  apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
+  apiListLeaseAbstracts } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
@@ -17,6 +18,7 @@ import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
 import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
+import LeaseAbstractModal from "./LeaseAbstractModal";
 import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
@@ -1266,6 +1268,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [reviewOpen, setReviewOpen] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [imgs, setImgs] = useState<ImageBundle | null>(null);
+  // Lease abstracts on file for this deal (keyed by lowercased tenant name), plus
+  // the open viewer/paste modal. Loaded per deal; refreshed after a save/delete.
+  const [abstracts, setAbstracts] = useState<LeaseAbstract[]>([]);
+  const [abstractModal, setAbstractModal] = useState<{ mode: "view" | "add"; tenantName: string } | null>(null);
   const [saleBusy, setSaleBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
@@ -1342,6 +1348,21 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     }).catch(() => {});
     return () => { alive = false; };
   }, [d.id]);
+
+  // Load lease abstracts for this deal (powers the roster "Abstract" pills and the
+  // viewer). Returns [] on any failure, so the roster never breaks.
+  const reloadAbstracts = useCallback(() => {
+    apiListLeaseAbstracts(d.id).then(setAbstracts).catch(() => setAbstracts([]));
+  }, [d.id]);
+  useEffect(() => { setAbstracts([]); reloadAbstracts(); }, [reloadAbstracts]);
+
+  const abstractsByTenant = useMemo(() => {
+    const m = new Map<string, LeaseAbstract>();
+    for (const a of abstracts) {
+      if (a.tenantName) m.set(a.tenantName.trim().toLowerCase(), a);
+    }
+    return m;
+  }, [abstracts]);
 
   // Resync confirmation boxes to the persisted flags when switching properties.
   useEffect(() => {
@@ -2585,7 +2606,24 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           omDate={d.omDate}
           estimatedRecoveries={estimateRecoveries(d).byName}
           latestSales={buildLatestSales(d)}
+          abstractsByTenant={abstractsByTenant}
+          onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
+          onAddAbstract={(name) => setAbstractModal({ mode: "add", tenantName: name })}
         /></div>
+      )}
+
+      {abstractModal && (
+        <LeaseAbstractModal
+          open={true}
+          onClose={() => setAbstractModal(null)}
+          mode={abstractModal.mode}
+          abstract={abstractModal.mode === "view" ? (abstractsByTenant.get(abstractModal.tenantName.trim().toLowerCase()) ?? null) : null}
+          dealId={d.id}
+          tenantName={abstractModal.tenantName}
+          isAdmin={isAdmin}
+          onSaved={() => reloadAbstracts()}
+          onDeleted={() => reloadAbstracts()}
+        />
       )}
 
       {/* Tenant Sales Panel */}
