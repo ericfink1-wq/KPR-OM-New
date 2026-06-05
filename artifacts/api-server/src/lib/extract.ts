@@ -1,12 +1,12 @@
 // Shared Anthropic extraction logic — used by both the ai route and the ingest route
 import type { Logger } from "pino";
-import { db, dealsTable, pool } from "@workspace/db";
+import { db, dealsTable, pool, leaseAbstractsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { rebuildTenantIndex, parseLeaseDate } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
-import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction } from "./leaseRiskExtract";
+import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -479,15 +479,30 @@ BELOW-MARKET RENT — judge it correctly, do not treat it as automatically good 
 
 KPR THESIS (the "kprThesis" field, if present): this is the KPR acquisitions team's own stated thesis / assumptions for the deal — why they like it, what they're underwriting to, risks they're discounting. Treat it as INFORMED INTERNAL CONTEXT and weave it into the narrative, strengths, and risks — but stay OBJECTIVE and ADVISORY: you may agree, add nuance, or PUSH BACK where the roster/financials don't support a claim. If a thesis point is contradicted by the data, say so plainly (e.g. as a risk or caveat) rather than parroting it. Do NOT let an optimistic thesis inflate the grade beyond what the numbers justify. If kprThesis is absent, ignore this.
 
+LEASE RISK (anchor-dependency / co-tenancy): If a "leaseRiskExposure" block is present, it lists co-tenancy / sales-kickout exposure the APP computed from the lease documents — base rent that can convert to alternate/reduced rent (or grant a termination right) if a named anchor goes dark. NARRATE those figures; never re-derive or invent them. Fold the MATERIAL exposure into the Risks list and the narrative's risk sentence — e.g. a Tier-1 figure that is significant vs. the property's rent is a real risk ("~$X of base rent (TenantA, TenantB) converts to alternate rent if Anchor goes dark"). Tier-2 (needs a second event) is a lesser watch item. Where an executed lease has VERIFIED/mitigated a clause (Tier-1 reduced, or a tenant de-linked), reflect it as resolved rather than a live risk, and do not list a mitigated tenant as at-risk. Clauses still "OM-only (unverified)" should be framed as "subject to confirming the executed leases." Keep it proportional — a small Tier-1 relative to total rent is a minor note, not a headline. If no leaseRiskExposure block is present, ignore this.
+
 Base everything on the CURRENT roster below (note tenantsAsOf — this roster supersedes any older OM). Output must start with { and end with }.
 
 CURRENT PROPERTY DATA (JSON):
 `;
 
-export async function runRosterAnalysis(dealData: Record<string, unknown>): Promise<Record<string, unknown>> {
+// Load a deal's pasted lease abstracts and build the resolved co-tenancy exposure
+// summary for the narrative pass. Best-effort: returns "" on any failure.
+export async function loadLeaseRiskSummary(dealId: string, dealData: Record<string, unknown>): Promise<string> {
+  try {
+    const rows = await db.select().from(leaseAbstractsTable).where(eq(leaseAbstractsTable.dealId, dealId));
+    const abstracts = rows.map((r) => ({ ...(r.data as Record<string, unknown>), tenantName: r.tenantName }));
+    return summarizeLeaseRisk(dealData, abstracts);
+  } catch {
+    return "";
+  }
+}
+
+export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {
   const t = Array.isArray(dealData.tenants) ? (dealData.tenants as Array<Record<string, unknown>>) : [];
   const thesis = typeof dealData.dealThesis === "string" ? dealData.dealThesis.trim() : "";
   const snapshot = {
+    leaseRiskExposure: leaseRiskSummary || undefined,
     propertyName: dealData.propertyName, address: dealData.address, city: dealData.city, state: dealData.state,
     assetType: dealData.assetType, centerType: dealData.centerType,
     totalSF: dealData.totalSF, occupancy: dealData.occupancy, walt: dealData.walt,

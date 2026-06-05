@@ -318,6 +318,107 @@ export async function runLeaseRiskPass(opts: {
   }
 }
 
+// ── lease-risk SUMMARY for the AI narrative (resolve OM + abstracts) ──────────────
+// Pure + DB-free: the caller loads the deal's abstracts and passes them in. Produces
+// a compact, factual exposure block the roster-analysis model NARRATES (it must not
+// re-derive the numbers). Mirrors the client engine's resolve + tier logic.
+
+function anchorMatch(a: unknown, b: unknown): boolean {
+  const x = anchorKey(a), y = anchorKey(b);
+  return !!x && !!y && (x === y || x.includes(y) || y.includes(x));
+}
+function leaves(n: TriggerNode | null | undefined): TriggerCondition[] {
+  if (!n) return [];
+  if ("operator" in n) return (n.conditions || []).flatMap(leaves);
+  return [n];
+}
+function evalTree(n: TriggerNode | null | undefined, t: (c: TriggerCondition) => boolean): boolean {
+  if (!n) return false;
+  if ("operator" in n) {
+    if (!n.conditions?.length) return false;
+    return n.operator === "AND" ? n.conditions.every((c) => evalTree(c, t)) : n.conditions.some((c) => evalTree(c, t));
+  }
+  return t(n);
+}
+const namesAnchor = (c: TriggerCondition, anchor: string) => !!c.anchor && /anchor/i.test(c.type || "") && anchorMatch(c.anchor, anchor);
+
+function clauseTier(trigger: TriggerNode | null | undefined, anchor: string): 0 | 1 | 2 | 3 {
+  if (!leaves(trigger).some((c) => namesAnchor(c, anchor))) return 0;
+  if (evalTree(trigger, (c) => namesAnchor(c, anchor))) return 1;
+  for (const L of leaves(trigger).filter((c) => !namesAnchor(c, anchor))) {
+    if (evalTree(trigger, (c) => namesAnchor(c, anchor) || c === L)) return 2;
+  }
+  return 3;
+}
+
+interface ResolvedT { tenant: string; baseRent: number | null; coTenancy: CoTenancyClause[]; verified: boolean }
+
+function resolveServer(lr: DealLeaseRisk, abstracts: Array<Record<string, unknown>>, dealData: Record<string, unknown>): ResolvedT[] {
+  const rentByKey = new Map<string, number>();
+  for (const t of (Array.isArray(dealData.tenants) ? dealData.tenants : []) as Array<Record<string, unknown>>) {
+    const r = num(t.annualRent); const k = anchorKey(t.canonicalName ?? t.name);
+    if (r != null && k) rentByKey.set(k, r);
+  }
+  const absByKey = new Map<string, CoTenancyClause[]>();
+  for (const a of abstracts) {
+    const name = str(a.tenantName); if (!name) continue;
+    const co = (Array.isArray(a.coTenancy) ? a.coTenancy : []).map(normCoTenancy).filter((c): c is CoTenancyClause => c != null);
+    if (co.length) absByKey.set(anchorKey(name), co);
+  }
+  return (lr.tenants || []).map((t) => {
+    const key = anchorKey(t.tenant);
+    const abs = absByKey.get(key);
+    const coTenancy = abs && abs.length ? abs : (t.coTenancy || []);
+    const baseRent = t.baseRentAnnual != null ? Number(t.baseRentAnnual) : (rentByKey.get(key) ?? null);
+    return { tenant: t.tenant, baseRent, coTenancy, verified: !!(abs && abs.length) };
+  });
+}
+
+function anchorsReferenced(resolved: ResolvedT[]): string[] {
+  const seen = new Map<string, string>();
+  for (const r of resolved) for (const c of r.coTenancy) for (const lf of leaves(c.triggerLogic)) {
+    if (lf.anchor && /anchor/i.test(lf.type || "")) { const k = anchorKey(lf.anchor); if (k && !seen.has(k)) seen.set(k, lf.anchor); }
+  }
+  return [...seen.values()];
+}
+
+const fmt$ = (n: number) => `$${Math.round(n).toLocaleString()}`;
+
+/** Build a compact, factual co-tenancy exposure block for the narrative model. "" when none. */
+export function summarizeLeaseRisk(dealData: Record<string, unknown>, abstracts: Array<Record<string, unknown>> = []): string {
+  const lr = dealData.leaseRisk as DealLeaseRisk | undefined;
+  if (!lr || !Array.isArray(lr.tenants) || !lr.tenants.length) return "";
+  const resolved = resolveServer(lr, abstracts, dealData);
+  const omOnly = resolveServer(lr, [], dealData);
+  const anchors = anchorsReferenced(resolved);
+  if (!anchors.length) return "";
+
+  const expFor = (rs: ResolvedT[], anchor: string) => {
+    let t1 = 0, t2 = 0, t3 = 0; const t1n: string[] = [], t2n: string[] = [];
+    for (const r of rs) for (const c of r.coTenancy) {
+      const tier = clauseTier(c.triggerLogic, anchor); if (!tier) continue;
+      const rent = r.baseRent ?? 0; t3 += rent;
+      if (tier === 1) { t1 += rent; t1n.push(r.tenant); } else if (tier === 2) { t2 += rent; t2n.push(r.tenant); }
+    }
+    return { t1, t2, t3, t1n, t2n };
+  };
+
+  const ranked = anchors.map((a) => ({ a, e: expFor(resolved, a) })).sort((x, y) => y.e.t1 - x.e.t1 || y.e.t3 - x.e.t3).slice(0, 4);
+  const lines: string[] = ["LEASE-RISK EXPOSURE (computed by the app from the lease documents — NARRATE these figures, do not re-derive):"];
+  for (const { a, e } of ranked) {
+    if (e.t3 <= 0) continue;
+    let s = `• If ${a} goes dark/relocates: Tier-1 ${fmt$(e.t1)} trips on ${a} alone${e.t1n.length ? ` (${e.t1n.join(", ")})` : ""}; Tier-2 ${fmt$(e.t2)} needs a second event${e.t2n.length ? ` (${e.t2n.join(", ")})` : ""}; Tier-3 ${fmt$(e.t3)} any linkage.`;
+    const om = expFor(omOnly, a);
+    if (om.t1 !== e.t1) s += ` (Executed leases reduced Tier-1 from ${fmt$(om.t1)}.)`;
+    lines.push(s);
+  }
+  const unverified = resolved.filter((r) => r.coTenancy.length && !r.verified).map((r) => r.tenant);
+  const verified = resolved.filter((r) => r.verified).map((r) => r.tenant);
+  if (verified.length) lines.push(`Verified against executed leases: ${verified.join(", ")}.`);
+  if (unverified.length) lines.push(`Still OM-only (unverified — pull leases): ${unverified.slice(0, 12).join(", ")}${unverified.length > 12 ? "…" : ""}.`);
+  return lines.length > 1 ? lines.join("\n") : "";
+}
+
 // ── post-extraction validators (seed Import-Review questions) ─────────────────────
 export interface ReviewQuestionLike {
   id: string;

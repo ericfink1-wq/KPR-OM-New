@@ -2,7 +2,7 @@ import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable } from "@workspace/db";
 import { eq, isNotNull, sql } from "drizzle-orm";
-import { runOmExtraction, runRosterAnalysis } from "../lib/extract";
+import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
@@ -884,8 +884,9 @@ router.post("/deals/:id/refresh-analysis", requireAuth, async (req, res) => {
       return;
     }
 
-    // 1) Regenerate narrative from the live roster
-    const analysis = await runRosterAnalysis(current);
+    // 1) Regenerate narrative from the live roster (incl. resolved co-tenancy exposure)
+    const leaseRiskSummary = await loadLeaseRiskSummary(id, current);
+    const analysis = await runRosterAnalysis(current, leaseRiskSummary);
     const updated: Record<string, unknown> = { ...current, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
 
     // 2) Layer the portfolio-benchmark pass (augments dealScore + red flags; keeps qualitative flags)
@@ -929,7 +930,7 @@ router.post("/deals/score-unscored", requireAuth, async (req, res) => {
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
       try {
-        const analysis = await runRosterAnalysis(data);
+        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data));
         await db.update(dealsTable)
           .set({ data: { ...data, ...analysis, analysisVersion: ANALYSIS_VERSION }, updatedAt: new Date() })
           .where(eq(dealsTable.id, r.id));
@@ -987,7 +988,7 @@ router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
       try {
-        const analysis = await runRosterAnalysis(data);
+        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data));
         const updated: Record<string, unknown> = { ...data, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
         try {
           const patch = await rescoreDeal(r.id, updated, req.log);

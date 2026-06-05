@@ -14,4 +14,7 @@
 //   1 — baseline
 //   2 — below-market mark-to-market logic, lease-commencement weighting,
 //       trimmed "confidence" prose (2026-05)
-export const ANALYSIS_VERSION = 2;
+//   3 — lease-risk / co-tenancy exposure folded into Risks + narrative
+//       (anchor-dependency: base rent at risk if an anchor goes dark, plus any
+//       executed-lease mitigation) (2026-06)
+export const ANALYSIS_VERSION = 3;

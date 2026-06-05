@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   runLeaseRiskPass, normalizeLeaseRisk, coerceTriggerNode,
-  enforceRosterCotenancyRule, validateLeaseRiskAtExtraction,
+  enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk,
   type DealLeaseRisk,
 } from "../leaseRiskExtract";
 import { robustParseJSON } from "../jsonRepair";
@@ -147,5 +147,44 @@ describe("validateLeaseRiskAtExtraction", () => {
   it("emits nothing when there is no lease risk and rents only increase", () => {
     const deal: Record<string, unknown> = { tenants: [{ name: "A", rentSchedule: "2024-01-01: $20 PSF; 2026-01-01: $22 PSF" }] };
     expect(validateLeaseRiskAtExtraction(deal).length).toBe(0);
+  });
+});
+
+describe("summarizeLeaseRisk (narrative input)", () => {
+  const deal: Record<string, unknown> = {
+    tenants: [{ name: "Carter's / Osh Kosh", annualRent: 156410 }, { name: "Ulta", annualRent: 357993 }],
+    leaseRisk: normalizeLeaseRisk({
+      coTenancyDisclosed: true,
+      tenants: [
+        { tenant: "Carter's / Osh Kosh", baseRentAnnual: 156410, coTenancy: [{ type: "operating", triggerLogic: { operator: "OR", conditions: [
+          { type: "named_anchor_dark", anchor: "Ulta" }, { type: "named_anchor_dark", anchor: "PetSmart" }, { type: "named_anchor_dark", anchor: "Dick's Sporting Goods" },
+        ] }, verbatimQuote: "x" }] },
+        { tenant: "Ulta", baseRentAnnual: 357993, coTenancy: [{ type: "operating", triggerLogic: { operator: "OR", conditions: [
+          { type: "named_anchor_dark", anchor: "Target" }, { type: "named_anchor_dark", anchor: "Dick's Sporting Goods" },
+        ] }, verbatimQuote: "x" }] },
+      ],
+    }),
+  };
+
+  it("summarizes Dick's Tier-1 exposure (Ulta + Carter's, $514,403) for the model to narrate", () => {
+    const s = summarizeLeaseRisk(deal, []);
+    expect(s).toContain("Dick's Sporting Goods");
+    expect(s).toContain("$514,403");
+    expect(s).toMatch(/Carter's/);
+    expect(s).toMatch(/Still OM-only \(unverified/);
+  });
+
+  it("reflects the executed-lease mitigation when an Ulta abstract removes Dick's", () => {
+    const ultaAbs = { tenantName: "Ulta", coTenancy: [{ type: "operating", triggerLogic: { operator: "OR", conditions: [
+      { type: "named_anchor_dark", anchor: "Target" }, { type: "occupancy_threshold", scope: "inline", direction: "below", pct: 75 },
+    ] }, verbatimQuote: "amended" }] };
+    const s = summarizeLeaseRisk(deal, [ultaAbs]);
+    expect(s).toContain("$156,410");                 // Tier-1 now just Carter's
+    expect(s).toContain("reduced Tier-1 from $514,403");
+    expect(s).toMatch(/Verified against executed leases:.*Ulta/);
+  });
+
+  it("returns empty when the deal has no lease risk", () => {
+    expect(summarizeLeaseRisk({ tenants: [] }, [])).toBe("");
   });
 });
