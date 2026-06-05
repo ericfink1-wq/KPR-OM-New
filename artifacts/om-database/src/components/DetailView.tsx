@@ -19,6 +19,7 @@ import ScoreBadge from "./ScoreBadge";
 import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
 import LeaseAbstractModal from "./LeaseAbstractModal";
+import { computeAbstractChecks } from "../lib/abstractChecks";
 import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
@@ -1365,6 +1366,36 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     return m;
   }, [abstracts]);
 
+  // Auto-apply lease-authoritative data to the roster: for every abstract that
+  // matches a roster tenant, fill the fields the roster is MISSING (never
+  // overwrites). Idempotent — once filled there are no blanks left, so it stops.
+  // Keyed on [abstracts, d.id] so the onUpdate below can't loop.
+  useEffect(() => {
+    if (!abstracts.length || !(d.tenants?.length)) return;
+    let next = d.tenants;
+    let changed = false;
+    for (const a of abstracts) {
+      const chk = computeAbstractChecks(a, next, undefined);
+      if (chk.tenantIndex >= 0 && Object.keys(chk.fill).length) {
+        next = next.map((t, i) => (i === chk.tenantIndex ? { ...t, ...chk.fill } : t));
+        changed = true;
+      }
+    }
+    if (changed) onUpdate(d.id, { tenants: next, ...recomputeRosterMetrics(next as Array<Record<string, unknown>>, d.tenantsAsOf, d) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abstracts, d.id]);
+
+  // Roster tenants whose broker/rent-roll data disagrees with their lease abstract
+  // (lowercased tenant name -> the list of discrepancies). Surfaced on the roster.
+  const abstractDiscrepancies = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const a of abstracts) {
+      const chk = computeAbstractChecks(a, d.tenants ?? [], undefined);
+      if (a.tenantName && chk.discrepancies.length) m.set(a.tenantName.trim().toLowerCase(), chk.discrepancies);
+    }
+    return m;
+  }, [abstracts, d.tenants]);
+
   // Resync confirmation boxes to the persisted flags when switching properties.
   useEffect(() => {
     setCoverFinalized(!!d.imageMeta?.coverConfirmed);
@@ -2615,6 +2646,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           estimatedRecoveries={estimateRecoveries(d).byName}
           latestSales={buildLatestSales(d)}
           abstractsByTenant={abstractsByTenant}
+          abstractDiscrepancies={abstractDiscrepancies}
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
           onAddAbstract={(name) => setAbstractModal({ mode: "add", tenantName: name })}
         /></div>

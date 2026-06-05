@@ -6,7 +6,8 @@ import type {
   AbstractFlag, AbstractDocRef, AbstractNoticeAddress, LeaseNote, Tenant,
 } from "../lib/idb";
 import { LEASE_NOTE_SECTIONS } from "../lib/idb";
-import { useWatchlist, type WatchMap } from "../lib/useWatchlist";
+import { useWatchlist } from "../lib/useWatchlist";
+import { computeAbstractChecks } from "../lib/abstractChecks";
 import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract } from "../lib/api";
 import { exportLeaseAbstract } from "../lib/abstractExcel";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -82,72 +83,10 @@ function KV({ label, value, cite, indent }: { label: string; value?: React.React
 }
 const dval = (f?: AbstractField | null): string => (f && f.value != null ? String(f.value) : "");
 
-// ── Live, token-free checks: roster-vs-lease discrepancies + co-tenancy risk ──
-function pnum(v: unknown): number | null {
-  if (v == null || v === "") return null;
-  const n = typeof v === "number" ? v : Number(String(v).replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(n) ? n : null;
-}
-function currentAnnualRent(a: LeaseAbstract): number | null {
-  const today = new Date().toISOString().slice(0, 10);
-  for (const o of a.options ?? []) {
-    if (o.status === "exercised" && o.windowStart && o.windowEnd && String(o.windowStart) <= today && today <= String(o.windowEnd)) { const n = pnum(o.rent); if (n) return n; }
-  }
-  const rs = a.rentSchedule ?? [];
-  for (const r of rs) {
-    const s = r.periodStart ? String(r.periodStart) : ""; const e = r.periodEnd ? String(r.periodEnd) : "";
-    if (s && e && s <= today && today <= e) { const n = pnum(r.annualRent); if (n) return n; }
-  }
-  for (let i = rs.length - 1; i >= 0; i--) { const n = pnum(rs[i].annualRent); if (n) return n; }
-  return null;
-}
-interface AbstractChecks { discrepancies: string[]; risks: string[]; fill: Partial<Tenant>; fillLabels: string[]; tenantIndex: number }
-function computeChecks(a: LeaseAbstract, tenants: Tenant[], watchMap: WatchMap): AbstractChecks {
-  const discrepancies: string[] = []; const risks: string[] = [];
-  const fill: Partial<Tenant> = {}; const fillLabels: string[] = [];
-  const k = (s?: string | null) => (s || "").trim().toLowerCase();
-  const tenantIndex = tenants.findIndex((x) => x.name && (k(x.name) === k(a.tenantName) || (a.dba && k(a.dba).includes(k(x.name)) && k(x.name).length > 3)));
-  const t = tenantIndex >= 0 ? tenants[tenantIndex] : undefined;
-  // Roster vs. lease — the lease (abstract) is authoritative; flag what to investigate.
-  if (t) {
-    // Blanks the lease can fill (only where the roster is empty — never overwrite).
-    const empty = (v: unknown) => v == null || v === "" || (typeof v === "number" && Number.isNaN(v));
-    const aSF = pnum(a.premisesGLA ?? a.currentSF);
-    const aRent = currentAnnualRent(a);
-    const sf = pnum(t.sf) ?? aSF;
-    if (empty(t.sf) && aSF) { fill.sf = aSF; fillLabels.push(`SF ${aSF.toLocaleString()}`); }
-    if (empty(t.leaseStart) && a.commencement) { fill.leaseStart = String(a.commencement).slice(0, 10); fillLabels.push(`lease start ${fill.leaseStart}`); }
-    if (empty(t.leaseExpiry) && a.expiration) { fill.leaseExpiry = String(a.expiration).slice(0, 10); fillLabels.push(`expiry ${fill.leaseExpiry}`); }
-    if (empty(t.annualRent) && aRent) { fill.annualRent = aRent; fillLabels.push(`annual rent $${Math.round(aRent).toLocaleString()}`); }
-    if (empty(t.rentPerSF) && aRent && sf) { fill.rentPerSF = Math.round((aRent / sf) * 100) / 100; fillLabels.push(`rent/SF $${fill.rentPerSF}`); }
-    if (empty(t.renewalOptions) && a.options?.length) { const len = a.options[0].length || ""; fill.renewalOptions = `${a.options.length} @ ${len}`.trim(); fillLabels.push(`options "${fill.renewalOptions}"`); }
-    const rSF = pnum(t.sf);
-    if (aSF && rSF && Math.abs(aSF - rSF) / rSF > 0.015) discrepancies.push(`SF — roster shows ${rSF.toLocaleString()}, lease shows ${aSF.toLocaleString()}.`);
-    const rRent = pnum(t.annualRent);
-    if (aRent && rRent && Math.abs(aRent - rRent) / rRent > 0.02) discrepancies.push(`Current annual rent — roster shows $${Math.round(rRent).toLocaleString()}, lease shows $${Math.round(aRent).toLocaleString()}.`);
-    const aExp = a.expiration ? String(a.expiration).slice(0, 10) : ""; const rExp = t.leaseExpiry ? String(t.leaseExpiry).slice(0, 10) : "";
-    if (aExp && rExp && aExp !== rExp) discrepancies.push(`Lease expiration — roster shows ${rExp}, lease shows ${aExp}.`);
-  }
-  // Co-tenancy / operating-covenant clauses that lean on a distressed/unowned/dark tenant.
-  const clause = (a.leaseNotes ?? []).filter((n) => ["COTENCY", "OPC", "KICKTN"].includes(String(n.code))).map((n) => n.value || "").join("  ").toLowerCase();
-  if (clause && !/^none\.?$/.test(clause.trim())) {
-    const seen = new Set<string>();
-    for (const e of watchMap.values()) {
-      const b = (e.brand || "").trim();
-      if (b.length >= 3 && clause.includes(b.toLowerCase()) && !seen.has(b.toLowerCase())) { seen.add(b.toLowerCase()); risks.push(`Co-tenancy references ${b} — on the retailer watchlist (${e.status}). A dependence on a distressed retailer weakens this clause.`); }
-    }
-    for (const x of tenants) {
-      const nm = (x.name || "").trim();
-      if (nm.length >= 3 && (x.isNAP || x.isDark) && clause.includes(nm.toLowerCase()) && !seen.has(nm.toLowerCase())) { seen.add(nm.toLowerCase()); risks.push(`Co-tenancy references ${nm} — ${x.isNAP ? "an unowned (NAP) tenant KPR doesn't control" : "a dark store"}.`); }
-    }
-  }
-  return { discrepancies, risks, fill, fillLabels, tenantIndex };
-}
-
 function AbstractBody({ a, tenants, onFillRoster }: { a: LeaseAbstract; tenants?: Tenant[]; onFillRoster?: (tenantIndex: number, patch: Partial<Tenant>) => void }) {
   const isMobile = useIsMobile();
   const watchMap = useWatchlist();
-  const checks = computeChecks(a, tenants ?? [], watchMap);
+  const checks = computeAbstractChecks(a, tenants ?? [], watchMap);
   const fillKeys = Object.keys(checks.fill);
   const guaranties = (a.guaranties ?? []) as GuarantyEntry[];
   const tChain = (a.tenantChain ?? []) as PartyChainEntry[];

@@ -25,6 +25,9 @@ interface Props {
   // otherwise a faint "+ Abstract" lets you add one. Both are optional — the roster
   // renders unchanged when these aren't supplied.
   abstractsByTenant?: Map<string, LeaseAbstract>;
+  // Lowercased tenant name -> list of roster-vs-lease discrepancies (broker/rent-roll
+  // disagreeing with the abstract). When present, the Abstract pill shows a ⚠.
+  abstractDiscrepancies?: Map<string, string[]>;
   onOpenAbstract?: (tenantName: string) => void;
   onAddAbstract?: (tenantName: string) => void;
 }
@@ -273,7 +276,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, onOpenAbstract, onAddAbstract }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -426,14 +429,17 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
                   {(() => {
                     if (isVacantRow(t) || !t.name || (!onOpenAbstract && !onAddAbstract)) return null;
-                    const hasAbstract = abstractsByTenant?.has(t.name.trim().toLowerCase());
+                    const key = t.name.trim().toLowerCase();
+                    const hasAbstract = abstractsByTenant?.has(key);
+                    const disc = abstractDiscrepancies?.get(key);
                     if (hasAbstract && onOpenAbstract) {
+                      const flagged = !!disc?.length;
                       return (
                         <span
                           onClick={(e) => { e.stopPropagation(); onOpenAbstract(t.name!); }}
-                          title="View the lease abstract on file"
-                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"2px 8px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
-                          📄 ABSTRACT
+                          title={flagged ? `Roster disagrees with the lease — review:\n• ${disc!.join("\n• ")}` : "View the lease abstract on file"}
+                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color: flagged ? "#9a3412" : "#1f4d8f", background: flagged ? "#fdecdc" : "#eaf1fb", border:`1px solid ${flagged ? "#f0c08a" : "#c2d6f0"}`, padding:"2px 8px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
+                          📄 ABSTRACT{flagged ? " ⚠" : ""}
                         </span>
                       );
                     }
