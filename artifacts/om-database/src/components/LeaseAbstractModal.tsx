@@ -245,6 +245,20 @@ function AbstractBody({ a }: { a: LeaseAbstract }) {
         <Section title="Governing law"><div style={{ fontSize:13, color:C.ink }}>{a.governingLaw}</div></Section>
       )}
 
+      {Array.isArray(a.leaseNotes) && a.leaseNotes.length > 0 && (
+        <Section title="Lease notes" count={a.leaseNotes.length}>
+          <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+            {a.leaseNotes.map((n, i) => (
+              <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
+                <span style={{ fontWeight:700 }}>{n.label || n.code}</span>
+                {n.value ? <>: {n.value}</> : <span style={{ color:C.faint }}>: —</span>}
+                <Cite cite={n.cite} />
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {docs.length > 0 && (
         <Section title="Source documents" count={docs.length}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
