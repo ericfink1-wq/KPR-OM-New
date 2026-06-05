@@ -3871,7 +3871,10 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       notional, fixedRatePct, terminationDate,
       floatingSpreadBps: num(manualDraft.floatingSpreadBps),
       payFixed: true,
+      // Carry over everything else the loan already has, so the swap summary is complete.
       floatingIndex: deal.debtIndex || null,
+      counterparty: deal.debtLender || null,
+      effectiveDate: deal.debtOriginationDate || null,
       notes: "Entered manually — no swap confirmation on file.",
     };
     onUpdate(deal.id, buildSwapPatch(deal, sw));
