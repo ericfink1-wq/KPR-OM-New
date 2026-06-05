@@ -407,17 +407,28 @@ const fval = (f?: AbstractField | null): string => (f && f.value != null ? Strin
 const sv = (v: unknown): Cell => (v == null || v === "" ? "" : (typeof v === "number" ? v : String(v)));
 const yn = (b?: boolean | null): string => (b == null ? "" : b ? "Yes" : "No");
 
-// Build the per-tenant tab as an array-of-arrays.
+// Format an ISO date (yyyy-mm-dd) as M/D/YYYY to match Eric's tabs; pass other
+// strings ("None", "Not Provided", "Months 1", a bare year) through unchanged.
+function mdy(v: unknown): string {
+  if (v == null || v === "") return "";
+  const s = String(v).trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${Number(m[2])}/${Number(m[3])}/${m[1]}` : s;
+}
+const fdate = (f?: AbstractField | null): string => mdy(fval(f));
+
+// Build the per-tenant tab as an array-of-arrays, mirroring the layout/labels of
+// Eric's MRI-style abstract tab.
 function abstractTabAoa(a: LeaseAbstract): Aoa {
   const A: Aoa = [];
   const row = (...cells: Cell[]) => A.push(cells);
   const blank = () => A.push([""]);
   const head = (t: string) => { row(t); };
 
-  row(`${a.tenantName || ""}${a.dba ? "  —  " + a.dba : ""}`);
+  row(`${a.tenantName || ""}${a.dba && a.dba !== a.tenantName ? "  —  " + a.dba : ""}`);
   blank();
 
-  head("LEASE – PROPERTY / TENANT INFORMATION");
+  head("Lease – Property / Tenant Information");
   row("Building Name", sv(a.center));
   row("Suite #", sv(a.suite));
   row("Tenant Name", sv(a.tenantName));
@@ -427,72 +438,77 @@ function abstractTabAoa(a: LeaseAbstract): Aoa {
   blank();
 
   if (a.documents?.length) {
-    head("LEASE & AMENDMENTS");
-    for (const d of a.documents) row(sv(d.date), sv(d.name), sv(d.description));
+    head("Lease & Amendments");
+    for (const dc of a.documents) row(mdy(dc.date), sv(dc.name), sv(dc.description));
     blank();
   }
 
-  head("LEASE DATES");
+  // Lease Dates and Deposit Information side by side, like the tab.
   const d = a.dates || {};
-  const dr = (label: string, f?: AbstractField | null) => row(label, fval(f), citeShort(f?.cite));
-  dr("Lease Date", d.leaseDate);
-  dr("Open Date", d.openDate);
-  dr("Lease Commencement", d.leaseCommencement);
-  dr("Cancel", d.cancelDate);
-  dr("Lease Expiration", d.leaseExpiration);
-  dr("Rent Start Date", d.rentStartDate);
+  const dep = a.deposit || {};
+  const leftRows: Cell[][] = [
+    ["Lease Date", fdate(d.leaseDate), citeShort(d.leaseDate?.cite)],
+    ["Open Date", fdate(d.openDate), citeShort(d.openDate?.cite)],
+    ["Lease Comm.", fdate(d.leaseCommencement), citeShort(d.leaseCommencement?.cite)],
+    ["Cancel", fdate(d.cancelDate), citeShort(d.cancelDate?.cite)],
+    ["Insurance Cert. Exp.", sv(dep.insuranceCertExp), ""],
+    ["Lease Expiration", fdate(d.leaseExpiration), citeShort(d.leaseExpiration?.cite)],
+    ["Rent Start Date", fdate(d.rentStartDate), citeShort(d.rentStartDate?.cite)],
+  ];
+  const rightRows: Cell[][] = [
+    ["Non-Cash Deposit", sv(dep.nonCashDeposit)],
+    ["Interest Start Date", sv(dep.interestStartDate)],
+    ["Last Interest Earned Date", sv(dep.lastInterestEarnedDate)],
+    ["Vendor ID", sv(dep.vendorId)],
+    ["", ""],
+    ["Cash Deposit", sv(dep.cashDeposit)],
+    ["Interest Bearing", sv(dep.interestBearing)],
+  ];
+  row("LEASE DATES", "", "", "", "DEPOSIT INFORMATION");
+  for (let i = 0; i < Math.max(leftRows.length, rightRows.length); i++) {
+    const l = leftRows[i] ?? ["", "", ""];
+    const r = rightRows[i] ?? ["", ""];
+    row(l[0], l[1], l[2], "", r[0], r[1]);
+  }
   blank();
 
-  if (a.deposit) {
-    head("DEPOSIT INFORMATION");
-    const dep = a.deposit;
-    row("Cash Deposit", sv(dep.cashDeposit));
-    row("Non-Cash Deposit", sv(dep.nonCashDeposit));
-    row("Interest Bearing", sv(dep.interestBearing));
-    if (dep.interestStartDate) row("Interest Start Date", sv(dep.interestStartDate));
-    if (dep.vendorId) row("Vendor ID", sv(dep.vendorId));
-    if (dep.insuranceCertExp) row("Insurance Cert. Exp.", sv(dep.insuranceCertExp));
-    blank();
-  }
-
   if (a.noticeAddresses?.length) {
-    head("NOTICE ADDRESS");
+    head("Notice Address");
     for (const na of a.noticeAddresses) {
-      row(`${na.type || "Address"}`, citeShort(na.cite));
-      if (na.name) row("  Name", na.name);
-      if (na.attn) row("  Attn", na.attn);
+      row("Lease Address Type", sv(na.type || "Address"), citeShort(na.cite));
+      if (na.name) row("Name:", na.name);
+      if (na.attn) row("Attn:", na.attn);
       const addr = [na.address1, na.address2].filter(Boolean).join(", ");
-      if (addr) row("  Address", addr);
-      const csz = [na.city, na.state, na.zip].filter(Boolean).join(", ");
-      if (csz) row("  City/State/Zip", csz);
-      if (na.phone) row("  Phone", na.phone);
-      if (na.email) row("  Email", na.email);
+      if (addr) row("Address", addr);
+      row("City / State / Zip", [na.city, na.state, na.zip].filter(Boolean).join(", "));
+      if (na.phone) row("Phone", na.phone);
+      if (na.email) row("Email", na.email);
     }
     blank();
   }
 
   if (a.options?.length) {
-    head("LEASE – OPTIONS");
-    row("Number", "Option Date", "Type", "Notice Date", "Suite", "SF", "Term (mo)", "Rate (PSF)", "Descriptor", "Expire", "Source");
+    head("Lease – Options");
+    row("Option Number", "Option Date", "Type", "Notice Date", "Suite ID", "Square Feet", "Term Months", "Rate (PSF)", "Rate Descriptor", "Expire Date");
     for (const o of a.options) {
       row(
         sv(o.number ?? (o.ordinal != null ? `${o.ordinal}` : "")),
-        sv(o.windowStart), sv(o.optionType), sv(o.noticeDate), sv(o.suiteId),
+        mdy(o.windowStart), sv(o.optionType), mdy(o.noticeDate), sv(o.suiteId),
         sv(o.squareFeet), sv(o.termMonths), sv(o.ratePSF), sv(o.rateDescriptor),
-        sv(o.expireDate ?? o.windowEnd), citeShort(o.cite),
+        mdy(o.expireDate ?? o.windowEnd),
       );
     }
-    if (a.optionNotes) row("Option Notes", a.optionNotes);
+    if (a.optionNotes) row("Option Notes:", a.optionNotes);
     blank();
   }
 
   if (a.rentSchedule?.length) {
-    head("BILLING – RECURRING CHARGES");
-    row("Income", "Effective", "End", "$/SF", "Annual", "Monthly", "Source");
+    head("Billing – Recurring Charges");
+    row("Income Category", "Effective Date", "End Date", "Annual Amount/sf", "Annual Total", "Monthly Amount", "Note");
     for (const r of a.rentSchedule) {
       row(
-        sv(r.incomeCategory ?? "RNT"), sv(r.periodStart), sv(r.periodEnd),
-        sv(r.amountPerSF ?? r.psf), sv(r.annualRent), sv(r.monthlyRent), citeShort(r.cite),
+        sv(r.incomeCategory ?? "RNT"), mdy(r.periodStart), mdy(r.periodEnd),
+        sv(r.amountPerSF ?? r.psf), sv(r.annualRent), sv(r.monthlyRent), sv(r.note),
       );
     }
     blank();
@@ -500,17 +516,17 @@ function abstractTabAoa(a: LeaseAbstract): Aoa {
 
   const pr = a.percentageRentDetail;
   if (pr || a.percentageRent) {
-    head("RETAIL – PERCENTAGE RENT");
+    head("Retail – Percentage Rent");
     if (pr) {
       if (pr.summary) row("Summary", pr.summary);
       row("Reporting Frequency", sv(pr.reportingFrequency));
-      row("Natural Breakpoint", yn(pr.naturalBreakpoint));
-      row("In Lieu of Minimum", yn(pr.inLieuOfMinimum));
+      row("Use Natural Breakpoint", yn(pr.naturalBreakpoint));
+      row("Percentage Rent in Lieu of Minimum Rent", yn(pr.inLieuOfMinimum));
       if (pr.salesYearEnd) row("Sales Year End", sv(pr.salesYearEnd));
-      if (pr.paymentTiming) row("Payment", sv(pr.paymentTiming));
+      if (pr.paymentTiming) row("Percentage Rent Paid", sv(pr.paymentTiming));
       if (pr.breakpoints?.length) {
         row("Start Date", "Percentage", "Breakpoint");
-        for (const b of pr.breakpoints) row(sv(b.startDate), sv(b.percentage), sv(b.breakpoint));
+        for (const b of pr.breakpoints) row(mdy(b.startDate), sv(b.percentage), sv(b.breakpoint));
       }
       if (pr.cite) row("Source", citeShort(pr.cite));
     } else if (a.percentageRent) {
@@ -519,12 +535,12 @@ function abstractTabAoa(a: LeaseAbstract): Aoa {
     blank();
   }
 
-  head("LEASE NOTES");
-  row("Section", "Category", "Notes", "Source");
+  // Lease Notes: Section (lease ref) | Code | (Category) | Notes — like the tab.
+  head("Lease Notes");
+  row("Section", "Code", "Category", "Notes");
   const byCode = new Map((a.leaseNotes || []).map((n) => [n.code, n]));
   for (const sec of LEASE_NOTE_SECTIONS) {
     const n = byCode.get(sec.code);
-    // Fall back to the high-level convenience fields when a note isn't keyed.
     let val = n?.value ?? "";
     let cite = n?.cite ?? null;
     if (!val) {
@@ -535,12 +551,12 @@ function abstractTabAoa(a: LeaseAbstract): Aoa {
       else if (sec.code === "EXCLUSI" && a.exclusives?.length) { val = a.exclusives.map((e) => e.description).filter(Boolean).join("  |  "); cite = a.exclusives[0]?.cite ?? null; }
       else if (sec.code === "GUARANT" && a.guaranties?.length) { val = a.guaranties.map((g) => `${g.guarantor}: ${g.scope ?? ""}`).join("  |  "); cite = a.guaranties[0]?.cite ?? null; }
     }
-    row(sv(cite?.section), sec.label, val, citeShort(cite));
+    row(sv(cite?.section), sec.code, `(${sec.label})`, val);
   }
 
   if (a.flags?.length) {
     blank();
-    head("FLAGS");
+    head("KPR Flags — verify these");
     for (const f of a.flags) row((f.severity || "note").toUpperCase(), f.issue || "", f.detail || "");
   }
 
@@ -551,7 +567,7 @@ function sanitizeSheetName(name: string): string {
   return (name || "Sheet").replace(/[\\/?*:[\]]/g, "-").slice(0, 31) || "Sheet";
 }
 
-const ABSTRACT_COL_WIDTHS = [22, 22, 14, 12, 14, 16, 44, 12, 12, 12, 30];
+const ABSTRACT_COL_WIDTHS = [24, 26, 30, 48, 16, 16, 16, 14, 16, 14];
 
 function appendAbstractTab(wb: XLSX.WorkBook, a: LeaseAbstract): void {
   const ws = XLSX.utils.aoa_to_sheet(abstractTabAoa(a));
@@ -566,7 +582,7 @@ function optsSummary(a: LeaseAbstract): { numLen: string; begins: string; rate: 
   const len = opts[0].length || (opts[0].termMonths ? `${opts[0].termMonths} mo` : "");
   const first = opts[0];
   const rate = first.ratePSF != null ? `$${first.ratePSF}` : (first.rent || "");
-  return { numLen: `${opts.length} @ ${len}`.trim(), begins: sv(first.windowStart) as string, rate };
+  return { numLen: `${opts.length} @ ${len}`.trim(), begins: mdy(first.windowStart), rate };
 }
 
 // Consolidated, topic-major "Issues Summary" across all of a deal's abstracts.
