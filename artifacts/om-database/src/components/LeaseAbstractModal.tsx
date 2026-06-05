@@ -3,8 +3,9 @@ import { createPortal } from "react-dom";
 import type {
   LeaseAbstract, AbstractCitation, AbstractField, GuarantyEntry,
   PartyChainEntry, AbstractOption, AbstractRentStep, AbstractExclusive,
-  AbstractSizeHistory, AbstractFlag, AbstractSourceDoc,
+  AbstractFlag, AbstractDocRef, AbstractNoticeAddress, LeaseNote,
 } from "../lib/idb";
+import { LEASE_NOTE_SECTIONS } from "../lib/idb";
 import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract } from "../lib/api";
 import { exportLeaseAbstract } from "../lib/exportExcel";
 
@@ -63,7 +64,21 @@ function flagColor(sev?: string | null) {
   return { fg:C.green, bg:C.greenBg, bd:C.greenBorder, label:"NOTE" };
 }
 
-// ---- Viewer -------------------------------------------------------------------
+// ---- Viewer (mirrors the per-tenant abstract tab layout) ----------------------
+
+// A label / value (/ citation) row, like the tab's left-aligned field rows.
+function KV({ label, value, cite, indent }: { label: string; value?: React.ReactNode; cite?: AbstractCitation | null; indent?: boolean }) {
+  return (
+    <div style={{ display:"flex", gap:10, padding:"3px 0", borderBottom:`1px solid ${C.line}`, marginLeft: indent ? 14 : 0 }}>
+      <div style={{ flex:"0 0 168px", fontSize:11.5, color:C.sub, fontWeight:600 }}>{label}</div>
+      <div style={{ flex:"1 1 auto", fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
+        {value != null && value !== "" ? value : <span style={{ color:C.faint }}>—</span>}<Cite cite={cite} />
+      </div>
+    </div>
+  );
+}
+const dval = (f?: AbstractField | null): string => (f && f.value != null ? String(f.value) : "");
+
 function AbstractBody({ a }: { a: LeaseAbstract }) {
   const guaranties = (a.guaranties ?? []) as GuarantyEntry[];
   const tChain = (a.tenantChain ?? []) as PartyChainEntry[];
@@ -71,16 +86,19 @@ function AbstractBody({ a }: { a: LeaseAbstract }) {
   const options = (a.options ?? []) as AbstractOption[];
   const rent = (a.rentSchedule ?? []) as AbstractRentStep[];
   const exclusives = (a.exclusives ?? []) as AbstractExclusive[];
-  const sizeHist = (a.sizeHistory ?? []) as AbstractSizeHistory[];
   const flags = (a.flags ?? []) as AbstractFlag[];
-  const docs = (a.sourceDocuments ?? []) as AbstractSourceDoc[];
+  const documents = (a.documents ?? []) as AbstractDocRef[];
+  const notices = (a.noticeAddresses ?? []) as AbstractNoticeAddress[];
+  const d = a.dates || {};
+  const dep = a.deposit;
+  const pr = a.percentageRentDetail;
+  const cite = (c?: AbstractCitation | null) => <Cite cite={c} />;
 
-  const optStatusPill = (s?: string | null) => {
-    const m = s === "exercised" ? { fg:C.green, bg:C.greenBg, bd:C.greenBorder }
-      : s === "expired" ? { fg:C.faint, bg:"#f6f2ea", bd:C.line }
-      : { fg:C.amber, bg:C.amberBg, bd:C.amberBorder };
-    return <span style={{ fontSize:9, fontWeight:700, color:m.fg, background:m.bg, border:`1px solid ${m.bd}`, borderRadius:10, padding:"1px 7px", textTransform:"uppercase" }}>{s || "—"}</span>;
-  };
+  // Lease Notes keyed by code, rendered in canonical (tab) order.
+  const notesByCode = new Map<string, LeaseNote>((a.leaseNotes ?? []).map((n) => [String(n.code), n]));
+
+  const th: React.CSSProperties = { padding:"4px 8px", textAlign:"left", color:C.faint, fontSize:10, fontWeight:700, whiteSpace:"nowrap" };
+  const td: React.CSSProperties = { padding:"4px 8px", color:C.ink, verticalAlign:"top" };
 
   return (
     <div>
@@ -103,171 +121,199 @@ function AbstractBody({ a }: { a: LeaseAbstract }) {
         </Section>
       )}
 
-      {a.narrative && (
-        <Section title="Summary">
-          <div style={{ fontSize:13, color:C.ink, lineHeight:1.55 }}>{a.narrative}</div>
-        </Section>
-      )}
-
-      <Section title="Premises & term">
-        <div style={{ fontSize:13, color:C.ink, lineHeight:1.6 }}>
-          <div><b style={{ fontWeight:600 }}>Size:</b> {a.currentSF != null ? `${a.currentSF}` : "—"} SF{sizeHist[0]?.cite ? <Cite cite={sizeHist[0].cite} /> : null}</div>
-          {a.term?.value && <div style={{ marginTop:4 }}><b style={{ fontWeight:600 }}>Term:</b> {a.term.value}<Cite cite={a.term.cite} /></div>}
-          {(a.commencement || a.expiration) && (
-            <div style={{ marginTop:4, color:C.sub }}>Commences {a.commencement || "—"} · current expiration {a.expiration || "—"}</div>
-          )}
-        </div>
+      <Section title="Lease – Property / Tenant Information">
+        <KV label="Building Name" value={a.center} />
+        <KV label="Suite #" value={a.suite} />
+        <KV label="Tenant Name" value={a.tenantName} />
+        <KV label="DBA" value={a.dba} />
+        <KV label="Premises GLA" value={(a.premisesGLA ?? a.currentSF) != null ? Number(a.premisesGLA ?? a.currentSF).toLocaleString() : ""} />
+        {a.mriNumber && <KV label="MRI #" value={a.mriNumber} />}
       </Section>
 
-      {tChain.length > 0 && (
-        <Section title="Tenant succession" count={tChain.length}>
-          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-            {tChain.map((p, i) => (
+      {documents.length > 0 && (
+        <Section title="Lease & Amendments" count={documents.length}>
+          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+            {documents.map((dc, i) => (
               <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.45 }}>
-                <span style={{ color:C.faint }}>{i + 1}.</span> {p.entity}
-                {p.effectiveDate ? <span style={{ color:C.sub }}> — {p.effectiveDate}</span> : null}
-                {p.instrument ? <span style={{ color:C.sub }}> ({p.instrument})</span> : null}
-                <Cite cite={p.cite} />
+                <span style={{ color:C.sub, fontFamily:"'SF Mono',ui-monospace,monospace", fontSize:11 }}>{dc.date || "—"}</span>{"  "}
+                <span style={{ fontWeight:600 }}>{dc.name}</span>{dc.description ? <span style={{ color:C.sub }}> — {dc.description}</span> : null}
               </div>
             ))}
           </div>
         </Section>
       )}
 
-      {lChain.length > 0 && (
-        <Section title="Landlord succession" count={lChain.length}>
-          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-            {lChain.map((p, i) => (
-              <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.45 }}>
-                <span style={{ color:C.faint }}>{i + 1}.</span> {p.entity}
-                {p.effectiveDate ? <span style={{ color:C.sub }}> — {p.effectiveDate}</span> : null}
-                <Cite cite={p.cite} />
-              </div>
-            ))}
-          </div>
+      <Section title="Lease Dates">
+        <KV label="Lease Date" value={dval(d.leaseDate)} cite={d.leaseDate?.cite} />
+        <KV label="Open Date" value={dval(d.openDate)} cite={d.openDate?.cite} />
+        <KV label="Lease Commencement" value={dval(d.leaseCommencement)} cite={d.leaseCommencement?.cite} />
+        <KV label="Cancel" value={dval(d.cancelDate)} cite={d.cancelDate?.cite} />
+        <KV label="Lease Expiration" value={dval(d.leaseExpiration)} cite={d.leaseExpiration?.cite} />
+        <KV label="Rent Start Date" value={dval(d.rentStartDate)} cite={d.rentStartDate?.cite} />
+      </Section>
+
+      {dep && (
+        <Section title="Deposit Information">
+          <KV label="Cash Deposit" value={dep.cashDeposit} />
+          <KV label="Non-Cash Deposit" value={dep.nonCashDeposit} />
+          <KV label="Interest Bearing" value={dep.interestBearing} />
+          {dep.vendorId && <KV label="Vendor ID" value={dep.vendorId} />}
+          {dep.insuranceCertExp && <KV label="Insurance Cert. Exp." value={dep.insuranceCertExp} />}
         </Section>
       )}
 
-      {guaranties.length > 0 && (
-        <Section title="Guaranty stack" count={guaranties.length}>
-          <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-            {guaranties.map((g, i) => (
-              <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                  <span style={{ fontWeight:700 }}>{g.guarantor}</span>
-                  {g.inForce === true && <span style={{ fontSize:9, fontWeight:700, color:C.green, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:10, padding:"1px 7px" }}>IN FORCE</span>}
-                  {g.inForce === false && <span style={{ fontSize:9, fontWeight:700, color:C.faint, background:"#f6f2ea", border:`1px solid ${C.line}`, borderRadius:10, padding:"1px 7px" }}>NOT IN FORCE</span>}
-                </div>
-                {g.scope && <div style={{ color:C.sub }}>{g.scope}{g.cap ? ` · Cap: ${g.cap}` : ""}<Cite cite={g.cite} /></div>}
-              </div>
-            ))}
-          </div>
+      {notices.length > 0 && (
+        <Section title="Notice Address" count={notices.length}>
+          {notices.map((na, i) => (
+            <div key={i} style={{ marginBottom:8 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.green, marginBottom:2 }}>{na.type || "Address"}{cite(na.cite)}</div>
+              {na.name && <KV label="Name" value={na.name} indent />}
+              {na.attn && <KV label="Attn" value={na.attn} indent />}
+              {(na.address1 || na.address2) && <KV label="Address" value={[na.address1, na.address2].filter(Boolean).join(", ")} indent />}
+              {(na.city || na.state || na.zip) && <KV label="City/State/Zip" value={[na.city, na.state, na.zip].filter(Boolean).join(", ")} indent />}
+              {na.phone && <KV label="Phone" value={na.phone} indent />}
+              {na.email && <KV label="Email" value={na.email} indent />}
+            </div>
+          ))}
         </Section>
       )}
 
       {options.length > 0 && (
-        <Section title="Options" count={options.length}>
-          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {options.map((o, i) => (
-              <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:7, flexWrap:"wrap" }}>
-                  <span style={{ fontWeight:700 }}>Option {o.ordinal ?? i + 1}{o.length ? ` · ${o.length}` : ""}</span>
-                  {optStatusPill(o.status)}
-                  {(o.windowStart || o.windowEnd) && <span style={{ color:C.sub }}>{o.windowStart || "?"} – {o.windowEnd || "?"}</span>}
-                  {o.rent && <span style={{ fontWeight:600 }}>{o.rent}</span>}
-                  {o.exercisedDate && <span style={{ color:C.green, fontSize:11 }}>exercised {o.exercisedDate}</span>}
-                </div>
-                {o.exerciseConditions && <div style={{ color:C.sub, fontSize:11.5 }}>{o.exerciseConditions}</div>}
-                <Cite cite={o.cite} />
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {rent.length > 0 && (
-        <Section title="Rent schedule" count={rent.length}>
+        <Section title="Lease – Options" count={options.length}>
           <div style={{ overflowX:"auto" }}>
-            <table style={{ borderCollapse:"collapse", fontSize:12, width:"100%", minWidth:380 }}>
-              <thead>
-                <tr style={{ color:C.faint, fontSize:10, textAlign:"left" }}>
-                  <th style={{ padding:"3px 8px 3px 0" }}>Period</th>
-                  <th style={{ padding:"3px 8px", textAlign:"right" }}>Annual</th>
-                  <th style={{ padding:"3px 8px", textAlign:"right" }}>Monthly</th>
-                  <th style={{ padding:"3px 8px" }}>Note</th>
-                </tr>
-              </thead>
+            <table style={{ borderCollapse:"collapse", fontSize:11.5, width:"100%", minWidth:560 }}>
+              <thead><tr>
+                <th style={th}>Number</th><th style={th}>Date</th><th style={th}>Type</th><th style={th}>Notice</th>
+                <th style={th}>SF</th><th style={th}>Term (mo)</th><th style={th}>Rate (PSF)</th><th style={th}>Expire</th><th style={th}>Source</th>
+              </tr></thead>
               <tbody>
-                {rent.map((r, i) => (
-                  <tr key={i} style={{ borderTop:`1px solid ${C.line}`, color:C.ink }}>
-                    <td style={{ padding:"4px 8px 4px 0", whiteSpace:"nowrap" }}>{r.periodStart || "?"} – {r.periodEnd || "?"}</td>
-                    <td style={{ padding:"4px 8px", textAlign:"right", fontWeight:600, whiteSpace:"nowrap" }}>{fmtMoney(r.annualRent)}</td>
-                    <td style={{ padding:"4px 8px", textAlign:"right", color:C.sub, whiteSpace:"nowrap" }}>{fmtMoney(r.monthlyRent)}</td>
-                    <td style={{ padding:"4px 8px", color:C.sub }}>{r.note || ""}</td>
+                {options.map((o, i) => (
+                  <tr key={i} style={{ borderTop:`1px solid ${C.line}` }}>
+                    <td style={{ ...td, fontWeight:600, whiteSpace:"nowrap" }}>{o.number ?? (o.ordinal != null ? `${o.ordinal}` : "")}</td>
+                    <td style={{ ...td, whiteSpace:"nowrap" }}>{o.windowStart || "—"}</td>
+                    <td style={td}>{o.optionType || "—"}</td>
+                    <td style={{ ...td, whiteSpace:"nowrap" }}>{o.noticeDate || "—"}</td>
+                    <td style={{ ...td, whiteSpace:"nowrap" }}>{o.squareFeet != null ? Number(o.squareFeet).toLocaleString() : "—"}</td>
+                    <td style={td}>{o.termMonths ?? "—"}</td>
+                    <td style={{ ...td, whiteSpace:"nowrap" }}>{o.ratePSF != null ? `$${o.ratePSF}` : (o.rent || "—")}</td>
+                    <td style={{ ...td, whiteSpace:"nowrap" }}>{o.expireDate || o.windowEnd || "—"}</td>
+                    <td style={{ ...td, color:C.faint, fontSize:10.5 }}>{o.cite ? [o.cite.doc, o.cite.section].filter(Boolean).join(" ") : ""}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {rent[0]?.cite && <div style={{ marginTop:4 }}><Cite cite={rent[0].cite} /></div>}
+          {a.optionNotes && <div style={{ marginTop:6, fontSize:12, color:C.sub, lineHeight:1.5 }}><b style={{ fontWeight:600, color:C.ink }}>Option Notes:</b> {a.optionNotes}</div>}
         </Section>
       )}
 
-      <Section title="Rent extras">
-        <div style={{ fontSize:13, color:C.ink, lineHeight:1.6 }}>
-          <div><b style={{ fontWeight:600 }}>Percentage rent:</b> <FieldBlock field={a.percentageRent} /></div>
-          <div style={{ marginTop:6 }}><b style={{ fontWeight:600 }}>Security deposit:</b> <FieldBlock field={a.securityDeposit} /></div>
+      {rent.length > 0 && (
+        <Section title="Billing – Recurring Charges" count={rent.length}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ borderCollapse:"collapse", fontSize:11.5, width:"100%", minWidth:520 }}>
+              <thead><tr>
+                <th style={th}>Income</th><th style={th}>Effective</th><th style={th}>End</th>
+                <th style={{ ...th, textAlign:"right" }}>$/SF</th><th style={{ ...th, textAlign:"right" }}>Annual</th><th style={{ ...th, textAlign:"right" }}>Monthly</th><th style={th}>Note</th>
+              </tr></thead>
+              <tbody>
+                {rent.map((r, i) => (
+                  <tr key={i} style={{ borderTop:`1px solid ${C.line}` }}>
+                    <td style={td}>{r.incomeCategory || "RNT"}</td>
+                    <td style={{ ...td, whiteSpace:"nowrap" }}>{r.periodStart || "—"}</td>
+                    <td style={{ ...td, whiteSpace:"nowrap" }}>{r.periodEnd || "—"}</td>
+                    <td style={{ ...td, textAlign:"right", whiteSpace:"nowrap" }}>{(r.amountPerSF ?? r.psf) != null ? `$${Number(r.amountPerSF ?? r.psf).toFixed(2)}` : "—"}</td>
+                    <td style={{ ...td, textAlign:"right", fontWeight:600, whiteSpace:"nowrap" }}>{fmtMoney(r.annualRent)}</td>
+                    <td style={{ ...td, textAlign:"right", color:C.sub, whiteSpace:"nowrap" }}>{fmtMoney(r.monthlyRent)}</td>
+                    <td style={{ ...td, color:C.sub }}>{r.note || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rent[0]?.cite && <div style={{ marginTop:4 }}>{cite(rent[0].cite)}</div>}
+        </Section>
+      )}
+
+      {(pr || a.percentageRent) && (
+        <Section title="Retail – Percentage Rent">
+          {pr ? (
+            <>
+              {pr.summary && <KV label="Summary" value={pr.summary} />}
+              <KV label="Reporting Frequency" value={pr.reportingFrequency} />
+              <KV label="Natural Breakpoint" value={pr.naturalBreakpoint == null ? "" : pr.naturalBreakpoint ? "Yes" : "No"} />
+              <KV label="In Lieu of Minimum" value={pr.inLieuOfMinimum == null ? "" : pr.inLieuOfMinimum ? "Yes" : "No"} />
+              {pr.salesYearEnd && <KV label="Sales Year End" value={pr.salesYearEnd} />}
+              {pr.paymentTiming && <KV label="Payment" value={pr.paymentTiming} cite={pr.cite} />}
+              {(pr.breakpoints ?? []).length > 0 && (
+                <div style={{ overflowX:"auto", marginTop:6 }}>
+                  <table style={{ borderCollapse:"collapse", fontSize:11.5, minWidth:320 }}>
+                    <thead><tr><th style={th}>Start Date</th><th style={th}>Percentage</th><th style={{ ...th, textAlign:"right" }}>Breakpoint</th></tr></thead>
+                    <tbody>
+                      {(pr.breakpoints ?? []).map((b, i) => (
+                        <tr key={i} style={{ borderTop:`1px solid ${C.line}` }}>
+                          <td style={{ ...td, whiteSpace:"nowrap" }}>{b.startDate || "—"}</td>
+                          <td style={td}>{b.percentage || "—"}</td>
+                          <td style={{ ...td, textAlign:"right", whiteSpace:"nowrap" }}>{fmtMoney(b.breakpoint)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          ) : (
+            <FieldBlock field={a.percentageRent} />
+          )}
+        </Section>
+      )}
+
+      <Section title="Lease Notes">
+        <div style={{ display:"flex", flexDirection:"column" }}>
+          {LEASE_NOTE_SECTIONS.map((sec) => {
+            const n = notesByCode.get(sec.code);
+            if (!n) return null;
+            return (
+              <div key={sec.code} style={{ display:"flex", gap:10, padding:"5px 0", borderBottom:`1px solid ${C.line}` }}>
+                <div style={{ flex:"0 0 150px", fontSize:11.5, color:C.sub, fontWeight:700 }}>{sec.label}</div>
+                <div style={{ flex:"1 1 auto", fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
+                  {n.value || <span style={{ color:C.faint }}>—</span>}{cite(n.cite)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Section>
 
-      {exclusives.length > 0 && (
-        <Section title="Exclusives & use" count={exclusives.length}>
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {exclusives.map((e, i) => (
-              <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
-                <div>{e.description}<Cite cite={e.cite} /></div>
-                {(e.modifications ?? []).map((m, j) => (
-                  <div key={j} style={{ marginTop:3, marginLeft:12, color:C.amber, fontSize:11.5 }}>
-                    ↳ Waiver{m.date ? ` (${m.date})` : ""}: {m.change}<Cite cite={m.cite} />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <Section title="Go-dark"><FieldBlock field={a.goDark} /></Section>
-      <Section title="Assignment & subletting"><FieldBlock field={a.assignment} /></Section>
-      <Section title="CAM & taxes"><FieldBlock field={a.camTax} /></Section>
-      <Section title="Default"><FieldBlock field={a.defaultTerms} /></Section>
-      {a.governingLaw && (
-        <Section title="Governing law"><div style={{ fontSize:13, color:C.ink }}>{a.governingLaw}</div></Section>
-      )}
-
-      {Array.isArray(a.leaseNotes) && a.leaseNotes.length > 0 && (
-        <Section title="Lease notes" count={a.leaseNotes.length}>
-          <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-            {a.leaseNotes.map((n, i) => (
-              <div key={i} style={{ fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
-                <span style={{ fontWeight:700 }}>{n.label || n.code}</span>
-                {n.value ? <>: {n.value}</> : <span style={{ color:C.faint }}>: —</span>}
-                <Cite cite={n.cite} />
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {docs.length > 0 && (
-        <Section title="Source documents" count={docs.length}>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-            {docs.map((d, i) => (
-              <span key={i} title={d.type || ""} style={{ fontSize:11, color:C.sub, background:"#f6f2ea", border:`1px solid ${C.line}`, borderRadius:8, padding:"2px 8px" }}>
-                {d.name}{d.date ? ` · ${d.date}` : ""}
-              </span>
-            ))}
-          </div>
+      {/* KPR supplemental analysis (beyond the standard tab) */}
+      {(a.narrative || tChain.length > 0 || lChain.length > 0 || guaranties.length > 0 || exclusives.length > 0) && (
+        <Section title="KPR analysis">
+          {a.narrative && <div style={{ fontSize:13, color:C.ink, lineHeight:1.55, marginBottom: tChain.length || lChain.length || guaranties.length ? 10 : 0 }}>{a.narrative}</div>}
+          {tChain.length > 0 && (
+            <div style={{ marginBottom:8 }}>
+              <div style={{ fontSize:10.5, color:C.faint, fontWeight:700, textTransform:"uppercase", marginBottom:3 }}>Tenant succession</div>
+              {tChain.map((p, i) => <div key={i} style={{ fontSize:12, color:C.ink }}><span style={{ color:C.faint }}>{i + 1}.</span> {p.entity}{p.effectiveDate ? <span style={{ color:C.sub }}> — {p.effectiveDate}</span> : null}{cite(p.cite)}</div>)}
+            </div>
+          )}
+          {lChain.length > 0 && (
+            <div style={{ marginBottom:8 }}>
+              <div style={{ fontSize:10.5, color:C.faint, fontWeight:700, textTransform:"uppercase", marginBottom:3 }}>Landlord succession</div>
+              {lChain.map((p, i) => <div key={i} style={{ fontSize:12, color:C.ink }}><span style={{ color:C.faint }}>{i + 1}.</span> {p.entity}{p.effectiveDate ? <span style={{ color:C.sub }}> — {p.effectiveDate}</span> : null}{cite(p.cite)}</div>)}
+            </div>
+          )}
+          {guaranties.length > 0 && (
+            <div style={{ marginBottom: exclusives.length ? 8 : 0 }}>
+              <div style={{ fontSize:10.5, color:C.faint, fontWeight:700, textTransform:"uppercase", marginBottom:3 }}>Guaranty stack</div>
+              {guaranties.map((g, i) => <div key={i} style={{ fontSize:12, color:C.ink, lineHeight:1.45 }}><b style={{ fontWeight:700 }}>{g.guarantor}</b>{g.scope ? <span style={{ color:C.sub }}> — {g.scope}</span> : null}{cite(g.cite)}</div>)}
+            </div>
+          )}
+          {exclusives.length > 0 && (exclusives.some((e) => (e.modifications ?? []).length > 0)) && (
+            <div>
+              <div style={{ fontSize:10.5, color:C.faint, fontWeight:700, textTransform:"uppercase", marginBottom:3 }}>Exclusive — waivers/modifications</div>
+              {exclusives.flatMap((e, i) => (e.modifications ?? []).map((m, j) => (
+                <div key={`${i}-${j}`} style={{ fontSize:12, color:C.amber }}>↳ {m.date ? `(${m.date}) ` : ""}{m.change}{cite(m.cite)}</div>
+              )))}
+            </div>
+          )}
         </Section>
       )}
     </div>
