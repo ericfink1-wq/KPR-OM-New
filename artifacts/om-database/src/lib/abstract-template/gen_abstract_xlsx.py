@@ -1,6 +1,6 @@
 import openpyxl, json, sys, re, datetime
 from copy import copy
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, coordinate_to_tuple
 
 TEMPLATE = "/tmp/slim_marsh.xlsx"
 WRAP = 108
@@ -29,16 +29,37 @@ def gen(abs_path, out_path):
     a = json.load(open(abs_path))
     ws.title = (a["tenantName"]+("(r)" if a.get("dba") else ""))[:31]
 
+    # strip the firm's embedded lease-page screenshots (right side) + any charts
+    ws._images = []; ws._charts = []
     # unmerge the lease-notes region so we can rewrite it freely
     for mr in list(ws.merged_cells.ranges):
         if mr.min_row >= 142: ws.unmerge_cells(str(mr))
+    # DYNAMIC OPTIONS: the template has 4 option rows (67-70). If the tenant has
+    # more, insert rows after r70 so the table grows; everything below shifts down
+    # by N and we offset all subsequent row references by N.
+    _opts = a.get("options", [])[:20]
+    N = max(0, len(_opts) - 4)
+    if N:
+        ws.insert_rows(71, N)
+        for rr in range(71, 71+N):
+            ws.row_dimensions[rr].height = ws.row_dimensions[70].height
+            for col in range(1, 19):
+                ws.cell(rr, col)._style = copy(ws.cell(70, col)._style)
+    def OFF(row):  # offset a template row number for the inserted option rows
+        return row + (N if row >= 71 else 0)
+    def AD(addr):
+        m = re.match(r"^([A-Z]+)(\d+)$", addr); 
+        return f"{m.group(1)}{OFF(int(m.group(2)))}"
 
     def anchor(addr):
+        r,c = coordinate_to_tuple(addr)
         for mr in ws.merged_cells.ranges:
-            if addr in mr: return mr.coord.split(":")[0]
+            if mr.min_row<=r<=mr.max_row and mr.min_col<=c<=mr.max_col:
+                return f"{get_column_letter(mr.min_col)}{mr.min_row}"
         return addr
-    def S(addr,val): ws[anchor(addr)] = val
+    def S(addr,val): ws[anchor(AD(addr))] = val
     def clear(rng):
+        a0,a1 = rng.split(":"); rng = AD(a0)+":"+AD(a1)
         for row in ws[rng]:
             for c in row:
                 try: c.value=None
@@ -82,11 +103,14 @@ def gen(abs_path, out_path):
     S("C45",na.get("city","")); S("G45",na.get("state","")); S("I45",na.get("zip",""))
 
     # ---- OPTIONS (<=4) ----
-    orows=[67,68,69,70]
-    for i,o in enumerate(a.get("options",[])[:4]):
-        r=orows[i]; S(f"A{r}",o.get("number")); S(f"B{r}",fmtdate(o.get("windowStart","")))
-        S(f"C{r}",o.get("optionType","REN")); S(f"D{r}",fmtdate(o.get("noticeDate","")) or "Automatic")
-        S(f"E{r}","=+G4"); S(f"F{r}","=+C6")
+    def SR(addr,val):  # raw setter (no OFF) for the option rows themselves
+        ws[anchor(addr)]=val
+    for i,o in enumerate(_opts):
+        r=67+i  # contiguous (extra rows were inserted right after r70)
+        SR(f"A{r}",o.get("number")); SR(f"B{r}",fmtdate(o.get("windowStart","")))
+        SR(f"C{r}",o.get("optionType","REN")); SR(f"D{r}",fmtdate(o.get("noticeDate","")) or "Automatic")
+        SR(f"E{r}","=+G4"); SR(f"F{r}","=+C6")
+        if o.get("ratePSF") is not None: SR(f"M{r}", f'{o.get("rent","")}')
     if a.get("optionNotes"):
         S("B72","Option Notes:")
         for i,ln in enumerate(wrap_lines(a["optionNotes"])[:6]): S(f"D{72+i}",ln)
@@ -109,7 +133,7 @@ def gen(abs_path, out_path):
             r=131+i; S(f"A{r}",fmtdate(st.get("periodStart",""))); S(f"B{r}",0.02); S(f"C{r}",f"=E{brows[i]}/B{r}")
 
     # ---- LEASE NOTES (rebuild from r142, firm's single-line overflow) ----
-    refB,refC,refE,refA=ws["B147"],ws["C147"],ws["E147"],ws["A147"]
+    _nr=OFF(147); refB,refC,refE,refA=ws[f"B{_nr}"],ws[f"C{_nr}"],ws[f"E{_nr}"],ws[f"A{_nr}"]
     cat={"SECDEP":"(Security Deposit)","USE":"(Use Clause)","RADIUS":"(Radius)","LL RADIUS":"(Radius)",
       "EXCLUSI":"(Exclusive Use)","COTENCY":"(Co-tenancy)","KICKLL":"(Kickout/Termination)","KICKTN":"(Kickout/Termination)",
       "NBNC":"(LL Restrictions)","TRSTR":"(Tenant Restrictions)","CAM":"(CAM Method)","RETX":"(Tax Method)","INS":"(Insurance Method)",
@@ -118,7 +142,7 @@ def gen(abs_path, out_path):
       "PURCHSE":"(Purchase Option)","DUES":"(Merchant's Association)","HOLDOVR":"(Holdover)","PYLON":"(Pylon Sign)",
       "ESTOPPEL":"(Estoppel)","SUBORD":"(Subordination)","RELOCAT":"(Relocation)","UTILITY":"(Utilities)","HVAC":"(HVAC)"}
     def cp(dst,ref): dst._style=copy(ref._style)
-    r=142
+    r=OFF(142)
     for n in a.get("leaseNotes",[]):
         code=n.get("code",""); val=n.get("value",""); cite=(n.get("cite") or {})
         bc=ws.cell(r,2); cp(bc,refB); bc.value=code
