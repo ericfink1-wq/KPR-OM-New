@@ -101,6 +101,14 @@ def gen(abs_path, out_path):
     pr = a.get("percentageRent",{})
     prval = (pr.get("value","") if isinstance(pr,dict) else str(pr))
     has_pct = "none" not in prval.lower()[:12]
+    # clear Marshalls-specific percentage-rent data (citations, reporting window, sales year end)
+    for ad in ["G95","G110","F97","C107","D107","G107","E97_keep"]:
+        if ad.endswith("_keep"): continue
+        try:
+            for mr in ws.merged_cells.ranges:
+                if ad in mr: ad=mr.coord.split(":")[0]; break
+            ws[ad]=None
+        except Exception: pass
     S("A105", f"Use Natural Breakpoint: {'Yes' if pr.get('naturalBreakpoint') else ('No' if not has_pct else 'See Notes')}")
     clearrange("A131:K136")
     if has_pct and pr.get("naturalBreakpoint"):
