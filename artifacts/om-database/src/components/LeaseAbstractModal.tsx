@@ -7,7 +7,7 @@ import type {
 } from "../lib/idb";
 import { LEASE_NOTE_SECTIONS } from "../lib/idb";
 import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract } from "../lib/api";
-import { exportLeaseAbstract } from "../lib/exportExcel";
+import { exportLeaseAbstract } from "../lib/abstractExcel";
 import { useIsMobile } from "../hooks/use-mobile";
 
 // A lease abstract is a reconciled summary of a tenant's full lease document set.
@@ -440,7 +440,7 @@ export default function LeaseAbstractModal({ open, onClose, mode, abstract, deal
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0, flexWrap:"wrap" }}>
             {!showPaste && abstract && (
-              <button onClick={() => exportLeaseAbstract(abstract)} title="Export this abstract to Excel (mirrors your per-tenant tab)" style={{ fontSize:12, fontWeight:600, color:"#1f6f43", background:"#eafaf0", border:"1px solid #b7e4c7", borderRadius:7, padding:"6px 12px", cursor:"pointer" }}>⬇ Export to Excel</button>
+              <button onClick={() => { void exportLeaseAbstract(abstract).catch(() => {}); }} title="Export this abstract to Excel (mirrors your per-tenant tab)" style={{ fontSize:12, fontWeight:600, color:"#1f6f43", background:"#eafaf0", border:"1px solid #b7e4c7", borderRadius:7, padding:"6px 12px", cursor:"pointer" }}>⬇ Export to Excel</button>
             )}
             {!showPaste && abstract && (
               <button onClick={() => setUpdating(true)} style={{ fontSize:12, fontWeight:600, color:C.green, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:7, padding:"6px 12px", cursor:"pointer" }}>Update from Claude</button>
