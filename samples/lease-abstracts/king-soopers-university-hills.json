@@ -1,0 +1,140 @@
+{
+  "tenantName": "King Soopers",
+  "dba": "King Soopers (tenant of record: Dillon Companies, LLC)",
+  "status": "final",
+  "asOf": "2026-06-05",
+  "center": "University Hills",
+  "suite": "98",
+  "mriNumber": "-",
+  "premisesGLA": 65575,
+  "currentSF": 65575,
+  "sizeHistory": [
+    { "sf": 65575, "asOf": "1996-07-17", "cite": { "doc": "Lease" }, "note": "may include 5,041 SF of office/equipment area" }
+  ],
+  "documents": [
+    { "name": "Lease Agreement", "date": "1996-07-17", "type": "lease", "description": "Original lease (Dillon Companies / King Soopers)" },
+    { "name": "Letter (Undated)", "date": null, "type": "letter", "description": "Confirms the Commencement, Rent Commencement and Open date as 06/18/1997" },
+    { "name": "First Amendment", "date": "2001-10-09", "type": "amendment", "description": "Specifies Commencement 06/18/1997 and expiration 06/17/2017" },
+    { "name": "Second Amendment", "date": "2017-05-19", "type": "amendment", "description": "Tenant's parking rights and amends certain provisions" },
+    { "name": "Letter (1st option exercise)", "date": null, "type": "option", "description": "MISSING from file — exercise of first option, 6/18/2017–6/17/2022" },
+    { "name": "Letter", "date": "2021-11-19", "type": "option", "description": "Tenant exercised its 2nd option, 06/18/2022 to 06/17/2027" },
+    { "name": "Third Amendment to Lease Agreement", "date": "2024-09-27", "type": "amendment", "description": "Extends term to 2044; replaced existing options with twelve 5-year options" }
+  ],
+  "tenantChain": [
+    { "entity": "Dillon Companies, LLC (a Kroger company)", "role": "tenant", "effectiveDate": "1996-07-17", "instrument": "Lease Agreement", "cite": { "doc": "Lease" } }
+  ],
+  "landlordChain": [],
+  "guaranties": [],
+  "dates": {
+    "leaseDate": { "value": "1996-07-17", "cite": { "doc": "Lease" } },
+    "openDate": { "value": "1997-06-18", "cite": { "doc": "Letter (Undated)" } },
+    "leaseCommencement": { "value": "1997-06-18", "cite": { "doc": "First Amendment" } },
+    "cancelDate": { "value": "Not Provided" },
+    "leaseExpiration": { "value": "2044-09-30", "cite": { "doc": "Third Amendment" } },
+    "rentStartDate": { "value": "1997-06-18", "cite": { "doc": "First Amendment" } }
+  },
+  "deposit": {
+    "cashDeposit": "None",
+    "nonCashDeposit": "None",
+    "interestBearing": "N/A",
+    "interestStartDate": "None",
+    "lastInterestEarnedDate": "None",
+    "vendorId": "None",
+    "insuranceCertExp": "Not Provided"
+  },
+  "noticeAddresses": [
+    { "type": "Legal (Tenant)", "name": "Dillon Companies, LLC", "attn": "Real Estate Shared Services (KS-072)", "address1": "c/o The Kroger Company", "address2": "1014 Vine Street", "city": "Cincinnati", "state": "OH", "zip": "45202", "cite": { "doc": "Third Amendment" } },
+    { "type": "Copy", "name": "The Kroger Co.", "attn": "Law Department (KS-072)", "address1": "1014 Vine Street", "city": "Cincinnati", "state": "OH", "zip": "45202", "cite": { "doc": "Third Amendment" } }
+  ],
+  "commencement": "1997-06-18",
+  "expiration": "2044-09-30",
+  "term": { "value": "Lease dated 7/17/1996; commenced 6/18/1997. Through three amendments the term now runs to 9/30/2044, with twelve 5-year options thereafter (replacing the original option structure per the 3rd Amendment).", "cite": { "doc": "Third Amendment" } },
+  "options": [
+    { "number": "1", "ordinal": 1, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2044-10-01", "noticeDate": "2044-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2049-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "2", "ordinal": 2, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2049-10-01", "noticeDate": "2049-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2054-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "3", "ordinal": 3, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2054-10-01", "noticeDate": "2054-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2059-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "4", "ordinal": 4, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2059-10-01", "noticeDate": "2059-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2064-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "5", "ordinal": 5, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2064-10-01", "noticeDate": "2064-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2069-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "6", "ordinal": 6, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2069-10-01", "noticeDate": "2069-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2074-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "7", "ordinal": 7, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2074-10-01", "noticeDate": "2074-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2079-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "8", "ordinal": 8, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2079-10-01", "noticeDate": "2079-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2084-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "9", "ordinal": 9, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2084-10-01", "noticeDate": "2084-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2089-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "10", "ordinal": 10, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2089-10-01", "noticeDate": "2089-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2094-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "11", "ordinal": 11, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2094-10-01", "noticeDate": "2094-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2099-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } },
+    { "number": "12", "ordinal": 12, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2099-10-01", "noticeDate": "2099-07-03", "suiteId": "98", "squareFeet": 65575, "termMonths": 60, "ratePSF": 11.55, "rateDescriptor": "PSF", "expireDate": "2104-09-30", "rent": "$757,391/yr", "cite": { "doc": "Third Amendment" } }
+  ],
+  "optionNotes": "3rd Amendment extended the term and replaced the remaining options with twelve 5-year options (90 days' notice). It also added a Right of First Offer to Lease the space at the end of the 12th option period.",
+  "rentSchedule": [
+    { "incomeCategory": "RNT", "periodStart": "1997-06-18", "periodEnd": "2017-06-17", "amountPerSF": 10.50, "annualRent": 688537.50, "monthlyRent": 57378.13, "cite": { "doc": "First Amendment", "section": "6" } },
+    { "incomeCategory": "RNT", "periodStart": "2017-06-18", "periodEnd": "2022-06-17", "amountPerSF": 10.50, "annualRent": 688537.50, "monthlyRent": 57378.13, "cite": { "doc": "Lease", "section": "VI(4,5)" } },
+    { "incomeCategory": "RNT", "periodStart": "2022-06-18", "periodEnd": "2024-09-26", "amountPerSF": 10.50, "annualRent": 688537.50, "monthlyRent": 57378.13 },
+    { "incomeCategory": "RNT", "periodStart": "2024-09-27", "periodEnd": "2044-09-30", "amountPerSF": 11.50, "annualRent": 688538.00, "monthlyRent": 57378.17, "note": "current", "cite": { "doc": "Lease", "section": "VI(4)" } },
+    { "incomeCategory": "RNT", "periodStart": "2044-10-01", "periodEnd": "2049-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 1" },
+    { "incomeCategory": "RNT", "periodStart": "2049-10-01", "periodEnd": "2054-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 2" },
+    { "incomeCategory": "RNT", "periodStart": "2054-10-01", "periodEnd": "2059-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 3" },
+    { "incomeCategory": "RNT", "periodStart": "2059-10-01", "periodEnd": "2064-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 4" },
+    { "incomeCategory": "RNT", "periodStart": "2064-10-01", "periodEnd": "2069-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 5" },
+    { "incomeCategory": "RNT", "periodStart": "2069-10-01", "periodEnd": "2074-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 6" },
+    { "incomeCategory": "RNT", "periodStart": "2074-10-01", "periodEnd": "2079-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 7" },
+    { "incomeCategory": "RNT", "periodStart": "2079-10-01", "periodEnd": "2084-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 8" },
+    { "incomeCategory": "RNT", "periodStart": "2084-10-01", "periodEnd": "2089-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 9" },
+    { "incomeCategory": "RNT", "periodStart": "2089-10-01", "periodEnd": "2094-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 10" },
+    { "incomeCategory": "RNT", "periodStart": "2094-10-01", "periodEnd": "2099-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 11" },
+    { "incomeCategory": "RNT", "periodStart": "2099-10-01", "periodEnd": "2104-09-30", "amountPerSF": 11.55, "annualRent": 757391.00, "monthlyRent": 63115.92, "note": "Option 12" }
+  ],
+  "percentageRent": { "value": "None — no reporting; percentage rent none.", "cite": { "doc": "Lease" } },
+  "securityDeposit": { "value": "None", "cite": { "doc": "Lease" } },
+  "exclusives": [
+    { "description": "LL shall not, in future leases or agreements encumbering the Center, lease to any other tenant for the Initial Primary Use. (3rd Amendment replaces §3: no sale of groceries, meats, fish, produce, dairy, bakery, or packaged alcoholic beverages for off-premises consumption; incidental sale allowed up to the lesser of 1,000 SF or 10% of an occupant's space, or via a retail fulfillment center for digital delivery; no drugstore or pharmacy department.)", "modifications": [ { "change": "3rd Amendment replaced the exclusive (food/grocery/meat/fish/produce/dairy/bakery/packaged-alcohol + pharmacy)", "date": "2024-09-27", "cite": { "doc": "Third Amendment" } } ], "cite": { "doc": "Lease", "section": "III(5), X(2)" } }
+  ],
+  "goDark": { "value": "If Tenant ceases to use the Premises for more than 60 days, Landlord may terminate on notice (1st notice). If Tenant ceases again after the 1st notice for more than 30 days, Landlord may terminate (2nd notice); and a third time after the 2nd notice for more than 30 days (3rd notice). (Landlord-favorable — three-strike termination right.)", "cite": { "doc": "Lease", "section": "X(3-6)" } },
+  "assignment": { "value": "Landlord's prior written consent required, except for transfers to certain related parties (Kroger affiliates). No fee.", "cite": { "doc": "Lease", "section": "XXIV" } },
+  "camTax": { "value": "CAM: Pro-Rata = built ground-floor SF of the Premises ÷ built ground-floor + above-ground retail SF of all Center buildings; no admin fee; management fee included; Tenant pays its PRS of common-area capital improvements (e.g., parking-lot resurfacing). Monthly estimate with annual reconciliation. Taxes: Pro-Rata if not separately assessed (else paid directly); standard exclusions; no admin fee or cap; Landlord provides receipt within 30 days of final payment.", "cite": { "doc": "Lease", "section": "II(3,4), XIII(3-5)" } },
+  "defaultTerms": { "value": "Monetary: within 10 days after Landlord's written notice. Non-monetary: within 30 days after Landlord's written notice. Default Rate = prime + 2% (first 30 days), +4% (next 30), +6% thereafter.", "cite": { "doc": "Lease", "section": "XXX" } },
+  "governingLaw": "Colorado",
+  "leaseNotes": [
+    { "code": "SECDEP", "label": "Security Deposit", "value": "None" },
+    { "code": "USE", "label": "Use Clause", "value": "The Premises may be used for any lawful purpose. Initially intended for pharmacy, grocery store and supermarket purposes — retail sale or rental of all items sold/rented in grocery stores, bakery, meat, butchery, seafood departments and supermarkets, plus incidental uses customary to such operations. Banking, brokerage, dry-cleaning drop-off/pick-up, catering, floral, delivery, postal, shoe repair, packaging and other services may also be operated.", "cite": { "doc": "Lease", "section": "III(3), X(2)" } },
+    { "code": "RADIUS", "label": "Radius", "value": "None" },
+    { "code": "LL RADIUS", "label": "LL Radius", "value": "None" },
+    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "LL not to lease to any other tenant in the Center for the Initial Primary Use. 3rd Amendment (replaces §3): no off-premises sale of groceries, meats, fish, produce, dairy, bakery, or packaged alcoholic beverages; incidental sale allowed up to the lesser of 1,000 SF or 10% of an occupant's space (or via a retail fulfillment center for digital delivery); no drugstore or pharmacy department. No existing tenant as of 9/27/24 is subject unless its lease is modified to allow such sales.", "cite": { "doc": "Lease", "section": "III(5), X(2); 3rd amd" } },
+    { "code": "COTENCY", "label": "Co-tenancy", "value": "None" },
+    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "None" },
+    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "None" },
+    { "code": "NBNC", "label": "LL Restrictions", "value": "LL not to (a) construct improvements outside the building envelopes on the Site Plan; (b) move the 'Retail I' customer door east of the marked spot; or (c) substantially alter any building envelope, traffic lanes, ingress/egress, entrances, exits, walks, parking, setbacks or common areas within the 'Restricted Area'. No part of the Center may be used for a long list of prohibited uses (obnoxious odors; noxious/toxic gas; excessive dust; fire/explosive hazards; Hazardous Substances except in strict compliance; warehouse/industrial; trailer court/junk; stockyard; incineration; fire/bankruptcy/auction; auto sales/repair; mortuary; bingo; live entertainment; adult material/theatre/arcade; massage parlor; bar/tavern except ancillary to a restaurant; dance hall except ancillary; health spa except ancillary to salon; car wash; bowling; skating rink; game/billiard parlor except ancillary; shooting range; teen center; discotheque; video arcade; pawn shops).", "cite": { "doc": "Lease", "section": "III(2,4)" } },
+    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "No use violating U.S. law; no on-site dry cleaning or commercial laundry; ≤1,000 SF for a bank/S&L under license/sublease; ≤3,000 SF each (≤6,000 SF total) for specified 'Limited Uses' (office/school/business products & electronics; or home furnishings/domestic/kitchen goods). No use prohibited by the Declaration of Restrictions (Exh D), the Redevelopment Agreement Use Covenants (Exh E), or the Reciprocal Easement Agreement (Exh F).", "cite": { "doc": "Lease", "section": "X(1-2), Exh D, E, F" } },
+    { "code": "CAM", "label": "CAM Method", "value": "Pro-Rata = built ground-floor SF of Premises ÷ built ground-floor + above-ground retail SF of all Center buildings. No admin fee; management fee included; capital — Tenant pays its PRS of common-area capital improvements (e.g., parking-lot resurfacing, light standards). Monthly estimate / annual (or quarterly) reconciliation.", "cite": { "doc": "Lease", "section": "II(3,4), XIII(3-5)" } },
+    { "code": "RETX", "label": "Tax Method", "value": "Pro-Rata if not separately assessed (otherwise paid directly to LL and the taxing authority). Standard exclusions; no admin fee; no cap. LL to provide a receipt copy within 30 days after each final payment date.", "cite": { "doc": "Lease", "section": "XIII" } },
+    { "code": "INS", "label": "Insurance Method", "value": "Included in CAM. Liability $1M/occurrence, $2M aggregate (deductible up to $100K); Property damage $250K deductible; All Risk; fire & extended coverage at 100% replacement value; workers' comp as required. LL and any LL mortgagee as additional insured. Tenant may self-insure if net worth exceeds $100M. 30 days' prior notice of cancellation.", "cite": { "doc": "Lease", "section": "XIII(3), XVI(2,3,4,8)" } },
+    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Landlord's prior written consent required, except certain related parties. No fee.", "cite": { "doc": "Lease", "section": "XXIV" } },
+    { "code": "ALTERTN", "label": "Alterations", "value": "Interior, non-structural alterations upon notice to LL. Exterior or structural alterations upon LL's approval.", "cite": { "doc": "Lease", "section": "XIX" } },
+    { "code": "OPC", "label": "Operating Covenant", "value": "None" },
+    { "code": "GO DARK", "label": "Go Dark Option", "value": "If Tenant ceases use for >60 days, LL may terminate on notice (1st). If Tenant ceases again after the 1st notice for >30 days, LL may terminate (2nd); and a third time after the 2nd notice for >30 days (3rd). Three-strike termination right.", "cite": { "doc": "Lease", "section": "X(3-6)" } },
+    { "code": "LATECHG", "label": "Late Fee", "value": "Amounts unpaid after the 2-day cure period accrue interest at the Default Rate: prime + 2% for the first 30 days, +4% for the next 30 days, +6% thereafter (prime per First Interstate Bank of Denver or successor).", "cite": { "doc": "Lease", "section": "XII(1), XXX(1)" } },
+    { "code": "DEFAULT", "label": "Default", "value": "Monetary: within 10 days after LL's written notice. Non-monetary: within 30 days after LL's written notice.", "cite": { "doc": "Lease", "section": "XXX" } },
+    { "code": "GUARANT", "label": "Guaranty", "value": "None" },
+    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "None" },
+    { "code": "PURCHSE", "label": "Purchase Option", "value": "Right of First Offer (3rd Amendment, after 9/27/24): if LL sells the Premises or the Center, LL must offer the property to Tenant at the offer price; Tenant has 20 days to respond; if it accepts, 60 days to close; if it rejects, LL may sell but not below 90% of the offered price.", "cite": { "doc": "Third Amendment" } },
+    { "code": "DUES", "label": "Merchant's Association", "value": "None" },
+    { "code": "HOLDOVR", "label": "Holdover", "value": "Month-to-month tenancy at 120% of last-paid rent, terminable by either party on notice.", "cite": { "doc": "Lease", "section": "XXVIII" } },
+    { "code": "PYLON", "label": "Pylon Sign", "value": "None" },
+    { "code": "ESTOPPEL", "label": "Estoppel", "value": "None" },
+    { "code": "SUBORD", "label": "Subordination", "value": "Tenant agrees to subordinate its interest to the lien and encumbrance of LL's mortgagee.", "cite": { "doc": "Lease", "section": "XXIX(2)" } },
+    { "code": "RELOCAT", "label": "Relocation", "value": "None" },
+    { "code": "UTILITY", "label": "Utilities", "value": "Tenant to pay for all utilities consumed at the Premises.", "cite": { "doc": "Lease", "section": "XV" } },
+    { "code": "HVAC", "label": "HVAC", "value": "HVAC contract required (by Tenant, per 3rd Amendment).", "cite": { "doc": "Third Amendment" } }
+  ],
+  "flags": [
+    { "severity": "watch", "issue": "Missing document — First Option exercise", "detail": "The exercise of the First Option (6/18/2017–6/17/2022) is not in the file. Confirm it was validly exercised so the chain of term extensions is complete." },
+    { "severity": "info", "issue": "Rights of First Offer (purchase and re-lease)", "detail": "The 3rd Amendment adds a Right of First Offer to PURCHASE (if LL sells the premises or center) and a Right of First Offer to LEASE the space at the end of the 12th option period." }
+  ],
+  "narrative": "King Soopers (tenant of record Dillon Companies, LLC — a Kroger company) anchors University Hills in Denver, CO. 65,575 SF; lease dated 7/17/1996, commenced 6/18/1997. Through a First (2001), Second (2017) and Third (2024) Amendment, the term now runs to 9/30/2044, followed by twelve 5-year options at $11.55/SF (~$757,391/yr). Current base rent is $688,538 ($11.50/SF). The tenant holds a strong grocery/pharmacy exclusive (restated by the 3rd Amendment) and, via that amendment, a Right of First Offer to purchase the property and to re-lease the space after the 12th option. Less tenant-favorable than a typical Kroger box on go-dark: the landlord has a three-strike termination right (after a 60-day closure, then repeat 30-day closures). No guaranty, no percentage rent, no security deposit. Watch item: the First Option exercise document is missing from the file.",
+  "sourceDocuments": [
+    { "name": "Lease Agreement", "date": "1996-07-17", "type": "lease" },
+    { "name": "Confirmation Letter (Undated)", "date": null, "type": "letter" },
+    { "name": "First Amendment", "date": "2001-10-09", "type": "amendment" },
+    { "name": "Second Amendment", "date": "2017-05-19", "type": "amendment" },
+    { "name": "2nd Option exercise letter", "date": "2021-11-19", "type": "option" },
+    { "name": "Third Amendment to Lease Agreement", "date": "2024-09-27", "type": "amendment" }
+  ]
+}
