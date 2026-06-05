@@ -29,8 +29,13 @@ export function pnum(v: unknown): number | null {
 
 export function currentAnnualRent(a: LeaseAbstract): number | null {
   const today = new Date().toISOString().slice(0, 10);
+  // An option whose window covers today IS the current period (regardless of how
+  // its status was tagged). Use windowEnd OR expireDate for the end — abstracts
+  // use one or the other.
   for (const o of a.options ?? []) {
-    if (o.status === "exercised" && o.windowStart && o.windowEnd && String(o.windowStart) <= today && today <= String(o.windowEnd)) { const n = pnum(o.rent); if (n) return n; }
+    const start = o.windowStart ? String(o.windowStart) : "";
+    const end = o.windowEnd ? String(o.windowEnd) : (o.expireDate ? String(o.expireDate) : "");
+    if (start && end && start <= today && today <= end) { const n = pnum(o.rent); if (n) return n; }
   }
   const rs = a.rentSchedule ?? [];
   for (const r of rs) {
