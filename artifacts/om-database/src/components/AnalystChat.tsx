@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import type { Deal } from "../lib/idb";
+import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
-import { apiLoadImages } from "../lib/api";
+import { apiLoadImages, apiListAllLeaseAbstracts } from "../lib/api";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
 
@@ -83,6 +83,12 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   const { mutateAsync: sendMessage } = useCreateAiMessage();
   const active = deals.filter(d => !d.trashedAt);
 
+  // Lease abstracts on file, folded into the system prompt so the chat can answer
+  // lease-level questions (options, go-dark, exclusives, guaranties) with citations.
+  // Fetched once; [] on failure so the chat is never blocked.
+  const [abstracts, setAbstracts] = useState<LeaseAbstract[]>([]);
+  useEffect(() => { apiListAllLeaseAbstracts().then(setAbstracts).catch(() => {}); }, []);
+
   // Reset to top on initial mount — prevents opening scrolled to bottom
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -120,7 +126,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     setLoading(true);
 
     try {
-      const systemPrompt = buildSystemPrompt(deals);
+      const systemPrompt = buildSystemPrompt(deals, abstracts);
       const history = [...msgs, userMsg].map(m => ({ role: m.role, content: m.content }));
 
       const resp = await sendMessage({

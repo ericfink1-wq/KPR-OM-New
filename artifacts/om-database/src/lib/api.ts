@@ -691,6 +691,18 @@ export async function apiListLeaseAbstracts(dealId: string): Promise<LeaseAbstra
   }
 }
 
+// Every abstract across the library (for the Analyst chat's lease-level recall).
+// Returns [] on any failure so the chat never breaks.
+export async function apiListAllLeaseAbstracts(): Promise<LeaseAbstract[]> {
+  try {
+    const resp = await apiFetch(`/lease-abstracts`);
+    if (!resp.ok) return [];
+    return resp.json() as Promise<LeaseAbstract[]>;
+  } catch {
+    return [];
+  }
+}
+
 // One abstract by id.
 export async function apiGetLeaseAbstract(id: string): Promise<LeaseAbstract | null> {
   try {
