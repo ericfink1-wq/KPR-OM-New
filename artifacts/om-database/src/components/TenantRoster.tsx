@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
-import type { Tenant, OccBreakdown } from "../lib/idb";
+import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -20,6 +20,13 @@ interface Props {
   // Latest sales (by tenantKey) from the Tenant Sales panel — when present, the
   // roster shows these (uploaded report figures) instead of the OM-stated sales.
   latestSales?: Map<string, { salesPSF: number | null; occupancyCost: number | null; occSource?: "stated" | "computed"; occBreakdown?: OccBreakdown | null }>;
+  // Lease abstracts on file for this deal, keyed by lowercased tenant name. When a
+  // tenant has one, an "Abstract" pill shows next to its name (opens the viewer);
+  // otherwise a faint "+ Abstract" lets you add one. Both are optional — the roster
+  // renders unchanged when these aren't supplied.
+  abstractsByTenant?: Map<string, LeaseAbstract>;
+  onOpenAbstract?: (tenantName: string) => void;
+  onAddAbstract?: (tenantName: string) => void;
 }
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
@@ -266,7 +273,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, onOpenAbstract, onAddAbstract }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -413,6 +420,31 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         );
                       })()}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
+                      {(() => {
+                        if (!t.name || (!onOpenAbstract && !onAddAbstract)) return null;
+                        const hasAbstract = abstractsByTenant?.has(t.name.trim().toLowerCase());
+                        if (hasAbstract && onOpenAbstract) {
+                          return (
+                            <span
+                              onClick={(e) => { e.stopPropagation(); onOpenAbstract(t.name!); }}
+                              title="View the lease abstract on file"
+                              style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 7px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
+                              📄 ABSTRACT
+                            </span>
+                          );
+                        }
+                        if (onAddAbstract) {
+                          return (
+                            <span
+                              onClick={(e) => { e.stopPropagation(); onAddAbstract(t.name!); }}
+                              title="Add a lease abstract for this tenant"
+                              style={{ fontSize:9, color:"#a69e91", background:"transparent", border:"1px dashed #d8cfbd", padding:"1px 7px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
+                              + Abstract
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   )}
                 </td>
