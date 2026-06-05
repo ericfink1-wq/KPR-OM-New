@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import type { Deal, ImageBundle, TenantSalesYear, LeaseAbstract } from "../lib/idb";
+import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
   apiListLeaseAbstracts } from "../lib/api";
@@ -19,10 +19,11 @@ import ScoreBadge from "./ScoreBadge";
 import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
 import LeaseAbstractModal from "./LeaseAbstractModal";
-import AbstractUploadModal from "./AbstractUploadModal";
+import { computeAbstractChecks } from "../lib/abstractChecks";
 import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
+import { exportLeaseAbstractsWorkbook } from "../lib/abstractExcel";
 import { extractAnyFile } from "../lib/fileExtract";
 import { extractSalesReport, buildSalesHistoryPatch } from "../lib/salesExtract";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
@@ -1273,7 +1274,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // the open viewer/paste modal. Loaded per deal; refreshed after a save/delete.
   const [abstracts, setAbstracts] = useState<LeaseAbstract[]>([]);
   const [abstractModal, setAbstractModal] = useState<{ mode: "view" | "add"; tenantName: string } | null>(null);
-  const [showAbstractUpload, setShowAbstractUpload] = useState(false);
   const [saleBusy, setSaleBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
@@ -1365,6 +1365,36 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     }
     return m;
   }, [abstracts]);
+
+  // Auto-apply lease-authoritative data to the roster: for every abstract that
+  // matches a roster tenant, fill the fields the roster is MISSING (never
+  // overwrites). Idempotent — once filled there are no blanks left, so it stops.
+  // Keyed on [abstracts, d.id] so the onUpdate below can't loop.
+  useEffect(() => {
+    if (!abstracts.length || !(d.tenants?.length)) return;
+    let next = d.tenants;
+    let changed = false;
+    for (const a of abstracts) {
+      const chk = computeAbstractChecks(a, next, undefined);
+      if (chk.tenantIndex >= 0 && Object.keys(chk.fill).length) {
+        next = next.map((t, i) => (i === chk.tenantIndex ? { ...t, ...chk.fill } : t));
+        changed = true;
+      }
+    }
+    if (changed) onUpdate(d.id, { tenants: next, ...recomputeRosterMetrics(next as Array<Record<string, unknown>>, d.tenantsAsOf, d) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abstracts, d.id]);
+
+  // Roster tenants whose broker/rent-roll data disagrees with their lease abstract
+  // (lowercased tenant name -> the list of discrepancies). Surfaced on the roster.
+  const abstractDiscrepancies = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const a of abstracts) {
+      const chk = computeAbstractChecks(a, d.tenants ?? [], undefined);
+      if (a.tenantName && chk.discrepancies.length) m.set(a.tenantName.trim().toLowerCase(), chk.discrepancies);
+    }
+    return m;
+  }, [abstracts, d.tenants]);
 
   // Resync confirmation boxes to the persisted flags when switching properties.
   useEffect(() => {
@@ -2560,6 +2590,18 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 ⬇ Rent roll — Excel
               </button>
+              {abstracts.length > 0 && (
+                <button onClick={() => { void exportLeaseAbstractsWorkbook(d.propertyName || d.fileName || "deal", abstracts).catch(() => {}); }}
+                  title="Export all lease abstracts on this deal to Excel — an Issues Summary plus one detailed tab per tenant"
+                  style={{ background:"#eafaf0", border:"1px solid #b7e4c7", color:"#1f6f43", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                  ⬇ Lease abstracts — Excel
+                </button>
+              )}
+              <button onClick={() => setAbstractModal({ mode: "add", tenantName: "" })}
+                title="Paste a whole property's abstracts at once — an array, or { abstracts: [...] }"
+                style={{ background:"#eef1fb", border:"1px solid #c2cdef", color:"#33408f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                ⬆ Bulk abstracts
+              </button>
               <PdfDownloadButton
                 fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
                 makeDoc={async () => { const { default: RentRollPDF } = await import("./RentRollPDF"); return <RentRollPDF deal={d} />; }}
@@ -2596,13 +2638,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               </div>
             </div>
           )}
-          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
-            <button onClick={() => setShowAbstractUpload(true)}
-              title="Upload one tenant's abstract or a whole-property file — it auto-routes to the right tenants"
-              style={{ background:"#fff", border:"1px solid #c2d6f0", color:"#1f4d8f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
-              ⬆ Upload abstracts
-            </button>
-          </div>
           <TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
@@ -2616,7 +2651,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           estimatedRecoveries={estimateRecoveries(d).byName}
           latestSales={buildLatestSales(d)}
           abstractsByTenant={abstractsByTenant}
+          abstractDiscrepancies={abstractDiscrepancies}
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
+          onAddAbstract={(name) => setAbstractModal({ mode: "add", tenantName: name })}
         /></div>
       )}
 
@@ -2628,18 +2665,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           abstract={abstractModal.mode === "view" ? (abstractsByTenant.get(abstractModal.tenantName.trim().toLowerCase()) ?? null) : null}
           dealId={d.id}
           tenantName={abstractModal.tenantName}
+          tenants={d.tenants}
           isAdmin={isAdmin}
           onSaved={() => reloadAbstracts()}
           onDeleted={() => reloadAbstracts()}
-        />
-      )}
-
-      {showAbstractUpload && (
-        <AbstractUploadModal
-          dealId={d.id}
-          tenantNames={(d.tenants ?? []).map((t) => t.name).filter((n): n is string => !!n && !!n.trim())}
-          onClose={() => setShowAbstractUpload(false)}
-          onSaved={() => reloadAbstracts()}
+          onFillRoster={(idx, patch) => {
+            const newTenants = (d.tenants || []).map((t, i) => i === idx ? { ...t, ...patch } : t);
+            onUpdate(d.id, { tenants: newTenants, ...recomputeRosterMetrics(newTenants as Array<Record<string, unknown>>, d.tenantsAsOf, d) });
+          }}
         />
       )}
 
@@ -3299,6 +3332,37 @@ const NUMERIC_TXN_FIELDS = new Set<string>([
   "acqHoldPeriod","acqTargetIRR","dispExitCap","dispCosts","dispLoanPayoff",
 ]);
 
+// Coerce a loosely-typed date the user typed (3/12/26, 3-12-2026, "March 12, 2026")
+// into ISO YYYY-MM-DD, which is what every date calc in the app expects. Returns the
+// input unchanged if it can't confidently parse it — never mangle what they typed.
+function normalizeDateInput(raw: string): string {
+  const s = raw.trim();
+  if (!s || /^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // blank or already ISO
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fixYr = (y: number) => y >= 100 ? y : (y < 70 ? 2000 + y : 1900 + y); // 2-digit → century
+  // US order M/D/Y (also - or . separators)
+  let m = s.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})$/);
+  if (m) {
+    const mo = +m[1], da = +m[2], yr = fixYr(+m[3]);
+    if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) return `${yr}-${pad(mo)}-${pad(da)}`;
+    return s;
+  }
+  // ISO-ish with slashes: Y/M/D
+  m = s.match(/^(\d{4})[/.\-](\d{1,2})[/.\-](\d{1,2})$/);
+  if (m) {
+    const yr = +m[1], mo = +m[2], da = +m[3];
+    if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) return `${yr}-${pad(mo)}-${pad(da)}`;
+    return s;
+  }
+  // Month-name formats ("March 12, 2026", "12 Mar 2026") — only when a 4-digit year
+  // is present, so we never guess a century from an ambiguous string.
+  if (/\d{4}/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  return s;
+}
+
 interface TxnFieldProps {
   label: string;
   field: keyof Deal;
@@ -3319,6 +3383,7 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
   const isMoney = prefix === "$";
   const isPct   = suffix === "%";
   const isNum   = !!(numeric || isMoney || isPct || NUMERIC_TXN_FIELDS.has(field as string));
+  const isDate  = !isNum && (placeholder === "YYYY-MM-DD" || /date$/i.test(String(field)));
   const fmt = (v: unknown): string => {
     if (v == null || v === "") return "";
     if (isMoney) { const n = Number(String(v).replace(/[^0-9.\-]/g,"")); return isNaN(n) ? String(v) : n.toLocaleString("en-US"); }
@@ -3347,6 +3412,7 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
     let patchVal: unknown;
     if (v === "" || v == null) patchVal = null;
     else if (isNum) { const n = Number(String(v).replace(/[^0-9.\-]/g,"")); patchVal = isNaN(n) ? null : n; }
+    else if (isDate) patchVal = normalizeDateInput(String(v));
     else patchVal = v;
     onUpdate(dealId, { [field]: patchVal } as Partial<Deal>);
     return patchVal;
@@ -3393,7 +3459,15 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
             value={val}
             onFocus={() => { focusedRef.current = true; }}
             onChange={e => handleChange(e.target.value)}
-            onBlur={() => { focusedRef.current = false; commit(); }}
+            onBlur={() => {
+              focusedRef.current = false;
+              // Convert a loosely-typed date (3/12/26) to ISO and reflect it in the box.
+              if (isDate && valRef.current.trim()) {
+                const norm = normalizeDateInput(valRef.current);
+                if (norm !== valRef.current) { setVal(norm); valRef.current = norm; dirtyRef.current = true; }
+              }
+              commit();
+            }}
             onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
             placeholder={placeholder}
             style={{ flex:1, background:"transparent", border:"none", outline:"none", padding:"10px 6px", fontSize:14, color:"#383a37" }}/>
@@ -3856,6 +3930,59 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       if (swapFileRef.current) swapFileRef.current.value = "";
     }
   };
+  // Manual swap entry / edit. For a hedged loan with no confirmation PDF, type the
+  // terms (pre-filled from the loan's debt fields). The same form also EDITS an
+  // already-imported swap, so an extraction error can be corrected by hand.
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualDraft, setManualDraft] = useState({ notional: "", fixedRatePct: "", terminationDate: "", floatingSpreadBps: "", floatingIndex: "", counterparty: "" });
+  const openManualSwap = () => {
+    setSwapErr(null);
+    setManualDraft({
+      notional: deal.debtLoanAmount != null ? String(deal.debtLoanAmount) : "",
+      fixedRatePct: deal.debtRate != null ? String(deal.debtRate) : "",
+      terminationDate: deal.debtMaturityDate || "",
+      floatingSpreadBps: deal.debtSpread != null ? String(Math.round(Number(deal.debtSpread))) : "", // debtSpread is already in bps
+      floatingIndex: deal.debtIndex || "",
+      counterparty: deal.debtLender || "",
+    });
+    setManualOpen(true);
+  };
+  const openEditSwap = () => {
+    if (!swap) return;
+    setSwapErr(null);
+    setManualDraft({
+      notional: swap.notional != null ? String(swap.notional) : "",
+      fixedRatePct: swap.fixedRatePct != null ? String(swap.fixedRatePct) : "",
+      terminationDate: swap.terminationDate || "",
+      floatingSpreadBps: swap.floatingSpreadBps != null ? String(Math.round(Number(swap.floatingSpreadBps))) : "",
+      floatingIndex: swap.floatingIndex || "",
+      counterparty: swap.counterparty || "",
+    });
+    setManualOpen(true);
+  };
+  const saveManualSwap = () => {
+    const num = (v: string) => { const n = Number(v.replace(/[,$\s]/g, "")); return v.trim() === "" || isNaN(n) ? null : n; };
+    const notional = num(manualDraft.notional);
+    const fixedRatePct = num(manualDraft.fixedRatePct);
+    const terminationDate = manualDraft.terminationDate || null;
+    if (notional == null || fixedRatePct == null || !terminationDate) {
+      setSwapErr("Enter notional, fixed rate, and termination date to estimate breakage.");
+      return;
+    }
+    const sw: InterestRateSwap = {
+      // When editing, keep the imported swap's other fields (trade date, day-count,
+      // confirmation ref, etc.); when new, seed effective date / notes from the loan.
+      ...(swap || { effectiveDate: deal.debtOriginationDate || null, notes: "Entered manually — no swap confirmation on file." }),
+      notional, fixedRatePct, terminationDate,
+      floatingSpreadBps: num(manualDraft.floatingSpreadBps),
+      floatingIndex: manualDraft.floatingIndex.trim() || null,
+      counterparty: manualDraft.counterparty.trim() || null,
+      payFixed: swap?.payFixed ?? true,
+    };
+    onUpdate(deal.id, buildSwapPatch(deal, sw));
+    setManualOpen(false);
+  };
+
   const breakage = calcSwapBreakage(swap, { valuationDate: payoff, marketSwapRatePct: swapRate });
   const fmt$ = (v: number | null) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
   const basisColor = result.basis === "exact" ? "#0f9d63" : result.basis === "estimate" ? "#b08a3e" : result.basis === "locked" ? "#dc2626" : "#7d766a";
@@ -3871,7 +3998,19 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
         <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
           {swap ? "Swap Breakage — Early Payoff" : "Prepayment Penalty"}
         </div>
-        <div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          {!swap && (
+            <button onClick={openManualSwap}
+              style={{ background:"#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
+              Enter swap manually
+            </button>
+          )}
+          {swap && (
+            <button onClick={openEditSwap}
+              style={{ background:"#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
+              Edit terms
+            </button>
+          )}
           <input ref={swapFileRef} type="file" accept=".pdf" style={{ display:"none" }}
             onChange={e => { const f = e.target.files?.[0]; if (f) importSwap(f); }} />
           <button onClick={() => swapFileRef.current?.click()} disabled={swapBusy}
@@ -3909,6 +4048,57 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
           </div>
         )}
       </div>
+
+      {manualOpen && (
+        <div style={{ background:"#fbf8f1", border:"1px solid #e0d2b4", borderRadius:10, padding:"12px 14px", marginBottom:12 }}>
+          <div style={{ fontSize:11.5, fontWeight:600, color:"#5c5047", marginBottom:8 }}>{swap ? "Edit swap terms" : "Enter swap terms (no confirmation needed)"}</div>
+          <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-end" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Notional ($)
+              <input value={manualDraft.notional} onChange={e => setManualDraft(d => ({ ...d, notional: e.target.value }))} placeholder="e.g. 25,000,000"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:150 }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Swap fixed rate (%)
+              <input value={manualDraft.fixedRatePct} onChange={e => setManualDraft(d => ({ ...d, fixedRatePct: e.target.value }))} placeholder="e.g. 5.10"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:120 }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Termination date
+              <input type="date" value={manualDraft.terminationDate} onChange={e => setManualDraft(d => ({ ...d, terminationDate: e.target.value }))}
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Floating index (optional)
+              <input value={manualDraft.floatingIndex} onChange={e => setManualDraft(d => ({ ...d, floatingIndex: e.target.value }))} placeholder="e.g. USD-SOFR CME Term 1M"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Floating spread (bps, optional)
+              <input value={manualDraft.floatingSpreadBps} onChange={e => setManualDraft(d => ({ ...d, floatingSpreadBps: e.target.value }))} placeholder="e.g. 200"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Dealer / counterparty (optional)
+              <input value={manualDraft.counterparty} onChange={e => setManualDraft(d => ({ ...d, counterparty: e.target.value }))} placeholder="e.g. Webster Bank, N.A."
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+            </label>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={saveManualSwap}
+                style={{ background:"#3f7a1f", border:"none", color:"#fff", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                {swap ? "Save terms" : "Calculate breakage"}
+              </button>
+              <button onClick={() => { setManualOpen(false); setSwapErr(null); }}
+                style={{ background:"#fff", border:"1px solid #ddd4c2", color:"#7d766a", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>
+            Notional usually equals the loan amount, the fixed rate is your locked swap rate, and termination is the swap/loan maturity. The current market swap rate is filled in automatically from Today's Rates once you save — replace it with your bank's quote for a tighter estimate.
+          </div>
+        </div>
+      )}
 
       {!swap ? (
         <>

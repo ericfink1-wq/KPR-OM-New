@@ -83,6 +83,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <><B>Rent roll</B> — your authoritative current roster (SF, current rent, dates, rent steps). It <B>only adds to and fills in</B> the roster — it can never delete a tenant.</>,
           <><B>Lease options</B> — enriches each tenant's <B>renewal-option ladder</B>; it never adds or removes tenants.</>,
           <><B>Sales report</B> — tenant sales by year; matched suite-aware to the roster and stacked by vintage.</>,
+          <><B>Financing docs</B> — a <B>term sheet / loan doc</B>, <B>swap confirmation</B>, or <B>amortization schedule</B> are recognized too and fill in the deal's Financing tab (loan terms, swap, schedule).</>,
         ]} />
         <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}><B>Confirm import details:</B> if the AI was unsure about a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner — confirm, dismiss, or fix it right there.</p>
         <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>AI reads cost money.</B> Each PDF/Excel read uses paid tokens (a full OM is the biggest). Avoid re-uploading the same file; browsing, editing, and exporting are free.</p>
@@ -108,7 +109,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library, organized by status (Prospect → Under Contract → Owned → Sold, or Passed) — active deals surface first.</p>
         <BriefList items={[
           <><B>Cards</B> show anchor, SF, occupancy, WALT, NOI, cap rate, market, and a red-flag count.</>,
-          <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches the <B>columns you see</B> (property, status, city, state, MSA, anchor, seller) so every result maps to something on screen.</>,
+          <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches the <B>columns you see</B> (property, status, city, state, MSA, anchor, seller) plus a deal's saved <B>aliases</B>, so an alternate name still finds it.</>,
           <><B>Compare</B> — pick 2+ deals for a side-by-side: best value per metric highlighted, KPR's own economics next to the OM figures, shared tenants, an AI read, and Excel export.</>,
           <><B>Bulk actions</B> — checkboxes (on hover) to re-status or delete several at once.</>,
         ]} />
@@ -128,26 +129,26 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio — open any deal" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Click any card to open its detail page (Overview → Tenants/Sales/Rollover → Highlights/Upside/Flags → Financials/Comps/Closing Costs → Thesis/Cash Flow → Demographics → Notes). <B>Jump to ▾</B> in the sticky header skips to any section.</p>
+        <p style={{ margin:0 }}>Click any card to open its detail page, organized into tabs across the top — <B>Overview, AI Analysis, Tenants & Sales, Transaction Details, Financing, Market & Comps,</B> and <B>Underwriting</B>. Each tab's <B>▾</B> jumps straight to a section within it.</p>
         <BriefList items={[
-          <><B>Editable address</B> — click the address under the title to fill in street/city/state if the OM didn't capture them (the state drives the Closing Costs estimate).</>,
-          <><B>Tenant roster</B> — every lease (SF, rent/SF, annual rent, dates, term, rent steps, options, reimbursements). Anchor, Investment-Grade, NAP, dark-store and <B>ATM</B> badges. Click a tenant name for all its locations library-wide.</>,
-          <><B>AI Highlights, Financials, Red Flags & Upside</B> — narrative, NOI/cap/occupancy/WALT, and AI-surfaced risks/opportunities.</>,
-          <><B>Comp Benchmark</B> — median cap rate and price/SF vs. comparable trades (sample size + date range). Sort/search the comps, see each comp's <B>anchor</B>, <B>★ star</B> a great comp to weight it more, <B>×</B> drop one, or <B>click a comp to expand</B> its center detail.</>,
-          <><B>Our Thesis / Assumptions</B> — type why you like the deal; <B>"Save & Re-grade"</B> folds it into the AI grade (it stays objective). Saved and shared with the team.</>,
-          <><B>Trade Area demographics</B> — 1/3/5-mile population & income from US Census data.</>,
+          <><B>Overview & editable address</B> — cover, site plan, key financials, and your notes. Click the address under the title to fill in street/city/state (the state drives Closing Costs). Type a date any common way — <em>3/12/26</em> — and it standardizes when you click out.</>,
+          <><B>Tenants & Sales</B> — every lease (SF, rent/SF, annual rent, dates, term, rent steps, options, reimbursements) with <B>Anchor, Investment-Grade, NAP, dark-store</B> and <B>ATM</B> badges; click a tenant name for all its locations. <B>Tenant Sales</B> tracks figures by year and shows a green ▲ / red ▼ on the latest year when sales are up or down vs. the prior year.</>,
+          <><B>AI Analysis</B> — narrative highlights, deal score, upside and red flags, plus <B>Our Thesis</B> (type why you like it; <B>"Save & Re-grade"</B> folds it into the grade, which stays objective).</>,
+          <><B>Financing</B> — record the loan (lender, rate, term, amortization) and estimate early-payoff cost: a <B>prepayment-penalty</B> calculator (step-down / yield-maintenance / defeasance) and a <B>swap-breakage</B> estimator. Import a swap confirmation, or <B>enter/edit the swap by hand</B> — it seeds today's market rate from Today's Rates. Preferred equity has its own block.</>,
+          <><B>Market & Comps</B> — the <B>Comp Benchmark</B> (median cap rate & price/SF vs. comparable trades, with ★ star / × drop / click-to-expand) and <B>1/3/5-mile</B> Census demographics.</>,
+          <><B>Transaction & Underwriting</B> — the purchase / closing-cost record, and <B>KPR's own economics plus a cash-flow projection</B>, kept separate from the OM-stated figures.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
         <><B>Edit any field</B> via its pencil icon (auto-saved, logged); lock verified figures so a re-extraction won't overwrite them.</>,
-        <><B>Re-run extraction</B> re-reads the OM PDF; <B>Refresh Analysis</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste); <B>Refresh Score</B> re-benchmarks against your portfolio. All show live progress, and each asks a quick <B>"this uses tokens — continue?"</B> first so an accidental click can't spend.</>,
-        <><B>Re-uploading for an existing property never overwrites your data.</B> It recognizes the deal (even if the new file is named a little differently), <B>fills only blank fields</B>, and <B>flags any conflicting numbers</B> (price, cap, NOI, SF, occupancy…) as a review item — keep yours or apply the OM's in one click. Verified fields are left untouched.</>,
+        <><B>Re-run extraction</B> re-reads the OM PDF; <B>Refresh Analysis</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste); <B>Refresh Score</B> re-benchmarks against your portfolio. Each asks a quick <B>"this uses tokens — continue?"</B> first.</>,
+        <><B>Re-uploading for an existing property never overwrites your data.</B> It recognizes the deal (even if the file is renamed), <B>fills only blank fields</B>, and <B>flags conflicting numbers</B> (price, cap, NOI, SF, occupancy…) as a review item — keep yours or apply the OM's in one click.</>,
+        <><B>Financing calculators:</B> the prepay penalty is <em>exact</em> for step-down and an <em>indicative estimate</em> for yield-maintenance/defeasance; <B>swap breakage</B> is indicative too — it proxies the current market swap rate from the Treasury curve (replace it with your bank's quote for a tighter number). Imported swap terms are fully <B>editable</B> via "Edit terms" if the doc read anything wrong.</>,
         <><B>Comp Benchmark</B> uses medians and tiers comps by relevance (same state/type/size within 24 months first, widening if needed); below a minimum sample it withholds a verdict rather than guess.</>,
-        <><B>Closing Costs</B> estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle), with each buyer/seller line showing its <B>effective % of price (or loan)</B> and a flag on anything to confirm with title — a ballpark, confirm with title.</>,
-        <><B>Cover & site plan</B> fit to screen; each has a 🗑 (with confirm). Dark-store flags are read-only (set from the data). Section titles show their source (OM vs. Census).</>,
-        <><B>Owned-deal Terms & Financing</B> (purchase price, going-in cap, lender, loan terms) are editable and feed the analytics. <B>Summary</B>, <B>Excel</B>, and <B>Find Sale</B> buttons export or research the deal.</>,
+        <><B>Closing Costs</B> (under Transaction Details) estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle), each line showing its <B>effective % of price (or loan)</B> — a ballpark, confirm with title.</>,
+        <><B>Cover & site plan</B> fit to screen, each with a 🗑 (with confirm). <B>Summary</B>, <B>Excel</B>, and <B>Find Sale</B> buttons export or research the deal; section titles show their source (OM vs. Census).</>,
       ]} />
     ),
   },
@@ -228,7 +229,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <>
         <BriefList items={[
           <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and an admin approves them under <B>Members</B> (they get an email that they're cleared). Logins now persist across updates.</>,
-          <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps, all stamped in <B>Eastern time (ET)</B> (the 3-year is an estimate from the Treasury curve when not quoted directly).</>,
+          <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps, all stamped in <B>Eastern time (ET)</B>; these also seed the deal-page <B>prepay & swap-breakage</B> estimates.</>,
           <><B>Admin → Members</B> now includes an <B>Upload activity</B> log — every file uploaded, when, ok/failed, and who — with a <B>CSV export</B> and a red badge on the Members button when there have been recent failed uploads.</>,
           <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
           <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,

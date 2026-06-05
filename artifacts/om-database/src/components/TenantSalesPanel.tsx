@@ -647,12 +647,20 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                         </div>
                       </td>
                       {selectedYear === "all"
-                        ? displayYears.map(y => {
+                        ? displayYears.map((y, yi) => {
                             const rec = row.byYear[y];
+                            // On the most recent year (leftmost), color the PSF by whether
+                            // it's up/down vs the prior year shown, and append the % change.
+                            const priorRec = yi === 0 && displayYears.length > 1 ? row.byYear[displayYears[1]] : null;
+                            const cur = rec?.salesPSF ?? null;
+                            const prior = priorRec?.salesPSF ?? null;
+                            const pct = (cur != null && prior != null && prior > 0 && cur !== prior) ? ((cur - prior) / prior) * 100 : null;
+                            const psfColor = cur == null ? "#bbb" : pct == null ? "#262724" : pct > 0 ? "#0f9d63" : "#dc2626";
                             return (
                               <>
-                                <td key={`${y}-psf`} style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#2d5a0e" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400, borderLeft: "2px solid #c8ddb8" }}>
-                                  {fmtPSF(rec?.salesPSF)}
+                                <td key={`${y}-psf`} style={{ padding: "7px 10px", textAlign: "right", color: psfColor, fontWeight: cur ? 600 : 400, borderLeft: "2px solid #c8ddb8" }}>
+                                  {fmtPSF(cur)}
+                                  {pct != null && <span style={{ marginLeft: 4, fontSize: 11 }}>({pct > 0 ? "+" : "−"}{Math.abs(pct).toFixed(1)}%)</span>}
                                 </td>
                                 <td key={`${y}-tot`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
@@ -667,7 +675,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                             const rec = row.byYear[selectedYear as number];
                             return (
                               <>
-                                <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#2d5a0e" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}</td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#262724" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtNum(rec?.sf)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>

@@ -25,6 +25,9 @@ interface Props {
   // otherwise a faint "+ Abstract" lets you add one. Both are optional — the roster
   // renders unchanged when these aren't supplied.
   abstractsByTenant?: Map<string, LeaseAbstract>;
+  // Lowercased tenant name -> list of roster-vs-lease discrepancies (broker/rent-roll
+  // disagreeing with the abstract). When present, the Abstract pill shows a ⚠.
+  abstractDiscrepancies?: Map<string, string[]>;
   onOpenAbstract?: (tenantName: string) => void;
   onAddAbstract?: (tenantName: string) => void;
 }
@@ -273,7 +276,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, onOpenAbstract, onAddAbstract }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -337,7 +340,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   );
 
   const cols: [string, string, boolean][] = [
-    ["name","Tenant",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
+    ["name","Tenant",false],["abstract","Abstract",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
     ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
     ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["recentlyExercisedRenewal","Recent Renewal",false],
     ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
@@ -374,7 +377,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} onClick={() => setSort(k)} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>{label}{arrow(k)}</th>
+                <th key={k} onClick={k === "abstract" ? undefined : () => setSort(k)} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: k === "abstract" ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>{label}{k === "abstract" ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
@@ -420,40 +423,38 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         );
                       })()}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
-                      {(() => {
-                        if (!t.name || (!onOpenAbstract && !onAddAbstract)) return null;
-                        const hasAbstract = abstractsByTenant?.has(t.name.trim().toLowerCase());
-                        if (hasAbstract && onOpenAbstract) {
-                          return (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onOpenAbstract(t.name!); }}
-                              title="View the lease abstract on file"
-                              style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 7px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
-                              📄 ABSTRACT
-                            </span>
-                          );
-                        }
-                        if (onAddAbstract) {
-                          return (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onAddAbstract(t.name!); }}
-                              title="Add a lease abstract for this tenant"
-                              style={{ fontSize:9, color:"#a69e91", background:"transparent", border:"1px dashed #d8cfbd", padding:"1px 7px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
-                              + Abstract
-                            </span>
-                          );
-                        }
-                        // No abstract yet — view-only roster: a faint, non-actionable hint
-                        // (uploading is now a single deal-level "Upload abstracts" button).
-                        return (
-                          <span title="No lease abstract on file yet"
-                            style={{ fontSize:9, color:"#bdb6a8", background:"transparent", border:"1px dashed #e7e0d2", padding:"1px 7px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>
-                            no abstract
-                          </span>
-                        );
-                      })()}
                     </div>
                   )}
+                </td>
+                <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
+                  {(() => {
+                    if (isVacantRow(t) || !t.name || (!onOpenAbstract && !onAddAbstract)) return null;
+                    const key = t.name.trim().toLowerCase();
+                    const hasAbstract = abstractsByTenant?.has(key);
+                    const disc = abstractDiscrepancies?.get(key);
+                    if (hasAbstract && onOpenAbstract) {
+                      const flagged = !!disc?.length;
+                      return (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); onOpenAbstract(t.name!); }}
+                          title={flagged ? `Roster disagrees with the lease — review:\n• ${disc!.join("\n• ")}` : "View the lease abstract on file"}
+                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color: flagged ? "#9a3412" : "#1f4d8f", background: flagged ? "#fdecdc" : "#eaf1fb", border:`1px solid ${flagged ? "#f0c08a" : "#c2d6f0"}`, padding:"2px 8px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
+                          📄 ABSTRACT{flagged ? " ⚠" : ""}
+                        </span>
+                      );
+                    }
+                    if (onAddAbstract) {
+                      return (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); onAddAbstract(t.name!); }}
+                          title="Add a lease abstract for this tenant"
+                          style={{ fontSize:9, color:"#a69e91", background:"transparent", border:"1px dashed #d8cfbd", padding:"2px 8px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
+                          + Abstract
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:"#837c6e", fontFamily:"'SF Mono',ui-monospace,monospace", fontSize:11 }}>{t.suite || "—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>

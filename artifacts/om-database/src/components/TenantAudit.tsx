@@ -17,6 +17,7 @@ interface Group {
   rawNames: Map<string, string[]>; // raw name -> list of deal labels
   dealCount: number;
   locationCount: number;
+  maxSf: number; // largest SF seen across placements (0 = unknown)
 }
 
 const LS_KEY = "kpr_dismissed_tenant_splits";
@@ -83,12 +84,14 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
         const key = tenantKey(t.canonicalName || t.name);
         if (!key) continue;
         if (!map.has(key)) {
-          map.set(key, { key, rawNames: new Map(), dealCount: 0, locationCount: 0 });
+          map.set(key, { key, rawNames: new Map(), dealCount: 0, locationCount: 0, maxSf: 0 });
         }
         const g = map.get(key)!;
         if (!g.rawNames.has(t.name)) g.rawNames.set(t.name, []);
         g.rawNames.get(t.name)!.push(label);
         g.locationCount++;
+        const sf = typeof t.sf === "number" ? t.sf : Number(String(t.sf ?? "").replace(/[^0-9.]/g, "")) || 0;
+        if (sf > g.maxSf) g.maxSf = sf;
       }
     }
     for (const g of map.values()) {
@@ -120,11 +123,19 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
       return diff.some(w => FORMAT_TOKENS.includes(w));
     };
 
+    // Nail salons (name contains "nail"/"nails") under 5k SF are small inline shops
+    // that are essentially never the same operator across centers — they only ever
+    // share generic name fragments. Never flag them for merge so the audit stops
+    // asking about them.
+    const NAIL_RE = /\bnails?\b/i;
+    const isIgnorableNailSalon = (g: Group) => NAIL_RE.test(g.key) && g.maxSf < 5000;
+
     const splits: { a: Group; b: Group; reason: string }[] = [];
     for (let i = 0; i < groups.length; i++) {
       for (let j = i + 1; j < groups.length; j++) {
         const ka = groups[i].key;
         const kb = groups[j].key;
+        if (isIgnorableNailSalon(groups[i]) || isIgnorableNailSalon(groups[j])) continue; // skip nail salons
         if (isFormatSplit(ka, kb)) continue; // auto-reject store vs storage/gas pad
         const prefix = ka.startsWith(kb + " ") || kb.startsWith(ka + " ");
 

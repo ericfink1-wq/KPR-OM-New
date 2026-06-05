@@ -1,0 +1,125 @@
+{
+  "tenantName": "Stop & Shop",
+  "dba": "Stop & Shop (tenant of record: The Stop & Shop Supermarket Company)",
+  "status": "final",
+  "asOf": "2026-06-05",
+  "center": "Concordia Shopping Center",
+  "suite": "",
+  "mriNumber": "",
+  "premisesGLA": 65572,
+  "currentSF": 65572,
+  "sizeHistory": [
+    { "sf": 30310, "asOf": "1983-06-30", "cite": { "doc": "Lease", "section": "1.1" } },
+    { "sf": 34746, "asOf": "2002-04-24", "cite": { "doc": "Amendment", "section": "Recital A" } },
+    { "sf": 65572, "asOf": "2006", "cite": { "doc": "Amendment", "section": "Exh K" } }
+  ],
+  "documents": [
+    { "name": "Lease", "date": "1983-06-30", "type": "lease", "description": "Indenture of Lease (Mayfair Super Markets / Kokes-Wishnick)" },
+    { "name": "Amendment of Lease and Expansion Agreement", "date": "2002-04-24", "type": "amendment", "description": "Extension by 24,810 SF; new 20-yr term; replaced go-dark/assignment/options/default" },
+    { "name": "Guaranty", "date": "2002", "type": "guaranty", "description": "Guarantor Koninklijke Ahold — NOT executed" }
+  ],
+  "tenantChain": [
+    { "entity": "Mayfair Super Markets, Inc. (New Jersey)", "role": "tenant", "effectiveDate": "1983-06-30", "instrument": "Indenture of Lease", "cite": { "doc": "Lease", "section": "intro" } },
+    { "entity": "The Stop & Shop Supermarket Company (Delaware)", "role": "tenant", "effectiveDate": "2000-11-04", "instrument": "Merger of Mayfair into Stop & Shop", "cite": { "doc": "Amendment", "section": "Recital C" } }
+  ],
+  "landlordChain": [
+    { "entity": "Kokes / Wishnick trusts (fee owners)", "role": "landlord", "effectiveDate": "1983-06-30", "instrument": "Indenture of Lease", "cite": { "doc": "Lease", "section": "intro" } },
+    { "entity": "Concordia Holding, L.L.C. (ground lessee / current landlord)", "role": "landlord", "effectiveDate": "1997-05-23", "instrument": "Master Net Lease", "cite": { "doc": "Amendment", "section": "Recital B" } }
+  ],
+  "guaranties": [
+    { "guarantor": "Koninklijke Ahold, n.v. (Royal Ahold)", "scope": "Guaranty of Tenant's financial obligations contemplated by the 2002 Amendment", "cap": null, "inForce": false, "cite": { "doc": "Guaranty" } }
+  ],
+  "dates": {
+    "leaseDate": { "value": "1983-06-30", "cite": { "doc": "Lease" } },
+    "openDate": { "value": "" },
+    "leaseCommencement": { "value": "1985-03-10", "cite": { "doc": "Lease" } },
+    "cancelDate": { "value": "N/A" },
+    "leaseExpiration": { "value": "2024-04-30", "cite": { "doc": "Amendment" } },
+    "rentStartDate": { "value": "1985-03-10", "cite": { "doc": "Lease" } }
+  },
+  "deposit": {
+    "cashDeposit": "None",
+    "nonCashDeposit": "None",
+    "interestBearing": "N/A"
+  },
+  "noticeAddresses": [
+    { "type": "Legal (Tenant)", "name": "The Stop & Shop Supermarket Company", "attn": "Real Estate Department", "address1": "1385 Hancock Street", "city": "Quincy", "state": "MA", "zip": "02169", "cite": { "doc": "Amendment", "section": "Art. VIII (Notices)" } },
+    { "type": "Copy", "name": "The Stop & Shop Supermarket Company", "attn": "Senior VP of Real Estate", "address1": "1385 Hancock Street", "city": "Quincy", "state": "MA", "zip": "02169", "cite": { "doc": "Amendment", "section": "Art. VIII" } }
+  ],
+  "commencement": "1985-03-10",
+  "expiration": "2029-04-30",
+  "term": { "value": "Original Indenture of Lease commenced 3/10/1985 (orig. expiration 4/30/2024 after the 2002 Expansion Amendment's new 20-yr term). Eleven 5-year options follow; the first runs 5/1/2024–4/30/2029. Options auto-extend unless Tenant opts out ≥12 months prior.", "cite": { "doc": "Amendment", "section": "2.03" } },
+  "options": [
+    { "number": "1", "ordinal": 1, "length": "5 years", "status": "exercised", "optionType": "REN", "windowStart": "2024-05-01", "noticeDate": "2023-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 11.45, "rateDescriptor": "PSF", "expireDate": "2029-04-30", "rent": "$750,603/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "2", "ordinal": 2, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2029-05-01", "noticeDate": "2028-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 12.45, "rateDescriptor": "PSF", "expireDate": "2034-04-30", "rent": "$816,175/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "3", "ordinal": 3, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2034-05-01", "noticeDate": "2033-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 13.45, "rateDescriptor": "PSF", "expireDate": "2039-04-30", "rent": "$881,747/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "4", "ordinal": 4, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2039-05-01", "noticeDate": "2038-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 14.45, "rateDescriptor": "PSF", "expireDate": "2044-04-30", "rent": "$947,319/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "5", "ordinal": 5, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2044-05-01", "noticeDate": "2043-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 15.95, "rateDescriptor": "PSF", "expireDate": "2049-04-30", "rent": "$1,045,677/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "6", "ordinal": 6, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2049-05-01", "noticeDate": "2048-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 17.45, "rateDescriptor": "PSF", "expireDate": "2054-04-30", "rent": "$1,144,035/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "7", "ordinal": 7, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2054-05-01", "noticeDate": "2053-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 19.45, "rateDescriptor": "PSF", "expireDate": "2059-04-30", "rent": "$1,275,179/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "8", "ordinal": 8, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2059-05-01", "noticeDate": "2058-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 21.45, "rateDescriptor": "PSF", "expireDate": "2064-04-30", "rent": "$1,406,323/yr", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "9", "ordinal": 9, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2064-05-01", "noticeDate": "2063-04-30", "squareFeet": 65572, "termMonths": 60, "ratePSF": 23.45, "rateDescriptor": "PSF (greater of $2/SF step or CPI)", "expireDate": "2069-04-30", "rent": "$1,537,467/yr", "cite": { "doc": "Amendment", "section": "Exh K" } },
+    { "number": "10", "ordinal": 10, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2069-05-01", "noticeDate": "2068-04-30", "squareFeet": 65572, "termMonths": 60, "rateDescriptor": "See Note (CPI)", "expireDate": "2074-04-30", "rent": "Greater of $2/SF or CPI increase over prior 5 years", "cite": { "doc": "Amendment", "section": "2.03" } },
+    { "number": "11", "ordinal": 11, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2074-05-01", "noticeDate": "2073-04-30", "squareFeet": 65572, "termMonths": 60, "rateDescriptor": "See Note (CPI)", "expireDate": "2079-04-30", "rent": "Greater of $2/SF or CPI increase over prior 5 years", "cite": { "doc": "Amendment", "section": "2.03" } }
+  ],
+  "optionNotes": "Per Amendment §2.03, the options are automatically extended unless Tenant provides at least 12 months' prior written notice of its intent not to extend (evergreen / tenant-cancellable). Options 10–11 step by the greater of $2.00/SF or the CPI increase over the preceding 5 years.",
+  "rentSchedule": [
+    { "incomeCategory": "RNT", "periodStart": "1985-03-10", "periodEnd": "2005-03-31", "amountPerSF": 6.20, "annualRent": 406362.00, "monthlyRent": 33863.50, "cite": { "doc": "Amendment", "section": "Exh K" } },
+    { "incomeCategory": "RNT", "periodStart": "2005-04-01", "periodEnd": "2010-03-31", "amountPerSF": 7.81, "annualRent": 511913.00, "monthlyRent": 42659.42, "cite": { "doc": "Amendment", "section": "Exh K" } },
+    { "incomeCategory": "RNT", "periodStart": "2010-04-01", "periodEnd": "2015-03-31", "amountPerSF": 8.45, "annualRent": 553887.00, "monthlyRent": 46157.25, "cite": { "doc": "Amendment", "section": "Exh K" } },
+    { "incomeCategory": "RNT", "periodStart": "2015-04-01", "periodEnd": "2020-03-31", "amountPerSF": 9.45, "annualRent": 619459.00, "monthlyRent": 51621.58, "cite": { "doc": "Amendment", "section": "Exh K" } },
+    { "incomeCategory": "RNT", "periodStart": "2020-04-01", "periodEnd": "2024-04-30", "amountPerSF": 10.45, "annualRent": 685031.00, "monthlyRent": 57085.92, "note": "to original expiration", "cite": { "doc": "Amendment", "section": "Exh K" } }
+  ],
+  "percentageRent": { "value": "None", "cite": { "doc": "Lease" } },
+  "securityDeposit": { "value": "None", "cite": { "doc": "Lease", "section": "2.5" } },
+  "exclusives": [
+    { "description": "Landlord not to lease any portion of the Center for: (a) supermarket/grocery; (b) convenience store (7-Eleven/Krauszer's/Cumberland Farms); (c) bakery/fresh bagel; (d) fish/seafood; (e) butcher/meat (ex-kosher); (f) produce; (g) deli/cheese — while Tenant provides those departments. While ≥15,000 SF is used as a food supermarket, no other food-for-off-premises use in the Center or adjacent Landlord land, with carve-outs (snack bars, ice cream, candy, package liquor, ≤2,500 SF food in variety/dept stores, ≤600 SF pet food, sit-down restaurants). Drug/pharmacy/health-&-beauty exclusive after Eckerd's.", "cite": { "doc": "Amendment", "section": "10.03; 4.4" } }
+  ],
+  "goDark": { "value": "Tenant may, in its sole discretion at any time, on 60 days' notice, cease business — continuing to pay fixed and additional rent. If a ≥15,000 SF supermarket ceases, Fixed Annual Additional Rent increases by $0.50/SF while no supermarket is open; after the 4th anniversary of cessation the increase applies only to the area then still vacant.", "cite": { "doc": "Amendment", "section": "10.02" } },
+  "assignment": { "value": "With prior notice but without Landlord consent. Neither Tenant nor Royal Ahold (as guarantor) is released. No fee.", "cite": { "doc": "Amendment", "section": "10A.1" } },
+  "camTax": { "value": "CAM: Pro-Rata = Premises ÷ Ground Floor Space of Phases I–III minus 2,000 SF (Service Station); 15% admin fee; capital expenditures excluded (repaving ≥20% of blacktop in 12 months is capital); monthly estimate + annual reconciliation; audit once per Lease Year; Tenant self-help to assume Common-Area maintenance on 5 days' notice. Taxes: Building = Premises ÷ Building rentable SF; Land = Premises ÷ Phases I–III Ground Floor Space; separately-assessed parcels excluded; income/franchise/rental-receipt taxes excluded; Tenant contest right.", "cite": { "doc": "Amendment", "section": "17; 2.2; 2.3" } },
+  "defaultTerms": { "value": "Monetary: 20 days after written notice (and if Tenant defaults 3 times in any 12-month period and fails to cure within 10 days of notice, Landlord may terminate). Non-monetary: 15 days after written notice.", "cite": { "doc": "Amendment", "section": "13.01; 7.1" } },
+  "governingLaw": "New Jersey",
+  "leaseNotes": [
+    { "code": "SECDEP", "label": "Security Deposit", "value": "None", "cite": { "doc": "Lease", "section": "2.5" } },
+    { "code": "USE", "label": "Use Clause", "value": "Initially open the Expansion Premises together with the Original Premises as a supermarket; thereafter the Premises may be used for any lawful retail purpose. Prohibited: (i) a 'car-hop' restaurant; (ii) noxious/unreasonably offensive uses (noise/smoke/dust/odors); (iii) any use barred by a valid restrictive covenant with another Center tenant; (iv) motel/tourist court, off-track betting, strip shows, massage parlor, or adult-material sales; (v) funeral home/parlor/crematory/mortuary. Not principally a bank (in-store branch bank allowed); no pharmacist-required use while Eckerd's lease is in effect (Landlord not to extend Eckerd's). These are the sole use restrictions.", "cite": { "doc": "Amendment", "section": "10.01" } },
+    { "code": "RADIUS", "label": "Radius", "value": "None" },
+    { "code": "LL RADIUS", "label": "LL Radius", "value": "None" },
+    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Landlord not to lease any portion of the Center for: (a) supermarket/grocery; (b) convenience store; (c) bakery/fresh bagel; (d) fish/seafood; (e) butcher/meat (ex-kosher); (f) produce; (g) deli/cheese — while Tenant provides those departments. While ≥15,000 SF is a food supermarket (or food/drug/general-merchandise 'Super Store'), no other food-for-off-premises use in the Center or adjacent Landlord land, except: (1) snack bars in variety/department stores (no frozen foods); (2) ice cream stores (Friendly/Baskin Robbins type); (3) candy stores; (4) a package liquor store (subject to not precluding Tenant's beer/wine license); (5) ≤2,500 SF (or 5% of floor area) of food in variety/department stores; (6) ≤600 SF pet food in a pet shop; (7) sit-down restaurants. After Eckerd's lease ends, drug/pharmacy/health-&-beauty exclusive (nail/beauty/barber may sell ≤200 SF hair-care/beauty products).", "cite": { "doc": "Amendment", "section": "10.03; 4.4" } },
+    { "code": "COTENCY", "label": "Co-tenancy", "value": "None" },
+    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "None" },
+    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "None" },
+    { "code": "NBNC", "label": "No-Build Area / LL Restrictions", "value": "No obstructions (incl. kiosks) in the Center; Tenant's entrance visibility and traffic flow not to be hindered. Within the green-cross-hatched 'Critical Area' (Exhibit A), Landlord covenants not to: (i) lease the Critical-Area Building space for other than retail; (ii) alter the Critical-Area improvements without Tenant consent; (iii) increase the Center's Ground Floor Space without consent (except a 13,000 SF second floor on Phase III); (iv) alter traffic access/service drives or ingress/egress without consent.", "cite": { "doc": "Amendment", "section": "7.02; 4.5" } },
+    { "code": "CAM", "label": "CAM Method", "value": "Pro-Rata = Premises ÷ Ground Floor Space of Phases I–III minus 2,000 SF (Service Station). 15% admin fee. Capital expenditures excluded (repaving ≥20% of blacktop within 12 months = capital, excluded). Includes insurance, landscaping, cleaning, fire safety, repaving, snow removal, lighting, trash removal, common-area utilities, security, equipment rental, required license/permit fees. Monthly estimate / annual reconciliation. Audit no more than once per Lease Year. If Tenant is dissatisfied, it may assume Common-Area maintenance on 5 days' notice (relieved of its CAM charge; Landlord keeps insurance, Tenant pays its share of premiums); Landlord may seek to resume after 1 year.", "cite": { "doc": "Amendment", "section": "17; 2.3.C" } },
+    { "code": "RETX", "label": "Tax Method", "value": "Building = Premises ÷ rentable floor space in the Building; Land = Premises ÷ Ground Floor Space within Phases I–III. Separately-assessed parcels excluded. Excludes income, franchise and rental-receipt taxes. Tenant has the right (in Landlord's or its own name) to contest the validity or amount of Real Estate Taxes. No cap.", "cite": { "doc": "Lease", "section": "2.2" } },
+    { "code": "INS", "label": "Insurance Method", "value": "Included in CAM. No admin fee.", "cite": { "doc": "Lease", "section": "2.3" } },
+    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "With prior notice but without Landlord consent. Neither Tenant nor Royal Ahold (as guarantor) is released. No fee.", "cite": { "doc": "Amendment", "section": "10A.1" } },
+    { "code": "ALTERTN", "label": "Alterations", "value": "Tenant may, at its own expense, redecorate and make interior alterations/additions/improvements, structural (including roof and walls); but may not (A) increase the footprint shown on the Site Plan, or (B) change the exterior of Tenant's Building (which must be architecturally harmonious with the Center) without Landlord's consent.", "cite": { "doc": "Amendment", "section": "14" } },
+    { "code": "OPC", "label": "Operating Covenant", "value": "None — Tenant may go dark (see Go Dark)." },
+    { "code": "GO DARK", "label": "Go Dark Option", "value": "Tenant may, in its sole discretion at any time, on 60 days' notice, cease business while continuing to pay fixed and additional rent. If a ≥15,000 SF supermarket ceases, Fixed Annual Additional Rent increases by $0.50/SF while no supermarket is open; after the 4th anniversary of cessation, the increase applies only to the area then still vacant.", "cite": { "doc": "Amendment", "section": "10.02" } },
+    { "code": "LATECHG", "label": "Late Fee", "value": "Silent." },
+    { "code": "DEFAULT", "label": "Default", "value": "Monetary: 20 days after written notice (3 defaults within any 12-month period uncured within 10 days of notice → Landlord may terminate). Non-monetary: 15 days after written notice.", "cite": { "doc": "Amendment", "section": "13.01; 7.1" } },
+    { "code": "GUARANT", "label": "Guaranty", "value": "Guarantor Koninklijke Ahold — NOT executed.", "cite": { "doc": "Guaranty" } },
+    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "None" },
+    { "code": "PURCHSE", "label": "Purchase Option", "value": "None" },
+    { "code": "DUES", "label": "Merchant's Association", "value": "None" },
+    { "code": "HOLDOVR", "label": "Holdover", "value": "150% of Minimum Rent.", "cite": { "doc": "Lease", "section": "7.4" } },
+    { "code": "PYLON", "label": "Pylon Sign", "value": "Tenant may erect one pylon sign advertising the Center as a whole, of a size/location/content in Tenant's reasonable business judgment, with an identification panel at the highest level and largest allowed; may erect one additional pylon advertising its business (subject to Landlord approval not unreasonably withheld).", "cite": { "doc": "Amendment", "section": "16" } },
+    { "code": "SUBORD", "label": "Subordination", "value": "Lease subject and subordinate to mortgages, with a Landlord-procured non-disturbance agreement (SNDA).", "cite": { "doc": "Lease", "section": "5.4" } },
+    { "code": "RELOCAT", "label": "Relocation", "value": "None" },
+    { "code": "UTILITY", "label": "Utilities", "value": "Tenant causes all utility services to be metered in its own name and pays the utility companies directly.", "cite": { "doc": "Lease", "section": "5.3" } },
+    { "code": "HVAC", "label": "HVAC", "value": "Tenant responsible for repair/replacement of its HVAC units and systems.", "cite": { "doc": "Lease", "section": "5.7.A" } }
+  ],
+  "flags": [
+    { "severity": "info", "issue": "Option 9 per-SF rate corrected per Exhibit K", "detail": "The source tab listed Option 9 at $21.45/SF (same as Option 8), but Exhibit K's authoritative dollar amount for the 9th Renewal Period is $1,537,467 = $23.45/SF (the $2/SF step above Option 8). The dollar amount is unchanged; only the displayed rate was corrected to match the lease." },
+    { "severity": "watch", "issue": "Ahold guaranty NOT executed", "detail": "The Koninklijke Ahold (Royal Ahold) guaranty contemplated by the 2002 Amendment was never executed — there is no parent guaranty backing the lease. The assignment/go-dark provisions still reference Royal Ahold as 'guarantor', but the guaranty itself is unsigned. Confirm before relying on parent credit." },
+    { "severity": "info", "issue": "Options are evergreen / tenant-cancellable", "detail": "The eleven 5-year options auto-extend unless Tenant gives ≥12 months' notice not to extend (Amendment §2.03) — the landlord cannot force a roll; the tenant effectively controls a ~55-year tail." },
+    { "severity": "info", "issue": "Ground/master lease above this anchor lease", "detail": "Concordia Holding holds the lessor interest via a 1997 master Net Lease from the fee owners — relevant to SNDA, estoppels, and who signs amendments." }
+  ],
+  "narrative": "Super Stop & Shop (tenant of record The Stop & Shop Supermarket Company) anchors the Concordia Shopping Center in Monroe Township, NJ under a 6/30/1983 Indenture of Lease originally signed by Mayfair Super Markets (merged into Stop & Shop in 2000). A 2002 Amendment of Lease and Expansion Agreement grew the premises to a built 65,572 SF, reset a new 20-year term (original expiration 4/30/2024), and wholesale-replaced the go-dark, assignment, options and default provisions. The lease is strongly tenant-favorable: eleven evergreen 5-year options (the first running 5/1/2024–4/30/2029 at $750,603/yr, stepping to CPI by the 10th–11th), a right to go dark with the landlord's only lever being continued rent plus a $0.50/SF bump, and a no-consent assignment right. Important: the Koninklijke Ahold parent guaranty contemplated by the amendment was never executed, so there is no parent-credit backstop. Landlord interest sits under a 1997 master net lease held by Concordia Holding. No percentage rent; no security deposit; New Jersey law.",
+  "sourceDocuments": [
+    { "name": "Indenture of Lease (Mayfair Super Markets)", "date": "1983-06-30", "type": "lease" },
+    { "name": "Amendment of Lease and Expansion Agreement", "date": "2002-04-24", "type": "amendment" },
+    { "name": "Guaranty (Koninklijke Ahold) — not executed", "date": "2002", "type": "guaranty" }
+  ]
+}

@@ -157,6 +157,47 @@ router.post("/deals/:id/lease-abstracts", requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/deals/:id/lease-abstracts/bulk — upsert MANY abstracts at once.
+// Body: { abstracts: LeaseAbstract[] } or a raw array. Each is keyed on
+// (dealId, tenantName); existing rows are replaced + version-bumped. Lets a whole
+// property's abstracts be uploaded in one shot instead of tenant by tenant.
+router.post("/deals/:id/lease-abstracts/bulk", requireAuth, async (req, res) => {
+  try {
+    await ensureLeaseAbstractsTable();
+    const dealId = String(req.params.id);
+    const body = req.body as { abstracts?: unknown } | unknown[];
+    const list = Array.isArray(body) ? body : (Array.isArray(body?.abstracts) ? body.abstracts : null);
+    if (!list) {
+      res.status(400).json({ error: "Expected an array of abstracts, or { abstracts: [...] }" });
+      return;
+    }
+
+    let saved = 0; const skipped: string[] = [];
+    for (const item of list) {
+      const obj = (item ?? {}) as Record<string, unknown>;
+      const tenantName = typeof obj.tenantName === "string" ? obj.tenantName.trim() : "";
+      if (!tenantName) { skipped.push("(missing tenantName)"); continue; }
+      const { id: _i, dealId: _d, version: _v, createdAt: _c, updatedAt: _u, ...data } = obj;
+      data.tenantName = tenantName;
+      const existing = await db.select().from(leaseAbstractsTable)
+        .where(and(eq(leaseAbstractsTable.dealId, dealId), eq(leaseAbstractsTable.tenantName, tenantName)));
+      if (existing.length) {
+        const row = existing[0];
+        await db.update(leaseAbstractsTable)
+          .set({ data: data as Record<string, unknown>, version: (row.version ?? 1) + 1, updatedAt: new Date() })
+          .where(eq(leaseAbstractsTable.id, row.id));
+      } else {
+        await db.insert(leaseAbstractsTable).values({ id: newAbstractId(), dealId, tenantName, data: data as Record<string, unknown>, version: 1 });
+      }
+      saved += 1;
+    }
+    res.json({ ok: true, saved, skipped });
+  } catch (err) {
+    req.log.error({ err }, "Failed to bulk-save lease abstracts");
+    res.status(500).json({ error: "Failed to bulk-save lease abstracts" });
+  }
+});
+
 // DELETE /api/lease-abstracts/:id — remove an abstract (admin only; destructive).
 router.delete("/lease-abstracts/:id", requireAdmin, async (req, res) => {
   try {
