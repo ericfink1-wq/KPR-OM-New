@@ -1,0 +1,111 @@
+{
+  "tenantName": "Marshalls",
+  "dba": "Marshalls of MA, Inc.",
+  "status": "final",
+  "asOf": "2026-06-05",
+  "center": "University Hills",
+  "suite": "61",
+  "mriNumber": "-",
+  "premisesGLA": 22821,
+  "currentSF": 22821,
+  "documents": [
+    { "name": "Lease Agreement", "date": "2015-11-10", "type": "lease", "description": "Black Cherry LLC (predecessor landlord) / Marshalls of MA, Inc." },
+    { "name": "Turnover Notice", "date": "2016-07-07", "type": "letter", "description": "Confirms Substantial Completion & Delivery of Possession as 07/08/2016" },
+    { "name": "Insurance Addendum / New Lease Agreement (DDR–TJX)", "date": "2016-08-18", "type": "amendment", "description": "Insurance addendum" },
+    { "name": "Commencement Date Agreement", "date": "2016-08-18", "type": "amendment", "description": "CD 08/18/2016; original Expiration 08/31/2026" },
+    { "name": "Consent and Omnibus Agreement", "date": "2020-09-23", "type": "amendment", "description": "COVID-related; rent deferral/payback" },
+    { "name": "Letter Agreement", "date": "2021-11-18", "type": "waiver", "description": "Waiver/consent" },
+    { "name": "Letter Agreement", "date": "2022-01-27", "type": "waiver", "description": "Waiver/consent" },
+    { "name": "Second Amendment to Lease", "date": "2025-05-30", "type": "amendment", "description": "Exercised 1st Extension (term to 8/31/2031); added 5th Extension; rewrote co-tenancy (§4.7); replaced go-dark (§4.8, 180 days); added deferral §5.4; landlord now SK University Hills Owner MZL (KPR); notice updated" }
+  ],
+  "tenantChain": [
+    { "entity": "Marshalls of MA, Inc. (Massachusetts corp; a TJX company)", "role": "tenant", "effectiveDate": "2015-11-10", "instrument": "Lease Agreement", "cite": { "doc": "Lease" } }
+  ],
+  "landlordChain": [
+    { "entity": "Black Cherry Limited Liability Company", "role": "landlord", "effectiveDate": "2015-11-10", "instrument": "Lease Agreement", "cite": { "doc": "Lease" } },
+    { "entity": "SK University Hills Owner MZL, LLC (Delaware; KPR)", "role": "landlord", "effectiveDate": "2025-05-30", "instrument": "named as Landlord in the 2nd Amendment", "cite": { "doc": "Second Amendment", "section": "intro" } }
+  ],
+  "guaranties": [],
+  "dates": {
+    "leaseDate": { "value": "2015-11-10", "cite": { "doc": "Lease" } },
+    "openDate": { "value": "Not Provided" },
+    "leaseCommencement": { "value": "2016-08-18", "cite": { "doc": "Commencement Date Agreement" } },
+    "cancelDate": { "value": "Not Provided" },
+    "leaseExpiration": { "value": "2031-08-31", "cite": { "doc": "Second Amendment", "section": "2" } },
+    "rentStartDate": { "value": "2016-08-18", "cite": { "doc": "Lease", "section": "5.1" } }
+  },
+  "deposit": { "cashDeposit": "None", "nonCashDeposit": "None", "interestBearing": "N/A" },
+  "noticeAddresses": [
+    { "type": "Legal (Tenant)", "name": "Marshalls of MA, Inc.", "attn": "Vice President-Real Estate", "address1": "770 Cochituate Road", "city": "Framingham", "state": "MA", "zip": "01701", "cite": { "doc": "Second Amendment", "section": "7" } },
+    { "type": "Tenant — default copies", "name": "Marshalls of MA, Inc.", "attn": "Legal – Real Estate", "address1": "770 Cochituate Road", "city": "Framingham", "state": "MA", "zip": "01701", "cite": { "doc": "Second Amendment", "section": "7" } },
+    { "type": "Landlord", "name": "SK University Hills Owner MZL, LLC", "attn": "c/o KPR Centers LLC", "address1": "535 Fifth Avenue, 12th Floor", "city": "New York", "state": "NY", "zip": "10017", "email": "officialnotice@kprcenters.com", "cite": { "doc": "Second Amendment", "section": "7" } }
+  ],
+  "commencement": "2016-08-18",
+  "expiration": "2031-08-31",
+  "term": { "value": "Lease 11/10/2015; commenced 8/18/2016; original term to 8/31/2026. Tenant exercised the 1st Extension via the 2nd Amendment, so the current term runs to 8/31/2031. Remaining: an 'Extra Period' (fraction of a year to Jan 31) plus the 2nd–5th Extension Periods (the 5th was added by the 2nd Amendment).", "cite": { "doc": "Second Amendment", "section": "2, 3" } },
+  "options": [
+    { "number": "1 (Extension)", "ordinal": 1, "length": "5 years", "status": "exercised", "optionType": "REN", "windowStart": "2026-09-01", "noticeDate": "2026-02-28", "suiteId": "61", "squareFeet": 22821, "termMonths": 60, "ratePSF": 18.00, "rateDescriptor": "PSF", "expireDate": "2031-08-31", "rent": "$410,778/yr", "exercisedDate": "2025-05-30", "cite": { "doc": "Second Amendment", "section": "2" } },
+    { "number": "2", "ordinal": 2, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2031-09-01", "noticeDate": "2031-02-28", "suiteId": "61", "squareFeet": 22821, "termMonths": 60, "ratePSF": 19.00, "rateDescriptor": "PSF", "expireDate": "2036-08-31", "rent": "$433,599/yr", "cite": { "doc": "Lease", "section": "4.2, 5.1" } },
+    { "number": "3", "ordinal": 3, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2036-09-01", "noticeDate": "2036-02-29", "suiteId": "61", "squareFeet": 22821, "termMonths": 60, "ratePSF": 20.00, "rateDescriptor": "PSF", "expireDate": "2041-08-31", "rent": "$456,420/yr", "cite": { "doc": "Lease", "section": "4.2, 5.1" } },
+    { "number": "4", "ordinal": 4, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2041-09-01", "noticeDate": "2041-02-28", "suiteId": "61", "squareFeet": 22821, "termMonths": 60, "ratePSF": 21.00, "rateDescriptor": "PSF", "expireDate": "2046-08-31", "rent": "$479,241/yr", "cite": { "doc": "Lease", "section": "4.2, 5.1" } },
+    { "number": "5 (added)", "ordinal": 5, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2046-09-01", "suiteId": "61", "squareFeet": 22821, "termMonths": 60, "ratePSF": 22.00, "rateDescriptor": "PSF", "expireDate": "2051-08-31", "rent": "$502,062/yr", "cite": { "doc": "Second Amendment", "section": "3, 5" } }
+  ],
+  "optionNotes": "Four 5-year renewal options on 6 months' notice, PLUS a 5th Extension Period added by the 2nd Amendment (5/30/2025) at $502,062/yr ($22/SF), on the same notice terms. The 1st Extension (9/1/2026–8/31/2031) was exercised in the 2nd Amendment. There is also an 'Extra Period' (a fraction of a year ending the January 31 after the then-current term expires), at the rate in effect immediately prior.",
+  "rentSchedule": [
+    { "incomeCategory": "RNT", "periodStart": "2016-08-18", "periodEnd": "2021-08-17", "amountPerSF": 16.00, "annualRent": 365136.00, "monthlyRent": 30428.00, "cite": { "doc": "Lease", "section": "5.1" } },
+    { "incomeCategory": "RNT", "periodStart": "2021-08-18", "periodEnd": "2026-08-31", "amountPerSF": 17.00, "annualRent": 387957.00, "monthlyRent": 32329.75, "note": "current", "cite": { "doc": "Lease", "section": "5.1" } },
+    { "incomeCategory": "RNT", "periodStart": "2026-09-01", "periodEnd": "2031-08-31", "amountPerSF": 18.00, "annualRent": 410778.00, "monthlyRent": 34231.50, "note": "1st Extension (exercised)", "cite": { "doc": "Second Amendment", "section": "2" } },
+    { "incomeCategory": "RNT", "periodStart": "2031-09-01", "periodEnd": "2036-08-31", "amountPerSF": 19.00, "annualRent": 433599.00, "monthlyRent": 36133.25, "note": "2nd Extension", "cite": { "doc": "Lease", "section": "5.1" } },
+    { "incomeCategory": "RNT", "periodStart": "2036-09-01", "periodEnd": "2041-08-31", "amountPerSF": 20.00, "annualRent": 456420.00, "monthlyRent": 38035.00, "note": "3rd Extension", "cite": { "doc": "Lease", "section": "5.1" } },
+    { "incomeCategory": "RNT", "periodStart": "2041-09-01", "periodEnd": "2046-08-31", "amountPerSF": 21.00, "annualRent": 479241.00, "monthlyRent": 39936.75, "note": "4th Extension", "cite": { "doc": "Lease", "section": "5.1" } },
+    { "incomeCategory": "RNT", "periodStart": "2046-09-01", "periodEnd": "2051-08-31", "amountPerSF": 22.00, "annualRent": 502062.00, "monthlyRent": 41838.50, "note": "5th Extension (added by 2nd Amendment)", "cite": { "doc": "Second Amendment", "section": "5" } }
+  ],
+  "percentageRent": { "value": "Percentage rent applies (Lease §7.3, §7.4); reported annually. Detailed breakpoint terms to be confirmed against the full 2015 lease.", "cite": { "doc": "Lease", "section": "7.3, 7.4" } },
+  "securityDeposit": { "value": "None", "cite": { "doc": "Lease" } },
+  "exclusives": [
+    { "description": "No other premises in the SC may contain more than 15,000 SF used for the sale/display of off-price brand-name men's, women's and children's apparel. Exceptions: TJ Maxx, Marshalls (and affiliates); Wal-Mart, Target, JCPenney, Sears, Kohl's (with an Alternate-Rent / termination mechanic if Kohl's opens) and other 50,000+ SF general-merchandise department stores; a full-line sporting goods store; and rights granted to tenants existing as of the lease date.", "cite": { "doc": "Lease", "section": "Sch B(4(B,C))" } }
+  ],
+  "goDark": { "value": "Per the 2nd Amendment (§6), Section 4.8 was REPLACED: if the Premises are closed for business for 180 consecutive days or more (after the 1st anniversary of the Commencement Date), other than for a Force Majeure Event, Landlord may terminate on 30 days' notice (before Tenant gives notice it will reopen). If Tenant gives a reopen notice it must reopen within 90 days. No continuous-operation covenant otherwise.", "cite": { "doc": "Second Amendment", "section": "6 (replaces §4.8)" } },
+  "assignment": { "value": "No Landlord consent required to assign or sublet the Premises; Landlord consent IS required to assign/sublet more than 25% of the floor area. Tenant may assign/sublet to a Related Party without consent and without giving Landlord a termination right.", "cite": { "doc": "Lease", "section": "17" } },
+  "camTax": { "value": "CAM: Pro-rata = Ground Floor Area of Premises ÷ Total Gross Leasable Area of the SC; service areas excluded; no admin fee; LL insurance, management/admin/overhead and capital expenditures EXCLUDED; CAP — 1st year ≤ $1.19/SF, thereafter increases ≤ 4%/yr non-cumulative (excl. snow removal and utility-rate increases); audit within 3 years. Taxes: same pro-rata; separately-assessed out-parcels excluded from the denominator; initial estimate $3.73/SF; audit within 3 years.", "cite": { "doc": "Lease", "section": "6.1–6.5, Sch B" } },
+  "governingLaw": "Colorado",
+  "leaseNotes": [
+    { "code": "SECDEP", "label": "Security Deposit", "value": "None" },
+    { "code": "USE", "label": "Use Clause", "value": "Retail store.", "cite": { "doc": "Lease", "section": "1.2" } },
+    { "code": "RADIUS", "label": "Radius", "value": "None" },
+    { "code": "LL RADIUS", "label": "LL Radius", "value": "None" },
+    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "No other premises in the SC > 15,000 SF for off-price brand-name men's/women's/children's apparel. Exceptions: TJ Maxx/Marshalls; Wal-Mart, Target, JCPenney, Sears, Kohl's (Alternate-Rent/termination mechanic if Kohl's opens) and other 50,000+ SF department stores; a full-line sporting-goods store; and pre-existing tenant rights.", "cite": { "doc": "Lease", "section": "Sch B(4(B,C))" } },
+    { "code": "COTENCY", "label": "Co-tenancy", "value": "If fewer than 3 of the named anchors are open for >30 days, Tenant pays Alternate Rent (lesser of 2% of sales or minimum rent); if the failure lasts >365 days, Tenant may terminate on 90 days' notice (or revert to full rent). Per the 2nd Amendment (§4), the named anchors are now King Soopers (~65,000 SF), ULTA (~9,744 SF, replacing Pier 1), Michaels (~32,000 SF), PetSmart (~15,000 SF), and Five Below (~10,000 SF, replacing 24 Hour Fitness). Qualified Replacement must use ≥80% of the replaced space and operate ≥25 stores regionally / 50 nationally. (Original Lease named Pier 1 and 24 Hour Fitness; the COVID exception no longer applies.)", "cite": { "doc": "Lease §4.3(A(2)),B), §4.7; amended by 2nd Amendment §4", "section": "4.7" } },
+    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "None" },
+    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "None (co-tenancy termination right is captured under Co-tenancy)" },
+    { "code": "NBNC", "label": "LL Restrictions", "value": "The SC may not be used for: non-retail purposes; entertainment uses (bowling, skating, cinema, bar except incidental to a restaurant, nightclub, discotheque, amusement gallery, poolroom, health club except one existing + one small Curves-type ≤3,500 SF not adjacent to the Premises, massage parlor except Massage Envy/therapeutic ≤5,000 SF not contiguous, sports/game facility, off-track betting); pornographic materials (center-wide); used/second-hand goods (except first-class operators like Play It Again Sports ≤8,000 SF aggregate); educational facilities (except Huntington/Sylvan/Kaplan ≤5,000 SF aggregate, or Regency Beauty ≤7,500 SF); restaurants unless ≥150 ft from the Premises (existing ones grandfathered; aggregate ≤20,000 SF). Additional medical/dental ≤5,000 SF aggregate allowed.", "cite": { "doc": "Lease §4(A), Sch A/B; Omnibus Amd §§5–7", "section": "4(A)" } },
+    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "Tenant will not use the Premises in violation of any other tenant's exclusive or prohibited use set forth in Schedule F.", "cite": { "doc": "Lease", "section": "Sch B(5), Sch F" } },
+    { "code": "CAM", "label": "CAM Method", "value": "Pro-rata = Ground Floor Area of Premises ÷ Total Gross Leasable Area of the SC (service areas excluded). No admin fee. LL insurance, management/admin/overhead and capital expenditures excluded. CAP: 1st year ≤ $1.19/SF; thereafter increases ≤ 4%/yr non-cumulative (excluding snow removal and utility-rate increases). Audit within 3 years.", "cite": { "doc": "Lease", "section": "6.1, Sch B(2,7,10)" } },
+    { "code": "RETX", "label": "Tax Method", "value": "Pro-rata (same fraction as CAM). Separately-assessed out-parcels excluded from the denominator. Standard exclusions; no admin fee or cap. Initial estimate $3.73/SF. Tenant not required to pay until 20 days after receiving the bill + supporting documentation. Audit within 3 years.", "cite": { "doc": "Lease", "section": "6.1–6.5, Sch B" } },
+    { "code": "INS", "label": "Insurance Method", "value": "Pro-rata (same fraction as CAM); billed with CAM. No admin fee or cap. Audit within 3 years.", "cite": { "doc": "Lease", "section": "6.1, 10.3, 10.4, Sch B" } },
+    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "No Landlord consent to assign or sublet the Premises; Landlord consent required to assign/sublet >25% of the floor area. Related-party transfers permitted without consent and without a Landlord termination right.", "cite": { "doc": "Lease", "section": "17" } },
+    { "code": "ALTERTN", "label": "Alterations", "value": "Landlord consent required for alterations to the foundation, canopy, storefront, roof, exterior walls, or anything affecting structural integrity (except storefront changes consistent with the SC's uniform architectural design).", "cite": { "doc": "Lease", "section": "9.1" } },
+    { "code": "OPC", "label": "Operating Covenant", "value": "One day only (no continuing operating covenant).", "cite": { "doc": "Lease", "section": "4.8" } },
+    { "code": "GO DARK", "label": "Go Dark Option", "value": "Per the 2nd Amendment (replacing §4.8): closure for 180 consecutive days or more (after the 1st anniversary), other than for a Force Majeure Event, lets Landlord terminate on 30 days' notice; if Tenant gives a reopen notice it must reopen within 90 days. (Original §4.8 used 60 days.)", "cite": { "doc": "Second Amendment", "section": "6 (replaces §4.8)" } },
+    { "code": "DEFAULT", "label": "Default", "value": "Per Lease Article on defaults (to be confirmed against the full 2015 lease). 2nd Amendment §5.4 adds a Forced-Shutdown rent-deferral mechanism (government-mandated closures) with repayment over 12 months from the next Feb 1 / May 1, no interest or late fees.", "cite": { "doc": "Lease; Second Amendment §5.4", "section": "5.4" } },
+    { "code": "GUARANT", "label": "Guaranty", "value": "None (Marshalls of MA, Inc., a TJX company, is the tenant)." },
+    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "Out-parcels referenced in the tax/co-tenancy provisions; full restrictions to be confirmed against the lease." },
+    { "code": "PURCHSE", "label": "Purchase Option", "value": "None noted (confirm vs full lease)." },
+    { "code": "HOLDOVR", "label": "Holdover", "value": "To be confirmed against the full 2015 lease." },
+    { "code": "RELOCAT", "label": "Relocation", "value": "None noted (confirm vs full lease)." },
+    { "code": "UTILITY", "label": "Utilities", "value": "To be confirmed against the full 2015 lease." },
+    { "code": "HVAC", "label": "HVAC", "value": "To be confirmed against the full 2015 lease." }
+  ],
+  "flags": [
+    { "severity": "watch", "issue": "Your workbook tab is missing the 2nd Amendment (5/30/2025) — please review", "detail": "The on-file Marshalls tab lists documents only through the 2020 Omnibus. The 2nd Amendment materially changes the deal: (a) the 1st Extension was exercised — term now runs to 8/31/2031, not 8/31/2026; (b) a 5th Extension Period was added at $502,062/yr ($22/SF); (c) co-tenancy anchors were updated; (d) go-dark was rewritten (60 → 180 days); (e) landlord is now SK University Hills Owner MZL (KPR) with a new notice address. Please confirm so we update the on-file abstract." },
+    { "severity": "watch", "issue": "Co-tenancy named anchors changed — please review", "detail": "Your tab's co-tenancy names King Soopers, Pier 1, Michaels, PetSmart, 24 Hour Fitness. The 2nd Amendment §4 replaced Pier 1 (20,000 SF) with ULTA (9,744 SF) and 24 Hour Fitness (16,000 SF) with Five Below (10,000 SF). So the EARLIER Pier 1 co-tenancy risk is cured. Please confirm the current named anchors." },
+    { "severity": "info", "issue": "Base-lease terms not yet verified against the full 2015 lease", "detail": "I read the 2nd Amendment in full from source; the base-lease terms here are drawn from your workbook tab and not yet checked against the full 6 MB 2015 lease. I'll verify them next (percentage-rent breakpoints, default, holdover, utilities, HVAC, outparcel/purchase) — flagging now for transparency rather than asserting them as source-verified." }
+  ],
+  "narrative": "Marshalls (Marshalls of MA, Inc., a TJX company) occupies 22,821 SF (Suite 61) at University Hills, Denver under an 11/10/2015 lease that commenced 8/18/2016. Per the 5/30/2025 2nd Amendment, the Tenant exercised its 1st Extension, so the term now runs to 8/31/2031, with four more renewal options ($19–$22/SF) plus an Extra Period; current rent is $387,957/yr ($17/SF). The 2nd Amendment (with KPR now the landlord) also rewrote the co-tenancy — substituting ULTA for Pier 1 and Five Below for 24 Hour Fitness, curing the prior Pier-1 co-tenancy exposure — and replaced the go-dark trigger (60 → 180 days). The tenant holds a 15,000-SF off-price-apparel exclusive and a no-consent assignment right (consent only for >25% of the floor area). NOTE: the on-file workbook tab predates the 2nd Amendment and should be updated; base-lease terms here still need verification against the full 2015 lease.",
+  "sourceDocuments": [
+    { "name": "Lease Agreement", "date": "2015-11-10", "type": "lease" },
+    { "name": "Commencement Date Agreement", "date": "2016-08-18", "type": "amendment" },
+    { "name": "Consent and Omnibus Agreement", "date": "2020-09-23", "type": "amendment" },
+    { "name": "Second Amendment to Lease", "date": "2025-05-30", "type": "amendment" }
+  ]
+}
