@@ -3925,12 +3925,11 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       if (swapFileRef.current) swapFileRef.current.value = "";
     }
   };
-  // Manual swap entry — for a hedged loan with no confirmation PDF on file. Lets
-  // you type the three figures the breakage math needs (notional, fixed rate,
-  // termination date), pre-filled from the loan's debt fields, then builds the same
-  // interestRateSwap record the confirmation importer would.
+  // Manual swap entry / edit. For a hedged loan with no confirmation PDF, type the
+  // terms (pre-filled from the loan's debt fields). The same form also EDITS an
+  // already-imported swap, so an extraction error can be corrected by hand.
   const [manualOpen, setManualOpen] = useState(false);
-  const [manualDraft, setManualDraft] = useState({ notional: "", fixedRatePct: "", terminationDate: "", floatingSpreadBps: "" });
+  const [manualDraft, setManualDraft] = useState({ notional: "", fixedRatePct: "", terminationDate: "", floatingSpreadBps: "", floatingIndex: "", counterparty: "" });
   const openManualSwap = () => {
     setSwapErr(null);
     setManualDraft({
@@ -3938,6 +3937,21 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       fixedRatePct: deal.debtRate != null ? String(deal.debtRate) : "",
       terminationDate: deal.debtMaturityDate || "",
       floatingSpreadBps: deal.debtSpread != null ? String(Math.round(Number(deal.debtSpread))) : "", // debtSpread is already in bps
+      floatingIndex: deal.debtIndex || "",
+      counterparty: deal.debtLender || "",
+    });
+    setManualOpen(true);
+  };
+  const openEditSwap = () => {
+    if (!swap) return;
+    setSwapErr(null);
+    setManualDraft({
+      notional: swap.notional != null ? String(swap.notional) : "",
+      fixedRatePct: swap.fixedRatePct != null ? String(swap.fixedRatePct) : "",
+      terminationDate: swap.terminationDate || "",
+      floatingSpreadBps: swap.floatingSpreadBps != null ? String(Math.round(Number(swap.floatingSpreadBps))) : "",
+      floatingIndex: swap.floatingIndex || "",
+      counterparty: swap.counterparty || "",
     });
     setManualOpen(true);
   };
@@ -3951,14 +3965,14 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       return;
     }
     const sw: InterestRateSwap = {
+      // When editing, keep the imported swap's other fields (trade date, day-count,
+      // confirmation ref, etc.); when new, seed effective date / notes from the loan.
+      ...(swap || { effectiveDate: deal.debtOriginationDate || null, notes: "Entered manually — no swap confirmation on file." }),
       notional, fixedRatePct, terminationDate,
       floatingSpreadBps: num(manualDraft.floatingSpreadBps),
-      payFixed: true,
-      // Carry over everything else the loan already has, so the swap summary is complete.
-      floatingIndex: deal.debtIndex || null,
-      counterparty: deal.debtLender || null,
-      effectiveDate: deal.debtOriginationDate || null,
-      notes: "Entered manually — no swap confirmation on file.",
+      floatingIndex: manualDraft.floatingIndex.trim() || null,
+      counterparty: manualDraft.counterparty.trim() || null,
+      payFixed: swap?.payFixed ?? true,
     };
     onUpdate(deal.id, buildSwapPatch(deal, sw));
     setManualOpen(false);
@@ -3984,6 +3998,12 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
             <button onClick={openManualSwap}
               style={{ background:"#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
               Enter swap manually
+            </button>
+          )}
+          {swap && (
+            <button onClick={openEditSwap}
+              style={{ background:"#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
+              Edit terms
             </button>
           )}
           <input ref={swapFileRef} type="file" accept=".pdf" style={{ display:"none" }}
@@ -4024,9 +4044,9 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
         )}
       </div>
 
-      {!swap && manualOpen && (
+      {manualOpen && (
         <div style={{ background:"#fbf8f1", border:"1px solid #e0d2b4", borderRadius:10, padding:"12px 14px", marginBottom:12 }}>
-          <div style={{ fontSize:11.5, fontWeight:600, color:"#5c5047", marginBottom:8 }}>Enter swap terms (no confirmation needed)</div>
+          <div style={{ fontSize:11.5, fontWeight:600, color:"#5c5047", marginBottom:8 }}>{swap ? "Edit swap terms" : "Enter swap terms (no confirmation needed)"}</div>
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-end" }}>
             <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
               Notional ($)
@@ -4044,14 +4064,24 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
                 style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
             </label>
             <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Floating index (optional)
+              <input value={manualDraft.floatingIndex} onChange={e => setManualDraft(d => ({ ...d, floatingIndex: e.target.value }))} placeholder="e.g. USD-SOFR CME Term 1M"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
               Floating spread (bps, optional)
               <input value={manualDraft.floatingSpreadBps} onChange={e => setManualDraft(d => ({ ...d, floatingSpreadBps: e.target.value }))} placeholder="e.g. 200"
                 style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
             </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Dealer / counterparty (optional)
+              <input value={manualDraft.counterparty} onChange={e => setManualDraft(d => ({ ...d, counterparty: e.target.value }))} placeholder="e.g. Webster Bank, N.A."
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+            </label>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={saveManualSwap}
                 style={{ background:"#3f7a1f", border:"none", color:"#fff", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight:600 }}>
-                Calculate breakage
+                {swap ? "Save terms" : "Calculate breakage"}
               </button>
               <button onClick={() => { setManualOpen(false); setSwapErr(null); }}
                 style={{ background:"#fff", border:"1px solid #ddd4c2", color:"#7d766a", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12 }}>
