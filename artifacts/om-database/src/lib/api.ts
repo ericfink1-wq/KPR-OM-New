@@ -748,3 +748,28 @@ export async function apiDeleteLeaseAbstract(id: string): Promise<{ ok: boolean;
     return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
   }
 }
+
+// Phase 2 (DORMANT) — auto-reconcile a full document set into an abstract on the
+// server, instead of pasting Claude's JSON. The endpoint is not mounted and is
+// feature-flagged off; this helper is ready for the future "Auto-extract" UI.
+export interface LeaseAbstractDocInput { name: string; date?: string | null; type?: string | null; text: string }
+export async function apiAutoExtractLeaseAbstract(
+  dealId: string,
+  tenantName: string,
+  docs: LeaseAbstractDocInput[],
+  dealName?: string,
+): Promise<{ ok: boolean; id?: string; version?: number; abstract?: LeaseAbstract; error?: string }> {
+  try {
+    const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/lease-abstracts/auto`, {
+      method: "POST",
+      body: JSON.stringify({ tenantName, dealName, docs }),
+    });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Auto-extraction failed" };
+    }
+    return resp.json() as Promise<{ ok: boolean; id?: string; version?: number; abstract?: LeaseAbstract }>;
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
+}
