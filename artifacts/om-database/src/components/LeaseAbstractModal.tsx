@@ -101,16 +101,29 @@ function currentAnnualRent(a: LeaseAbstract): number | null {
   for (let i = rs.length - 1; i >= 0; i--) { const n = pnum(rs[i].annualRent); if (n) return n; }
   return null;
 }
-interface AbstractChecks { discrepancies: string[]; risks: string[] }
+interface AbstractChecks { discrepancies: string[]; risks: string[]; fill: Partial<Tenant>; fillLabels: string[]; tenantIndex: number }
 function computeChecks(a: LeaseAbstract, tenants: Tenant[], watchMap: WatchMap): AbstractChecks {
   const discrepancies: string[] = []; const risks: string[] = [];
+  const fill: Partial<Tenant> = {}; const fillLabels: string[] = [];
   const k = (s?: string | null) => (s || "").trim().toLowerCase();
-  const t = tenants.find((x) => x.name && (k(x.name) === k(a.tenantName) || (a.dba && k(a.dba).includes(k(x.name)) && k(x.name).length > 3)));
+  const tenantIndex = tenants.findIndex((x) => x.name && (k(x.name) === k(a.tenantName) || (a.dba && k(a.dba).includes(k(x.name)) && k(x.name).length > 3)));
+  const t = tenantIndex >= 0 ? tenants[tenantIndex] : undefined;
   // Roster vs. lease — the lease (abstract) is authoritative; flag what to investigate.
   if (t) {
-    const aSF = pnum(a.premisesGLA ?? a.currentSF); const rSF = pnum(t.sf);
+    // Blanks the lease can fill (only where the roster is empty — never overwrite).
+    const empty = (v: unknown) => v == null || v === "" || (typeof v === "number" && Number.isNaN(v));
+    const aSF = pnum(a.premisesGLA ?? a.currentSF);
+    const aRent = currentAnnualRent(a);
+    const sf = pnum(t.sf) ?? aSF;
+    if (empty(t.sf) && aSF) { fill.sf = aSF; fillLabels.push(`SF ${aSF.toLocaleString()}`); }
+    if (empty(t.leaseStart) && a.commencement) { fill.leaseStart = String(a.commencement).slice(0, 10); fillLabels.push(`lease start ${fill.leaseStart}`); }
+    if (empty(t.leaseExpiry) && a.expiration) { fill.leaseExpiry = String(a.expiration).slice(0, 10); fillLabels.push(`expiry ${fill.leaseExpiry}`); }
+    if (empty(t.annualRent) && aRent) { fill.annualRent = aRent; fillLabels.push(`annual rent $${Math.round(aRent).toLocaleString()}`); }
+    if (empty(t.rentPerSF) && aRent && sf) { fill.rentPerSF = Math.round((aRent / sf) * 100) / 100; fillLabels.push(`rent/SF $${fill.rentPerSF}`); }
+    if (empty(t.renewalOptions) && a.options?.length) { const len = a.options[0].length || ""; fill.renewalOptions = `${a.options.length} @ ${len}`.trim(); fillLabels.push(`options "${fill.renewalOptions}"`); }
+    const rSF = pnum(t.sf);
     if (aSF && rSF && Math.abs(aSF - rSF) / rSF > 0.015) discrepancies.push(`SF — roster shows ${rSF.toLocaleString()}, lease shows ${aSF.toLocaleString()}.`);
-    const aRent = currentAnnualRent(a); const rRent = pnum(t.annualRent);
+    const rRent = pnum(t.annualRent);
     if (aRent && rRent && Math.abs(aRent - rRent) / rRent > 0.02) discrepancies.push(`Current annual rent — roster shows $${Math.round(rRent).toLocaleString()}, lease shows $${Math.round(aRent).toLocaleString()}.`);
     const aExp = a.expiration ? String(a.expiration).slice(0, 10) : ""; const rExp = t.leaseExpiry ? String(t.leaseExpiry).slice(0, 10) : "";
     if (aExp && rExp && aExp !== rExp) discrepancies.push(`Lease expiration — roster shows ${rExp}, lease shows ${aExp}.`);
@@ -128,13 +141,14 @@ function computeChecks(a: LeaseAbstract, tenants: Tenant[], watchMap: WatchMap):
       if (nm.length >= 3 && (x.isNAP || x.isDark) && clause.includes(nm.toLowerCase()) && !seen.has(nm.toLowerCase())) { seen.add(nm.toLowerCase()); risks.push(`Co-tenancy references ${nm} — ${x.isNAP ? "an unowned (NAP) tenant KPR doesn't control" : "a dark store"}.`); }
     }
   }
-  return { discrepancies, risks };
+  return { discrepancies, risks, fill, fillLabels, tenantIndex };
 }
 
-function AbstractBody({ a, tenants }: { a: LeaseAbstract; tenants?: Tenant[] }) {
+function AbstractBody({ a, tenants, onFillRoster }: { a: LeaseAbstract; tenants?: Tenant[]; onFillRoster?: (tenantIndex: number, patch: Partial<Tenant>) => void }) {
   const isMobile = useIsMobile();
   const watchMap = useWatchlist();
   const checks = computeChecks(a, tenants ?? [], watchMap);
+  const fillKeys = Object.keys(checks.fill);
   const guaranties = (a.guaranties ?? []) as GuarantyEntry[];
   const tChain = (a.tenantChain ?? []) as PartyChainEntry[];
   const lChain = (a.landlordChain ?? []) as PartyChainEntry[];
@@ -157,8 +171,17 @@ function AbstractBody({ a, tenants }: { a: LeaseAbstract; tenants?: Tenant[] }) 
 
   return (
     <div>
-      {(checks.discrepancies.length > 0 || checks.risks.length > 0) && (
+      {(checks.discrepancies.length > 0 || checks.risks.length > 0 || (fillKeys.length > 0 && !!onFillRoster)) && (
         <Section title="Checks — review (live)">
+          {fillKeys.length > 0 && onFillRoster && checks.tenantIndex >= 0 && (
+            <div style={{ background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:8, padding:"8px 10px", marginBottom: (checks.discrepancies.length || checks.risks.length) ? 7 : 0, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:11, fontWeight:800, color:C.green, letterSpacing:"0.04em", marginBottom:2 }}>FILL ROSTER FROM LEASE</div>
+                <div style={{ fontSize:12, color:C.sub, lineHeight:1.4 }}>The roster is missing {fillKeys.length} field{fillKeys.length > 1 ? "s" : ""} this lease can supply: {checks.fillLabels.join(", ")}.</div>
+              </div>
+              <button onClick={() => onFillRoster(checks.tenantIndex, checks.fill)} style={{ fontSize:12, fontWeight:700, color:"#fff", background:C.green, border:"none", borderRadius:7, padding:"7px 14px", cursor:"pointer", flexShrink:0 }}>Apply to roster</button>
+            </div>
+          )}
           {checks.discrepancies.length > 0 && (
             <div style={{ background:C.amberBg, border:`1px solid ${C.amberBorder}`, borderRadius:8, padding:"8px 10px", marginBottom: checks.risks.length ? 7 : 0 }}>
               <div style={{ fontSize:11, fontWeight:800, color:C.amber, letterSpacing:"0.04em", marginBottom:3 }}>ROSTER vs. LEASE — INVESTIGATE</div>
@@ -456,9 +479,10 @@ interface Props {
   isAdmin?: boolean;
   onSaved?: (a: LeaseAbstract) => void;
   onDeleted?: (id: string) => void;
+  onFillRoster?: (tenantIndex: number, patch: Partial<Tenant>) => void;
 }
 
-export default function LeaseAbstractModal({ open, onClose, mode, abstract, dealId, tenantName, tenants, isAdmin, onSaved, onDeleted }: Props) {
+export default function LeaseAbstractModal({ open, onClose, mode, abstract, dealId, tenantName, tenants, isAdmin, onSaved, onDeleted, onFillRoster }: Props) {
   // "view" can flip into an inline update (paste) without closing.
   const [updating, setUpdating] = useState(false);
   const isMobile = useIsMobile();
@@ -529,7 +553,7 @@ export default function LeaseAbstractModal({ open, onClose, mode, abstract, deal
               <PasteBody dealId={dealId} lockTenant={lockTenant} onSaved={(a) => { onSaved?.(a); onClose(); }} />
             </div>
           ) : abstract ? (
-            <AbstractBody a={abstract} tenants={tenants} />
+            <AbstractBody a={abstract} tenants={tenants} onFillRoster={onFillRoster ? (i, p) => { onFillRoster(i, p); onClose(); } : undefined} />
           ) : (
             <div style={{ padding:"20px 0", color:C.faint }}>No abstract.</div>
           )}

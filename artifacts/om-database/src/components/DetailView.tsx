@@ -2632,6 +2632,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           isAdmin={isAdmin}
           onSaved={() => reloadAbstracts()}
           onDeleted={() => reloadAbstracts()}
+          onFillRoster={(idx, patch) => {
+            const newTenants = (d.tenants || []).map((t, i) => i === idx ? { ...t, ...patch } : t);
+            onUpdate(d.id, { tenants: newTenants, ...recomputeRosterMetrics(newTenants as Array<Record<string, unknown>>, d.tenantsAsOf, d) });
+          }}
         />
       )}
 
