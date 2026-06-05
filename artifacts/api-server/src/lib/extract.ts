@@ -6,6 +6,7 @@ import { rebuildTenantIndex, parseLeaseDate } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
+import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction } from "./leaseRiskExtract";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -182,44 +183,8 @@ export async function callAnthropicOnce(body: object, retryCount = 0): Promise<R
   return resp;
 }
 
-export function robustParseJSON(raw: string): unknown {
-  if (!raw?.trim()) throw new Error("Empty response");
-  let s = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-  try { return JSON.parse(s); } catch {}
-  try { return JSON.parse(s.replace(/,(\s*[}\]])/g, "$1")); } catch {}
-  const first = s.indexOf("{");
-  const last = s.lastIndexOf("}");
-  if (first !== -1 && last !== -1 && last > first) {
-    try { return JSON.parse(s.slice(first, last + 1)); } catch {}
-  }
-  if (first !== -1) {
-    try { return repairTruncatedJSON(s.slice(first)); } catch {}
-  }
-  throw new Error("The AI's response couldn't be read as structured data — it came back incomplete or not in the expected format.");
-}
-
-function repairTruncatedJSON(s: string): unknown {
-  let inStr = false, esc = false;
-  const stack: string[] = [];
-  let safeLen = -1, safeClosers = "";
-  const closersFor = () => stack.map((b) => (b === "{" ? "}" : "]")).reverse().join("");
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (inStr) {
-      if (esc) esc = false;
-      else if (c === "\\") esc = true;
-      else if (c === '"') inStr = false;
-      continue;
-    }
-    if (c === '"') { inStr = true; }
-    else if (c === "{" || c === "[") { stack.push(c); }
-    else if (c === "}" || c === "]") { stack.pop(); safeLen = i + 1; safeClosers = closersFor(); }
-    else if (c === ",") { safeLen = i; safeClosers = closersFor(); }
-  }
-  if (safeLen <= 0) throw new Error("Could not repair truncated JSON");
-  const repaired = s.slice(0, safeLen).replace(/,\s*$/, "") + safeClosers;
-  return JSON.parse(repaired);
-}
+export { robustParseJSON } from "./jsonRepair";
+import { robustParseJSON } from "./jsonRepair";
 
 // Strip trailing phase/building identifiers like "(West)", "(Phase 2)", "(Bldg A)"
 // so duplicate phase entries collapse to the same base name.
@@ -269,7 +234,7 @@ function mergePhaseDuplicates(tenants: Array<Record<string, unknown>>): Array<Re
 }
 
 // Full OM extraction — retries truncated tenant lists automatically
-export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean; timings: { totalMs: number; firstPassMs: number; continuationRounds: number; continuationMs: number; gapFillRounds: number; gapFillMs: number; tenantCount: number; budgetHit: boolean } }> {
+export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean; timings: { totalMs: number; firstPassMs: number; continuationRounds: number; continuationMs: number; gapFillRounds: number; gapFillMs: number; leaseRiskMs: number; tenantCount: number; budgetHit: boolean } }> {
   const truncatedText = text.length > 180000
     ? text.slice(0, 120000) + "\n...[middle truncated]...\n" + text.slice(-40000)
     : text;
@@ -435,6 +400,25 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     }
   }
 
+  // DEDICATED LEASE-RISK PASS — a separate, focused model call (reusing the cached
+  // OM blocks) so a long rent roll truncating the main pass can never drop the
+  // co-tenancy / kickout data. Best-effort; normalised to source:"OM"/unverified.
+  // Skipped if we already blew the time budget.
+  let leaseRiskMs = 0;
+  if (!budgetHit && Date.now() < EXTRACTION_DEADLINE) {
+    const _lrStart = Date.now();
+    const names = (extracted.tenants as Array<{ name?: unknown }>).map((t) => String(t?.name ?? "")).filter(Boolean);
+    const leaseRisk = await runLeaseRiskPass({ callExtract, cachedBlocks, tenantNames: names, parse: robustParseJSON });
+    leaseRiskMs = Date.now() - _lrStart;
+    if (leaseRisk) {
+      extracted.leaseRisk = leaseRisk;
+      // Backstop the roster rule: drop any anchor name that leaked into tenants[]
+      // only because a co-tenancy clause referenced it.
+      const guard = enforceRosterCotenancyRule(extracted.tenants as Array<Record<string, unknown>>, leaseRisk);
+      extracted.tenants = guard.tenants;
+    }
+  }
+
   // If we stopped at the time budget, flag it loudly: log it and leave a review
   // question so the roster is reviewed rather than silently trusted as complete.
   if (budgetHit) {
@@ -458,6 +442,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     continuationMs,
     gapFillRounds: gapRoundsTotal,
     gapFillMs,
+    leaseRiskMs,
     tenantCount,
     budgetHit,
   };
@@ -622,6 +607,16 @@ export async function runBackgroundExtraction(
       lastScoredDealCount: totalCount,
       analysisVersion: ANALYSIS_VERSION,
     };
+    // Post-extraction lease-risk validators → fold into Import-Review questions
+    // (unverified OM co-tenancy/kickout + any "increase" rent step that decreases).
+    try {
+      const lrChecks = validateLeaseRiskAtExtraction(dealData);
+      if (lrChecks.length) {
+        const existing = Array.isArray(dealData.reviewQuestions) ? dealData.reviewQuestions as unknown[] : [];
+        const seen = new Set(existing.map((q) => (q as { id?: string })?.id));
+        dealData.reviewQuestions = [...existing, ...lrChecks.filter((q) => !seen.has(q.id))];
+      }
+    } catch { /* validators must never break an upload */ }
     await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })
       .where(eq(dealsTable.id, id));

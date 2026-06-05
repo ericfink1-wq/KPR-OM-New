@@ -388,6 +388,120 @@ export const LEASE_NOTE_SECTIONS: { code: string; label: string }[] = [
   { code: "HVAC", label: "HVAC" },
 ];
 
+// ---- Lease risk (deal-killer clauses) -----------------------------------------
+// Co-tenancy, sales kickouts, go-dark, and related anchor-dependency clauses are
+// invisible in a rent roll — they only live in the lease stack (and sometimes an
+// OM's rent-roll footnotes / lease-summary section). They can cut or stop a
+// tenant's rent when an anchor leaves, so they are captured as STRUCTURED data,
+// separate from the roster, at two levels:
+//   (1) OM-disclosed — rides the existing OM extraction pass; source "OM",
+//       verifiedAgainstExecutedDoc:false (a summary, never auto-trusted).
+//   (2) Lease-abstract — reconciled from the executed docs and pasted in; it
+//       OVERRIDES the OM value for that tenant and flips verified true.
+// The exposure engine runs off the RESOLVED (merged) view and works off OM-only
+// data when no abstract exists. Co-tenancy ANCHOR NAMES live ONLY here — they are
+// never added to the tenant roster (a co-tenancy reference is not an occupant).
+
+export type RiskProvenance = "extracted" | "inferred";
+
+// Per-field source + verification metadata carried by every risk clause. A clause
+// sourced only from an OM/abstract summary is UNVERIFIED — the system never
+// auto-clears a co-tenancy/kickout off it; it flags for counsel review.
+export interface RiskFieldMeta {
+  sourceDocument?: string | null;       // e.g. "Carter's Lease (executed)" or "OM rent-roll footnote"
+  controllingDocument?: string | null;  // the latest amendment that controls this field, when known
+  sectionRef?: string | null;           // e.g. "§24.33"
+  verbatimQuote?: string | null;        // exact lease/OM text the value came from
+  provenance?: RiskProvenance | null;   // "extracted" = read verbatim; "inferred" = derived (never present an inferred value as extracted)
+  verifiedAgainstExecutedDoc?: boolean | null; // true ONLY when sourced from an executed lease document
+}
+
+// One leaf condition in a co-tenancy trigger tree.
+export interface TriggerCondition {
+  type: string;                       // "named_anchor_dark" | "occupancy_threshold" | "anchor_replacement_failed" | "named_anchor_gone" | ...
+  anchor?: string | null;             // for named_anchor_* — the anchor brand
+  scope?: string | null;              // for occupancy_threshold — e.g. "inline <15000 SF"
+  direction?: "above" | "below" | null;
+  pct?: number | null;                // threshold percent (occupancy_threshold)
+  note?: string | null;
+}
+
+// A nested AND/OR branch, OR a leaf condition. (operator+conditions) ⇒ branch; else leaf.
+export type TriggerNode =
+  | { operator: "AND" | "OR"; conditions: TriggerNode[] }
+  | TriggerCondition;
+
+export interface CoTenancyRemedy {
+  mechanism?: string | null;          // "alternate_rent_pct_sales" | "percent_rent_reduction" | "fixed_reduction" | ...
+  value?: number | null;              // e.g. 5 (=5% of gross sales) or 50 (=50% rent reduction)
+  cap?: string | null;                // e.g. "minimum_annual_rent"
+  additionalRentTreatment?: "tenant_continues" | "swept" | "unknown" | null;
+}
+
+export interface CoTenancyClause extends RiskFieldMeta {
+  type?: "opening" | "operating" | null;
+  triggerLogic?: TriggerNode | null;
+  remedy?: CoTenancyRemedy | null;
+  reliefPeriodMonthsBeforeTermination?: number | null;
+  terminationNoticeDays?: number | null;
+  cureCondition?: string | null;
+  suitableReplacementDefinition?: string | null;
+}
+
+export interface SalesKickout extends RiskFieldMeta {
+  salesThresholdAmount?: number | null;
+  salesThresholdPSF?: number | null;
+  measurementPeriod?: string | null;
+  noticeWindowDays?: number | null;
+  terminationFee?: number | null;
+  unamortizedTiRepayment?: number | null;
+}
+
+// A single "other risk" clause. present=false/null means the clause is absent;
+// when present, summary holds the short description. Each carries its own meta.
+export interface RiskClauseNote extends RiskFieldMeta {
+  present?: boolean | null;
+  summary?: string | null;
+}
+
+export interface OtherRiskClauses {
+  goDarkRight?: RiskClauseNote | null;
+  continuousOperationCovenant?: RiskClauseNote | null;
+  exclusiveUse?: RiskClauseNote | null;
+  rofrRofo?: RiskClauseNote | null;             // right of first refusal / offer (e.g. McDonald's-type)
+  recaptureAssignment?: RiskClauseNote | null;
+  earlyTerminationOption?: RiskClauseNote | null;
+}
+
+// One tenant's structured lease-risk clause set. tenant/suite/baseRentAnnual mirror
+// the per-lease shape so the OM pass and a pasted abstract produce the same object.
+export interface TenantLeaseRisk {
+  tenant?: string | null;             // tenant name (matches roster Tenant.name)
+  suite?: string | null;
+  baseRentAnnual?: number | null;     // base rent put at risk if a clause trips
+  coTenancy?: CoTenancyClause[] | null;
+  salesKickout?: SalesKickout[] | null;
+  otherRiskClauses?: OtherRiskClauses | null;
+}
+
+// Deal-level container for OM-disclosed lease risk (one entry per tenant with a
+// disclosed clause). coTenancyDisclosed records whether the OM disclosed co-tenancy
+// AT ALL — when false, the diligence list emits "co-tenancy not disclosed in OM —
+// pull leases" rather than implying there is no co-tenancy risk.
+export interface DealLeaseRisk {
+  tenants?: TenantLeaseRisk[] | null;
+  coTenancyDisclosed?: boolean | null;
+  source?: "OM" | null;
+}
+
+// One row of the editable anchor-status table that powers the exposure engine.
+export interface AnchorStatus {
+  anchor: string;                     // anchor brand name
+  status?: "in_place" | "shadow" | "NAP" | "departing" | null;
+  termExpiration?: string | null;     // ISO
+  relocating?: boolean | null;
+}
+
 export interface LeaseAbstract {
   id?: string;                      // abstract id (la_...)
   dealId?: string;                  // owning deal id
@@ -445,6 +559,14 @@ export interface LeaseAbstract {
   // Kickout, CAM, Tax, Insurance, Assignment, Go Dark, Default, Guaranty,
   // Holdover, Estoppel, Subordination, Relocation, Utilities, HVAC, …).
   leaseNotes?: LeaseNote[] | null;
+
+  // Structured deal-killer risk clauses, reconciled from the EXECUTED documents.
+  // When present these OVERRIDE any OM-level capture for this tenant in the
+  // resolved view and are treated as verifiedAgainstExecutedDoc:true.
+  coTenancy?: CoTenancyClause[] | null;
+  salesKickout?: SalesKickout[] | null;
+  otherRiskClauses?: OtherRiskClauses | null;
+  baseRentAnnual?: number | null;   // base rent at risk (mirrors TenantLeaseRisk)
 
   // Meta
   flags?: AbstractFlag[] | null;
@@ -675,6 +797,12 @@ export interface Deal {
   upsideItems?: { priority: string; item: string; detail: string }[];
   keyAssumptions?: string | string[] | null;
   shadowAnchors?: string | null;
+  // Structured lease-risk clauses disclosed by the OM (co-tenancy / sales kickout /
+  // go-dark / etc.). Unverified (source "OM"); a pasted lease abstract overrides per
+  // tenant. Drives the co-tenancy exposure engine even when no abstract exists.
+  leaseRisk?: DealLeaseRisk | null;
+  // Editable anchor-status table powering the exposure engine ("what if Dick's leaves").
+  anchorStatus?: AnchorStatus[] | null;
   // Tenants
   tenants?: Tenant[];
   tenantsAsOf?: string | null;
