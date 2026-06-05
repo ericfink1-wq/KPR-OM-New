@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import type { Deal, ImageBundle, TenantSalesYear } from "../lib/idb";
+import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress } from "../lib/utils";
@@ -3801,6 +3801,42 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       if (swapFileRef.current) swapFileRef.current.value = "";
     }
   };
+  // Manual swap entry — for a hedged loan with no confirmation PDF on file. Lets
+  // you type the three figures the breakage math needs (notional, fixed rate,
+  // termination date), pre-filled from the loan's debt fields, then builds the same
+  // interestRateSwap record the confirmation importer would.
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualDraft, setManualDraft] = useState({ notional: "", fixedRatePct: "", terminationDate: "", floatingSpreadBps: "" });
+  const openManualSwap = () => {
+    setSwapErr(null);
+    setManualDraft({
+      notional: deal.debtLoanAmount != null ? String(deal.debtLoanAmount) : "",
+      fixedRatePct: deal.debtRate != null ? String(deal.debtRate) : "",
+      terminationDate: deal.debtMaturityDate || "",
+      floatingSpreadBps: deal.debtSpread != null ? String(Math.round(Number(deal.debtSpread) * 100)) : "",
+    });
+    setManualOpen(true);
+  };
+  const saveManualSwap = () => {
+    const num = (v: string) => { const n = Number(v.replace(/[,$\s]/g, "")); return v.trim() === "" || isNaN(n) ? null : n; };
+    const notional = num(manualDraft.notional);
+    const fixedRatePct = num(manualDraft.fixedRatePct);
+    const terminationDate = manualDraft.terminationDate || null;
+    if (notional == null || fixedRatePct == null || !terminationDate) {
+      setSwapErr("Enter notional, fixed rate, and termination date to estimate breakage.");
+      return;
+    }
+    const sw: InterestRateSwap = {
+      notional, fixedRatePct, terminationDate,
+      floatingSpreadBps: num(manualDraft.floatingSpreadBps),
+      payFixed: true,
+      floatingIndex: deal.debtIndex || null,
+      notes: "Entered manually — no swap confirmation on file.",
+    };
+    onUpdate(deal.id, buildSwapPatch(deal, sw));
+    setManualOpen(false);
+  };
+
   const breakage = calcSwapBreakage(swap, { valuationDate: payoff, marketSwapRatePct: swapRate });
   const fmt$ = (v: number | null) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
   const basisColor = result.basis === "exact" ? "#0f9d63" : result.basis === "estimate" ? "#b08a3e" : result.basis === "locked" ? "#dc2626" : "#7d766a";
@@ -3816,7 +3852,13 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
         <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
           {swap ? "Swap Breakage — Early Payoff" : "Prepayment Penalty"}
         </div>
-        <div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          {!swap && (
+            <button onClick={openManualSwap}
+              style={{ background:"#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
+              Enter swap manually
+            </button>
+          )}
           <input ref={swapFileRef} type="file" accept=".pdf" style={{ display:"none" }}
             onChange={e => { const f = e.target.files?.[0]; if (f) importSwap(f); }} />
           <button onClick={() => swapFileRef.current?.click()} disabled={swapBusy}
@@ -3854,6 +3896,47 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
           </div>
         )}
       </div>
+
+      {!swap && manualOpen && (
+        <div style={{ background:"#fbf8f1", border:"1px solid #e0d2b4", borderRadius:10, padding:"12px 14px", marginBottom:12 }}>
+          <div style={{ fontSize:11.5, fontWeight:600, color:"#5c5047", marginBottom:8 }}>Enter swap terms (no confirmation needed)</div>
+          <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-end" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Notional ($)
+              <input value={manualDraft.notional} onChange={e => setManualDraft(d => ({ ...d, notional: e.target.value }))} placeholder="e.g. 25,000,000"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:150 }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Swap fixed rate (%)
+              <input value={manualDraft.fixedRatePct} onChange={e => setManualDraft(d => ({ ...d, fixedRatePct: e.target.value }))} placeholder="e.g. 5.10"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:120 }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Termination date
+              <input type="date" value={manualDraft.terminationDate} onChange={e => setManualDraft(d => ({ ...d, terminationDate: e.target.value }))}
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
+            </label>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+              Floating spread (bps, optional)
+              <input value={manualDraft.floatingSpreadBps} onChange={e => setManualDraft(d => ({ ...d, floatingSpreadBps: e.target.value }))} placeholder="e.g. 200"
+                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
+            </label>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={saveManualSwap}
+                style={{ background:"#3f7a1f", border:"none", color:"#fff", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                Calculate breakage
+              </button>
+              <button onClick={() => { setManualOpen(false); setSwapErr(null); }}
+                style={{ background:"#fff", border:"1px solid #ddd4c2", color:"#7d766a", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>
+            Notional usually equals the loan amount, the fixed rate is your locked swap rate, and termination is the swap/loan maturity. The current market swap rate is filled in automatically from Today's Rates once you save — replace it with your bank's quote for a tighter estimate.
+          </div>
+        </div>
+      )}
 
       {!swap ? (
         <>
