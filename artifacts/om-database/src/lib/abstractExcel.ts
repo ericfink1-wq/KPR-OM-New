@@ -77,12 +77,28 @@ function makeWriter(ws: WS) {
     void c; merge(r, 1, LAST_COL); ws.getRow(r).height = 16; r += 1;
   };
 
+  // Excel won't auto-grow row height for WRAPPED text in MERGED cells, so we set
+  // it ourselves: estimate the lines from the text length and the merged width.
+  const colWidth = (c1: number, c2: number) => { let s = 0; for (let c = c1; c <= c2; c++) s += COL_WIDTHS[c - 1] ?? 8.73; return s; };
+  const bumpHeight = (row: number, c1: number, c2: number, text: unknown) => {
+    const t = text == null ? "" : String(text);
+    if (!t) return;
+    const perLine = Math.max(8, colWidth(c1, c2) * 0.92); // ~chars per line (slightly conservative)
+    let lines = 0;
+    for (const seg of t.split("\n")) lines += Math.max(1, Math.ceil((seg.length || 1) / perLine));
+    lines = Math.min(lines, 60);
+    const h = Math.max(15, lines * 14.5);
+    const cur = ws.getRow(row).height || 0;
+    if (h > cur) ws.getRow(row).height = h;
+  };
+
   // label (A:B) | value (C:valEnd, wrapped) | cite (after value, italic faint)
   const kv = (label: string, value: string | number, cite?: AbstractCitation | null, valEnd = 11) => {
     set(r, 1, label, { font: { color: { argb: SUB }, size: 10 } }); merge(r, 1, 2);
     set(r, 3, value, { alignment: { wrapText: true, vertical: "top" }, font: { color: { argb: INK }, size: 10 } }); merge(r, 3, valEnd);
     const cs = citeShort(cite);
     if (cs) { set(r, valEnd + 1, cs, { font: { italic: true, color: { argb: FAINT }, size: 9 } }); merge(r, valEnd + 1, LAST_COL); }
+    bumpHeight(r, 3, valEnd, value);
     r += 1;
   };
 
@@ -90,7 +106,7 @@ function makeWriter(ws: WS) {
     ws,
     get r() { return r; },
     set: (row: number, col: number, value: string | number, opts?: Partial<ExcelJS.Style>) => set(row, col, value, opts),
-    merge,
+    merge, bumpHeight,
     row: () => r,
     next: () => { r += 1; },
     blank, title, section, kv,
@@ -119,6 +135,7 @@ function writeTab(ws: WS, a: LeaseAbstract): void {
       w.set(r, 1, mdy(dc.date), { font: { color: { argb: SUB }, size: 9.5 } }); w.merge(r, 1, 2);
       const txt = `${dc.name || ""}${dc.description ? " — " + dc.description : ""}`;
       w.set(r, 3, txt, { alignment: { wrapText: true, vertical: "top" }, font: { color: { argb: INK }, size: 10 } }); w.merge(r, 3, LAST_COL);
+      w.bumpHeight(r, 3, LAST_COL, txt);
       w.next();
     }
     w.blank();
@@ -204,6 +221,7 @@ function writeTab(ws: WS, a: LeaseAbstract): void {
       const rr = w.row();
       w.set(rr, 1, "Option Notes:", { font: { bold: true, color: { argb: SUB }, size: 9.5 } }); w.merge(rr, 1, 2);
       w.set(rr, 3, a.optionNotes, { alignment: { wrapText: true, vertical: "top" }, font: { color: { argb: INK }, size: 9.5 } }); w.merge(rr, 3, LAST_COL);
+      w.bumpHeight(rr, 3, LAST_COL, a.optionNotes);
       w.next();
     }
     w.blank();
@@ -274,6 +292,7 @@ function writeTab(ws: WS, a: LeaseAbstract): void {
       w.set(rr, 3, sec.code, { font: { size: 9, bold: true, color: { argb: INK } }, border: allBorders, alignment: { vertical: "top" } });
       w.set(rr, 4, `(${sec.label})`, { font: { size: 9, color: { argb: SUB } }, border: allBorders, alignment: { vertical: "top", wrapText: true } }); w.merge(rr, 4, 6);
       w.set(rr, 7, sv(n.value), { font: { size: 9.5, color: { argb: INK } }, border: allBorders, alignment: { vertical: "top", wrapText: true } }); w.merge(rr, 7, LAST_COL);
+      w.bumpHeight(rr, 4, 6, `(${sec.label})`); w.bumpHeight(rr, 7, LAST_COL, n.value);
       w.next();
     }
     w.blank();
@@ -285,7 +304,9 @@ function writeTab(ws: WS, a: LeaseAbstract): void {
       const rr = w.row();
       const color = f.severity === "defect" ? RED : f.severity === "watch" ? AMBER : GREEN;
       w.set(rr, 1, (f.severity || "note").toUpperCase(), { font: { bold: true, size: 9, color: { argb: color } } }); w.merge(rr, 1, 2);
-      w.set(rr, 3, `${f.issue || ""}${f.detail ? " — " + f.detail : ""}`, { alignment: { wrapText: true, vertical: "top" }, font: { size: 9.5, color: { argb: INK } } }); w.merge(rr, 3, LAST_COL);
+      { const txt = `${f.issue || ""}${f.detail ? " — " + f.detail : ""}`;
+        w.set(rr, 3, txt, { alignment: { wrapText: true, vertical: "top" }, font: { size: 9.5, color: { argb: INK } } }); w.merge(rr, 3, LAST_COL);
+        w.bumpHeight(rr, 3, LAST_COL, txt); }
       w.next();
     }
   }
