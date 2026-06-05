@@ -65,3 +65,10 @@ export const PDF_JS_WORKER = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PD
 
 // A Prospect sitting untouched this long auto-shifts to Passed (~2 months).
 export const PROSPECT_STALE_DAYS = 61;
+
+// DORMANT (Phase 2): when true, the lease-abstract modal shows an "Auto-extract
+// from PDFs" tab (admin only) that uploads a document set and has the SERVER
+// reconcile it, instead of pasting Claude's JSON. Off by default — the server
+// endpoint is likewise unmounted + feature-flagged, so flipping this alone does
+// nothing until Phase 2 is enabled end to end (see docs/lease-abstracts-phase2.md).
+export const LEASE_ABSTRACT_AUTOEXTRACT_UI = false;

@@ -6,6 +6,8 @@ import type {
   AbstractSizeHistory, AbstractFlag, AbstractSourceDoc,
 } from "../lib/idb";
 import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract } from "../lib/api";
+import { LEASE_ABSTRACT_AUTOEXTRACT_UI } from "../lib/constants";
+import LeaseAbstractAutoExtract from "./LeaseAbstractAutoExtract";
 
 // A lease abstract is a reconciled summary of a tenant's full lease document set.
 // This modal both VIEWS an abstract (cited, sectioned) and ACCEPTS a pasted
@@ -311,6 +313,31 @@ function PasteBody({ dealId, lockTenant, onSaved }: {
   );
 }
 
+// Paste box, plus (DORMANT, behind LEASE_ABSTRACT_AUTOEXTRACT_UI + admin) an
+// "Auto-extract from PDFs" tab that uploads a document set for server-side
+// reconciliation. With the flag off, only the paste box renders — no change.
+function PasteOrAuto({ dealId, lockTenant, isAdmin, onSaved }: {
+  dealId: string; lockTenant?: string | null; isAdmin?: boolean; onSaved: (a: LeaseAbstract) => void;
+}) {
+  const showAuto = LEASE_ABSTRACT_AUTOEXTRACT_UI && !!isAdmin && !!lockTenant;
+  const [tab, setTab] = useState<"paste" | "auto">("paste");
+  if (!showAuto) return <PasteBody dealId={dealId} lockTenant={lockTenant} onSaved={onSaved} />;
+  const tabBtn = (k: "paste" | "auto", label: string) => (
+    <button onClick={() => setTab(k)} style={{ fontSize:12.5, fontWeight:700, color: tab === k ? C.green : C.faint, background: tab === k ? C.greenBg : "transparent", border: `1px solid ${tab === k ? C.greenBorder : "transparent"}`, borderRadius:7, padding:"6px 12px", cursor:"pointer" }}>{label}</button>
+  );
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+        {tabBtn("paste", "Paste from Claude")}
+        {tabBtn("auto", "Auto-extract from PDFs")}
+      </div>
+      {tab === "paste"
+        ? <PasteBody dealId={dealId} lockTenant={lockTenant} onSaved={onSaved} />
+        : <LeaseAbstractAutoExtract dealId={dealId} tenantName={lockTenant ?? ""} onSaved={onSaved} />}
+    </div>
+  );
+}
+
 // ---- Modal shell --------------------------------------------------------------
 interface Props {
   open: boolean;
@@ -381,7 +408,7 @@ export default function LeaseAbstractModal({ open, onClose, mode, abstract, deal
         <div style={{ overflowY:"auto", padding:"4px 22px 20px" }}>
           {showPaste ? (
             <div style={{ paddingTop:14 }}>
-              <PasteBody dealId={dealId} lockTenant={lockTenant} onSaved={(a) => { onSaved?.(a); onClose(); }} />
+              <PasteOrAuto dealId={dealId} lockTenant={lockTenant} isAdmin={isAdmin} onSaved={(a) => { onSaved?.(a); onClose(); }} />
             </div>
           ) : abstract ? (
             <AbstractBody a={abstract} />
