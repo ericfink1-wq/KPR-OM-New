@@ -2597,6 +2597,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                   ⬇ Lease abstracts — Excel
                 </button>
               )}
+              <button onClick={() => setAbstractModal({ mode: "add", tenantName: "" })}
+                title="Paste a whole property's abstracts at once — an array, or { abstracts: [...] }"
+                style={{ background:"#eef1fb", border:"1px solid #c2cdef", color:"#33408f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                ⬆ Bulk abstracts
+              </button>
               <PdfDownloadButton
                 fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
                 makeDoc={async () => { const { default: RentRollPDF } = await import("./RentRollPDF"); return <RentRollPDF deal={d} />; }}

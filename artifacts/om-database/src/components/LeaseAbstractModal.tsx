@@ -8,7 +8,7 @@ import type {
 import { LEASE_NOTE_SECTIONS } from "../lib/idb";
 import { useWatchlist } from "../lib/useWatchlist";
 import { computeAbstractChecks } from "../lib/abstractChecks";
-import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract } from "../lib/api";
+import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract, apiBulkSaveLeaseAbstracts } from "../lib/api";
 import { exportLeaseAbstract } from "../lib/abstractExcel";
 import { useIsMobile } from "../hooks/use-mobile";
 
@@ -364,29 +364,44 @@ function PasteBody({ dealId, lockTenant, onSaved }: {
 
   const save = async () => {
     setErr(null);
-    let parsed: LeaseAbstract;
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(text) as LeaseAbstract;
+      parsed = JSON.parse(text);
     } catch {
-      setErr("That isn't valid JSON. Paste the full abstract object Claude gave you (it starts with { and ends with }).");
+      setErr("That isn't valid JSON. Paste the abstract JSON Claude gave you — a single object, an array, or { \"abstracts\": [...] }.");
       return;
     }
-    if (lockTenant) parsed.tenantName = lockTenant; // ensure it links to the right roster tenant
-    if (!parsed.tenantName || !String(parsed.tenantName).trim()) {
+    // Bulk: an array, or { abstracts: [...] } — upsert the whole set at once.
+    const arr = Array.isArray(parsed) ? parsed : (Array.isArray((parsed as { abstracts?: unknown })?.abstracts) ? (parsed as { abstracts: LeaseAbstract[] }).abstracts : null);
+    if (arr) {
+      const missing = arr.filter((a) => !(a as LeaseAbstract)?.tenantName || !String((a as LeaseAbstract).tenantName).trim()).length;
+      if (!arr.length) { setErr("That array is empty."); return; }
+      setSaving(true);
+      const res = await apiBulkSaveLeaseAbstracts(dealId, arr as LeaseAbstract[]);
+      setSaving(false);
+      if (!res.ok) { setErr(res.error || "Couldn't save."); return; }
+      onSaved({ tenantName: `${res.saved ?? arr.length} abstracts` } as LeaseAbstract); // signal reload
+      if (missing) setErr(`Saved ${res.saved}, skipped ${missing} without a tenantName.`);
+      return;
+    }
+    // Single abstract.
+    const single = parsed as LeaseAbstract;
+    if (lockTenant) single.tenantName = lockTenant; // ensure it links to the right roster tenant
+    if (!single.tenantName || !String(single.tenantName).trim()) {
       setErr("The abstract needs a tenantName so it links to a roster tenant.");
       return;
     }
     setSaving(true);
-    const res = await apiSaveLeaseAbstract(dealId, parsed);
+    const res = await apiSaveLeaseAbstract(dealId, single);
     setSaving(false);
     if (!res.ok) { setErr(res.error || "Couldn't save."); return; }
-    onSaved({ ...parsed, id: res.id, dealId, version: res.version });
+    onSaved({ ...single, id: res.id, dealId, version: res.version });
   };
 
   return (
     <div>
       <p style={{ fontSize:12.5, color:C.sub, lineHeight:1.5, margin:"0 0 10px" }}>
-        Paste the reconciled lease abstract JSON from Claude{lockTenant ? <> for <b style={{ color:C.ink }}>{lockTenant}</b></> : null}. It's stored, displayed here, and made available to the Analyst chat. Source PDFs aren't uploaded — each fact cites its document, section, and page.
+        Paste the reconciled lease abstract JSON from Claude{lockTenant ? <> for <b style={{ color:C.ink }}>{lockTenant}</b></> : null}. A single object, an array, or {"{ abstracts: [...] }"} for a whole property at once. It's stored, displayed here, and made available to the Analyst chat. Source PDFs aren't uploaded — each fact cites its document, section, and page.
       </p>
       <textarea
         value={text}

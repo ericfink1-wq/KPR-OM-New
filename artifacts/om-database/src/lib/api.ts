@@ -748,3 +748,23 @@ export async function apiDeleteLeaseAbstract(id: string): Promise<{ ok: boolean;
     return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
   }
 }
+
+// Bulk-upsert many abstracts for a deal in one call (a whole property at once).
+export async function apiBulkSaveLeaseAbstracts(
+  dealId: string,
+  abstracts: LeaseAbstract[],
+): Promise<{ ok: boolean; saved?: number; skipped?: string[]; error?: string }> {
+  try {
+    const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/lease-abstracts/bulk`, {
+      method: "POST",
+      body: JSON.stringify({ abstracts }),
+    });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Couldn't bulk-save the abstracts" };
+    }
+    return resp.json() as Promise<{ ok: boolean; saved?: number; skipped?: string[] }>;
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
+}
