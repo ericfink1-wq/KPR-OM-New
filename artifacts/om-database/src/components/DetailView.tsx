@@ -2828,6 +2828,19 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {tab === "overview" && (<>
       {/* Edit metrics — below red flags */}
       <div id="section-aliases"><AkaEditor deal={d} onUpdate={onUpdate}/></div>
+
+      {/* AI Investment Highlights — mirrored from the AI Analysis tab so the narrative
+          is visible on the main page too (no id: section-highlights stays unique). */}
+      {d.notes && (
+        <div style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
+            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
+            {d.analysisStale && <StaleBadge />}
+          </div>
+          <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}><BoldText text={d.notes}/></p>
+        </div>
+      )}
+
       <div id="section-metriceditor"><MetricsEditor deal={d} onUpdate={onUpdate}/></div>
 
       {/* Financial grid */}
