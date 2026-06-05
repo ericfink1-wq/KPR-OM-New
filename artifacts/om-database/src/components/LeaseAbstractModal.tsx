@@ -8,6 +8,7 @@ import type {
 import { LEASE_NOTE_SECTIONS } from "../lib/idb";
 import { apiSaveLeaseAbstract, apiDeleteLeaseAbstract } from "../lib/api";
 import { exportLeaseAbstract } from "../lib/exportExcel";
+import { useIsMobile } from "../hooks/use-mobile";
 
 // A lease abstract is a reconciled summary of a tenant's full lease document set.
 // This modal both VIEWS an abstract (cited, sectioned) and ACCEPTS a pasted
@@ -68,10 +69,11 @@ function flagColor(sev?: string | null) {
 
 // A label / value (/ citation) row, like the tab's left-aligned field rows.
 function KV({ label, value, cite, indent }: { label: string; value?: React.ReactNode; cite?: AbstractCitation | null; indent?: boolean }) {
+  const isMobile = useIsMobile();
   return (
-    <div style={{ display:"flex", gap:10, padding:"3px 0", borderBottom:`1px solid ${C.line}`, marginLeft: indent ? 14 : 0 }}>
-      <div style={{ flex:"0 0 168px", fontSize:11.5, color:C.sub, fontWeight:600 }}>{label}</div>
-      <div style={{ flex:"1 1 auto", fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
+    <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 0 : 10, padding:"4px 0", borderBottom:`1px solid ${C.line}`, marginLeft: indent ? 14 : 0 }}>
+      <div style={{ flex: isMobile ? "none" : "0 0 168px", fontSize:11.5, color:C.sub, fontWeight:600 }}>{label}</div>
+      <div style={{ flex:"1 1 auto", fontSize:12.5, color:C.ink, lineHeight:1.5, wordBreak:"break-word" }}>
         {value != null && value !== "" ? value : <span style={{ color:C.faint }}>—</span>}<Cite cite={cite} />
       </div>
     </div>
@@ -80,6 +82,7 @@ function KV({ label, value, cite, indent }: { label: string; value?: React.React
 const dval = (f?: AbstractField | null): string => (f && f.value != null ? String(f.value) : "");
 
 function AbstractBody({ a }: { a: LeaseAbstract }) {
+  const isMobile = useIsMobile();
   const guaranties = (a.guaranties ?? []) as GuarantyEntry[];
   const tChain = (a.tenantChain ?? []) as PartyChainEntry[];
   const lChain = (a.landlordChain ?? []) as PartyChainEntry[];
@@ -273,9 +276,9 @@ function AbstractBody({ a }: { a: LeaseAbstract }) {
             const n = notesByCode.get(sec.code);
             if (!n) return null;
             return (
-              <div key={sec.code} style={{ display:"flex", gap:10, padding:"5px 0", borderBottom:`1px solid ${C.line}` }}>
-                <div style={{ flex:"0 0 150px", fontSize:11.5, color:C.sub, fontWeight:700 }}>{sec.label}</div>
-                <div style={{ flex:"1 1 auto", fontSize:12.5, color:C.ink, lineHeight:1.5 }}>
+              <div key={sec.code} style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 1 : 10, padding:"6px 0", borderBottom:`1px solid ${C.line}` }}>
+                <div style={{ flex: isMobile ? "none" : "0 0 150px", fontSize:11.5, color:C.sub, fontWeight:700 }}>{sec.label}</div>
+                <div style={{ flex:"1 1 auto", fontSize:12.5, color:C.ink, lineHeight:1.5, wordBreak:"break-word" }}>
                   {n.value || <span style={{ color:C.faint }}>—</span>}{cite(n.cite)}
                 </div>
               </div>
@@ -388,6 +391,7 @@ interface Props {
 export default function LeaseAbstractModal({ open, onClose, mode, abstract, dealId, tenantName, isAdmin, onSaved, onDeleted }: Props) {
   // "view" can flip into an inline update (paste) without closing.
   const [updating, setUpdating] = useState(false);
+  const isMobile = useIsMobile();
   useEffect(() => { if (open) setUpdating(false); }, [open, abstract]);
 
   useEffect(() => {
@@ -420,16 +424,21 @@ export default function LeaseAbstractModal({ open, onClose, mode, abstract, deal
         role="dialog" aria-modal="true"
         style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:2001, width:"min(760px, calc(100vw - 24px))", maxHeight:"88vh", display:"flex", flexDirection:"column", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", fontFamily:"'Inter',-apple-system,sans-serif" }}
       >
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"18px 22px 12px", borderBottom:`1px solid ${C.line}` }}>
-          <div style={{ minWidth:0 }}>
-            <div style={{ fontSize:16, fontWeight:700, color:C.ink, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{title}</div>
-            {!showPaste && abstract && (
-              <div style={{ fontSize:11, color:C.faint, marginTop:2 }}>
-                Lease abstract{abstract.dba && abstract.dba !== abstract.tenantName ? ` · ${abstract.dba}` : ""}{abstract.version ? ` · v${abstract.version}` : ""}{abstract.asOf ? ` · as of ${abstract.asOf}` : ""}
-              </div>
+        <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", justifyContent:"space-between", gap:10, padding: isMobile ? "14px 16px 10px" : "18px 22px 12px", borderBottom:`1px solid ${C.line}` }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:8, minWidth:0 }}>
+            <div style={{ minWidth:0, flex:1 }}>
+              <div style={{ fontSize: isMobile ? 15 : 16, fontWeight:700, color:C.ink, whiteSpace: isMobile ? "normal" : "nowrap", overflow:"hidden", textOverflow:"ellipsis", lineHeight:1.25 }}>{title}</div>
+              {!showPaste && abstract && (
+                <div style={{ fontSize:11, color:C.faint, marginTop:2, lineHeight:1.3 }}>
+                  Lease abstract{abstract.version ? ` · v${abstract.version}` : ""}{abstract.asOf ? ` · as of ${abstract.asOf}` : ""}
+                </div>
+              )}
+            </div>
+            {isMobile && (
+              <button onClick={onClose} aria-label="Close" style={{ fontSize:22, lineHeight:1, color:C.faint, background:"none", border:"none", cursor:"pointer", padding:"0 4px", flexShrink:0 }}>×</button>
             )}
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0, flexWrap:"wrap" }}>
             {!showPaste && abstract && (
               <button onClick={() => exportLeaseAbstract(abstract)} title="Export this abstract to Excel (mirrors your per-tenant tab)" style={{ fontSize:12, fontWeight:600, color:"#1f6f43", background:"#eafaf0", border:"1px solid #b7e4c7", borderRadius:7, padding:"6px 12px", cursor:"pointer" }}>⬇ Export to Excel</button>
             )}
@@ -439,7 +448,9 @@ export default function LeaseAbstractModal({ open, onClose, mode, abstract, deal
             {!showPaste && abstract && isAdmin && (
               <button onClick={handleDelete} style={{ fontSize:12, fontWeight:600, color:C.red, background:"#fff", border:`1px solid ${C.redBorder}`, borderRadius:7, padding:"6px 10px", cursor:"pointer" }}>Delete</button>
             )}
-            <button onClick={onClose} aria-label="Close" style={{ fontSize:18, lineHeight:1, color:C.faint, background:"none", border:"none", cursor:"pointer", padding:"2px 6px" }}>×</button>
+            {!isMobile && (
+              <button onClick={onClose} aria-label="Close" style={{ fontSize:18, lineHeight:1, color:C.faint, background:"none", border:"none", cursor:"pointer", padding:"2px 6px" }}>×</button>
+            )}
           </div>
         </div>
         <div style={{ overflowY:"auto", padding:"4px 22px 20px" }}>
