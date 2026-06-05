@@ -37,6 +37,30 @@ function newAbstractId(): string {
   return `la_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
+// GET /api/lease-abstracts — every abstract across the library (powers the
+// Analyst chat's lease-level recall). Returns the stored `data` objects stamped
+// with id/dealId/version so the chat can cite and link them.
+router.get("/lease-abstracts", requireAuth, async (req, res) => {
+  try {
+    await ensureLeaseAbstractsTable();
+    const rows = await db.select().from(leaseAbstractsTable)
+      .orderBy(asc(leaseAbstractsTable.tenantName));
+    const abstracts = rows.map((r) => ({
+      ...(r.data as Record<string, unknown>),
+      id: r.id,
+      dealId: r.dealId,
+      tenantName: r.tenantName,
+      version: r.version,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+    res.json(abstracts);
+  } catch (err) {
+    req.log.error({ err }, "Failed to load all lease abstracts");
+    res.status(500).json({ error: "Failed to load lease abstracts" });
+  }
+});
+
 // GET /api/deals/:id/lease-abstracts — all abstracts for a deal (powers the
 // roster "Abstract" button state and the abstract page). Returns the stored
 // `data` objects, each stamped with id/version so the client has the full record.

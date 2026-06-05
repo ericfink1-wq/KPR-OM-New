@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Deal, ReviewQuestion } from "./idb";
+import type { Deal, ReviewQuestion, LeaseAbstract } from "./idb";
 import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "./idb";
 import { isInvestmentGrade } from "./tenantCredit";
 
@@ -1186,7 +1186,7 @@ export function fmtTenantSales(salesPSF: unknown, sf: unknown): string {
   return `${totalStr} / ${psfStr}`;
 }
 
-export function buildSystemPrompt(deals: Deal[]): string {
+export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []): string {
   const active = deals.filter(d => !d.trashedAt);
   const statuses = ["Prospect","Under Contract","Owned","Sold","Passed"];
   const bySt = Object.fromEntries(statuses.map(s => [s, active.filter(d => d.status === s).length]));
@@ -1261,6 +1261,30 @@ export function buildSystemPrompt(deals: Deal[]): string {
 
   const ownedCount = bySt["Owned"] || 0;
 
+  // Lease abstracts on file (reconciled from each tenant's full document set).
+  // These are the authoritative source for lease-level questions and carry
+  // per-fact citations (document, section, page). Tagged with their deal name
+  // for context; the storage-envelope keys are stripped to keep the prompt lean.
+  const dealName = (id?: string) => {
+    const dd = active.find(x => x.id === id);
+    return dd ? (dd.propertyName || dd.fileName || id) : id;
+  };
+  const absForPrompt = (abstracts || []).map(a => {
+    const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = a;
+    return { deal: dealName(a.dealId), ...rest };
+  });
+  const abstractsSection = absForPrompt.length ? `
+
+=== LEASE ABSTRACTS ON FILE ===
+Full, reconciled lease abstracts for specific tenants — assembled from the original lease plus every amendment, assignment, guaranty, option exercise and waiver, with later documents controlling earlier ones. These are the AUTHORITATIVE source for lease-level questions (term, options, rent steps, percentage rent, security deposit, exclusives/use, go-dark, assignment/recapture, guaranties, default, CAM/taxes). Rules:
+- Every fact carries a "cite" object (doc, section, page). When you answer from an abstract, quote the value AND cite it, e.g. "Fresh Farms can go dark — it's not a default; the landlord's only remedy is to terminate (Cub Foods Lease, §9.6, p. 20 of 49)."
+- "options" carry a status (exercised / available / expired), window dates and rent — use them for "when does the next option start / what's the rent."
+- "guaranties" is a stack (a lease can carry several across successive assignments). "flags" are reconciliation/defect items — surface the relevant one when it bears on the answer.
+- If a lease-level question is about a tenant that has NO abstract here, say no abstract is on file rather than inferring from the roster summary.
+
+Lease abstracts (JSON):
+${JSON.stringify(absForPrompt, null, 2)}` : "";
+
   return `You are KPR Centers' in-house commercial real estate analyst. You specialize in RETAIL SHOPPING CENTERS (anchored strip/power/grocery centers — not residential, not office, not raw land). You are analyzing KPR's own deal library. Be precise, think like an experienced acquisitions principal, and reason from the structured data below — never invent numbers.
 
 === "KPR PORTFOLIO" vs "THE DATABASE" — READ THIS FIRST (most common source of confusion) ===
@@ -1302,6 +1326,7 @@ Portfolio counts: ${active.length} total deals — ${statuses.map(s => `${bySt[s
 
 Full deal data (JSON):
 ${JSON.stringify(portfolio, null, 2)}
+${abstractsSection}
 
 === ANSWERING GUIDELINES ===
 - Reference actual deal names and real numbers from the data above; don't generalize when specifics are available.
