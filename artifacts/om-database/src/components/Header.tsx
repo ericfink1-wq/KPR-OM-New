@@ -77,6 +77,14 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [adminError, setAdminError] = useState<string | null>(null);
   const [adminSubmitting, setAdminSubmitting] = useState(false);
 
+  // Enable real folder selection on the folder input (webkitdirectory isn't a typed
+  // JSX prop, so set it on the element directly). With it, the picker selects an
+  // entire folder and returns every file inside, recursively.
+  useEffect(() => {
+    const el = folderRef.current;
+    if (el) { el.setAttribute("webkitdirectory", ""); el.setAttribute("directory", ""); }
+  }, []);
+
   const openFeedbackInbox = async () => {
     setBackupMenu(false);
     setFeedbackModal(true);
@@ -173,6 +181,18 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const active = deals.filter(d => !d.trashedAt);
   const handleFiles = (fl: FileList | null) => {
     if (fl && fl.length > 0) onFiles(fl);
+  };
+
+  // Folder import: a folder pick (webkitdirectory) returns EVERY file in the tree —
+  // including .DS_Store, images, etc. — and browsers ignore `accept` for folders, so
+  // filter to the supported document types before queuing them.
+  const handleFolder = (fl: FileList | null) => {
+    if (!fl || fl.length === 0) return;
+    const supported = /\.(pdf|xlsx|xls|xlsm|xlsb|csv)$/i;
+    const dt = new DataTransfer();
+    for (const f of Array.from(fl)) if (supported.test(f.name)) dt.items.add(f);
+    if (dt.files.length === 0) { alert("No PDF or Excel/CSV files found in that folder."); return; }
+    onFiles(dt.files);
   };
 
   const handleJsonFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -532,7 +552,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
         {/* Hidden inputs */}
         <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
-        <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
+        <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFolder(e.target.files)} />
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
 
