@@ -710,9 +710,11 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
     transferTaxes: [
       { name: "Documentary Stamp Tax on Deed — All Counties Except Miami-Dade",
         rate: 0.007, base: "price", party: "seller",
+        altGroup: "FL-deedstamp", altLabel: "All counties except Miami-Dade", altDefault: true,
         notes: "$0.70 per $100 = 0.70%. Seller pays. Applies in Broward, Palm Beach, Orange (Orlando), Hillsborough (Tampa), Pinellas (St. Pete), Duval (Jacksonville), Lee (Fort Myers), Collier (Naples), Sarasota, and all other FL counties except Miami-Dade." },
       { name: "Documentary Stamp Tax on Deed — Miami-Dade County Only",
         rate: 0.0105, rateMin: 0, rateMax: 0.0105, base: "price", party: "seller",
+        altGroup: "FL-deedstamp", altLabel: "Miami-Dade County",
         notes: "Miami-Dade ONLY: standard $0.70/$100 state doc stamps + $0.45/$100 Miami-Dade county surtax = $1.05/$100 = 1.05% total. Seller pays. 50% higher than rest of Florida. Always confirm property is in Miami-Dade (not Broward or Monroe which use standard 0.70%)." },
       { name: "Documentary Stamp Tax on Promissory Note / Mortgage",
         rate: 0.0035, base: "loan", party: "buyer",
@@ -1550,6 +1552,9 @@ export interface ResolvedJurisdiction {
 const COUNTY_LOCALITY: Record<string, Array<{ group: string; label: string; counties: string[] }>> = {
   NY: [
     { group: "NY-local", label: "NYC", counties: ["new york county", "kings county", "queens county", "bronx county", "richmond county"] },
+  ],
+  FL: [
+    { group: "FL-deedstamp", label: "Miami-Dade County", counties: ["miami-dade county", "dade county"] },
   ],
   // All 24 MD jurisdictions — the geocoded county name (Census form, lowercased)
   // IS the dropdown label lowercased, so map each name to itself.
