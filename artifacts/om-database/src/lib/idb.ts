@@ -213,27 +213,41 @@ export interface PartyChainEntry {
   cite?: AbstractCitation | null;
 }
 
-// One renewal/extension option and its current status.
+// One renewal/extension option and its current status. The MRI-style fields
+// (optionType…expireDate) mirror the Options table in Eric's per-tenant abstract
+// tab; the high-level fields drive the on-screen viewer and chat.
 export interface AbstractOption {
   ordinal?: number | null;          // 1, 2, 3...
+  number?: string | null;           // tab label, e.g. "3rd", "4th"
   length?: string | null;           // "5 years"
   status?: "exercised" | "available" | "expired" | null;
-  windowStart?: string | null;      // ISO — term start if/when this option runs
+  optionType?: string | null;       // MRI "Type", e.g. "REN" (renewal)
+  windowStart?: string | null;      // ISO — term start if/when this option runs ("Option Date")
   windowEnd?: string | null;        // ISO
+  noticeDate?: string | null;       // ISO — last date to give notice
+  suiteId?: string | null;
+  squareFeet?: number | string | null;
+  termMonths?: number | string | null;
+  ratePSF?: number | string | null; // rate per SF for the option period
+  rateDescriptor?: string | null;   // "PSF", "FMV", etc.
+  expireDate?: string | null;       // ISO — option period expiration
   rent?: string | null;             // annual rent for this option period
   exerciseConditions?: string | null; // e.g. notice window, net-worth tests from assignments
   exercisedDate?: string | null;    // ISO, when exercised
   cite?: AbstractCitation | null;
 }
 
-// One step in the base-rent schedule.
+// One step in the base-rent schedule (mirrors the "Billing / Recurring Charges"
+// table in the tab: income category, effective/end, $/SF, annual, monthly).
 export interface AbstractRentStep {
-  periodStart?: string | null;      // ISO
-  periodEnd?: string | null;        // ISO
-  annualRent?: number | string | null;
+  incomeCategory?: string | null;   // e.g. "RNT"
+  periodStart?: string | null;      // ISO ("Effective Date")
+  periodEnd?: string | null;        // ISO ("End Date")
+  amountPerSF?: number | string | null; // annual $/SF
+  annualRent?: number | string | null;  // annual total
   monthlyRent?: number | string | null;
-  psf?: number | string | null;
-  note?: string | null;             // "flat", "first option", etc.
+  psf?: number | string | null;     // alias kept for back-compat
+  note?: string | null;             // "Option 3", "flat", etc.
   cite?: AbstractCitation | null;
 }
 
@@ -265,6 +279,115 @@ export interface AbstractSourceDoc {
   type?: string | null;             // lease | amendment | guaranty | assignment | option | waiver | letter | license | other
 }
 
+// ---- MRI-style blocks (mirror Eric's detailed per-tenant abstract tab) --------
+
+// "Lease & Amendments" — each document with its date and a one-line description.
+export interface AbstractDocRef {
+  name?: string | null;
+  date?: string | null;             // ISO
+  description?: string | null;      // e.g. "Confirms the Lease Dates and certain other terms"
+  type?: string | null;
+}
+
+// "Lease Dates" block — each a cited value.
+export interface AbstractLeaseDates {
+  leaseDate?: AbstractField | null;
+  openDate?: AbstractField | null;
+  leaseCommencement?: AbstractField | null;
+  cancelDate?: AbstractField | null;
+  leaseExpiration?: AbstractField | null;
+  rentStartDate?: AbstractField | null;
+}
+
+// "Deposit Information" block.
+export interface AbstractDeposit {
+  cashDeposit?: string | null;
+  nonCashDeposit?: string | null;
+  interestBearing?: string | null;
+  interestStartDate?: string | null;
+  lastInterestEarnedDate?: string | null;
+  vendorId?: string | null;
+  insuranceCertExp?: string | null;
+  cite?: AbstractCitation | null;
+}
+
+// "Notice Address" — one block per address type (Tenant Legal, Guarantor, …).
+export interface AbstractNoticeAddress {
+  type?: string | null;             // "Legal" | "Guarantor" | "Billing" | …
+  name?: string | null;
+  attn?: string | null;
+  address1?: string | null;
+  address2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  cite?: AbstractCitation | null;
+}
+
+// One row of the percentage-rent breakpoint table.
+export interface AbstractBreakpoint {
+  startDate?: string | null;
+  percentage?: string | null;       // e.g. "1%"
+  breakpoint?: number | string | null;
+}
+
+// "Retail – Percentage Rent" block.
+export interface AbstractPercentageRentDetail {
+  summary?: string | null;
+  reportingFrequency?: string | null;
+  naturalBreakpoint?: boolean | null;
+  inLieuOfMinimum?: boolean | null;
+  salesYearEnd?: string | null;
+  paymentTiming?: string | null;    // e.g. "Within 120 days after the end of each Lease Year"
+  breakpoints?: AbstractBreakpoint[] | null;
+  cite?: AbstractCitation | null;
+}
+
+// One section of the section-keyed "Lease Notes" block.
+export interface LeaseNote {
+  code?: string | null;             // SECDEP, USE, RADIUS, EXCLUSI, COTENCY, …
+  label?: string | null;            // "Security Deposit", "Use Clause", …
+  value?: string | null;
+  cite?: AbstractCitation | null;
+}
+
+// Canonical order + labels of the Lease-Notes sections, matching the tab so the
+// export renders them in the same sequence.
+export const LEASE_NOTE_SECTIONS: { code: string; label: string }[] = [
+  { code: "SECDEP", label: "Security Deposit" },
+  { code: "USE", label: "Use Clause" },
+  { code: "RADIUS", label: "Radius" },
+  { code: "LL RADIUS", label: "LL Radius" },
+  { code: "EXCLUSI", label: "Exclusive Use" },
+  { code: "COTENCY", label: "Co-tenancy" },
+  { code: "KICKLL", label: "Kickout/Termination (LL)" },
+  { code: "KICKTN", label: "Kickout/Termination (Tenant)" },
+  { code: "NBNC", label: "LL Restrictions" },
+  { code: "TRSTR", label: "Tenant Restrictions" },
+  { code: "CAM", label: "CAM Method" },
+  { code: "RETX", label: "Tax Method" },
+  { code: "INS", label: "Insurance Method" },
+  { code: "ASSNSUB", label: "Assignment & Sublet" },
+  { code: "ALTERTN", label: "Alterations" },
+  { code: "OPC", label: "Operating Covenant" },
+  { code: "GO DARK", label: "Go Dark Option" },
+  { code: "LATECHG", label: "Late Fee" },
+  { code: "DEFAULT", label: "Default" },
+  { code: "GUARANT", label: "Guaranty" },
+  { code: "OTPRCL", label: "Outparcel Restrictions" },
+  { code: "PURCHSE", label: "Purchase Option" },
+  { code: "DUES", label: "Merchant's Association" },
+  { code: "HOLDOVR", label: "Holdover" },
+  { code: "PYLON", label: "Pylon Sign" },
+  { code: "ESTOPPEL", label: "Estoppel" },
+  { code: "SUBORD", label: "Subordination" },
+  { code: "RELOCAT", label: "Relocation" },
+  { code: "UTILITY", label: "Utilities" },
+  { code: "HVAC", label: "HVAC" },
+];
+
 export interface LeaseAbstract {
   id?: string;                      // abstract id (la_...)
   dealId?: string;                  // owning deal id
@@ -274,9 +397,16 @@ export interface LeaseAbstract {
   version?: number | null;
   asOf?: string | null;            // reconciliation date (ISO)
 
-  // Identity / premises
+  // Identity / premises (tab header block)
+  center?: string | null;           // shopping center name
+  suite?: string | null;            // site-plan suite #
+  mriNumber?: string | null;
+  premisesGLA?: number | string | null; // GLA as shown on the tab (usually == currentSF)
   currentSF?: number | string | null;
   sizeHistory?: AbstractSizeHistory[] | null;
+
+  // Lease & Amendments (the document stack, with descriptions)
+  documents?: AbstractDocRef[] | null;
 
   // Parties / succession
   tenantChain?: PartyChainEntry[] | null;
@@ -285,24 +415,36 @@ export interface LeaseAbstract {
   // Guaranty stack
   guaranties?: GuarantyEntry[] | null;
 
+  // Lease dates / deposit / notice addresses (MRI blocks)
+  dates?: AbstractLeaseDates | null;
+  deposit?: AbstractDeposit | null;
+  noticeAddresses?: AbstractNoticeAddress[] | null;
+
   // Term & options
   commencement?: string | null;     // ISO
   expiration?: string | null;       // ISO (current controlling expiration)
   term?: AbstractField | null;      // prose summary of the term
   options?: AbstractOption[] | null;
+  optionNotes?: string | null;      // free-text note under the options table
 
-  // Rent
+  // Rent / billing
   rentSchedule?: AbstractRentStep[] | null;
-  percentageRent?: AbstractField | null;
+  percentageRent?: AbstractField | null;          // short prose (kept for chat/back-compat)
+  percentageRentDetail?: AbstractPercentageRentDetail | null;  // full MRI block
   securityDeposit?: AbstractField | null;
 
-  // Covenants
+  // Covenants (high-level convenience fields; the full set lives in leaseNotes)
   exclusives?: AbstractExclusive[] | null;
   goDark?: AbstractField | null;
   assignment?: AbstractField | null;
   camTax?: AbstractField | null;
   defaultTerms?: AbstractField | null;
   governingLaw?: string | null;
+
+  // Full section-keyed Lease Notes block (Use, Radius, Exclusive, Co-tenancy,
+  // Kickout, CAM, Tax, Insurance, Assignment, Go Dark, Default, Guaranty,
+  // Holdover, Estoppel, Subordination, Relocation, Utilities, HVAC, …).
+  leaseNotes?: LeaseNote[] | null;
 
   // Meta
   flags?: AbstractFlag[] | null;
