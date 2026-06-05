@@ -453,7 +453,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         </span>
                       );
                     }
-                    return null;
+                    // No abstract yet — the roster pill is view-only (uploading is now the
+                    // single deal-level "⬆ Upload abstracts" button that auto-routes by name).
+                    return (
+                      <span title="No lease abstract on file yet"
+                        style={{ fontSize:9, color:"#bdb6a8", background:"transparent", border:"1px dashed #e7e0d2", padding:"2px 8px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>
+                        no abstract
+                      </span>
+                    );
                   })()}
                 </td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:"#837c6e", fontFamily:"'SF Mono',ui-monospace,monospace", fontSize:11 }}>{t.suite || "—"}</td>
