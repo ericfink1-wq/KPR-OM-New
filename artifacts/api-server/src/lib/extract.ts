@@ -6,6 +6,7 @@ import { rebuildTenantIndex, parseLeaseDate } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
+import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction } from "./leaseRiskExtract";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -118,36 +119,6 @@ REQUIRED SCHEMA:
   "underwritingAssumptions": {"analysisPeriodYears": "number or null", "analysisStartDate": "string or null", "expenseInflation": "string or null", "marketRentInflation": "string or null", "capitalReserves": "string or null", "managementFeePct": "string or null", "generalVacancyLoss": "string or null", "renewalProbability": "string or null", "tiAllowance": "string or null", "leasingCommissions": "string or null", "marketRentsBySpaceType": "string or null"},
   "shadowAnchors": "string or null — ONLY on-site parcels NOT part of this sale (NAP/unowned). Most centers have none.",
   "keyAssumptions": ["array of deal-level footnotes affecting underwriting — empty array if none"],
-  "leaseRisk": {
-    "coTenancyDisclosed": "true ONLY if the OM (rent-roll footnotes, a lease-summary / lease-abstract section, or tenant-by-tenant notes) actually discloses a co-tenancy, sales-kickout, or go-dark clause for ANY tenant. false when the OM is silent on these (most OMs are). Do not infer one from the mere presence of anchors.",
-    "tenants": [
-      {
-        "tenant": "tenant name — MUST exactly match a name in the tenants array above. This is NOT a roster row; it is structured deal-killer-clause data for that existing tenant. NEVER add an anchor named only inside a co-tenancy clause to the tenants roster.",
-        "suite": "string or null",
-        "baseRentAnnual": "number or null — that tenant's base rent put at risk (usually their annualRent)",
-        "coTenancy": [
-          {
-            "type": "opening|operating — opening = right not to open / abate until co-tenancy met; operating = ongoing right while a named anchor is dark",
-            "triggerLogic": "nested AND/OR tree. A branch is {\"operator\":\"AND|OR\",\"conditions\":[...]}; a leaf is {\"type\":\"named_anchor_dark\",\"anchor\":\"Target\"} or {\"type\":\"occupancy_threshold\",\"scope\":\"inline <15000 SF\",\"direction\":\"below\",\"pct\":75}. Encode exactly what the clause says; preserve which anchors are named.",
-            "remedy": {"mechanism": "alternate_rent_pct_sales|percent_rent_reduction|fixed_reduction|null", "value": "number or null (e.g. 5 = 5% of gross sales; 50 = 50% reduction)", "cap": "string or null (e.g. minimum_annual_rent)", "additionalRentTreatment": "tenant_continues|swept|unknown|null"},
-            "reliefPeriodMonthsBeforeTermination": "number or null",
-            "terminationNoticeDays": "number or null",
-            "cureCondition": "string or null — what restores full rent",
-            "suitableReplacementDefinition": "string or null — how a replacement anchor is defined",
-            "sectionRef": "string or null", "verbatimQuote": "string or null — exact OM text",
-            "sourceDocument": "OM", "provenance": "extracted|inferred", "verifiedAgainstExecutedDoc": false
-          }
-        ],
-        "salesKickout": [
-          {"salesThresholdAmount": "number or null", "salesThresholdPSF": "number or null", "measurementPeriod": "string or null", "noticeWindowDays": "number or null", "terminationFee": "number or null", "unamortizedTiRepayment": "number or null", "sectionRef": "string or null", "verbatimQuote": "string or null", "sourceDocument": "OM", "provenance": "extracted|inferred", "verifiedAgainstExecutedDoc": false}
-        ],
-        "otherRiskClauses": {
-          "goDarkRight": "null, or {present:true, summary, sectionRef, verbatimQuote, sourceDocument:\"OM\", provenance, verifiedAgainstExecutedDoc:false}",
-          "continuousOperationCovenant": "same shape or null", "exclusiveUse": "same shape or null", "rofrRofo": "same shape or null (right of first refusal/offer)", "recaptureAssignment": "same shape or null", "earlyTerminationOption": "same shape or null"
-        }
-      }
-    ]
-  },
   "comparableSales": [{"name": "string or null — property name if stated", "address": "string", "market": "string or null — MSA or city/market label", "saleDate": "string", "salePrice": "number or null", "capRate": "number or null", "pricePerSF": "number or null", "sf": "number or null", "occupancy": "number or null"}],
   "dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "one precise sentence based on the OM data available now, with the key driver(s) wrapped in **double asterisks** for bold emphasis — NOTE: a post-extraction portfolio benchmark pass will inject recency-weighted rent data from previously analyzed deals and may revise this score; when that data is present it supersedes general market assumptions", "strengths": ["string"], "risks": ["string"]},
   "redFlags": [{"severity": "high|medium|low", "description": "string — high only for substantial roof end-of-life or anchor with weak credit/closure history. NEVER flag absent asking price or non-reassessed RE taxes."}],
@@ -158,7 +129,7 @@ REQUIRED SCHEMA:
 }
 DATA-INTEGRITY QUESTIONS (reviewQuestions): This is a DASHBOARD for the user to verify a clean import, not a place to dump everything. Add an item ONLY when you genuinely could not capture a value with confidence from the document — e.g. the OM gives conflicting square footages, the NOI/cap/price don't tie out, a rent-roll column was unlabeled or ambiguous, a key number was blurry/footnoted/asterisked, or two tenants might be the same. Severity: "high" = a core financial/SF figure that drives the analysis; "medium" = a material lease/tenant detail; "low" = a minor field. ALWAYS set "target" so the user can fix the value in one click: kind/fieldKey/tenantName/valueType pointing at the exact field; set target to null ONLY when the question is not about a single editable field (e.g. "two tenants might be duplicates"). Do NOT raise questions for values that are simply ABSENT from the document (those are just null) — only for values you DID capture but are UNSURE about, or genuine internal contradictions. Empty array if the import was clean and unambiguous. Cap at the ~5 most important.
 
-PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. LEASE RISK (leaseRisk): capture co-tenancy / sales-kickout / go-dark clauses ONLY when the OM actually discloses them (rent-roll footnotes, a lease-summary/abstract section, tenant notes); set coTenancyDisclosed:false and tenants:[] when the OM is silent — do NOT invent clauses. Everything here is source "OM", verifiedAgainstExecutedDoc:false (a summary, not the executed lease). Anchor names referenced inside a co-tenancy trigger belong ONLY in leaseRisk — never add them to the tenants roster. Tenant roster scope: ONLY include tenants that are actual occupants of THIS property — i.e., they appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Exclude any tenant mentioned solely as: a competitor, a shadow anchor or co-tenant at another parcel, a comparable-sale occupant, a "trade area" or "co-tenancy" narrative reference, or market context. The test is: does this tenant have a lease at THIS property? If yes → include. If no → exclude. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include EACH vacant/availability row as its own tenant entry with name "Vacant", its SF if stated, and null for all lease/rent fields — do NOT merge multiple vacant suites into one row. Dates: always ISO YYYY-MM-DD. rentSchedule: leave null when no rent rate/steps are disclosed — do not just restate the lease-expiry date. creditRating: leave null unless the OM states it or the tenant is a certain national investment-grade credit — never guess (see field note). WALT: ALWAYS compute it yourself from the rent-roll lease-expiry dates (SF-weighted, to today); do NOT copy a WALT figure printed on the cover/marketing pages, which may use a different basis and conflict with the roster. Tenant names: brand only, no store numbers.
+PRIORITIES: Capture all footnotes/assumptions (assumptionNote, keyAssumptions). Capture roof ages. Only fill askingPrice/capRate when explicitly stated. shadowAnchors = null unless OM explicitly marks on-site parcel as NAP/unowned. Tenant roster scope: ONLY include tenants that are actual occupants of THIS property — i.e., they appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Exclude any tenant mentioned solely as: a competitor, a shadow anchor or co-tenant at another parcel, a comparable-sale occupant, a "trade area" or "co-tenancy" narrative reference, or market context. The test is: does this tenant have a lease at THIS property? If yes → include. If no → exclude. Tenant deduplication: if the same retailer appears in multiple phases, buildings, or pads (e.g. "TJ Maxx" and "TJ Maxx (West)"), consolidate into ONE tenant row — do NOT append phase/building identifiers in parentheses to the tenant name. Use the combined SF and primary lease terms for the single entry. Vacant spaces: include EACH vacant/availability row as its own tenant entry with name "Vacant", its SF if stated, and null for all lease/rent fields — do NOT merge multiple vacant suites into one row. Dates: always ISO YYYY-MM-DD. rentSchedule: leave null when no rent rate/steps are disclosed — do not just restate the lease-expiry date. creditRating: leave null unless the OM states it or the tenant is a certain national investment-grade credit — never guess (see field note). WALT: ALWAYS compute it yourself from the rent-roll lease-expiry dates (SF-weighted, to today); do NOT copy a WALT figure printed on the cover/marketing pages, which may use a different basis and conflict with the roster. Tenant names: brand only, no store numbers.
 
 LANGUAGE (notes/rationale narration): RENTS DO NOT "TRADE" — properties trade, rents do not; say a rent "is X% below/above" market, never "trades below/above." Reserve "portfolio"/"KPR portfolio" for assets the owner holds; call the broader analyzed dataset "the database." KPR underwrites a 5–7 year hold (max ~10): frame mark-to-market/value-add upside that rolls within ~7 years as in-hold upside KPR captures; upside that rolls ~7–12 years out is residual/exit upside to position for the next buyer (not in-hold); upside locked deeper than that is not upside.
 
@@ -212,44 +183,8 @@ export async function callAnthropicOnce(body: object, retryCount = 0): Promise<R
   return resp;
 }
 
-export function robustParseJSON(raw: string): unknown {
-  if (!raw?.trim()) throw new Error("Empty response");
-  let s = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-  try { return JSON.parse(s); } catch {}
-  try { return JSON.parse(s.replace(/,(\s*[}\]])/g, "$1")); } catch {}
-  const first = s.indexOf("{");
-  const last = s.lastIndexOf("}");
-  if (first !== -1 && last !== -1 && last > first) {
-    try { return JSON.parse(s.slice(first, last + 1)); } catch {}
-  }
-  if (first !== -1) {
-    try { return repairTruncatedJSON(s.slice(first)); } catch {}
-  }
-  throw new Error("The AI's response couldn't be read as structured data — it came back incomplete or not in the expected format.");
-}
-
-function repairTruncatedJSON(s: string): unknown {
-  let inStr = false, esc = false;
-  const stack: string[] = [];
-  let safeLen = -1, safeClosers = "";
-  const closersFor = () => stack.map((b) => (b === "{" ? "}" : "]")).reverse().join("");
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (inStr) {
-      if (esc) esc = false;
-      else if (c === "\\") esc = true;
-      else if (c === '"') inStr = false;
-      continue;
-    }
-    if (c === '"') { inStr = true; }
-    else if (c === "{" || c === "[") { stack.push(c); }
-    else if (c === "}" || c === "]") { stack.pop(); safeLen = i + 1; safeClosers = closersFor(); }
-    else if (c === ",") { safeLen = i; safeClosers = closersFor(); }
-  }
-  if (safeLen <= 0) throw new Error("Could not repair truncated JSON");
-  const repaired = s.slice(0, safeLen).replace(/,\s*$/, "") + safeClosers;
-  return JSON.parse(repaired);
-}
+export { robustParseJSON } from "./jsonRepair";
+import { robustParseJSON } from "./jsonRepair";
 
 // Strip trailing phase/building identifiers like "(West)", "(Phase 2)", "(Bldg A)"
 // so duplicate phase entries collapse to the same base name.
@@ -299,7 +234,7 @@ function mergePhaseDuplicates(tenants: Array<Record<string, unknown>>): Array<Re
 }
 
 // Full OM extraction — retries truncated tenant lists automatically
-export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean; timings: { totalMs: number; firstPassMs: number; continuationRounds: number; continuationMs: number; gapFillRounds: number; gapFillMs: number; tenantCount: number; budgetHit: boolean } }> {
+export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean; timings: { totalMs: number; firstPassMs: number; continuationRounds: number; continuationMs: number; gapFillRounds: number; gapFillMs: number; leaseRiskMs: number; tenantCount: number; budgetHit: boolean } }> {
   const truncatedText = text.length > 180000
     ? text.slice(0, 120000) + "\n...[middle truncated]...\n" + text.slice(-40000)
     : text;
@@ -465,6 +400,25 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     }
   }
 
+  // DEDICATED LEASE-RISK PASS — a separate, focused model call (reusing the cached
+  // OM blocks) so a long rent roll truncating the main pass can never drop the
+  // co-tenancy / kickout data. Best-effort; normalised to source:"OM"/unverified.
+  // Skipped if we already blew the time budget.
+  let leaseRiskMs = 0;
+  if (!budgetHit && Date.now() < EXTRACTION_DEADLINE) {
+    const _lrStart = Date.now();
+    const names = (extracted.tenants as Array<{ name?: unknown }>).map((t) => String(t?.name ?? "")).filter(Boolean);
+    const leaseRisk = await runLeaseRiskPass({ callExtract, cachedBlocks, tenantNames: names, parse: robustParseJSON });
+    leaseRiskMs = Date.now() - _lrStart;
+    if (leaseRisk) {
+      extracted.leaseRisk = leaseRisk;
+      // Backstop the roster rule: drop any anchor name that leaked into tenants[]
+      // only because a co-tenancy clause referenced it.
+      const guard = enforceRosterCotenancyRule(extracted.tenants as Array<Record<string, unknown>>, leaseRisk);
+      extracted.tenants = guard.tenants;
+    }
+  }
+
   // If we stopped at the time budget, flag it loudly: log it and leave a review
   // question so the roster is reviewed rather than silently trusted as complete.
   if (budgetHit) {
@@ -488,6 +442,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     continuationMs,
     gapFillRounds: gapRoundsTotal,
     gapFillMs,
+    leaseRiskMs,
     tenantCount,
     budgetHit,
   };
@@ -652,6 +607,16 @@ export async function runBackgroundExtraction(
       lastScoredDealCount: totalCount,
       analysisVersion: ANALYSIS_VERSION,
     };
+    // Post-extraction lease-risk validators → fold into Import-Review questions
+    // (unverified OM co-tenancy/kickout + any "increase" rent step that decreases).
+    try {
+      const lrChecks = validateLeaseRiskAtExtraction(dealData);
+      if (lrChecks.length) {
+        const existing = Array.isArray(dealData.reviewQuestions) ? dealData.reviewQuestions as unknown[] : [];
+        const seen = new Set(existing.map((q) => (q as { id?: string })?.id));
+        dealData.reviewQuestions = [...existing, ...lrChecks.filter((q) => !seen.has(q.id))];
+      }
+    } catch { /* validators must never break an upload */ }
     await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })
       .where(eq(dealsTable.id, id));
