@@ -9,89 +9,496 @@
   "premisesGLA": 10000,
   "currentSF": 10000,
   "documents": [
-    { "name": "Lease", "date": "2021-03-31", "type": "lease", "description": "Black Cherry LLC / Five Below, Inc. ~10,000 SF. 10-yr+ term to 1/31/2032 + two 5-yr options; teen/pre-teen ≤$10 exclusive; 3-of-4 co-tenancy; $100,000 construction allowance." },
-    { "name": "Commencement Date Certificate", "date": "2022-01-27", "type": "amendment", "description": "Delivery/Open/Rent Commencement 9/26/2021; Expiration 1/31/2032; confirms rent steps and two renewal options." }
+    {
+      "name": "Lease",
+      "date": "2021-03-31",
+      "type": "lease",
+      "description": "Black Cherry LLC / Five Below, Inc. ~10,000 SF. 10-yr+ term to 1/31/2032 + two 5-yr options; teen/pre-teen \u2264$10 exclusive; 3-of-4 co-tenancy; $100,000 construction allowance."
+    },
+    {
+      "name": "Commencement Date Certificate",
+      "date": "2022-01-27",
+      "type": "amendment",
+      "description": "Delivery/Open/Rent Commencement 9/26/2021; Expiration 1/31/2032; confirms rent steps and two renewal options."
+    }
   ],
   "tenantChain": [
-    { "entity": "Five Below, Inc.", "role": "tenant", "effectiveDate": "2021-03-31", "instrument": "Lease", "cite": { "doc": "Lease" } }
+    {
+      "entity": "Five Below, Inc.",
+      "role": "tenant",
+      "effectiveDate": "2021-03-31",
+      "instrument": "Lease",
+      "cite": {
+        "doc": "Lease"
+      }
+    }
   ],
   "landlordChain": [
-    { "entity": "Black Cherry Limited Liability Company (Colorado LLC)", "role": "landlord", "effectiveDate": "2021-03-31", "instrument": "Lease", "cite": { "doc": "Lease" } },
-    { "entity": "SK University Hills Owner MZL, LLC (KPR; current owner)", "role": "landlord", "effectiveDate": "2024", "instrument": "current owner of University Hills (per KPR acquisition; same entity named as Landlord in the King Soopers Third Amendment and Marshalls 2nd Amendment)", "cite": { "doc": "property ownership" } }
+    {
+      "entity": "Black Cherry Limited Liability Company (Colorado LLC)",
+      "role": "landlord",
+      "effectiveDate": "2021-03-31",
+      "instrument": "Lease",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "entity": "SK University Hills Owner MZL, LLC (KPR; current owner)",
+      "role": "landlord",
+      "effectiveDate": "2024",
+      "instrument": "current owner of University Hills (per KPR acquisition; same entity named as Landlord in the King Soopers Third Amendment and Marshalls 2nd Amendment)",
+      "cite": {
+        "doc": "property ownership"
+      }
+    }
   ],
   "guaranties": [],
   "dates": {
-    "leaseDate": { "value": "2021-03-31", "cite": { "doc": "Lease" } },
-    "openDate": { "value": "2021-09-26", "cite": { "doc": "Commencement Date Certificate" } },
-    "leaseCommencement": { "value": "2021-09-26", "cite": { "doc": "Commencement Date Certificate" } },
-    "cancelDate": { "value": "Not Provided" },
-    "leaseExpiration": { "value": "2032-01-31", "cite": { "doc": "Commencement Date Certificate" } },
-    "rentStartDate": { "value": "2021-09-26", "cite": { "doc": "Commencement Date Certificate" } }
+    "leaseDate": {
+      "value": "2021-03-31",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    "openDate": {
+      "value": "2021-09-26",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    "leaseCommencement": {
+      "value": "2021-09-26",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    "cancelDate": {
+      "value": "Not Provided"
+    },
+    "leaseExpiration": {
+      "value": "2032-01-31",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    "rentStartDate": {
+      "value": "2021-09-26",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    }
   },
-  "deposit": { "cashDeposit": "None noted", "nonCashDeposit": "None noted", "interestBearing": "N/A" },
+  "deposit": {
+    "cashDeposit": "None noted",
+    "nonCashDeposit": "None noted",
+    "interestBearing": "N/A"
+  },
   "noticeAddresses": [
-    { "type": "Tenant", "name": "Five Below, Inc.", "attn": "Lease Administration", "address1": "701 Market Street, Suite 555", "city": "Philadelphia", "state": "PA", "zip": "19106", "cite": { "doc": "Commencement Date Certificate" } },
-    { "type": "Landlord (current — KPR)", "name": "SK University Hills Owner MZL, LLC", "attn": "c/o KPR Centers LLC", "address1": "535 Fifth Avenue, 12th Floor", "city": "New York", "state": "NY", "zip": "10017", "email": "officialnotice@kprcenters.com", "cite": { "doc": "current owner — confirm against any KPR assignment/SNDA for this lease" } }
+    {
+      "type": "Tenant",
+      "name": "Five Below, Inc.",
+      "attn": "Lease Administration",
+      "address1": "701 Market Street, Suite 555",
+      "city": "Philadelphia",
+      "state": "PA",
+      "zip": "19106",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    {
+      "type": "Landlord (current \u2014 KPR)",
+      "name": "SK University Hills Owner MZL, LLC",
+      "attn": "c/o KPR Centers LLC",
+      "address1": "535 Fifth Avenue, 12th Floor",
+      "city": "New York",
+      "state": "NY",
+      "zip": "10017",
+      "email": "officialnotice@kprcenters.com",
+      "cite": {
+        "doc": "current owner \u2014 confirm against any KPR assignment/SNDA for this lease"
+      }
+    }
   ],
   "commencement": "2021-09-26",
   "expiration": "2032-01-31",
-  "term": { "value": "Lease 3/31/2021; Rent Commencement / store open 9/26/2021; expires 1/31/2032 (~10 years + initial fraction). Two 5-year renewal options run to 1/31/2042.", "cite": { "doc": "Lease; Commencement Date Certificate" } },
+  "term": {
+    "value": "Lease 3/31/2021; Rent Commencement / store open 9/26/2021; expires 1/31/2032 (~10 years + initial fraction). Two 5-year renewal options run to 1/31/2042.",
+    "cite": {
+      "doc": "Lease; Commencement Date Certificate"
+    }
+  },
   "options": [
-    { "number": "1", "ordinal": 1, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2032-02-01", "suiteId": "57", "squareFeet": 10000, "termMonths": 60, "ratePSF": 29.04, "rateDescriptor": "PSF", "expireDate": "2037-01-31", "rent": "$290,400/yr", "cite": { "doc": "Commencement Date Certificate" } },
-    { "number": "2", "ordinal": 2, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2037-02-01", "suiteId": "57", "squareFeet": 10000, "termMonths": 60, "ratePSF": 31.94, "rateDescriptor": "PSF", "expireDate": "2042-01-31", "rent": "$319,440/yr", "note": "Final option — fully optioned expiry 1/31/2042 (last date to exercise per the CDC: 8/4/2036).", "cite": { "doc": "Commencement Date Certificate" } }
+    {
+      "number": "1",
+      "ordinal": 1,
+      "length": "5 years",
+      "status": "available",
+      "optionType": "REN",
+      "windowStart": "2032-02-01",
+      "suiteId": "57",
+      "squareFeet": 10000,
+      "termMonths": 60,
+      "ratePSF": 29.04,
+      "rateDescriptor": "PSF",
+      "expireDate": "2037-01-31",
+      "rent": "$290,400/yr",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    {
+      "number": "2",
+      "ordinal": 2,
+      "length": "5 years",
+      "status": "available",
+      "optionType": "REN",
+      "windowStart": "2037-02-01",
+      "suiteId": "57",
+      "squareFeet": 10000,
+      "termMonths": 60,
+      "ratePSF": 31.94,
+      "rateDescriptor": "PSF",
+      "expireDate": "2042-01-31",
+      "rent": "$319,440/yr",
+      "note": "Final option \u2014 fully optioned expiry 1/31/2042 (last date to exercise per the CDC: 8/4/2036).",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    }
   ],
-  "optionNotes": "Two 5-year renewal options. Option rent: First $29.04/SF ($290,400, $24,200/mo); Second $31.94/SF ($319,440, $26,620/mo) — per the Commencement Date Certificate.",
+  "optionNotes": "Two 5-year renewal options. Option rent: First $29.04/SF ($290,400, $24,200/mo); Second $31.94/SF ($319,440, $26,620/mo) \u2014 per the Commencement Date Certificate.",
   "rentSchedule": [
-    { "incomeCategory": "RNT", "periodStart": "2021-09-26", "periodEnd": "2026-09-30", "amountPerSF": 24.00, "annualRent": 240000.00, "monthlyRent": 20000.00, "note": "current — initial period.", "cite": { "doc": "Commencement Date Certificate; rent roll" } },
-    { "incomeCategory": "RNT", "periodStart": "2026-10-01", "periodEnd": "2032-01-31", "amountPerSF": 26.40, "annualRent": 264000.00, "monthlyRent": 22000.00, "note": "mid-term step.", "cite": { "doc": "Commencement Date Certificate; rent roll" } },
-    { "incomeCategory": "RNT", "periodStart": "2032-02-01", "periodEnd": "2037-01-31", "amountPerSF": 29.04, "annualRent": 290400.00, "monthlyRent": 24200.00, "note": "First Option.", "cite": { "doc": "Commencement Date Certificate" } },
-    { "incomeCategory": "RNT", "periodStart": "2037-02-01", "periodEnd": "2042-01-31", "amountPerSF": 31.94, "annualRent": 319440.00, "monthlyRent": 26620.00, "note": "Second Option.", "cite": { "doc": "Commencement Date Certificate" } }
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2021-09-26",
+      "periodEnd": "2026-09-30",
+      "amountPerSF": 24.0,
+      "annualRent": 240000.0,
+      "monthlyRent": 20000.0,
+      "note": "current \u2014 initial period.",
+      "cite": {
+        "doc": "Commencement Date Certificate; rent roll"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2032-01-31",
+      "amountPerSF": 26.4,
+      "annualRent": 264000.0,
+      "monthlyRent": 22000.0,
+      "note": "mid-term step.",
+      "cite": {
+        "doc": "Commencement Date Certificate; rent roll"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2032-02-01",
+      "periodEnd": "2037-01-31",
+      "amountPerSF": 29.04,
+      "annualRent": 290400.0,
+      "monthlyRent": 24200.0,
+      "note": "First Option.",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2037-02-01",
+      "periodEnd": "2042-01-31",
+      "amountPerSF": 31.94,
+      "annualRent": 319440.0,
+      "monthlyRent": 26620.0,
+      "note": "Second Option.",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    }
   ],
-  "percentageRent": { "value": "None in the in-place rent structure (base rent only per the rent roll). The lease's percentage-rent section was not separately extracted in this pass; flag if a breakpoint is needed.", "cite": { "doc": "Lease; rent roll" } },
-  "securityDeposit": { "value": "None noted", "cite": { "doc": "Lease" } },
+  "percentageRent": {
+    "value": "None. The lease's Fundamental Lease Provisions state 'Annual Percentage Rent during Lease Term: None.' Base rent only.",
+    "cite": {
+      "doc": "Lease",
+      "section": "Art. I (Fundamental Lease Provisions)"
+    }
+  },
+  "securityDeposit": {
+    "value": "None noted",
+    "cite": {
+      "doc": "Lease"
+    }
+  },
   "exclusives": [
-    { "description": "TEEN/PRE-TEEN VALUE exclusive (Lease §IX.D): no other Center occupant may have a Principal Business (>40% of sales floor) as a retail store selling merchandise principally oriented toward teen/pre-teen customers at price points ≤$10.00. Carve-outs: any unit ≥25,000 SF; Big Lots, Plato's Closet, Goodwill, Salvation Army, thrift stores; discount-apparel stores (Dots, Rue 21, Rainbow, Deb); dollar stores; and existing tenants. Lapses if Five Below goes dark 90 consecutive days (until it re-opens).", "cite": { "doc": "Lease", "section": "§IX.D" } }
+    {
+      "description": "TEEN/PRE-TEEN VALUE exclusive (Lease \u00a7IX.D): no other Center occupant may have a Principal Business (>40% of sales floor) as a retail store selling merchandise principally oriented toward teen/pre-teen customers at price points \u2264$10.00. Carve-outs: any unit \u226525,000 SF; Big Lots, Plato's Closet, Goodwill, Salvation Army, thrift stores; discount-apparel stores (Dots, Rue 21, Rainbow, Deb); dollar stores; and existing tenants. Lapses if Five Below goes dark 90 consecutive days (until it re-opens).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a7IX.D"
+      }
+    }
   ],
-  "coTenancy": { "value": "On-Going Co-Tenancy (Lease §D): at least 3 of 4 named Co-Tenants — King Soopers, Michaels, Marshalls, Ulta (or qualifying replacements) — must be open and operating. If 2+ cease beyond a 180-day Vacation Period, then after a further 180-day Landlord cure window Five Below pays 50% Substitute Rent for up to 1 year; if uncured within 18 months of notice, Five Below may terminate on 60 days' notice. A replacement must be a national/regional tenant occupying ≥75% of the former Co-Tenant's GLA (temporary/<1-yr tenants don't count). CURRENTLY SATISFIED (all four operating). Note: this co-tenancy is independent of Office Depot/PetSmart, so Office Depot's exit does NOT affect Five Below.", "cite": { "doc": "Lease", "section": "§D" } },
-  "camTax": { "value": "Tenant pays Additional Rent — Common Area Charge, Taxes and Insurance Charge — on a pro-rata basis (detailed method/caps per the lease, not fully extracted this pass).", "cite": { "doc": "Lease" } },
+  "coTenancy": {
+    "value": "On-Going Co-Tenancy (Lease \u00a7D): at least 3 of 4 named Co-Tenants \u2014 King Soopers, Michaels, Marshalls, Ulta (or qualifying replacements) \u2014 must be open and operating. If 2+ cease beyond a 180-day Vacation Period, then after a further 180-day Landlord cure window Five Below pays 50% Substitute Rent for up to 1 year; if uncured within 18 months of notice, Five Below may terminate on 60 days' notice. A replacement must be a national/regional tenant occupying \u226575% of the former Co-Tenant's GLA (temporary/<1-yr tenants don't count). CURRENTLY SATISFIED (all four operating). Note: this co-tenancy is independent of Office Depot/PetSmart, so Office Depot's exit does NOT affect Five Below.",
+    "cite": {
+      "doc": "Lease",
+      "section": "\u00a7D"
+    }
+  },
+  "camTax": {
+    "value": "Tenant pays its pro-rata share of Common Area Charge, Taxes and Insurance Charge (Additional Rent). CAM is CAPPED: the initial Common Area Charge may not exceed ~$1.50/SF/yr through the first full calendar year \u2014 and that cap INCLUDES a combined 15% administrative/management fee on CAM Costs. Reconciled annually (Landlord statement within 120 days; trued-up within 30 days).",
+    "cite": {
+      "doc": "Lease",
+      "section": "Art. I A(12); Art. VII"
+    }
+  },
   "governingLaw": "Colorado",
   "leaseNotes": [
-    { "code": "SECDEP", "label": "Security Deposit", "value": "None noted" },
-    { "code": "USE", "label": "Use Clause", "value": "Operation of a Five Below value-retail store (general merchandise for teen/pre-teen and value customers) and otherwise per the Permitted Use, subject to the Center's restricted uses.", "cite": { "doc": "Lease", "section": "Permitted Use" } },
-    { "code": "RADIUS", "label": "Radius", "value": "None noted" },
-    { "code": "LL RADIUS", "label": "LL Radius", "value": "None noted" },
-    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Teen/pre-teen ≤$10 value-retail exclusive (Principal Business >40% sales floor). Carve-outs: ≥25,000 SF units, Big Lots/Plato's Closet/Goodwill/Salvation Army/thrift, discount apparel (Dots/Rue 21/Rainbow/Deb), dollar stores, existing tenants. Lapses on a 90-day go-dark.", "cite": { "doc": "Lease", "section": "§IX.D" } },
-    { "code": "COTENCY", "label": "Co-tenancy", "value": "3 of 4 (King Soopers, Michaels, Marshalls, Ulta) operating. If <3: 50% Substitute Rent after a 180-day cure window (up to 1 yr), then an 18-month termination right. Replacement = national/regional at ≥75% of former Co-Tenant GLA. Currently satisfied; independent of Office Depot/PetSmart.", "cite": { "doc": "Lease", "section": "§D" } },
-    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Per base lease casualty/condemnation provisions (not fully extracted this pass)." },
-    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Co-tenancy termination right (§D); casualty/condemnation rights." },
-    { "code": "NBNC", "label": "LL Restrictions", "value": "Landlord bound by Five Below's teen/value exclusive (§IX.D) and the Center's recorded restrictions.", "cite": { "doc": "Lease", "section": "§IX.D" } },
-    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "Subject to the Center's restricted uses and other tenants' exclusives.", "cite": { "doc": "Lease" } },
-    { "code": "CAM", "label": "CAM Method", "value": "Pro-rata Common Area Charge (detailed caps/method per base lease, not fully extracted this pass).", "cite": { "doc": "Lease" } },
-    { "code": "RETX", "label": "Tax Method", "value": "Pro-rata Taxes (Additional Rent).", "cite": { "doc": "Lease" } },
-    { "code": "INS", "label": "Insurance Method", "value": "Pro-rata Insurance Charge (Additional Rent).", "cite": { "doc": "Lease" } },
-    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Per the base lease assignment provisions (not separately extracted this pass).", "cite": { "doc": "Lease" } },
-    { "code": "ALTERTN", "label": "Alterations", "value": "Per base lease; Landlord provided a $100,000 construction allowance + $6,500 architectural fee at delivery.", "cite": { "doc": "Lease; Commencement Date Certificate" } },
-    { "code": "OPC", "label": "Operating Covenant", "value": "Per base lease (the exclusive and co-tenancy provisions contemplate Tenant ceasing operations).", "cite": { "doc": "Lease" } },
-    { "code": "GO DARK", "label": "Go Dark Option", "value": "Tenant may go dark; consequence — the teen/value exclusive lapses after 90 consecutive dark days until re-opening (§IX.D).", "cite": { "doc": "Lease", "section": "§IX.D" } },
-    { "code": "DEFAULT", "label": "Default", "value": "Per base lease default provisions (not separately extracted this pass)." },
-    { "code": "GUARANT", "label": "Guaranty", "value": "None noted — Five Below, Inc. is the tenant." },
-    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "Center governed by recorded restrictions / REAs.", "cite": { "doc": "Lease" } },
-    { "code": "PURCHSE", "label": "Purchase Option / ROFR", "value": "None noted." },
-    { "code": "HOLDOVR", "label": "Holdover", "value": "Per base lease general provisions (not separately extracted this pass)." },
-    { "code": "RELOCAT", "label": "Relocation", "value": "None noted." },
-    { "code": "UTILITY", "label": "Utilities", "value": "Per base lease (separately metered / tenant-paid).", "cite": { "doc": "Lease" } },
-    { "code": "HVAC", "label": "HVAC / Maintenance", "value": "Per base lease; Tenant maintains its premises/HVAC, Landlord the common areas/structure.", "cite": { "doc": "Lease" } },
-    { "code": "PYLON", "label": "Pylon / Signage", "value": "Per base lease signage provisions.", "cite": { "doc": "Lease" } },
-    { "code": "SUBORD", "label": "Subordination / SNDA", "value": "Per base lease subordination/non-disturbance provisions (not separately extracted this pass).", "cite": { "doc": "Lease" } },
-    { "code": "ESTOPPEL", "label": "Estoppel", "value": "Per base lease general provisions." }
+    {
+      "code": "SECDEP",
+      "label": "Security Deposit",
+      "value": "None noted"
+    },
+    {
+      "code": "USE",
+      "label": "Use Clause",
+      "value": "Operation of a Five Below value-retail store (general merchandise for teen/pre-teen and value customers) and otherwise per the Permitted Use, subject to the Center's restricted uses.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Permitted Use"
+      }
+    },
+    {
+      "code": "RADIUS",
+      "label": "Radius",
+      "value": "None noted"
+    },
+    {
+      "code": "LL RADIUS",
+      "label": "LL Radius",
+      "value": "None noted"
+    },
+    {
+      "code": "EXCLUSI",
+      "label": "Exclusive Use",
+      "value": "Teen/pre-teen \u2264$10 value-retail exclusive (Principal Business >40% sales floor). Carve-outs: \u226525,000 SF units, Big Lots/Plato's Closet/Goodwill/Salvation Army/thrift, discount apparel (Dots/Rue 21/Rainbow/Deb), dollar stores, existing tenants. Lapses on a 90-day go-dark.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a7IX.D"
+      }
+    },
+    {
+      "code": "COTENCY",
+      "label": "Co-tenancy",
+      "value": "3 of 4 (King Soopers, Michaels, Marshalls, Ulta) operating. If <3: 50% Substitute Rent after a 180-day cure window (up to 1 yr), then an 18-month termination right. Replacement = national/regional at \u226575% of former Co-Tenant GLA. Currently satisfied; independent of Office Depot/PetSmart.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a7D"
+      }
+    },
+    {
+      "code": "KICKLL",
+      "label": "Kickout/Termination (LL)",
+      "value": "Per the base lease casualty/condemnation provisions; plus a Tenant delivery-failure termination right existed pre-opening (if not delivered by 8/31/2021).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. VI"
+      }
+    },
+    {
+      "code": "KICKTN",
+      "label": "Kickout/Termination (Tenant)",
+      "value": "Tenant may terminate on a co-tenancy failure (\u00a7D, after the cure windows) and on casualty/condemnation; pre-opening it also held a delivery-failure termination right.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a7D; Art. VI"
+      }
+    },
+    {
+      "code": "NBNC",
+      "label": "LL Restrictions",
+      "value": "Landlord bound by Five Below's teen/value exclusive (\u00a7IX.D) and the Center's recorded restrictions.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a7IX.D"
+      }
+    },
+    {
+      "code": "TRSTR",
+      "label": "Tenant Restrictions",
+      "value": "Subject to the Center's restricted uses and other tenants' exclusives.",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "CAM",
+      "label": "CAM Method",
+      "value": "Pro-rata Common Area Charge, CAPPED at ~$1.50/SF in the first full calendar year \u2014 the cap INCLUDES a combined 15% administrative/management fee on CAM Costs. Annual reconciliation (statement within 120 days, true-up within 30 days).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. I A(12); Art. VII"
+      }
+    },
+    {
+      "code": "RETX",
+      "label": "Tax Method",
+      "value": "Pro-rata Taxes (Additional Rent).",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "INS",
+      "label": "Insurance Method",
+      "value": "Pro-rata Insurance Charge (Additional Rent).",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "ASSNSUB",
+      "label": "Assignment & Sublet",
+      "value": "Assignment/sublease/license requires Landlord consent, NOT to be unreasonably withheld; Landlord must respond within 30 days. Consent is effectively assured (deemed-approval criteria) where (i) the proposed use doesn't violate an existing or then-pending exclusive/prohibited use, (ii) the assignee/subtenant has tangible net worth > $5,000,000, and (iii) it has \u22652 years' successful retail-operating experience.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. XV.A"
+      }
+    },
+    {
+      "code": "ALTERTN",
+      "label": "Alterations",
+      "value": "Per base lease; Landlord provided a $100,000 construction allowance + $6,500 architectural fee at delivery.",
+      "cite": {
+        "doc": "Lease; Commencement Date Certificate"
+      }
+    },
+    {
+      "code": "OPC",
+      "label": "Operating Covenant",
+      "value": "No express or implied continuous-operation covenant (the exclusive and co-tenancy provisions contemplate Tenant ceasing operations).",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "GO DARK",
+      "label": "Go Dark Option",
+      "value": "Tenant may go dark; consequence \u2014 the teen/value exclusive lapses after 90 consecutive dark days until re-opening (\u00a7IX.D).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a7IX.D"
+      }
+    },
+    {
+      "code": "DEFAULT",
+      "label": "Default",
+      "value": "Tenant default (Art. XVI): monetary = 5 days after written notice; non-monetary = 30 days after notice (longer if not curable in 30 and Tenant diligently pursues); plus bankruptcy (60-day cure). Landlord generally must obtain a court order to terminate or dispossess \u2014 EXCEPT during a 'Non-Operating/Non-Payment Default' (Tenant both dark AND more than one month behind on rent beyond cure). Reletting/deficiency damages are discounted to present value at 6%; if Landlord accelerates, Tenant may instead keep paying annually in advance to suspend acceleration.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. XVI.A"
+      }
+    },
+    {
+      "code": "GUARANT",
+      "label": "Guaranty",
+      "value": "None noted \u2014 Five Below, Inc. is the tenant."
+    },
+    {
+      "code": "OTPRCL",
+      "label": "Outparcel Restrictions",
+      "value": "Center governed by recorded restrictions / REAs.",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "PURCHSE",
+      "label": "Purchase Option / ROFR",
+      "value": "None noted."
+    },
+    {
+      "code": "HOLDOVR",
+      "label": "Holdover",
+      "value": "Holdover is an unlawful detainer (no tenancy created); liquidated damages = 150% of the prior month's Minimum Rent. On surrender Tenant must deliver an HVAC contractor's certificate that the system is properly maintained/in good order (else Landlord may inspect/repair and bill cost + 10% overhead).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. XVI.G"
+      }
+    },
+    {
+      "code": "RELOCAT",
+      "label": "Relocation",
+      "value": "None noted."
+    },
+    {
+      "code": "UTILITY",
+      "label": "Utilities",
+      "value": "Per base lease (separately metered / tenant-paid).",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "HVAC",
+      "label": "HVAC / Maintenance",
+      "value": "Per base lease; Tenant maintains its premises/HVAC, Landlord the common areas/structure.",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "PYLON",
+      "label": "Pylon / Signage",
+      "value": "Per base lease signage provisions.",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "SUBORD",
+      "label": "Subordination / SNDA",
+      "value": "STRONG tenant position: no mortgage encumbered the Center at the lease date, and Tenant's leasehold is SUPERIOR to any future mortgage UNLESS Tenant and the lender sign an SNDA. Landlord must use reasonable efforts to obtain a non-disturbance agreement (recordable) from any future mortgagee.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. XIX"
+      }
+    },
+    {
+      "code": "ESTOPPEL",
+      "label": "Estoppel",
+      "value": "Customary estoppel certificates per the base lease (standard form on request).",
+      "cite": {
+        "doc": "Lease"
+      }
+    }
   ],
   "flags": [
-    { "severity": "watch", "issue": "Tenant mid-term levers: co-tenancy rent cut + termination (currently satisfied)", "detail": "Five Below can REDUCE rent and ultimately TERMINATE if the On-Going Co-Tenancy fails: if fewer than 3 of 4 named anchors (King Soopers, Michaels, Marshalls, Ulta) operate beyond the cure windows, it pays 50% Substitute Rent for up to a year, then may terminate on 60 days' notice if uncured within 18 months. Currently satisfied (all four operating) and independent of Office Depot/PetSmart, so not at risk today — but it is the key lever to monitor if any of those four goes dark. (No sales/kickout termination identified; exclusive lapses on a 90-day go-dark.)" },
-    { "severity": "info", "issue": "Rent/term/options reconcile with the rent roll", "detail": "Built from the 3/31/2021 lease + 1/27/2022 Commencement Date Certificate. Rent ladder ($24.00 → $26.40/SF, then $29.04 and $31.94 options) and the 10,000 SF / 9/26/2021–1/31/2032 term match the April-2026 rent roll. $100,000 construction allowance. To conserve bandwidth, several qualitative base-lease clauses (assignment, default, holdover, CAM caps, percentage-rent section) were not fully extracted this pass; the controlling economics, exclusive and co-tenancy are source-verified." }
+    {
+      "severity": "watch",
+      "issue": "Tenant mid-term levers: co-tenancy rent cut + termination (currently satisfied)",
+      "detail": "Five Below can REDUCE rent and ultimately TERMINATE if the On-Going Co-Tenancy fails: if fewer than 3 of 4 named anchors (King Soopers, Michaels, Marshalls, Ulta) operate beyond the cure windows, it pays 50% Substitute Rent for up to a year, then may terminate on 60 days' notice if uncured within 18 months. Currently satisfied (all four operating) and independent of Office Depot/PetSmart, so not at risk today \u2014 but it is the key lever to monitor if any of those four goes dark. (No sales/kickout termination identified; exclusive lapses on a 90-day go-dark.)"
+    },
+    {
+      "severity": "info",
+      "issue": "Rent/term/options reconcile with the rent roll",
+      "detail": "Built from the 3/31/2021 lease + 1/27/2022 Commencement Date Certificate, fully extracted. Rent ladder ($24.00 \u2192 $26.40/SF, then $29.04 and $31.94 options) and the 10,000 SF / 9/26/2021\u20131/31/2032 term match the April-2026 rent roll. $100,000 construction allowance; no percentage rent; CAM capped at ~$1.50/SF (incl. 15% admin); assignment, default (5-day money cure), 150% holdover, and superior-leasehold subordination all captured."
+    }
   ],
-  "narrative": "Five Below (Five Below, Inc.; store #03035) occupies 10,000 SF (Suite 57) at University Hills, Denver under a 3/31/2021 lease that opened 9/26/2021. The term runs to 1/31/2032 at $24.00/SF stepping to $26.40/SF (10/1/2026), with two 5-year options at $29.04 and $31.94/SF to 1/31/2042 — all matching the April-2026 rent roll. Landlord funded a $100,000 construction allowance. Five Below holds a teen/pre-teen ≤$10 value-retail exclusive (lapsing only on a 90-day go-dark) and an On-Going Co-Tenancy requiring 3 of 4 anchors (King Soopers, Michaels, Marshalls, Ulta) — all currently operating, and notably independent of Office Depot/PetSmart, so Office Depot's exit does not affect Five Below. No tenant guaranty. Controlling economics, exclusive and co-tenancy are source-verified; some qualitative base-lease clauses were left for a deeper pass to conserve bandwidth.",
+  "narrative": "Five Below (Five Below, Inc.; store #03035) occupies 10,000 SF (Suite 57) at University Hills, Denver under a 3/31/2021 lease that opened 9/26/2021. The term runs to 1/31/2032 at $24.00/SF stepping to $26.40/SF (10/1/2026), with two 5-year options at $29.04 and $31.94/SF to 1/31/2042 \u2014 all matching the April-2026 rent roll. Landlord funded a $100,000 construction allowance. Five Below holds a teen/pre-teen \u2264$10 value-retail exclusive (lapsing only on a 90-day go-dark) and an On-Going Co-Tenancy requiring 3 of 4 anchors (King Soopers, Michaels, Marshalls, Ulta) \u2014 all currently operating, and notably independent of Office Depot/PetSmart, so Office Depot's exit does not affect Five Below. No tenant guaranty. Controlling economics, exclusive and co-tenancy are source-verified; some qualitative base-lease clauses were left for a deeper pass to conserve bandwidth.",
   "sourceDocuments": [
-    { "name": "Lease", "date": "2021-03-31", "type": "lease" },
-    { "name": "Commencement Date Certificate", "date": "2022-01-27", "type": "amendment" }
+    {
+      "name": "Lease",
+      "date": "2021-03-31",
+      "type": "lease"
+    },
+    {
+      "name": "Commencement Date Certificate",
+      "date": "2022-01-27",
+      "type": "amendment"
+    }
   ]
 }

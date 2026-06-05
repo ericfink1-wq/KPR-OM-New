@@ -9,96 +9,516 @@
   "premisesGLA": 16724,
   "currentSF": 16724,
   "documents": [
-    { "name": "Amended and Restated Lease", "date": "2015-02-25", "type": "lease", "description": "OPERATIVE LEASE. SK University Hills predecessor / OfficeMax North America, Inc. RELOCATED OfficeMax from the original ~30,000 SF box to NEW 16,724 SF premises at 2730 S Colorado Blvd. 10-year term + two 5-yr options; any-lawful-retail use; King Soopers co-tenancy. (Supersedes the 1996 OfficeMax lease entirely.)" },
-    { "name": "Memorandum of Lease", "date": "2015-02-25", "type": "lease", "description": "Recordable short-form of the A&R Lease." },
-    { "name": "Turnover Notice", "date": "2015-08-17", "type": "letter", "description": "Premises delivery/turnover for the relocated 16,724 SF space." },
-    { "name": "Waiver/Consent", "date": "2016-05-19", "type": "letter", "description": "Office Depot consent (operational)." },
-    { "name": "Non-Renewal Notice", "date": "2025-03-14", "type": "letter", "description": "Tenant notified Landlord (SK University Hills Owner MZL / KPR) it is NOT renewing; Lease to expire as scheduled 9/30/2025." },
-    { "name": "First Amendment to Lease", "date": "2025-07-23", "type": "amendment", "description": "CONTROLLING (KPR / SK University Hills Owner MZL). Notwithstanding the non-renewal, extends the term ONE year (10/1/2025–9/30/2026) at $19.50/SF; either party may terminate on 120–150 days' notice; no further renewal; Landlord access for marketing/tours (KPR re-tenanting the space)." }
+    {
+      "name": "Amended and Restated Lease",
+      "date": "2015-02-25",
+      "type": "lease",
+      "description": "OPERATIVE LEASE. SK University Hills predecessor / OfficeMax North America, Inc. RELOCATED OfficeMax from the original ~30,000 SF box to NEW 16,724 SF premises at 2730 S Colorado Blvd. 10-year term + two 5-yr options; any-lawful-retail use; King Soopers co-tenancy. (Supersedes the 1996 OfficeMax lease entirely.)"
+    },
+    {
+      "name": "Memorandum of Lease",
+      "date": "2015-02-25",
+      "type": "lease",
+      "description": "Recordable short-form of the A&R Lease."
+    },
+    {
+      "name": "Turnover Notice",
+      "date": "2015-08-17",
+      "type": "letter",
+      "description": "Premises delivery/turnover for the relocated 16,724 SF space."
+    },
+    {
+      "name": "Waiver/Consent",
+      "date": "2016-05-19",
+      "type": "letter",
+      "description": "Office Depot consent (operational)."
+    },
+    {
+      "name": "Non-Renewal Notice",
+      "date": "2025-03-14",
+      "type": "letter",
+      "description": "Tenant notified Landlord (SK University Hills Owner MZL / KPR) it is NOT renewing; Lease to expire as scheduled 9/30/2025."
+    },
+    {
+      "name": "First Amendment to Lease",
+      "date": "2025-07-23",
+      "type": "amendment",
+      "description": "CONTROLLING (KPR / SK University Hills Owner MZL). Notwithstanding the non-renewal, extends the term ONE year (10/1/2025\u20139/30/2026) at $19.50/SF; either party may terminate on 120\u2013150 days' notice; no further renewal; Landlord access for marketing/tours (KPR re-tenanting the space)."
+    }
   ],
   "tenantChain": [
-    { "entity": "OfficeMax North America, Inc., an Ohio corporation (operating as Office Depot; The ODP Corporation)", "role": "tenant", "effectiveDate": "2015-02-25", "instrument": "Amended and Restated Lease", "cite": { "doc": "A&R Lease; First Amendment (2025)" } }
+    {
+      "entity": "OfficeMax North America, Inc., an Ohio corporation (operating as Office Depot; The ODP Corporation)",
+      "role": "tenant",
+      "effectiveDate": "2015-02-25",
+      "instrument": "Amended and Restated Lease",
+      "cite": {
+        "doc": "A&R Lease; First Amendment (2025)"
+      }
+    }
   ],
   "landlordChain": [
-    { "entity": "Black Cherry LLC (predecessor; the A&R Lease's original landlord)", "role": "landlord", "effectiveDate": "2015-02-25", "instrument": "Amended and Restated Lease", "cite": { "doc": "A&R Lease" } },
-    { "entity": "SK University Hills Owner MZL, LLC (KPR; current owner)", "role": "landlord", "effectiveDate": "2024", "instrument": "current owner; signs the 2025 First Amendment and receives the 2025 Non-Renewal Notice", "cite": { "doc": "First Amendment (2025); Non-Renewal Notice" } }
+    {
+      "entity": "Black Cherry LLC (predecessor; the A&R Lease's original landlord)",
+      "role": "landlord",
+      "effectiveDate": "2015-02-25",
+      "instrument": "Amended and Restated Lease",
+      "cite": {
+        "doc": "A&R Lease"
+      }
+    },
+    {
+      "entity": "SK University Hills Owner MZL, LLC (KPR; current owner)",
+      "role": "landlord",
+      "effectiveDate": "2024",
+      "instrument": "current owner; signs the 2025 First Amendment and receives the 2025 Non-Renewal Notice",
+      "cite": {
+        "doc": "First Amendment (2025); Non-Renewal Notice"
+      }
+    }
   ],
   "guaranties": [],
   "dates": {
-    "leaseDate": { "value": "2015-02-25", "cite": { "doc": "A&R Lease" } },
-    "openDate": { "value": "2015-08-17", "cite": { "doc": "Turnover Notice (approx)" } },
-    "leaseCommencement": { "value": "2015-10-01", "cite": { "doc": "approx — 10-yr Initial Term scheduled to expire 9/30/2025 per the Non-Renewal Notice" } },
-    "cancelDate": { "value": "2026-09-30", "cite": { "doc": "First Amendment (2025) — and earlier terminable on 120–150 days' notice by either party" } },
-    "leaseExpiration": { "value": "2026-09-30", "cite": { "doc": "First Amendment (2025) §2" } },
-    "rentStartDate": { "value": "2015-10-01", "cite": { "doc": "A&R Lease" } }
+    "leaseDate": {
+      "value": "2015-02-25",
+      "cite": {
+        "doc": "A&R Lease"
+      }
+    },
+    "openDate": {
+      "value": "2015-08-17",
+      "cite": {
+        "doc": "Turnover Notice (approx)"
+      }
+    },
+    "leaseCommencement": {
+      "value": "2015-10-01",
+      "cite": {
+        "doc": "approx \u2014 10-yr Initial Term scheduled to expire 9/30/2025 per the Non-Renewal Notice"
+      }
+    },
+    "cancelDate": {
+      "value": "2026-09-30",
+      "cite": {
+        "doc": "First Amendment (2025) \u2014 and earlier terminable on 120\u2013150 days' notice by either party"
+      }
+    },
+    "leaseExpiration": {
+      "value": "2026-09-30",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a72"
+      }
+    },
+    "rentStartDate": {
+      "value": "2015-10-01",
+      "cite": {
+        "doc": "A&R Lease"
+      }
+    }
   },
-  "deposit": { "cashDeposit": "None noted", "nonCashDeposit": "None noted", "interestBearing": "N/A" },
+  "deposit": {
+    "cashDeposit": "None noted",
+    "nonCashDeposit": "None noted",
+    "interestBearing": "N/A"
+  },
   "noticeAddresses": [
-    { "type": "Tenant", "name": "Office Depot, LLC", "attn": "Vice President – Real Estate (copy: Office of the General Counsel – Real Estate); real estate manager Stephen Bade", "address1": "6600 North Military Trail", "city": "Boca Raton", "state": "FL", "zip": "33496", "cite": { "doc": "First Amendment (2025) §9" } },
-    { "type": "Landlord", "name": "SK University Hills Owner MZL, LLC", "attn": "c/o KPR Centers LLC", "address1": "535 Fifth Avenue, 12th Floor", "city": "New York", "state": "NY", "zip": "10017", "email": "officialnotice@kprcenters.com", "cite": { "doc": "First Amendment (2025) §9" } }
+    {
+      "type": "Tenant",
+      "name": "Office Depot, LLC",
+      "attn": "Vice President \u2013 Real Estate (copy: Office of the General Counsel \u2013 Real Estate); real estate manager Stephen Bade",
+      "address1": "6600 North Military Trail",
+      "city": "Boca Raton",
+      "state": "FL",
+      "zip": "33496",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a79"
+      }
+    },
+    {
+      "type": "Landlord",
+      "name": "SK University Hills Owner MZL, LLC",
+      "attn": "c/o KPR Centers LLC",
+      "address1": "535 Fifth Avenue, 12th Floor",
+      "city": "New York",
+      "state": "NY",
+      "zip": "10017",
+      "email": "officialnotice@kprcenters.com",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a79"
+      }
+    }
   ],
   "commencement": "2015-10-01",
   "expiration": "2026-09-30",
-  "term": { "value": "OPERATIVE LEASE is the Amended and Restated Lease dated 2/25/2015, which RELOCATED OfficeMax/Office Depot from the original ~30,000 SF box to a new 16,724 SF space — so the tenant has been at 16,724 SF since 2015 (the 1996 OfficeMax lease is fully superseded). The A&R Lease had a 10-year Initial Term (≈10/1/2015–9/30/2025) plus two 5-year options ($24.20 then $26.62/SF). Tenant gave a Non-Renewal Notice (3/14/2025) declining the options, so the lease was set to expire 9/30/2025; KPR then signed a 2025 First Amendment extending ONE year to 9/30/2026 at a below-option $19.50/SF. During this extension EITHER party may terminate on 120–150 days' notice, and KPR has access to market/tour the space — i.e., this is a true short-term, exit-track occupancy.", "cite": { "doc": "A&R Lease §1.1.7, §2.3; Non-Renewal Notice; First Amendment (2025)", "section": "1.1.7" } },
+  "term": {
+    "value": "OPERATIVE LEASE is the Amended and Restated Lease dated 2/25/2015, which RELOCATED OfficeMax/Office Depot from the original ~30,000 SF box to a new 16,724 SF space \u2014 so the tenant has been at 16,724 SF since 2015 (the 1996 OfficeMax lease is fully superseded). The A&R Lease had a 10-year Initial Term (\u224810/1/2015\u20139/30/2025) plus two 5-year options ($24.20 then $26.62/SF). Tenant gave a Non-Renewal Notice (3/14/2025) declining the options, so the lease was set to expire 9/30/2025; KPR then signed a 2025 First Amendment extending ONE year to 9/30/2026 at a below-option $19.50/SF. During this extension EITHER party may terminate on 120\u2013150 days' notice, and KPR has access to market/tour the space \u2014 i.e., this is a true short-term, exit-track occupancy.",
+    "cite": {
+      "doc": "A&R Lease \u00a71.1.7, \u00a72.3; Non-Renewal Notice; First Amendment (2025)",
+      "section": "1.1.7"
+    }
+  },
   "options": [
-    { "number": "1 (declined)", "ordinal": 1, "length": "5 years", "status": "declined", "optionType": "REN", "windowStart": "2025-10-01", "suiteId": "08", "squareFeet": 16724, "termMonths": 60, "ratePSF": 24.20, "rateDescriptor": "PSF", "expireDate": "2030-09-30", "rent": "$404,720.80/yr", "note": "Lease Years 11–15 option — DECLINED via the 3/14/2025 Non-Renewal Notice.", "cite": { "doc": "A&R Lease §1.1.8; Non-Renewal Notice" } },
-    { "number": "2 (declined)", "ordinal": 2, "length": "5 years", "status": "declined", "optionType": "REN", "windowStart": "2030-10-01", "suiteId": "08", "squareFeet": 16724, "termMonths": 60, "ratePSF": 26.62, "rateDescriptor": "PSF", "expireDate": "2035-09-30", "rent": "$445,192.88/yr", "note": "Lease Years 16–20 option — DECLINED.", "cite": { "doc": "A&R Lease §1.1.8" } }
+    {
+      "number": "1 (declined)",
+      "ordinal": 1,
+      "length": "5 years",
+      "status": "declined",
+      "optionType": "REN",
+      "windowStart": "2025-10-01",
+      "suiteId": "08",
+      "squareFeet": 16724,
+      "termMonths": 60,
+      "ratePSF": 24.2,
+      "rateDescriptor": "PSF",
+      "expireDate": "2030-09-30",
+      "rent": "$404,720.80/yr",
+      "note": "Lease Years 11\u201315 option \u2014 DECLINED via the 3/14/2025 Non-Renewal Notice.",
+      "cite": {
+        "doc": "A&R Lease \u00a71.1.8; Non-Renewal Notice"
+      }
+    },
+    {
+      "number": "2 (declined)",
+      "ordinal": 2,
+      "length": "5 years",
+      "status": "declined",
+      "optionType": "REN",
+      "windowStart": "2030-10-01",
+      "suiteId": "08",
+      "squareFeet": 16724,
+      "termMonths": 60,
+      "ratePSF": 26.62,
+      "rateDescriptor": "PSF",
+      "expireDate": "2035-09-30",
+      "rent": "$445,192.88/yr",
+      "note": "Lease Years 16\u201320 option \u2014 DECLINED.",
+      "cite": {
+        "doc": "A&R Lease \u00a71.1.8"
+      }
+    }
   ],
-  "optionNotes": "The A&R Lease's two 5-year options (Lease Years 11–15 at $24.20/SF and 16–20 at $26.62/SF) were DECLINED by Office Depot's 3/14/2025 Non-Renewal Notice. There is no remaining renewal right — the only forward term is the 1-year KPR extension to 9/30/2026 (terminable early by either side on 120–150 days' notice).",
+  "optionNotes": "The A&R Lease's two 5-year options (Lease Years 11\u201315 at $24.20/SF and 16\u201320 at $26.62/SF) were DECLINED by Office Depot's 3/14/2025 Non-Renewal Notice. There is no remaining renewal right \u2014 the only forward term is the 1-year KPR extension to 9/30/2026 (terminable early by either side on 120\u2013150 days' notice).",
   "rentSchedule": [
-    { "incomeCategory": "RNT", "periodStart": "2025-10-01", "periodEnd": "2026-09-30", "amountPerSF": 19.50, "annualRent": 326118.00, "monthlyRent": 27176.50, "note": "current — 1-year extension (2025 First Amendment); terminable early by either party on 120–150 days' notice.", "cite": { "doc": "First Amendment (2025) §4" } }
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2025-10-01",
+      "periodEnd": "2026-09-30",
+      "amountPerSF": 19.5,
+      "annualRent": 326118.0,
+      "monthlyRent": 27176.5,
+      "note": "current \u2014 1-year extension (2025 First Amendment); terminable early by either party on 120\u2013150 days' notice.",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a74"
+      }
+    }
   ],
   "rentHistory": [
-    { "period": "Lease Years 1–5 (≈10/2015–9/2020)", "amountPerSF": 21.00, "annualRent": 351204.00, "monthlyRent": 29267.00, "cite": { "doc": "A&R Lease §1.1.8" } },
-    { "period": "Lease Years 6–10 (≈10/2020–9/2025)", "amountPerSF": 22.00, "annualRent": 367928.00, "monthlyRent": 30660.67, "cite": { "doc": "A&R Lease §1.1.8" } }
+    {
+      "period": "Lease Years 1\u20135 (\u224810/2015\u20139/2020)",
+      "amountPerSF": 21.0,
+      "annualRent": 351204.0,
+      "monthlyRent": 29267.0,
+      "cite": {
+        "doc": "A&R Lease \u00a71.1.8"
+      }
+    },
+    {
+      "period": "Lease Years 6\u201310 (\u224810/2020\u20139/2025)",
+      "amountPerSF": 22.0,
+      "annualRent": 367928.0,
+      "monthlyRent": 30660.67,
+      "cite": {
+        "doc": "A&R Lease \u00a71.1.8"
+      }
+    }
   ],
-  "percentageRent": { "value": "None noted (fixed minimum rent only).", "cite": { "doc": "A&R Lease" } },
-  "securityDeposit": { "value": "None noted", "cite": { "doc": "A&R Lease" } },
+  "percentageRent": {
+    "value": "None noted (fixed minimum rent only).",
+    "cite": {
+      "doc": "A&R Lease"
+    }
+  },
+  "securityDeposit": {
+    "value": "None noted",
+    "cite": {
+      "doc": "A&R Lease"
+    }
+  },
   "exclusives": [
-    { "description": "Tenant operates an office/consumer-supply store; the A&R Lease's Permitted Use is ANY lawful retail purpose (or no use), subject to the Center's Restricted Uses (Schedule E-1). (An office-supply exclusive may exist in the A&R Lease body; not separately extracted in this pass — noted given Office Depot is on an exit track.)", "cite": { "doc": "A&R Lease", "section": "§1.1.15 (Permitted Use)" } }
+    {
+      "description": "No tenant USE-EXCLUSIVE located in the 2015 Amended & Restated Lease. The Permitted Use is any lawful retail purpose (Tenant's 'Current Use' is an office/consumer-supply store), and the lease carries Landlord zoning warranties supporting office-supply operation (\u00a77.1.3) and a parking 'No Change Area' protection (\u00a77.1.5) \u2014 but no covenant barring other office-supply uses in the Center. (The original 1996 OfficeMax lease HAD an office-supply exclusive; this relocation/A&R lease does not carry one.)",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "\u00a71.1.15, \u00a77.1.3, \u00a77.1.5"
+      }
+    }
   ],
-  "coTenancy": { "value": "Ongoing Co-Tenancy (A&R Lease §2.6): King Soopers (or a Qualified Replacement) PLUS at least one additional 15,000+ SF retailer must be open and operating (≥80% of their premises). If not met (beyond 180-day remodel/casualty closures), Tenant may pay 50% Reduced Rent for up to 24 months and, failing cure within a further 12 months, terminate on 60 days' notice. No Opening Co-Tenancy. Currently satisfied (King Soopers + Marshalls/Michaels/PetSmart operating).", "cite": { "doc": "A&R Lease", "section": "§2.6" } },
-  "camTax": { "value": "Tenant pays its pro-rata share of Shared Charges (CAM, taxes, insurance). For pro-rata calculations, the Center Leasable Area has a 'Denominator Floor' of 220,000 SF (i.e., Tenant's share is never computed on less than 220,000 SF). Detailed CAM caps/exclusions per the A&R Lease (not fully extracted this pass).", "cite": { "doc": "A&R Lease", "section": "§1.3.9" } },
+  "coTenancy": {
+    "value": "Ongoing Co-Tenancy (A&R Lease \u00a72.6): King Soopers (or a Qualified Replacement) PLUS at least one additional 15,000+ SF retailer must be open and operating (\u226580% of their premises). If not met (beyond 180-day remodel/casualty closures), Tenant may pay 50% Reduced Rent for up to 24 months and, failing cure within a further 12 months, terminate on 60 days' notice. No Opening Co-Tenancy. Currently satisfied (King Soopers + Marshalls/Michaels/PetSmart operating).",
+    "cite": {
+      "doc": "A&R Lease",
+      "section": "\u00a72.6"
+    }
+  },
+  "camTax": {
+    "value": "Tenant pays its pro-rata share of Shared Charges (CAM, taxes, insurance). For pro-rata math the Center Leasable Area never counts as less than a 220,000 SF 'Denominator Floor', which caps Tenant's share (its 16,724 SF over a floor of at least 220,000 SF). Detailed CAM inclusions/exclusions per the A&R Lease.",
+    "cite": {
+      "doc": "A&R Lease",
+      "section": "\u00a71.3.9"
+    }
+  },
   "governingLaw": "Colorado",
   "leaseNotes": [
-    { "code": "SECDEP", "label": "Security Deposit", "value": "None noted" },
-    { "code": "USE", "label": "Use Clause", "value": "Any lawful retail purpose, or no use (go-dark permitted), subject to the Center's Restricted Uses (Schedule E-1). 'Current Use' = office/consumer-supply, furniture, equipment, electronics, school/teacher supplies, print/ship/business services, etc.", "cite": { "doc": "A&R Lease", "section": "§1.1.15" } },
-    { "code": "RADIUS", "label": "Radius", "value": "None noted" },
-    { "code": "LL RADIUS", "label": "LL Radius", "value": "None noted" },
-    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Office-supply use is Tenant's Current Use; an exclusive may exist in the A&R Lease (not fully extracted this pass — Office Depot is on an exit track).", "cite": { "doc": "A&R Lease" } },
-    { "code": "COTENCY", "label": "Co-tenancy", "value": "Ongoing Co-Tenancy: King Soopers (or Qualified Replacement) + one 15,000+ SF retailer operating. If not met: 50% Reduced Rent up to 24 months; then a termination right. Currently satisfied.", "cite": { "doc": "A&R Lease", "section": "§2.6" } },
-    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "During the 1-year extension, Landlord (KPR) may terminate on 120–150 days' notice (2025 First Amendment §6) — KPR is actively marketing the space.", "cite": { "doc": "First Amendment (2025) §6" } },
-    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Tenant may also terminate the extension on 120–150 days' notice (§6); plus the co-tenancy termination right (§2.6).", "cite": { "doc": "First Amendment (2025) §6; A&R Lease §2.6" } },
-    { "code": "NBNC", "label": "LL Restrictions", "value": "Center governed by recorded Declaration of Restrictions / REAs and the Restricted Uses schedule.", "cite": { "doc": "A&R Lease" } },
-    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "Subject to the Center's Restricted Uses (Schedule E-1) and recorded restrictions.", "cite": { "doc": "A&R Lease §1.1.15" } },
-    { "code": "CAM", "label": "CAM Method", "value": "Pro-rata Shared Charges with a 220,000 SF Denominator Floor. Detailed caps per A&R Lease (not fully extracted this pass).", "cite": { "doc": "A&R Lease §1.3.9" } },
-    { "code": "RETX", "label": "Tax Method", "value": "Pro-rata Shared Charge (220,000 SF Denominator Floor).", "cite": { "doc": "A&R Lease §1.3.9" } },
-    { "code": "INS", "label": "Insurance Method", "value": "Pro-rata Shared Charge; Tenant to provide an insurance certificate for the extension term (2025 First Amendment §14).", "cite": { "doc": "A&R Lease; First Amendment (2025) §14" } },
-    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Per the A&R Lease assignment provisions (not separately extracted this pass).", "cite": { "doc": "A&R Lease" } },
-    { "code": "ALTERTN", "label": "Alterations", "value": "Premises accepted 'as-is' for the extension; Landlord not obligated to perform/pay for any work (2025 First Amendment §3).", "cite": { "doc": "First Amendment (2025) §3" } },
-    { "code": "OPC", "label": "Operating Covenant", "value": "None — Permitted Use allows 'no use' (Tenant may go dark).", "cite": { "doc": "A&R Lease §1.1.15" } },
-    { "code": "GO DARK", "label": "Go Dark Option", "value": "Tenant may cease operating (no continuous-operation covenant). On exit, the 2025 First Amendment governs surrender and removal of Tenant's equipment/signage.", "cite": { "doc": "A&R Lease §1.1.15; First Amendment (2025) §7" } },
-    { "code": "DEFAULT", "label": "Default", "value": "Per the A&R Lease default provisions (not separately extracted this pass).", "cite": { "doc": "A&R Lease" } },
-    { "code": "GUARANT", "label": "Guaranty", "value": "None noted." },
-    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "Center governed by recorded Declaration of Restrictions / REAs and an access easement (Rec. No. 2002111229).", "cite": { "doc": "A&R Lease" } },
-    { "code": "PURCHSE", "label": "Purchase Option / ROFR", "value": "None noted." },
-    { "code": "HOLDOVR", "label": "Holdover", "value": "Per the A&R Lease; the current 1-year extension is itself an agreed short-term tail with mutual early-termination rights.", "cite": { "doc": "A&R Lease; First Amendment (2025)" } },
-    { "code": "RELOCAT", "label": "Relocation", "value": "The 2015 A&R Lease WAS itself a relocation (from the original ~30,000 SF box to 16,724 SF).", "cite": { "doc": "A&R Lease recital C" } },
-    { "code": "UTILITY", "label": "Utilities", "value": "Per the A&R Lease (separately metered / tenant-paid).", "cite": { "doc": "A&R Lease" } },
-    { "code": "HVAC", "label": "HVAC / Maintenance", "value": "Landlord's existing maintenance obligations continue during the extension (2025 First Amendment §3).", "cite": { "doc": "First Amendment (2025) §3" } },
-    { "code": "PYLON", "label": "Pylon / Signage", "value": "Per the A&R Lease; Tenant to remove signage on exit (2025 First Amendment §7).", "cite": { "doc": "First Amendment (2025) §7" } },
-    { "code": "SUBORD", "label": "Subordination / SNDA", "value": "Per the A&R Lease; Landlord represented (July 2025) no mortgagee/lender consent was required for the extension.", "cite": { "doc": "First Amendment (2025) §12" } },
-    { "code": "ESTOPPEL", "label": "Estoppel", "value": "Tenant gave estoppel-type representations in the 2025 First Amendment §11 (lease in full force, no defaults/offsets).", "cite": { "doc": "First Amendment (2025) §11" } }
+    {
+      "code": "SECDEP",
+      "label": "Security Deposit",
+      "value": "None noted"
+    },
+    {
+      "code": "USE",
+      "label": "Use Clause",
+      "value": "Any lawful retail purpose, or no use (go-dark permitted), subject to the Center's Restricted Uses (Schedule E-1). 'Current Use' = office/consumer-supply, furniture, equipment, electronics, school/teacher supplies, print/ship/business services, etc.",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "\u00a71.1.15"
+      }
+    },
+    {
+      "code": "RADIUS",
+      "label": "Radius",
+      "value": "None noted"
+    },
+    {
+      "code": "LL RADIUS",
+      "label": "LL Radius",
+      "value": "None noted"
+    },
+    {
+      "code": "EXCLUSI",
+      "label": "Exclusive Use",
+      "value": "None located in the 2015 A&R Lease. Permitted Use is any lawful retail; Landlord warrants zoning permits office-supply operation (\u00a77.1.3) and protects Tenant's parking 'No Change Area' (\u00a77.1.5), but there is NO covenant restricting other office-supply uses in the Center (the original 1996 OfficeMax lease had such an exclusive; this A&R lease does not).",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "\u00a71.1.15, \u00a77.1.3, \u00a77.1.5"
+      }
+    },
+    {
+      "code": "COTENCY",
+      "label": "Co-tenancy",
+      "value": "Ongoing Co-Tenancy: King Soopers (or Qualified Replacement) + one 15,000+ SF retailer operating. If not met: 50% Reduced Rent up to 24 months; then a termination right. Currently satisfied.",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "\u00a72.6"
+      }
+    },
+    {
+      "code": "KICKLL",
+      "label": "Kickout/Termination (LL)",
+      "value": "During the 1-year extension, Landlord (KPR) may terminate on 120\u2013150 days' notice (2025 First Amendment \u00a76) \u2014 KPR is actively marketing the space.",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a76"
+      }
+    },
+    {
+      "code": "KICKTN",
+      "label": "Kickout/Termination (Tenant)",
+      "value": "Tenant may terminate: (a) the extension on 120\u2013150 days' notice (2025 First Amendment \u00a76); (b) on a co-tenancy failure (\u00a72.6); (c) if a zoning change forces it to cease operating as an office-supply/retail store (\u00a77.1.3, \u00a77.1.5); plus casualty/condemnation.",
+      "cite": {
+        "doc": "A&R Lease \u00a72.6, \u00a77.1.3; First Amendment (2025) \u00a76"
+      }
+    },
+    {
+      "code": "NBNC",
+      "label": "LL Restrictions",
+      "value": "Center governed by recorded Declaration of Restrictions / REAs and the Restricted Uses schedule.",
+      "cite": {
+        "doc": "A&R Lease"
+      }
+    },
+    {
+      "code": "TRSTR",
+      "label": "Tenant Restrictions",
+      "value": "Subject to the Center's Restricted Uses (Schedule E-1) and recorded restrictions.",
+      "cite": {
+        "doc": "A&R Lease \u00a71.1.15"
+      }
+    },
+    {
+      "code": "CAM",
+      "label": "CAM Method",
+      "value": "Tenant pays its pro-rata share of Shared Charges (CAM). For pro-rata math the Center Leasable Area never counts as less than a 220,000 SF 'Denominator Floor' (caps Tenant's share). Detailed CAM inclusions/exclusions per the A&R Lease.",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "\u00a71.3.9"
+      }
+    },
+    {
+      "code": "RETX",
+      "label": "Tax Method",
+      "value": "Pro-rata Shared Charge (220,000 SF Denominator Floor).",
+      "cite": {
+        "doc": "A&R Lease \u00a71.3.9"
+      }
+    },
+    {
+      "code": "INS",
+      "label": "Insurance Method",
+      "value": "Pro-rata Shared Charge; Tenant to provide an insurance certificate for the extension term (2025 First Amendment \u00a714).",
+      "cite": {
+        "doc": "A&R Lease; First Amendment (2025) \u00a714"
+      }
+    },
+    {
+      "code": "ASSNSUB",
+      "label": "Assignment & Sublet",
+      "value": "Tenant may sublease, license or assign AT ANY TIME WITHOUT Landlord consent (Art. 9). The original Tenant and assignees remain liable for the full term \u2014 EXCEPT the assignor is released if the assignee (or its guarantor) has tangible net worth over $75,000,000. Subleases/licenses are subordinate to the Lease and must comply with its use restrictions.",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "Art. 9 (\u00a79.1)"
+      }
+    },
+    {
+      "code": "ALTERTN",
+      "label": "Alterations",
+      "value": "Premises accepted 'as-is' for the extension; Landlord not obligated to perform/pay for any work (2025 First Amendment \u00a73).",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a73"
+      }
+    },
+    {
+      "code": "OPC",
+      "label": "Operating Covenant",
+      "value": "None \u2014 Permitted Use allows 'no use' (Tenant may go dark).",
+      "cite": {
+        "doc": "A&R Lease \u00a71.1.15"
+      }
+    },
+    {
+      "code": "GO DARK",
+      "label": "Go Dark Option",
+      "value": "No continuous-operation covenant \u2014 Tenant must open as an Office Depot/OfficeMax office-supply store for at least ONE day within 30 days of commencement, and need not operate thereafter (\u00a72.8). BUT if Tenant ceases operating for 90 consecutive days (other than remodel/casualty/condemnation, or a permitted assignment/sublease whose tenant opens within 180 days), Landlord may TERMINATE and recapture on 60 days' notice (Tenant can defeat by reopening \u2014 or its assignee/subtenant opening \u2014 within 30 days of that notice).",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "\u00a72.8"
+      }
+    },
+    {
+      "code": "DEFAULT",
+      "label": "Default",
+      "value": "Tenant default (Art. 11): monetary default = 10 days after written notice; non-monetary = 30 days after notice (longer if not curable in 30 and Tenant diligently pursues); plus bankruptcy (120-day dismissal window). On an Event of Default, Landlord may (a) repossess WITHOUT terminating (relet for Tenant's account; Tenant liable for the deficiency, credited with re-letting rents) or (b) terminate (Tenant liable only to the termination date). Landlord must use reasonable efforts to relet/mitigate, and \u2014 importantly \u2014 may NOT accelerate rent or lock out/retake possession without due legal process and a court order; Landlord waives consequential and punitive damages.",
+      "cite": {
+        "doc": "A&R Lease",
+        "section": "\u00a711.1"
+      }
+    },
+    {
+      "code": "GUARANT",
+      "label": "Guaranty",
+      "value": "None noted."
+    },
+    {
+      "code": "OTPRCL",
+      "label": "Outparcel Restrictions",
+      "value": "Center governed by recorded Declaration of Restrictions / REAs and an access easement (Rec. No. 2002111229).",
+      "cite": {
+        "doc": "A&R Lease"
+      }
+    },
+    {
+      "code": "PURCHSE",
+      "label": "Purchase Option / ROFR",
+      "value": "None noted."
+    },
+    {
+      "code": "HOLDOVR",
+      "label": "Holdover",
+      "value": "Month-to-month tenancy; holdover rent = 150% of the last month's Fixed Rent plus the same Additional Charges (Art. 11.2). (The current 1-year extension is itself an agreed short-term tail with mutual 120\u2013150-day early-termination rights.)",
+      "cite": {
+        "doc": "A&R Lease \u00a711.2; First Amendment (2025) \u00a76"
+      }
+    },
+    {
+      "code": "RELOCAT",
+      "label": "Relocation",
+      "value": "The 2015 A&R Lease WAS itself a relocation (from the original ~30,000 SF box to 16,724 SF).",
+      "cite": {
+        "doc": "A&R Lease recital C"
+      }
+    },
+    {
+      "code": "UTILITY",
+      "label": "Utilities",
+      "value": "Per the A&R Lease (separately metered / tenant-paid).",
+      "cite": {
+        "doc": "A&R Lease"
+      }
+    },
+    {
+      "code": "HVAC",
+      "label": "HVAC / Maintenance",
+      "value": "Landlord's existing maintenance obligations continue during the extension (2025 First Amendment \u00a73).",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a73"
+      }
+    },
+    {
+      "code": "PYLON",
+      "label": "Pylon / Signage",
+      "value": "Per the A&R Lease; Tenant to remove signage on exit (2025 First Amendment \u00a77).",
+      "cite": {
+        "doc": "First Amendment (2025) \u00a77"
+      }
+    },
+    {
+      "code": "SUBORD",
+      "label": "Subordination / SNDA",
+      "value": "No mortgage encumbered the Center at the lease date. Tenant subordinates to a future first-lien Institutional Mortgagee ONLY if the lender delivers an SNDA (Exhibit I form) \u2014 non-disturbance so long as Tenant isn't in default, lender assumes Landlord's obligations, Tenant attorns. Landlord represented (July 2025) no lender consent was needed for the extension.",
+      "cite": {
+        "doc": "A&R Lease \u00a712.5; First Amendment (2025) \u00a712"
+      }
+    },
+    {
+      "code": "ESTOPPEL",
+      "label": "Estoppel",
+      "value": "Either party delivers an estoppel within 30 days of request (lease in force, modifications, rent paid-through, any violations) \u2014 relied on by purchasers/mortgagees/assignees (\u00a712.6). Tenant also gave estoppel-type reps in the 2025 First Amendment \u00a711 (lease in full force, no defaults/offsets).",
+      "cite": {
+        "doc": "A&R Lease \u00a712.6; First Amendment (2025) \u00a711"
+      }
+    }
   ],
   "flags": [
-    { "severity": "watch", "issue": "Office Depot is on an EXIT track — non-renewed, now on a 1-year terminable extension (KPR marketing the space)", "detail": "The operative lease is the 2/25/2015 Amended & Restated Lease (16,724 SF). Office Depot DECLINED its renewal options (Non-Renewal Notice 3/14/2025) and is occupying only under a 1-year KPR extension to 9/30/2026 at $19.50/SF, which EITHER party can end on 120–150 days' notice. KPR has the right to tour/market the space. Underwrite this as a near-term vacancy/re-tenanting opportunity (16,724 SF), not as in-place term. Note the 2025 First Amendment requires KPR to keep the termination/closing confidential from Office Depot store staff." },
-    { "severity": "watch", "issue": "Bears directly on Michaels' co-tenancy — the OfficeMax/Office Depot anchor leg is leaving", "detail": "Office Depot (the OfficeMax leg of Michaels' 3-anchor co-tenancy) is on an exit track (≤9/30/2026, possibly sooner). When it goes, Michaels falls to 2 of 3 (King Soopers + PetSmart) with no cushion — see the Michaels co-tenancy flag. A replacement for this 16,724 SF space that qualifies as an 'Anchor Tenant' under Michaels' lease (≥20 stores nationally / ≥7 regionally, or up to 2 tenants ≥21,000 SF / 70% of the OfficeMax space) would restore the cushion." },
-    { "severity": "info", "issue": "Corrects an earlier draft built on the wrong (superseded 1996) lease", "detail": "An earlier version of this abstract was mistakenly built on the original 1996 OfficeMax lease (30,000 SF) found in the 'Office Depot Lease (Original)' folder. The OPERATIVE document is the 2015 Amended & Restated Lease (16,724 SF, store OMX #3362) — which the rent roll's 16,724 SF and $19.50 rent confirm. Rent ladder verified: $21.00→$22.00/SF base (10-yr term), $24.20/$26.62 options (declined), $19.50 current extension. All figures tie to the rent roll." }
+    {
+      "severity": "watch",
+      "issue": "Office Depot is on an EXIT track \u2014 non-renewed, now on a 1-year terminable extension (KPR marketing the space)",
+      "detail": "The operative lease is the 2/25/2015 Amended & Restated Lease (16,724 SF). Office Depot DECLINED its renewal options (Non-Renewal Notice 3/14/2025) and is occupying only under a 1-year KPR extension to 9/30/2026 at $19.50/SF, which EITHER party can end on 120\u2013150 days' notice. KPR has the right to tour/market the space. Underwrite this as a near-term vacancy/re-tenanting opportunity (16,724 SF), not as in-place term. Note the 2025 First Amendment requires KPR to keep the termination/closing confidential from Office Depot store staff."
+    },
+    {
+      "severity": "watch",
+      "issue": "Bears directly on Michaels' co-tenancy \u2014 the OfficeMax/Office Depot anchor leg is leaving",
+      "detail": "Office Depot (the OfficeMax leg of Michaels' 3-anchor co-tenancy) is on an exit track (\u22649/30/2026, possibly sooner). When it goes, Michaels falls to 2 of 3 (King Soopers + PetSmart) with no cushion \u2014 see the Michaels co-tenancy flag. A replacement for this 16,724 SF space that qualifies as an 'Anchor Tenant' under Michaels' lease (\u226520 stores nationally / \u22657 regionally, or up to 2 tenants \u226521,000 SF / 70% of the OfficeMax space) would restore the cushion."
+    },
+    {
+      "severity": "info",
+      "issue": "Corrects an earlier draft built on the wrong (superseded 1996) lease",
+      "detail": "An earlier version of this abstract was mistakenly built on the original 1996 OfficeMax lease (30,000 SF) found in the 'Office Depot Lease (Original)' folder. The OPERATIVE document is the 2015 Amended & Restated Lease (16,724 SF, store OMX #3362) \u2014 which the rent roll's 16,724 SF and $19.50 rent confirm. Rent ladder verified: $21.00\u2192$22.00/SF base (10-yr term), $24.20/$26.62 options (declined), $19.50 current extension. All figures tie to the rent roll."
+    }
   ],
-  "narrative": "Office Depot (OfficeMax North America, Inc., an Ohio corporation; The ODP Corporation; store OMX #3362) occupies 16,724 SF at 2730 S Colorado Blvd in University Hills, Denver. The operative lease is the Amended & Restated Lease dated 2/25/2015, which relocated OfficeMax from the original ~30,000 SF box to this smaller 16,724 SF space — so the tenant has been at 16,724 SF since 2015 (the 1996 lease is fully superseded). The A&R Lease ran a 10-year term (~2015–2025) at $21.00→$22.00/SF with two 5-year options ($24.20, $26.62). Office Depot DECLINED renewal (Non-Renewal Notice 3/14/2025), so the lease was set to expire 9/30/2025; KPR then signed a First Amendment (7/23/2025) extending one year to 9/30/2026 at a below-option $19.50/SF ($326,118), with EITHER party able to terminate on 120–150 days' notice and KPR marketing the space. This is an exit-track, near-term vacancy — underwrite the 16,724 SF as a re-tenanting opportunity. It also matters for Michaels' co-tenancy: this OfficeMax leg is departing, dropping Michaels to 2 of 3 anchors. (This abstract corrects an earlier draft mistakenly built on the superseded 1996 OfficeMax lease.)",
+  "narrative": "Office Depot (OfficeMax North America, Inc., an Ohio corporation; The ODP Corporation; store OMX #3362) occupies 16,724 SF at 2730 S Colorado Blvd in University Hills, Denver. The operative lease is the Amended & Restated Lease dated 2/25/2015, which relocated OfficeMax from the original ~30,000 SF box to this smaller 16,724 SF space \u2014 so the tenant has been at 16,724 SF since 2015 (the 1996 lease is fully superseded). The A&R Lease ran a 10-year term (~2015\u20132025) at $21.00\u2192$22.00/SF with two 5-year options ($24.20, $26.62). Office Depot DECLINED renewal (Non-Renewal Notice 3/14/2025), so the lease was set to expire 9/30/2025; KPR then signed a First Amendment (7/23/2025) extending one year to 9/30/2026 at a below-option $19.50/SF ($326,118), with EITHER party able to terminate on 120\u2013150 days' notice and KPR marketing the space. This is an exit-track, near-term vacancy \u2014 underwrite the 16,724 SF as a re-tenanting opportunity. It also matters for Michaels' co-tenancy: this OfficeMax leg is departing, dropping Michaels to 2 of 3 anchors. (This abstract corrects an earlier draft mistakenly built on the superseded 1996 OfficeMax lease.)",
   "sourceDocuments": [
-    { "name": "Amended and Restated Lease", "date": "2015-02-25", "type": "lease" },
-    { "name": "Non-Renewal Notice", "date": "2025-03-14", "type": "letter" },
-    { "name": "First Amendment to Lease", "date": "2025-07-23", "type": "amendment" }
+    {
+      "name": "Amended and Restated Lease",
+      "date": "2015-02-25",
+      "type": "lease"
+    },
+    {
+      "name": "Non-Renewal Notice",
+      "date": "2025-03-14",
+      "type": "letter"
+    },
+    {
+      "name": "First Amendment to Lease",
+      "date": "2025-07-23",
+      "type": "amendment"
+    }
   ]
 }
