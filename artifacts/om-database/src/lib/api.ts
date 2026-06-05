@@ -1,7 +1,7 @@
 // API layer — replaces IndexedDB with backend calls
 // All functions maintain the same signatures as idb.ts for easy drop-in replacement
 
-import type { Deal, ImageBundle } from "./idb";
+import type { Deal, ImageBundle, LeaseAbstract } from "./idb";
 import { normalizeDeal } from "./utils";
 
 const BASE = "/api";
@@ -676,4 +676,63 @@ export async function apiGetRates(refresh = false): Promise<RatesPayload> {
     throw new Error(body.error || "Couldn't fetch rates");
   }
   return resp.json() as Promise<RatesPayload>;
+}
+
+// ── Lease abstracts ──────────────────────────────────────────────────────────
+// All abstracts on file for a deal (powers the roster "Abstract" button state and
+// the abstract page). Returns [] on any failure so the roster never breaks.
+export async function apiListLeaseAbstracts(dealId: string): Promise<LeaseAbstract[]> {
+  try {
+    const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/lease-abstracts`);
+    if (!resp.ok) return [];
+    return resp.json() as Promise<LeaseAbstract[]>;
+  } catch {
+    return [];
+  }
+}
+
+// One abstract by id.
+export async function apiGetLeaseAbstract(id: string): Promise<LeaseAbstract | null> {
+  try {
+    const resp = await apiFetch(`/lease-abstracts/${encodeURIComponent(id)}`);
+    if (!resp.ok) return null;
+    return resp.json() as Promise<LeaseAbstract>;
+  } catch {
+    return null;
+  }
+}
+
+// Upsert an abstract (Claude-reconciled JSON) for a deal+tenant. The server keys
+// on (dealId, tenantName): replaces and bumps version if one already exists.
+export async function apiSaveLeaseAbstract(
+  dealId: string,
+  abstract: LeaseAbstract,
+): Promise<{ ok: boolean; id?: string; version?: number; error?: string }> {
+  try {
+    const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/lease-abstracts`, {
+      method: "POST",
+      body: JSON.stringify(abstract),
+    });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Couldn't save the lease abstract" };
+    }
+    return resp.json() as Promise<{ ok: boolean; id?: string; version?: number }>;
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
+}
+
+// Delete an abstract (admin only on the server).
+export async function apiDeleteLeaseAbstract(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const resp = await apiFetch(`/lease-abstracts/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Couldn't delete the lease abstract" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
 }
