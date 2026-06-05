@@ -19,6 +19,7 @@ import ScoreBadge from "./ScoreBadge";
 import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
 import LeaseAbstractModal from "./LeaseAbstractModal";
+import AbstractUploadModal from "./AbstractUploadModal";
 import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
@@ -1272,6 +1273,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // the open viewer/paste modal. Loaded per deal; refreshed after a save/delete.
   const [abstracts, setAbstracts] = useState<LeaseAbstract[]>([]);
   const [abstractModal, setAbstractModal] = useState<{ mode: "view" | "add"; tenantName: string } | null>(null);
+  const [showAbstractUpload, setShowAbstractUpload] = useState(false);
   const [saleBusy, setSaleBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
@@ -2594,6 +2596,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               </div>
             </div>
           )}
+          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
+            <button onClick={() => setShowAbstractUpload(true)}
+              title="Upload one tenant's abstract or a whole-property file — it auto-routes to the right tenants"
+              style={{ background:"#fff", border:"1px solid #c2d6f0", color:"#1f4d8f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
+              ⬆ Upload abstracts
+            </button>
+          </div>
           <TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
@@ -2608,7 +2617,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           latestSales={buildLatestSales(d)}
           abstractsByTenant={abstractsByTenant}
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
-          onAddAbstract={(name) => setAbstractModal({ mode: "add", tenantName: name })}
         /></div>
       )}
 
@@ -2623,6 +2631,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           isAdmin={isAdmin}
           onSaved={() => reloadAbstracts()}
           onDeleted={() => reloadAbstracts()}
+        />
+      )}
+
+      {showAbstractUpload && (
+        <AbstractUploadModal
+          dealId={d.id}
+          tenantNames={(d.tenants ?? []).map((t) => t.name).filter((n): n is string => !!n && !!n.trim())}
+          onClose={() => setShowAbstractUpload(false)}
+          onSaved={() => reloadAbstracts()}
         />
       )}
 
