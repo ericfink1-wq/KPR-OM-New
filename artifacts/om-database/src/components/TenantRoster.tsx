@@ -337,7 +337,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   );
 
   const cols: [string, string, boolean][] = [
-    ["name","Tenant",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
+    ["name","Tenant",false],["abstract","Abstract",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
     ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
     ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["recentlyExercisedRenewal","Recent Renewal",false],
     ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
@@ -374,7 +374,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} onClick={() => setSort(k)} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>{label}{arrow(k)}</th>
+                <th key={k} onClick={k === "abstract" ? undefined : () => setSort(k)} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: k === "abstract" ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>{label}{k === "abstract" ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
@@ -420,33 +420,35 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         );
                       })()}
                       {t.assumptionNote && <FlagTip content={t.assumptionNote}><Info size={12} strokeWidth={1.75} /></FlagTip>}
-                      {(() => {
-                        if (!t.name || (!onOpenAbstract && !onAddAbstract)) return null;
-                        const hasAbstract = abstractsByTenant?.has(t.name.trim().toLowerCase());
-                        if (hasAbstract && onOpenAbstract) {
-                          return (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onOpenAbstract(t.name!); }}
-                              title="View the lease abstract on file"
-                              style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 7px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
-                              📄 ABSTRACT
-                            </span>
-                          );
-                        }
-                        if (onAddAbstract) {
-                          return (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onAddAbstract(t.name!); }}
-                              title="Add a lease abstract for this tenant"
-                              style={{ fontSize:9, color:"#a69e91", background:"transparent", border:"1px dashed #d8cfbd", padding:"1px 7px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
-                              + Abstract
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
                     </div>
                   )}
+                </td>
+                <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
+                  {(() => {
+                    if (isVacantRow(t) || !t.name || (!onOpenAbstract && !onAddAbstract)) return null;
+                    const hasAbstract = abstractsByTenant?.has(t.name.trim().toLowerCase());
+                    if (hasAbstract && onOpenAbstract) {
+                      return (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); onOpenAbstract(t.name!); }}
+                          title="View the lease abstract on file"
+                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"2px 8px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
+                          📄 ABSTRACT
+                        </span>
+                      );
+                    }
+                    if (onAddAbstract) {
+                      return (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); onAddAbstract(t.name!); }}
+                          title="Add a lease abstract for this tenant"
+                          style={{ fontSize:9, color:"#a69e91", background:"transparent", border:"1px dashed #d8cfbd", padding:"2px 8px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
+                          + Abstract
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:"#837c6e", fontFamily:"'SF Mono',ui-monospace,monospace", fontSize:11 }}>{t.suite || "—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
