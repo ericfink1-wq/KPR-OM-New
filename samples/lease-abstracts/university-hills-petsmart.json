@@ -9,100 +9,587 @@
   "premisesGLA": 15250,
   "currentSF": 15250,
   "documents": [
-    { "name": "Shopping Center Lease", "date": "1998-01-29", "type": "lease", "description": "Black Cherry LLC / PetSmart, Inc. (Fundamental Lease Provisions + Articles + Exhibits A–K). Premises 103'8\" x 142'." },
-    { "name": "Memorandum of Lease", "date": "1998-09-16", "type": "lease", "description": "Recordable short-form memorandum." },
-    { "name": "First Amendment to Shopping Center Lease", "date": "1999-08-04", "type": "amendment", "description": "Certifies Gross Floor Area at 15,250 SF and Hard Building Costs; sets the FINAL base-rent ladder for the initial term and all five renewal periods ($19.26 → $29.50/SF)." },
-    { "name": "Commencement Date Certificate", "date": "1999", "type": "amendment", "description": "Delivery of Possession 11/6/1998; Commencement Date 2/4/1999." },
-    { "name": "Waiver/Consent", "date": "2005-04-25", "type": "letter", "description": "Waiver/consent (not executed by tenant). Non-economic." },
-    { "name": "Uniform Common Area Maintenance Payment Agreement (DDR/PetSmart)", "date": "2011-09-09", "type": "amendment", "description": "Portfolio fixed-CAM deal: set University Hills (store #231) CAM at $1.02/SF (1/1/2010), +2.75%/yr, no reconciliation/audit. Per its §5 the Premises drops out when the center is SOLD — so on KPR's 2024 acquisition PetSmart reverts to the lease's pro-rata CAM + 5% admin." },
-    { "name": "Waiver/Consent", "date": "2021-06-25", "type": "letter", "description": "Waiver/consent (operational). Non-economic." },
-    { "name": "Waiver/Consent", "date": "2021-12-10", "type": "letter", "description": "Waiver/consent (operational). Non-economic." },
-    { "name": "Courtesy Notice of Lease Renewal", "date": "2024-08-19", "type": "letter", "description": "PetSmart LLC exercising its THIRD renewal option, commencing 2/1/2025 (options auto-exercise per Article 5)." }
+    {
+      "name": "Shopping Center Lease",
+      "date": "1998-01-29",
+      "type": "lease",
+      "description": "Black Cherry LLC / PetSmart, Inc. (Fundamental Lease Provisions + Articles + Exhibits A\u2013K). Premises 103'8\" x 142'."
+    },
+    {
+      "name": "Memorandum of Lease",
+      "date": "1998-09-16",
+      "type": "lease",
+      "description": "Recordable short-form memorandum."
+    },
+    {
+      "name": "First Amendment to Shopping Center Lease",
+      "date": "1999-08-04",
+      "type": "amendment",
+      "description": "Certifies Gross Floor Area at 15,250 SF and Hard Building Costs; sets the FINAL base-rent ladder for the initial term and all five renewal periods ($19.26 \u2192 $29.50/SF)."
+    },
+    {
+      "name": "Commencement Date Certificate",
+      "date": "1999",
+      "type": "amendment",
+      "description": "Delivery of Possession 11/6/1998; Commencement Date 2/4/1999."
+    },
+    {
+      "name": "Waiver/Consent",
+      "date": "2005-04-25",
+      "type": "letter",
+      "description": "Waiver/consent (not executed by tenant). Non-economic."
+    },
+    {
+      "name": "Uniform Common Area Maintenance Payment Agreement (DDR/PetSmart)",
+      "date": "2011-09-09",
+      "type": "amendment",
+      "description": "Portfolio fixed-CAM deal: set University Hills (store #231) CAM at $1.02/SF (1/1/2010), +2.75%/yr, no reconciliation/audit. Per its \u00a75 the Premises drops out when the center is SOLD \u2014 so on KPR's 2024 acquisition PetSmart reverts to the lease's pro-rata CAM + 5% admin."
+    },
+    {
+      "name": "Waiver/Consent",
+      "date": "2021-06-25",
+      "type": "letter",
+      "description": "Waiver/consent (operational). Non-economic."
+    },
+    {
+      "name": "Waiver/Consent",
+      "date": "2021-12-10",
+      "type": "letter",
+      "description": "Waiver/consent (operational). Non-economic."
+    },
+    {
+      "name": "Courtesy Notice of Lease Renewal",
+      "date": "2024-08-19",
+      "type": "letter",
+      "description": "PetSmart LLC exercising its THIRD renewal option, commencing 2/1/2025 (options auto-exercise per Article 5)."
+    }
   ],
   "tenantChain": [
-    { "entity": "PetSmart, Inc., a Delaware corporation", "role": "tenant", "effectiveDate": "1998-01-29", "instrument": "Shopping Center Lease", "cite": { "doc": "Lease" } },
-    { "entity": "PetSmart LLC (f/k/a PetSmart, Inc.)", "role": "tenant", "effectiveDate": "2024-08-19", "instrument": "named as Tenant in the 2024 renewal notice", "cite": { "doc": "Renewal Notice" } }
+    {
+      "entity": "PetSmart, Inc., a Delaware corporation",
+      "role": "tenant",
+      "effectiveDate": "1998-01-29",
+      "instrument": "Shopping Center Lease",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "entity": "PetSmart LLC (f/k/a PetSmart, Inc.)",
+      "role": "tenant",
+      "effectiveDate": "2024-08-19",
+      "instrument": "named as Tenant in the 2024 renewal notice",
+      "cite": {
+        "doc": "Renewal Notice"
+      }
+    }
   ],
   "landlordChain": [
-    { "entity": "Black Cherry Limited Liability Company (Colorado LLC; Gold UH, LLC member)", "role": "landlord", "effectiveDate": "1998-01-29", "instrument": "Shopping Center Lease", "cite": { "doc": "Lease; First Amendment" } },
-    { "entity": "SK University Hills Owner MZL, LLC (KPR; current owner of the Center)", "role": "landlord", "effectiveDate": "2024", "instrument": "current owner of University Hills (per KPR acquisition; same entity named as Landlord in the King Soopers Third Amendment and Marshalls 2nd Amendment)", "cite": { "doc": "property ownership" } }
+    {
+      "entity": "Black Cherry Limited Liability Company (Colorado LLC; Gold UH, LLC member)",
+      "role": "landlord",
+      "effectiveDate": "1998-01-29",
+      "instrument": "Shopping Center Lease",
+      "cite": {
+        "doc": "Lease; First Amendment"
+      }
+    },
+    {
+      "entity": "SK University Hills Owner MZL, LLC (KPR; current owner of the Center)",
+      "role": "landlord",
+      "effectiveDate": "2024",
+      "instrument": "current owner of University Hills (per KPR acquisition; same entity named as Landlord in the King Soopers Third Amendment and Marshalls 2nd Amendment)",
+      "cite": {
+        "doc": "property ownership"
+      }
+    }
   ],
   "guaranties": [],
   "dates": {
-    "leaseDate": { "value": "1998-01-29", "cite": { "doc": "Lease; Commencement Date Certificate" } },
-    "openDate": { "value": "1999-02-04", "cite": { "doc": "Commencement Date Certificate" } },
-    "leaseCommencement": { "value": "1999-02-04", "cite": { "doc": "Commencement Date Certificate" } },
-    "cancelDate": { "value": "Not Provided" },
-    "leaseExpiration": { "value": "2030-01-31", "cite": { "doc": "2024 Renewal Notice; First Amendment rent table" } },
-    "rentStartDate": { "value": "1999-02-04", "cite": { "doc": "Commencement Date Certificate" } }
+    "leaseDate": {
+      "value": "1998-01-29",
+      "cite": {
+        "doc": "Lease; Commencement Date Certificate"
+      }
+    },
+    "openDate": {
+      "value": "1999-02-04",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    "leaseCommencement": {
+      "value": "1999-02-04",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    "cancelDate": {
+      "value": "Not Provided"
+    },
+    "leaseExpiration": {
+      "value": "2030-01-31",
+      "cite": {
+        "doc": "2024 Renewal Notice; First Amendment rent table"
+      }
+    },
+    "rentStartDate": {
+      "value": "1999-02-04",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    }
   },
-  "deposit": { "cashDeposit": "None", "nonCashDeposit": "None", "interestBearing": "N/A" },
+  "deposit": {
+    "cashDeposit": "None",
+    "nonCashDeposit": "None",
+    "interestBearing": "N/A"
+  },
   "noticeAddresses": [
-    { "type": "Tenant", "name": "PetSmart LLC", "attn": "Real Estate (store #0231); fmilicevic@petsmart.com", "address1": "19601 North 27th Avenue", "city": "Phoenix", "state": "AZ", "zip": "85027", "cite": { "doc": "Renewal Notice" } },
-    { "type": "Landlord (current — KPR)", "name": "SK University Hills Owner MZL, LLC", "attn": "c/o KPR Centers LLC", "address1": "535 Fifth Avenue, 12th Floor", "city": "New York", "state": "NY", "zip": "10017", "email": "officialnotice@kprcenters.com", "cite": { "doc": "current owner — confirm against any KPR assignment/SNDA for this lease" } }
+    {
+      "type": "Tenant",
+      "name": "PetSmart LLC",
+      "attn": "Real Estate (store #0231); fmilicevic@petsmart.com",
+      "address1": "19601 North 27th Avenue",
+      "city": "Phoenix",
+      "state": "AZ",
+      "zip": "85027",
+      "cite": {
+        "doc": "Renewal Notice"
+      }
+    },
+    {
+      "type": "Landlord (current \u2014 KPR)",
+      "name": "SK University Hills Owner MZL, LLC",
+      "attn": "c/o KPR Centers LLC",
+      "address1": "535 Fifth Avenue, 12th Floor",
+      "city": "New York",
+      "state": "NY",
+      "zip": "10017",
+      "email": "officialnotice@kprcenters.com",
+      "cite": {
+        "doc": "current owner \u2014 confirm against any KPR assignment/SNDA for this lease"
+      }
+    }
   ],
   "commencement": "1999-02-04",
   "expiration": "2030-01-31",
-  "term": { "value": "Shopping Center Lease 1/29/1998; possession 11/6/1998; Commencement 2/4/1999. Initial Term of 15 years, then FIVE 5-year renewal options (Article 5) that AUTO-EXERCISE unless Tenant gives ≥120 days' notice NOT to renew. PetSmart has let options 1–3 run (the 2024 notice confirms the third option commencing 2/1/2025), so the current term runs to 1/31/2030, with two options remaining (to 1/31/2040).", "cite": { "doc": "Lease Art. 5; First Amendment; Renewal Notice", "section": "5" } },
+  "term": {
+    "value": "Shopping Center Lease 1/29/1998; possession 11/6/1998; Commencement 2/4/1999. Initial Term of 15 years, then FIVE 5-year renewal options (Article 5) that AUTO-EXERCISE unless Tenant gives \u2265120 days' notice NOT to renew. PetSmart has let options 1\u20133 run (the 2024 notice confirms the third option commencing 2/1/2025), so the current term runs to 1/31/2030, with two options remaining (to 1/31/2040).",
+    "cite": {
+      "doc": "Lease Art. 5; First Amendment; Renewal Notice",
+      "section": "5"
+    }
+  },
   "options": [
-    { "number": "3 (current)", "ordinal": 3, "length": "5 years", "status": "exercised", "optionType": "REN", "windowStart": "2025-02-01", "suiteId": "56", "squareFeet": 15250, "termMonths": 60, "ratePSF": 26.50, "rateDescriptor": "PSF", "expireDate": "2030-01-31", "rent": "$404,125/yr", "note": "CURRENT period (Lease Years 26–30); auto-exercised, confirmed by the 8/19/2024 courtesy notice.", "cite": { "doc": "2024 Renewal Notice; First Amendment" } },
-    { "number": "4", "ordinal": 4, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2030-02-01", "suiteId": "56", "squareFeet": 15250, "termMonths": 60, "ratePSF": 28.00, "rateDescriptor": "PSF", "expireDate": "2035-01-31", "rent": "$427,000/yr", "note": "Lease Years 31–35.", "cite": { "doc": "First Amendment; Lease Art. 5" } },
-    { "number": "5", "ordinal": 5, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2035-02-01", "suiteId": "56", "squareFeet": 15250, "termMonths": 60, "ratePSF": 29.50, "rateDescriptor": "PSF", "expireDate": "2040-01-31", "rent": "$449,875/yr", "note": "Lease Years 36–40 — final option, fully optioned expiry 1/31/2040.", "cite": { "doc": "First Amendment; Lease Art. 5" } }
+    {
+      "number": "3 (current)",
+      "ordinal": 3,
+      "length": "5 years",
+      "status": "exercised",
+      "optionType": "REN",
+      "windowStart": "2025-02-01",
+      "suiteId": "56",
+      "squareFeet": 15250,
+      "termMonths": 60,
+      "ratePSF": 26.5,
+      "rateDescriptor": "PSF",
+      "expireDate": "2030-01-31",
+      "rent": "$404,125/yr",
+      "note": "CURRENT period (Lease Years 26\u201330); auto-exercised, confirmed by the 8/19/2024 courtesy notice.",
+      "cite": {
+        "doc": "2024 Renewal Notice; First Amendment"
+      }
+    },
+    {
+      "number": "4",
+      "ordinal": 4,
+      "length": "5 years",
+      "status": "available",
+      "optionType": "REN",
+      "windowStart": "2030-02-01",
+      "suiteId": "56",
+      "squareFeet": 15250,
+      "termMonths": 60,
+      "ratePSF": 28.0,
+      "rateDescriptor": "PSF",
+      "expireDate": "2035-01-31",
+      "rent": "$427,000/yr",
+      "note": "Lease Years 31\u201335.",
+      "cite": {
+        "doc": "First Amendment; Lease Art. 5"
+      }
+    },
+    {
+      "number": "5",
+      "ordinal": 5,
+      "length": "5 years",
+      "status": "available",
+      "optionType": "REN",
+      "windowStart": "2035-02-01",
+      "suiteId": "56",
+      "squareFeet": 15250,
+      "termMonths": 60,
+      "ratePSF": 29.5,
+      "rateDescriptor": "PSF",
+      "expireDate": "2040-01-31",
+      "rent": "$449,875/yr",
+      "note": "Lease Years 36\u201340 \u2014 final option, fully optioned expiry 1/31/2040.",
+      "cite": {
+        "doc": "First Amendment; Lease Art. 5"
+      }
+    }
   ],
-  "optionNotes": "Five 5-year renewal options total (Article 5), auto-exercising unless Tenant gives ≥120 days' notice NOT to renew. Full base-rent ladder (First Amendment, certified to 15,250 SF — stated as 'Maximum' base rent, which the rent roll confirms is the actual): Initial Term — Yrs 1–5 $19.26/SF ($293,715), Yrs 6–10 $20.76 ($316,590), Yrs 11–15 $22.26 ($339,465); Renewals — Yrs 16–20 $23.50 ($358,375), Yrs 21–25 $25.00 ($381,250), Yrs 26–30 $26.50 ($404,125, current), Yrs 31–35 $28.00 ($427,000), Yrs 36–40 $29.50 ($449,875). $1.50/SF step per renewal.",
+  "optionNotes": "Five 5-year renewal options total (Article 5), auto-exercising unless Tenant gives \u2265120 days' notice NOT to renew. Full base-rent ladder (First Amendment, certified to 15,250 SF \u2014 stated as 'Maximum' base rent, which the rent roll confirms is the actual): Initial Term \u2014 Yrs 1\u20135 $19.26/SF ($293,715), Yrs 6\u201310 $20.76 ($316,590), Yrs 11\u201315 $22.26 ($339,465); Renewals \u2014 Yrs 16\u201320 $23.50 ($358,375), Yrs 21\u201325 $25.00 ($381,250), Yrs 26\u201330 $26.50 ($404,125, current), Yrs 31\u201335 $28.00 ($427,000), Yrs 36\u201340 $29.50 ($449,875). $1.50/SF step per renewal.",
   "rentSchedule": [
-    { "incomeCategory": "RNT", "periodStart": "2025-02-01", "periodEnd": "2030-01-31", "amountPerSF": 26.50, "annualRent": 404125.00, "monthlyRent": 33677.08, "note": "current — 3rd renewal option (Lease Years 26–30).", "cite": { "doc": "First Amendment; 2024 Renewal Notice" } },
-    { "incomeCategory": "RNT", "periodStart": "2030-02-01", "periodEnd": "2035-01-31", "amountPerSF": 28.00, "annualRent": 427000.00, "monthlyRent": 35583.33, "note": "4th renewal option (Lease Years 31–35).", "cite": { "doc": "First Amendment" } },
-    { "incomeCategory": "RNT", "periodStart": "2035-02-01", "periodEnd": "2040-01-31", "amountPerSF": 29.50, "annualRent": 449875.00, "monthlyRent": 37489.58, "note": "5th renewal option (Lease Years 36–40).", "cite": { "doc": "First Amendment" } }
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2025-02-01",
+      "periodEnd": "2030-01-31",
+      "amountPerSF": 26.5,
+      "annualRent": 404125.0,
+      "monthlyRent": 33677.08,
+      "note": "current \u2014 3rd renewal option (Lease Years 26\u201330).",
+      "cite": {
+        "doc": "First Amendment; 2024 Renewal Notice"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2035-01-31",
+      "amountPerSF": 28.0,
+      "annualRent": 427000.0,
+      "monthlyRent": 35583.33,
+      "note": "4th renewal option (Lease Years 31\u201335).",
+      "cite": {
+        "doc": "First Amendment"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2035-02-01",
+      "periodEnd": "2040-01-31",
+      "amountPerSF": 29.5,
+      "annualRent": 449875.0,
+      "monthlyRent": 37489.58,
+      "note": "5th renewal option (Lease Years 36\u201340).",
+      "cite": {
+        "doc": "First Amendment"
+      }
+    }
   ],
-  "percentageRent": { "value": "None. Base Rent only (with CPI / floor-area / hard-building-cost adjustments that were fixed by the First Amendment). No percentage/overage rent.", "cite": { "doc": "Lease Art. 4; First Amendment" } },
-  "securityDeposit": { "value": "None", "cite": { "doc": "Lease" } },
+  "percentageRent": {
+    "value": "None. Base Rent only (with CPI / floor-area / hard-building-cost adjustments that were fixed by the First Amendment). No percentage/overage rent.",
+    "cite": {
+      "doc": "Lease Art. 4; First Amendment"
+    }
+  },
+  "securityDeposit": {
+    "value": "None",
+    "cite": {
+      "doc": "Lease"
+    }
+  },
   "exclusives": [
-    { "description": "PET-STORE exclusive (Exhibit I §2): PetSmart's 'Primary Business' = retail sale of (i) pets, (ii) pet/animal food, accessories and products (incl. equestrian), (iii) pet/animal services (grooming, boarding, veterinary), (iv) nature/environment products, and (v) related educational products. Excluding King Soopers, OfficeMax and Home Place (and successors), no other Center tenant may engage in clauses (i)–(iii) of the Primary Business except on an incidental basis. Survives 6 months post-term (unless Tenant leaves the metro or the lease is terminated for Tenant default).", "cite": { "doc": "Lease", "section": "Exhibit I §2" } }
+    {
+      "description": "PET-STORE exclusive (Exhibit I \u00a72): PetSmart's 'Primary Business' = retail sale of (i) pets, (ii) pet/animal food, accessories and products (incl. equestrian), (iii) pet/animal services (grooming, boarding, veterinary), (iv) nature/environment products, and (v) related educational products. Excluding King Soopers, OfficeMax and Home Place (and successors), no other Center tenant may engage in clauses (i)\u2013(iii) of the Primary Business except on an incidental basis. Survives 6 months post-term (unless Tenant leaves the metro or the lease is terminated for Tenant default).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Exhibit I \u00a72"
+      }
+    }
   ],
-  "coTenancy": { "value": "EXPIRED / not currently operative. Exhibit K provided a King Soopers protection ONLY during the first 5 years after Commencement (2/4/1999–2/4/2004): if King Soopers went dark 12 months, Base Rent would drop 25% until King Soopers or a Comparable Replacement Tenant reopened (or the 5-year window ended). The Initial Co-Tenants were King Soopers, OfficeMax and Home Place. There is NO ongoing co-tenancy protection today.", "cite": { "doc": "Lease", "section": "Exhibit K, Art. 23" } },
-  "camTax": { "value": "CAM (Lease Art. 11.6): Tenant pays its Proportionate Share of Common Area Costs + a 5% administrative fee. Excludes capital costs, structural repairs, management/leasing/marketing, depreciation and financing. Estimated CAM (excl. utilities/snow) capped at prior-year actual +5%. 2-year reconciliation waiver; full audit rights (3% overstatement → Landlord pays audit). NOTE: the 2011 DDR Uniform CAM Agreement had fixed CAM at $1.02/SF (2010) +2.75%/yr, but per its §5 University Hills dropped out of that agreement when KPR bought the center (2024) — so PetSmart now pays the lease's pro-rata CAM + 5% admin. Real Estate Taxes: pro-rata Proportionate Share (Art. 12).", "cite": { "doc": "Lease Art. 11.6, 12; 2011 Uniform CAM Agreement §5" } },
+  "coTenancy": {
+    "value": "EXPIRED / not currently operative. Exhibit K provided a King Soopers protection ONLY during the first 5 years after Commencement (2/4/1999\u20132/4/2004): if King Soopers went dark 12 months, Base Rent would drop 25% until King Soopers or a Comparable Replacement Tenant reopened (or the 5-year window ended). The Initial Co-Tenants were King Soopers, OfficeMax and Home Place. There is NO ongoing co-tenancy protection today.",
+    "cite": {
+      "doc": "Lease",
+      "section": "Exhibit K, Art. 23"
+    }
+  },
+  "camTax": {
+    "value": "CAM (Lease Art. 11.6): Tenant pays its Proportionate Share of Common Area Costs + a 5% administrative fee. Excludes capital costs, structural repairs, management/leasing/marketing, depreciation and financing. Estimated CAM (excl. utilities/snow) capped at prior-year actual +5%. 2-year reconciliation waiver; full audit rights (3% overstatement \u2192 Landlord pays audit). NOTE: the 2011 DDR Uniform CAM Agreement had fixed CAM at $1.02/SF (2010) +2.75%/yr, but per its \u00a75 University Hills dropped out of that agreement when KPR bought the center (2024) \u2014 so PetSmart now pays the lease's pro-rata CAM + 5% admin. Real Estate Taxes: pro-rata Proportionate Share (Art. 12).",
+    "cite": {
+      "doc": "Lease Art. 11.6, 12; 2011 Uniform CAM Agreement \u00a75"
+    }
+  },
   "governingLaw": "Colorado",
   "leaseNotes": [
-    { "code": "SECDEP", "label": "Security Deposit", "value": "None" },
-    { "code": "USE", "label": "Use Clause", "value": "PetSmart's Primary Business (pet store with grooming/boarding/veterinary, pet products, nature/educational) or any lawful retail use typical of a comparable shopping center (subject to Exhibit I prohibited uses and other tenants' exclusives). Must open fully stocked/staffed within 18 months of Commencement; thereafter NO obligation to operate or keep any hours (subject to the go-dark recapture below).", "cite": { "doc": "Lease", "section": "Art. 6; Exhibit I §2" } },
-    { "code": "RADIUS", "label": "Radius", "value": "None" },
-    { "code": "LL RADIUS", "label": "LL Radius", "value": "None" },
-    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Pet-store exclusive (Exhibit I §2): pets, pet food/accessories/products, and pet services (grooming/boarding/vet) — no other tenant may conduct these except incidentally; excludes King Soopers, OfficeMax, Home Place. Survives 6 months post-term.", "cite": { "doc": "Lease", "section": "Exhibit I §2" } },
-    { "code": "COTENCY", "label": "Co-tenancy", "value": "EXPIRED. Only a first-5-years King Soopers protection (25% rent reduction on a 12-month King Soopers dark) existed (Exhibit K); that window closed 2/2004. No ongoing co-tenancy today. (PetSmart is itself one of Michaels' required co-tenancy anchors and is operating.)", "cite": { "doc": "Lease", "section": "Exhibit K; Art. 23" } },
-    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Landlord go-dark recapture: if Tenant ceases business for 180+ consecutive days (max twice in the Initial Term or once in any 5-year period), Landlord may terminate on 30 days' notice — but must pay Tenant a termination fee (see Go Dark). Plus casualty/condemnation rights.", "cite": { "doc": "Lease", "section": "Art. 6" } },
-    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Tenant may terminate for an uncured exclusive/use violation (Termination Default) after two 30-day notices (§25.2); plus casualty/condemnation. No general early-termination right.", "cite": { "doc": "Lease", "section": "Art. 25.2" } },
-    { "code": "NBNC", "label": "LL Restrictions", "value": "Center-wide prohibited uses (Exhibit I §1): nuisance, loud/odor uses, manufacturing, dry cleaner (ex. drop-off), used-clothing/thrift/liquidation, massage parlor, adult, mortuary, coin laundry, bar/tavern (ex. restaurant/liquor store), nightclub, cinema/theater, recreation (bowling/skating/arcade/health spa), church. Within 125 ft of the Premises (Tenant approval): drive-throughs, kids' rec/daycare, restaurants >3,500 SF, offices, professional uses, schools. Also bound by the Denver Urban Renewal use restrictions and the 7/17/1996 recorded Declaration of Restrictions.", "cite": { "doc": "Lease", "section": "Exhibit I §1, §4" } },
-    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "Tenant must respect other occupants' exclusive rights (for tenants/occupants of >10,000 SF, where the exclusive is their principal business, isn't part of PetSmart's Primary Business, and Landlord has notified Tenant) and the Exhibit I prohibited uses / recorded restrictions.", "cite": { "doc": "Lease", "section": "Exhibit I §3–§4" } },
-    { "code": "CAM", "label": "CAM Method", "value": "Pro-rata Proportionate Share of Common Area Costs + 5% admin fee (Art. 11.6). Excludes capital, structural, management/leasing/marketing, depreciation, financing. Estimate capped at prior-year actual +5% (excl. utilities/snow). 2-year reconciliation waiver; full audit (3% overstatement → LL pays). Currently on the lease method (the 2011 DDR fixed-CAM ended when KPR bought the center).", "cite": { "doc": "Lease Art. 11.6; 2011 CAM Agreement §5" } },
-    { "code": "RETX", "label": "Tax Method", "value": "Pro-rata Proportionate Share of Real Property Taxes (Art. 12).", "cite": { "doc": "Lease", "section": "Art. 12" } },
-    { "code": "INS", "label": "Insurance Method", "value": "Tenant pays its Proportionate Share of Insurance Costs (separate from CAM and taxes).", "cite": { "doc": "Lease", "section": "Art. 11–12 (Insurance Costs)" } },
-    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Landlord consent required, not to be unreasonably withheld/conditioned/delayed (deemed granted if Landlord doesn't disapprove with reasons within 30 days); permitted retail use only (no Exhibit I/Art. 6 violation). NO consent needed for collateral assignment, a merger/consolidation/sale of substantially all of Tenant's metro-area stores, or concessions/licenses. Tenant remains liable for rent/CAM/tax/insurance.", "cite": { "doc": "Lease", "section": "Art. 20" } },
-    { "code": "ALTERTN", "label": "Alterations", "value": "Tenant may make non-structural/interior alterations; structural/exterior changes per the lease's construction/signage provisions. Trade fixtures remain Tenant's and removable.", "cite": { "doc": "Lease", "section": "Art. 9–10" } },
-    { "code": "OPC", "label": "Operating Covenant", "value": "None after the initial 18-month opening covenant — no continuous-operation requirement (subject to the go-dark recapture).", "cite": { "doc": "Lease", "section": "Art. 6" } },
-    { "code": "GO DARK", "label": "Go Dark Option", "value": "Tenant may go dark, BUT if it ceases business for 180+ consecutive days (limited to twice in the Initial Term or once per any 5-year period), Landlord may terminate on 30 days' notice. Tenant can defeat termination by giving notice it will resume (directly or via assignee/subtenant) within 120 days and doing so. On any such Landlord termination, Landlord must pay Tenant a termination fee = greater of FMV or book value of Tenant's leasehold improvements/fixtures, capped at $500,000 (amortized straight-line over the 15-year initial term).", "cite": { "doc": "Lease", "section": "Art. 6" } },
-    { "code": "DEFAULT", "label": "Default", "value": "Tenant default (Art. 24): 10 days to cure money defaults after notice; 30 days for non-monetary (longer if not curable in 30 and Tenant diligently pursues). Landlord must obtain a court order to re-enter/dispossess and must mitigate; standard deficiency/relet damages. No cross-defaults with other PetSmart/Landlord leases (§24.3). Landlord default (Art. 25): 30-day cure; Tenant remedies incl. termination for exclusive/use violations after two 30-day notices, self-help/offset, and a first-5-years sales-based rent-abatement formula.", "cite": { "doc": "Lease", "section": "Art. 24, 25" } },
-    { "code": "GUARANT", "label": "Guaranty", "value": "None on the tenant side. (The folder's 1998 'Guarantee' is a landlord/principal COMPLETION guaranty from Gold UH/Mark Goldberg to the lender New York Life — not a guaranty of PetSmart's lease.)", "cite": { "doc": "UH Principal's Completion Guaranty (1998)" } },
-    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "Center has pad/outparcel buildings (Buildings L/M/N/O/P) with height carve-outs; height of other in-line improvements limited to Tenant's building height except King Soopers, OfficeMax, Home Place, Hallmark and Ulta.", "cite": { "doc": "Lease", "section": "Art. 9.3" } },
-    { "code": "PURCHSE", "label": "Purchase Option / ROFR", "value": "None — no purchase option or right of first refusal in the lease.", "cite": { "doc": "Lease" } },
-    { "code": "HOLDOVR", "label": "Holdover", "value": "Holdover handled under the lease's general provisions (specific premium not separately extracted here).", "cite": { "doc": "Lease" } },
-    { "code": "RELOCAT", "label": "Relocation", "value": "None — no landlord relocation right; Tenant Control Area / parking fixed on Exhibit A.", "cite": { "doc": "Lease", "section": "Art. 9.2" } },
-    { "code": "UTILITY", "label": "Utilities", "value": "Separately metered; Tenant pays utilities serving the Premises directly.", "cite": { "doc": "Lease", "section": "Art. 11–12" } },
-    { "code": "HVAC", "label": "HVAC / Maintenance", "value": "Tenant maintains its building/HVAC; Landlord maintains the Common Areas (structural repairs and capital are excluded from CAM and are Landlord's cost).", "cite": { "doc": "Lease", "section": "Art. 11.6" } },
-    { "code": "PYLON", "label": "Pylon / Signage", "value": "Building signage ≥150 SF (front/back) plus secondary grooming/vet signage. Monument signs on Colorado Blvd and East Yale Ave — Tenant has a first right to an available panel (after the Retail 'J' tenant), behind King Soopers/OfficeMax/Home Place and any larger tenant. Landlord lights/maintains the monuments.", "cite": { "doc": "Lease", "section": "Art. 10" } },
-    { "code": "SUBORD", "label": "Subordination / SNDA", "value": "Non-disturbance protected: Landlord delivered an ALTA leasehold title policy ($1M, Stewart Title) and the lease contemplates mortgagee non-disturbance; Tenant must give a mortgagee a 30-day cure window before terminating for Landlord default. On a sale of the Center, the buyer must assume the lease for Landlord to be released (§21.4).", "cite": { "doc": "Lease", "section": "Art. 19, 21.2, 25.3" } },
-    { "code": "ESTOPPEL", "label": "Estoppel", "value": "Customary estoppel/SNDA cooperation per the lease's general provisions.", "cite": { "doc": "Lease" } }
+    {
+      "code": "SECDEP",
+      "label": "Security Deposit",
+      "value": "None"
+    },
+    {
+      "code": "USE",
+      "label": "Use Clause",
+      "value": "PetSmart's Primary Business (pet store with grooming/boarding/veterinary, pet products, nature/educational) or any lawful retail use typical of a comparable shopping center (subject to Exhibit I prohibited uses and other tenants' exclusives). Must open fully stocked/staffed within 18 months of Commencement; thereafter NO obligation to operate or keep any hours (subject to the go-dark recapture below).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 6; Exhibit I \u00a72"
+      }
+    },
+    {
+      "code": "RADIUS",
+      "label": "Radius",
+      "value": "None"
+    },
+    {
+      "code": "LL RADIUS",
+      "label": "LL Radius",
+      "value": "None"
+    },
+    {
+      "code": "EXCLUSI",
+      "label": "Exclusive Use",
+      "value": "Pet-store exclusive (Exhibit I \u00a72): pets, pet food/accessories/products, and pet services (grooming/boarding/vet) \u2014 no other tenant may conduct these except incidentally; excludes King Soopers, OfficeMax, Home Place. Survives 6 months post-term.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Exhibit I \u00a72"
+      }
+    },
+    {
+      "code": "COTENCY",
+      "label": "Co-tenancy",
+      "value": "EXPIRED. Only a first-5-years King Soopers protection (25% rent reduction on a 12-month King Soopers dark) existed (Exhibit K); that window closed 2/2004. No ongoing co-tenancy today. (PetSmart is itself one of Michaels' required co-tenancy anchors and is operating.)",
+      "cite": {
+        "doc": "Lease",
+        "section": "Exhibit K; Art. 23"
+      }
+    },
+    {
+      "code": "KICKLL",
+      "label": "Kickout/Termination (LL)",
+      "value": "Landlord go-dark recapture: if Tenant ceases business for 180+ consecutive days (max twice in the Initial Term or once in any 5-year period), Landlord may terminate on 30 days' notice \u2014 but must pay Tenant a termination fee (see Go Dark). Plus casualty/condemnation rights.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 6"
+      }
+    },
+    {
+      "code": "KICKTN",
+      "label": "Kickout/Termination (Tenant)",
+      "value": "Tenant may terminate for an uncured exclusive/use violation (Termination Default) after two 30-day notices (\u00a725.2); plus casualty/condemnation. No general early-termination right.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 25.2"
+      }
+    },
+    {
+      "code": "NBNC",
+      "label": "LL Restrictions",
+      "value": "Center-wide prohibited uses (Exhibit I \u00a71): nuisance, loud/odor uses, manufacturing, dry cleaner (ex. drop-off), used-clothing/thrift/liquidation, massage parlor, adult, mortuary, coin laundry, bar/tavern (ex. restaurant/liquor store), nightclub, cinema/theater, recreation (bowling/skating/arcade/health spa), church. Within 125 ft of the Premises (Tenant approval): drive-throughs, kids' rec/daycare, restaurants >3,500 SF, offices, professional uses, schools. Also bound by the Denver Urban Renewal use restrictions and the 7/17/1996 recorded Declaration of Restrictions.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Exhibit I \u00a71, \u00a74"
+      }
+    },
+    {
+      "code": "TRSTR",
+      "label": "Tenant Restrictions",
+      "value": "Tenant must respect other occupants' exclusive rights (for tenants/occupants of >10,000 SF, where the exclusive is their principal business, isn't part of PetSmart's Primary Business, and Landlord has notified Tenant) and the Exhibit I prohibited uses / recorded restrictions.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Exhibit I \u00a73\u2013\u00a74"
+      }
+    },
+    {
+      "code": "CAM",
+      "label": "CAM Method",
+      "value": "Pro-rata Proportionate Share of Common Area Costs + 5% admin fee (Art. 11.6). Excludes capital, structural, management/leasing/marketing, depreciation, financing. Estimate capped at prior-year actual +5% (excl. utilities/snow). 2-year reconciliation waiver; full audit (3% overstatement \u2192 LL pays). Currently on the lease method (the 2011 DDR fixed-CAM ended when KPR bought the center).",
+      "cite": {
+        "doc": "Lease Art. 11.6; 2011 CAM Agreement \u00a75"
+      }
+    },
+    {
+      "code": "RETX",
+      "label": "Tax Method",
+      "value": "Pro-rata Proportionate Share of Real Property Taxes (Art. 12).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 12"
+      }
+    },
+    {
+      "code": "INS",
+      "label": "Insurance Method",
+      "value": "Tenant pays its Proportionate Share of Insurance Costs (separate from CAM and taxes).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 11\u201312 (Insurance Costs)"
+      }
+    },
+    {
+      "code": "ASSNSUB",
+      "label": "Assignment & Sublet",
+      "value": "Landlord consent required, not to be unreasonably withheld/conditioned/delayed (deemed granted if Landlord doesn't disapprove with reasons within 30 days); permitted retail use only (no Exhibit I/Art. 6 violation). NO consent needed for collateral assignment, a merger/consolidation/sale of substantially all of Tenant's metro-area stores, or concessions/licenses. Tenant remains liable for rent/CAM/tax/insurance.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 20"
+      }
+    },
+    {
+      "code": "ALTERTN",
+      "label": "Alterations",
+      "value": "Tenant may make non-structural/interior alterations; structural/exterior changes per the lease's construction/signage provisions. Trade fixtures remain Tenant's and removable.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 9\u201310"
+      }
+    },
+    {
+      "code": "OPC",
+      "label": "Operating Covenant",
+      "value": "None after the initial 18-month opening covenant \u2014 no continuous-operation requirement (subject to the go-dark recapture).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 6"
+      }
+    },
+    {
+      "code": "GO DARK",
+      "label": "Go Dark Option",
+      "value": "Tenant may go dark, BUT if it ceases business for 180+ consecutive days (limited to twice in the Initial Term or once per any 5-year period), Landlord may terminate on 30 days' notice. Tenant can defeat termination by giving notice it will resume (directly or via assignee/subtenant) within 120 days and doing so. On any such Landlord termination, Landlord must pay Tenant a termination fee = greater of FMV or book value of Tenant's leasehold improvements/fixtures, capped at $500,000 (amortized straight-line over the 15-year initial term).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 6"
+      }
+    },
+    {
+      "code": "DEFAULT",
+      "label": "Default",
+      "value": "Tenant default (Art. 24): 10 days to cure money defaults after notice; 30 days for non-monetary (longer if not curable in 30 and Tenant diligently pursues). Landlord must obtain a court order to re-enter/dispossess and must mitigate; standard deficiency/relet damages. No cross-defaults with other PetSmart/Landlord leases (\u00a724.3). Landlord default (Art. 25): 30-day cure; Tenant remedies incl. termination for exclusive/use violations after two 30-day notices, self-help/offset, and a first-5-years sales-based rent-abatement formula.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 24, 25"
+      }
+    },
+    {
+      "code": "GUARANT",
+      "label": "Guaranty",
+      "value": "None on the tenant side. (The folder's 1998 'Guarantee' is a landlord/principal COMPLETION guaranty from Gold UH/Mark Goldberg to the lender New York Life \u2014 not a guaranty of PetSmart's lease.)",
+      "cite": {
+        "doc": "UH Principal's Completion Guaranty (1998)"
+      }
+    },
+    {
+      "code": "OTPRCL",
+      "label": "Outparcel Restrictions",
+      "value": "Center has pad/outparcel buildings (Buildings L/M/N/O/P) with height carve-outs; height of other in-line improvements limited to Tenant's building height except King Soopers, OfficeMax, Home Place, Hallmark and Ulta.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 9.3"
+      }
+    },
+    {
+      "code": "PURCHSE",
+      "label": "Purchase Option / ROFR",
+      "value": "None \u2014 no purchase option or right of first refusal in the lease.",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "HOLDOVR",
+      "label": "Holdover",
+      "value": "Month-to-month after expiration (no renewal/extension implied); holdover rent = 125% of the Monthly Base Rent in effect immediately before the end of the Term, until surrender; Landlord may terminate the holdover on 30 days' notice (\u00a732.7).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a732.7"
+      }
+    },
+    {
+      "code": "RELOCAT",
+      "label": "Relocation",
+      "value": "None \u2014 no landlord relocation right; Tenant Control Area / parking fixed on Exhibit A.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 9.2"
+      }
+    },
+    {
+      "code": "UTILITY",
+      "label": "Utilities",
+      "value": "Separately metered; Tenant pays utilities serving the Premises directly.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 11\u201312"
+      }
+    },
+    {
+      "code": "HVAC",
+      "label": "HVAC / Maintenance",
+      "value": "Tenant maintains its building/HVAC; Landlord maintains the Common Areas (structural repairs and capital are excluded from CAM and are Landlord's cost).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 11.6"
+      }
+    },
+    {
+      "code": "PYLON",
+      "label": "Pylon / Signage",
+      "value": "Building signage \u2265150 SF (front/back) plus secondary grooming/vet signage. Monument signs on Colorado Blvd and East Yale Ave \u2014 Tenant has a first right to an available panel (after the Retail 'J' tenant), behind King Soopers/OfficeMax/Home Place and any larger tenant. Landlord lights/maintains the monuments.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 10"
+      }
+    },
+    {
+      "code": "SUBORD",
+      "label": "Subordination / SNDA",
+      "value": "Non-disturbance protected: Landlord delivered an ALTA leasehold title policy ($1M, Stewart Title) and the lease contemplates mortgagee non-disturbance; Tenant must give a mortgagee a 30-day cure window before terminating for Landlord default. On a sale of the Center, the buyer must assume the lease for Landlord to be released (\u00a721.4).",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 19, 21.2, 25.3"
+      }
+    },
+    {
+      "code": "ESTOPPEL",
+      "label": "Estoppel",
+      "value": "Customary estoppel/SNDA cooperation per the lease's general provisions.",
+      "cite": {
+        "doc": "Lease"
+      }
+    }
   ],
   "flags": [
-    { "severity": "info", "issue": "Abstract reconciles with the rent roll; full document folder read", "detail": "Enumerated the full PetSmart folder by ID (10 docs) and read the chain: lease + 1st Amendment (rent) + commencement certificate + 2011 Uniform CAM Agreement + waivers + 2024 renewal notice. Current rent $26.50/SF ($404,125/yr ≈ roll's $404,124.96) through 1/31/2030, then $28.00 and $29.50/SF options — matches the rent roll (which shows '4th of 5' options remaining). 15,250 SF confirmed by the 1st Amendment certification. No missing amendment; no purchase option; no tenant guaranty." },
-    { "severity": "watch", "issue": "Confirm PetSmart reverted to lease pro-rata CAM after KPR's acquisition (vs. the 2011 DDR fixed-CAM)", "detail": "The 2011 DDR Uniform CAM Agreement fixed PetSmart's CAM at $1.02/SF (2010) escalating 2.75%/yr, but §5 removes a premises from that agreement when DDR/SITE sells the center. KPR acquired University Hills in 2024, which should have dropped PetSmart out of the fixed-CAM deal and reverted it to the lease's pro-rata CAM + 5% admin. Worth confirming which basis PetSmart is actually being billed on now (the rent roll shows ~$1.575/SF monthly CAM), since it affects recoveries. Not a lease error — a billing/transition item for KPR to verify." }
+    {
+      "severity": "info",
+      "issue": "Abstract reconciles with the rent roll; full document folder read",
+      "detail": "Enumerated the full PetSmart folder by ID (10 docs) and read the chain: lease + 1st Amendment (rent) + commencement certificate + 2011 Uniform CAM Agreement + waivers + 2024 renewal notice. Current rent $26.50/SF ($404,125/yr \u2248 roll's $404,124.96) through 1/31/2030, then $28.00 and $29.50/SF options \u2014 matches the rent roll (which shows '4th of 5' options remaining). 15,250 SF confirmed by the 1st Amendment certification. No missing amendment; no purchase option; no tenant guaranty."
+    },
+    {
+      "severity": "watch",
+      "issue": "Confirm PetSmart reverted to lease pro-rata CAM after KPR's acquisition (vs. the 2011 DDR fixed-CAM)",
+      "detail": "The 2011 DDR Uniform CAM Agreement fixed PetSmart's CAM at $1.02/SF (2010) escalating 2.75%/yr, but \u00a75 removes a premises from that agreement when DDR/SITE sells the center. KPR acquired University Hills in 2024, which should have dropped PetSmart out of the fixed-CAM deal and reverted it to the lease's pro-rata CAM + 5% admin. Worth confirming which basis PetSmart is actually being billed on now (the rent roll shows ~$1.575/SF monthly CAM), since it affects recoveries. Not a lease error \u2014 a billing/transition item for KPR to verify."
+    }
   ],
-  "narrative": "PetSmart (PetSmart LLC, f/k/a PetSmart, Inc.; store #0231) occupies 15,250 SF (Suite 56) at University Hills, Denver under a 1/29/1998 lease that commenced 2/4/1999. The structure is a 15-year initial term plus five 5-year options that auto-renew unless PetSmart affirmatively declines (120 days' notice); PetSmart is now in its third option (commenced 2/1/2025) at $26.50/SF ($404,125/yr), with two options remaining at $28.00 and $29.50/SF (to 1/31/2040). Rent steps $1.50/SF per renewal; there is no percentage rent and no tenant guaranty. The lease carries a pet-store exclusive (pets, pet products, grooming/boarding/vet), a tenant-favorable CAM (pro-rata + 5% admin, no capital/structural/management, with a soft 5% estimate cap), pro-rata taxes, free assignment for collateral/merger/metro-portfolio transfers (Landlord consent otherwise, not unreasonably withheld), and no continuous-operation covenant — though Landlord holds a go-dark recapture (180-day cessation) that requires Landlord to pay PetSmart a termination fee (up to $500K). PetSmart's own co-tenancy protection (a first-5-years King Soopers clause) has long since expired, so there is no ongoing co-tenancy. The full document folder was enumerated and read; the abstract reconciles cleanly with the April-2026 rent roll. One transition item is flagged: the 2011 DDR fixed-CAM agreement should have dropped off when KPR bought the center, reverting PetSmart to lease pro-rata CAM — worth confirming how it's being billed.",
+  "narrative": "PetSmart (PetSmart LLC, f/k/a PetSmart, Inc.; store #0231) occupies 15,250 SF (Suite 56) at University Hills, Denver under a 1/29/1998 lease that commenced 2/4/1999. The structure is a 15-year initial term plus five 5-year options that auto-renew unless PetSmart affirmatively declines (120 days' notice); PetSmart is now in its third option (commenced 2/1/2025) at $26.50/SF ($404,125/yr), with two options remaining at $28.00 and $29.50/SF (to 1/31/2040). Rent steps $1.50/SF per renewal; there is no percentage rent and no tenant guaranty. The lease carries a pet-store exclusive (pets, pet products, grooming/boarding/vet), a tenant-favorable CAM (pro-rata + 5% admin, no capital/structural/management, with a soft 5% estimate cap), pro-rata taxes, free assignment for collateral/merger/metro-portfolio transfers (Landlord consent otherwise, not unreasonably withheld), and no continuous-operation covenant \u2014 though Landlord holds a go-dark recapture (180-day cessation) that requires Landlord to pay PetSmart a termination fee (up to $500K). PetSmart's own co-tenancy protection (a first-5-years King Soopers clause) has long since expired, so there is no ongoing co-tenancy. The full document folder was enumerated and read; the abstract reconciles cleanly with the April-2026 rent roll. One transition item is flagged: the 2011 DDR fixed-CAM agreement should have dropped off when KPR bought the center, reverting PetSmart to lease pro-rata CAM \u2014 worth confirming how it's being billed.",
   "sourceDocuments": [
-    { "name": "Shopping Center Lease", "date": "1998-01-29", "type": "lease" },
-    { "name": "First Amendment to Shopping Center Lease", "date": "1999-08-04", "type": "amendment" },
-    { "name": "Commencement Date Certificate", "date": "1999", "type": "amendment" },
-    { "name": "Uniform Common Area Maintenance Payment Agreement", "date": "2011-09-09", "type": "amendment" },
-    { "name": "Courtesy Notice of Lease Renewal (3rd option)", "date": "2024-08-19", "type": "letter" }
+    {
+      "name": "Shopping Center Lease",
+      "date": "1998-01-29",
+      "type": "lease"
+    },
+    {
+      "name": "First Amendment to Shopping Center Lease",
+      "date": "1999-08-04",
+      "type": "amendment"
+    },
+    {
+      "name": "Commencement Date Certificate",
+      "date": "1999",
+      "type": "amendment"
+    },
+    {
+      "name": "Uniform Common Area Maintenance Payment Agreement",
+      "date": "2011-09-09",
+      "type": "amendment"
+    },
+    {
+      "name": "Courtesy Notice of Lease Renewal (3rd option)",
+      "date": "2024-08-19",
+      "type": "letter"
+    }
   ]
 }

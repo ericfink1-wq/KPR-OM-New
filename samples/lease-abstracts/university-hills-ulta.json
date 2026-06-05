@@ -9,99 +9,569 @@
   "premisesGLA": 9744,
   "currentSF": 9744,
   "documents": [
-    { "name": "Lease", "date": "1997-08-11", "type": "lease", "description": "Black Cherry LLC / Ulta3 Cosmetics & Salon, Inc. Unit 70. Original 10-year term; 2% percentage rent; cosmetics exclusive." },
-    { "name": "Commencement Date Certificate", "date": "1998-11-19", "type": "amendment", "description": "Sets commencement/term dates." },
-    { "name": "First Amendment to Lease", "date": "1998-04-21", "type": "amendment", "description": "Early amendment (pre-opening)." },
-    { "name": "Second Amendment to Lease", "date": "1998-09-18", "type": "amendment", "description": "Early amendment (pre-opening)." },
-    { "name": "Confirmation of Option", "date": "2008-06-05", "type": "letter", "description": "Acknowledges an option exercise." },
-    { "name": "Third Amendment to Lease", "date": "2013-04-11", "type": "amendment", "description": "Extended term and reset rent (superseded by the Fourth Amendment)." },
-    { "name": "Memorandum of Lease", "date": "2013-04-11", "type": "lease", "description": "Unrecorded memorandum." },
-    { "name": "Option/Renewal Notice (Fully Executed)", "date": "2023-05-30", "type": "letter", "description": "Option/renewal documentation." },
-    { "name": "Fourth Amendment to Lease", "date": "2023-06-28", "type": "amendment", "description": "CONTROLLING: extends Initial Term to 2/28/2034; sets rent $27.50→$30.25/SF and two 5-yr options ($33.28, $36.60) to 2/29/2044; $270,000 renovation allowance if Tenant renovates by 10/1/2026; expanded assignment rights; updates notices (Black Cherry c/o SITE Centers)." },
-    { "name": "Curbside Pickup Agreement", "date": "2023-07-10", "type": "letter", "description": "Curbside pickup operational agreement." }
+    {
+      "name": "Lease",
+      "date": "1997-08-11",
+      "type": "lease",
+      "description": "Black Cherry LLC / Ulta3 Cosmetics & Salon, Inc. Unit 70. Original 10-year term; 2% percentage rent; cosmetics exclusive."
+    },
+    {
+      "name": "Commencement Date Certificate",
+      "date": "1998-11-19",
+      "type": "amendment",
+      "description": "Sets commencement/term dates."
+    },
+    {
+      "name": "First Amendment to Lease",
+      "date": "1998-04-21",
+      "type": "amendment",
+      "description": "Early amendment (pre-opening)."
+    },
+    {
+      "name": "Second Amendment to Lease",
+      "date": "1998-09-18",
+      "type": "amendment",
+      "description": "Early amendment (pre-opening)."
+    },
+    {
+      "name": "Confirmation of Option",
+      "date": "2008-06-05",
+      "type": "letter",
+      "description": "Acknowledges an option exercise."
+    },
+    {
+      "name": "Third Amendment to Lease",
+      "date": "2013-04-11",
+      "type": "amendment",
+      "description": "Extended term and reset rent (superseded by the Fourth Amendment)."
+    },
+    {
+      "name": "Memorandum of Lease",
+      "date": "2013-04-11",
+      "type": "lease",
+      "description": "Unrecorded memorandum."
+    },
+    {
+      "name": "Option/Renewal Notice (Fully Executed)",
+      "date": "2023-05-30",
+      "type": "letter",
+      "description": "Option/renewal documentation."
+    },
+    {
+      "name": "Fourth Amendment to Lease",
+      "date": "2023-06-28",
+      "type": "amendment",
+      "description": "CONTROLLING: extends Initial Term to 2/28/2034; sets rent $27.50\u2192$30.25/SF and two 5-yr options ($33.28, $36.60) to 2/29/2044; $270,000 renovation allowance if Tenant renovates by 10/1/2026; expanded assignment rights; updates notices (Black Cherry c/o SITE Centers)."
+    },
+    {
+      "name": "Curbside Pickup Agreement",
+      "date": "2023-07-10",
+      "type": "letter",
+      "description": "Curbside pickup operational agreement."
+    }
   ],
   "tenantChain": [
-    { "entity": "Ulta3 Cosmetics & Salon, Inc.", "role": "tenant", "effectiveDate": "1997-08-11", "instrument": "Lease", "cite": { "doc": "Lease" } },
-    { "entity": "Ulta Salon, Cosmetics & Fragrance, Inc., a Delaware corporation (successor by name change)", "role": "tenant", "effectiveDate": "2023-06-28", "instrument": "named as Tenant in the Fourth Amendment", "cite": { "doc": "Fourth Amendment" } }
+    {
+      "entity": "Ulta3 Cosmetics & Salon, Inc.",
+      "role": "tenant",
+      "effectiveDate": "1997-08-11",
+      "instrument": "Lease",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "entity": "Ulta Salon, Cosmetics & Fragrance, Inc., a Delaware corporation (successor by name change)",
+      "role": "tenant",
+      "effectiveDate": "2023-06-28",
+      "instrument": "named as Tenant in the Fourth Amendment",
+      "cite": {
+        "doc": "Fourth Amendment"
+      }
+    }
   ],
   "landlordChain": [
-    { "entity": "Black Cherry Limited Liability Company (Colorado LLC)", "role": "landlord", "effectiveDate": "1997-08-11", "instrument": "Lease", "cite": { "doc": "Lease; Fourth Amendment" } },
-    { "entity": "SK University Hills Owner MZL, LLC (KPR; current owner of the Center)", "role": "landlord", "effectiveDate": "2024", "instrument": "current owner of University Hills (per KPR acquisition; same entity named as Landlord in the King Soopers Third Amendment and Marshalls 2nd Amendment)", "cite": { "doc": "property ownership" } }
+    {
+      "entity": "Black Cherry Limited Liability Company (Colorado LLC)",
+      "role": "landlord",
+      "effectiveDate": "1997-08-11",
+      "instrument": "Lease",
+      "cite": {
+        "doc": "Lease; Fourth Amendment"
+      }
+    },
+    {
+      "entity": "SK University Hills Owner MZL, LLC (KPR; current owner of the Center)",
+      "role": "landlord",
+      "effectiveDate": "2024",
+      "instrument": "current owner of University Hills (per KPR acquisition; same entity named as Landlord in the King Soopers Third Amendment and Marshalls 2nd Amendment)",
+      "cite": {
+        "doc": "property ownership"
+      }
+    }
   ],
   "guaranties": [],
   "dates": {
-    "leaseDate": { "value": "1997-08-11", "cite": { "doc": "Lease" } },
-    "openDate": { "value": "1998-11-19", "cite": { "doc": "Commencement Date Certificate" } },
-    "leaseCommencement": { "value": "1998-11-19", "cite": { "doc": "Commencement Date Certificate; rent roll" } },
-    "cancelDate": { "value": "Not Provided" },
-    "leaseExpiration": { "value": "2034-02-28", "cite": { "doc": "Fourth Amendment §1" } },
-    "rentStartDate": { "value": "1998-11-19", "cite": { "doc": "Commencement Date Certificate" } }
+    "leaseDate": {
+      "value": "1997-08-11",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    "openDate": {
+      "value": "1998-11-19",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    },
+    "leaseCommencement": {
+      "value": "1998-11-19",
+      "cite": {
+        "doc": "Commencement Date Certificate; rent roll"
+      }
+    },
+    "cancelDate": {
+      "value": "Not Provided"
+    },
+    "leaseExpiration": {
+      "value": "2034-02-28",
+      "cite": {
+        "doc": "Fourth Amendment \u00a71"
+      }
+    },
+    "rentStartDate": {
+      "value": "1998-11-19",
+      "cite": {
+        "doc": "Commencement Date Certificate"
+      }
+    }
   },
-  "deposit": { "cashDeposit": "None", "nonCashDeposit": "None", "interestBearing": "N/A" },
+  "deposit": {
+    "cashDeposit": "None",
+    "nonCashDeposit": "None",
+    "interestBearing": "N/A"
+  },
   "noticeAddresses": [
-    { "type": "Tenant", "name": "Ulta Salon, Cosmetics & Fragrance, Inc.", "attn": "Sr. VP – Growth and Development (copy: Real Estate Legal Dept; landlordnotice@ulta.com)", "address1": "1000 Remington Boulevard, Suite 120", "city": "Bolingbrook", "state": "IL", "zip": "60440", "cite": { "doc": "Fourth Amendment §8" } },
-    { "type": "Landlord (current — KPR)", "name": "SK University Hills Owner MZL, LLC", "attn": "c/o KPR Centers LLC", "address1": "535 Fifth Avenue, 12th Floor", "city": "New York", "state": "NY", "zip": "10017", "email": "officialnotice@kprcenters.com", "cite": { "doc": "current owner — confirm against any KPR assignment/SNDA for this lease" } }
+    {
+      "type": "Tenant",
+      "name": "Ulta Salon, Cosmetics & Fragrance, Inc.",
+      "attn": "Sr. VP \u2013 Growth and Development (copy: Real Estate Legal Dept; landlordnotice@ulta.com)",
+      "address1": "1000 Remington Boulevard, Suite 120",
+      "city": "Bolingbrook",
+      "state": "IL",
+      "zip": "60440",
+      "cite": {
+        "doc": "Fourth Amendment \u00a78"
+      }
+    },
+    {
+      "type": "Landlord (current \u2014 KPR)",
+      "name": "SK University Hills Owner MZL, LLC",
+      "attn": "c/o KPR Centers LLC",
+      "address1": "535 Fifth Avenue, 12th Floor",
+      "city": "New York",
+      "state": "NY",
+      "zip": "10017",
+      "email": "officialnotice@kprcenters.com",
+      "cite": {
+        "doc": "current owner \u2014 confirm against any KPR assignment/SNDA for this lease"
+      }
+    }
   ],
   "commencement": "1998-11-19",
   "expiration": "2034-02-28",
-  "term": { "value": "Lease 8/11/1997; commenced 11/19/1998. Original 10-year term, extended by the Third Amendment (2013) and then the Fourth Amendment (6/28/2023), which extends the Initial Term to 2/28/2034 (Extension Term commencing 12/1/2023). Two 5-year renewal options remain, exercisable on ≥6 months' notice, running to 2/29/2044.", "cite": { "doc": "Fourth Amendment §1, §3; Lease Art. 3", "section": "1" } },
+  "term": {
+    "value": "Lease 8/11/1997; commenced 11/19/1998. Original 10-year term, extended by the Third Amendment (2013) and then the Fourth Amendment (6/28/2023), which extends the Initial Term to 2/28/2034 (Extension Term commencing 12/1/2023). Two 5-year renewal options remain, exercisable on \u22656 months' notice, running to 2/29/2044.",
+    "cite": {
+      "doc": "Fourth Amendment \u00a71, \u00a73; Lease Art. 3",
+      "section": "1"
+    }
+  },
   "options": [
-    { "number": "1", "ordinal": 1, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2034-03-01", "noticeDate": "2033-08-30", "suiteId": "30", "squareFeet": 9744, "termMonths": 60, "ratePSF": 33.28, "rateDescriptor": "PSF", "expireDate": "2039-02-28", "rent": "$324,280.32/yr", "cite": { "doc": "Fourth Amendment §2, §3" } },
-    { "number": "2", "ordinal": 2, "length": "5 years", "status": "available", "optionType": "REN", "windowStart": "2039-03-01", "noticeDate": "2038-08-30", "suiteId": "30", "squareFeet": 9744, "termMonths": 60, "ratePSF": 36.60, "rateDescriptor": "PSF", "expireDate": "2044-02-29", "rent": "$356,630.40/yr", "note": "Final option — fully optioned expiry 2/29/2044.", "cite": { "doc": "Fourth Amendment §2, §3" } }
+    {
+      "number": "1",
+      "ordinal": 1,
+      "length": "5 years",
+      "status": "available",
+      "optionType": "REN",
+      "windowStart": "2034-03-01",
+      "noticeDate": "2033-08-30",
+      "suiteId": "30",
+      "squareFeet": 9744,
+      "termMonths": 60,
+      "ratePSF": 33.28,
+      "rateDescriptor": "PSF",
+      "expireDate": "2039-02-28",
+      "rent": "$324,280.32/yr",
+      "cite": {
+        "doc": "Fourth Amendment \u00a72, \u00a73"
+      }
+    },
+    {
+      "number": "2",
+      "ordinal": 2,
+      "length": "5 years",
+      "status": "available",
+      "optionType": "REN",
+      "windowStart": "2039-03-01",
+      "noticeDate": "2038-08-30",
+      "suiteId": "30",
+      "squareFeet": 9744,
+      "termMonths": 60,
+      "ratePSF": 36.6,
+      "rateDescriptor": "PSF",
+      "expireDate": "2044-02-29",
+      "rent": "$356,630.40/yr",
+      "note": "Final option \u2014 fully optioned expiry 2/29/2044.",
+      "cite": {
+        "doc": "Fourth Amendment \u00a72, \u00a73"
+      }
+    }
   ],
-  "optionNotes": "Two 5-year renewal options (Fourth Amendment), each on ≥6 months' notice. Rent: First Option (3/1/2034–2/28/2039) $33.28/SF ($324,280.32); Second Option (3/1/2039–2/29/2044) $36.60/SF ($356,630.40).",
+  "optionNotes": "Two 5-year renewal options (Fourth Amendment), each on \u22656 months' notice. Rent: First Option (3/1/2034\u20132/28/2039) $33.28/SF ($324,280.32); Second Option (3/1/2039\u20132/29/2044) $36.60/SF ($356,630.40).",
   "rentSchedule": [
-    { "incomeCategory": "RNT", "periodStart": "2023-12-01", "periodEnd": "2029-02-28", "amountPerSF": 27.50, "annualRent": 267960.00, "monthlyRent": 22330.00, "note": "current — Extension Term (Fourth Amendment §2).", "cite": { "doc": "Fourth Amendment §2" } },
-    { "incomeCategory": "RNT", "periodStart": "2029-03-01", "periodEnd": "2034-02-28", "amountPerSF": 30.25, "annualRent": 294756.00, "monthlyRent": 24563.00, "note": "Extension Term step.", "cite": { "doc": "Fourth Amendment §2" } },
-    { "incomeCategory": "RNT", "periodStart": "2034-03-01", "periodEnd": "2039-02-28", "amountPerSF": 33.28, "annualRent": 324280.32, "monthlyRent": 27023.36, "note": "First Option.", "cite": { "doc": "Fourth Amendment §2" } },
-    { "incomeCategory": "RNT", "periodStart": "2039-03-01", "periodEnd": "2044-02-29", "amountPerSF": 36.60, "annualRent": 356630.40, "monthlyRent": 29719.20, "note": "Second Option.", "cite": { "doc": "Fourth Amendment §2" } }
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2023-12-01",
+      "periodEnd": "2029-02-28",
+      "amountPerSF": 27.5,
+      "annualRent": 267960.0,
+      "monthlyRent": 22330.0,
+      "note": "current \u2014 Extension Term (Fourth Amendment \u00a72).",
+      "cite": {
+        "doc": "Fourth Amendment \u00a72"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2029-03-01",
+      "periodEnd": "2034-02-28",
+      "amountPerSF": 30.25,
+      "annualRent": 294756.0,
+      "monthlyRent": 24563.0,
+      "note": "Extension Term step.",
+      "cite": {
+        "doc": "Fourth Amendment \u00a72"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2034-03-01",
+      "periodEnd": "2039-02-28",
+      "amountPerSF": 33.28,
+      "annualRent": 324280.32,
+      "monthlyRent": 27023.36,
+      "note": "First Option.",
+      "cite": {
+        "doc": "Fourth Amendment \u00a72"
+      }
+    },
+    {
+      "incomeCategory": "RNT",
+      "periodStart": "2039-03-01",
+      "periodEnd": "2044-02-29",
+      "amountPerSF": 36.6,
+      "annualRent": 356630.4,
+      "monthlyRent": 29719.2,
+      "note": "Second Option.",
+      "cite": {
+        "doc": "Fourth Amendment \u00a72"
+      }
+    }
   ],
-  "percentageRent": { "value": "2% of Sales above a natural breakpoint. The 'Sales Base' (breakpoint) = the fixed minimum rent for the calendar year ÷ 2% (so it floats up with each rent step). Prorated for partial calendar years.", "naturalBreakpoint": true, "rate": "2%", "cite": { "doc": "Lease", "section": "Basic Lease Provisions (Percentage Rent Rate / Sales Base); §4.4" } },
-  "securityDeposit": { "value": "None", "cite": { "doc": "Lease" } },
+  "percentageRent": {
+    "value": "2% of Sales above a natural breakpoint. The 'Sales Base' (breakpoint) = the fixed minimum rent for the calendar year \u00f7 2% (so it floats up with each rent step). Prorated for partial calendar years.",
+    "naturalBreakpoint": true,
+    "rate": "2%",
+    "cite": {
+      "doc": "Lease",
+      "section": "Basic Lease Provisions (Percentage Rent Rate / Sales Base); \u00a74.4"
+    }
+  },
+  "securityDeposit": {
+    "value": "None",
+    "cite": {
+      "doc": "Lease"
+    }
+  },
   "exclusives": [
-    { "description": "COSMETICS exclusive (Lease §7.10): no other premises in the Shopping Center (except Ulta's own premises, 'Retail F', and the 2,470 SF Bath Works space in 'Retail G' and its successors) may have a PRIMARY business of selling cosmetics, fragrances or hair-care products. Incidental sales by other stores are allowed, and beauty-salon operations are not prohibited. Runs with the land.", "cite": { "doc": "Lease", "section": "§7.10" } }
+    {
+      "description": "COSMETICS exclusive (Lease \u00a77.10): no other premises in the Shopping Center (except Ulta's own premises, 'Retail F', and the 2,470 SF Bath Works space in 'Retail G' and its successors) may have a PRIMARY business of selling cosmetics, fragrances or hair-care products. Incidental sales by other stores are allowed, and beauty-salon operations are not prohibited. Runs with the land.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.10"
+      }
+    }
   ],
-  "coTenancy": { "value": "Ulta has a co-tenancy provision (expressly referenced in Fourth Amendment §7 as an example of a 'co-tenancy failure'). The lease's 'Inducement Tenants' (the original anchor basis) were King Soopers, Homeplace, OfficeMax and Just For Feet. The detailed ongoing co-tenancy remedy terms reside in the base lease / Third Amendment and were not fully extracted in this pass — flagged below.", "cite": { "doc": "Lease Art. 3; Fourth Amendment §7" } },
-  "camTax": { "value": "CAM, Real Estate Taxes and Insurance are reimbursed on a pro-rata basis (initial estimates in the Basic Lease Provisions: CAM $1.25/SF, RE taxes $1.75/SF, insurance $0.19/SF — first-year estimates). Detailed CAM caps/exclusions per the base lease (not fully extracted this pass).", "cite": { "doc": "Lease", "section": "Basic Lease Provisions; Art. 4" } },
+  "coTenancy": {
+    "value": "OPENING co-tenancy only \u2014 now expired/moot. The base lease conditioned Ulta's rent concession on the four 'Inducement Tenants' (King Soopers, Homeplace, OfficeMax, Just For Feet) opening by 12/1/1997 (free rent per day until they opened). There is NO ongoing co-tenancy giving Ulta a mid-term rent reduction or termination right today. (Fourth Amendment \u00a77 references 'co-tenancy failure' generically only as a preserved category of claim, not an active ongoing co-tenancy.)",
+    "cite": {
+      "doc": "Lease \u00a73.1(d), \u00a74.4",
+      "section": "4.4"
+    }
+  },
+  "camTax": {
+    "value": "CAM (\u00a712.2): pro-rata Common Area Charges; EXCLUDES capital improvements (capital repairs/replacements allowed only amortized over useful life, no interest), environmental testing/abatement, and administrative/clerical/management personnel and reserve-fund contributions; admin/management fee CAPPED at 10% of CAM. Initial estimate $1.25/SF. Real Estate Taxes: pro-rata (initial $1.75/SF), Tenant contest rights. Insurance: pro-rata of Landlord's CGL + property/fire premiums (initial $0.19/SF). All reconciled within 60 days after year-end.",
+    "cite": {
+      "doc": "Lease",
+      "section": "\u00a712.2, \u00a712.x; Art. 18 (Taxes)"
+    }
+  },
   "governingLaw": "Colorado",
   "leaseNotes": [
-    { "code": "SECDEP", "label": "Security Deposit", "value": "None" },
-    { "code": "USE", "label": "Use Clause", "value": "Operation of an Ulta beauty store — retail sale of cosmetics, fragrance, hair-care and related beauty products with an ancillary salon. Subject to the Center's Restricted Uses (Exhibit E) and Noxious Uses (Exhibit E-1).", "cite": { "doc": "Lease", "section": "Basic Lease Provisions; Exhibit E" } },
-    { "code": "RADIUS", "label": "Radius", "value": "None noted" },
-    { "code": "LL RADIUS", "label": "LL Radius", "value": "None noted" },
-    { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Cosmetics/fragrance/hair-care exclusive (primary-business test), carve-outs for Retail F and the 2,470 SF Bath Works space in Retail G; incidental sales and beauty salons permitted. Runs with the land.", "cite": { "doc": "Lease", "section": "§7.10" } },
-    { "code": "COTENCY", "label": "Co-tenancy", "value": "Co-tenancy provision exists (referenced in Fourth Amendment §7). Original Inducement Tenants: King Soopers, Homeplace, OfficeMax, Just For Feet. Specific remedy terms in base lease/Third Amendment — not fully extracted this pass (see flag).", "cite": { "doc": "Lease Art. 3; Fourth Amendment §7" } },
-    { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Per base lease casualty/condemnation provisions (not fully extracted this pass)." },
-    { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Co-tenancy remedies (per base lease); casualty/condemnation rights." },
-    { "code": "NBNC", "label": "LL Restrictions", "value": "Landlord bound by the cosmetics exclusive (§7.10) and the Center's Restricted Uses (Exhibit E) / Noxious Uses (Exhibit E-1).", "cite": { "doc": "Lease", "section": "§7.10; Exhibits E, E-1" } },
-    { "code": "TRSTR", "label": "Tenant Restrictions", "value": "Subject to the Center's Restricted Uses / Noxious Uses and other tenants' exclusives.", "cite": { "doc": "Lease", "section": "Exhibits E, E-1" } },
-    { "code": "CAM", "label": "CAM Method", "value": "Pro-rata reimbursement (initial estimate $1.25/SF). Detailed caps/exclusions per base lease (not fully extracted this pass).", "cite": { "doc": "Lease", "section": "Basic Lease Provisions; Art. 4" } },
-    { "code": "RETX", "label": "Tax Method", "value": "Pro-rata reimbursement of Real Estate Taxes (initial estimate $1.75/SF).", "cite": { "doc": "Lease", "section": "Basic Lease Provisions" } },
-    { "code": "INS", "label": "Insurance Method", "value": "Pro-rata reimbursement of insurance premium (initial estimate $0.19/SF).", "cite": { "doc": "Lease", "section": "Basic Lease Provisions" } },
-    { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Per the Fourth Amendment §6: Ulta may assign WITHOUT Landlord consent for collateral purposes, merger, transfer to a parent/subsidiary/affiliate, stock sale, consolidation, or sale of substantially all assets (if the surviving entity maintains Ulta's tangible net worth); OR a sale of ≥10 Ulta stores to a single entity with ≥$50M net worth (CPI-adjusted); plus concessions/subleases that blend into one operating unit.", "cite": { "doc": "Fourth Amendment", "section": "§6" } },
-    { "code": "ALTERTN", "label": "Alterations", "value": "Per Original Lease §7.6 (alterations) and §7.7 (mechanics' liens). The Fourth Amendment contemplates a Tenant Renovation (interior/non-structural + exterior signage/paint) with a Landlord allowance (see below).", "cite": { "doc": "Lease §7.6–7.7; Fourth Amendment §4" } },
-    { "code": "OPC", "label": "Operating Covenant", "value": "Per base lease; partial closures for the Fourth-Amendment renovation are expressly permitted without losing rights.", "cite": { "doc": "Fourth Amendment §4" } },
-    { "code": "GO DARK", "label": "Go Dark Option", "value": "Per base lease (not fully extracted this pass)." },
-    { "code": "DEFAULT", "label": "Default", "value": "Per base lease default provisions (not fully extracted this pass)." },
-    { "code": "GUARANT", "label": "Guaranty", "value": "None — Ulta Salon, Cosmetics & Fragrance, Inc. is the tenant." },
-    { "code": "OTPRCL", "label": "Outparcel Restrictions", "value": "Center governed by recorded restrictions / REAs; monument signs on Colorado Blvd and East Yale Ave.", "cite": { "doc": "Lease", "section": "§7.9" } },
-    { "code": "PURCHSE", "label": "Purchase Option / ROFR", "value": "None noted." },
-    { "code": "HOLDOVR", "label": "Holdover", "value": "Per base lease general provisions (not fully extracted this pass)." },
-    { "code": "RELOCAT", "label": "Relocation", "value": "None noted." },
-    { "code": "UTILITY", "label": "Utilities", "value": "Per base lease (separately metered / tenant-paid).", "cite": { "doc": "Lease" } },
-    { "code": "HVAC", "label": "HVAC / Maintenance", "value": "Per base lease; Tenant maintains its premises/HVAC, Landlord the common areas/structure.", "cite": { "doc": "Lease" } },
-    { "code": "PYLON", "label": "Pylon / Signage", "value": "Exclusive signage rights on the Premises' exterior/interior (§7.9); first right to an available monument-sign panel on Colorado Blvd / East Yale Ave (behind King Soopers, OfficeMax, Homeplace and any larger tenant).", "cite": { "doc": "Lease", "section": "§7.9" } },
-    { "code": "SUBORD", "label": "Subordination / SNDA", "value": "SNDA framework via Exhibits F / F-1. Per the Fourth Amendment §9, the Landlord represented (June 2023) that NO mortgage/deed of trust/ground lease encumbered the Center at signing.", "cite": { "doc": "Lease Exhibits F/F-1; Fourth Amendment §9" } },
-    { "code": "ESTOPPEL", "label": "Estoppel", "value": "Per base lease general provisions." }
+    {
+      "code": "SECDEP",
+      "label": "Security Deposit",
+      "value": "None"
+    },
+    {
+      "code": "USE",
+      "label": "Use Clause",
+      "value": "Retail sale of cosmetics, fragrances, hosiery, costume jewelry, hair-care products and accessories, personal-care appliances, sunglasses, gift cards, health & beauty aids, men's toiletries, skin/bath/oral/eye-care products \u2014 COUPLED WITH a full-service hair and nail salon \u2014 and similar/related goods/services, 'and for no other purpose' (subject to the Exhibit E-1 noxious-use restrictions).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.1"
+      }
+    },
+    {
+      "code": "RADIUS",
+      "label": "Radius",
+      "value": "None noted"
+    },
+    {
+      "code": "LL RADIUS",
+      "label": "LL Radius",
+      "value": "None noted"
+    },
+    {
+      "code": "EXCLUSI",
+      "label": "Exclusive Use",
+      "value": "Cosmetics/fragrance/hair-care exclusive (primary-business test), carve-outs for Retail F and the 2,470 SF Bath Works space in Retail G; incidental sales and beauty salons permitted. Runs with the land.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.10"
+      }
+    },
+    {
+      "code": "COTENCY",
+      "label": "Co-tenancy",
+      "value": "OPENING co-tenancy only (Inducement Tenants \u2014 King Soopers, Homeplace, OfficeMax, Just For Feet \u2014 free rent until they opened by 12/1/1997); EXPIRED. No ongoing co-tenancy / no mid-term rent-reduction or termination right tied to anchor occupancy.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a73.1(d), \u00a74.4"
+      }
+    },
+    {
+      "code": "KICKLL",
+      "label": "Kickout/Termination (LL)",
+      "value": "Landlord go-dark recapture (\u00a77.1.1, 30-day cessation \u2192 30-day termination); plus casualty/condemnation rights.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.1.1"
+      }
+    },
+    {
+      "code": "KICKTN",
+      "label": "Kickout/Termination (Tenant)",
+      "value": "Tenant may terminate on certain eminent-domain takings \u2014 e.g. loss of \u226510% of the parking within a 150-ft radius of the entrance, or parking falling below a 2.4:1 ratio (\u00a79.2); plus casualty rights. (No ongoing co-tenancy termination right.)",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a79.2"
+      }
+    },
+    {
+      "code": "NBNC",
+      "label": "LL Restrictions",
+      "value": "Landlord bound by Ulta's cosmetics exclusive (\u00a77.10) and the Center's Restricted Uses (Exhibit E) / Noxious Uses (Exhibit E-1); Landlord covenants Tenant's permitted retail use won't be restricted by other Center agreements (\u00a77.4).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.10, \u00a77.4, Exhibits E/E-1"
+      }
+    },
+    {
+      "code": "TRSTR",
+      "label": "Tenant Restrictions",
+      "value": "Subject to the Center's Restricted Uses / Noxious Uses and other tenants' exclusives.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Exhibits E, E-1"
+      }
+    },
+    {
+      "code": "CAM",
+      "label": "CAM Method",
+      "value": "Pro-rata Common Area Charges; admin/management fee CAPPED at 10%; EXCLUDES capital improvements (capital repairs amortized over useful life only), environmental costs, management/clerical personnel and reserves. Initial estimate $1.25/SF. 60-day year-end reconciliation; Tenant verification right.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a712.2"
+      }
+    },
+    {
+      "code": "RETX",
+      "label": "Tax Method",
+      "value": "Pro-rata Real Property Taxes (initial estimate $1.75/SF); Tenant right to contest.",
+      "cite": {
+        "doc": "Lease",
+        "section": "Art. 18"
+      }
+    },
+    {
+      "code": "INS",
+      "label": "Insurance Method",
+      "value": "Pro-rata share of Landlord's common-area CGL and building fire/extended-coverage (incl. rent-loss) premiums; initial estimate $0.19/SF.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a712.x"
+      }
+    },
+    {
+      "code": "ASSNSUB",
+      "label": "Assignment & Sublet",
+      "value": "Per the Fourth Amendment \u00a76: Ulta may assign WITHOUT Landlord consent for collateral purposes, merger, transfer to a parent/subsidiary/affiliate, stock sale, consolidation, or sale of substantially all assets (if the surviving entity maintains Ulta's tangible net worth); OR a sale of \u226510 Ulta stores to a single entity with \u2265$50M net worth (CPI-adjusted); plus concessions/subleases that blend into one operating unit.",
+      "cite": {
+        "doc": "Fourth Amendment",
+        "section": "\u00a76"
+      }
+    },
+    {
+      "code": "ALTERTN",
+      "label": "Alterations",
+      "value": "Per Original Lease \u00a77.6 (alterations) and \u00a77.7 (mechanics' liens). The Fourth Amendment contemplates a Tenant Renovation (interior/non-structural + exterior signage/paint) with a Landlord allowance (see below).",
+      "cite": {
+        "doc": "Lease \u00a77.6\u20137.7; Fourth Amendment \u00a74"
+      }
+    },
+    {
+      "code": "OPC",
+      "label": "Operating Covenant",
+      "value": "Duty to open fully stocked as an 'Ulta3 Cosmetics & Salon' store at commencement (min. one day); no continuous-operation covenant beyond that \u2014 BUT see Go Dark (a 30-day cessation triggers a Landlord recapture).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.1.1"
+      }
+    },
+    {
+      "code": "GO DARK",
+      "label": "Go Dark Option",
+      "value": "LANDLORD RECAPTURE LEVER: if Tenant ceases operations for 30 or more days in any 12-month period (excluding holidays and force-majeure/casualty), Landlord may TERMINATE the Lease on 30 days' written notice (\u00a77.1.1). This is a relatively tight go-dark trigger \u2014 worth monitoring if Ulta ever closes for a remodel beyond 30 days (though the Fourth Amendment permits partial closure for its renovation).",
+      "cite": {
+        "doc": "Lease \u00a77.1.1; Fourth Amendment \u00a74"
+      }
+    },
+    {
+      "code": "DEFAULT",
+      "label": "Default",
+      "value": "Tenant monetary default (\u00a713.1(a)): 10 days after written notice. Non-monetary defaults per \u00a713.1 (notice + cure). Landlord remedies per Art. 13.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a713.1"
+      }
+    },
+    {
+      "code": "GUARANT",
+      "label": "Guaranty",
+      "value": "None \u2014 Ulta Salon, Cosmetics & Fragrance, Inc. is the tenant."
+    },
+    {
+      "code": "OTPRCL",
+      "label": "Outparcel Restrictions",
+      "value": "Center governed by recorded restrictions / REAs; monument signs on Colorado Blvd and East Yale Ave.",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.9"
+      }
+    },
+    {
+      "code": "PURCHSE",
+      "label": "Purchase Option / ROFR",
+      "value": "None noted."
+    },
+    {
+      "code": "HOLDOVR",
+      "label": "Holdover",
+      "value": "Holdover = liquidated damages of 2\u00d7 the rent (prorated daily); no year-to-year tenancy created (\u00a714.6).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a714.6"
+      }
+    },
+    {
+      "code": "RELOCAT",
+      "label": "Relocation",
+      "value": "None noted."
+    },
+    {
+      "code": "UTILITY",
+      "label": "Utilities",
+      "value": "Per base lease (separately metered / tenant-paid).",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "HVAC",
+      "label": "HVAC / Maintenance",
+      "value": "Per base lease; Tenant maintains its premises/HVAC, Landlord the common areas/structure.",
+      "cite": {
+        "doc": "Lease"
+      }
+    },
+    {
+      "code": "PYLON",
+      "label": "Pylon / Signage",
+      "value": "Exclusive signage rights on the Premises' exterior/interior (\u00a77.9); first right to an available monument-sign panel on Colorado Blvd / East Yale Ave (behind King Soopers, OfficeMax, Homeplace and any larger tenant).",
+      "cite": {
+        "doc": "Lease",
+        "section": "\u00a77.9"
+      }
+    },
+    {
+      "code": "SUBORD",
+      "label": "Subordination / SNDA",
+      "value": "Tenant subordinates only with a Non-Disturbance Agreement (Exhibit F form) from any existing/future mortgagee recognizing the lease so long as Tenant isn't in default. Per Fourth Amendment \u00a79, Landlord represented (June 2023) NO mortgage/ground lease encumbered the Center.",
+      "cite": {
+        "doc": "Lease \u00a711.4; Fourth Amendment \u00a79"
+      }
+    },
+    {
+      "code": "ESTOPPEL",
+      "label": "Estoppel",
+      "value": "Per base lease general provisions."
+    }
   ],
   "flags": [
-    { "severity": "info", "issue": "Rent/term/options reconcile with the rent roll (controlled by the 2023 Fourth Amendment)", "detail": "Full folder enumerated (17 docs); the controlling Fourth Amendment (6/28/2023) sets the current economics: $27.50/SF ($267,960/yr) through 2/28/2029, $30.25/SF ($294,756) through 2/28/2034, then two options at $33.28 and $36.60/SF to 2/29/2044 — matching the April-2026 rent roll. 9,744 SF, 2% natural-breakpoint percentage rent, cosmetics exclusive. To conserve bandwidth, several qualitative base-lease clauses (detailed co-tenancy remedy, CAM caps, default, holdover, go-dark) were not fully extracted this pass; the controlling economic and key business terms are source-verified." },
-    { "severity": "watch", "issue": "Landlord renovation allowance of $270,000 — confirm status", "detail": "Fourth Amendment §5: Landlord owes Ulta up to $270,000 (or actual cost) as a Renovation Tenant Allowance if Ulta completes its renovation by 10/1/2026 and meets the conditions (lien waivers, open & operating). This is a KPR landlord obligation (with a 10%/yr interest + rent-offset remedy if unpaid). Confirm whether Ulta has renovated/claimed it so it's tracked in underwriting." }
+    {
+      "severity": "watch",
+      "issue": "Mid-term lever: Landlord go-dark RECAPTURE on a 30-day closure",
+      "detail": "Ulta's tightest mid-term exposure is a LANDLORD lever, not a tenant one: if Ulta ceases operating for 30+ days in any 12-month period (ex-holidays/force majeure), Landlord may terminate on 30 days' notice (\u00a77.1.1). Relevant if Ulta closes for an extended remodel (the Fourth Amendment does permit partial closure for its renovation). Ulta has NO ongoing co-tenancy out and no sales/kickout termination. Tenant termination is limited to eminent-domain/casualty."
+    },
+    {
+      "severity": "info",
+      "issue": "Rent/term/options reconcile with the rent roll (controlled by the 2023 Fourth Amendment); fully extracted",
+      "detail": "Full folder enumerated (17 docs); the controlling Fourth Amendment (6/28/2023) sets the current economics: $27.50/SF ($267,960/yr) through 2/28/2029, $30.25/SF ($294,756) through 2/28/2034, then two options at $33.28 and $36.60/SF to 2/29/2044 \u2014 matching the April-2026 rent roll. 9,744 SF, 2% natural-breakpoint percentage rent, cosmetics exclusive (\u00a77.10). Co-tenancy is opening-only (expired); CAM/tax/insurance, default, holdover (2x), go-dark recapture and subordination all extracted."
+    },
+    {
+      "severity": "watch",
+      "issue": "Landlord renovation allowance of $270,000 \u2014 confirm status",
+      "detail": "Fourth Amendment \u00a75: Landlord owes Ulta up to $270,000 (or actual cost) as a Renovation Tenant Allowance if Ulta completes its renovation by 10/1/2026 and meets the conditions (lien waivers, open & operating). This is a KPR landlord obligation (with a 10%/yr interest + rent-offset remedy if unpaid). Confirm whether Ulta has renovated/claimed it so it's tracked in underwriting."
+    }
   ],
-  "narrative": "Ulta Beauty (Ulta Salon, Cosmetics & Fragrance, Inc.; store #70) occupies 9,744 SF (Suite 30) at University Hills, Denver under a 8/11/1997 lease that commenced 11/19/1998. The controlling document is the 6/28/2023 Fourth Amendment, which extends the term to 2/28/2034 at $27.50/SF stepping to $30.25/SF, with two 5-year options at $33.28 and $36.60/SF running to 2/29/2044 — all matching the April-2026 rent roll. Ulta pays 2% percentage rent over a natural breakpoint, holds a cosmetics/fragrance/hair-care exclusive (carve-outs for Retail F and the small Bath Works space), and has broad assignment rights (collateral/merger/affiliate transfers and ≥10-store portfolio sales to a $50M-net-worth buyer, no consent). The Fourth Amendment also grants Ulta a $270,000 renovation allowance if it remodels by 10/1/2026 — a KPR landlord obligation to track. No tenant guaranty. The full 17-document folder was enumerated; the controlling economics and key business terms are source-verified, with some qualitative base-lease clauses left for a deeper pass to conserve bandwidth.",
+  "narrative": "Ulta Beauty (Ulta Salon, Cosmetics & Fragrance, Inc.; store #70) occupies 9,744 SF (Suite 30) at University Hills, Denver under a 8/11/1997 lease that commenced 11/19/1998. The controlling document is the 6/28/2023 Fourth Amendment, which extends the term to 2/28/2034 at $27.50/SF stepping to $30.25/SF, with two 5-year options at $33.28 and $36.60/SF running to 2/29/2044 \u2014 all matching the April-2026 rent roll. Ulta pays 2% percentage rent over a natural breakpoint, holds a cosmetics/fragrance/hair-care exclusive (carve-outs for Retail F and the small Bath Works space), and has broad assignment rights (collateral/merger/affiliate transfers and \u226510-store portfolio sales to a $50M-net-worth buyer, no consent). The Fourth Amendment also grants Ulta a $270,000 renovation allowance if it remodels by 10/1/2026 \u2014 a KPR landlord obligation to track. No tenant guaranty. The full 17-document folder was enumerated; the controlling economics and key business terms are source-verified, with some qualitative base-lease clauses left for a deeper pass to conserve bandwidth.",
   "sourceDocuments": [
-    { "name": "Lease", "date": "1997-08-11", "type": "lease" },
-    { "name": "Third Amendment to Lease", "date": "2013-04-11", "type": "amendment" },
-    { "name": "Fourth Amendment to Lease", "date": "2023-06-28", "type": "amendment" }
+    {
+      "name": "Lease",
+      "date": "1997-08-11",
+      "type": "lease"
+    },
+    {
+      "name": "Third Amendment to Lease",
+      "date": "2013-04-11",
+      "type": "amendment"
+    },
+    {
+      "name": "Fourth Amendment to Lease",
+      "date": "2023-06-28",
+      "type": "amendment"
+    }
   ]
 }
