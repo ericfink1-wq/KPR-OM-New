@@ -323,3 +323,38 @@ export function buildAnchorDependencyGraph(resolved: ResolvedTenantRisk[]): Anch
 export function computeDealExposure(deal: Deal, abstracts: LeaseAbstract[], anchor: string): ExposureResult {
   return computeExposure(resolveTenantRisk(deal, abstracts), anchor);
 }
+
+// ── auto-generated diligence to-do list ──────────────────────────────────────────
+export interface DiligenceItem {
+  kind: "verify_unverified" | "pull_leases_no_cotenancy";
+  tenant: string;
+  message: string;
+}
+
+/**
+ * Auto diligence list:
+ *  - every co-tenancy/kickout clause not yet verified against an executed doc → "verify";
+ *  - every real (non-vacant, non-shadow/NAP) roster tenant with NO co-tenancy captured →
+ *    "co-tenancy not disclosed in OM — pull leases" (the OM's silence is not evidence
+ *    of no risk).
+ */
+export function buildDiligenceList(deal: Deal, abstracts: LeaseAbstract[] = []): DiligenceItem[] {
+  const resolved = resolveTenantRisk(deal, abstracts);
+  const haveCoTenancy = new Set<string>();
+  const items: DiligenceItem[] = [];
+  for (const r of resolved) {
+    if (r.coTenancy.length) haveCoTenancy.add(r.key);
+    const unverified = [...r.coTenancy, ...r.salesKickout].some((c) => c.verifiedAgainstExecutedDoc !== true);
+    if (unverified) {
+      items.push({ kind: "verify_unverified", tenant: r.tenant, message: `${r.tenant}: clause captured from a summary — pull and verify against the executed lease.` });
+    }
+  }
+  for (const t of deal.tenants || []) {
+    if (!t.name || isVacant(t.name)) continue;
+    if (t.isNAP || (t.isAnchor && (t.isDark || t.isNAP))) continue; // shadow/unowned anchors aren't "our" leases to pull
+    if (haveCoTenancy.has(tenantKey(t.canonicalName || t.name))) continue;
+    items.push({ kind: "pull_leases_no_cotenancy", tenant: t.canonicalName || t.name, message: `${t.canonicalName || t.name}: co-tenancy not disclosed in OM — pull leases.` });
+  }
+  return items;
+}
+
