@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
-import type { Deal, CashFlowRow } from "./idb";
+import type { Deal, CashFlowRow, LeaseAbstract, AbstractCitation, AbstractField } from "./idb";
+import { LEASE_NOTE_SECTIONS } from "./idb";
 import { filterFutureRentSteps } from "./utils";
 
 function safeNum(v: unknown): number | "" {
@@ -369,4 +370,247 @@ export function exportAggregateToExcel(
   columns.forEach((c, i) => { if (c.fmt) colFormats[i] = c.fmt; });
   polishSheet(ws, { rows: aoa.length, cols: headers.length, widths: columns.map(c => c.width), colFormats });
   downloadWb(ws, sheetName, fileName);
+}
+
+// ===========================================================================
+// Lease-abstract export — mirrors Eric's detailed per-tenant abstract tab.
+// A single tenant exports as one sheet laid out like the tab; a deal exports as
+// a workbook with an "Issues Summary" sheet plus one tab per tenant.
+// ===========================================================================
+
+type Cell = string | number;
+type Aoa = Cell[][];
+
+// Render a citation in Eric's shorthand, e.g. "Lse. Sec. 9.3", "Supplement to
+// Lse. Sec. 4", "Memo. Exh A", "Guaranty Sec. 9".
+function citeShort(c?: AbstractCitation | null): string {
+  if (!c) return "";
+  const doc = (c.doc || "").trim();
+  const sec = (c.section || "").trim();
+  const page = (c.page || "").trim();
+  if (!doc && !sec && !page) return "";
+  const low = doc.toLowerCase();
+  let prefix = doc;
+  if (/supplement/.test(low)) prefix = "Supplement to Lse.";
+  else if (/memo/.test(low)) prefix = "Memo.";
+  else if (/guaranty|guarantee/.test(low)) prefix = "Guaranty";
+  else if (/amendment|expansion/.test(low)) prefix = "Amend.";
+  else if (/\blease\b|indenture/.test(low)) prefix = "Lse.";
+  // letters / options / waivers keep their descriptive name
+  let secPart = "";
+  if (sec) secPart = /sec\.|§|exh/i.test(sec) ? sec.replace(/§/g, "Sec. ") : `Sec. ${sec}`;
+  const pagePart = page ? `p. ${page}` : "";
+  return [prefix, secPart, pagePart].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+const fval = (f?: AbstractField | null): string => (f && f.value != null ? String(f.value) : "");
+const sv = (v: unknown): Cell => (v == null || v === "" ? "" : (typeof v === "number" ? v : String(v)));
+const yn = (b?: boolean | null): string => (b == null ? "" : b ? "Yes" : "No");
+
+// Build the per-tenant tab as an array-of-arrays.
+function abstractTabAoa(a: LeaseAbstract): Aoa {
+  const A: Aoa = [];
+  const row = (...cells: Cell[]) => A.push(cells);
+  const blank = () => A.push([""]);
+  const head = (t: string) => { row(t); };
+
+  row(`${a.tenantName || ""}${a.dba ? "  —  " + a.dba : ""}`);
+  blank();
+
+  head("LEASE – PROPERTY / TENANT INFORMATION");
+  row("Building Name", sv(a.center));
+  row("Suite #", sv(a.suite));
+  row("Tenant Name", sv(a.tenantName));
+  row("DBA", sv(a.dba));
+  row("Premises GLA", sv(a.premisesGLA ?? a.currentSF));
+  if (a.mriNumber) row("MRI #", sv(a.mriNumber));
+  blank();
+
+  if (a.documents?.length) {
+    head("LEASE & AMENDMENTS");
+    for (const d of a.documents) row(sv(d.date), sv(d.name), sv(d.description));
+    blank();
+  }
+
+  head("LEASE DATES");
+  const d = a.dates || {};
+  const dr = (label: string, f?: AbstractField | null) => row(label, fval(f), citeShort(f?.cite));
+  dr("Lease Date", d.leaseDate);
+  dr("Open Date", d.openDate);
+  dr("Lease Commencement", d.leaseCommencement);
+  dr("Cancel", d.cancelDate);
+  dr("Lease Expiration", d.leaseExpiration);
+  dr("Rent Start Date", d.rentStartDate);
+  blank();
+
+  if (a.deposit) {
+    head("DEPOSIT INFORMATION");
+    const dep = a.deposit;
+    row("Cash Deposit", sv(dep.cashDeposit));
+    row("Non-Cash Deposit", sv(dep.nonCashDeposit));
+    row("Interest Bearing", sv(dep.interestBearing));
+    if (dep.interestStartDate) row("Interest Start Date", sv(dep.interestStartDate));
+    if (dep.vendorId) row("Vendor ID", sv(dep.vendorId));
+    if (dep.insuranceCertExp) row("Insurance Cert. Exp.", sv(dep.insuranceCertExp));
+    blank();
+  }
+
+  if (a.noticeAddresses?.length) {
+    head("NOTICE ADDRESS");
+    for (const na of a.noticeAddresses) {
+      row(`${na.type || "Address"}`, citeShort(na.cite));
+      if (na.name) row("  Name", na.name);
+      if (na.attn) row("  Attn", na.attn);
+      const addr = [na.address1, na.address2].filter(Boolean).join(", ");
+      if (addr) row("  Address", addr);
+      const csz = [na.city, na.state, na.zip].filter(Boolean).join(", ");
+      if (csz) row("  City/State/Zip", csz);
+      if (na.phone) row("  Phone", na.phone);
+      if (na.email) row("  Email", na.email);
+    }
+    blank();
+  }
+
+  if (a.options?.length) {
+    head("LEASE – OPTIONS");
+    row("Number", "Option Date", "Type", "Notice Date", "Suite", "SF", "Term (mo)", "Rate (PSF)", "Descriptor", "Expire", "Source");
+    for (const o of a.options) {
+      row(
+        sv(o.number ?? (o.ordinal != null ? `${o.ordinal}` : "")),
+        sv(o.windowStart), sv(o.optionType), sv(o.noticeDate), sv(o.suiteId),
+        sv(o.squareFeet), sv(o.termMonths), sv(o.ratePSF), sv(o.rateDescriptor),
+        sv(o.expireDate ?? o.windowEnd), citeShort(o.cite),
+      );
+    }
+    if (a.optionNotes) row("Option Notes", a.optionNotes);
+    blank();
+  }
+
+  if (a.rentSchedule?.length) {
+    head("BILLING – RECURRING CHARGES");
+    row("Income", "Effective", "End", "$/SF", "Annual", "Monthly", "Source");
+    for (const r of a.rentSchedule) {
+      row(
+        sv(r.incomeCategory ?? "RNT"), sv(r.periodStart), sv(r.periodEnd),
+        sv(r.amountPerSF ?? r.psf), sv(r.annualRent), sv(r.monthlyRent), citeShort(r.cite),
+      );
+    }
+    blank();
+  }
+
+  const pr = a.percentageRentDetail;
+  if (pr || a.percentageRent) {
+    head("RETAIL – PERCENTAGE RENT");
+    if (pr) {
+      if (pr.summary) row("Summary", pr.summary);
+      row("Reporting Frequency", sv(pr.reportingFrequency));
+      row("Natural Breakpoint", yn(pr.naturalBreakpoint));
+      row("In Lieu of Minimum", yn(pr.inLieuOfMinimum));
+      if (pr.salesYearEnd) row("Sales Year End", sv(pr.salesYearEnd));
+      if (pr.paymentTiming) row("Payment", sv(pr.paymentTiming));
+      if (pr.breakpoints?.length) {
+        row("Start Date", "Percentage", "Breakpoint");
+        for (const b of pr.breakpoints) row(sv(b.startDate), sv(b.percentage), sv(b.breakpoint));
+      }
+      if (pr.cite) row("Source", citeShort(pr.cite));
+    } else if (a.percentageRent) {
+      row("Percentage Rent", fval(a.percentageRent), citeShort(a.percentageRent.cite));
+    }
+    blank();
+  }
+
+  head("LEASE NOTES");
+  row("Section", "Category", "Notes", "Source");
+  const byCode = new Map((a.leaseNotes || []).map((n) => [n.code, n]));
+  for (const sec of LEASE_NOTE_SECTIONS) {
+    const n = byCode.get(sec.code);
+    // Fall back to the high-level convenience fields when a note isn't keyed.
+    let val = n?.value ?? "";
+    let cite = n?.cite ?? null;
+    if (!val) {
+      if (sec.code === "SECDEP") { val = fval(a.securityDeposit); cite = a.securityDeposit?.cite ?? null; }
+      else if (sec.code === "GO DARK") { val = fval(a.goDark); cite = a.goDark?.cite ?? null; }
+      else if (sec.code === "ASSNSUB") { val = fval(a.assignment); cite = a.assignment?.cite ?? null; }
+      else if (sec.code === "DEFAULT") { val = fval(a.defaultTerms); cite = a.defaultTerms?.cite ?? null; }
+      else if (sec.code === "EXCLUSI" && a.exclusives?.length) { val = a.exclusives.map((e) => e.description).filter(Boolean).join("  |  "); cite = a.exclusives[0]?.cite ?? null; }
+      else if (sec.code === "GUARANT" && a.guaranties?.length) { val = a.guaranties.map((g) => `${g.guarantor}: ${g.scope ?? ""}`).join("  |  "); cite = a.guaranties[0]?.cite ?? null; }
+    }
+    row(sv(cite?.section), sec.label, val, citeShort(cite));
+  }
+
+  if (a.flags?.length) {
+    blank();
+    head("FLAGS");
+    for (const f of a.flags) row((f.severity || "note").toUpperCase(), f.issue || "", f.detail || "");
+  }
+
+  return A;
+}
+
+function sanitizeSheetName(name: string): string {
+  return (name || "Sheet").replace(/[\\/?*:[\]]/g, "-").slice(0, 31) || "Sheet";
+}
+
+const ABSTRACT_COL_WIDTHS = [22, 22, 14, 12, 14, 16, 44, 12, 12, 12, 30];
+
+function appendAbstractTab(wb: XLSX.WorkBook, a: LeaseAbstract): void {
+  const ws = XLSX.utils.aoa_to_sheet(abstractTabAoa(a));
+  ws["!cols"] = ABSTRACT_COL_WIDTHS.map((w) => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(a.tenantName || a.dba || "Tenant"));
+}
+
+// Renewal-options one-liner for the Issues Summary (count + length, next start, rate).
+function optsSummary(a: LeaseAbstract): { numLen: string; begins: string; rate: string } {
+  const opts = a.options ?? [];
+  if (!opts.length) return { numLen: "None", begins: "", rate: "" };
+  const len = opts[0].length || (opts[0].termMonths ? `${opts[0].termMonths} mo` : "");
+  const first = opts[0];
+  const rate = first.ratePSF != null ? `$${first.ratePSF}` : (first.rent || "");
+  return { numLen: `${opts.length} @ ${len}`.trim(), begins: sv(first.windowStart) as string, rate };
+}
+
+// Consolidated, topic-major "Issues Summary" across all of a deal's abstracts.
+function issuesSummaryAoa(abstracts: LeaseAbstract[]): Aoa {
+  const A: Aoa = [];
+  const row = (...c: Cell[]) => A.push(c);
+  const blank = () => A.push([""]);
+  row("Issues Summary");
+  blank();
+  row("RENEWAL OPTIONS");
+  row("Tenant", "Number/Length", "1st Option Begins", "Initial Annual Rent/sf");
+  for (const a of abstracts) { const s = optsSummary(a); row(sv(a.tenantName), s.numLen, s.begins, s.rate); }
+  blank();
+  for (const sec of LEASE_NOTE_SECTIONS) {
+    row(sec.label.toUpperCase());
+    for (const a of abstracts) {
+      const n = (a.leaseNotes || []).find((x) => x.code === sec.code);
+      let val = n?.value ?? "";
+      if (!val && sec.code === "SECDEP") val = fval(a.securityDeposit);
+      if (!val && sec.code === "GO DARK") val = fval(a.goDark);
+      if (!val && sec.code === "ASSNSUB") val = fval(a.assignment);
+      row(sv(a.tenantName), val);
+    }
+    blank();
+  }
+  return A;
+}
+
+// Export a SINGLE tenant's abstract as a one-sheet workbook (mirrors the tab).
+export function exportLeaseAbstract(a: LeaseAbstract): void {
+  const wb = XLSX.utils.book_new();
+  appendAbstractTab(wb, a);
+  const safe = (a.tenantName || "abstract").replace(/[/\\?%*:|"<>]/g, "-").slice(0, 60);
+  XLSX.writeFile(wb, `KPR_LeaseAbstract_${safe}_${today()}.xlsx`);
+}
+
+// Export ALL of a deal's abstracts: Issues Summary + one tab per tenant.
+export function exportLeaseAbstractsWorkbook(dealName: string, abstracts: LeaseAbstract[]): void {
+  if (!abstracts.length) return;
+  const wb = XLSX.utils.book_new();
+  const sumWs = XLSX.utils.aoa_to_sheet(issuesSummaryAoa(abstracts));
+  sumWs["!cols"] = [{ wch: 26 }, { wch: 60 }, { wch: 22 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, sumWs, "Issues Summary");
+  for (const a of abstracts) appendAbstractTab(wb, a);
+  const safe = (dealName || "deal").replace(/[/\\?%*:|"<>]/g, "-").slice(0, 60);
+  XLSX.writeFile(wb, `KPR_LeaseAbstracts_${safe}_${today()}.xlsx`);
 }

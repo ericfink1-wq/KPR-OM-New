@@ -21,7 +21,7 @@ import TenantRoster from "./TenantRoster";
 import LeaseAbstractModal from "./LeaseAbstractModal";
 import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
-import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
+import { exportDealToExcel, exportRosterToExcel, exportLeaseAbstractsWorkbook } from "../lib/exportExcel";
 import { extractAnyFile } from "../lib/fileExtract";
 import { extractSalesReport, buildSalesHistoryPatch } from "../lib/salesExtract";
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
@@ -2558,6 +2558,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 ⬇ Rent roll — Excel
               </button>
+              {abstracts.length > 0 && (
+                <button onClick={() => exportLeaseAbstractsWorkbook(d.propertyName || d.fileName || "deal", abstracts)}
+                  title="Export all lease abstracts on this deal to Excel — an Issues Summary plus one detailed tab per tenant"
+                  style={{ background:"#eafaf0", border:"1px solid #b7e4c7", color:"#1f6f43", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                  ⬇ Lease abstracts — Excel
+                </button>
+              )}
               <PdfDownloadButton
                 fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
                 makeDoc={async () => { const { default: RentRollPDF } = await import("./RentRollPDF"); return <RentRollPDF deal={d} />; }}
