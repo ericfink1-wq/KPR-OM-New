@@ -42,20 +42,6 @@ function fmtNum(v: number | null | undefined): string {
   return Number(v).toLocaleString();
 }
 
-// Green ▲ / red ▼ next to the most recent year's sales PSF when it's up/down vs the
-// prior year. Returns null when either year is missing or the figures are equal.
-function TrendIcon({ cur, prior }: { cur: number | null | undefined; prior: number | null | undefined }) {
-  if (cur == null || prior == null || cur === prior) return null;
-  const up = cur > prior;
-  const pct = prior > 0 ? ((cur - prior) / prior) * 100 : null;
-  const title = `${up ? "Up" : "Down"}${pct != null ? ` ${Math.abs(pct).toFixed(1)}%` : ""} vs prior year ($${Math.round(Number(prior))} PSF)`;
-  return (
-    <span title={title} style={{ color: up ? "#0f9d63" : "#dc2626", fontSize: 10, fontWeight: 700, lineHeight: 1 }}>
-      {up ? "▲" : "▼"}
-    </span>
-  );
-}
-
 // Derive a synthetic OM snapshot from the tenant roster
 function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): TenantSalesYear | null {
   const reporting = tenants.filter(t =>
@@ -663,16 +649,18 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                       {selectedYear === "all"
                         ? displayYears.map((y, yi) => {
                             const rec = row.byYear[y];
-                            // On the most recent year (leftmost), flag whether this
-                            // tenant's sales PSF is up/down vs the prior year shown.
+                            // On the most recent year (leftmost), color the PSF by whether
+                            // it's up/down vs the prior year shown, and append the % change.
                             const priorRec = yi === 0 && displayYears.length > 1 ? row.byYear[displayYears[1]] : null;
+                            const cur = rec?.salesPSF ?? null;
+                            const prior = priorRec?.salesPSF ?? null;
+                            const pct = (cur != null && prior != null && prior > 0 && cur !== prior) ? ((cur - prior) / prior) * 100 : null;
+                            const psfColor = cur == null ? "#bbb" : pct == null ? "#262724" : pct > 0 ? "#0f9d63" : "#dc2626";
                             return (
                               <>
-                                <td key={`${y}-psf`} style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#2d5a0e" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400, borderLeft: "2px solid #c8ddb8" }}>
-                                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
-                                    {fmtPSF(rec?.salesPSF)}
-                                    {priorRec && <TrendIcon cur={rec?.salesPSF} prior={priorRec.salesPSF} />}
-                                  </span>
+                                <td key={`${y}-psf`} style={{ padding: "7px 10px", textAlign: "right", color: psfColor, fontWeight: cur ? 600 : 400, borderLeft: "2px solid #c8ddb8" }}>
+                                  {fmtPSF(cur)}
+                                  {pct != null && <span style={{ marginLeft: 4, fontSize: 11 }}>({pct > 0 ? "+" : "−"}{Math.abs(pct).toFixed(1)}%)</span>}
                                 </td>
                                 <td key={`${y}-tot`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
@@ -687,7 +675,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                             const rec = row.byYear[selectedYear as number];
                             return (
                               <>
-                                <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#2d5a0e" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}</td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#262724" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtNum(rec?.sf)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
