@@ -17,6 +17,7 @@ import clientErrorsRouter from "./clientErrors";
 import ratesRouter from "./rates";
 import uploadLogRouter from "./uploadLog";
 import extractionLessonsRouter from "./extractionLessons";
+import leaseAbstractsRouter from "./leaseAbstracts";
 
 const router: IRouter = Router();
 
@@ -37,6 +38,7 @@ router.use(clientErrorsRouter);
 router.use(ratesRouter);
 router.use(uploadLogRouter);
 router.use(extractionLessonsRouter);
+router.use(leaseAbstractsRouter);
 router.use(aiRouter);
 
 export default router;

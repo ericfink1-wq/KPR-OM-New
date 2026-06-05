@@ -12,3 +12,4 @@ export * from "./loginEvents";
 export * from "./uploadLog";
 export * from "./extractionLessons";
 export * from "./sessions";
+export * from "./leaseAbstracts";

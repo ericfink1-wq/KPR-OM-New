@@ -6,6 +6,7 @@ import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
 import { ensureSessionTable } from "./lib/sessionStore";
 import { ensureUploadLogTable } from "./routes/uploadLog";
+import { ensureLeaseAbstractsTable } from "./routes/leaseAbstracts";
 
 const rawPort = process.env["PORT"];
 
@@ -59,6 +60,13 @@ ensureSessionTable()
 ensureUploadLogTable()
   .then(() => logger.info("upload_log table ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureUploadLogTable failed on startup (will retry on first use)"));
+
+// Provision the lease-abstracts table on startup, so DEV matches PROD and
+// Replit's publish diff stays clean. Best-effort. Keep in sync with
+// schema/leaseAbstracts.ts and routes/leaseAbstracts.ts.
+ensureLeaseAbstractsTable()
+  .then(() => logger.info("lease_abstracts table ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureLeaseAbstractsTable failed on startup (will retry on first use)"));
 
 // Clear ZOMBIE database connections on every boot. A stuck/idle-in-transaction
 // connection (left by an earlier hung request, and kept alive across app restarts

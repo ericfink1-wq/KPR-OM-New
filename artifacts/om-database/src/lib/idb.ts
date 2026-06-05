@@ -173,6 +173,146 @@ export interface Tenant {
   salesNotes?: string | null;
 }
 
+// ---- Lease abstracts ----------------------------------------------------------
+// A structured, reconciled summary of one tenant's FULL lease document set
+// (original lease + amendments + assignments + guaranties + option exercises +
+// waivers). Reconciled by Claude (latest-controlling-document-wins) and stored
+// per deal + tenant. Source PDFs are NOT stored — every fact cites its document
+// name, section, and page so the original can be found on the user's own server.
+
+// A precise pointer back to the source document for one fact.
+export interface AbstractCitation {
+  doc?: string | null;      // document name, e.g. "Cub Foods Lease"
+  section?: string | null;  // e.g. "§9.6" or "Recital C"
+  page?: string | null;     // e.g. "20 of 49" or "1"
+}
+
+// A single reconciled value plus its citation (used for the prose-style fields).
+export interface AbstractField {
+  value?: string | null;
+  cite?: AbstractCitation | null;
+}
+
+// One guarantor in the guaranty stack (a lease can accumulate several across
+// successive assignments — e.g. a corporate parent guaranty plus later personal
+// guaranties from each assignee).
+export interface GuarantyEntry {
+  guarantor?: string | null;
+  scope?: string | null;            // e.g. "All financial obligations; payment not collection"
+  cap?: string | null;              // any dollar/scope cap, else null
+  inForce?: boolean | null;         // best understanding of whether it still applies
+  cite?: AbstractCitation | null;
+}
+
+// One link in a tenant- or landlord-succession chain.
+export interface PartyChainEntry {
+  entity?: string | null;
+  role?: string | null;             // "tenant" | "landlord" | free note
+  effectiveDate?: string | null;    // ISO
+  instrument?: string | null;       // the assignment/merger/deed doc that effected it
+  cite?: AbstractCitation | null;
+}
+
+// One renewal/extension option and its current status.
+export interface AbstractOption {
+  ordinal?: number | null;          // 1, 2, 3...
+  length?: string | null;           // "5 years"
+  status?: "exercised" | "available" | "expired" | null;
+  windowStart?: string | null;      // ISO — term start if/when this option runs
+  windowEnd?: string | null;        // ISO
+  rent?: string | null;             // annual rent for this option period
+  exerciseConditions?: string | null; // e.g. notice window, net-worth tests from assignments
+  exercisedDate?: string | null;    // ISO, when exercised
+  cite?: AbstractCitation | null;
+}
+
+// One step in the base-rent schedule.
+export interface AbstractRentStep {
+  periodStart?: string | null;      // ISO
+  periodEnd?: string | null;        // ISO
+  annualRent?: number | string | null;
+  monthlyRent?: number | string | null;
+  psf?: number | string | null;
+  note?: string | null;             // "flat", "first option", etc.
+  cite?: AbstractCitation | null;
+}
+
+// One exclusive/use covenant plus any later waivers/modifications to it.
+export interface AbstractExclusive {
+  description?: string | null;
+  modifications?: { change?: string | null; date?: string | null; cite?: AbstractCitation | null }[] | null;
+  cite?: AbstractCitation | null;
+}
+
+// One entry in the premises-size history (anchor footprints grow via expansions).
+export interface AbstractSizeHistory {
+  sf?: number | string | null;
+  asOf?: string | null;             // ISO or year
+  cite?: AbstractCitation | null;
+}
+
+// A reconciliation/defect flag surfaced for the user's attention.
+export interface AbstractFlag {
+  severity?: "info" | "watch" | "defect" | null;
+  issue?: string | null;
+  detail?: string | null;
+}
+
+// One source document in the reconciled set (name + date + type only).
+export interface AbstractSourceDoc {
+  name?: string | null;
+  date?: string | null;             // ISO
+  type?: string | null;             // lease | amendment | guaranty | assignment | option | waiver | letter | license | other
+}
+
+export interface LeaseAbstract {
+  id?: string;                      // abstract id (la_...)
+  dealId?: string;                  // owning deal id
+  tenantName?: string;              // links to roster Tenant.name
+  dba?: string | null;             // operating banner if different from tenant of record
+  status?: "draft" | "final" | null;
+  version?: number | null;
+  asOf?: string | null;            // reconciliation date (ISO)
+
+  // Identity / premises
+  currentSF?: number | string | null;
+  sizeHistory?: AbstractSizeHistory[] | null;
+
+  // Parties / succession
+  tenantChain?: PartyChainEntry[] | null;
+  landlordChain?: PartyChainEntry[] | null;
+
+  // Guaranty stack
+  guaranties?: GuarantyEntry[] | null;
+
+  // Term & options
+  commencement?: string | null;     // ISO
+  expiration?: string | null;       // ISO (current controlling expiration)
+  term?: AbstractField | null;      // prose summary of the term
+  options?: AbstractOption[] | null;
+
+  // Rent
+  rentSchedule?: AbstractRentStep[] | null;
+  percentageRent?: AbstractField | null;
+  securityDeposit?: AbstractField | null;
+
+  // Covenants
+  exclusives?: AbstractExclusive[] | null;
+  goDark?: AbstractField | null;
+  assignment?: AbstractField | null;
+  camTax?: AbstractField | null;
+  defaultTerms?: AbstractField | null;
+  governingLaw?: string | null;
+
+  // Meta
+  flags?: AbstractFlag[] | null;
+  narrative?: string | null;        // short plain-English summary the Analyst chat can lean on
+  sourceDocuments?: AbstractSourceDoc[] | null;
+
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface OccBreakdown {
   base: number;
   reimbursements: number;
