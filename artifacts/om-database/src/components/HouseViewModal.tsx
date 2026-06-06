@@ -52,8 +52,8 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>🧠 House View</div>
             <div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>
-              KPR's underwriting lens — distilled from your deal reviews, applied to every future analysis.
-              {data ? ` · from ${data.sourceCount} review${data.sourceCount === 1 ? "" : "s"}${data.lastDistilledAt ? ` · rebuilt ${new Date(data.lastDistilledAt).toLocaleDateString()}` : ""}` : ""}
+              KPR's underwriting lens — distilled from your deal takes, applied to every future analysis. Updates automatically as you write takes.
+              {data ? ` · from ${data.sourceCount} take${data.sourceCount === 1 ? "" : "s"}${data.lastDistilledAt ? ` · rebuilt ${new Date(data.lastDistilledAt).toLocaleDateString()}` : ""}` : ""}
             </div>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ fontSize: 20, lineHeight: 1, color: C.faint, background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>×</button>
@@ -65,8 +65,13 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
           ) : (
             <>
               <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.5, marginBottom: 10 }}>
-                This is what the analyst applies to grades, strengths, risks and pricing on every deal. {isAdmin ? "Edit it directly, or rebuild it from the latest reviews." : "Ask an admin to edit or rebuild it."}
+                This is what the analyst applies to grades, strengths, risks and pricing on every deal. It re-learns automatically when you save a take{isAdmin ? " — or edit it directly below." : "."}
               </div>
+              {data && data.manuallyEdited && data.pendingReviews > 0 && (
+                <div style={{ fontSize: 12, color: "#8a5a00", background: "#fbf1e4", border: "1px solid #e0c9a8", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+                  ⚠ {data.pendingReviews} new take{data.pendingReviews === 1 ? "" : "s"} since you hand-edited this. Auto-update is paused so your edits aren't overwritten — {isAdmin ? "click Rebuild to fold them in (replaces your edits)." : "ask an admin to Rebuild to fold them in."}
+                </div>
+              )}
               {isAdmin ? (
                 <textarea value={text} onChange={(e) => setText(e.target.value)} rows={16}
                   placeholder="No House View yet. Write a few deal reviews, then click “Rebuild from reviews” to distill them — or type your underwriting principles here directly."

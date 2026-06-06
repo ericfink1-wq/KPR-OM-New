@@ -7,7 +7,7 @@ import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchma
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
 import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
-import { getHouseView, saveHouseView } from "./houseView";
+import { getHouseView, saveHouseView, incrementPendingReviews } from "./houseView";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -562,6 +562,20 @@ export async function rebuildHouseView(updatedBy: string | null): Promise<{ cont
   const content = (blocks?.find((b) => b.type === "text")?.text ?? "").trim();
   await saveHouseView(content, updatedBy, { sourceCount: reviews.length });
   return { content, sourceCount: reviews.length };
+}
+
+// Called (in the background) whenever a deal's "Our Take" is saved. Keeps the House
+// View learning automatically: re-distills from all takes — UNLESS the House View
+// was hand-edited since the last rebuild, in which case it leaves the manual text
+// alone and just counts the take as pending (the UI nudges for a manual rebuild).
+export async function autoUpdateHouseViewOnReview(updatedBy: string | null): Promise<void> {
+  try {
+    const hv = await getHouseView();
+    if (hv.manuallyEdited) { await incrementPendingReviews(); return; }
+    await rebuildHouseView(updatedBy);
+  } catch {
+    /* best-effort: never let House-View upkeep affect the deal save */
+  }
 }
 
 export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {

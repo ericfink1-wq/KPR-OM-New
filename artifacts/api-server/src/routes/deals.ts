@@ -2,7 +2,7 @@ import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable } from "@workspace/db";
 import { eq, isNotNull, sql } from "drizzle-orm";
-import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary } from "../lib/extract";
+import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHouseViewOnReview } from "../lib/extract";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
@@ -323,6 +323,10 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     const id = req.params.id as string;
     const { id: _bodyId, ...rest0 } = req.body as Record<string, unknown>;
     const rest = coerceDealArrays(rest0);
+    // Capture the prior "Our Take" so we only re-learn the House View when it changes.
+    const prevRows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    const prevReview = typeof (prevRows[0]?.data as Record<string, unknown> | undefined)?.dealReview === "string"
+      ? ((prevRows[0]!.data as Record<string, unknown>).dealReview as string).trim() : "";
     await db.insert(dealsTable)
       .values({ id, data: rest })
       .onConflictDoUpdate({ target: dealsTable.id, set: { data: rest, updatedAt: new Date() } });
@@ -330,6 +334,10 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     setImmediate(() => {
       rebuildTenantIndex(id, rest).catch(() => {});
       rebuildCompsIndex(id, rest).catch(() => {});
+      // When the deal's "Our Take" changed, auto-update the House View in the
+      // background (re-distills unless the House View was hand-edited).
+      const newReview = typeof rest.dealReview === "string" ? rest.dealReview.trim() : "";
+      if (newReview !== prevReview) autoUpdateHouseViewOnReview(req.session.userEmail || null).catch(() => {});
       // Auto-fetch demographics for new deals that have an address but no demo data yet
       if (!rest.marketDemographics && !rest.demoChecked) {
         (async () => {

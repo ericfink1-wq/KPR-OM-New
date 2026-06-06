@@ -479,7 +479,8 @@ export async function apiReanalyzeDeal(id: string, opts?: { overwriteRoster?: bo
 // (not the stored OM). Safe after a manual rent-roll update — does not touch tenants.
 // --- House View (distilled cross-deal underwriting lens) ---
 export interface HouseViewData {
-  content: string; sourceCount: number; lastDistilledAt: string | null; updatedAt: string | null; updatedBy: string | null;
+  content: string; sourceCount: number; pendingReviews: number; manuallyEdited: boolean;
+  lastDistilledAt: string | null; updatedAt: string | null; updatedBy: string | null;
 }
 export async function apiGetHouseView(): Promise<HouseViewData> {
   const resp = await apiFetch("/house-view");
