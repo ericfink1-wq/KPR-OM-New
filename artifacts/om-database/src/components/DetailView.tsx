@@ -2597,6 +2597,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 {pastePanelOpen ? "Close paste box" : "⌘ Paste roster"}
               </button>
+              <button onClick={() => setShowAbstractUpload(true)}
+                title="Upload one tenant's abstract or a whole-property file — it auto-routes to the right tenants"
+                style={{ background:"#fff", border:"1px solid #c2d6f0", color:"#1f4d8f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                ⬆ Upload abstracts
+              </button>
               <span style={{ fontSize:11.5, color: rrError ? "#dc2626" : "#3f7a1f" }}>
                 {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? `✓ Refreshed ${d.tenantsAsOf}` : "")}
               </span>
@@ -2655,13 +2660,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               </div>
             </div>
           )}
-          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
-            <button onClick={() => setShowAbstractUpload(true)}
-              title="Upload one tenant's abstract or a whole-property file — it auto-routes to the right tenants"
-              style={{ background:"#fff", border:"1px solid #c2d6f0", color:"#1f4d8f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
-              ⬆ Upload abstracts
-            </button>
-          </div>
           <TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
