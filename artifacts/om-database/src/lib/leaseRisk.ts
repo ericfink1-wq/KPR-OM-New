@@ -130,7 +130,8 @@ function rosterRentByKey(tenants: Tenant[]): Map<string, number> {
 function stamp<T extends { verifiedAgainstExecutedDoc?: boolean | null; sourceDocument?: string | null }>(
   clauses: T[] | null | undefined, verified: boolean, fallbackDoc: string,
 ): T[] {
-  return (clauses ?? []).map((c) => ({
+  // Guard against malformed stored data (a clause group that isn't an array).
+  return (Array.isArray(clauses) ? clauses : []).filter((c): c is T => !!c && typeof c === "object").map((c) => ({
     ...c,
     sourceDocument: c.sourceDocument || fallbackDoc,
     verifiedAgainstExecutedDoc: c.verifiedAgainstExecutedDoc ?? verified,
@@ -349,11 +350,16 @@ export function buildDiligenceList(deal: Deal, abstracts: LeaseAbstract[] = []):
       items.push({ kind: "verify_unverified", tenant: r.tenant, message: `${r.tenant}: clause captured from a summary — pull and verify against the executed lease.` });
     }
   }
-  for (const t of deal.tenants || []) {
-    if (!t.name || isVacant(t.name)) continue;
-    if (t.isNAP || (t.isAnchor && (t.isDark || t.isNAP))) continue; // shadow/unowned anchors aren't "our" leases to pull
-    if (haveCoTenancy.has(tenantKey(t.canonicalName || t.name))) continue;
-    items.push({ kind: "pull_leases_no_cotenancy", tenant: t.canonicalName || t.name, message: `${t.canonicalName || t.name}: co-tenancy not disclosed in OM — pull leases.` });
+  // Only emit "pull leases" once the OM has actually been processed for lease risk
+  // (deal.leaseRisk present). On older deals with no lease-risk data we have no
+  // basis to claim co-tenancy is "not disclosed", and we don't want a noisy list.
+  if (deal.leaseRisk) {
+    for (const t of deal.tenants || []) {
+      if (!t.name || isVacant(t.name)) continue;
+      if (t.isNAP || (t.isAnchor && (t.isDark || t.isNAP))) continue; // shadow/unowned anchors aren't "our" leases to pull
+      if (haveCoTenancy.has(tenantKey(t.canonicalName || t.name))) continue;
+      items.push({ kind: "pull_leases_no_cotenancy", tenant: t.canonicalName || t.name, message: `${t.canonicalName || t.name}: co-tenancy not disclosed in OM — pull leases.` });
+    }
   }
   return items;
 }

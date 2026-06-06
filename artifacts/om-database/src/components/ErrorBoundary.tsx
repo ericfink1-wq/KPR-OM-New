@@ -6,7 +6,7 @@ interface State {
 }
 
 export default class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; fallback?: React.ReactNode },
   State
 > {
   state: State = { hasError: false, message: "" };
@@ -37,6 +37,10 @@ export default class ErrorBoundary extends React.Component<
 
   render() {
     if (!this.state.hasError) return this.props.children;
+    // When a `fallback` is provided, this boundary is wrapping a NON-critical
+    // subtree (e.g. one panel) — render the quiet fallback instead of the
+    // full-page error screen, so one widget's failure can't take down the page.
+    if (this.props.fallback !== undefined) return this.props.fallback;
     return (
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",

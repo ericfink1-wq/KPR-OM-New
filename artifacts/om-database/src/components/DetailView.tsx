@@ -30,6 +30,7 @@ import { extractSalesReport, buildSalesHistoryPatch } from "../lib/salesExtract"
 import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
 import LeaseRiskPanel from "./LeaseRiskPanel";
+import ErrorBoundary from "./ErrorBoundary";
 // @react-pdf/renderer (~2 MB) and the PDF document components are loaded ON
 // CLICK via PdfDownloadButton, so opening a deal page no longer pulls the whole
 // PDF engine into its chunk.
@@ -2724,8 +2725,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         </div>
       )}
 
-      {/* Lease Risk — anchor-dependency / co-tenancy exposure (live, token-free) */}
-      <LeaseRiskPanel deal={d} abstracts={abstracts} />
+      {/* Lease Risk — anchor-dependency / co-tenancy exposure (live, token-free).
+          Wrapped so a panel error can never take down the Tenants tab (it logs +
+          renders nothing instead). */}
+      <ErrorBoundary fallback={null}><LeaseRiskPanel deal={d} abstracts={abstracts} /></ErrorBoundary>
 
       {/* Lease Rollover & WALT */}
       {(d.tenants||[]).length > 0 && (
