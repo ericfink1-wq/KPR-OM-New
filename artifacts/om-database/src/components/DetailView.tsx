@@ -53,7 +53,7 @@ const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map((
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
   overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Also known as",id:"section-aliases"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Your notes",id:"section-notes"}],
   ai: [{label:"Highlights",id:"section-highlights"},{label:"Our thesis",id:"section-thesis"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
-  tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease rollover & WALT",id:"section-rollover"}],
+  tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Ownership structure",id:"section-ownership"}],
   financing: [{label:"Senior loan",id:"section-senior-loan"},{label:"Amortization",id:"section-amortization"},{label:"Prepay & swap",id:"section-prepay"},{label:"Preferred equity",id:"section-pref-equity"}],
   market: [{label:"Market sale",id:"section-market-sale"},{label:"Comp benchmark",id:"section-comp-benchmark"},{label:"Property info",id:"section-property-info"},{label:"Demographics",id:"section-demographics"},{label:"Trade-area demographics",id:"section-trade-area"}],
@@ -896,6 +896,7 @@ const SECTION_LABELS: Record<string, string> = {
   "section-highlights": "Investment Highlights",
   "section-tenants": "Tenant Roster",
   "section-tenant-sales": "Tenant Sales",
+  "section-lease-risk": "Lease Risk",
   "section-rollover": "Lease Rollover & WALT",
   "section-dealscore": "AI Deal Score",
   "section-upside": "Upside Items",
@@ -2723,13 +2724,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         </div>
       )}
 
+      {/* Lease Risk — anchor-dependency / co-tenancy exposure (live, token-free) */}
+      <LeaseRiskPanel deal={d} abstracts={abstracts} />
+
       {/* Lease Rollover & WALT */}
       {(d.tenants||[]).length > 0 && (
         <div id="section-rollover"><LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} /></div>
       )}
-
-      {/* Lease Risk — anchor-dependency / co-tenancy exposure (live, token-free) */}
-      <LeaseRiskPanel deal={d} abstracts={abstracts} />
 
       </>)}
       {tab === "ai" && (<>

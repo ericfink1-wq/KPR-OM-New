@@ -76,7 +76,7 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
   const tier1Delta = (expOM && exp && expOM.tier1Rent !== exp.tier1Rent);
 
   return (
-    <div id="section-lease-risk" style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: isMobile ? "12px 13px" : "14px 16px", marginTop: 14 }}>
+    <div id="section-lease-risk" data-jump="Lease Risk" style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: isMobile ? "12px 13px" : "14px 16px", marginTop: 14 }}>
       <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>LEASE RISK · ANCHOR DEPENDENCY</div>
       <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.5, marginBottom: 10 }}>
         Co-tenancy / kickout clauses that let a tenant cut or stop rent when an anchor leaves — invisible in a rent roll. Pick an anchor to model its departure.
