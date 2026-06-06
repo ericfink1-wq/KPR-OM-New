@@ -7,6 +7,7 @@ import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchma
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
 import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
+import { getHouseView, saveHouseView } from "./houseView";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -269,6 +270,12 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // so the system applies past corrections to every new OM. Best-effort: never
   // blocks extraction if the lessons table is unavailable.
   const taughtRules = await lessonGuidance("om");
+  // KPR House View — the team's distilled underwriting lens, applied to the grade/
+  // narrative so new uploads are reviewed the way KPR thinks.
+  const houseView = await loadHouseViewText();
+  const houseBlock = houseView
+    ? `\n\nKPR HOUSE VIEW (apply this lens to dealScore, strengths, risks, redFlags, upsideItems and notes — weigh it but stay grounded in THIS OM's data):\n${houseView}\n`
+    : "";
   // Prompt caching: the large static EXTRACTION_PROMPT is byte-identical on every
   // OM, so mark it as a cached block. Across a batch of deals (within the cache
   // window) the schema/instructions prefix is a cache hit — cheaper + faster on
@@ -279,7 +286,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // the whole thing each round — the main cause of slow multi-pass extractions.
   const cachedBlocks: Block[] = [
     { type: "text", text: EXTRACTION_PROMPT, cache_control: { type: "ephemeral" } },
-    { type: "text", text: taughtRules + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText, cache_control: { type: "ephemeral" } },
+    { type: "text", text: taughtRules + houseBlock + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText, cache_control: { type: "ephemeral" } },
   ];
   // Per-phase timing (measurement only — does not change extraction behavior).
   const _extractStart = Date.now();
@@ -477,6 +484,10 @@ BELOW-MARKET RENT — judge it correctly, do not treat it as automatically good 
 - Below-market rent can also be a WARNING, not upside: if sales are weak or occupancyCost is already high, the low rent may reflect a struggling tenant or a soft market, and pushing rent at renewal risks losing them. Frame it as a risk in that case.
 - If sales/occupancy-cost data is absent, stay measured: note the below-market rent as a POSSIBLE mark-to-market opportunity contingent on lease term/options and sales, rather than asserting upside.
 
+KPR HOUSE VIEW (the "houseView" field, if present): this is the KPR team's distilled, cross-deal underwriting philosophy — what they consistently reward and penalize, their cap-rate expectations by product type and market, and recurring concerns, learned from their reviews of past deals. Apply this lens to the grade, strengths, risks, and narrative so the analysis reflects how KPR actually thinks — while staying grounded in THIS deal's data. A deal-specific kprReview or kprThesis (if present) takes precedence over the general House View where they conflict. If houseView is absent, ignore this.
+
+KPR REVIEW (the "kprReview" field, if present): this is the KPR team's OVERALL HUMAN ASSESSMENT of THIS deal — what they like, what concerns them, and their read on the broker's pricing / cap rate. It is the team's verdict; weave it directly into the narrative, strengths, risks, and especially the grade rationale, and let it move the grade. You may add nuance or push back where the roster/financials clearly contradict it, but give it real weight (it reflects experienced underwriting judgment, not just optimism). Where the review questions pricing (e.g. "broker's 6.5% is too expensive for this product/market"), reflect that as a pricing/return risk. If kprReview is absent, ignore this.
+
 KPR THESIS (the "kprThesis" field, if present): this is the KPR acquisitions team's own stated thesis / assumptions for the deal — why they like it, what they're underwriting to, risks they're discounting. Treat it as INFORMED INTERNAL CONTEXT and weave it into the narrative, strengths, and risks — but stay OBJECTIVE and ADVISORY: you may agree, add nuance, or PUSH BACK where the roster/financials don't support a claim. If a thesis point is contradicted by the data, say so plainly (e.g. as a risk or caveat) rather than parroting it. Do NOT let an optimistic thesis inflate the grade beyond what the numbers justify. If kprThesis is absent, ignore this.
 
 LEASE RISK (anchor-dependency / co-tenancy): If a "leaseRiskExposure" block is present, it lists co-tenancy / sales-kickout exposure the APP computed from the lease documents — base rent that can convert to alternate/reduced rent (or grant a termination right) if a named anchor goes dark. NARRATE those figures; never re-derive or invent them. Fold the MATERIAL exposure into the Risks list and the narrative's risk sentence — e.g. a Tier-1 figure that is significant vs. the property's rent is a real risk ("~$X of base rent (TenantA, TenantB) converts to alternate rent if Anchor goes dark"). Tier-2 (needs a second event) is a lesser watch item. Where an executed lease has VERIFIED/mitigated a clause (Tier-1 reduced, or a tenant de-linked), reflect it as resolved rather than a live risk, and do not list a mitigated tenant as at-risk. Clauses still "OM-only (unverified)" should be framed as "subject to confirming the executed leases." Keep it proportional — a small Tier-1 relative to total rent is a minor note, not a headline. If no leaseRiskExposure block is present, ignore this.
@@ -498,11 +509,70 @@ export async function loadLeaseRiskSummary(dealId: string, dealData: Record<stri
   }
 }
 
+// Load the distilled House View text (KPR's cross-deal underwriting lens) for
+// injection into the grade/narrative. Best-effort: "" on any failure.
+export async function loadHouseViewText(): Promise<string> {
+  try { return (await getHouseView()).content.trim(); } catch { return ""; }
+}
+
+const HOUSE_VIEW_DISTILL_PROMPT = `You are distilling an acquisitions team's underwriting JUDGMENT from their free-text reviews of retail shopping-center deals into a compact, durable "House View" that will be applied to every FUTURE deal the team analyzes.
+
+Below is a JSON array of past deal reviews (each with the property, center type, state, going-in cap rate where known, and the team's verbatim review). Read them and synthesize the team's CONSISTENT preferences and judgment — NOT a deal-by-deal summary.
+
+Return ONLY plain text (no JSON, no markdown headers), ~150-350 words, organized as short labeled lines covering, where the reviews support it:
+- REWARDS: what the team consistently likes (e.g. strong grocer sales + below-market rent, credit anchors, infill density).
+- PENALIZES / CONCERNS: what consistently worries them (e.g. junior boxes with high rent + soft sales, single-anchor dependence, weak co-tenancy).
+- CAP RATE / PRICING: their expectations by product type and market (e.g. "grocery-anchored in secondary NJ markets: rich below ~6.75%, fair ~7%+"); capture any explicit cap-rate opinions and generalize them by product/market.
+- TENANT/CREDIT VIEWS: recurring stances (e.g. treat franchised QSR as non-credit).
+- DEAL TYPES TO AVOID: anything they say they won't buy.
+Only include a point if the reviews actually support it. Be specific and quote their numbers/thresholds where given. Do not invent preferences. This text becomes the team's standing lens, so write durable principles, not one-off notes.`;
+
+// Rebuild the House View by distilling every deal's dealReview. Returns the new
+// content + how many reviews fed it. Token cost: one Haiku pass.
+export async function rebuildHouseView(updatedBy: string | null): Promise<{ content: string; sourceCount: number }> {
+  const rows = await db.select().from(dealsTable);
+  const reviews = rows
+    .map((r) => r.data as Record<string, unknown>)
+    .filter((d) => d && !d.trashedAt && typeof d.dealReview === "string" && (d.dealReview as string).trim())
+    .map((d) => ({
+      property: d.propertyName, centerType: d.centerType, state: d.state,
+      capRate: d.capRate ?? null, askingPrice: d.askingPrice ?? null,
+      review: (d.dealReview as string).trim(),
+    }));
+  if (reviews.length === 0) {
+    await saveHouseView("", updatedBy, { sourceCount: 0 });
+    return { content: "", sourceCount: 0 };
+  }
+  const upstream = await callAnthropicOnce({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1500,
+    messages: [{ role: "user", content: [
+      { type: "text", text: HOUSE_VIEW_DISTILL_PROMPT, cache_control: { type: "ephemeral" } },
+      { type: "text", text: "DEAL REVIEWS (JSON):\n" + JSON.stringify(reviews, null, 1) },
+    ] }],
+  });
+  const data = await upstream.json() as Record<string, unknown>;
+  if (!upstream.ok) {
+    const errMsg = typeof data.error === "object" && data.error !== null
+      ? (data.error as Record<string, unknown>).message ?? JSON.stringify(data.error)
+      : String(data.error ?? "Unknown error");
+    throw new Error(String(errMsg));
+  }
+  const blocks = data.content as Array<{ type: string; text?: string }>;
+  const content = (blocks?.find((b) => b.type === "text")?.text ?? "").trim();
+  await saveHouseView(content, updatedBy, { sourceCount: reviews.length });
+  return { content, sourceCount: reviews.length };
+}
+
 export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {
+  const houseView = await loadHouseViewText();
   const t = Array.isArray(dealData.tenants) ? (dealData.tenants as Array<Record<string, unknown>>) : [];
   const thesis = typeof dealData.dealThesis === "string" ? dealData.dealThesis.trim() : "";
+  const review = typeof dealData.dealReview === "string" ? dealData.dealReview.trim() : "";
   const snapshot = {
+    houseView: houseView || undefined,
     leaseRiskExposure: leaseRiskSummary || undefined,
+    kprReview: review || undefined,
     propertyName: dealData.propertyName, address: dealData.address, city: dealData.city, state: dealData.state,
     assetType: dealData.assetType, centerType: dealData.centerType,
     totalSF: dealData.totalSF, occupancy: dealData.occupancy, walt: dealData.walt,

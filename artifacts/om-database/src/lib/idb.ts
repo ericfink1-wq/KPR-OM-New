@@ -832,6 +832,11 @@ export interface Deal {
   // KPR's own thesis / assumptions for this deal — free text the acquisitions team
   // writes. Folded into the AI grade/narrative (advisory) on re-grade.
   dealThesis?: string | null;
+  // KPR's overall human REVIEW of this deal — our honest take (what we like / don't
+  // like, our read on broker pricing / cap rate). Folds into THIS deal's grade &
+  // narrative, AND is distilled across all reviewed deals into the global "House
+  // View" that teaches the analyst how we think and shapes every future analysis.
+  dealReview?: string | null;
   verified?: Record<string, { by?: string; ts?: number }>;
   autoPassed?: boolean;
   autoPassedAt?: string;

@@ -31,6 +31,7 @@ import MyUnderwritingPanel from "./MyUnderwritingPanel";
 import LeaseRollover from "./LeaseRollover";
 import LeaseRiskPanel from "./LeaseRiskPanel";
 import ErrorBoundary from "./ErrorBoundary";
+import HouseViewModal from "./HouseViewModal";
 // @react-pdf/renderer (~2 MB) and the PDF document components are loaded ON
 // CLICK via PdfDownloadButton, so opening a deal page no longer pulls the whole
 // PDF engine into its chunk.
@@ -53,7 +54,7 @@ const PAGE_TABS = [
 const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
   overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Also known as",id:"section-aliases"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Your notes",id:"section-notes"}],
-  ai: [{label:"Highlights",id:"section-highlights"},{label:"Our thesis",id:"section-thesis"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
+  ai: [{label:"Highlights",id:"section-highlights"},{label:"Our thesis",id:"section-thesis"},{label:"Our review",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
   tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Ownership structure",id:"section-ownership"}],
   financing: [{label:"Senior loan",id:"section-senior-loan"},{label:"Amortization",id:"section-amortization"},{label:"Prepay & swap",id:"section-prepay"},{label:"Preferred equity",id:"section-pref-equity"}],
@@ -905,6 +906,7 @@ const SECTION_LABELS: Record<string, string> = {
   "section-financials": "Key Financials",
   "section-assumptions": "Key Assumptions",
   "section-thesis": "Our Thesis",
+  "section-review": "Our Review",
   "section-comp-benchmark": "Comp Benchmark",
   "section-closing-costs": "Estimated Closing Costs",
   "section-cashflow": "Cash Flow",
@@ -1113,6 +1115,77 @@ function DealThesisBox({ deal, onUpdate, onRegrade, regrading }: {
   );
 }
 
+// Our REVIEW / overall take on the deal. Like the thesis box, but it's our verdict
+// (what we like / don't like, our read on pricing). It folds into THIS deal's grade
+// on re-grade, AND feeds the portfolio "House View" (Phase 2) that teaches the
+// analyst how we think across all future deals.
+function DealReviewBox({ deal, onUpdate, onRegrade, regrading, onOpenHouseView }: {
+  deal: Deal;
+  onUpdate: (id: string, patch: Partial<Deal>) => void;
+  onRegrade: () => void | Promise<void>;
+  regrading: boolean;
+  onOpenHouseView?: () => void;
+}) {
+  const [text, setText] = useState(deal.dealReview ?? "");
+  const saved = (deal.dealReview ?? "");
+  const dirty = text.trim() !== saved.trim();
+
+  const lastSavedRef = useRef(saved);
+  useEffect(() => {
+    const prevSaved = lastSavedRef.current;
+    if (saved !== prevSaved) {
+      lastSavedRef.current = saved;
+      setText(prev => (prev.trim() === "" || prev === prevSaved ? saved : prev));
+    }
+  }, [saved]);
+
+  const save = () => { if (dirty) onUpdate(deal.id, { dealReview: text.trim() || null }); };
+  const saveAndRegrade = async () => {
+    if (dirty) onUpdate(deal.id, { dealReview: text.trim() || null });
+    await Promise.resolve();
+    await onRegrade();
+  };
+
+  return (
+    <div style={{ background:"#f1f8f2", border:"1px solid #c2e0c9", borderRadius:12, padding:"16px 18px", marginBottom:14 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:6, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:13 }}>🧭</span>
+          <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.04em", color:"#1f7a43", textTransform:"uppercase" }}>Our Review / Deal Take</span>
+        </div>
+        {onOpenHouseView && (
+          <button onClick={onOpenHouseView}
+            style={{ background:"#fff", border:"1px solid #c2e0c9", color:"#1f7a43", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+            🧠 House View
+          </button>
+        )}
+      </div>
+      <div style={{ fontSize:11, color:"#5e7165", marginBottom:10, lineHeight:1.5 }}>
+        Your honest overall assessment — what you like, what concerns you, your read on the broker's pricing / cap. Folds into this deal's grade when you re-grade, and is distilled across all your reviews into the <b>House View</b> that teaches the analyst how you think and shapes every future deal.
+      </div>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={save}
+        placeholder="e.g. We like the grocer's strong sales and below-market rent. Concerned about Best Buy — rent is high and sales are soft. Broker guided to a 6.5% cap, which is too expensive for this product and market…"
+        rows={4}
+        style={{ width:"100%", boxSizing:"border-box", resize:"vertical", fontFamily:"'Inter',sans-serif", fontSize:13, lineHeight:1.55, padding:"10px 12px", border:"1px solid #c2e0c9", borderRadius:8, color:"#383a37", background:"#fff", outline:"none" }}
+      />
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10, flexWrap:"wrap" }}>
+        <button onClick={save} disabled={!dirty}
+          style={{ background: dirty ? "#fff" : "#eef3ea", border:"1px solid #c2e0c9", color: dirty ? "#1f7a43" : "#a89f8f", padding:"7px 14px", borderRadius:7, cursor: dirty ? "pointer" : "default", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+          {dirty ? "Save" : "Saved"}
+        </button>
+        <button onClick={saveAndRegrade} disabled={regrading || (!saved && !text.trim())}
+          style={{ background:"#1f7a43", border:"none", color:"#fff", padding:"7px 14px", borderRadius:7, cursor: regrading ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", opacity: regrading ? 0.6 : 1 }}>
+          {regrading ? "Re-grading…" : "✨ Save & Re-grade with this review"}
+        </button>
+        <span style={{ fontSize:10.5, color:"#9aa3b2" }}>Re-grade uses a token refresh.</span>
+      </div>
+    </div>
+  );
+}
+
 // Disposition subsection — collapsed behind a hide/unhide toggle by default,
 // auto-expanded when the deal is Sold (so exit details surface automatically).
 function DispositionSection({ sold, children }: { sold: boolean; children: React.ReactNode }) {
@@ -1278,6 +1351,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // the open viewer/paste modal. Loaded per deal; refreshed after a save/delete.
   const [abstracts, setAbstracts] = useState<LeaseAbstract[]>([]);
   const [abstractModal, setAbstractModal] = useState<{ mode: "view" | "add"; tenantName: string } | null>(null);
+  const [houseViewOpen, setHouseViewOpen] = useState(false);
   const [showAbstractUpload, setShowAbstractUpload] = useState(false);
   const [saleBusy, setSaleBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
@@ -2444,6 +2518,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         <DealThesisBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy}/>
       </div>
       )}
+      {showAcq && (
+      <div id="section-review" data-jump="Our Review">
+        <DealReviewBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy} onOpenHouseView={() => setHouseViewOpen(true)}/>
+      </div>
+      )}
 
       </>)}
       {(tab === "overview" || tab === "tenants") && (<>
@@ -2667,6 +2746,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
         /></div>
       )}
+
+      <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
 
       {abstractModal && (
         <LeaseAbstractModal

@@ -477,6 +477,26 @@ export async function apiReanalyzeDeal(id: string, opts?: { overwriteRoster?: bo
 
 // Regenerate summary/grade/strengths/risks/upside/red flags from the CURRENT roster
 // (not the stored OM). Safe after a manual rent-roll update — does not touch tenants.
+// --- House View (distilled cross-deal underwriting lens) ---
+export interface HouseViewData {
+  content: string; sourceCount: number; lastDistilledAt: string | null; updatedAt: string | null; updatedBy: string | null;
+}
+export async function apiGetHouseView(): Promise<HouseViewData> {
+  const resp = await apiFetch("/house-view");
+  if (!resp.ok) throw new Error("Failed to load House View");
+  return resp.json() as Promise<HouseViewData>;
+}
+export async function apiSaveHouseView(content: string): Promise<HouseViewData> {
+  const resp = await apiFetch("/house-view", { method: "PUT", body: JSON.stringify({ content }) });
+  if (!resp.ok) { const b = await resp.json().catch(() => ({})) as { error?: string }; throw new Error(b.error || "Failed to save House View"); }
+  return resp.json() as Promise<HouseViewData>;
+}
+export async function apiRebuildHouseView(): Promise<HouseViewData> {
+  const resp = await apiFetch("/house-view/rebuild", { method: "POST" });
+  if (!resp.ok) { const b = await resp.json().catch(() => ({})) as { error?: string }; throw new Error(b.error || "Failed to rebuild House View"); }
+  return resp.json() as Promise<HouseViewData>;
+}
+
 export async function apiRefreshAnalysis(id: string): Promise<{
   ok?: boolean; notes?: unknown; dealScore?: unknown;
   upsideItems?: unknown; redFlags?: { severity: string; description: string }[];
