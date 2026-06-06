@@ -325,6 +325,56 @@ export function computeDealExposure(deal: Deal, abstracts: LeaseAbstract[], anch
   return computeExposure(resolveTenantRisk(deal, abstracts), anchor);
 }
 
+// ── combined multi-anchor scenario ───────────────────────────────────────────────
+// "What if ALL of these anchors go dark together?" — evaluates each clause with the
+// whole selected set dark, surfacing cascade exposure a single-anchor view misses
+// (e.g. a tenant that needs two of three anchors dark). comboOnly = trips under the
+// combination but NOT under any single selected anchor alone.
+export interface CombinedClause {
+  tenant: string;
+  baseRentAnnual: number | null;
+  remedy: CoTenancyRemedy | null;
+  terminationNoticeDays: number | null;
+  verified: boolean;
+  triggerSummary: string;
+  comboOnly: boolean;
+}
+export interface CombinedExposure {
+  anchors: string[];
+  clauses: CombinedClause[];
+  totalRent: number;       // base rent that trips when all selected anchors go dark
+  comboOnlyRent: number;   // of that, the rent that trips ONLY because of the combination
+}
+
+export function computeCombinedExposure(resolved: ResolvedTenantRisk[], anchors: string[]): CombinedExposure {
+  const sel = anchors.filter(Boolean);
+  const darkLeaf = (c: TriggerCondition) => sel.some((a) => leafNamesAnchor(c, a));
+  const clauses: CombinedClause[] = [];
+  for (const r of resolved) {
+    for (const c of r.coTenancy) {
+      if (!sel.some((a) => triggerReferencesAnchor(c.triggerLogic, a))) continue; // unrelated to the selected set
+      if (!evaluateTrigger(c.triggerLogic, darkLeaf)) continue;                    // doesn't trip under the combination
+      const tripsSingle = sel.some((a) => evaluateTrigger(c.triggerLogic, (x) => leafNamesAnchor(x, a)));
+      clauses.push({
+        tenant: r.tenant,
+        baseRentAnnual: r.baseRentAnnual,
+        remedy: c.remedy ?? null,
+        terminationNoticeDays: c.terminationNoticeDays ?? null,
+        verified: c.verifiedAgainstExecutedDoc === true,
+        triggerSummary: describeTrigger(c.triggerLogic),
+        comboOnly: !tripsSingle,
+      });
+    }
+  }
+  clauses.sort((a, b) => Number(a.comboOnly) - Number(b.comboOnly) || (b.baseRentAnnual ?? 0) - (a.baseRentAnnual ?? 0));
+  return {
+    anchors: sel,
+    clauses,
+    totalRent: clauses.reduce((s, c) => s + (c.baseRentAnnual ?? 0), 0),
+    comboOnlyRent: clauses.filter((c) => c.comboOnly).reduce((s, c) => s + (c.baseRentAnnual ?? 0), 0),
+  };
+}
+
 // ── auto-generated diligence to-do list ──────────────────────────────────────────
 export interface DiligenceItem {
   kind: "verify_unverified" | "pull_leases_no_cotenancy";

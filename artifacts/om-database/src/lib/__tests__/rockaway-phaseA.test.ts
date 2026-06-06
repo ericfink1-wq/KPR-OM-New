@@ -108,3 +108,22 @@ describe("Rockaway Phase B — Ulta abstract mitigates the Dick's exposure", () 
     expect(ulta?.hasUnverified).toBe(false);
   });
 })
+
+import { computeCombinedExposure } from "../leaseRisk";
+describe("Rockaway — combined multi-anchor scenario (Dick's + Target)", () => {
+  const r = resolveTenantRisk(rockawayOmDeal);
+  const cb = computeCombinedExposure(r, ["Dick's Sporting Goods", "Target"]);
+
+  it("combined exposure totals Carter's + Ulta + J Crew = $663,034", () => {
+    expect(cb.totalRent).toBe(156410 + 357993 + 148631);
+    expect(cb.clauses.map((c) => c.tenant).sort()).toEqual(["Carter's / Osh Kosh", "J Crew", "Ulta"].sort());
+  });
+  it("J Crew is CASCADE-only — trips only because two anchors go dark together", () => {
+    const jcrew = cb.clauses.find((c) => c.tenant === "J Crew");
+    expect(jcrew?.comboOnly).toBe(true);
+    expect(cb.comboOnlyRent).toBe(148631);
+    // Carter's/Ulta trip on a single selected anchor, so not cascade-only
+    expect(cb.clauses.find((c) => c.tenant.startsWith("Carter"))?.comboOnly).toBe(false);
+    expect(cb.clauses.find((c) => c.tenant === "Ulta")?.comboOnly).toBe(false);
+  });
+})
