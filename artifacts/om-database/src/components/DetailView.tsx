@@ -54,7 +54,7 @@ const PAGE_TABS = [
 const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
   overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Also known as",id:"section-aliases"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Your notes",id:"section-notes"}],
-  ai: [{label:"Highlights",id:"section-highlights"},{label:"Our thesis",id:"section-thesis"},{label:"Our review",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
+  ai: [{label:"Highlights",id:"section-highlights"},{label:"Our take",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
   tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Ownership structure",id:"section-ownership"}],
   financing: [{label:"Senior loan",id:"section-senior-loan"},{label:"Amortization",id:"section-amortization"},{label:"Prepay & swap",id:"section-prepay"},{label:"Preferred equity",id:"section-pref-equity"}],
@@ -1048,73 +1048,6 @@ function SectionJump({ deal, scrollRef, viewMode }: { deal: Deal; scrollRef: Rea
   );
 }
 
-// KPR thesis / assumptions box — free text the acquisitions team writes about why
-// they like a deal / what they're underwriting to. Saving stores the text (free);
-// "Save & Re-grade" folds it into the AI analysis (advisory — the model can push
-// back where the data doesn't support a claim).
-function DealThesisBox({ deal, onUpdate, onRegrade, regrading }: {
-  deal: Deal;
-  onUpdate: (id: string, patch: Partial<Deal>) => void;
-  onRegrade: () => void | Promise<void>;
-  regrading: boolean;
-}) {
-  const [text, setText] = useState(deal.dealThesis ?? "");
-  const saved = (deal.dealThesis ?? "");
-  const dirty = text.trim() !== saved.trim();
-
-  // Keep the box in sync when the saved value changes from outside (deal reloaded,
-  // another user's edit, post-regrade) — but never clobber unsaved local edits.
-  const lastSavedRef = useRef(saved);
-  useEffect(() => {
-    const prevSaved = lastSavedRef.current;
-    if (saved !== prevSaved) {
-      lastSavedRef.current = saved;
-      // Adopt the new saved value only if the box wasn't mid-edit (i.e. it still
-      // matched the previously-saved text or was empty).
-      setText(prev => (prev.trim() === "" || prev === prevSaved ? saved : prev));
-    }
-  }, [saved]);
-
-  const save = () => { if (dirty) onUpdate(deal.id, { dealThesis: text.trim() || null }); };
-  const saveAndRegrade = async () => {
-    if (dirty) onUpdate(deal.id, { dealThesis: text.trim() || null });
-    // Let the save propagate, then re-grade (reads the deal incl. the new thesis).
-    await Promise.resolve();
-    await onRegrade();
-  };
-
-  return (
-    <div style={{ background:"#f3f7fc", border:"1px solid #c9dbf0", borderRadius:12, padding:"16px 18px", marginBottom:14 }}>
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-        <span style={{ fontSize:13 }}>📝</span>
-        <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.04em", color:"#2d4ecf", textTransform:"uppercase" }}>Our Thesis / Assumptions</span>
-      </div>
-      <div style={{ fontSize:11, color:"#6f7a8c", marginBottom:10, lineHeight:1.5 }}>
-        Why we like this deal, what we're underwriting to, risks we're discounting. Folded into the AI grade when you re-grade — the analyst weighs it but stays objective and will flag anything the data contradicts.
-      </div>
-      <textarea
-        value={text}
-        onChange={e => setText(e.target.value)}
-        onBlur={save}
-        placeholder="e.g. Underwriting to mark-to-market on the inline shops at rollover; comfortable with the grocer's below-market sales given the dense infill location and lack of nearby competition; assume the vacant pad leases within 18 months…"
-        rows={4}
-        style={{ width:"100%", boxSizing:"border-box", resize:"vertical", fontFamily:"'Inter',sans-serif", fontSize:13, lineHeight:1.55, padding:"10px 12px", border:"1px solid #c9dbf0", borderRadius:8, color:"#383a37", background:"#fff", outline:"none" }}
-      />
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10, flexWrap:"wrap" }}>
-        <button onClick={save} disabled={!dirty}
-          style={{ background: dirty ? "#fff" : "#f1eadc", border:"1px solid #c9dbf0", color: dirty ? "#2d4ecf" : "#a89f8f", padding:"7px 14px", borderRadius:7, cursor: dirty ? "pointer" : "default", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
-          {dirty ? "Save" : "Saved"}
-        </button>
-        <button onClick={saveAndRegrade} disabled={regrading || (!saved && !text.trim())}
-          style={{ background:"#2d4ecf", border:"none", color:"#fff", padding:"7px 14px", borderRadius:7, cursor: regrading ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", opacity: regrading ? 0.6 : 1 }}>
-          {regrading ? "Re-grading…" : "✨ Save & Re-grade with this thesis"}
-        </button>
-        <span style={{ fontSize:10.5, color:"#9aa3b2" }}>Re-grade uses a token refresh.</span>
-      </div>
-    </div>
-  );
-}
-
 // Our REVIEW / overall take on the deal. Like the thesis box, but it's our verdict
 // (what we like / don't like, our read on pricing). It folds into THIS deal's grade
 // on re-grade, AND feeds the portfolio "House View" (Phase 2) that teaches the
@@ -1126,8 +1059,12 @@ function DealReviewBox({ deal, onUpdate, onRegrade, regrading, onOpenHouseView }
   regrading: boolean;
   onOpenHouseView?: () => void;
 }) {
-  const [text, setText] = useState(deal.dealReview ?? "");
-  const saved = (deal.dealReview ?? "");
+  // Single "Our Take" box. If a deal still has a legacy dealThesis but no review,
+  // seed from it so old thesis text isn't lost — it migrates into dealReview (and
+  // the old thesis is cleared) on the next save.
+  const legacy = deal.dealReview ?? deal.dealThesis ?? "";
+  const [text, setText] = useState(legacy);
+  const saved = legacy;
   const dirty = text.trim() !== saved.trim();
 
   const lastSavedRef = useRef(saved);
@@ -1139,9 +1076,10 @@ function DealReviewBox({ deal, onUpdate, onRegrade, regrading, onOpenHouseView }
     }
   }, [saved]);
 
-  const save = () => { if (dirty) onUpdate(deal.id, { dealReview: text.trim() || null }); };
+  const persist = () => onUpdate(deal.id, { dealReview: text.trim() || null, ...(deal.dealThesis ? { dealThesis: null } : {}) });
+  const save = () => { if (dirty) persist(); };
   const saveAndRegrade = async () => {
-    if (dirty) onUpdate(deal.id, { dealReview: text.trim() || null });
+    if (dirty) persist();
     await Promise.resolve();
     await onRegrade();
   };
@@ -1151,7 +1089,7 @@ function DealReviewBox({ deal, onUpdate, onRegrade, regrading, onOpenHouseView }
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:6, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <span style={{ fontSize:13 }}>🧭</span>
-          <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.04em", color:"#1f7a43", textTransform:"uppercase" }}>Our Review / Deal Take</span>
+          <span style={{ fontSize:12, fontWeight:700, letterSpacing:"0.04em", color:"#1f7a43", textTransform:"uppercase" }}>Our Take on This Deal</span>
         </div>
         {onOpenHouseView && (
           <button onClick={onOpenHouseView}
@@ -1161,7 +1099,7 @@ function DealReviewBox({ deal, onUpdate, onRegrade, regrading, onOpenHouseView }
         )}
       </div>
       <div style={{ fontSize:11, color:"#5e7165", marginBottom:10, lineHeight:1.5 }}>
-        Your honest overall assessment — what you like, what concerns you, your read on the broker's pricing / cap. Folds into this deal's grade when you re-grade, and is distilled across all your reviews into the <b>House View</b> that teaches the analyst how you think and shapes every future deal.
+        Your overall take — what you like, what concerns you, what you're underwriting to, and your read on the broker's pricing / cap. Folds into this deal's grade when you re-grade, and is distilled across all your takes into the <b>House View</b> that teaches the analyst how you think and shapes every future deal.
       </div>
       <textarea
         value={text}
@@ -2514,12 +2452,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* KPR thesis / assumptions — folded into the AI grade on re-grade. Placed
           above the site plan. Hidden in Asset Management view. */}
       {showAcq && (
-      <div id="section-thesis" data-jump="Our Thesis">
-        <DealThesisBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy}/>
-      </div>
-      )}
-      {showAcq && (
-      <div id="section-review" data-jump="Our Review">
+      <div id="section-review" data-jump="Our Take">
         <DealReviewBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy} onOpenHouseView={() => setHouseViewOpen(true)}/>
       </div>
       )}
