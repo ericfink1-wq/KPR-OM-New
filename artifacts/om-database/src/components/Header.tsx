@@ -6,6 +6,7 @@ import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
 import ChangePassword from "./ChangePassword";
+import HouseViewModal from "./HouseViewModal";
 import { dedupeStoredAddress } from "../lib/utils";
 
 interface Props {
@@ -33,6 +34,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [backupMenu, setBackupMenu] = useState(false);
   const [uploadMenu, setUploadMenu] = useState(false);
   const [ratesOpen, setRatesOpen] = useState(false);
+  const [houseViewOpen, setHouseViewOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
@@ -562,6 +564,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           📈 Today's Rates
         </button>
         {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} />}
+
+        {/* House View — KPR's distilled underwriting lens (spans all deals) */}
+        <button onClick={() => setHouseViewOpen(true)} title="House View — the underwriting lens learned from your deal takes, applied to every analysis"
+          style={{ background: "#fff", border: "1px solid #c2e0c9", color: "#1f7a43", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+          🧠 House View
+        </button>
+        <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
 
         {/* Upload OMs split button */}
         <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
