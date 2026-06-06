@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import {
-  resolveTenantRisk, computeExposure, computeCombinedExposure, anchorsReferenced, buildDiligenceList,
-  type ExposureResult,
+  resolveTenantRisk, computeExposure, computeCombinedExposure, anchorsReferenced,
+  buildAnchorDependencyGraph, buildDiligenceList, type ExposureResult,
 } from "../lib/leaseRisk";
 import { useIsMobile } from "../hooks/use-mobile";
 
@@ -55,27 +55,27 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
   const anchors = useMemo(() => anchorsReferenced(resolved), [resolved]);
   const diligence = useMemo(() => buildDiligenceList(deal, abstracts), [deal, abstracts]);
 
-  // Default the scenario to the anchor with the largest OM Tier-1 exposure.
-  const defaultAnchor = useMemo(() => {
-    let best = anchors[0] ?? ""; let bestVal = -1;
-    for (const a of anchors) { const e = computeExposure(resolvedOM, a); const v = e.tier1Rent * 1e6 + e.tier3Rent; if (v > bestVal) { bestVal = v; best = a; } }
-    return best;
-  }, [anchors, resolvedOM]);
+  // How many tenants depend on each anchor — drives the per-chip count and ordering
+  // (specific named anchors first; generic "any anchor" descriptors sink to the end).
+  const depByAnchor = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const g of buildAnchorDependencyGraph(resolved)) m.set(g.anchor, g.dependents.length);
+    return m;
+  }, [resolved]);
+  const isGeneric = (a: string) => /anchor tenant|premises|exhibit|replacement/i.test(a) || a.length > 34;
+  const sortedAnchors = useMemo(() =>
+    [...anchors].sort((x, y) =>
+      (Number(isGeneric(x)) - Number(isGeneric(y))) ||
+      ((depByAnchor.get(y) ?? 0) - (depByAnchor.get(x) ?? 0)) ||
+      x.localeCompare(y)),
+    [anchors, depByAnchor]);
 
   const [selected, setSelected] = useState<string[]>([]);
   const [showDil, setShowDil] = useState(false);
 
-  // Active set: the user's selection (valid anchors only), or the default when empty.
-  const active = useMemo(() => {
-    const s = selected.filter((a) => anchors.includes(a));
-    return s.length ? s : (defaultAnchor ? [defaultAnchor] : []);
-  }, [selected, anchors, defaultAnchor]);
-
-  const toggle = (a: string) => setSelected((prev) => {
-    const base = prev.filter((x) => anchors.includes(x));
-    const cur = base.length ? base : (defaultAnchor ? [defaultAnchor] : []);
-    return cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a];
-  });
+  // Active set = exactly what the user picked. NOTHING is auto-selected.
+  const active = useMemo(() => selected.filter((a) => anchors.includes(a)), [selected, anchors]);
+  const toggle = (a: string) => setSelected((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
 
   if (!anchors.length && !diligence.length) return null;
 
@@ -103,23 +103,27 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
 
       {anchors.length > 0 && (
         <>
-          {/* Multi-select scenario chips */}
+          {/* Multi-select scenario chips. The trailing number = tenants whose
+              co-tenancy depends on that anchor. Long/generic anchor descriptors are
+              shortened; the full text shows on tap/hover (title). */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 4 }}>
-            {anchors.map((a) => {
+            {sortedAnchors.map((a) => {
               const on = active.includes(a);
+              const n = depByAnchor.get(a) ?? 0;
+              const short = a.length > 30 ? a.slice(0, 28).trimEnd() + "…" : a;
               return (
-                <button key={a} onClick={() => toggle(a)}
-                  style={{ fontSize: 12, fontWeight: on ? 800 : 600, color: on ? "#fff" : C.ink, background: on ? C.red : "#fff", border: `1px solid ${on ? C.red : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer" }}>
-                  {on ? "✓ " : ""}{a}
+                <button key={a} onClick={() => toggle(a)} title={`${a}${n ? ` — ${n} dependent tenant${n === 1 ? "" : "s"}` : ""}`}
+                  style={{ fontSize: 12, fontWeight: on ? 800 : 600, color: on ? "#fff" : C.ink, background: on ? C.red : "#fff", border: `1px solid ${on ? C.red : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer", maxWidth: "100%" }}>
+                  {on ? "✓ " : ""}{short}{n ? <span style={{ opacity: 0.7, fontWeight: 700 }}> · {n}</span> : null}
                 </button>
               );
             })}
           </div>
-          {active.length > 0 && (
-            <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 10 }}>
-              {multi ? `${active.length} anchors selected — modeling them dark together.` : "Tap another anchor to model a combined departure."}
-            </div>
-          )}
+          <div style={{ fontSize: 11, color: active.length ? C.faint : C.sub, margin: "2px 0 10px" }}>
+            {active.length === 0
+              ? "Tap an anchor to model its departure — the number is how many tenants' leases depend on it. Tap more than one to model them going dark together."
+              : multi ? `${active.length} anchors selected — modeling them dark together.` : "Tap another anchor to model a combined departure."}
+          </div>
 
           {/* SINGLE-ANCHOR tiered view */}
           {!multi && single && exp && (
