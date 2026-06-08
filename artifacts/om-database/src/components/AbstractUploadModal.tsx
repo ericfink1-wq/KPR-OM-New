@@ -50,6 +50,11 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
     return m;
   }, [tenantNames]);
 
+  const sortedTenantNames = useMemo(
+    () => [...tenantNames].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+    [tenantNames]
+  );
+
   function matchName(raw: string): string | null {
     const k = normalize(raw);
     if (!k) return null;
@@ -177,7 +182,7 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
                       onChange={(e) => { const v = e.target.value; setItems((prev) => (prev ?? []).map((p, pi) => pi === ix ? { ...p, assigned: v || null } : p)); }}
                       style={{ flex: "1 1 180px", fontSize: 12.5, padding: "6px 8px", border: `1px solid ${C.amberBorder}`, borderRadius: 7, color: C.ink, background: "#fff", minHeight: 34 }}>
                       <option value="">— pick a tenant —</option>
-                      {tenantNames.map((n) => <option key={n} value={n}>{n}</option>)}
+                      {sortedTenantNames.map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>
                 ))}
