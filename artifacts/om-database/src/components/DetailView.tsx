@@ -45,6 +45,12 @@ import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { useIsMobile } from "../hooks/use-mobile";
 
+// Single source of truth for the deal page's readable width. The body and the
+// floating title bar both use this, and every sub-tab renders inside that one
+// centered column — so the property detail page and ALL its subpages stay at an
+// identical width on a big monitor. Change it here and everything follows.
+const DETAIL_MAX_WIDTH = 1400;
+
 // Sub-page tabs and the jump-list shown when a tab is clicked.
 const PAGE_TABS = [
   ["overview","Overview"],["ai","AI Analysis"],["tenants","Tenants & Sales"],
@@ -2016,7 +2022,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         left: "50%",
         right: "auto",
         width: "100%",
-        maxWidth: 1280,
+        maxWidth: DETAIL_MAX_WIDTH,
         zIndex: 90,
         background: "rgba(252,250,245,0.94)",
         backdropFilter: "blur(12px)",
@@ -2074,7 +2080,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           sub-tabs sit in a centered max-width column so they stay readable on a big
           monitor. The scroll stays on the full-width container above; only the
           content is capped. */}
-      <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+      <div style={{ maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Back — own line above the title so it never crowds the title/actions row */}
       <div style={{ marginBottom:8 }}>
         <button onClick={onBack} title="Back" aria-label="Back" style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fff", border:"1px solid #e0d8c8", color:"#5c5047", borderRadius:20, padding:"5px 13px 5px 10px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif", boxShadow:"0 1px 3px rgba(56,58,55,0.1)" }}>← Back</button>
