@@ -25,6 +25,7 @@ Rules:
 - SF and rents as plain numbers (no $ or commas).
 - If a value isn't shown, omit it.
 - remainingTermYears: compute from asOf to leaseExpiry if possible.
+- KEEP EVERY FIELD CONCISE — output structured DATA, not prose. assumptionNote / percentageRentClause / recentlyExercisedRenewal / rentSchedule / renewalOptions must be SHORT one-line summaries (each ≤ ~160 characters). NEVER copy a lease's verbatim legal language (full percentage-rent, CAM-cap, co-tenancy, reimbursement or commencement-clause paragraphs) into any field — distill it to the key terms (e.g. "% rent 4% over natural breakpoint", "CAM cap 5%/yr non-cumulative"). A "Comments" column full of long legal text is a SOURCE to read, NOT text to reproduce. (Copying it verbatim bloats the response so much the extraction times out and fails — so summarize, never echo.)
 
 CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
 - CAPTURE EVERY occupied line, never drop tenants. Anchors / junior anchors (the largest-SF tenants — grocers, Burlington, Marshalls, banks) are the MOST important to never omit. Before finishing, confirm the sum of your tenant SF reconciles with the rent roll's stated occupied SF; if it doesn't, you missed tenants — add them (largest first).
@@ -64,9 +65,12 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
     };
   };
 
-  // Big roomy first pass so even a 100+-tenant mall roll comes back in ONE call
-  // (no slow continuation rounds for the common case).
-  const first = await callRoll("", 32000);
+  // Bound each request so no single synchronous call runs for minutes (a long
+  // generation gets cut by the hosting gateway → the upload fails with a generic
+  // "AI request failed"). 16k comfortably holds ~50 concise tenants in one pass;
+  // genuinely large malls finish via the continuation loop below — each round is
+  // its own bounded request, so none of them time out either.
+  const first = await callRoll("", 16000);
   let parsed: { asOf?: string | null; tenants?: unknown[]; reviewQuestions?: unknown[] };
   try { parsed = robustParseJSON(first.raw) as typeof parsed; }
   catch { throw new Error("Couldn't parse the rent roll. Try a clearer file."); }
@@ -84,7 +88,7 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
     const have = (tenants as Array<{ name?: string }>).map(t => t?.name).filter(Boolean) as string[];
     const cont = await callRoll(
       `\n\nYour previous answer was TRUNCATED before the end of the rent roll. Return ONLY JSON {"tenants":[...]} containing ONLY the occupied or vacant suites NOT already in the list below — same per-tenant schema and same rules. If none remain, return {"tenants":[]}.\nAlready captured (${have.length}): ${have.join(", ")}`,
-      24000,
+      16000,
     );
     let more: unknown[] = [];
     try { more = (robustParseJSON(cont.raw) as { tenants?: unknown[] }).tenants || []; } catch { break; }
