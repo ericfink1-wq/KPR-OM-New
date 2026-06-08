@@ -2010,8 +2010,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       <div style={{
         position: "fixed",
         top: 88,
-        left: 0,
-        right: 0,
+        // Centered to the same max width as the body so the floating title bar
+        // lines up with the content on a wide monitor instead of spanning the
+        // whole screen.
+        left: "50%",
+        right: "auto",
+        width: "100%",
+        maxWidth: 1280,
         zIndex: 90,
         background: "rgba(252,250,245,0.94)",
         backdropFilter: "blur(12px)",
@@ -2022,7 +2027,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         // Hidden state must clear the top:88 offset too — translateY(-110%) only moved
         // it up by its own height, leaving its bottom edge stuck visible at the top
         // before any scroll. Move up its full height PLUS the offset so it's fully gone.
-        transform: titleScrolled ? "translateY(0)" : "translateY(calc(-100% - 96px))",
+        transform: titleScrolled ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(calc(-100% - 96px))",
         transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
         pointerEvents: titleScrolled ? "auto" : "none",
       }}>
@@ -2065,6 +2070,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         </div>
       </div>
 
+      {/* Width-constrained body — like the Comps page, the deal page and all its
+          sub-tabs sit in a centered max-width column so they stay readable on a big
+          monitor. The scroll stays on the full-width container above; only the
+          content is capped. */}
+      <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Back — own line above the title so it never crowds the title/actions row */}
       <div style={{ marginBottom:8 }}>
         <button onClick={onBack} title="Back" aria-label="Back" style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fff", border:"1px solid #e0d8c8", color:"#5c5047", borderRadius:20, padding:"5px 13px 5px 10px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif", boxShadow:"0 1px 3px rgba(56,58,55,0.1)" }}>← Back</button>
@@ -3370,6 +3380,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       </>)}
 
       <PropertyChat deal={d} abstracts={abstracts} />
+      </div>
     </div>
   );
 }
