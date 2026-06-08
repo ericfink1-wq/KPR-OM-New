@@ -4312,22 +4312,17 @@ function PropertyChat({ deal }: { deal: Deal }) {
     if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, thinking, open]);
 
-  const buildContext = () => ({
-    property: deal.propertyName, address: deal.address, market: deal.market,
-    assetType: deal.assetType, centerType: deal.centerType, status: deal.status,
-    totalSF: deal.totalSF, occupancy: deal.occupancy, noi: deal.noi, capRate: deal.capRate,
-    askingPrice: deal.askingPrice, walt: deal.walt, weightedAvgRentPSF: deal.weightedAvgRentPSF,
-    grossPotentialRent: deal.grossPotentialRent, operatingExpenses: deal.operatingExpenses,
-    nnnRecoveries: deal.nnnRecoveries, yearBuilt: deal.yearBuilt,
-    highlights: deal.notes, redFlags: deal.redFlags, keyAssumptions: deal.keyAssumptions,
-    demographics: deal.marketDemographics, sale: deal.marketSale,
-    tenants: (deal.tenants || []).map(t => ({
-      name: t.name, sf: t.sf, rentPSF: t.rentPerSF, annualRent: t.annualRent,
-      start: t.leaseStart, expiry: t.leaseExpiry, reimbursement: t.reimbursementMethod,
-      salesPSF: t.salesPSF, anchor: t.isAnchor || undefined,
-      options: t.renewalOptions, rentSteps: t.rentSchedule,
-    })),
-  });
+  // Give the assistant the FULL deal record (minus UI-only noise) plus the lease
+  // abstracts on file, so it can never be "missing" data that lives on the property
+  // — roof, debt, cash flow, income/expense breakdown, demographics, market sale,
+  // KPR thesis/review/score, co-tenancy lease risk, tenant sales history, etc. Passing
+  // the whole record (rather than a hand-picked subset) keeps it complete as new
+  // fields are added.
+  const buildContext = () => {
+    const rest: Record<string, unknown> = { ...deal };
+    for (const k of ["imageMeta", "reviewQuestions", "_processing", "_processingError"]) delete rest[k];
+    return { ...rest, leaseAbstracts: abstracts.length ? abstracts : undefined };
+  };
 
   const ask = async (text: string) => {
     if (!text.trim() || thinking) return;
