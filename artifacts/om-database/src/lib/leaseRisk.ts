@@ -463,7 +463,12 @@ export function buildRiskMatrix(resolved: ResolvedTenantRisk[]): RiskMatrix {
   }).filter((a) => a.dependentCount > 0);
 
   anchors.sort((a, b) => b.tier1Rent - a.tier1Rent || b.totalRent - a.totalRent || a.anchor.localeCompare(b.anchor));
+  // Rank tenants by Tier-1 exposure dollars — the base rent that trips if a single
+  // anchor goes dark on its own (worstTier 1). Biggest single-event risks sit at
+  // the top; tenants that need a second event fall below, then by base rent / name.
+  const tier1Dollars = (t: MatrixTenantRow) => (t.worstTier === 1 ? (t.baseRentAnnual ?? 0) : 0);
   tenants.sort((a, b) =>
+    tier1Dollars(b) - tier1Dollars(a) ||
     (b.baseRentAnnual ?? 0) - (a.baseRentAnnual ?? 0) ||
     a.worstTier - b.worstTier ||
     a.tenant.localeCompare(b.tenant));

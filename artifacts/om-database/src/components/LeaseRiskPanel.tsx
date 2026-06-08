@@ -5,6 +5,7 @@ import {
   buildAnchorDependencyGraph, buildDiligenceList, buildRiskMatrix, type ExposureResult,
 } from "../lib/leaseRisk";
 import { exportLeaseRiskMatrix } from "../lib/leaseRiskExcel";
+import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
 
 // Lease Risk — Anchor Dependency. Reads the resolver LIVE (token-free): OM-disclosed
@@ -50,6 +51,7 @@ function remedyText(remedy: { mechanism?: string | null; value?: number | null }
 
 export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstract[] }) {
   const isMobile = useIsMobile();
+  const watch = useWatchlist();
 
   const resolvedOM = useMemo(() => resolveTenantRisk(deal, []), [deal]);
   const resolved = useMemo(() => resolveTenantRisk(deal, abstracts), [deal, abstracts]);
@@ -82,7 +84,7 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
   }, [resolved]);
   const doExport = async () => {
     setExporting(true);
-    try { await exportLeaseRiskMatrix(deal, abstracts); }
+    try { await exportLeaseRiskMatrix(deal, abstracts, watch); }
     finally { setExporting(false); }
   };
 

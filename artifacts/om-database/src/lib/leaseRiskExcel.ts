@@ -7,6 +7,7 @@
 import ExcelJS from "exceljs";
 import type { Deal, LeaseAbstract } from "./idb";
 import { resolveTenantRisk, buildRiskMatrix, type MatrixCell, type RiskMatrix } from "./leaseRisk";
+import { lookupWatch, WATCH_STATUS_META, type WatchMap } from "./useWatchlist";
 
 const INK = "FF383A37", SUB = "FF6F6A5F", FAINT = "FFA69E91";
 const SECTION_FILL = "FFEFE8DA", HEADER_FILL = "FFF3EEE3", LINE = "FFD8CFBD";
@@ -22,6 +23,14 @@ const tierStyle = (t: 1 | 2 | 3) =>
   t === 1 ? { fg: RED, bg: RED_BG, label: "Tier 1" }
   : t === 2 ? { fg: AMBER, bg: AMBER_BG, label: "Tier 2" }
   : { fg: SUB, bg: GRAY_BG, label: "Tier 3" };
+
+// Excel styling for a watchlist / concern flag, mirroring the app's severity tiers:
+// bankruptcy / liquidating read red; watch / distressed read amber.
+function watchStyleXlsx(status: string) {
+  const label = WATCH_STATUS_META[status]?.label || (status ? status[0].toUpperCase() + status.slice(1) : "Watchlist");
+  const severe = status === "bankruptcy" || status === "liquidating";
+  return severe ? { fg: RED, bg: RED_BG, label } : { fg: AMBER, bg: AMBER_BG, label };
+}
 
 function remedyText(cell: MatrixCell): string {
   const parts: string[] = [];
@@ -96,11 +105,11 @@ function writeSummary(ws: WS, dealName: string, m: RiskMatrix): void {
 }
 
 // ── Sheet 2: anchor × tenant matrix ───────────────────────────────────────────────
-function writeMatrix(ws: WS, dealName: string, m: RiskMatrix): void {
+function writeMatrix(ws: WS, dealName: string, m: RiskMatrix, watch?: WatchMap): void {
   const anchorCols = m.anchors.map((a) => a.anchor);
-  const FIXED = 4; // Tenant | Base Rent | Worst | #Anchors
+  const FIXED = 5; // Tenant | Base Rent | Worst | #Anchors | Watch / Concern
   ws.columns = [
-    { width: 28 }, { width: 13 }, { width: 9 }, { width: 9 },
+    { width: 28 }, { width: 13 }, { width: 9 }, { width: 9 }, { width: 17 },
     ...anchorCols.map(() => ({ width: 12 })),
   ];
   let r = 1;
@@ -118,24 +127,34 @@ function writeMatrix(ws: WS, dealName: string, m: RiskMatrix): void {
 
   set(1, `Lease Risk Matrix — who trips if an anchor goes dark  ·  ${dealName}`, { font: { bold: true, size: 13, color: { argb: INK } } });
   ws.mergeCells(r, 1, r, lastCol); r += 1;
-  set(1, "Rows = tenants with co-tenancy (ranked by base rent at stake). Columns = anchors (ranked by Tier-1 rent). Cell = the worst tier at which that tenant trips on that anchor: 1 = on that anchor alone, 2 = needs a second event, 3 = linked / deeper trigger. Blank = no co-tenancy link.", { font: { italic: true, size: 9.5, color: { argb: SUB } }, alignment: { wrapText: true, vertical: "top" } });
+  set(1, "Rows = tenants with co-tenancy, ranked by Tier-1 exposure $ (base rent that trips if a single anchor goes dark on its own), then base rent. Columns = anchors (ranked by Tier-1 rent). Cell = the worst tier at which that tenant trips on that anchor: 1 = on that anchor alone, 2 = needs a second event, 3 = linked / deeper trigger. Blank = no link. Tenants on the watchlist / flagged as a concern are highlighted, with the reason in the Watch / Concern column.", { font: { italic: true, size: 9.5, color: { argb: SUB } }, alignment: { wrapText: true, vertical: "top" } });
   ws.mergeCells(r, 1, r, lastCol); ws.getRow(r).height = 30; r += 1;
 
   // Header row 1: fixed labels + anchor names (rotated to keep columns narrow).
   const hr = r;
-  ["Tenant", "Base Rent", "Worst", "Anchors"].forEach((h, i) =>
-    set(i + 1, h, { font: { bold: true, size: 9.5, color: { argb: INK } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } }, border: allBorders, alignment: { vertical: "bottom", horizontal: i >= 1 ? "center" : "left" } }));
+  ["Tenant", "Base Rent", "Worst", "Anchors", "Watch / Concern"].forEach((h, i) =>
+    set(i + 1, h, { font: { bold: true, size: 9.5, color: { argb: INK } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } }, border: allBorders, alignment: { vertical: "bottom", horizontal: i >= 1 && i <= 3 ? "center" : "left", wrapText: true } }));
   anchorCols.forEach((a, i) =>
     set(FIXED + 1 + i, a, { font: { bold: true, size: 9, color: { argb: INK } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } }, border: allBorders, alignment: { textRotation: 90, vertical: "bottom", horizontal: "center", wrapText: true } }));
   ws.getRow(hr).height = 96; r += 1;
 
   // Tenant rows.
   for (const t of m.tenants) {
-    set(1, t.tenant, { font: { bold: true, size: 10, color: { argb: INK } }, border: allBorders, alignment: { wrapText: true, vertical: "middle" } });
+    const w = watch ? lookupWatch(watch, t.tenant) : undefined;
+    const wst = w ? watchStyleXlsx(w.status) : null;
+    // Tenant name — tinted when the tenant is on the watchlist / flagged a concern.
+    set(1, t.tenant, { font: { bold: true, size: 10, color: { argb: wst ? wst.fg : INK } }, fill: wst ? { type: "pattern", pattern: "solid", fgColor: { argb: wst.bg } } : undefined, border: allBorders, alignment: { wrapText: true, vertical: "middle" } });
     set(2, t.baseRentAnnual ?? null, { font: { size: 10, color: { argb: INK } }, border: allBorders, numFmt: MONEY_FMT, alignment: { vertical: "middle" } });
     const ws_ = tierStyle(t.worstTier);
     set(3, ws_.label, { font: { bold: true, size: 9, color: { argb: ws_.fg } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: ws_.bg } }, border: allBorders, alignment: { horizontal: "center", vertical: "middle" } });
     set(4, t.anchorsAffecting, { font: { size: 10, color: { argb: SUB } }, border: allBorders, alignment: { horizontal: "center", vertical: "middle" } });
+    // Watch / Concern — the status label, colored; reason (if any) as a hover note.
+    if (wst) {
+      const c5 = set(5, wst.label, { font: { bold: true, size: 9, color: { argb: wst.fg } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: wst.bg } }, border: allBorders, alignment: { horizontal: "center", vertical: "middle", wrapText: true } });
+      if (w?.note) c5.note = w.note;
+    } else {
+      set(5, null, { border: allBorders });
+    }
     anchorCols.forEach((a, i) => {
       const cell = t.cells[a];
       if (!cell) { set(FIXED + 1 + i, null, { border: allBorders }); return; }
@@ -170,7 +189,7 @@ function writeMatrix(ws: WS, dealName: string, m: RiskMatrix): void {
 const sheetSafe = (name: string) => (name || "Sheet").replace(/[\\/?*:[\]]/g, "-").slice(0, 31) || "Sheet";
 
 /** Export the anchor-dependency risk matrix for one deal as a styled workbook. */
-export async function exportLeaseRiskMatrix(deal: Deal, abstracts: LeaseAbstract[]): Promise<void> {
+export async function exportLeaseRiskMatrix(deal: Deal, abstracts: LeaseAbstract[], watch?: WatchMap): Promise<void> {
   const resolved = resolveTenantRisk(deal, abstracts);
   const matrix = buildRiskMatrix(resolved);
   if (!matrix.anchors.length || !matrix.tenants.length) return;
@@ -178,7 +197,7 @@ export async function exportLeaseRiskMatrix(deal: Deal, abstracts: LeaseAbstract
   const dealName = deal.propertyName || "Deal";
   const wb = new ExcelJS.Workbook();
   writeSummary(wb.addWorksheet(sheetSafe("Anchor Exposure")), dealName, matrix);
-  writeMatrix(wb.addWorksheet(sheetSafe("Risk Matrix")), dealName, matrix);
+  writeMatrix(wb.addWorksheet(sheetSafe("Risk Matrix")), dealName, matrix, watch);
 
   const safe = dealName.replace(/[/\\?%*:|"<>]/g, "-").slice(0, 60);
   await downloadWorkbook(wb, `KPR_LeaseRiskMatrix_${safe}_${today()}.xlsx`);
