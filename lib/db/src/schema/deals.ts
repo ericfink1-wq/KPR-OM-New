@@ -1,4 +1,4 @@
-import { pgTable, text, jsonb, timestamp, boolean, bigserial } from "drizzle-orm/pg-core";
+import { pgTable, text, jsonb, timestamp, boolean, bigserial, integer } from "drizzle-orm/pg-core";
 
 // Diagnostic trace tables (operational telemetry, not deal data): img_trace records
 // recent image-save attempts (/api/image-save-diag), upload_trace records per-OM
@@ -14,6 +14,20 @@ export const uploadTraceTable = pgTable("upload_trace", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   data: jsonb("data").notNull(),
+});
+
+// House View: the single distilled cross-deal underwriting lens (one row, id=1).
+// Runtime-created via ensureHouseViewTable; declared here so the deploy's schema-diff
+// recognizes it rather than proposing to DROP it. Its content is rebuildable from the
+// per-deal "Our Take" reviews, so a drop is recoverable, but we'd rather it not churn.
+export const analystHouseViewTable = pgTable("analyst_house_view", {
+  id: integer("id").primaryKey().default(1),
+  content: text("content").notNull().default(""),
+  sourceCount: integer("source_count").notNull().default(0),
+  pendingReviews: integer("pending_reviews").notNull().default(0),
+  lastDistilledAt: timestamp("last_distilled_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: text("updated_by"),
 });
 
 export const dealsTable = pgTable("deals", {
