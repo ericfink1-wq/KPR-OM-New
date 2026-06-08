@@ -1254,6 +1254,11 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
       noi: d.noi, capRate: d.capRate, askingPrice: d.askingPrice,
       occupancy: d.occupancy, walt: d.walt, weightedAvgRentPSF: d.weightedAvgRentPSF,
       dealScore: d.dealScore?.score ?? undefined,
+      // Property condition / vintage — so roof-age & capex questions are answerable
+      // instead of "unknown" (the extractor captures these; they just weren't passed).
+      yearBuilt: d.yearBuilt ?? undefined,
+      renovationYear: d.renovationYear ?? undefined,
+      roofData: d.roofData ?? undefined,
       tenants: tenants.length ? tenants : undefined,
       kpr,
     };
