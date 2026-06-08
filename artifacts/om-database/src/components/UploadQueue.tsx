@@ -1140,7 +1140,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       let pollError: string | null = null;
       let connLost = false;
       let consecutiveErrors = 0;
-      const POLL_ITERS = 240; // 240 × 2.5s = 10 min
+      const POLL_ITERS = 528; // 528 × 2.5s = 22 min — covers the server's progress-based budget (stalls stop server-side much sooner)
       for (let i = 0; i < POLL_ITERS; i++) {
         if (isCancelled(itemId)) return; // user stopped this file — quit waiting
         await new Promise(r => setTimeout(r, 2500));
@@ -1174,8 +1174,16 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           error: "Lost connection while it was processing — the deal may still finish. Refresh in a minute; if it's not there, re-upload." });
         return;
       }
-      if (pollError || !resolvedDeal) {
-        throw new Error(pollError || "Extraction timed out — please retry");
+      if (pollError) {
+        throw new Error(pollError);
+      }
+      if (!resolvedDeal) {
+        // We waited out the client window but the server may still be finishing a
+        // large (still-progressing) OM. Don't delete the temp deal or call it a hard
+        // failure — it should land shortly.
+        updateItem(itemId, { status: "error", progress: 0, msg: "Still processing",
+          error: "This OM is large and is still extracting on the server — it should appear shortly. Refresh in a minute; if it's not there, re-upload." });
+        return;
       }
 
       updateItem(itemId, { msg: "Checking for duplicates…", progress: 95 });

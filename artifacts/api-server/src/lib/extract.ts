@@ -316,13 +316,20 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // Hard budget so a problematic OM can never churn the model indefinitely and
   // burn tokens. Once we pass the deadline, we stop the follow-up passes and
   // return whatever we've captured (flagged incomplete) instead of looping.
-  const EXTRACTION_DEADLINE = Date.now() + 5 * 60 * 1000; // 5 min of model work
+  // Progress-based budget: keep going while the model is still pulling NEW tenants;
+  // stop only if it STALLS (no new tenants for STALL_MS — wheel-spinning that just
+  // burns tokens) or hits an absolute backstop (anti-runaway). A big-but-advancing
+  // OM is therefore never cut off mid-progress; only a stuck one is.
+  const STALL_MS = 2 * 60 * 1000;                         // ≥2 min with no new tenants → stuck
+  const ABS_DEADLINE = Date.now() + 20 * 60 * 1000;       // hard ceiling, rarely reached
+  let lastProgressAt = Date.now();
+  const overBudget = () => Date.now() > ABS_DEADLINE || (Date.now() - lastProgressAt) > STALL_MS;
   let budgetHit = false;
 
   let stopReason = first.stopReason;
   let rounds = 0;
-  while (stopReason === "max_tokens" && rounds < 8) {
-    if (Date.now() > EXTRACTION_DEADLINE) { budgetHit = true; break; }
+  while (stopReason === "max_tokens" && rounds < 20) {
+    if (overBudget()) { budgetHit = true; break; }
     rounds++;
     const tenants = extracted.tenants as Array<{ name?: string }>;
     const haveNames = tenants.map((t) => t.name).filter(Boolean);
@@ -342,6 +349,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         .filter((t) => t?.name && !haveNames.includes(t.name));
       if (newOnes.length === 0) break;
       extracted.tenants = (extracted.tenants as unknown[]).concat(newOnes);
+      lastProgressAt = Date.now();   // captured new tenants → still progressing
       stopReason = cont.stopReason;
     } catch {
       break;
@@ -358,8 +366,8 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     let occPct = Number(extracted.occupancy);
     if (occPct > 0 && occPct <= 1.5) occPct *= 100; // fraction → percent
     let gapRounds = 0;
-    while (gapRounds < 3 && totalSF > 0 && occPct > 0 && occPct <= 100) {
-      if (Date.now() > EXTRACTION_DEADLINE) { budgetHit = true; break; }
+    while (gapRounds < 5 && totalSF > 0 && occPct > 0 && occPct <= 100) {
+      if (overBudget()) { budgetHit = true; break; }
       const tenants = extracted.tenants as Array<{ name?: string; sf?: unknown; isNAP?: boolean }>;
       const capturedSF = tenants.reduce((s, t) => {
         const sf = Number(t?.sf);
@@ -388,6 +396,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
           .filter((t) => t?.name && !haveNames.includes(t.name));
         if (newOnes.length === 0) break;
         extracted.tenants = (extracted.tenants as unknown[]).concat(newOnes);
+        lastProgressAt = Date.now();   // found missing tenants → still progressing
       } catch {
         break;
       }
@@ -412,7 +421,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // co-tenancy / kickout data. Best-effort; normalised to source:"OM"/unverified.
   // Skipped if we already blew the time budget.
   let leaseRiskMs = 0;
-  if (!budgetHit && Date.now() < EXTRACTION_DEADLINE) {
+  if (!budgetHit && !overBudget()) {
     const _lrStart = Date.now();
     const names = (extracted.tenants as Array<{ name?: unknown }>).map((t) => String(t?.name ?? "")).filter(Boolean);
     const leaseRisk = await runLeaseRiskPass({ callExtract, cachedBlocks, tenantNames: names, parse: robustParseJSON });
