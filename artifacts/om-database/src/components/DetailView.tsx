@@ -3369,7 +3369,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       </>)}
 
-      <PropertyChat deal={d} />
+      <PropertyChat deal={d} abstracts={abstracts} />
     </div>
   );
 }
@@ -4287,7 +4287,7 @@ function _pcMarkdown({ text }: { text: string }) {
 
 // Floating scoped mini-chat — sends only this deal's data to the AI via the
 // shared server proxy (same route as the main Analyst chat).
-function PropertyChat({ deal }: { deal: Deal }) {
+function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstract[] }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState<{ role: "user"|"assistant"; content: string }[]>([]);
