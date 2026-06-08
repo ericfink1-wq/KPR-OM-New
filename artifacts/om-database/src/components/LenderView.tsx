@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
+import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { lenderKey, lenderLabel } from "../lib/utils";
 
 interface Props {
@@ -116,7 +117,7 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
   );
 
   return (
-    <div style={{ padding: "24px 28px", maxWidth: 1100, margin: "0 auto", fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ padding: "24px 28px", maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
       {/* Back */}
       <button onClick={onBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, marginBottom: 20 }}>
         ← Back

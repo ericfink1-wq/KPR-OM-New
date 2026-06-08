@@ -1,5 +1,6 @@
 import { useState, useMemo, Fragment } from "react";
 import type { Deal } from "../lib/idb";
+import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { isVacant, tenantKey, tenantLabel, cityState } from "../lib/utils";
 import { exportAggregateToExcel, type AggColumn } from "../lib/exportExcel";
@@ -258,7 +259,7 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
   const ghostBtn: React.CSSProperties = { background: "#fff", border: "1px solid #d9d2c4", color: "#5c5047", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" };
 
   return (
-    <div style={{ padding: isMobile ? "14px 14px 40px" : "20px 28px 40px" }}>
+    <div style={{ padding: isMobile ? "14px 14px 40px" : "20px 28px 40px", maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Toolbar */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 18 }}>
         <button onClick={onBack} style={{ ...ghostBtn, padding: "5px 10px", fontSize: 11, fontWeight: 400, color: "#7d766a", border: "1px solid #e7e0d2" }}>← Back</button>

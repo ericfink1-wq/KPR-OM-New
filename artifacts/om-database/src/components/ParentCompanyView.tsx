@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
+import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTenantSales, isNAPTenant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -120,6 +121,9 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
 
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+      {/* Centered max-width column — same DETAIL_MAX_WIDTH as the deal page so a
+          property's subpages all read at one consistent width on a big monitor. */}
+      <div style={{ maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Back button */}
       <div style={{ marginBottom:16 }}>
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
@@ -229,6 +233,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

@@ -13,7 +13,7 @@ import { extractAmortSchedule } from "../lib/amortExtract";
 import { extractPref, buildPrefPatch } from "../lib/prefExtract";
 import ImportReview from "./ImportReview";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
-import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION } from "../lib/constants";
+import { STATUS_COLORS, GRADE_COLORS, ANALYSIS_VERSION, DETAIL_MAX_WIDTH } from "../lib/constants";
 import StatusTag from "./StatusTag";
 import ScoreBadge from "./ScoreBadge";
 import RecencyBadge from "./RecencyBadge";
@@ -45,11 +45,10 @@ import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { useIsMobile } from "../hooks/use-mobile";
 
-// Single source of truth for the deal page's readable width. The body and the
-// floating title bar both use this, and every sub-tab renders inside that one
-// centered column — so the property detail page and ALL its subpages stay at an
-// identical width on a big monitor. Change it here and everything follows.
-const DETAIL_MAX_WIDTH = 1400;
+// DETAIL_MAX_WIDTH (from lib/constants) caps the deal page's readable width. The
+// body and floating title bar both use it, and every sub-tab renders inside that
+// one centered column — so the detail page and ALL its subpages match. The same
+// constant drives the tenant/parent/lender/compare pages for one consistent width.
 
 // Sub-page tabs and the jump-list shown when a tab is clicked.
 const PAGE_TABS = [

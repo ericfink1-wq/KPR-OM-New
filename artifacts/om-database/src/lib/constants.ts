@@ -59,6 +59,12 @@ export const SUGGESTED = [
   "What are the demographics like across my portfolio?",
 ];
 
+// Readable max width (px) for the property detail page and every page reached
+// from it (tenant, parent-company, lender, compare). One source of truth so a
+// huge monitor never stretches these full-bleed and they all stay identical.
+// The page's scroll stays full-width; only the content column is capped + centered.
+export const DETAIL_MAX_WIDTH = 1400;
+
 export const PDF_JS_VERSION = "3.11.174";
 export const PDF_JS_CDN = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.min.js`;
 export const PDF_JS_WORKER = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.worker.min.js`;

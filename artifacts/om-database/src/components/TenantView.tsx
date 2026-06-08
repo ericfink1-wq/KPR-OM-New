@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { EyeOff, Unlink } from "lucide-react";
 import type { Deal } from "../lib/idb";
+import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
@@ -162,6 +163,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
 
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+      {/* Centered max-width column — same DETAIL_MAX_WIDTH as the deal page, so a
+          property's subpages all read at one consistent width on a big monitor. */}
+      <div style={{ maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       <div style={{ marginBottom:16 }}>
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
       </div>
@@ -380,6 +384,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }
