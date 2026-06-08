@@ -375,6 +375,102 @@ export function computeCombinedExposure(resolved: ResolvedTenantRisk[], anchors:
   };
 }
 
+// ── risk matrix (anchor × tenant) ─────────────────────────────────────────────────
+// A single grid for export: rows = tenants whose co-tenancy depends on an anchor,
+// columns = the at-risk anchors, each cell = the WORST (lowest) tier at which that
+// tenant trips on that anchor. Anchor columns carry the rent at stake (ranked), and
+// tenant rows carry their own base rent (ranked) — "who is affected by whom, and how
+// much rent is on the line." Deterministic, token-free; mirrors the panel's math.
+export interface MatrixCell {
+  tier: 1 | 2 | 3;
+  clauseType: "opening" | "operating" | null;
+  remedy: CoTenancyRemedy | null;
+  terminationNoticeDays: number | null;
+  verified: boolean;
+  triggerSummary: string;
+}
+export interface MatrixTenantRow {
+  tenant: string;
+  key: string;
+  baseRentAnnual: number | null;
+  cells: Record<string, MatrixCell>;   // keyed by anchor display name
+  worstTier: 1 | 2 | 3;                // lowest tier across this row's cells
+  anchorsAffecting: number;
+  anyVerified: boolean;                // any cell sourced from an executed lease
+}
+export interface MatrixAnchorCol {
+  anchor: string;
+  tier1Rent: number;     // base rent of tenants that trip on this anchor ALONE
+  tier2Rent: number;     // base rent of tenants that need this anchor + one more event
+  totalRent: number;     // base rent of every tenant linked to this anchor (any tier)
+  dependentCount: number;
+}
+export interface RiskMatrix {
+  anchors: MatrixAnchorCol[];   // ranked: most tier-1 rent at stake first
+  tenants: MatrixTenantRow[];   // ranked: most base rent at stake first
+}
+
+/** Build the anchor × tenant exposure matrix from the resolved view. */
+export function buildRiskMatrix(resolved: ResolvedTenantRisk[]): RiskMatrix {
+  const anchorNames = anchorsReferenced(resolved);
+
+  const tenants: MatrixTenantRow[] = [];
+  for (const r of resolved) {
+    if (!r.coTenancy.length) continue;
+    const cells: Record<string, MatrixCell> = {};
+    for (const anchor of anchorNames) {
+      // Across this tenant's clauses, keep the one with the lowest (worst) tier
+      // for this anchor — the most easily tripped is the one that matters.
+      let best: MatrixCell | null = null;
+      for (const c of r.coTenancy) {
+        const tier = clauseTierForAnchor(c, anchor);
+        if (tier === 0) continue;
+        if (!best || tier < best.tier) {
+          best = {
+            tier,
+            clauseType: c.type ?? null,
+            remedy: c.remedy ?? null,
+            terminationNoticeDays: c.terminationNoticeDays ?? null,
+            verified: c.verifiedAgainstExecutedDoc === true,
+            triggerSummary: describeTrigger(c.triggerLogic),
+          };
+        }
+      }
+      if (best) cells[anchor] = best;
+    }
+    const keys = Object.keys(cells);
+    if (!keys.length) continue;
+    const worstTier = keys.reduce((m, a) => Math.min(m, cells[a].tier), 3) as 1 | 2 | 3;
+    tenants.push({
+      tenant: r.tenant, key: r.key, baseRentAnnual: r.baseRentAnnual, cells,
+      worstTier, anchorsAffecting: keys.length,
+      anyVerified: keys.some((a) => cells[a].verified),
+    });
+  }
+
+  const anchors: MatrixAnchorCol[] = anchorNames.map((anchor) => {
+    let tier1Rent = 0, tier2Rent = 0, totalRent = 0, dependentCount = 0;
+    for (const t of tenants) {
+      const cell = t.cells[anchor];
+      if (!cell) continue;
+      const rent = t.baseRentAnnual ?? 0;
+      dependentCount += 1;
+      totalRent += rent;
+      if (cell.tier === 1) tier1Rent += rent;
+      else if (cell.tier === 2) tier2Rent += rent;
+    }
+    return { anchor, tier1Rent, tier2Rent, totalRent, dependentCount };
+  }).filter((a) => a.dependentCount > 0);
+
+  anchors.sort((a, b) => b.tier1Rent - a.tier1Rent || b.totalRent - a.totalRent || a.anchor.localeCompare(b.anchor));
+  tenants.sort((a, b) =>
+    (b.baseRentAnnual ?? 0) - (a.baseRentAnnual ?? 0) ||
+    a.worstTier - b.worstTier ||
+    a.tenant.localeCompare(b.tenant));
+
+  return { anchors, tenants };
+}
+
 // ── auto-generated diligence to-do list ──────────────────────────────────────────
 export interface DiligenceItem {
   kind: "verify_unverified" | "pull_leases_no_cotenancy";

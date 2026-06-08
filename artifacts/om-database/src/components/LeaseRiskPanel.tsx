@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import {
   resolveTenantRisk, computeExposure, computeCombinedExposure, anchorsReferenced,
-  buildAnchorDependencyGraph, buildDiligenceList, type ExposureResult,
+  buildAnchorDependencyGraph, buildDiligenceList, buildRiskMatrix, type ExposureResult,
 } from "../lib/leaseRisk";
+import { exportLeaseRiskMatrix } from "../lib/leaseRiskExcel";
 import { useIsMobile } from "../hooks/use-mobile";
 
 // Lease Risk — Anchor Dependency. Reads the resolver LIVE (token-free): OM-disclosed
@@ -72,6 +73,18 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
 
   const [selected, setSelected] = useState<string[]>([]);
   const [showDil, setShowDil] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  // Whether there's anything to export (≥1 anchor with ≥1 dependent tenant).
+  const hasMatrix = useMemo(() => {
+    const m = buildRiskMatrix(resolved);
+    return m.anchors.length > 0 && m.tenants.length > 0;
+  }, [resolved]);
+  const doExport = async () => {
+    setExporting(true);
+    try { await exportLeaseRiskMatrix(deal, abstracts); }
+    finally { setExporting(false); }
+  };
 
   // Active set = exactly what the user picked. NOTHING is auto-selected.
   const active = useMemo(() => selected.filter((a) => anchors.includes(a)), [selected, anchors]);
@@ -96,7 +109,16 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
 
   return (
     <div id="section-lease-risk" data-jump="Lease Risk" style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: isMobile ? "12px 13px" : "14px 16px", marginTop: 14 }}>
-      <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>LEASE RISK · ANCHOR DEPENDENCY</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>LEASE RISK · ANCHOR DEPENDENCY</div>
+        {hasMatrix && (
+          <button onClick={doExport} disabled={exporting}
+            title="Download the anchor × tenant risk matrix (who trips if an anchor goes dark, and how much rent is at stake) as Excel"
+            style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: exporting ? C.faint : C.green, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 7, padding: "5px 11px", cursor: exporting ? "default" : "pointer", minHeight: 32 }}>
+            {exporting ? "Exporting…" : "⬇ Export matrix (Excel)"}
+          </button>
+        )}
+      </div>
       <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.5, marginBottom: 10 }}>
         Co-tenancy / kickout clauses that let a tenant cut or stop rent when an anchor leaves — invisible in a rent roll. Tap an anchor to model its departure; tap more than one to model them going dark <b>together</b>.
       </div>
