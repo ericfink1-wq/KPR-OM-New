@@ -4,6 +4,7 @@ import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal
 import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
+import { playUploadSuccess, playUploadError } from "../lib/sounds";
 import { classifyDocument, matchDeal, hasPossibleMatch, type DocType } from "../lib/docClassify";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
@@ -365,6 +366,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
     if ((patch.status === "done" || patch.status === "error") && !loggedRef.current.has(itemId)) {
       loggedRef.current.add(itemId);
+      // Quick notification ping: ding on success, soft low ping on failure.
+      if (patch.status === "done") playUploadSuccess(); else playUploadError();
       const it = queueRef.current.find(x => x.id === itemId);
       const detail = patch.status === "error"
         ? (patch.error || it?.error || patch.msg || it?.msg || "")
