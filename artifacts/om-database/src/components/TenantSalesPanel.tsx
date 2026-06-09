@@ -275,7 +275,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedYear, setSelectedYear] = useState<number | "all">("all");
   const [filter, setFilter] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("salesPSF");
+  const [sortKey, setSortKey] = useState<SortKey>("annualSales");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [collapsed, setCollapsed] = useState(false);
   const [linkEditKey, setLinkEditKey] = useState<string | null>(null);

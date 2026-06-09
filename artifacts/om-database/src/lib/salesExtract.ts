@@ -58,25 +58,41 @@ CHOOSING THE YEAR — READ CAREFULLY (for multi-year column reports, NOT the R12
 
 SQUARE FOOTAGE — IMPORTANT. If the report's "Square Feet (GLA)" prints as 0 or blank but it DOES state a "Per Square Foot" sales figure, DERIVE sf = round(annualSales ÷ salesPSF). Never report sf as 0 when sales and PSF are both present.
 
+MONTHLY-BREAKOUT REPORTS WITH A "Projected Annual" COLUMN (common PM-export format — handle explicitly). The sheet lists, FOR EACH TENANT, a header row with the tenant name plus "Units:" (suite), "Lease Start", "Lease Expiration", followed by one row PER YEAR. Each year row begins with the tenant's SF, then the year, then twelve monthly columns (Jan–Dec), then a "YTD"/"Total" column, then "Projected Annual" "Total" and "$PSF" columns. For this format:
+- annualSales = the "Projected Annual" Total (the full-year figure); salesPSF = the "Projected Annual" "$PSF". Do NOT use the "YTD"/"Total" column — it is a year-to-date number (often just the first month) and badly understates annual sales.
+- Choose the MOST RECENT year whose twelve monthly columns are fully populated. If the latest year's later months are blank/zero (still in progress), step back to the last fully-populated year.
+- name = the tenant in the header row (strip the store # and any "(tNNNN…)" id, e.g. "Aerie #3883 (t9500499)" → "Aerie"); suite = the "Units:" value; sf = the leading SF number on the chosen year row.
+
 reviewQuestions — FLAG DOUBT so the user can confirm/fix it. Add an item ONLY when you genuinely could not capture a value with confidence, e.g.: the year you chose was ambiguous (the latest column might be partial and you had to step back a year); a sales/PSF figure was blurry, split oddly, or in unclear units (thousands vs whole dollars); a tenant's salesPSF and annual sales don't tie (annualSales ÷ sf should ≈ salesPSF); or a column was unlabeled and you weren't sure it was sales vs PSF vs occupancy cost. ALWAYS set target to the exact tenant + field when the doubt is about one tenant's number. Do NOT flag values simply absent from the report (those are just null). Empty array if the report was clean. Cap at the ~4 most important.
 
 ${await lessonGuidanceClient("sales")}
 SALES REPORT TEXT:
-${text.slice(0, 40000)}`;
+${text.slice(0, 120000)}`;
 
-  const res = await apiAiMessages({
-    model: "claude-sonnet-4-6",
-    max_tokens: 16000,
-    messages: [{ role: "user", content: prompt }],
-  });
-  const raw = res.content.find((c: { type: string }) => c.type === "text")?.text ?? "";
-  let parsed: { year?: number; tenants?: unknown[] };
-  try { parsed = robustParseJSON(raw) as typeof parsed; } catch { throw new Error("Couldn't parse the AI response — try again."); }
+  // Call once, parse; if the model returned non-JSON (stray prose / a truncated or
+  // malformed object), retry ONCE automatically before surfacing an error — these
+  // misses are usually transient, so the user shouldn't have to re-trigger by hand.
+  const callOnce = async (): Promise<string> => {
+    const res = await apiAiMessages({
+      model: "claude-sonnet-4-6",
+      max_tokens: 16000,
+      messages: [{ role: "user", content: prompt }],
+    });
+    return res.content.find((c: { type: string }) => c.type === "text")?.text ?? "";
+  };
+  type ParsedSales = { year?: number; tenants?: unknown[]; reviewQuestions?: unknown };
+  let parsed: ParsedSales | null = null;
+  for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+    const raw = await callOnce();
+    try { parsed = robustParseJSON(raw) as ParsedSales; } catch { parsed = null; }
+  }
+  if (!parsed) throw new Error("Couldn't parse the AI response — try again.");
+  const data: ParsedSales = parsed;
 
-  const year = typeof parsed.year === "number" ? parsed.year : new Date().getFullYear() - 1;
-  const tenants = Array.isArray(parsed.tenants) ? parsed.tenants as Array<Record<string, unknown>> : [];
+  const year = typeof data.year === "number" ? data.year : new Date().getFullYear() - 1;
+  const tenants = Array.isArray(data.tenants) ? data.tenants as Array<Record<string, unknown>> : [];
   if (tenants.length === 0) throw new Error("No tenant sales data found in the report.");
-  const reviewQuestions = parseAiReviewQuestions((parsed as { reviewQuestions?: unknown }).reviewQuestions, "ai-sales-");
+  const reviewQuestions = parseAiReviewQuestions(data.reviewQuestions, "ai-sales-");
   return { year, tenants, reviewQuestions };
 }
 
