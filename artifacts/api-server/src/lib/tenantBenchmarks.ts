@@ -26,6 +26,16 @@ const MIN_SALES_N = 3;
 // Store-size deviation needs at least a couple of comparable boxes to mean anything.
 const MIN_SIZE_N = 2;
 
+// Sanity bounds — drop values outside plausible retail ranges BEFORE averaging, so a
+// mis-extracted figure (monthly rent left in the annual field, total sales dropped
+// into the per-SF field, a missing/extra zero) can't move a brand's average. The
+// engine uses a MEAN over often-small samples, so one bad row would otherwise skew it.
+// Mirrors the comp benchmark's validity gate; generous, so only true errors drop.
+const RENT_PSF_MIN = 1, RENT_PSF_MAX = 300;       // $/SF/yr
+const SALES_PSF_MIN = 10, SALES_PSF_MAX = 6000;   // $/SF/yr
+const SF_MIN = 100, SF_MAX = 600000;              // leasable SF
+const inRange = (v: number, lo: number, hi: number) => v >= lo && v <= hi;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Confidence = "high" | "medium" | "low";
@@ -180,19 +190,19 @@ async function queryBenchmarks(
       const weight = recencyWeight(e.vintage);
       if (e.vintageFromLease) leaseDatedCount++;
 
-      // Only positive values count — a 0 (or blank) SF / rent / sales row, e.g. a
-      // shadow line or a data gap, must never drag an average down.
-      if (e.rentPerSf != null && e.rentPerSf > 0) {
+      // Only in-range values count — a 0/blank row (shadow line, data gap) or an
+      // out-of-range outlier (a unit/typo error) must never drag an average.
+      if (e.rentPerSf != null && inRange(e.rentPerSf, RENT_PSF_MIN, RENT_PSF_MAX)) {
         weightedRentSum += e.rentPerSf * weight;
         weightSum += weight;
         simpleRentSum += e.rentPerSf;
         simpleRentCount++;
       }
-      if (e.sf != null && e.sf > 0) {
+      if (e.sf != null && inRange(e.sf, SF_MIN, SF_MAX)) {
         sfSum += e.sf;
         sfCount++;
       }
-      if (e.salesPsf != null && e.salesPsf > 0) {
+      if (e.salesPsf != null && inRange(e.salesPsf, SALES_PSF_MIN, SALES_PSF_MAX)) {
         const sw = salesRecencyWeight(e.salesYear);
         weightedSalesSum += e.salesPsf * sw;
         salesWeightSum += sw;
