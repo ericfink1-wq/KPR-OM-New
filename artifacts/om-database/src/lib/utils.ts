@@ -3,6 +3,9 @@ import { twMerge } from "tailwind-merge";
 import type { Deal, ReviewQuestion, LeaseAbstract } from "./idb";
 import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "./idb";
 import { isInvestmentGrade } from "./tenantCredit";
+// Used only inside buildSystemPrompt (runtime), so the utils⇄leaseRisk import cycle
+// is safe — neither module touches the other's exports at module-eval time.
+import { resolveTenantRisk, anchorsReferenced, computeExposure } from "./leaseRisk";
 
 // Occupancy sanity: some OMs express occupancy as a FRACTION (1.0 = 100%,
 // 0.993 = 99.3%) rather than a percent. A real retail-center occupancy is never
@@ -1298,6 +1301,73 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
     return Object.keys(k).length ? k : undefined;
   };
 
+  // Co-tenancy exposure (the deterministic lease-risk engine, token-free). Per named
+  // anchor: rent that trips if it goes dark ALONE (tripsAlone — be precise, never
+  // overstate an X-of-N clause as a solo trigger) vs. ANY linkage (anyLinkage —
+  // trips alone OR needs a second event). Resolves abstracts (verified) over OM
+  // (unverified) for the deal, exactly like the deal page's risk panel.
+  const coTenancyExposure = (d: Deal) => {
+    const resolved = resolveTenantRisk(d, (abstracts || []).filter(a => a.dealId === d.id));
+    const anchors = anchorsReferenced(resolved);
+    if (!anchors.length) return undefined;
+    const rows = anchors.map(anchor => {
+      const e = computeExposure(resolved, anchor);
+      return {
+        anchor,
+        tripsAloneRent: Math.round(e.tier1Rent) || undefined,
+        tripsAloneTenants: e.tier1Count || undefined,
+        anyLinkageRent: Math.round(e.tier3Rent) || undefined,
+        anyLinkageTenants: e.tier3Count || undefined,
+        verified: e.clauses.some(c => c.verified) || undefined,
+      };
+    }).sort((a, b) => (b.tripsAloneRent ?? 0) - (a.tripsAloneRent ?? 0));
+    return rows.length ? rows : undefined;
+  };
+
+  // Trade-area demographics — OM-stated plus AI-researched (marketDemographics).
+  const demographics = (d: Deal) => {
+    const m: Record<string, unknown> = {};
+    if (nz(d.trafficCountVPD)) m.trafficVPD = d.trafficCountVPD;
+    if (nz(d.population3mi)) m.pop3mi = d.population3mi;
+    if (nz(d.medianHHIncome3mi)) m.medHHI3mi = d.medianHHIncome3mi;
+    if (nz(d.avgHHIncome3mi)) m.avgHHI3mi = d.avgHHIncome3mi;
+    if (nz(d.proximityHighways)) m.highways = d.proximityHighways;
+    if (nz(d.retailCotenants)) m.nearbyRetail = d.retailCotenants;
+    const md = d.marketDemographics;
+    if (md) {
+      const r: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries({ pop1mi: md.pop1mi, pop3mi: md.pop3mi, pop5mi: md.pop5mi, avgHHI1mi: md.avgHHI1mi, avgHHI3mi: md.avgHHI3mi, avgHHI5mi: md.avgHHI5mi })) {
+        if (nz(v)) r[k] = v;
+      }
+      if (md.confidence) r.confidence = md.confidence;
+      if (Object.keys(r).length) m.researched = r;
+    }
+    return Object.keys(m).length ? m : undefined;
+  };
+
+  // Lease-expiration (rollover) schedule — base rent + SF + tenant count expiring per
+  // year, so "what rolls in 2027 / our rollover exposure" is answerable directly.
+  // Bucketed: already-expired/MTM, each of the next ~10 years, then a 10yr+ tail.
+  const rolloverByYear = (d: Deal) => {
+    const curY = new Date().getFullYear();
+    const buckets = new Map<string, { rent: number; sf: number; tenants: number }>();
+    for (const t of (d.tenants || [])) {
+      if (isNAPTenant(t)) continue;
+      const y = parseInt(String(t.leaseExpiry ?? "").slice(0, 4), 10);
+      if (!y || isNaN(y)) continue;
+      const key = y <= curY ? "expired/MTM" : y >= curY + 10 ? `${curY + 10}+` : String(y);
+      const b = buckets.get(key) || { rent: 0, sf: 0, tenants: 0 };
+      b.rent += _num(t.annualRent) ?? 0;
+      b.sf += _num(t.sf) ?? 0;
+      b.tenants += 1;
+      buckets.set(key, b);
+    }
+    if (!buckets.size) return undefined;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of buckets) out[k] = { rent: Math.round(v.rent) || undefined, sf: Math.round(v.sf) || undefined, tenants: v.tenants };
+    return out;
+  };
+
   const portfolio = active.map(d => {
     const isPassed = d.status === "Passed";
     const tenantList = (d.tenants || []);
@@ -1357,10 +1427,28 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
       salesYearsOnFile: (d.tenantSalesHistory && d.tenantSalesHistory.length)
         ? Array.from(new Set(d.tenantSalesHistory.map(s => s.year))).sort((a, b) => b - a)
         : undefined,
+      // Co-tenancy exposure + lease rollover (non-passed; passed deals are bare comps).
+      coTenancyExposure: isPassed ? undefined : coTenancyExposure(d),
+      rollover: isPassed ? undefined : rolloverByYear(d),
+      demographics: demographics(d),
+      // KPR's own recorded take — these DEFINE the house view (see HOUSE VIEW section).
+      kprReview: nz(d.dealReview) ? d.dealReview : undefined,
+      kprThesis: nz(d.dealThesis) ? d.dealThesis : undefined,
+      keyAssumptions: nz(d.keyAssumptions) ? d.keyAssumptions : undefined,
+      shadowAnchors: nz(d.shadowAnchors) ? d.shadowAnchors : undefined,
+      redFlags: (d.redFlags && d.redFlags.length) ? d.redFlags : undefined,
+      upside: (d.upsideItems && d.upsideItems.length) ? d.upsideItems : undefined,
       tenants: tenants.length ? tenants : undefined,
       kpr,
     };
   });
+
+  // KPR HOUSE VIEW — distilled from every deal Eric has personally reviewed. This is
+  // how KPR thinks (pricing read, what they like/avoid, risk tolerance); the analyst
+  // should reason in this voice and apply it even to deals without an explicit review.
+  const houseView = active
+    .filter(d => nz(d.dealReview))
+    .map(d => ({ deal: d.propertyName || d.fileName, status: d.status, review: d.dealReview }));
 
   const ownedCount = bySt["Owned"] || 0;
 
@@ -1477,7 +1565,12 @@ For Owned / Under Contract / Sold deals, a "kpr" object holds KPR's ACTUAL deal 
 - askingPrice / capRate / noi at the top level are the OM/seller-stated figures — what the deal was marketed at, not necessarily KPR's actual basis or underwriting.
 - kprAcqCapRate = KPR's going-in cap on actual price; loan* = KPR's financing (lender, amount, rate, spread in bps, LTV, IO years, maturity); pref* = preferred equity. kprSalePrice/kprSaleDate = exit terms for Sold deals.
 - For "what's our basis / our cap / our loan / our financing / cash-on-cash", use the kpr object. If a needed kpr field is absent, say it isn't recorded — do not substitute the OM figure silently.
+${houseView.length ? `
+=== KPR HOUSE VIEW (how we think — READ AND ADOPT THIS) ===
+These are KPR's OWN written takes on deals it has reviewed — the team's real opinions on pricing, what they like and avoid, and risk tolerance. This is the house view: reason in this voice, weight deals the way these reviews do, and APPLY the same lens to deals that have no explicit review. Each deal also carries its own "kprReview"/"kprThesis" inline. When you draw on it, attribute it as KPR's own view (e.g. "consistent with your read on …"), and never contradict a recorded KPR review with a generic take — if you disagree, flag the tension explicitly.
 
+${JSON.stringify(houseView)}
+` : ""}
 === RETAIL DOMAIN GLOSSARY ===
 - Anchor: large lead tenant driving traffic (grocer, big-box, etc.) — flagged anchor:true. "Inline/shop tenants" = the smaller non-anchor stores.
 - NAP ("not a part", isNAP:true): a parcel/pad in the center not part of the leasable area KPR controls (e.g. a ground-leased pad or separately-owned outparcel) — exclude from KPR's occupancy/SF/rent rollups unless asked specifically.
@@ -1493,6 +1586,18 @@ Sales figures shown are the MOST RECENT on file, resolving uploaded sales report
 - occCostPct = occupancy cost as a % of sales = (base rent + reimbursements + percentage rent + other) ÷ gross sales. This is the key health metric: low (grocers often <3%, inline apparel healthy <10–12%, stressed >15%) = the tenant can comfortably afford its rent and there's mark-to-market room; high = rent is stretched relative to sales, a closure/renewal risk. Never compute occ cost as rent÷sales alone, and never invent it — use the value given.
 - salesHistory = an array (newest year first) of {year, salesPSF, grossSales, occCostPct} when 2+ years are on file — use it for year-over-year / trend ("sales up/down X% since 20YY"). salesYearsOnFile (deal level) lists which sales-report years exist for the deal even if a roster was trimmed.
 - A tenant with NO sales fields simply has no reported sales — say so; do not infer sales from rent. When quoting a cross-tenant sales benchmark, it's sourced from the database (uploaded + OM sales across deals) — cite the year basis and tenant count, use medians, and never quote a sales-PSF average off a tiny sample.
+
+=== CO-TENANCY EXPOSURE (deal field "coTenancyExposure") ===
+A precomputed, deterministic read of each deal's co-tenancy risk — what happens to OTHER tenants' rent if a named anchor goes dark. Per anchor:
+- tripsAloneRent / tripsAloneTenants = base rent (and # of tenants) whose co-tenancy clause trips if THIS anchor alone goes dark. This is the true single-anchor exposure — use it for "if Anchor X leaves, how much rent is at risk?"
+- anyLinkageRent / anyLinkageTenants = rent of every tenant whose clause so much as REFERENCES this anchor, including ones that need a SECOND event (e.g. an "X-of-N key-tenants" clause that only trips when several go dark). anyLinkage ≥ tripsAlone. NEVER present anyLinkage as if one anchor leaving triggers it — that overstates exposure. If tripsAloneRent is 0 but anyLinkage is large, say the anchor is one of several named tenants and the clause needs multiple to go dark.
+- verified:true = at least one clause is confirmed against an executed lease/abstract; otherwise it's OM-disclosed and UNVERIFIED — say so. Absent coTenancyExposure = no co-tenancy disclosed for that deal.
+
+=== LEASE ROLLOVER (deal field "rollover") ===
+Base rent + SF + tenant count expiring per year (keys: "expired/MTM" = already past, each upcoming year, and "<year>+" = a 10-year tail). Use it for rollover-wall / "what rolls in 20XX" / near-term mark-to-market questions; pair with the hold-period lens below.
+
+=== DEMOGRAPHICS (deal field "demographics") ===
+trafficVPD (vehicles/day), pop3mi, medHHI3mi/avgHHI3mi (household income), highways, nearbyRetail. "researched" = an AI-verified trade-area pull (pop/income at 1/3/5 mi with a confidence) — distinguish it from OM-stated figures, and note low confidence when present.
 
 Portfolio counts: ${active.length} total deals — ${statuses.map(s => `${bySt[s]} ${s}`).join(", ")}.
 
