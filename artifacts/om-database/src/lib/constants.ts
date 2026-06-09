@@ -50,12 +50,15 @@ export const ANALYST_TOOLS = [
   { name: "get_demographics", description: "Pull 1/3/5-mile trade area demographics (population, avg HHI) for a property address" },
 ];
 
+// Suggested analyst prompts. Every one must be answerable from the data
+// buildSystemPrompt() actually sends — if you change what's in the prompt, re-check
+// these so a tapped chip never returns "I don't have that data."
 export const SUGGESTED = [
-  "What deals are approaching lease expirations in the next 2 years?",
+  "Which leases roll in the next 2 years, and how much rent is exposed?",
   "Rank my deals by cap rate and explain the spread.",
-  "Which assets have the highest rollover risk?",
-  "Give me a market overview for my grocery-anchored centers.",
-  "Which deals have assumable debt and what are the terms?",
+  "Where do we have the most co-tenancy exposure if an anchor goes dark?",
+  "How do our cap rates compare to the sales comps in the database?",
+  "Which deals have assumable debt, and what are the terms?",
   "What are the demographics like across my portfolio?",
 ];
 

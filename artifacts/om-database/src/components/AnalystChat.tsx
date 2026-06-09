@@ -3,7 +3,8 @@ import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
-import { apiLoadImages, apiListAllLeaseAbstracts } from "../lib/api";
+import { apiLoadImages, apiListAllLeaseAbstracts, apiLoadComps } from "../lib/api";
+import { buildCompsSummary, type CompsSummary } from "../lib/compsSummary";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
 
@@ -89,6 +90,12 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   const [abstracts, setAbstracts] = useState<LeaseAbstract[]>([]);
   useEffect(() => { apiListAllLeaseAbstracts().then(setAbstracts).catch(() => {}); }, []);
 
+  // Sales-comp benchmark — computed in code from the comps database (cardinal rule:
+  // the app computes comp stats, the analyst only narrates), folded into the prompt
+  // so cap-rate / price-PSF comparisons are answerable. Fetched once; null on failure.
+  const [compsSummary, setCompsSummary] = useState<CompsSummary | null>(null);
+  useEffect(() => { apiLoadComps().then(rows => setCompsSummary(buildCompsSummary(rows))).catch(() => {}); }, []);
+
   // Reset to top on initial mount — prevents opening scrolled to bottom
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -126,7 +133,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     setLoading(true);
 
     try {
-      const systemPrompt = buildSystemPrompt(deals, abstracts);
+      const systemPrompt = buildSystemPrompt(deals, abstracts, compsSummary);
       const history = [...msgs, userMsg].map(m => ({ role: m.role, content: m.content }));
 
       const resp = await sendMessage({
