@@ -2340,6 +2340,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         })()}
       </div>
 
+      {/* Thin/partial-extraction banner with the "Fill in the blanks" CTA — kept at
+          the very top, next to the import-review box, so missing core data is obvious. */}
+      <ExtractionQuality deal={d} onUpdate={onUpdate}/>
+
       {/* Unified import-review / data-integrity banner — top of page. Amber when
           there are open items to confirm (opens the review overlay), green when
           everything checks out. Supersedes the old standalone DataIntegrity box. */}
@@ -2507,8 +2511,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}><BoldText text={d.notes}/></p>}
         </div>
       )}
-
-      <ExtractionQuality deal={d} onUpdate={onUpdate}/>
 
       </>)}
       {tab === "market" && (<>
