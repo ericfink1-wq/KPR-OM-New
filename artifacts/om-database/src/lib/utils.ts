@@ -1513,12 +1513,32 @@ export function buildSystemPrompt(
     return { deal: dealName(a.dealId), ...rest };
   });
   // ---- Context-size guard ----------------------------------------------------
-  // The ENTIRE library is serialized into every Analyst prompt; past ~100 deals +
-  // abstracts the JSON exceeds the model's 200K-token context and the request 400s
-  // ("prompt is too long"). Serialize COMPACT (no pretty-print) and, if still too
-  // big, shed the least-important detail in order — non-owned rosters → all rosters
-  // → abstract bodies — until the data fits a safe char budget (~3.2 chars/token).
-  const DATA_BUDGET = 500_000; // ~150K tokens; leaves headroom for instructions + full chat history
+  // The ENTIRE library is serialized into every Analyst prompt; as deals +
+  // abstracts grow the JSON exceeds the model's 200K-token context and the request
+  // 400s ("prompt is too long"). Serialize COMPACT (no pretty-print) and, if still
+  // too big, shed the least-important detail in order — non-owned rosters → all
+  // rosters → abstract bodies — until the data fits the budget below.
+  //
+  // The budget is DYNAMIC: an earlier version measured ONLY the portfolio+abstract
+  // JSON against a fixed 500K-char cap and ignored the other large sections that
+  // also go into the prompt (comps summary, tenant benchmarks, house view, the
+  // static instruction scaffold) plus the running chat history and the reply. So
+  // the data could sit just under cap while the WHOLE prompt overflowed (a batch of
+  // verbose lease abstracts tipped it to ~208K tokens). Budget the data against
+  // what's actually left: a conservative input-token target × chars/token, minus the
+  // measured overhead and a reserve for history/reply.
+  const CHARS_PER_TOKEN = 2.9;          // conservative for this mixed JSON/prose/number content
+  const INPUT_TOKEN_TARGET = 175_000;   // generous margin below the 200K hard cap
+  const HISTORY_RESERVE_CHARS = 40_000; // ~14K tokens kept free for the running chat history + reply
+  const overheadChars =
+    JSON.stringify(compsSummary ?? null).length +
+    JSON.stringify(tenantBenchmarks ?? null).length +
+    JSON.stringify(houseView).length +
+    24_000;                             // the static instruction scaffold below (approx, stable)
+  const DATA_BUDGET = Math.max(
+    140_000,
+    Math.floor(INPUT_TOKEN_TARGET * CHARS_PER_TOKEN) - HISTORY_RESERVE_CHARS - overheadChars,
+  );
   const byId = new Map(active.map(d => [d.id, d] as const));
   const compactRoster = (d: Deal) => {
     const latestSales = salesByDeal.get(d.id);
