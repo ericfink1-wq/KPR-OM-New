@@ -287,10 +287,10 @@ RULES:
 6. Vacant tenants: skip entirely.
 7. For single-lease flags, note "(only 1 database lease — directional)" in the description.
 8. STORE SIZE vs PROTOTYPE (SIZE segments): a box far from its chain's typical size is a real re-leasing risk — off-prototype stores are harder to backfill and likelier to sit on a chain's "non-prototype / do-not-renew" list, so they carry higher closure risk even at a market rent.
-   a. DATABASE size: when a SIZE segment shows this store >=40% SMALLER or >=40% LARGER than the brand's database average (it already requires 2+ locations), add a redFlag framed as prototype-fit / backfill risk, citing this SF, the brand average, the location count, and the % gap. Severity: >=60% off OR 3+ locations -> "medium"; otherwise "low" (database size samples are directional). Do NOT raise a size flag under a 40% deviation.
+   a. DATABASE size: when a SIZE segment shows this store >=40% SMALLER or >=40% LARGER than the database average (it already requires 2+ locations), add a redFlag framed as prototype-fit / backfill risk, citing this SF, the database average, the location count, and the % gap. Severity: >=60% off OR 3+ locations -> "medium"; otherwise "low" (database size samples are directional). Do NOT raise a size flag under a 40% deviation.
    b. NATIONAL prototype (use sparingly, only when you are genuinely confident): if you reliably know a well-known chain's typical national prototype footprint and THIS store is well outside that range, you MAY add a low/medium note — but you MUST label it as based on the chain's general/national prototype (NOT database data), and it must never override the database SIZE segment. If unsure of the prototype, say nothing about size beyond the database segment. NEVER invent a prototype size.
 9. SALES PER SF (SALES segments) — treat as AT LEAST as important as rent. A SALES segment is shown ONLY when >=${MIN_SALES_N} database locations disclosed sales, so when one is present the average is reliable enough to quote.
-   a. This store materially BELOW the brand's database sales/SF average is a struggling-location / closure-risk redFlag (a weak-selling box is a re-leasing risk regardless of its current rent). Severity by gap + sample: >=40% below -> "medium" (or "high" with 5+ locations); 25–39% below -> "low"–"medium"; under 25% below -> mention only if it compounds another risk.
+   a. This store materially BELOW the database sales/SF average is a struggling-location / closure-risk redFlag (a weak-selling box is a re-leasing risk regardless of its current rent). Severity by gap + sample: >=40% below -> "medium" (or "high" with 5+ locations); 25–39% below -> "low"–"medium"; under 25% below -> mention only if it compounds another risk.
    b. This store materially ABOVE the average -> a strength bullet (a healthy, productive, sticky location that supports its rent).
    c. If a tenant has NO SALES segment, do NOT comment on its sales and never quote a brand sales average for it — the sample was too small to be reliable.
    - Every sales mention must cite this store's sales/SF, the database average, the location count, and the years.
@@ -433,7 +433,7 @@ export async function augmentScoringWithBenchmarks(
         occCost != null ? `occ-cost ${occCost.toFixed(1)}%` : null,
       ].filter(Boolean).join(", ");
 
-      // — RENT segment: recency-weighted $/SF vs the brand's database average —
+      // — RENT segment: recency-weighted $/SF vs the database average —
       let rentSeg = "";
       if (rentPSF != null && bench.weightedAvgRentPerSf != null) {
         const pct = ((rentPSF - bench.weightedAvgRentPerSf) / bench.weightedAvgRentPerSf) * 100;
@@ -447,14 +447,14 @@ export async function augmentScoringWithBenchmarks(
           ` [${dateRange}, recency-weighted; severity tier: ${bench.confidence}, eff. weight ${effCount}] → ${pctStr(pct)} vs rent benchmark`;
       }
 
-      // — SIZE segment: this box vs the brand's average store size (prototype proxy) —
+      // — SIZE segment: this box vs the database average store size (prototype proxy) —
       let sizeSeg = "";
       const thisSf = toNum(t.sf);
       if (thisSf != null && bench.avgSf != null && bench.sfCount >= MIN_SIZE_N) {
         const spct = ((thisSf - bench.avgSf) / bench.avgSf) * 100;
         sizeSeg =
-          `SIZE: this ${Math.round(thisSf).toLocaleString()} SF vs brand avg ${Math.round(bench.avgSf).toLocaleString()} SF` +
-          ` across ${bench.sfCount} ${bench.sfCount === 1 ? "location" : "locations"} → ${pctStr(spct)} vs prototype`;
+          `SIZE: this ${Math.round(thisSf).toLocaleString()} SF vs database avg ${Math.round(bench.avgSf).toLocaleString()} SF` +
+          ` across ${bench.sfCount} ${bench.sfCount === 1 ? "location" : "locations"} → ${pctStr(spct)} vs size benchmark`;
       }
 
       // — SALES segment: only when a large-enough sample (≥MIN_SALES_N) has disclosed sales —
@@ -468,7 +468,7 @@ export async function augmentScoringWithBenchmarks(
               : `${bench.salesOldestYear}–${bench.salesNewestYear}`
             : "years n/a";
         salesSeg =
-          `SALES: this ${fmtMoney(thisSales)}/SF vs brand avg ${fmtMoney(bench.weightedAvgSalesPerSf)}/SF` +
+          `SALES: this ${fmtMoney(thisSales)}/SF vs database avg ${fmtMoney(bench.weightedAvgSalesPerSf)}/SF` +
           ` across ${bench.salesCount} locations [${syRange}, recency-weighted] → ${pctStr(salesPct)} vs sales benchmark`;
       }
 
@@ -483,7 +483,7 @@ export async function augmentScoringWithBenchmarks(
     }
 
     // Only proceed if at least one tenant has an actual comparison (rent, size, or sales)
-    const comparableLines = tenantLines.filter((l) => /vs (rent|sales) benchmark|vs prototype/.test(l));
+    const comparableLines = tenantLines.filter((l) => /vs (rent|sales|size) benchmark/.test(l));
     if (comparableLines.length === 0) return extracted;
 
     // Build prompt
