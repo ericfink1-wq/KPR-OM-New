@@ -1751,8 +1751,15 @@ ${JSON.stringify(tenantBenchmarks)}
   // ~195K tokens, still under the 200K hard cap (at the measured ~2.3 it's ~170K).
   const HARD_CHAR_CAP = 390_000;
   if (prompt.length > HARD_CHAR_CAP) {
-    return prompt.slice(0, HARD_CHAR_CAP) +
-      "\n\n[Context truncated to fit the model's limit. Some lower-priority sections were cut — ask about a SPECIFIC deal or tenant for full detail.]";
+    // Truncating the tail drops the ANSWERING GUIDELINES, so re-append a compact set
+    // of the non-negotiable rules — a truncated prompt must still know not to
+    // fabricate and how to scope "portfolio" vs "database".
+    const CRITICAL_RULES = "\n\n=== CRITICAL RULES (still apply) ===\n" +
+      "- Never invent numbers; if a figure isn't in the data above, say so plainly. null/absent = unknown, not zero.\n" +
+      "- \"KPR portfolio\" / \"our\" = Owned deals only; \"the database\" = all statuses. State which set any aggregate covers.\n" +
+      "- Always cite the year for a sales figure; use medians (not means) for benchmarks; rents \"are X% below,\" they don't \"trade.\"\n" +
+      "- Some lower-priority context was truncated to fit the model's limit — for anything missing, ask about a SPECIFIC deal or tenant (full detail is on its page).";
+    return prompt.slice(0, HARD_CHAR_CAP - CRITICAL_RULES.length) + CRITICAL_RULES;
   }
   return prompt;
 }
