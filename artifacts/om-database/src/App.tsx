@@ -105,6 +105,15 @@ function AppInner() {
     setDealCounts(prev => (prev && prev.shown === shown && prev.total === total) ? prev : { shown, total });
   }, []);
   const [deals, setDeals] = useState<Deal[]>([]);
+  // Always-current mirror of `deals`. Background saves in UploadQueue finish out of
+  // band, so they need to re-base their changes onto the LATEST deal (which may
+  // include edits the user just made on the deal page) rather than a stale snapshot
+  // captured when the upload started. Reading state inside an async callback would
+  // see a stale closure; this ref is kept current synchronously by the racing
+  // updaters below (and on every render as a backstop).
+  const dealsRef = useRef<Deal[]>([]);
+  dealsRef.current = deals;
+  const getLatestDeal = useCallback((id: string) => dealsRef.current.find(d => d.id === id), []);
   const [tab, setTab] = useState<TabId>("analyst");
   // Right-side AI chat drawer (opened from the ask bar / "Ask about this property").
   const [chatOpen, setChatOpen] = useState(false);
@@ -226,12 +235,13 @@ function AppInner() {
   }, []);
 
   const handleUpdate = useCallback((id: string, patch: Partial<Deal>) => {
-    setDeals(prev => {
-      const next = prev.map(d => d.id === id ? { ...d, ...patch } : d);
-      const updated = next.find(d => d.id === id);
-      if (updated) apiSaveDeal(updated).catch(() => {});
-      return next;
-    });
+    // Merge onto the latest known deal and sync the ref synchronously, so a
+    // background save that lands right after sees this edit (and vice-versa).
+    const next = dealsRef.current.map(d => d.id === id ? { ...d, ...patch } : d);
+    dealsRef.current = next;
+    const updated = next.find(d => d.id === id);
+    if (updated) apiSaveDeal(updated).catch(() => {});
+    setDeals(next);
   }, []);
 
   const handleDealsAdded = useCallback((newDeals: Deal[]) => {
@@ -245,9 +255,13 @@ function AppInner() {
   const handleDealUpdated = useCallback((updated: Deal) => {
     // Upsert — if the deal isn't in the list yet (e.g. an auto-merge target that
     // wasn't loaded), add it so the result shows immediately without a refresh.
-    setDeals(prev => prev.some(d => d.id === updated.id)
-      ? prev.map(d => d.id === updated.id ? updated : d)
-      : [...prev, updated]);
+    // Sync the ref synchronously so a chained background save (e.g. apply roster →
+    // refresh analysis) re-bases onto this result instead of a stale snapshot.
+    const next = dealsRef.current.some(d => d.id === updated.id)
+      ? dealsRef.current.map(d => d.id === updated.id ? updated : d)
+      : [...dealsRef.current, updated];
+    dealsRef.current = next;
+    setDeals(next);
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {
@@ -674,6 +688,7 @@ function AppInner() {
         onFilesConsumed={() => setPendingFiles([])}
         onDealsAdded={handleDealsAdded}
         onDealUpdated={handleDealUpdated}
+        getLatestDeal={getLatestDeal}
         onOpenDeal={handleOpenDeal}
         existingDeals={deals}
         onPanelHeightChange={setUploadPanelH}

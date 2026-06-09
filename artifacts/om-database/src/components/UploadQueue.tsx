@@ -50,6 +50,10 @@ interface Props {
   onFilesConsumed: () => void;
   onDealsAdded: (deals: Deal[]) => void;
   onDealUpdated?: (deal: Deal) => void;
+  // Reads the freshest copy of a deal from app state. Background saves re-base their
+  // changes onto this so they don't clobber edits the user made on the deal page
+  // while the upload was still finishing.
+  getLatestDeal?: (id: string) => Deal | undefined;
   onOpenDeal: (id: string) => void;
   existingDeals: Deal[];
   // Reports the open import panel's height (0 when hidden) so the feedback flag
@@ -232,7 +236,7 @@ const REFRESH_FLAG_FIELDS: { key: string; label: string; type: "number" | "text"
 
 const MAX_CONCURRENT = 3;
 
-export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, onOpenDeal, existingDeals, onPanelHeightChange }: Props) {
+export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, getLatestDeal, onOpenDeal, existingDeals, onPanelHeightChange }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [queueOpen, setQueueOpen] = useState(true);
   // Tick once a second while anything is actively processing, to drive each
@@ -420,6 +424,22 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // deal page isn't left showing stale "analysis may be outdated". Best-effort —
   // never fails the import. Costs a Haiku roster pass per deal (acceptable: the
   // user asked for auto-refresh on upload).
+  // Persist a background change as a PATCH re-based onto the freshest deal — never a
+  // full-deal overwrite from the snapshot captured when the upload started. This is
+  // the fix for "I filled in the address / partial-extraction fields, came back, and
+  // it was gone": a refresh-analysis or apply-roster/sales/etc. finishing in the
+  // background used to PUT its stale snapshot (which lacked the user's just-saved
+  // edit) over both the server record and client state. By layering only the op's
+  // changed fields onto getLatestDeal(), the user's concurrent edits to other fields
+  // survive. Falls back to the captured deal if app state doesn't know it yet.
+  const commitPatch = async (deal: Deal, patch: Partial<Deal>): Promise<Deal> => {
+    const latest = getLatestDeal?.(deal.id) ?? deal;
+    const toSave = { ...latest, ...patch } as Deal;
+    await apiSaveDeal(toSave).catch(() => {});
+    onDealUpdated?.(toSave);
+    return toSave;
+  };
+
   const refreshAnalysisFor = async (itemId: string, deal: Deal): Promise<Deal> => {
     updateItem(itemId, { msg: `${deal.propertyName || deal.fileName || "Deal"} · refreshing analysis…` });
     // Retry on transient failures so a blip never leaves the deal stuck showing
@@ -427,25 +447,19 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const a = await apiRefreshAnalysis(deal.id);
-        const upd = {
-          ...deal,
-          notes: (a.notes as string) ?? deal.notes,
-          dealScore: (a.dealScore as Deal["dealScore"]) ?? deal.dealScore,
-          upsideItems: (a.upsideItems as Deal["upsideItems"]) ?? deal.upsideItems,
-          redFlags: (a.redFlags as Deal["redFlags"]) ?? deal.redFlags,
-          analysisStale: false,
-        } as Deal;
-        await apiSaveDeal(upd).catch(() => {});
-        onDealUpdated?.(upd);
-        return upd;
+        // Only the analysis fields the server actually returned — re-based onto the
+        // latest deal, so a concurrent core-field edit isn't reverted.
+        const patch: Partial<Deal> = { analysisStale: false };
+        if (a.notes != null) patch.notes = a.notes as string;
+        if (a.dealScore != null) patch.dealScore = a.dealScore as Deal["dealScore"];
+        if (a.upsideItems != null) patch.upsideItems = a.upsideItems as Deal["upsideItems"];
+        if (a.redFlags != null) patch.redFlags = a.redFlags as Deal["redFlags"];
+        return await commitPatch(deal, patch);
       } catch {
         if (attempt < 2) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); continue; }
         // Gave up after retries — clear the stale flag anyway so the badge doesn't
         // linger (the roster IS current; only the AI narrative refresh failed).
-        const cleared = { ...deal, analysisStale: false } as Deal;
-        await apiSaveDeal(cleared).catch(() => {});
-        onDealUpdated?.(cleared);
-        return cleared;
+        return await commitPatch(deal, { analysisStale: false });
       }
     }
     return deal;
@@ -456,9 +470,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     itemId: string, deal: Deal, result: { asOf: string | null; tenants: NonNullable<Deal["tenants"]> },
   ): Promise<Deal> => {
     const patch = buildRosterPatch(deal, result);
-    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
-    await apiSaveDeal(updated);
-    onDealUpdated?.(updated);
+    const updated = await commitPatch(deal, { ...patch, lastUploadAt: new Date().toISOString() });
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "rent-roll",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
@@ -514,9 +526,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       });
       return deal;
     }
-    const upd = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
-    await apiSaveDeal(upd);
-    onDealUpdated?.(upd);
+    const upd = await commitPatch(deal, { ...patch, lastUploadAt: new Date().toISOString() });
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "lease-options",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: upd,
@@ -555,9 +565,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // Apply an extracted sales report to a matched deal (auto-import, suite-aware).
   const applySalesToDeal = async (itemId: string, deal: Deal, result: SalesExtractResult): Promise<Deal> => {
     const patch = buildSalesHistoryPatch(deal, result);
-    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
-    await apiSaveDeal(updated);
-    onDealUpdated?.(updated);
+    const updated = await commitPatch(deal, { ...patch, lastUploadAt: new Date().toISOString() });
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "sales",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
@@ -599,10 +607,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const imageMeta = imgs
       ? { ...(deal.imageMeta || {}), cover: !!imgs.cover || !!deal.imageMeta?.cover, sitePlan: (imgs.sitePlan?.length || 0) || deal.imageMeta?.sitePlan || 0 }
       : deal.imageMeta;
-    const updated = { ...deal, imageMeta, lastUploadAt: new Date().toISOString() } as Deal;
-    await apiSaveDeal(updated);
+    const updated = await commitPatch(deal, { imageMeta, lastUploadAt: new Date().toISOString() });
     if (imgs) await saveImagesNoting(updated.id, imgs, itemId);
-    onDealUpdated?.(updated);
     const got = [imgs?.cover ? "cover photo" : "", imgs?.sitePlan?.length ? "site plan" : ""].filter(Boolean).join(" + ") || "no images found";
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "flyer",
@@ -643,9 +649,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // Apply an interest-rate swap confirmation to a matched deal (ENRICH-ONLY:
   // stores swap terms + sets the loan's all-in rate; never touches the roster).
   const applySwapToDeal = async (itemId: string, deal: Deal, swap: InterestRateSwap): Promise<Deal> => {
-    const updated = { ...deal, ...buildSwapPatch(deal, swap), lastUploadAt: new Date().toISOString() } as Deal;
-    await apiSaveDeal(updated);
-    onDealUpdated?.(updated);
+    const updated = await commitPatch(deal, { ...buildSwapPatch(deal, swap), lastUploadAt: new Date().toISOString() });
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "swap",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
@@ -682,9 +686,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // fields + structured prepay terms; never touches the roster or financials).
   const applyLoanToDeal = async (itemId: string, deal: Deal, result: LoanResult): Promise<Deal> => {
     const patch = buildLoanPatch(deal, result);
-    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
-    await apiSaveDeal(updated);
-    onDealUpdated?.(updated);
+    const updated = await commitPatch(deal, { ...patch, lastUploadAt: new Date().toISOString() });
     const n = Object.keys(patch).filter(k => k !== "lastUploadAt").length;
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "loan",
@@ -724,9 +726,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const patch: Partial<Deal> = { customAmortSchedule: rows };
     const { balance } = currentBalanceFromRows(rows);
     if (deal.loanBalance == null && balance != null) patch.loanBalance = Math.round(balance);
-    const updated = { ...deal, ...patch, lastUploadAt: new Date().toISOString() } as Deal;
-    await apiSaveDeal(updated);
-    onDealUpdated?.(updated);
+    const updated = await commitPatch(deal, { ...patch, lastUploadAt: new Date().toISOString() });
     updateItem(itemId, {
       status: "done", progress: 100, routedType: "amort",
       matchedDealName: deal.propertyName || deal.fileName || "deal", deal: updated,
@@ -1047,14 +1047,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       try {
         const st = await apiPollDealStatus(id);
         if (st && !st.processing && st.deal) {
-          const merged = { ...st.deal, imageMeta: {
+          await commitPatch(st.deal as Deal, { imageMeta: {
             ...(st.deal.imageMeta || {}),
             cover: !!late.cover,
             sitePlan: late.sitePlan ? late.sitePlan.length : 0,
             needsSitePlanPick: late.needsSitePlanPick || false,
-          } } as Deal;
-          await apiSaveDeal(merged).catch(() => {});
-          onDealUpdated?.(merged);
+          } });
         }
       } catch {}
     }).catch(() => {});
