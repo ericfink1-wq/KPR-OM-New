@@ -5,6 +5,7 @@ import { isInvestmentGrade } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
 import { apiLoadImages, apiListAllLeaseAbstracts, apiLoadComps } from "../lib/api";
 import { buildCompsSummary, type CompsSummary } from "../lib/compsSummary";
+import { useWatchlist } from "../lib/useWatchlist";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
 
@@ -96,6 +97,9 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   const [compsSummary, setCompsSummary] = useState<CompsSummary | null>(null);
   useEffect(() => { apiLoadComps().then(rows => setCompsSummary(buildCompsSummary(rows))).catch(() => {}); }, []);
 
+  // Retailer distress watchlist — folded in so the analyst flags bankrupt/distressed tenants.
+  const watch = useWatchlist();
+
   // Reset to top on initial mount — prevents opening scrolled to bottom
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -133,7 +137,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     setLoading(true);
 
     try {
-      const systemPrompt = buildSystemPrompt(deals, abstracts, compsSummary);
+      const systemPrompt = buildSystemPrompt(deals, abstracts, compsSummary, watch);
       const history = [...msgs, userMsg].map(m => ({ role: m.role, content: m.content }));
 
       const resp = await sendMessage({
