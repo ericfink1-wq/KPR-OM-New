@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Deal, ReviewQuestion, LeaseAbstract } from "./idb";
+import type { Deal, Tenant, ReviewQuestion, LeaseAbstract } from "./idb";
 import { getTenantDecisions, saveTenantDecision, removeTenantDecision } from "./idb";
 import { isInvestmentGrade } from "./tenantCredit";
 // Used only inside buildSystemPrompt (runtime), so the utils⇄leaseRisk import cycle
@@ -1234,7 +1234,12 @@ export function fmtUSD(v: unknown): string {
   return `$${Math.round(Number(v)).toLocaleString()}`;
 }
 
-export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = [], compsSummary?: import("./compsSummary").CompsSummary | null): string {
+export function buildSystemPrompt(
+  deals: Deal[],
+  abstracts: LeaseAbstract[] = [],
+  compsSummary?: import("./compsSummary").CompsSummary | null,
+  watch?: ReadonlyMap<string, { status: string; note?: string | null }>,
+): string {
   const active = deals.filter(d => !d.trashedAt);
   const statuses = ["Prospect","Under Contract","Owned","Sold","Passed"];
   const bySt = Object.fromEntries(statuses.map(s => [s, active.filter(d => d.status === s).length]));
@@ -1368,83 +1373,118 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
     return out;
   };
 
+  // ── Generic field pass-through — so the analyst AUTO-FOLDS IN EVERY data field ──
+  // An allowlist is a maintenance trap: every new Deal/Tenant field would be invisible
+  // to the analyst until someone hand-edited this prompt. Instead we serialize ALL
+  // present fields and OMIT only a small, stable denylist of internal/noise/huge or
+  // separately-handled fields. New underwriting fields (financials, lease terms,
+  // cash flow, rent steps, …) therefore reach the analyst automatically — no babysitting.
+  const has = (v: unknown): boolean => {
+    if (v == null || v === "") return false;
+    if (typeof v === "number") return !isNaN(v);
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === "object") return Object.keys(v as object).length > 0;
+    return true;
+  };
+  // Deal fields handled elsewhere (computed / renamed) or pure noise/internal.
+  const DEAL_OMIT = new Set<string>([
+    "tenants", "tenantSalesHistory", "leaseRisk", "anchorStatus", "marketDemographics",
+    "dealScore", "dealReview", "dealThesis", "fileName", "imageMeta", "verified",
+    "reviewQuestions", "analysisStale", "analysisVersion", "autoPassed", "autoPassedAt",
+    "propertyGroupId", "updatedAt", "refreshedAt", "demoChecked", "marketSaleChecked",
+    "trashedAt", "aka", "tenantsManual", "tenantsSource", "pdfPages",
+    // demographics fold into the `demographics` object below:
+    "trafficCountVPD", "population3mi", "medianHHIncome3mi", "avgHHIncome3mi",
+    "proximityHighways", "retailCotenants",
+  ]);
+  // Heavy fields dropped for PASSED deals only (they're market-intel/comps, the bulk
+  // of the count) so the prompt stays lean; active deals keep everything.
+  const PASSED_HEAVY_OMIT = new Set<string>([
+    "notes", "userNotes", "cashFlowProjection", "incomeBreakdown", "expenseBreakdown",
+    "roofData", "keyAssumptions", "shadowAnchors", "redFlags", "upsideItems", "marketSale",
+  ]);
+  const genericDeal = (d: Deal, lean = false): Record<string, unknown> => {
+    const o: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(d)) {
+      if (DEAL_OMIT.has(k)) continue;
+      if (lean && PASSED_HEAVY_OMIT.has(k)) continue;
+      if (/^(acq|debt|pref|txn|disp)/.test(k)) continue; // KPR economics → consolidated in `kpr`
+      if (has(v)) o[k] = v;
+    }
+    return o;
+  };
+  const TENANT_OMIT = new Set<string>(["canonicalName"]); // grouping key, not analyst-facing
+  const genericTenant = (t: Tenant): Record<string, unknown> => {
+    const o: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(t)) {
+      if (TENANT_OMIT.has(k)) continue;
+      if (has(v)) o[k] = v;
+    }
+    return o;
+  };
+  const watchOf = (t: Tenant) => {
+    const w = watch?.get(tenantKey(t.canonicalName ?? t.name));
+    return w ? { status: w.status, note: w.note ?? undefined } : undefined;
+  };
+
   const portfolio = active.map(d => {
     const isPassed = d.status === "Passed";
     const tenantList = (d.tenants || []);
     const latestSales = salesByDeal.get(d.id);
     const hist = salesHistByDeal.get(d.id);
-    // Active deals: full roster. Passed deals: anchor-only compact summary to save tokens.
+    // Resolved sales (uploads-over-OM) + watchlist overlay onto each tenant.
+    const tenantSales = (t: Tenant) => {
+      const ls = latestSales?.get(tenantKey(t.canonicalName ?? t.name));
+      const h = hist?.get(tenantKey(t.canonicalName ?? t.name));
+      return {
+        salesPSF: (ls?.salesPSF ?? _num(t.salesPSF)) ?? undefined,
+        salesGross: ls?.grossSales ?? undefined,
+        salesYear: ls?.salesYear ?? _num(t.salesYear) ?? undefined,
+        occCostPct: ls?.occupancyCost ?? _num(t.occupancyCost) ?? undefined,
+        salesHistory: h && h.length >= 2 ? h : undefined,
+      };
+    };
+    // Passed deals: anchor-only compact summary (the bulk of the pipeline — keep lean).
+    // Active deals: EVERY tenant field (generic) + resolved sales/IG/watchlist overlay.
     const tenants = isPassed
       ? tenantList
           .filter(t => t.isAnchor || (t.sf && Number(t.sf) >= 5000))
-          .map(t => {
-            const ls = latestSales?.get(tenantKey(t.canonicalName ?? t.name));
-            return { name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry,
-              salesPSF: (ls?.salesPSF ?? _num(t.salesPSF)) ?? undefined,
-              isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined };
-          })
-      : tenantList.map(t => {
-          // Resolved latest sales (uploads-over-OM), falling back to roster salesPSF.
-          const ls = latestSales?.get(tenantKey(t.canonicalName ?? t.name));
-          const salesPSF = (ls?.salesPSF ?? _num(t.salesPSF)) ?? undefined;
-          const h = hist?.get(tenantKey(t.canonicalName ?? t.name));
-          return {
-            name: t.name,
-            sf: t.sf,
-            rentPSF: t.rentPerSF,
-            annualRent: t.annualRent,
-            expiry: t.leaseExpiry,
-            salesPSF,
-            salesGross: ls?.grossSales ?? undefined,
-            salesYear: ls?.salesYear ?? t.salesYear ?? undefined,
-            occCostPct: ls?.occupancyCost ?? _num(t.occupancyCost) ?? undefined,
-            // Multi-year history (newest first) for YoY / trend questions — only when 2+ years on file.
-            salesHistory: h && h.length >= 2 ? h : undefined,
-            anchor: t.isAnchor || undefined,
-            isNAP: t.isNAP || undefined,
-            isDark: t.isDark || undefined,
-            reimb: t.reimbursementMethod ?? undefined,
+          .map(t => ({
+            name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry,
+            ...tenantSales(t),
             isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined,
-          };
-        });
+            watch: watchOf(t),
+          }))
+      : tenantList.map(t => ({
+          ...genericTenant(t),
+          // Computed overlays WIN over the raw fields they replace:
+          ...tenantSales(t),
+          isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined,
+          watch: watchOf(t),
+        }));
     // KPR economics only for deals KPR has actually transacted on.
     const kpr = (d.status === "Owned" || d.status === "Under Contract" || d.status === "Sold")
       ? kprEconomics(d) : undefined;
     return {
-      id: d.id, name: d.propertyName||d.fileName, market: d.market,
-      city: d.city, state: d.state,
-      assetType: d.assetType, centerType: d.centerType, status: d.status, totalSF: d.totalSF,
-      noi: d.noi, capRate: d.capRate, askingPrice: d.askingPrice,
-      occupancy: d.occupancy, walt: d.walt, weightedAvgRentPSF: d.weightedAvgRentPSF,
+      // Generic pass-through of every present OM/underwriting field (auto-includes
+      // cash flow, rent steps, assumable debt, income/expense breakdowns, and any
+      // FUTURE field), then computed/renamed analytics overlaid on top.
+      ...genericDeal(d, isPassed),
+      id: d.id,
+      name: d.propertyName || d.fileName,
       dealScore: d.dealScore?.score ?? undefined,
-      // Property condition / vintage — so roof-age & capex questions are answerable
-      // instead of "unknown" (the extractor captures these; they just weren't passed).
-      yearBuilt: d.yearBuilt ?? undefined,
-      renovationYear: d.renovationYear ?? undefined,
-      roofData: d.roofData ?? undefined,
-      // Seller's in-place / assumable debt as stated in the OM (distinct from KPR's
-      // own financing in the kpr object) — so "which deals have assumable debt" works.
-      assumableDebt: d.assumableDebt ?? undefined,
-      loanBalance: nz(d.loanBalance) ? d.loanBalance : undefined,
-      loanRate: nz(d.loanRate) ? d.loanRate : undefined,
-      loanMaturity: nz(d.loanMaturity) ? d.loanMaturity : undefined,
-      loanType: nz(d.loanType) ? d.loanType : undefined,
-      // Which sales-report years are on file for this deal (so trend questions are
-      // answerable, and survive even if rosters get trimmed for context size).
+      dealGrade: d.dealScore?.grade ?? undefined,
+      // Which sales-report years are on file (so trend questions survive roster trims).
       salesYearsOnFile: (d.tenantSalesHistory && d.tenantSalesHistory.length)
         ? Array.from(new Set(d.tenantSalesHistory.map(s => s.year))).sort((a, b) => b - a)
         : undefined,
-      // Co-tenancy exposure + lease rollover (non-passed; passed deals are bare comps).
+      // Computed analytics (can't auto-derive from raw fields):
       coTenancyExposure: isPassed ? undefined : coTenancyExposure(d),
       rollover: isPassed ? undefined : rolloverByYear(d),
       demographics: demographics(d),
       // KPR's own recorded take — these DEFINE the house view (see HOUSE VIEW section).
       kprReview: nz(d.dealReview) ? d.dealReview : undefined,
       kprThesis: nz(d.dealThesis) ? d.dealThesis : undefined,
-      keyAssumptions: nz(d.keyAssumptions) ? d.keyAssumptions : undefined,
-      shadowAnchors: nz(d.shadowAnchors) ? d.shadowAnchors : undefined,
-      redFlags: (d.redFlags && d.redFlags.length) ? d.redFlags : undefined,
-      upside: (d.upsideItems && d.upsideItems.length) ? d.upsideItems : undefined,
       tenants: tenants.length ? tenants : undefined,
       kpr,
     };
@@ -1583,6 +1623,7 @@ ${JSON.stringify(houseView)}
 - NAP ("not a part", isNAP:true): a parcel/pad in the center not part of the leasable area KPR controls (e.g. a ground-leased pad or separately-owned outparcel) — exclude from KPR's occupancy/SF/rent rollups unless asked specifically.
 - Dark (isDark:true): tenant has gone dark — closed/not operating but STILL PAYING RENT under its lease. It counts as occupied/paying for income, but is an operational red flag (no traffic). Call this out when relevant.
 - IG (isIG:true): investment-grade-rated tenant (or parent) — stronger credit, lower risk. "IG rent %" = share of base rent from IG tenants.
+- watch (tenant field, when present): the retailer is on KPR's distress watchlist — watch.status is "watch" / "distressed" / "bankruptcy" / "liquidating" (escalating), watch.note gives the reason. ALWAYS surface this as a risk when discussing a flagged tenant (e.g. a bankruptcy tenant's rent is at real risk regardless of lease term); weight rollover/co-tenancy exposure on watchlisted anchors more heavily.
 - WALT: weighted-average lease term remaining (years), SF-weighted — higher = more durable income.
 - Occupancy: % of leasable SF leased. Cap rate: NOI ÷ price. weightedAvgRentPSF: SF-weighted in-place base rent per SF.
 - Vacant suites may appear in rosters; exclude vacants from rent/occupied-SF math but include them when discussing lease-up upside.
