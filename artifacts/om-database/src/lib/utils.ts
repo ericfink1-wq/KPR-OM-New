@@ -1560,6 +1560,21 @@ export function buildSystemPrompt(
   const trimNotes: string[] = [];
   const dataSize = () => JSON.stringify(portfolioOut).length + JSON.stringify(absOut).length;
 
+  // Abstracts grow fast, tokenize heavy (verbose legal prose), and are rarely
+  // needed in FULL for a portfolio question — yet a single batch can dominate the
+  // prompt on its own. So, INDEPENDENT of the overall budget, if the full abstract
+  // bodies exceed this standalone cap, condense them to a tenant index up front.
+  // (Without this, when the rest of the library is modest the total can sit just
+  // under DATA_BUDGET, no staged trim fires, and the bulky abstracts still ship —
+  // the exact case that kept the Analyst at ~208K tokens.) Full bodies stay on each
+  // deal's page; lease-level questions get pointed there.
+  const ABSTRACT_BODY_BUDGET = 90_000; // chars (~30K tokens)
+  if (JSON.stringify(absOut).length > ABSTRACT_BODY_BUDGET) {
+    absOut = absForPrompt.map(a => { const r = a as Record<string, unknown>; return { deal: r.deal, tenant: r.tenantName, suite: r.suite }; });
+    abstractsSummarized = true;
+    trimNotes.push("lease abstracts summarized to a tenant index (large abstract set)");
+  }
+
   if (dataSize() > DATA_BUDGET) {
     portfolioOut = portfolio.map(p => {
       const d = byId.get(p.id);
