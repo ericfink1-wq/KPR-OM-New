@@ -1,8 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { EyeOff, Unlink } from "lucide-react";
 import type { Deal } from "../lib/idb";
 import { DETAIL_MAX_WIDTH } from "../lib/constants";
-import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName } from "../lib/utils";
+import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, fmtUSD, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName, buildSalesByDeal, resolveSalesPSF } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
 
@@ -37,6 +37,11 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
       if (matchByName || matchByCanonical) allRows.push({ deal: d, t });
     })
   );
+
+  // Resolve sales the same way the deal page does — uploaded sales (tenantSalesHistory)
+  // win over the raw roster salesPSF, which uploads never write back.
+  const salesByDeal = useMemo(() => buildSalesByDeal(deals || []), [deals]);
+  const effSales = (r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }) => resolveSalesPSF(salesByDeal, r.deal, r.t);
 
   type SortKey = "property"|"recorded"|"market"|"sf"|"rentPSF"|"annualRent"|"expiry"|"salesPSF"|"reimbursement";
   const [sortKey, setSortKey] = useState<SortKey>("annualRent");
@@ -99,7 +104,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
       case "rentPSF":       return num(r.t.rentPerSF);
       case "annualRent":    return num(r.t.annualRent);
       case "expiry":        return r.t.leaseExpiry || "";
-      case "salesPSF":      return num(r.t.salesPSF);
+      case "salesPSF":      return effSales(r);
       case "reimbursement": return norm(r.t.reimbursementMethod);
       default:              return null;
     }
@@ -128,7 +133,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const rentRows     = activeRows.filter(isRentable);
   const sfVals       = rentRows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
   const rentVals     = rentRows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
-  const salesVals    = activeRows.map(r => num(r.t.salesPSF)).filter((v): v is number => v != null);
+  const salesVals    = activeRows.map(r => effSales(r)).filter((v): v is number => v != null);
   const totalSFAll   = sfVals.reduce((s, v) => s + v, 0);
   const totalRentAll = rentVals.reduce((s, v) => s + v, 0);
 
@@ -330,9 +335,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
-                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{num(r.t.annualRent) != null ? `$${num(r.t.annualRent)!.toLocaleString()}` : "—"}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{fmtUSD(r.t.annualRent)}</td>
                         <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
-                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(effSales(r), r.t.sf)}</td>
                         <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
                         {/* Ignore + Unlink — sticky right, stopPropagation so they don't open the deal */}
                         <td

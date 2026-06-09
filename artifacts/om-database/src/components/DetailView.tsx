@@ -4,7 +4,7 @@ import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstrac
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
   apiListLeaseAbstracts } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
@@ -2522,7 +2522,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             <button onClick={() => onLookupSale(d.id)} disabled={saleBusy} style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"3px 9px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:9, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"RE-CHECK"}</button>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:9 }}>
-            {([["SALE PRICE", d.marketSale.price!=null?`$${Number(d.marketSale.price).toLocaleString()}`:null],
+            {([["SALE PRICE", d.marketSale.price!=null?fmtUSD(d.marketSale.price):null],
                ["SALE DATE", d.marketSale.soldDate],["CAP RATE", d.marketSale.capRate!=null?`${d.marketSale.capRate}%`:null],
                ["BUYER", d.marketSale.buyer],["SELLER", d.marketSale.seller],["PRICE/SF", d.marketSale.pricePerSF!=null?`$${d.marketSale.pricePerSF}`:null]
             ] as [string,string|null][]).map(([l,v],i)=>(
@@ -2959,19 +2959,19 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* Financial grid */}
       <div id="section-financials" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
         <Card title="KEY FINANCIALS">
-          <Row l="ASKING PRICE" v={d.askingPrice?`$${Number(d.askingPrice).toLocaleString()}`:null} c="#6dba43" field="askingPrice"/>
+          <Row l="ASKING PRICE" v={d.askingPrice?fmtUSD(d.askingPrice):null} c="#6dba43" field="askingPrice"/>
           <Row l="CAP RATE" v={d.capRate?`${d.capRate}%`:null} c="#0f9d63" field="capRate"/>
-          <Row l="NOI" v={d.noi?`$${Number(d.noi).toLocaleString()}`:null} c="#0f9d63" field="noi"/>
+          <Row l="NOI" v={d.noi?fmtUSD(d.noi):null} c="#0f9d63" field="noi"/>
           <Row l="PRICE / SF" v={d.pricePerSF?`$${d.pricePerSF}`:null} field="pricePerSF"/>
           <Row l="TOTAL SF" v={d.totalSF?`${Number(d.totalSF).toLocaleString()} SF`:null} field="totalSF"/>
           <Row l="OCCUPANCY" v={d.occupancy?`${d.occupancy}%`:null} c="#383a37" field="occupancy" warn={reconWarns.occupancy}/>
           <PriceCapEditor deal={d} onUpdate={onUpdate}/>
         </Card>
         <Card title="INCOME & EXPENSES">
-          <Row l="GROSS POTENTIAL RENT" v={d.grossPotentialRent?`$${Number(d.grossPotentialRent).toLocaleString()}`:null} field="grossPotentialRent" warn={reconWarns.grossPotentialRent}/>
-          <Row l="EFF. GROSS INCOME" v={d.effectiveGrossIncome?`$${Number(d.effectiveGrossIncome).toLocaleString()}`:null} field="effectiveGrossIncome"/>
-          <Row l="OPERATING EXPENSES" v={d.operatingExpenses?`$${Number(d.operatingExpenses).toLocaleString()}`:null} field="operatingExpenses"/>
-          <Row l="NNN RECOVERIES" v={d.nnnRecoveries?`$${Number(d.nnnRecoveries).toLocaleString()}`:null}/>
+          <Row l="GROSS POTENTIAL RENT" v={d.grossPotentialRent?fmtUSD(d.grossPotentialRent):null} field="grossPotentialRent" warn={reconWarns.grossPotentialRent}/>
+          <Row l="EFF. GROSS INCOME" v={d.effectiveGrossIncome?fmtUSD(d.effectiveGrossIncome):null} field="effectiveGrossIncome"/>
+          <Row l="OPERATING EXPENSES" v={d.operatingExpenses?fmtUSD(d.operatingExpenses):null} field="operatingExpenses"/>
+          <Row l="NNN RECOVERIES" v={d.nnnRecoveries?fmtUSD(d.nnnRecoveries):null}/>
           <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null} warn={reconWarns.weightedAvgRentPSF}/>
         </Card>
         <Card title="LEASE METRICS">
@@ -3042,7 +3042,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                   <tr key={key} style={{ borderTop:"1px solid #f1eadc", background:key==="noi"?"#0f9d6308":"transparent" }}>
                     <td style={{ textAlign:"left", padding:"8px 10px", color:key==="noi"?"#0f7a4e":"#a69e91", fontWeight:key==="noi"?700:500, whiteSpace:"nowrap", position:"sticky", left:0, background:key==="noi"?"#f2faef":"#fff", zIndex:1 }}>{label}</td>
                     {d.cashFlowProjection!.map((r,ci) => (
-                      <td key={ci} style={{ textAlign:"right", padding:"8px 10px", color, fontWeight:key==="noi"?700:400, whiteSpace:"nowrap" }}>{(r as any)[key]!=null?`$${Number((r as any)[key]).toLocaleString()}`:"—"}</td>
+                      <td key={ci} style={{ textAlign:"right", padding:"8px 10px", color, fontWeight:key==="noi"?700:400, whiteSpace:"nowrap" }}>{fmtUSD((r as any)[key])}</td>
                     ))}
                   </tr>
                 ))}
@@ -3153,7 +3153,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <div style={{ marginBottom:18, paddingBottom:16, borderBottom:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
                 {goingInCap && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Going-In Cap (calc)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#0f9d63" }}>{goingInCap.toFixed(2)}%</div></div>}
                 {pricePerSFCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Price / SF</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${pricePerSFCalc.toFixed(0)}</div></div>}
-                {allInBasis && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>All-In Basis</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${allInBasis.toLocaleString()}</div></div>}
+                {allInBasis && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>All-In Basis</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>{fmtUSD(allInBasis)}</div></div>}
               </div>
             )}
 
@@ -3357,7 +3357,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <EditableTextRow label="BROKER" value={d.broker ?? d.acqBroker} placeholder="Listing / deal broker" onSave={v => onUpdate(d.id, { broker: v, acqBroker: v })} />
           <EditableTextRow label="SELLER" value={d.seller ?? d.txnSeller} placeholder="Seller / current owner" onSave={v => onUpdate(d.id, { seller: v, txnSeller: v })} />
           <Row l="LAST SALE DATE" v={d.lastSaleDate}/>
-          <Row l="LAST SALE PRICE" v={d.lastSalePrice?`$${Number(d.lastSalePrice).toLocaleString()}`:null}/>
+          <Row l="LAST SALE PRICE" v={d.lastSalePrice?fmtUSD(d.lastSalePrice):null}/>
         </Card>
       </div>
 
@@ -3367,8 +3367,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8 }}>
             {[["TRAFFIC/DAY", d.trafficCountVPD?`${Number(d.trafficCountVPD).toLocaleString()} VPD`:null],
               ["POP. 3MI", d.population3mi?`${Number(d.population3mi).toLocaleString()}`:null],
-              ["MED. HHI 3MI", d.medianHHIncome3mi?`$${Number(d.medianHHIncome3mi).toLocaleString()}`:null],
-              ["AVG. HHI 3MI", d.avgHHIncome3mi?`$${Number(d.avgHHIncome3mi).toLocaleString()}`:null],
+              ["MED. HHI 3MI", d.medianHHIncome3mi?fmtUSD(d.medianHHIncome3mi):null],
+              ["AVG. HHI 3MI", d.avgHHIncome3mi?fmtUSD(d.avgHHIncome3mi):null],
             ].map(([l,v]) => (
               <div key={l as string} style={{ background:"#fff", padding:"8px 10px", borderRadius:5 }}>
                 <div style={{ fontSize:8, color:"#958d80", marginBottom:3 }}>{l as string}</div>
@@ -3394,7 +3394,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         {d.marketDemographics ? (() => {
           const m = d.marketDemographics!;
           const fmtN = (v: number|null|undefined) => v!=null ? Number(v).toLocaleString() : "—";
-          const fmtD = (v: number|null|undefined) => v!=null ? `$${Number(v).toLocaleString()}` : "—";
+          const fmtD = (v: number|null|undefined) => v!=null ? fmtUSD(v) : "—";
           const cc = m.confidence==="high"?"#0f9d63":m.confidence==="medium"?"#d9890c":"#a69e91";
           return (
             <>

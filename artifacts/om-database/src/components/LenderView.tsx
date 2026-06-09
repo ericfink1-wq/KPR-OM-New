@@ -14,7 +14,7 @@ function fmt$(v: number | null | undefined): string {
   if (v == null) return "—";
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `$${Math.round(v / 1_000)}k`;
-  return `$${v.toLocaleString()}`;
+  return `$${Math.round(v).toLocaleString()}`;
 }
 
 function fmtDate(s: string | null | undefined): string {

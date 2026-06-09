@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
 import { DETAIL_MAX_WIDTH } from "../lib/constants";
-import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTenantSales, isNAPTenant } from "../lib/utils";
+import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTenantSales, fmtUSD, isNAPTenant, buildSalesByDeal, resolveSalesPSF } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import StatusTag from "./StatusTag";
@@ -44,6 +44,11 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     return rows;
   }, [parentName, deals]);
 
+  // Resolve sales the same way the deal page does — uploaded sales (tenantSalesHistory)
+  // win over the raw roster salesPSF, which uploads never write back.
+  const salesByDeal = useMemo(() => buildSalesByDeal(deals || []), [deals]);
+  const effSales = (r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }) => resolveSalesPSF(salesByDeal, r.deal, r.t);
+
   const rows = scope === "owned"
     ? allRows.filter(r => r.deal.status === "Owned" || r.deal.status === "Sold")
     : allRows;
@@ -73,7 +78,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
         case "rentPSF":    av = num(a.t.rentPerSF); bv = num(b.t.rentPerSF); break;
         case "annualRent": av = num(a.t.annualRent); bv = num(b.t.annualRent); break;
         case "expiry":     av = a.t.leaseExpiry || ""; bv = b.t.leaseExpiry || ""; break;
-        case "salesPSF":   av = num(a.t.salesPSF); bv = num(b.t.salesPSF); break;
+        case "salesPSF":   av = effSales(a); bv = effSales(b); break;
         default: av = null; bv = null;
       }
       let cmp = 0;
@@ -99,7 +104,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
   const sfVals      = rentableRows.map(r => num(r.t.sf)).filter(pos);
   const rentVals    = rentableRows.map(r => num(r.t.annualRent)).filter(pos);
   const rentPSFVals = rentableRows.map(r => num(r.t.rentPerSF)).filter(pos);
-  const salesVals   = rentableRows.map(r => num(r.t.salesPSF)).filter(pos);
+  const salesVals   = rentableRows.map(r => effSales(r)).filter(pos);
   const avgSF       = sfVals.length ? Math.round(sfVals.reduce((a,b)=>a+b,0)/sfVals.length) : null;
   const avgRentPSF  = rentPSFVals.length ? rentPSFVals.reduce((a,b)=>a+b,0)/rentPSFVals.length : null;
   const avgAnnRent  = rentVals.length ? rentVals.reduce((a,b)=>a+b,0)/rentVals.length : null;
@@ -229,9 +234,9 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                         <td style={{ padding:"9px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{r.deal.market || cityState(r.deal) || "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
-                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{num(r.t.annualRent) != null ? `$${num(r.t.annualRent)!.toLocaleString()}` : "—"}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{fmtUSD(r.t.annualRent)}</td>
                         <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
-                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(r.t.salesPSF, r.t.sf)}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(effSales(r), r.t.sf)}</td>
                       </tr>
                     );
                   })}

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, isVacant, isNAPTenant, isATM, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, type UserMerge } from "../lib/utils";
+import { tenantKey, isVacant, isNAPTenant, isATM, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, buildSalesByDeal, resolveSalesPSF, type UserMerge } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { exportAggregateToExcel, type AggColumn } from "../lib/exportExcel";
 
@@ -248,6 +248,8 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
       : deals;
 
     const map = new Map<string, TenantRow>();
+    // Uploaded sales (tenantSalesHistory) win over raw roster salesPSF, mirroring the deal page.
+    const salesByDeal = buildSalesByDeal(filtered);
 
     for (const deal of filtered) {
       if (!deal.tenants) continue;
@@ -259,7 +261,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         const key = tenantKey(rawName);
         const annualRent = num(t.annualRent) ?? 0;
         const rentPSF = num(t.rentPerSF);
-        const salesPSF = num(t.salesPSF);
+        const salesPSF = resolveSalesPSF(salesByDeal, deal, t);
         const sf = num(t.sf);
         const ig = isInvestmentGrade(rawName, t.creditRating);
 

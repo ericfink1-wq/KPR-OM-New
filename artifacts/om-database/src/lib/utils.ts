@@ -1064,6 +1064,36 @@ export function buildLatestSales(deal: {
   return out;
 }
 
+/**
+ * Build a per-deal map of resolved latest sales, keyed by deal id (then fileName).
+ * Lets cross-property views (Tenant page, Parent page, Tenant Analytics) surface
+ * UPLOADED sales (from tenantSalesHistory) the same way the deal page does —
+ * instead of only reading the raw roster `salesPSF`, which uploads never write back.
+ */
+export function buildSalesByDeal(deals: Deal[]): Map<string, Map<string, LatestSale>> {
+  const m = new Map<string, Map<string, LatestSale>>();
+  for (const d of deals) m.set(d.id || d.fileName || "?", buildLatestSales(d));
+  return m;
+}
+
+/**
+ * Effective per-SF sales for one roster tenant: prefer the resolved uploaded-sales
+ * value (tenantSalesHistory, uploads-over-OM, derived from gross÷SF when needed),
+ * else fall back to the roster's own OM-stated `salesPSF`. This is the single
+ * source of truth for sales in every cross-property/aggregate view.
+ */
+export function resolveSalesPSF(
+  salesByDeal: Map<string, Map<string, LatestSale>>,
+  deal: { id?: string; fileName?: string },
+  t: { name?: string | null; canonicalName?: string | null; salesPSF?: number | string | null },
+): number | null {
+  const resolved = salesByDeal.get(deal.id || deal.fileName || "?")?.get(tenantKey(t.canonicalName ?? t.name))?.salesPSF;
+  if (resolved != null) return resolved;
+  const raw = t.salesPSF;
+  if (raw == null || (raw as unknown) === "" || isNaN(Number(raw))) return null;
+  return Number(raw);
+}
+
 /** Stable grouping key — every spelling of one brand collapses to the same string. */
 export function tenantKey(name: unknown): string {
   const n = _normTenant(name);
@@ -1184,6 +1214,19 @@ export function fmtTenantSales(salesPSF: unknown, sf: unknown): string {
     ? `$${(total / 1_000_000).toFixed(1)}M`
     : `$${Math.round(total / 1000)}k`;
   return `${totalStr} / ${psfStr}`;
+}
+
+/**
+ * Site-wide money formatter for LARGE/TOTAL dollar amounts (annual rent, NOI,
+ * price, GPR, debt, gross sales, household income…). Always whole dollars — no
+ * cents — because stored values often carry stray cents (e.g. 1,553,529.96) and
+ * mixing "$1,553,529.96" with "$1,235,754" reads as inconsistent. Per-SF figures
+ * (rent/SF, sales/SF) keep their 2 decimals via their own formatters — this is
+ * only for the big totals. Returns "—" for null/blank/NaN.
+ */
+export function fmtUSD(v: unknown): string {
+  if (v == null || (v as unknown) === "" || isNaN(Number(v))) return "—";
+  return `$${Math.round(Number(v)).toLocaleString()}`;
 }
 
 export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []): string {

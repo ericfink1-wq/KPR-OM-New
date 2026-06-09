@@ -139,7 +139,40 @@ export async function rebuildTenantIndex(
     const dealName = typeof data.propertyName === "string" ? data.propertyName : null;
     const dealStatus = typeof data.status === "string" ? data.status : null;
 
+    // Resolve uploaded sales (tenantSalesHistory) per tenant the same way the deal
+    // page does — uploads win over OM, highest year wins — so the database benchmark
+    // sees sales that were uploaded after import, not just the raw roster salesPSF
+    // (which the sales-upload path never writes back). Falls back to roster salesPSF.
+    const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
+    type SalesHit = { year: number; psf: number | null; isUpload: boolean };
+    const uploadedSales = new Map<string, SalesHit>();
+    const history = data.tenantSalesHistory;
+    if (Array.isArray(history)) {
+      for (const snap of history as Array<Record<string, unknown>>) {
+        const isUpload = snap.source !== "om";
+        const year = toFloat(snap.year) ?? 0;
+        const snapTenants = Array.isArray(snap.tenants) ? (snap.tenants as Array<Record<string, unknown>>) : [];
+        for (const r of snapTenants) {
+          const key = norm(r.name);
+          if (!key) continue;
+          let psf = toFloat(r.salesPSF);
+          const gross = toFloat(r.annualSales);
+          const sf = toFloat(r.sf);
+          if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
+          const cur = uploadedSales.get(key);
+          if (!cur || (isUpload && !cur.isUpload) || (isUpload === cur.isUpload && year > cur.year)) {
+            uploadedSales.set(key, { year, psf, isUpload });
+          }
+        }
+      }
+    }
+
     const rows = tenants.map((t) => {
+      const nameKey = norm(t.name);
+      const canonKey = norm(t.canonicalName);
+      const hit = uploadedSales.get(nameKey) ?? (canonKey ? uploadedSales.get(canonKey) : undefined);
+      const resolvedSalesPsf = (hit && hit.psf != null) ? hit.psf : toFloat(t.salesPSF);
+      const resolvedSalesYear = (hit && hit.psf != null && hit.year) ? hit.year : toFloat(t.salesYear);
       const rawName = typeof t.name === "string" ? t.name.trim() || null : null;
       const canonicalName = rawName ? (aliasMap[rawName] ?? rawName) : null;
       const leaseExpiry = typeof t.leaseExpiry === "string" && t.leaseExpiry ? t.leaseExpiry : null;
@@ -164,8 +197,8 @@ export async function rebuildTenantIndex(
         expenseReimbursements: toFloat(t.expenseReimbursements),
         percentageRent: toFloat(t.percentageRent),
         otherRent: toFloat(t.otherRent),
-        salesPsf: toFloat(t.salesPSF),
-        salesYear: toFloat(t.salesYear),
+        salesPsf: resolvedSalesPsf,
+        salesYear: resolvedSalesYear,
       };
     });
 

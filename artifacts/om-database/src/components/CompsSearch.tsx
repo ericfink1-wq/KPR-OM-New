@@ -177,7 +177,7 @@ type DupInfo = {
 function fmtVolume(v: number): string {
   if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
   if (v >= 1e6) return `$${Math.round(v / 1e6)}M`;
-  return `$${v.toLocaleString()}`;
+  return `$${Math.round(v).toLocaleString()}`;
 }
 
 // ---------------------------------------------------------------------------
