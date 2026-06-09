@@ -3,7 +3,7 @@ import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
-import { apiLoadImages, apiListAllLeaseAbstracts, apiLoadComps } from "../lib/api";
+import { apiLoadImages, apiListAllLeaseAbstracts, apiLoadComps, apiLoadTenantBenchmarks, type AnalystTenantBenchmark } from "../lib/api";
 import { buildCompsSummary, type CompsSummary } from "../lib/compsSummary";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useCreateAiMessage } from "@workspace/api-client-react";
@@ -100,6 +100,11 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   // Retailer distress watchlist — folded in so the analyst flags bankrupt/distressed tenants.
   const watch = useWatchlist();
 
+  // Official database-wide tenant benchmarks (recency-weighted per-brand medians),
+  // so the analyst quotes the app's real numbers. Fetched once; [] on failure.
+  const [tenantBenchmarks, setTenantBenchmarks] = useState<AnalystTenantBenchmark[]>([]);
+  useEffect(() => { apiLoadTenantBenchmarks().then(setTenantBenchmarks).catch(() => {}); }, []);
+
   // Reset to top on initial mount — prevents opening scrolled to bottom
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -137,7 +142,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     setLoading(true);
 
     try {
-      const systemPrompt = buildSystemPrompt(deals, abstracts, compsSummary, watch);
+      const systemPrompt = buildSystemPrompt(deals, abstracts, compsSummary, watch, tenantBenchmarks);
       const history = [...msgs, userMsg].map(m => ({ role: m.role, content: m.content }));
 
       const resp = await sendMessage({
