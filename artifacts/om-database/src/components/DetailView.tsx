@@ -4038,8 +4038,15 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   const [swapBusy, setSwapBusy] = useState(false);
   const [swapErr, setSwapErr] = useState<string | null>(null);
 
-  // Seed the market swap rate with a matching-tenor Treasury proxy from Today's
-  // Rates (until the user types their bank's actual swap quote).
+  // Seed the market swap rate from the live SOFR SWAP curve in Today's Rates
+  // (Iron Hound 3/5/10-yr par swap rates — the actual rates swaps price off of),
+  // interpolated to the remaining term, until the user types their bank's quote.
+  // Breakage is brutally sensitive to this input: the locked fixed rate is all-in
+  // (SOFR swap rate + credit spread), so we compare against the current swap rate
+  // PLUS the same spread. Using the Treasury curve here understates the swap by the
+  // Treasury-vs-swap basis (~25-35 bps), which flips the breakage sign on near-the-
+  // money swaps — so we use the swap curve and fall back to Treasuries only if the
+  // swap feed is unavailable.
   useEffect(() => {
     if (!swap?.terminationDate || swapRateTouched) return;
     let alive = true;
@@ -4047,14 +4054,35 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       if (!alive) return;
       const term = new Date(swap.terminationDate!);
       const yrsLeft = Math.max(0, (term.getTime() - new Date(payoff).getTime()) / (365.25 * 864e5));
-      const tenors: Array<[string, number]> = [["1-Yr",1],["2-Yr",2],["3-Yr",3],["5-Yr",5],["7-Yr",7],["10-Yr",10],["30-Yr",30]];
-      const best = tenors.reduce((a, b) => Math.abs(b[1]-yrsLeft) < Math.abs(a[1]-yrsLeft) ? b : a);
-      const row = r.treasuries.rows.find(x => x.label === best[0]);
-      // Compare apples-to-apples with the all-in swap fixed rate: a new swap on the
-      // same floating leg (SOFR + credit spread) would price at the current swap
-      // rate PLUS that spread, so add it to the Treasury proxy.
       const spread = (swap.floatingSpreadBps ?? 0) / 100;
-      if (row?.value != null) setSwapRate(Math.round((row.value + spread) * 100) / 100);
+
+      // Pull (tenorYears, rate) points from the SOFR swap rows ("SOFR Swap – 3 Year",
+      // "… 3 Year (est.)", "… 5 Year", "… 10 Year") and interpolate to yrsLeft.
+      const swapPts = (r.swaps?.rows ?? [])
+        .map(x => { const m = /(\d+)\s*Year/i.exec(x.label || ""); return m && x.value != null ? [Number(m[1]), x.value] as [number, number] : null; })
+        .filter((p): p is [number, number] => !!p)
+        .sort((a, b) => a[0] - b[0]);
+
+      const interp = (pts: [number, number][], t: number): number | null => {
+        if (!pts.length) return null;
+        if (t <= pts[0][0]) return pts[0][1];                       // clamp below shortest tenor (e.g. 2.5y → 3y swap)
+        if (t >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+        for (let i = 1; i < pts.length; i++) {
+          const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+          if (t <= x1) return y0 + (y1 - y0) * ((t - x0) / (x1 - x0));
+        }
+        return pts[pts.length - 1][1];
+      };
+
+      let mkt = interp(swapPts, yrsLeft);
+      // Fallback only if the live swap feed is empty: matching-tenor Treasury proxy
+      // (rougher — carries the swap-spread basis error, but better than nothing).
+      if (mkt == null) {
+        const tenors: Array<[string, number]> = [["1-Yr",1],["2-Yr",2],["3-Yr",3],["5-Yr",5],["7-Yr",7],["10-Yr",10],["30-Yr",30]];
+        const best = tenors.reduce((a, b) => Math.abs(b[1]-yrsLeft) < Math.abs(a[1]-yrsLeft) ? b : a);
+        mkt = r.treasuries.rows.find(x => x.label === best[0])?.value ?? null;
+      }
+      if (mkt != null) setSwapRate(Math.round((mkt + spread) * 100) / 100);
     }).catch(() => {});
     return () => { alive = false; };
   }, [swap?.terminationDate, swap?.floatingSpreadBps, payoff, swapRateTouched]);
@@ -4285,7 +4313,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
                 style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
             </label>
             <div style={{ fontSize:10, color:"#bcae97", maxWidth:300, lineHeight:1.5 }}>
-              All-in rate (current swap rate + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from Today's Rates as a proxy — replace with your bank's actual quote for the remaining term for a tighter estimate.
+              All-in rate (current SOFR swap rate for your remaining term + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from the live SOFR swap curve in Today's Rates — replace with your bank's actual quote for a tighter estimate. Breakage is very rate-sensitive, so a few bps here moves the number a lot.
             </div>
           </div>
 
