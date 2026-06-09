@@ -195,4 +195,19 @@ router.get("/analytics/rollover-detail", requireAuth, async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/analytics/tenant-benchmarks — database-wide recency-weighted per-brand
+// rent/sales/size medians (the SAME engine the deal-page scoring uses), for the AI
+// analyst so it quotes official numbers instead of re-deriving its own.
+// ---------------------------------------------------------------------------
+router.get("/analytics/tenant-benchmarks", requireAuth, async (req, res) => {
+  try {
+    const { getAllTenantBenchmarks } = await import("../lib/tenantBenchmarks");
+    res.json(await getAllTenantBenchmarks());
+  } catch (err) {
+    req.log.error({ err }, "Failed to compute tenant benchmarks");
+    res.status(500).json({ error: "Failed to compute tenant benchmarks" });
+  }
+});
+
 export default router;

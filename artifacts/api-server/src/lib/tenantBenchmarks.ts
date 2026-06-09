@@ -315,6 +315,64 @@ Return ONLY valid JSON with no markdown or explanation:
 {"dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "string", "strengths": ["string"], "risks": ["string"]}, "redFlags": [{"severity": "high|medium|low", "description": "string"}]}`;
 }
 
+// ─── Database-wide benchmarks (for the AI analyst) ────────────────────────────
+//
+// Runs the SAME recency-weighted engine over EVERY brand in the database (no deal
+// excluded), so the analyst quotes the exact medians the app computes — no second,
+// divergent methodology. Returns multi-location brands only (a single-location brand
+// has no peer set to benchmark against), each with its official rent/sales/size
+// medians, sample counts, recency range and confidence. Cached briefly so repeated
+// analyst sessions don't re-query.
+export interface AnalystTenantBenchmark {
+  brand: string;
+  locations: number;
+  medianRentPerSf: number | null;
+  medianSalesPerSf: number | null;
+  salesCount: number;
+  medianSf: number | null;
+  sfCount: number;
+  recencyYears: [number | null, number | null];
+  salesYears: [number | null, number | null];
+  confidence: Confidence;
+}
+
+let _benchCache: { at: number; data: AnalystTenantBenchmark[] } | null = null;
+const BENCH_TTL_MS = 5 * 60 * 1000;
+
+export async function getAllTenantBenchmarks(): Promise<AnalystTenantBenchmark[]> {
+  if (_benchCache && Date.now() - _benchCache.at < BENCH_TTL_MS) return _benchCache.data;
+  await backfillTenantIndexFields();
+  const nameRows = await db
+    .selectDistinct({ canonicalName: tenantIndexTable.canonicalName })
+    .from(tenantIndexTable)
+    .where(isNotNull(tenantIndexTable.canonicalName));
+  const names = nameRows.map((r) => r.canonicalName).filter((n): n is string => !!n);
+  // excludeDealId="" excludes no real deal — benchmark spans the whole database.
+  const map = await queryBenchmarks(names, "");
+  const data: AnalystTenantBenchmark[] = [];
+  for (const b of map.values()) {
+    // Multi-location brands with at least one usable median — others have nothing to
+    // compare against and would just bloat the prompt.
+    if (b.locationCount < 2) continue;
+    if (b.medianRentPerSf == null && b.medianSalesPerSf == null) continue;
+    data.push({
+      brand: b.canonicalName,
+      locations: b.locationCount,
+      medianRentPerSf: b.medianRentPerSf,
+      medianSalesPerSf: b.medianSalesPerSf,
+      salesCount: b.salesCount,
+      medianSf: b.medianSf,
+      sfCount: b.sfCount,
+      recencyYears: [b.oldestDataYear, b.newestDataYear],
+      salesYears: [b.salesOldestYear, b.salesNewestYear],
+      confidence: b.confidence,
+    });
+  }
+  data.sort((a, b) => b.locations - a.locations);
+  _benchCache = { at: Date.now(), data };
+  return data;
+}
+
 // ─── Deal count helper ────────────────────────────────────────────────────────
 
 export async function getTotalDealCount(): Promise<number> {

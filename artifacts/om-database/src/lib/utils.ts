@@ -1239,6 +1239,7 @@ export function buildSystemPrompt(
   abstracts: LeaseAbstract[] = [],
   compsSummary?: import("./compsSummary").CompsSummary | null,
   watch?: ReadonlyMap<string, { status: string; note?: string | null }>,
+  tenantBenchmarks?: readonly import("./api").AnalystTenantBenchmark[] | null,
 ): string {
   const active = deals.filter(d => !d.trashedAt);
   const statuses = ["Prospect","Under Contract","Owned","Sold","Passed"];
@@ -1659,6 +1660,15 @@ This is the app's deterministic benchmark over the comp database (median + 25th/
 - When comparing one of KPR's deals to "the comps," compare its cap rate / price-PSF to these medians and state the gap in bps (cap) or % (price/SF).
 
 ${JSON.stringify(compsSummary)}
+` : ""}${tenantBenchmarks && tenantBenchmarks.length ? `
+=== TENANT BENCHMARKS — DATABASE MEDIANS (precomputed — NARRATE, never re-derive) ===
+The app's OFFICIAL per-brand benchmark — the SAME recency-weighted engine the deal pages use, run across every location of each brand in the database (recent leases weighted more: ≤3yr ×1.0, 3–7yr ×0.5, >7yr ×0.25; NAP/outlier rows excluded; medians, not means). When asked how a tenant's rent/sales/size compares to "the database" or "the chain," use THESE numbers — do not average the roster yourself. Always cite the brand's location count and recency. Rules:
+- medianRentPerSf = the database median base rent/SF for that brand across "locations" leases. State a tenant's rent as IS X% above/below it (rents don't "trade").
+- medianSalesPerSf is only meaningful when salesCount ≥ 3 (sparse otherwise) — if salesCount is low, say the sales sample is too thin to benchmark. medianSf = the brand's typical store size (prototype proxy) when sfCount ≥ 2.
+- confidence (high/medium/low) reflects sample depth — soften the verdict at low/medium. Only multi-location brands appear here; a brand NOT listed has no peer set to benchmark against (say so rather than guessing).
+- This is the database-wide median across ALL locations of the brand; the deal page's scoring flag compares a deal against the OTHERS (excluding itself), so for a tiny sample the two can differ slightly — frame this as the all-locations database median.
+
+${JSON.stringify(tenantBenchmarks)}
 ` : ""}
 === ANSWERING GUIDELINES ===
 - Reference actual deal names and real numbers from the data above; don't generalize when specifics are available.

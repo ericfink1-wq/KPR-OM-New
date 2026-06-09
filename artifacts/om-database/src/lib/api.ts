@@ -736,6 +736,30 @@ export async function apiLoadComps(): Promise<CompInput[]> {
   }
 }
 
+// Database-wide recency-weighted per-brand rent/sales/size medians — the SAME engine
+// the deal-page scoring uses — so the analyst quotes the app's official numbers.
+export interface AnalystTenantBenchmark {
+  brand: string;
+  locations: number;
+  medianRentPerSf: number | null;
+  medianSalesPerSf: number | null;
+  salesCount: number;
+  medianSf: number | null;
+  sfCount: number;
+  recencyYears: [number | null, number | null];
+  salesYears: [number | null, number | null];
+  confidence: "high" | "medium" | "low" | string;
+}
+export async function apiLoadTenantBenchmarks(): Promise<AnalystTenantBenchmark[]> {
+  try {
+    const resp = await apiFetch(`/analytics/tenant-benchmarks`);
+    if (!resp.ok) return [];
+    return resp.json() as Promise<AnalystTenantBenchmark[]>;
+  } catch {
+    return [];
+  }
+}
+
 // One abstract by id.
 export async function apiGetLeaseAbstract(id: string): Promise<LeaseAbstract | null> {
   try {
