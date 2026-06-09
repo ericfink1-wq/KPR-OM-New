@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
+import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
@@ -247,19 +248,94 @@ function StaleBadge() {
   );
 }
 
-function ExtractionQuality({ deal }: { deal: Deal }) {
+function ExtractionQuality({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
+  const [open, setOpen] = useState(false);
+  const [vals, setVals] = useState<Record<string, string>>({});
   const { quality, missing } = assessExtraction(deal);
   if (quality === "good") return null;
   const color = quality === "thin" ? "#dc2626" : "#d9890c";
   const bg = quality === "thin" ? "#dc262610" : "#d9890c10";
+
+  // The exact core fields assessExtraction grades on — let the user type in whichever
+  // are blank so a thin/partial deal can be completed by hand (not just re-uploaded).
+  const CORE: Array<{ field: keyof Deal; label: string; type: "text" | "number"; prefix?: string; suffix?: string; placeholder?: string }> = [
+    { field: "propertyName", label: "Property Name", type: "text", placeholder: "e.g. Pointe Plaza" },
+    { field: "totalSF", label: "Total SF", type: "number", placeholder: "e.g. 125000" },
+    { field: "noi", label: "NOI", type: "number", prefix: "$", placeholder: "e.g. 1850000" },
+    { field: "occupancy", label: "Occupancy", type: "number", suffix: "%", placeholder: "e.g. 94.5" },
+    { field: "walt", label: "WALT", type: "number", suffix: "yrs", placeholder: "e.g. 6.2" },
+  ];
+  const blanks = CORE.filter(c => deal[c.field] == null || deal[c.field] === "");
+
+  const save = () => {
+    const patch: Record<string, unknown> = {};
+    for (const c of blanks) {
+      const raw = (vals[c.field as string] ?? "").trim();
+      if (!raw) continue;
+      if (c.type === "number") {
+        const num = Number(raw.replace(/[$,%\s]/g, ""));
+        if (!isNaN(num)) patch[c.field as string] = num;
+      } else {
+        patch[c.field as string] = raw;
+      }
+    }
+    if (Object.keys(patch).length) onUpdate(deal.id, patch as Partial<Deal>);
+    setOpen(false);
+  };
+
   return (
     <div style={{ background:bg, border:`1px solid ${color}40`, borderRadius:8, padding:"10px 14px", marginBottom:12 }}>
-      <div style={{ fontSize:10, fontWeight:700, color, letterSpacing:"0.06em", marginBottom:3 }}>
-        {quality === "thin" ? "⚠ THIN EXTRACTION" : "PARTIAL EXTRACTION"}
+      <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+        <div style={{ flex:1, minWidth:180 }}>
+          <div style={{ fontSize:10, fontWeight:700, color, letterSpacing:"0.06em", marginBottom:3 }}>
+            {quality === "thin" ? "⚠ THIN EXTRACTION" : "PARTIAL EXTRACTION"}
+          </div>
+          <div style={{ fontSize:11, color:"#6f6a5f" }}>
+            {missing.length > 0
+              ? <>Missing: {missing.join(", ")}. Fill them in below, or re-upload a higher-quality PDF.</>
+              : <>No tenant roster captured — paste a rent roll or re-upload a higher-quality PDF.</>}
+          </div>
+        </div>
+        {blanks.length > 0 && (
+          <button onClick={() => { setVals({}); setOpen(true); }}
+            style={{ flexShrink:0, background:"#fff", border:`1px solid ${color}`, color, padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:700, fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap" }}>
+            ✎ Fill in the blanks
+          </button>
+        )}
       </div>
-      <div style={{ fontSize:11, color:"#6f6a5f" }}>
-        Missing: {missing.join(", ")}. Consider re-uploading a higher-quality PDF.
-      </div>
+      {open && createPortal(
+        <>
+          <div onClick={() => setOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.32)", zIndex:9998 }} />
+          <div onClick={e => e.stopPropagation()} style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, background:"#fff", borderRadius:14, boxShadow:"0 24px 60px rgba(0,0,0,0.22)", padding:"20px 22px 18px", width:"min(360px,92vw)", maxHeight:"88vh", overflowY:"auto", fontFamily:"'Inter',sans-serif" }}>
+            <div style={{ fontWeight:700, fontSize:13, color:"#383a37", marginBottom:4 }}>Fill in the missing fields</div>
+            <div style={{ fontSize:11, color:"#a89f8f", marginBottom:14, lineHeight:1.5 }}>
+              Enter the values from the OM. Filling these clears the {quality === "thin" ? "thin" : "partial"}-extraction flag. Leave any you don't have blank.
+            </div>
+            {blanks.map(c => (
+              <div key={c.field as string} style={{ marginBottom:12 }}>
+                <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>{c.label}</div>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  {c.prefix && <span style={{ fontSize:13, color:"#a89f8f" }}>{c.prefix}</span>}
+                  <input
+                    inputMode={c.type === "number" ? "decimal" : undefined}
+                    placeholder={c.placeholder}
+                    value={vals[c.field as string] ?? ""}
+                    onChange={e => setVals(prev => ({ ...prev, [c.field as string]: e.target.value }))}
+                    onKeyDown={e => { if (e.key === "Enter") save(); }}
+                    style={{ flex:1, boxSizing:"border-box", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", fontFamily:"'Inter',sans-serif", outline:"none", background:"#faf8f4" }}
+                  />
+                  {c.suffix && <span style={{ fontSize:13, color:"#a89f8f" }}>{c.suffix}</span>}
+                </div>
+              </div>
+            ))}
+            <div style={{ display:"flex", gap:8, marginTop:4 }}>
+              <button onClick={save} style={{ flex:1, background:"#3f7a1f", color:"#fff", border:"none", borderRadius:8, padding:"10px 0", fontFamily:"'Inter',sans-serif", fontWeight:600, fontSize:13, cursor:"pointer" }}>Save</button>
+              <button onClick={() => setOpen(false)} style={{ flex:1, background:"#f3f4f6", color:"#383a37", border:"none", borderRadius:8, padding:"10px 0", fontFamily:"'Inter',sans-serif", fontWeight:500, fontSize:13, cursor:"pointer" }}>Cancel</button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }
@@ -2432,7 +2508,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         </div>
       )}
 
-      <ExtractionQuality deal={d}/>
+      <ExtractionQuality deal={d} onUpdate={onUpdate}/>
 
       </>)}
       {tab === "market" && (<>
