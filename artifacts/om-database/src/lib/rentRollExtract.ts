@@ -4,6 +4,8 @@ import type { Deal, ReviewQuestion } from "./idb";
 
 export interface RentRollResult {
   asOf: string | null;
+  totalSF?: number | null;     // roll's stated total (gross leasable) SF, if shown
+  occupancy?: number | null;   // roll's stated % occupied (0–100), if shown
   tenants: NonNullable<Deal["tenants"]>;
   reviewQuestions?: ReviewQuestion[];
 }
@@ -12,7 +14,7 @@ export interface RentRollResult {
 // Shared by the deal page's "Refresh tenants" button and the smart uploader.
 export async function extractRentRoll(text: string): Promise<RentRollResult> {
   const prompt = `You are a CRE data extraction engine. Extract every occupied tenant from this rent roll.
-Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","tenants":[{...}],"reviewQuestions":[{...}]}
+Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","totalSF":number or null,"occupancy":number or null,"tenants":[{...}],"reviewQuestions":[{...}]}
 
 Each tenant object (omit unknown fields):
 {"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","rentBumps","rentSchedule","renewalOptions","recentlyExercisedRenewal","assumptionNote","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
@@ -37,6 +39,7 @@ CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
   • "Annual Option Rent" rows = renewal-OPTION period rents → renewalOptions ONLY (never rentSchedule). Their dates fall AT or AFTER the Term Exp. Date. Emit as "Opt: $<Incr/SF>/SF → <Mon YYYY>" using the option date.
   • Do NOT lump the contractual "Annual Rent Increase" steps into the renewalOptions string. If a date is before expiry it is a rent step; if it is at/after expiry it is an option.
 - SKIP summary rows: a final "Total" / "Totals for Occupied Suites" / "Totals for Vacant Suites" row (a count like "24" with grand-total SF and rent) is NOT a tenant — never emit it as a row.
+- DEAL-LEVEL TOTALS (top-level "totalSF" and "occupancy", NOT a tenant): from that same summary/"Total" line (usually at the very bottom), capture the center's STATED total/gross leasable SF as "totalSF" and the STATED percent occupied as "occupancy" (a number 0–100, e.g. 99.49). Many rolls print "Total: 240,710 SF ... 99.49% occupied". If the roll shows total SF but not a % occupied, still return totalSF and leave occupancy null. If neither is shown, set both null (the app will derive them by summing the roster).
 - MONTHLY vs ANNUAL: amounts in these rolls are MONTHLY. annualRent and expenseReimbursements must be ANNUAL — multiply monthly figures by 12. Sanity-check: rentPerSF ≈ annualRent ÷ SF (a normal inline rent is ~$10–$120/SF, never thousands).
 - rentSchedule = ONLY clean dated rent steps ("2027-12-01: $33.01 PSF") or "Flat at $X PSF through YYYY-MM-DD". NEVER put prose, explanations, or renewal narratives in rentSchedule — that belongs in assumptionNote. The "Future Rent Increases" columns/sub-rows (Cat / Date / Monthly Amount / PSF) ARE the steps — capture each future-dated one as a dated step (convert monthly amount to PSF or annual as needed).
 - EXECUTED RENEWAL (extends the term): if a tenant appears in a "New Leases" section with a term that BEGINS the day after its current "Occupied" expiration (a contiguous, already-executed renewal), the lease has been extended — set leaseExpiry to the NEW (later) end date, and note it in recentlyExercisedRenewal (e.g. "10-yr renewal executed, now through 2037-01-18"). This is DIFFERENT from an unexercised OPTION (which stays in renewalOptions and does NOT change leaseExpiry).
@@ -71,7 +74,7 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
   // genuinely large malls finish via the continuation loop below — each round is
   // its own bounded request, so none of them time out either.
   const first = await callRoll("", 16000);
-  let parsed: { asOf?: string | null; tenants?: unknown[]; reviewQuestions?: unknown[] };
+  let parsed: { asOf?: string | null; totalSF?: unknown; occupancy?: unknown; tenants?: unknown[]; reviewQuestions?: unknown[] };
   try { parsed = robustParseJSON(first.raw) as typeof parsed; }
   catch { throw new Error("Couldn't parse the rent roll. Try a clearer file."); }
   let tenants = (Array.isArray(parsed.tenants) ? parsed.tenants : []) as NonNullable<Deal["tenants"]>;
@@ -122,7 +125,13 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
       } as ReviewQuestion;
     })
     .filter(q => q.question);
-  return { asOf: parsed.asOf || new Date().toISOString().slice(0, 10), tenants, reviewQuestions };
+  const posNum = (v: unknown) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : null; };
+  return {
+    asOf: parsed.asOf || new Date().toISOString().slice(0, 10),
+    totalSF: posNum(parsed.totalSF),
+    occupancy: posNum(parsed.occupancy),
+    tenants, reviewQuestions,
+  };
 }
 
 // Extract a lease-OPTIONS schedule into per-tenant renewalOptions strings. These
@@ -278,10 +287,31 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
     const r = t as Record<string, unknown>;
     return !isVacant(r.name) && r.isNAP !== true;
   });
-  if (!deal.verified?.occupancy && deal.totalSF) {
-    const occupiedSF = occTenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
-    const occ = Math.round(occupiedSF / Number(deal.totalSF) * 1000) / 10;
-    if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
+  const occupiedSF = occTenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
+
+  // Total GLA: a rent-roll-only deal has no OM-stated totalSF, which left it flagged
+  // "thin" with blank SF/occupancy. Use the roll's STATED total when captured, else
+  // derive it by summing every non-NAP suite (occupied + vacant) in the roster. Gap-fill
+  // only — never override an existing or user-verified totalSF (the OM's GLA wins).
+  const statedTotalSF = nv(result.totalSF);
+  const grossRosterSF = (tenants as Array<Record<string, unknown>>)
+    .filter(t => t.isNAP !== true)
+    .reduce((s, t) => s + (nv(t.sf) ?? 0), 0);
+  let effectiveTotalSF = nv(deal.totalSF);
+  if (effectiveTotalSF == null && !deal.verified?.totalSF) {
+    const t = statedTotalSF ?? (grossRosterSF > 0 ? grossRosterSF : null);
+    if (t != null) { recomputed.totalSF = Math.round(t); effectiveTotalSF = t; }
+  }
+
+  // Occupancy: prefer the roll's stated %, else compute occupied ÷ total GLA.
+  if (!deal.verified?.occupancy) {
+    const statedOcc = nv(result.occupancy);
+    if (statedOcc != null && statedOcc > 0 && statedOcc <= 100) {
+      recomputed.occupancy = Math.round(statedOcc * 10) / 10;
+    } else if (effectiveTotalSF) {
+      const occ = Math.round(occupiedSF / effectiveTotalSF * 1000) / 10;
+      if (occ > 0 && occ <= 100) recomputed.occupancy = occ;
+    }
   }
   if (!deal.verified?.walt) {
     const sfT = occTenants.reduce((s, t) => s + (nv((t as Record<string, unknown>).sf) ?? 0), 0);
