@@ -1278,7 +1278,60 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
     const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = a;
     return { deal: dealName(a.dealId), ...rest };
   });
-  const abstractsSection = absForPrompt.length ? `
+  // ---- Context-size guard ----------------------------------------------------
+  // The ENTIRE library is serialized into every Analyst prompt; past ~100 deals +
+  // abstracts the JSON exceeds the model's 200K-token context and the request 400s
+  // ("prompt is too long"). Serialize COMPACT (no pretty-print) and, if still too
+  // big, shed the least-important detail in order — non-owned rosters → all rosters
+  // → abstract bodies — until the data fits a safe char budget (~3.2 chars/token).
+  const DATA_BUDGET = 500_000; // ~150K tokens; leaves headroom for instructions + full chat history
+  const byId = new Map(active.map(d => [d.id, d] as const));
+  const compactRoster = (d: Deal) => (d.tenants || [])
+    .filter(t => t.isAnchor || (t.sf != null && Number(t.sf) >= 8000))
+    .map(t => ({ name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry,
+                 rentPSF: t.rentPerSF ?? undefined, isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined }));
+
+  let portfolioOut: unknown[] = portfolio;
+  let absOut: unknown[] = absForPrompt;
+  let abstractsSummarized = false;
+  const trimNotes: string[] = [];
+  const dataSize = () => JSON.stringify(portfolioOut).length + JSON.stringify(absOut).length;
+
+  if (dataSize() > DATA_BUDGET) {
+    portfolioOut = portfolio.map(p => {
+      const d = byId.get(p.id);
+      if (d && d.status !== "Owned" && d.status !== "Under Contract" && p.tenants) {
+        const ct = compactRoster(d);
+        return { ...p, tenants: ct.length ? ct : undefined };
+      }
+      return p;
+    });
+    trimNotes.push("non-owned deals show anchors + larger tenants only");
+  }
+  if (dataSize() > DATA_BUDGET) {
+    portfolioOut = portfolio.map(p => {
+      const d = byId.get(p.id);
+      if (d && p.tenants) { const ct = compactRoster(d); return { ...p, tenants: ct.length ? ct : undefined }; }
+      return p;
+    });
+    trimNotes.push("all tenant rosters trimmed to anchors + larger tenants");
+  }
+  if (dataSize() > DATA_BUDGET && absOut.length) {
+    absOut = absForPrompt.map(a => { const r = a as Record<string, unknown>; return { deal: r.deal, tenant: r.tenantName, suite: r.suite }; });
+    abstractsSummarized = true;
+    trimNotes.push("lease abstracts summarized to a tenant index");
+  }
+
+  const trimNote = trimNotes.length
+    ? `\n\nNOTE: the library is large, so to fit the context window: ${trimNotes.join("; ")}. For anything trimmed, the full detail is on that deal's page — ask about the SPECIFIC deal or tenant and answer from what's shown, or say it's available there.`
+    : "";
+
+  const abstractsSection = !absOut.length ? "" : abstractsSummarized ? `
+
+=== LEASE ABSTRACTS ON FILE (index only — trimmed to fit) ===
+Full lease abstracts exist for these tenant/deal pairs, but their bodies were omitted to keep the prompt within the context window. For a lease-level question on one of these, say a full abstract is on file (on that deal's page) rather than guessing the terms.
+
+${JSON.stringify(absOut)}` : `
 
 === LEASE ABSTRACTS ON FILE ===
 Full, reconciled lease abstracts for specific tenants — assembled from the original lease plus every amendment, assignment, guaranty, option exercise and waiver, with later documents controlling earlier ones. These are the AUTHORITATIVE source for lease-level questions (term, options, rent steps, percentage rent, security deposit, exclusives/use, go-dark, assignment/recapture, guaranties, default, CAM/taxes). Rules:
@@ -1288,7 +1341,7 @@ Full, reconciled lease abstracts for specific tenants — assembled from the ori
 - If a lease-level question is about a tenant that has NO abstract here, say no abstract is on file rather than inferring from the roster summary.
 
 Lease abstracts (JSON):
-${JSON.stringify(absForPrompt, null, 2)}` : "";
+${JSON.stringify(absOut)}`;
 
   return `You are KPR Centers' in-house commercial real estate analyst. You specialize in RETAIL SHOPPING CENTERS (anchored strip/power/grocery centers — not residential, not office, not raw land). You are analyzing KPR's own deal library. Be precise, think like an experienced acquisitions principal, and reason from the structured data below — never invent numbers.
 
@@ -1330,8 +1383,8 @@ For Owned / Under Contract / Sold deals, a "kpr" object holds KPR's ACTUAL deal 
 Portfolio counts: ${active.length} total deals — ${statuses.map(s => `${bySt[s]} ${s}`).join(", ")}.
 
 Full deal data (JSON):
-${JSON.stringify(portfolio, null, 2)}
-${abstractsSection}
+${JSON.stringify(portfolioOut)}
+${abstractsSection}${trimNote}
 
 === ANSWERING GUIDELINES ===
 - Reference actual deal names and real numbers from the data above; don't generalize when specifics are available.
