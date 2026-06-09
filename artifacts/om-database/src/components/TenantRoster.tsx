@@ -350,6 +350,17 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const vacantCount = tenants.filter(isVacantRow).length;
   const occupiedCount = tenants.length - vacantCount;
 
+  // Occupancy by SQUARE FOOTAGE (the CRE standard), over the FULL roster: NAP
+  // parcels are excluded (owner-occupied, not leasable GLA) and dark stores count
+  // as occupied (still leased/paying). Null when there's no SF to compute from.
+  const sfOf = (t: Tenant) => { const v = n(t.sf); return v != null && v > 0 ? v : 0; };
+  const leasableRows = tenants.filter(t => !isNAPTenant(t));
+  const totalRosterSF = leasableRows.reduce((s, t) => s + sfOf(t), 0);
+  const vacantSF = leasableRows.filter(isVacantRow).reduce((s, t) => s + sfOf(t), 0);
+  const pctOccupied = totalRosterSF > 0 ? ((totalRosterSF - vacantSF) / totalRosterSF) * 100 : null;
+  const pctVacant = totalRosterSF > 0 ? (vacantSF / totalRosterSF) * 100 : null;
+  const fmtPct = (v: number) => `${(Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "")}%`;
+
   const asOfDate = tenantsAsOf || omDate;
   const asOfLabel = tenantsSource === "rent-roll" ? "RENT ROLL" : "OM";
 
@@ -361,6 +372,12 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           {asOfDate && (
             <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color: tenantsSource==="rent-roll" ? "#0d9488" : "#a89f8f", background: tenantsSource==="rent-roll" ? "#f0fdfa" : "#f6f2ea", border:`1px solid ${tenantsSource==="rent-roll" ? "#99f6e4" : "#e3dccd"}`, borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
               AS OF {fmtAsOf(asOfDate)} · {asOfLabel}
+            </span>
+          )}
+          {pctOccupied != null && (
+            <span title="Occupied vs vacant by square footage (NAP / owner-occupied parcels excluded)"
+              style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+              {fmtPct(pctOccupied)} OCCUPIED · <span style={{ color: (pctVacant ?? 0) > 0 ? "#c97a18" : "#3f7a1f" }}>{fmtPct(pctVacant ?? 0)} VACANT</span>
             </span>
           )}
         </div>
