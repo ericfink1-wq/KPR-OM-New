@@ -3,7 +3,7 @@
 // Flow (called AFTER main extraction returns):
 //   1. Resolve raw tenant names → canonical names (via alias map)
 //   2. Query tenant_index rows (joined with deals for uploadedAt) — excluding this deal
-//   3. Compute recency-weighted averages in TS:
+//   3. Compute recency-weighted MEDIANS in TS (robust to outliers; "medians, not means"):
 //        uploaded ≤3yr ago → weight 1.0 | 3–7yr → 0.5 | >7yr → 0.25
 //   4. If any matches: call Claude with existing dealScore + redFlags + weighted benchmark lines
 //      The prompt instructs the model to treat database data as authoritative when confidence is high.
@@ -43,11 +43,11 @@ type Confidence = "high" | "medium" | "low";
 interface TenantBenchmark {
   canonicalName: string;
   locationCount: number;
-  weightedAvgRentPerSf: number | null; // primary — recency-weighted
-  simpleAvgRentPerSf: number | null;   // unweighted reference
-  avgSf: number | null;                // simple avg store size (prototype proxy)
+  medianRentPerSf: number | null;       // primary — recency-weighted median
+  simpleMedianRentPerSf: number | null; // unweighted median (reference)
+  medianSf: number | null;              // median store size (prototype proxy)
   sfCount: number;                     // # locations with SF (size sample)
-  weightedAvgSalesPerSf: number | null; // recency-weighted by sales year
+  medianSalesPerSf: number | null;      // recency-weighted median, by sales year
   salesCount: number;                  // # locations with disclosed sales (sample gate)
   salesOldestYear: number | null;
   salesNewestYear: number | null;
@@ -80,6 +80,21 @@ function salesRecencyWeight(year: number | null): number {
   if (yearsAgo <= 3) return 1.0;
   if (yearsAgo <= 7) return 0.5;
   return 0.25;
+}
+
+// Weighted median: the value at which cumulative weight reaches half the total.
+// Far more robust than a mean — one mis-priced or atypical lease can't drag it —
+// while still honoring recency (a recent lease carries more weight toward the middle).
+function weightedMedian(pairs: Array<{ v: number; w: number }>): number | null {
+  const xs = pairs.filter((p) => p.w > 0).sort((a, b) => a.v - b.v);
+  if (xs.length === 0) return null;
+  const total = xs.reduce((s, p) => s + p.w, 0);
+  let cum = 0;
+  for (const p of xs) {
+    cum += p.w;
+    if (cum >= total / 2) return p.v;
+  }
+  return xs[xs.length - 1].v;
 }
 
 function deriveConfidence(locationCount: number, effectiveWeightedCount: number): Confidence {
@@ -171,41 +186,28 @@ async function queryBenchmarks(
   const result = new Map<string, TenantBenchmark>();
 
   for (const [canonicalName, entries] of groups) {
-    let weightedRentSum = 0;
-    let weightSum = 0;
-    let simpleRentSum = 0;
-    let simpleRentCount = 0;
-    let sfSum = 0;
-    let sfCount = 0;
-    let weightedSalesSum = 0;
-    let salesWeightSum = 0;
+    // Collect in-range observations with their recency weight, then take a WEIGHTED
+    // MEDIAN (matching the comp benchmark's "medians, not means" rule). Out-of-range
+    // values (unit/typo errors) and 0/blank rows are dropped before the median.
+    const rentPairs: Array<{ v: number; w: number }> = [];
+    const sfVals: number[] = [];
+    const salesPairs: Array<{ v: number; w: number }> = [];
     let salesCount = 0;
     let salesOldestYear: number | null = null;
     let salesNewestYear: number | null = null;
     let oldest: Date | null = null;
     let newest: Date | null = null;
-    let leaseDatedCount = 0;
 
     for (const e of entries) {
       const weight = recencyWeight(e.vintage);
-      if (e.vintageFromLease) leaseDatedCount++;
-
-      // Only in-range values count — a 0/blank row (shadow line, data gap) or an
-      // out-of-range outlier (a unit/typo error) must never drag an average.
       if (e.rentPerSf != null && inRange(e.rentPerSf, RENT_PSF_MIN, RENT_PSF_MAX)) {
-        weightedRentSum += e.rentPerSf * weight;
-        weightSum += weight;
-        simpleRentSum += e.rentPerSf;
-        simpleRentCount++;
+        rentPairs.push({ v: e.rentPerSf, w: weight });
       }
       if (e.sf != null && inRange(e.sf, SF_MIN, SF_MAX)) {
-        sfSum += e.sf;
-        sfCount++;
+        sfVals.push(e.sf);
       }
       if (e.salesPsf != null && inRange(e.salesPsf, SALES_PSF_MIN, SALES_PSF_MAX)) {
-        const sw = salesRecencyWeight(e.salesYear);
-        weightedSalesSum += e.salesPsf * sw;
-        salesWeightSum += sw;
+        salesPairs.push({ v: e.salesPsf, w: salesRecencyWeight(e.salesYear) });
         salesCount++;
         if (e.salesYear != null) {
           if (salesOldestYear == null || e.salesYear < salesOldestYear) salesOldestYear = e.salesYear;
@@ -219,21 +221,17 @@ async function queryBenchmarks(
       }
     }
 
-    const weightedAvgRentPerSf = weightSum > 0 ? weightedRentSum / weightSum : null;
-    const simpleAvgRentPerSf = simpleRentCount > 0 ? simpleRentSum / simpleRentCount : null;
-    const weightedAvgSalesPerSf = salesWeightSum > 0 ? weightedSalesSum / salesWeightSum : null;
-    const effectiveWeightedCount = weightSum; // sum of weights = effective sample size
+    const effectiveWeightedCount = rentPairs.reduce((s, p) => s + p.w, 0); // effective rent sample
     const confidence = deriveConfidence(entries.length, effectiveWeightedCount);
-    void leaseDatedCount;
 
     result.set(canonicalName, {
       canonicalName,
       locationCount: entries.length,
-      weightedAvgRentPerSf,
-      simpleAvgRentPerSf,
-      avgSf: sfCount > 0 ? sfSum / sfCount : null,
-      sfCount,
-      weightedAvgSalesPerSf,
+      medianRentPerSf: weightedMedian(rentPairs),
+      simpleMedianRentPerSf: weightedMedian(rentPairs.map((p) => ({ v: p.v, w: 1 }))),
+      medianSf: weightedMedian(sfVals.map((v) => ({ v, w: 1 }))),
+      sfCount: sfVals.length,
+      medianSalesPerSf: weightedMedian(salesPairs),
       salesCount,
       salesOldestYear: salesOldestYear != null ? Math.round(salesOldestYear) : null,
       salesNewestYear: salesNewestYear != null ? Math.round(salesNewestYear) : null,
@@ -279,39 +277,39 @@ RECENCY-WEIGHTED TENANT BENCHMARK DATA (primary reference for flagging):
 ${tenantLines.join("\n")}
 
 DATA STRENGTH (each tenant line shows its confidence tier — use it to set SEVERITY, but DON'T parrot the word "confidence" in your prose):
-- "high" (≥3 database locations): the database average is AUTHORITATIVE and supersedes general market assumptions.
+- "high" (≥3 database locations): the database median is AUTHORITATIVE and supersedes general market assumptions.
 - "medium" (2 locations): a reliable comparison.
 - "low" (1 location / thin data): directional only — cap severity at "medium".
 
 HOW TO PHRASE THE DATA in descriptions (IMPORTANT — Eric finds "high/medium confidence" repetitive):
-- Do NOT write "high confidence" / "medium confidence" in the output. Instead just state HOW MANY leases you're verifying against, e.g. "across 4 Marshalls leases in the database ($22.50/SF avg)…".
-- RENTS DO NOT "TRADE." Properties trade; rents do not. Never say a rent "trades below/above" the average. Say a rent "IS X% below/above" the database average. e.g. write "Five Below at $15.00/SF is 24% below the database average of $19.83/SF across 15 comparable leases (2026 recency-weighted)" — NOT "…trades 24% below…".
+- Do NOT write "high confidence" / "medium confidence" in the output. Instead just state HOW MANY leases you're verifying against, e.g. "across 4 Marshalls leases in the database ($22.50/SF median)…".
+- RENTS DO NOT "TRADE." Properties trade; rents do not. Never say a rent "trades below/above" the median. Say a rent "IS X% below/above" the database median. e.g. write "Five Below at $15.00/SF is 24% below the database median of $19.83/SF across 15 comparable leases (2026 recency-weighted)" — NOT "…trades 24% below…".
 - WORD "PORTFOLIO": reserve "portfolio" / "KPR portfolio" for assets KPR actually OWNS. This benchmark set spans ALL analyzed deals (owned + pipeline + passed), so call it "the database" (or "comparable leases in the database") — never "the portfolio."
 - HOLD-PERIOD LENS (three tiers): KPR underwrites a 5–7 year hold (max ~10). Rollover within ~7 yrs = in-hold upside KPR captures. Rollover ~7–12 yrs out = residual/exit upside to position for the NEXT buyer (note it as a future-owner mark-to-market, not in-hold). Locked deeper than ~12 yrs = not upside.
 - ONLY call out data strength when it's genuinely LIMITED — i.e. a single lease / thin sample. In that case say so plainly, e.g. "(only 1 database lease — directional)".
 - The lease years already reflect recency (more recent leases are weighted more); you may note when the comparison leans on recent vs older leases if relevant, but keep it brief.
 
 RULES:
-1. For any tenant paying >20% BELOW their weighted database avg, decide what the gap MEANS using the per-tenant signals in {curly braces} (lease term left, renewal options, sales/SF, occupancy-cost %). Below-market rent is NOT automatically good or bad:
+1. For any tenant paying >20% BELOW their weighted database median, decide what the gap MEANS using the per-tenant signals in {curly braces} (lease term left, renewal options, sales/SF, occupancy-cost %). Below-market rent is NOT automatically good or bad:
    a. CAPTURABLE MARK-TO-MARKET UPSIDE → add to dealScore.strengths or upsideItems (NOT a red flag). Strongest when the tenant is below market AND has LITTLE term left (low remaining term / near expiry) AND few/no remaining fixed-rate options AND can clearly afford more (strong sales/SF with low occupancy-cost %). This is the rent we can push at rollover.
    b. LOCKED PAST THE HOLD → if the tenant has many years of term left and/or remaining fixed/below-market options, we won't reach market during the 5–7yr hold. If the realistic rollover lands ~7–12 yrs out, position it as residual/exit upside for the NEXT buyer (low severity, framed as a future-owner mark-to-market — NOT in-hold upside). If locked deeper than ~12 yrs, mention only briefly / neutral and do NOT score it as upside.
    c. WARNING / POSSIBLE SOFTNESS → if sales are weak or occupancy-cost % is already high, the low rent may signal a struggling tenant or soft market; pushing rent risks losing them. THIS is when below-market belongs in redFlags. Severity by data strength + gap: 3+ leases & ≥35% below → "high"; 3+ leases & 20–34% → "medium"; 2 leases → "medium"; 1 lease → "low".
    d. SIGNALS ABSENT → if term/options/sales/occ-cost are unknown, stay measured: note it as a POSSIBLE mark-to-market opportunity contingent on lease term and sales, at "low" severity — do not assert either upside or distress.
-   - Any below-market mention must include: tenant name, this deal rent/SF, database avg, the LEASE COUNT you're comparing against, data years, and % gap. Example (capturable): "Across 4 Starbucks leases in the database (2021–2024) averaging $42/SF, this deal has them at $27/SF — 36% below — with only 1.5y left, no remaining options, and strong $1.1M/SF sales at a ~6% occupancy cost: a clear mark-to-market opportunity at rollover."
-2. For any tenant paying >20% ABOVE their database avg backed by 2+ leases: add a strength bullet to dealScore.strengths noting the premium and the lease count.
+   - Any below-market mention must include: tenant name, this deal rent/SF, database median, the LEASE COUNT you're comparing against, data years, and % gap. Example (capturable): "Across 4 Starbucks leases in the database (2021–2024) at a median $42/SF, this deal has them at $27/SF — 36% below — with only 1.5y left, no remaining options, and strong $1.1M/SF sales at a ~6% occupancy cost: a clear mark-to-market opportunity at rollover."
+2. For any tenant paying >20% ABOVE their database median backed by 2+ leases: add a strength bullet to dealScore.strengths noting the premium and the lease count.
 3. Keep ALL existing red flags unchanged — append benchmark-derived flags after them.
 4. When backed by 3+ leases, prefer the database data over general market assumptions. You may update dealScore.grade and rationale if it materially changes the thesis (e.g. multiple anchors deeply below-market vs. database). Otherwise leave the grade unchanged.
 5. DO NOT invent benchmark data. Only flag tenants listed in the analysis above.
 6. Vacant tenants: skip entirely.
 7. For single-lease flags, note "(only 1 database lease — directional)" in the description.
 8. STORE SIZE vs PROTOTYPE (SIZE segments): a box far from its chain's typical size is a real re-leasing risk — off-prototype stores are harder to backfill and likelier to sit on a chain's "non-prototype / do-not-renew" list, so they carry higher closure risk even at a market rent.
-   a. DATABASE size: when a SIZE segment shows this store >=40% SMALLER or >=40% LARGER than the database average (it already requires 2+ locations), add a redFlag framed as prototype-fit / backfill risk, citing this SF, the database average, the location count, and the % gap. Severity: >=60% off OR 3+ locations -> "medium"; otherwise "low" (database size samples are directional). Do NOT raise a size flag under a 40% deviation.
+   a. DATABASE size: when a SIZE segment shows this store >=40% SMALLER or >=40% LARGER than the database median (it already requires 2+ locations), add a redFlag framed as prototype-fit / backfill risk, citing this SF, the database median, the location count, and the % gap. Severity: >=60% off OR 3+ locations -> "medium"; otherwise "low" (database size samples are directional). Do NOT raise a size flag under a 40% deviation.
    b. NATIONAL prototype (use sparingly, only when you are genuinely confident): if you reliably know a well-known chain's typical national prototype footprint and THIS store is well outside that range, you MAY add a low/medium note — but you MUST label it as based on the chain's general/national prototype (NOT database data), and it must never override the database SIZE segment. If unsure of the prototype, say nothing about size beyond the database segment. NEVER invent a prototype size.
-9. SALES PER SF (SALES segments) — treat as AT LEAST as important as rent. A SALES segment is shown ONLY when >=${MIN_SALES_N} database locations disclosed sales, so when one is present the average is reliable enough to quote.
-   a. This store materially BELOW the database sales/SF average is a struggling-location / closure-risk redFlag (a weak-selling box is a re-leasing risk regardless of its current rent). Severity by gap + sample: >=40% below -> "medium" (or "high" with 5+ locations); 25–39% below -> "low"–"medium"; under 25% below -> mention only if it compounds another risk.
-   b. This store materially ABOVE the average -> a strength bullet (a healthy, productive, sticky location that supports its rent).
-   c. If a tenant has NO SALES segment, do NOT comment on its sales and never quote a brand sales average for it — the sample was too small to be reliable.
-   - Every sales mention must cite this store's sales/SF, the database average, the location count, and the years.
+9. SALES PER SF (SALES segments) — treat as AT LEAST as important as rent. A SALES segment is shown ONLY when >=${MIN_SALES_N} database locations disclosed sales, so when one is present the median is reliable enough to quote.
+   a. This store materially BELOW the database sales/SF median is a struggling-location / closure-risk redFlag (a weak-selling box is a re-leasing risk regardless of its current rent). Severity by gap + sample: >=40% below -> "medium" (or "high" with 5+ locations); 25–39% below -> "low"–"medium"; under 25% below -> mention only if it compounds another risk.
+   b. This store materially ABOVE the median -> a strength bullet (a healthy, productive, sticky location that supports its rent).
+   c. If a tenant has NO SALES segment, do NOT comment on its sales and never quote a brand sales median for it — the sample was too small to be reliable.
+   - Every sales mention must cite this store's sales/SF, the database median, the location count, and the years.
 
 Return ONLY valid JSON with no markdown or explanation:
 {"dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "string", "strengths": ["string"], "risks": ["string"]}, "redFlags": [{"severity": "high|medium|low", "description": "string"}]}`;
@@ -353,7 +351,8 @@ export async function rescoreDeal(
     // say "rent above submarket benchmark" and must not be deleted on rescore.
     // The injected flags always name "the database", so require that pairing.
     const isInjected =
-      desc.includes("database avg") ||
+      desc.includes("database median") ||
+      desc.includes("database avg") ||  // legacy wording (pre-median) — keep so old flags strip
       desc.includes("portfolio avg") || // legacy wording — keep so old stored flags still strip
       desc.includes("weighted avg") ||
       desc.includes("database data from") ||
@@ -451,34 +450,34 @@ export async function augmentScoringWithBenchmarks(
         occCost != null ? `occ-cost ${occCost.toFixed(1)}%` : null,
       ].filter(Boolean).join(", ");
 
-      // — RENT segment: recency-weighted $/SF vs the database average —
+      // — RENT segment: recency-weighted MEDIAN $/SF vs the database —
       let rentSeg = "";
-      if (rentPSF != null && bench.weightedAvgRentPerSf != null) {
-        const pct = ((rentPSF - bench.weightedAvgRentPerSf) / bench.weightedAvgRentPerSf) * 100;
+      if (rentPSF != null && bench.medianRentPerSf != null) {
+        const pct = ((rentPSF - bench.medianRentPerSf) / bench.medianRentPerSf) * 100;
         const simpleNote =
-          bench.simpleAvgRentPerSf != null &&
-          Math.abs(bench.simpleAvgRentPerSf - bench.weightedAvgRentPerSf) > 0.5
-            ? ` (unweighted avg ${fmtMoney(bench.simpleAvgRentPerSf)}/SF)`
+          bench.simpleMedianRentPerSf != null &&
+          Math.abs(bench.simpleMedianRentPerSf - bench.medianRentPerSf) > 0.5
+            ? ` (unweighted median ${fmtMoney(bench.simpleMedianRentPerSf)}/SF)`
             : "";
         rentSeg =
-          `RENT: this deal ${fmtMoney(rentPSF)}/SF vs avg ${fmtMoney(bench.weightedAvgRentPerSf)}/SF across ${bench.locationCount} database ${leaseWord}${simpleNote}` +
+          `RENT: this deal ${fmtMoney(rentPSF)}/SF vs database median ${fmtMoney(bench.medianRentPerSf)}/SF across ${bench.locationCount} ${leaseWord}${simpleNote}` +
           ` [${dateRange}, recency-weighted; severity tier: ${bench.confidence}, eff. weight ${effCount}] → ${pctStr(pct)} vs rent benchmark`;
       }
 
-      // — SIZE segment: this box vs the database average store size (prototype proxy) —
+      // — SIZE segment: this box vs the database median store size (prototype proxy) —
       let sizeSeg = "";
       const thisSf = toNum(t.sf);
-      if (thisSf != null && bench.avgSf != null && bench.sfCount >= MIN_SIZE_N) {
-        const spct = ((thisSf - bench.avgSf) / bench.avgSf) * 100;
+      if (thisSf != null && bench.medianSf != null && bench.sfCount >= MIN_SIZE_N) {
+        const spct = ((thisSf - bench.medianSf) / bench.medianSf) * 100;
         sizeSeg =
-          `SIZE: this ${Math.round(thisSf).toLocaleString()} SF vs database avg ${Math.round(bench.avgSf).toLocaleString()} SF` +
+          `SIZE: this ${Math.round(thisSf).toLocaleString()} SF vs database median ${Math.round(bench.medianSf).toLocaleString()} SF` +
           ` across ${bench.sfCount} ${bench.sfCount === 1 ? "location" : "locations"} → ${pctStr(spct)} vs size benchmark`;
       }
 
       // — SALES segment: only when a large-enough sample (≥MIN_SALES_N) has disclosed sales —
       let salesSeg = "";
-      if (thisSales != null && bench.weightedAvgSalesPerSf != null && bench.salesCount >= MIN_SALES_N) {
-        const salesPct = ((thisSales - bench.weightedAvgSalesPerSf) / bench.weightedAvgSalesPerSf) * 100;
+      if (thisSales != null && bench.medianSalesPerSf != null && bench.salesCount >= MIN_SALES_N) {
+        const salesPct = ((thisSales - bench.medianSalesPerSf) / bench.medianSalesPerSf) * 100;
         const syRange =
           bench.salesOldestYear && bench.salesNewestYear
             ? bench.salesOldestYear === bench.salesNewestYear
@@ -486,7 +485,7 @@ export async function augmentScoringWithBenchmarks(
               : `${bench.salesOldestYear}–${bench.salesNewestYear}`
             : "years n/a";
         salesSeg =
-          `SALES: this ${fmtMoney(thisSales)}/SF vs database avg ${fmtMoney(bench.weightedAvgSalesPerSf)}/SF` +
+          `SALES: this ${fmtMoney(thisSales)}/SF vs database median ${fmtMoney(bench.medianSalesPerSf)}/SF` +
           ` across ${bench.salesCount} locations [${syRange}, recency-weighted] → ${pctStr(salesPct)} vs sales benchmark`;
       }
 
