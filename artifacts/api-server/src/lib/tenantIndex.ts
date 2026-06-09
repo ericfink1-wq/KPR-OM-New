@@ -19,6 +19,8 @@ export function ensureTenantIndexColumns(): Promise<void> {
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS percentage_rent double precision`);
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS other_rent double precision`);
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS deal_status text`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS sales_psf double precision`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS sales_year double precision`);
     })().catch((err) => { columnsReady = null; throw err; });
   }
   return columnsReady;
@@ -124,6 +126,8 @@ export async function rebuildTenantIndex(
         expenseReimbursements: toFloat(t.expenseReimbursements),
         percentageRent: toFloat(t.percentageRent),
         otherRent: toFloat(t.otherRent),
+        salesPsf: toFloat(t.salesPSF),
+        salesYear: toFloat(t.salesYear),
       };
     });
 

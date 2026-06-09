@@ -17,6 +17,14 @@ import { and, ne, inArray, isNotNull, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { Logger } from "pino";
 import { callAnthropicOnce, robustParseJSON } from "./extract";
+import { ensureTenantIndexColumns } from "./tenantIndex";
+
+// Sales/SF is sparse and noisy, so we only QUOTE a brand sales average once enough
+// other locations have disclosed sales — below this we suppress the comparison
+// entirely rather than mislead off a tiny sample (Eric's explicit guard).
+const MIN_SALES_N = 3;
+// Store-size deviation needs at least a couple of comparable boxes to mean anything.
+const MIN_SIZE_N = 2;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,7 +35,12 @@ interface TenantBenchmark {
   locationCount: number;
   weightedAvgRentPerSf: number | null; // primary — recency-weighted
   simpleAvgRentPerSf: number | null;   // unweighted reference
-  avgSf: number | null;
+  avgSf: number | null;                // simple avg store size (prototype proxy)
+  sfCount: number;                     // # locations with SF (size sample)
+  weightedAvgSalesPerSf: number | null; // recency-weighted by sales year
+  salesCount: number;                  // # locations with disclosed sales (sample gate)
+  salesOldestYear: number | null;
+  salesNewestYear: number | null;
   effectiveWeightedCount: number;      // sum of weights (effective sample size)
   oldestDataYear: number | null;
   newestDataYear: number | null;
@@ -44,6 +57,16 @@ function recencyWeight(vintage: string | null): number {
   const ms = new Date(vintage).getTime();
   if (isNaN(ms)) return 0.5; // unparseable date → treat as unknown, not oldest
   const yearsAgo = (Date.now() - ms) / (365.25 * 24 * 60 * 60 * 1000);
+  if (yearsAgo <= 3) return 1.0;
+  if (yearsAgo <= 7) return 0.5;
+  return 0.25;
+}
+
+// Recency weight for a sales figure by its reporting YEAR (more recent sales are
+// fresher evidence of how a location is performing). Mirrors recencyWeight's tiers.
+function salesRecencyWeight(year: number | null): number {
+  if (!year || !isFinite(year)) return 0.5;
+  const yearsAgo = new Date().getFullYear() - year;
   if (yearsAgo <= 3) return 1.0;
   if (yearsAgo <= 7) return 0.5;
   return 0.25;
@@ -86,6 +109,10 @@ async function queryBenchmarks(
 ): Promise<Map<string, TenantBenchmark>> {
   if (canonicalNames.length === 0) return new Map();
 
+  // Make sure the sales columns exist before we select them (older databases were
+  // created before these were added; this is idempotent + cached).
+  await ensureTenantIndexColumns();
+
   // Fetch individual rows. Recency weighting prefers each lease's COMMENCEMENT
   // date (when it was actually signed/repriced) over the OM's upload date — a
   // freshly uploaded OM can still contain a 10-year-old lease, which is staler
@@ -96,6 +123,8 @@ async function queryBenchmarks(
       canonicalName: tenantIndexTable.canonicalName,
       rentPerSf: tenantIndexTable.rentPerSf,
       sf: tenantIndexTable.sf,
+      salesPsf: tenantIndexTable.salesPsf,
+      salesYear: tenantIndexTable.salesYear,
       leaseStartDate: sql<string | null>`${tenantIndexTable.leaseStartDate}`,
       uploadedAt: sql<string | null>`${dealsTable.data}->>'uploadedAt'`,
     })
@@ -112,13 +141,13 @@ async function queryBenchmarks(
   // Group by canonical name and compute recency-weighted statistics
   const groups = new Map<
     string,
-    Array<{ rentPerSf: number | null; sf: number | null; vintage: string | null; vintageFromLease: boolean }>
+    Array<{ rentPerSf: number | null; sf: number | null; salesPsf: number | null; salesYear: number | null; vintage: string | null; vintageFromLease: boolean }>
   >();
   for (const row of rows) {
     if (!row.canonicalName) continue;
     const arr = groups.get(row.canonicalName) ?? [];
     const vintage = row.leaseStartDate ?? row.uploadedAt;
-    arr.push({ rentPerSf: row.rentPerSf, sf: row.sf, vintage, vintageFromLease: row.leaseStartDate != null });
+    arr.push({ rentPerSf: row.rentPerSf, sf: row.sf, salesPsf: row.salesPsf, salesYear: row.salesYear, vintage, vintageFromLease: row.leaseStartDate != null });
     groups.set(row.canonicalName, arr);
   }
 
@@ -131,6 +160,11 @@ async function queryBenchmarks(
     let simpleRentCount = 0;
     let sfSum = 0;
     let sfCount = 0;
+    let weightedSalesSum = 0;
+    let salesWeightSum = 0;
+    let salesCount = 0;
+    let salesOldestYear: number | null = null;
+    let salesNewestYear: number | null = null;
     let oldest: Date | null = null;
     let newest: Date | null = null;
     let leaseDatedCount = 0;
@@ -149,6 +183,16 @@ async function queryBenchmarks(
         sfSum += e.sf;
         sfCount++;
       }
+      if (e.salesPsf != null) {
+        const sw = salesRecencyWeight(e.salesYear);
+        weightedSalesSum += e.salesPsf * sw;
+        salesWeightSum += sw;
+        salesCount++;
+        if (e.salesYear != null) {
+          if (salesOldestYear == null || e.salesYear < salesOldestYear) salesOldestYear = e.salesYear;
+          if (salesNewestYear == null || e.salesYear > salesNewestYear) salesNewestYear = e.salesYear;
+        }
+      }
       if (e.vintage) {
         const d = new Date(e.vintage);
         if (!oldest || d < oldest) oldest = d;
@@ -158,6 +202,7 @@ async function queryBenchmarks(
 
     const weightedAvgRentPerSf = weightSum > 0 ? weightedRentSum / weightSum : null;
     const simpleAvgRentPerSf = simpleRentCount > 0 ? simpleRentSum / simpleRentCount : null;
+    const weightedAvgSalesPerSf = salesWeightSum > 0 ? weightedSalesSum / salesWeightSum : null;
     const effectiveWeightedCount = weightSum; // sum of weights = effective sample size
     const confidence = deriveConfidence(entries.length, effectiveWeightedCount);
     void leaseDatedCount;
@@ -168,6 +213,11 @@ async function queryBenchmarks(
       weightedAvgRentPerSf,
       simpleAvgRentPerSf,
       avgSf: sfCount > 0 ? sfSum / sfCount : null,
+      sfCount,
+      weightedAvgSalesPerSf,
+      salesCount,
+      salesOldestYear: salesOldestYear != null ? Math.round(salesOldestYear) : null,
+      salesNewestYear: salesNewestYear != null ? Math.round(salesNewestYear) : null,
       effectiveWeightedCount,
       oldestDataYear: oldest ? oldest.getFullYear() : null,
       newestDataYear: newest ? newest.getFullYear() : null,
@@ -193,7 +243,7 @@ function buildAugmentPrompt(
   const strengths = Array.isArray(score?.strengths) ? (score.strengths as string[]).join("; ") : "—";
   const risks = Array.isArray(score?.risks) ? (score.risks as string[]).join("; ") : "—";
 
-  return `You are a CRE investment analyst. The existing score below was produced from OM text alone, without database benchmark data. You now have recency-weighted rent/SF benchmarks from previously analyzed deals in the database — use them to augment the score and flags.
+  return `You are a CRE investment analyst. The existing score below was produced from OM text alone, without database benchmark data. You now have recency-weighted rent/SF, store-size, and sales/SF benchmarks from previously analyzed deals in the database — use them to augment the score and flags. Each tenant line may carry RENT, SIZE and/or SALES segments (only the ones the data supports are shown).
 
 DEAL: ${name}, ${addr}
 
@@ -235,6 +285,14 @@ RULES:
 5. DO NOT invent benchmark data. Only flag tenants listed in the analysis above.
 6. Vacant tenants: skip entirely.
 7. For single-lease flags, note "(only 1 database lease — directional)" in the description.
+8. STORE SIZE vs PROTOTYPE (SIZE segments): a box far from its chain's typical size is a real re-leasing risk — off-prototype stores are harder to backfill and likelier to sit on a chain's "non-prototype / do-not-renew" list, so they carry higher closure risk even at a market rent.
+   a. DATABASE size: when a SIZE segment shows this store >=40% SMALLER or >=40% LARGER than the brand's database average (it already requires 2+ locations), add a redFlag framed as prototype-fit / backfill risk, citing this SF, the brand average, the location count, and the % gap. Severity: >=60% off OR 3+ locations -> "medium"; otherwise "low" (database size samples are directional). Do NOT raise a size flag under a 40% deviation.
+   b. NATIONAL prototype (use sparingly, only when you are genuinely confident): if you reliably know a well-known chain's typical national prototype footprint and THIS store is well outside that range, you MAY add a low/medium note — but you MUST label it as based on the chain's general/national prototype (NOT database data), and it must never override the database SIZE segment. If unsure of the prototype, say nothing about size beyond the database segment. NEVER invent a prototype size.
+9. SALES PER SF (SALES segments) — treat as AT LEAST as important as rent. A SALES segment is shown ONLY when >=${MIN_SALES_N} database locations disclosed sales, so when one is present the average is reliable enough to quote.
+   a. This store materially BELOW the brand's database sales/SF average is a struggling-location / closure-risk redFlag (a weak-selling box is a re-leasing risk regardless of its current rent). Severity by gap + sample: >=40% below -> "medium" (or "high" with 5+ locations); 25–39% below -> "low"–"medium"; under 25% below -> mention only if it compounds another risk.
+   b. This store materially ABOVE the average -> a strength bullet (a healthy, productive, sticky location that supports its rent).
+   c. If a tenant has NO SALES segment, do NOT comment on its sales and never quote a brand sales average for it — the sample was too small to be reliable.
+   - Every sales mention must cite this store's sales/SF, the database average, the location count, and the years.
 
 Return ONLY valid JSON with no markdown or explanation:
 {"dealScore": {"grade": "A+|A|B+|B|C+|C|D", "rationale": "string", "strengths": ["string"], "risks": ["string"]}, "redFlags": [{"severity": "high|medium|low", "description": "string"}]}`;
@@ -360,6 +418,22 @@ export async function augmentScoringWithBenchmarks(
 
       const effCount = bench.effectiveWeightedCount.toFixed(1);
 
+      const leaseWord = bench.locationCount === 1 ? "lease" : "leases";
+
+      // Signals that frame a below-market rent as capturable upside, locked-in, or a warning.
+      const term = toNum(t.remainingTermYears);
+      const occCost = toNum(t.occupancyCost);
+      const optsRaw = typeof t.renewalOptions === "string" ? t.renewalOptions.trim() : "";
+      const thisSales = toNum(t.salesPSF);
+      const mtmBits = [
+        term != null ? `term ${term.toFixed(1)}y left` : null,
+        optsRaw ? `options: ${optsRaw.slice(0, 60)}` : "options: none/unknown",
+        thisSales != null ? `sales ${fmtMoney(thisSales)}/SF` : null,
+        occCost != null ? `occ-cost ${occCost.toFixed(1)}%` : null,
+      ].filter(Boolean).join(", ");
+
+      // — RENT segment: recency-weighted $/SF vs the brand's database average —
+      let rentSeg = "";
       if (rentPSF != null && bench.weightedAvgRentPerSf != null) {
         const pct = ((rentPSF - bench.weightedAvgRentPerSf) / bench.weightedAvgRentPerSf) * 100;
         const simpleNote =
@@ -367,34 +441,48 @@ export async function augmentScoringWithBenchmarks(
           Math.abs(bench.simpleAvgRentPerSf - bench.weightedAvgRentPerSf) > 0.5
             ? ` (unweighted avg ${fmtMoney(bench.simpleAvgRentPerSf)}/SF)`
             : "";
-        // Signals that decide whether below-market rent is capturable upside, locked-in, or a warning.
-        const term = toNum(t.remainingTermYears);
-        const sales = toNum(t.salesPSF);
-        const occCost = toNum(t.occupancyCost);
-        const optsRaw = typeof t.renewalOptions === "string" ? t.renewalOptions.trim() : "";
-        const mtmBits = [
-          term != null ? `term ${term.toFixed(1)}y left` : null,
-          optsRaw ? `options: ${optsRaw.slice(0, 60)}` : "options: none/unknown",
-          sales != null ? `sales ${fmtMoney(sales)}/SF` : null,
-          occCost != null ? `occ-cost ${occCost.toFixed(1)}%` : null,
-        ].filter(Boolean).join(", ");
-        const leaseWord = bench.locationCount === 1 ? "lease" : "leases";
-        tenantLines.push(
-          `• ${rawName} (${sfStr}): this deal ${fmtMoney(rentPSF)}/SF vs avg ${fmtMoney(bench.weightedAvgRentPerSf)}/SF across ${bench.locationCount} database ${leaseWord}${simpleNote}` +
-            ` [${dateRange}, recency-weighted; severity tier: ${bench.confidence}, eff. weight ${effCount}]` +
-            ` → ${pctStr(pct)} vs benchmark` +
-            (mtmBits ? ` {${mtmBits}}` : ""),
-        );
+        rentSeg =
+          `RENT: this deal ${fmtMoney(rentPSF)}/SF vs avg ${fmtMoney(bench.weightedAvgRentPerSf)}/SF across ${bench.locationCount} database ${leaseWord}${simpleNote}` +
+          ` [${dateRange}, recency-weighted; severity tier: ${bench.confidence}, eff. weight ${effCount}] → ${pctStr(pct)} vs rent benchmark`;
+      }
+
+      // — SIZE segment: this box vs the brand's average store size (prototype proxy) —
+      let sizeSeg = "";
+      const thisSf = toNum(t.sf);
+      if (thisSf != null && bench.avgSf != null && bench.sfCount >= MIN_SIZE_N) {
+        const spct = ((thisSf - bench.avgSf) / bench.avgSf) * 100;
+        sizeSeg =
+          `SIZE: this ${Math.round(thisSf).toLocaleString()} SF vs brand avg ${Math.round(bench.avgSf).toLocaleString()} SF` +
+          ` across ${bench.sfCount} ${bench.sfCount === 1 ? "location" : "locations"} → ${pctStr(spct)} vs prototype`;
+      }
+
+      // — SALES segment: only when a large-enough sample (≥MIN_SALES_N) has disclosed sales —
+      let salesSeg = "";
+      if (thisSales != null && bench.weightedAvgSalesPerSf != null && bench.salesCount >= MIN_SALES_N) {
+        const salesPct = ((thisSales - bench.weightedAvgSalesPerSf) / bench.weightedAvgSalesPerSf) * 100;
+        const syRange =
+          bench.salesOldestYear && bench.salesNewestYear
+            ? bench.salesOldestYear === bench.salesNewestYear
+              ? `${bench.salesNewestYear}`
+              : `${bench.salesOldestYear}–${bench.salesNewestYear}`
+            : "years n/a";
+        salesSeg =
+          `SALES: this ${fmtMoney(thisSales)}/SF vs brand avg ${fmtMoney(bench.weightedAvgSalesPerSf)}/SF` +
+          ` across ${bench.salesCount} locations [${syRange}, recency-weighted] → ${pctStr(salesPct)} vs sales benchmark`;
+      }
+
+      const segs = [rentSeg, sizeSeg, salesSeg].filter(Boolean);
+      if (segs.length > 0) {
+        tenantLines.push(`• ${rawName} (${sfStr}): ` + segs.join("  ·  ") + (mtmBits ? ` {${mtmBits}}` : ""));
       } else if (bench.locationCount > 0) {
-        const leaseWord = bench.locationCount === 1 ? "lease" : "leases";
         tenantLines.push(
-          `• ${rawName} (${sfStr}): ${bench.locationCount} database ${leaseWord} [${dateRange}; severity tier: ${bench.confidence}] — no rent/SF data for comparison`,
+          `• ${rawName} (${sfStr}): ${bench.locationCount} database ${leaseWord} [${dateRange}; severity tier: ${bench.confidence}] — no rent/size/sales comparison available`,
         );
       }
     }
 
-    // Only proceed if we have lines with actual rent comparisons
-    const comparableLines = tenantLines.filter((l) => l.includes("vs benchmark"));
+    // Only proceed if at least one tenant has an actual comparison (rent, size, or sales)
+    const comparableLines = tenantLines.filter((l) => /vs (rent|sales) benchmark|vs prototype/.test(l));
     if (comparableLines.length === 0) return extracted;
 
     // Build prompt

@@ -20,6 +20,8 @@ export const tenantIndexTable = pgTable("tenant_index", {
   expenseReimbursements: doublePrecision("expense_reimbursements"),
   percentageRent: doublePrecision("percentage_rent"),
   otherRent: doublePrecision("other_rent"),
+  salesPsf: doublePrecision("sales_psf"),
+  salesYear: doublePrecision("sales_year"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
