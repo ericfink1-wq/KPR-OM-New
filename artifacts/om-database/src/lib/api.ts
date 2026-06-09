@@ -3,6 +3,7 @@
 
 import type { Deal, ImageBundle, LeaseAbstract } from "./idb";
 import { normalizeDeal } from "./utils";
+import type { CompInput } from "./compsSummary";
 
 const BASE = "/api";
 
@@ -719,6 +720,17 @@ export async function apiListAllLeaseAbstracts(): Promise<LeaseAbstract[]> {
     const resp = await apiFetch(`/lease-abstracts`);
     if (!resp.ok) return [];
     return resp.json() as Promise<LeaseAbstract[]>;
+  } catch {
+    return [];
+  }
+}
+
+// Whole comps_index table — used to build the analyst's comp-benchmark summary.
+export async function apiLoadComps(): Promise<CompInput[]> {
+  try {
+    const resp = await apiFetch(`/comps`);
+    if (!resp.ok) return [];
+    return resp.json() as Promise<CompInput[]>;
   } catch {
     return [];
   }

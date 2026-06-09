@@ -1234,7 +1234,7 @@ export function fmtUSD(v: unknown): string {
   return `$${Math.round(Number(v)).toLocaleString()}`;
 }
 
-export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []): string {
+export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = [], compsSummary?: import("./compsSummary").CompsSummary | null): string {
   const active = deals.filter(d => !d.trashedAt);
   const statuses = ["Prospect","Under Contract","Owned","Sold","Passed"];
   const bySt = Object.fromEntries(statuses.map(s => [s, active.filter(d => d.status === s).length]));
@@ -1422,6 +1422,13 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
       yearBuilt: d.yearBuilt ?? undefined,
       renovationYear: d.renovationYear ?? undefined,
       roofData: d.roofData ?? undefined,
+      // Seller's in-place / assumable debt as stated in the OM (distinct from KPR's
+      // own financing in the kpr object) — so "which deals have assumable debt" works.
+      assumableDebt: d.assumableDebt ?? undefined,
+      loanBalance: nz(d.loanBalance) ? d.loanBalance : undefined,
+      loanRate: nz(d.loanRate) ? d.loanRate : undefined,
+      loanMaturity: nz(d.loanMaturity) ? d.loanMaturity : undefined,
+      loanType: nz(d.loanType) ? d.loanType : undefined,
       // Which sales-report years are on file for this deal (so trend questions are
       // answerable, and survive even if rosters get trimmed for context size).
       salesYearsOnFile: (d.tenantSalesHistory && d.tenantSalesHistory.length)
@@ -1604,7 +1611,14 @@ Portfolio counts: ${active.length} total deals — ${statuses.map(s => `${bySt[s
 Full deal data (JSON):
 ${JSON.stringify(portfolioOut)}
 ${abstractsSection}${trimNote}
+${compsSummary ? `
+=== SALES-COMP BENCHMARK (precomputed — NARRATE, never re-derive) ===
+This is the app's deterministic benchmark over the comp database (median + 25th/75th percentile, validity-filtered: sale price > 0, no future dates, cap 3–12%, price/SF ≤ $2,000). The numbers are FINAL — quote them, do not average raw comps yourself, and always cite n + the date range. Use MEDIANS, not means. Source tiers, strongest to weakest: owned (KPR's verified trades) > broker/manual > OM-sourced (seller-cherry-picked). ${compsSummary.insufficient ? "NOTE: fewer than 4 valid comps — say the sample is too thin for a reliable benchmark rather than quoting a median as authoritative." : ""}
+- n=${compsSummary.n} valid comps${compsSummary.dateRange ? `, sales ${compsSummary.dateRange.from} → ${compsSummary.dateRange.to}` : ""} (excluded ${compsSummary.excludedInvalid} invalid). Source mix: ${compsSummary.sourceMix.owned} owned, ${compsSummary.sourceMix.brokerManual} broker/manual, ${compsSummary.sourceMix.omSourced} OM-sourced.
+- When comparing one of KPR's deals to "the comps," compare its cap rate / price-PSF to these medians and state the gap in bps (cap) or % (price/SF).
 
+${JSON.stringify(compsSummary)}
+` : ""}
 === ANSWERING GUIDELINES ===
 - Reference actual deal names and real numbers from the data above; don't generalize when specifics are available.
 - Accuracy over confidence: if a figure isn't in the data, say so plainly and leave it out — NEVER fabricate a precise-looking number. null/absent means unknown, not zero.
