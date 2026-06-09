@@ -26,6 +26,36 @@ export function ensureTenantIndexColumns(): Promise<void> {
   return columnsReady;
 }
 
+// One-time (per process) backfill of the sales columns straight from the deal JSON
+// we ALREADY store — so existing tenant_index rows pick up sales without anyone
+// running a manual "rebuild index". Idempotent: only touches rows whose sales_psf
+// is still null and whose deal JSON has a numeric salesPSF for the matching tenant.
+// Runs lazily before the first benchmark query; non-fatal (benchmarks just stay
+// sparse if it can't run). After this, normal deal writes keep sales current.
+let salesBackfillReady: Promise<void> | null = null;
+export function backfillTenantIndexSales(): Promise<void> {
+  if (!salesBackfillReady) {
+    salesBackfillReady = (async () => {
+      await ensureTenantIndexColumns();
+      await db.execute(sql`
+        UPDATE tenant_index ti SET
+          sales_psf  = (t.elem->>'salesPSF')::double precision,
+          sales_year = CASE WHEN (t.elem->>'salesYear') ~ '^[0-9]+(\\.[0-9]+)?$'
+                            THEN (t.elem->>'salesYear')::double precision END
+        FROM deals d
+        CROSS JOIN LATERAL jsonb_array_elements(
+          CASE WHEN jsonb_typeof(d.data->'tenants') = 'array'
+               THEN d.data->'tenants' ELSE '[]'::jsonb END) AS t(elem)
+        WHERE ti.deal_id = d.id
+          AND t.elem->>'name' = ti.raw_name
+          AND ti.sales_psf IS NULL
+          AND (t.elem->>'salesPSF') ~ '^[0-9]+(\\.[0-9]+)?$'
+      `);
+    })().catch(() => { /* non-fatal — the admin "rebuild index" remains a fallback */ });
+  }
+  return salesBackfillReady;
+}
+
 // ---------------------------------------------------------------------------
 // Lease date parser — returns "YYYY-MM-DD" for storage, null if unparseable
 // Handles: ISO YYYY-MM-DD, YYYY-MM, MM/DD/YYYY, M/D/YY, M/YYYY,

@@ -17,7 +17,7 @@ import { and, ne, inArray, isNotNull, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { Logger } from "pino";
 import { callAnthropicOnce, robustParseJSON } from "./extract";
-import { ensureTenantIndexColumns } from "./tenantIndex";
+import { backfillTenantIndexSales } from "./tenantIndex";
 
 // Sales/SF is sparse and noisy, so we only QUOTE a brand sales average once enough
 // other locations have disclosed sales — below this we suppress the comparison
@@ -109,9 +109,10 @@ async function queryBenchmarks(
 ): Promise<Map<string, TenantBenchmark>> {
   if (canonicalNames.length === 0) return new Map();
 
-  // Make sure the sales columns exist before we select them (older databases were
-  // created before these were added; this is idempotent + cached).
-  await ensureTenantIndexColumns();
+  // Make sure the sales columns exist AND are backfilled from the deal JSON before
+  // we read them (older rows were indexed before sales existed). Both are idempotent
+  // and cached, so this is a no-op after the first benchmark query each process.
+  await backfillTenantIndexSales();
 
   // Fetch individual rows. Recency weighting prefers each lease's COMMENCEMENT
   // date (when it was actually signed/repriced) over the OM's upload date — a
