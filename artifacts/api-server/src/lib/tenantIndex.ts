@@ -21,39 +21,46 @@ export function ensureTenantIndexColumns(): Promise<void> {
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS deal_status text`);
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS sales_psf double precision`);
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS sales_year double precision`);
+      await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS is_nap boolean`);
     })().catch((err) => { columnsReady = null; throw err; });
   }
   return columnsReady;
 }
 
-// One-time (per process) backfill of the sales columns straight from the deal JSON
-// we ALREADY store — so existing tenant_index rows pick up sales without anyone
-// running a manual "rebuild index". Idempotent: only touches rows whose sales_psf
-// is still null and whose deal JSON has a numeric salesPSF for the matching tenant.
+// One-time (per process) backfill of the columns added after the table's original
+// creation (sales/SF, sales year, and the NAP flag) straight from the deal JSON we
+// ALREADY store — so existing tenant_index rows pick these up without anyone running
+// a manual "rebuild index". Idempotent: COALESCE only fills a column that's still
+// null, and the casts are regex-guarded so odd values can't error the statement.
 // Runs lazily before the first benchmark query; non-fatal (benchmarks just stay
-// sparse if it can't run). After this, normal deal writes keep sales current.
-let salesBackfillReady: Promise<void> | null = null;
-export function backfillTenantIndexSales(): Promise<void> {
-  if (!salesBackfillReady) {
-    salesBackfillReady = (async () => {
+// sparse if it can't run). After this, normal deal writes keep these current.
+let backfillReady: Promise<void> | null = null;
+export function backfillTenantIndexFields(): Promise<void> {
+  if (!backfillReady) {
+    backfillReady = (async () => {
       await ensureTenantIndexColumns();
       await db.execute(sql`
         UPDATE tenant_index ti SET
-          sales_psf  = (t.elem->>'salesPSF')::double precision,
-          sales_year = CASE WHEN (t.elem->>'salesYear') ~ '^[0-9]+(\\.[0-9]+)?$'
-                            THEN (t.elem->>'salesYear')::double precision END
+          sales_psf  = COALESCE(ti.sales_psf,
+                         CASE WHEN (t.elem->>'salesPSF') ~ '^[0-9]+(\\.[0-9]+)?$'
+                              THEN (t.elem->>'salesPSF')::double precision END),
+          sales_year = COALESCE(ti.sales_year,
+                         CASE WHEN (t.elem->>'salesYear') ~ '^[0-9]+(\\.[0-9]+)?$'
+                              THEN (t.elem->>'salesYear')::double precision END),
+          is_nap     = COALESCE(ti.is_nap,
+                         CASE WHEN (t.elem->>'isNAP') IN ('true','false')
+                              THEN (t.elem->>'isNAP')::boolean END)
         FROM deals d
         CROSS JOIN LATERAL jsonb_array_elements(
           CASE WHEN jsonb_typeof(d.data->'tenants') = 'array'
                THEN d.data->'tenants' ELSE '[]'::jsonb END) AS t(elem)
         WHERE ti.deal_id = d.id
           AND t.elem->>'name' = ti.raw_name
-          AND ti.sales_psf IS NULL
-          AND (t.elem->>'salesPSF') ~ '^[0-9]+(\\.[0-9]+)?$'
+          AND (ti.sales_psf IS NULL OR ti.is_nap IS NULL)
       `);
     })().catch(() => { /* non-fatal — the admin "rebuild index" remains a fallback */ });
   }
-  return salesBackfillReady;
+  return backfillReady;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,6 +159,7 @@ export async function rebuildTenantIndex(
         leaseType: typeof t.leaseType === "string" ? t.leaseType : null,
         creditRating: typeof t.creditRating === "string" ? t.creditRating : null,
         isAnchor: typeof t.isAnchor === "boolean" ? t.isAnchor : null,
+        isNap: typeof t.isNAP === "boolean" ? t.isNAP : null,
         dealStatus,
         expenseReimbursements: toFloat(t.expenseReimbursements),
         percentageRent: toFloat(t.percentageRent),

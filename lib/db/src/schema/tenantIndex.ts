@@ -16,6 +16,7 @@ export const tenantIndexTable = pgTable("tenant_index", {
   leaseType: text("lease_type"),
   creditRating: text("credit_rating"),
   isAnchor: boolean("is_anchor"),
+  isNap: boolean("is_nap"),
   dealStatus: text("deal_status"),
   expenseReimbursements: doublePrecision("expense_reimbursements"),
   percentageRent: doublePrecision("percentage_rent"),

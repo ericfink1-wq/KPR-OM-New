@@ -17,7 +17,7 @@ import { and, ne, inArray, isNotNull, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { Logger } from "pino";
 import { callAnthropicOnce, robustParseJSON } from "./extract";
-import { backfillTenantIndexSales } from "./tenantIndex";
+import { backfillTenantIndexFields } from "./tenantIndex";
 
 // Sales/SF is sparse and noisy, so we only QUOTE a brand sales average once enough
 // other locations have disclosed sales — below this we suppress the comparison
@@ -109,10 +109,10 @@ async function queryBenchmarks(
 ): Promise<Map<string, TenantBenchmark>> {
   if (canonicalNames.length === 0) return new Map();
 
-  // Make sure the sales columns exist AND are backfilled from the deal JSON before
-  // we read them (older rows were indexed before sales existed). Both are idempotent
-  // and cached, so this is a no-op after the first benchmark query each process.
-  await backfillTenantIndexSales();
+  // Make sure the post-creation columns (sales/SF, sales year, NAP flag) exist AND
+  // are backfilled from the deal JSON before we read them. Idempotent and cached, so
+  // this is a no-op after the first benchmark query each process.
+  await backfillTenantIndexFields();
 
   // Fetch individual rows. Recency weighting prefers each lease's COMMENCEMENT
   // date (when it was actually signed/repriced) over the OM's upload date — a
@@ -126,6 +126,7 @@ async function queryBenchmarks(
       sf: tenantIndexTable.sf,
       salesPsf: tenantIndexTable.salesPsf,
       salesYear: tenantIndexTable.salesYear,
+      isNap: tenantIndexTable.isNap,
       leaseStartDate: sql<string | null>`${tenantIndexTable.leaseStartDate}`,
       uploadedAt: sql<string | null>`${dealsTable.data}->>'uploadedAt'`,
     })
@@ -146,6 +147,11 @@ async function queryBenchmarks(
   >();
   for (const row of rows) {
     if (!row.canonicalName) continue;
+    // NAP tenants (shadow anchors / outparcels not part of the center) are not real
+    // leases at this property — usually a real brand name carried at 0 SF. They must
+    // NOT count as comparables: a NAP "Costco" would otherwise drag the brand's size
+    // average toward 0 and inflate the location count. Drop them entirely.
+    if (row.isNap === true) continue;
     const arr = groups.get(row.canonicalName) ?? [];
     const vintage = row.leaseStartDate ?? row.uploadedAt;
     arr.push({ rentPerSf: row.rentPerSf, sf: row.sf, salesPsf: row.salesPsf, salesYear: row.salesYear, vintage, vintageFromLease: row.leaseStartDate != null });
@@ -174,17 +180,19 @@ async function queryBenchmarks(
       const weight = recencyWeight(e.vintage);
       if (e.vintageFromLease) leaseDatedCount++;
 
-      if (e.rentPerSf != null) {
+      // Only positive values count — a 0 (or blank) SF / rent / sales row, e.g. a
+      // shadow line or a data gap, must never drag an average down.
+      if (e.rentPerSf != null && e.rentPerSf > 0) {
         weightedRentSum += e.rentPerSf * weight;
         weightSum += weight;
         simpleRentSum += e.rentPerSf;
         simpleRentCount++;
       }
-      if (e.sf != null) {
+      if (e.sf != null && e.sf > 0) {
         sfSum += e.sf;
         sfCount++;
       }
-      if (e.salesPsf != null) {
+      if (e.salesPsf != null && e.salesPsf > 0) {
         const sw = salesRecencyWeight(e.salesYear);
         weightedSalesSum += e.salesPsf * sw;
         salesWeightSum += sw;
