@@ -1527,7 +1527,7 @@ export function buildSystemPrompt(
   // verbose lease abstracts tipped it to ~208K tokens). Budget the data against
   // what's actually left: a conservative input-token target × chars/token, minus the
   // measured overhead and a reserve for history/reply.
-  const CHARS_PER_TOKEN = 2.9;          // conservative for this mixed JSON/prose/number content
+  const CHARS_PER_TOKEN = 2.3;          // measured: this dense deal/abstract JSON tokenizes ~2.3 chars/token (an earlier 2.9 ran the budget ~20% too loose so trims never fired)
   const INPUT_TOKEN_TARGET = 175_000;   // generous margin below the 200K hard cap
   const HISTORY_RESERVE_CHARS = 40_000; // ~14K tokens kept free for the running chat history + reply
   const overheadChars =
@@ -1599,6 +1599,32 @@ export function buildSystemPrompt(
     abstractsSummarized = true;
     trimNotes.push("lease abstracts summarized to a tenant index");
   }
+  // Heavy deal-LEVEL fields (cash-flow projections, income/expense breakdowns, long
+  // narrative notes, amort/pref schedules) can dominate the prompt even after the
+  // rosters are trimmed — and they're rarely what a cross-portfolio question needs.
+  // genericDeal() passes every field through, so shed the heavy ones when still over
+  // budget; full detail stays on each deal's page.
+  const HEAVY_DEAL_KEYS = ["cashFlowProjection","incomeBreakdown","expenseBreakdown","notes","keyAssumptions","redFlags","upsideItems","shadowAnchors","roofData","customAmortSchedule","prefSchedule","marketDemographics"];
+  if (dataSize() > DATA_BUDGET) {
+    portfolioOut = (portfolioOut as Array<Record<string, unknown>>).map(p => {
+      const c = { ...p }; for (const k of HEAVY_DEAL_KEYS) delete c[k]; return c;
+    });
+    trimNotes.push("heavy deal fields (cash flow, income/expense breakdowns, long notes) omitted");
+  }
+  // Last resort: collapse non-transacted (Prospect/Passed) deals to a compact stub so
+  // owned-portfolio questions always fit even with a large pipeline.
+  if (dataSize() > DATA_BUDGET) {
+    portfolioOut = (portfolioOut as Array<Record<string, unknown>>).map(p => {
+      const d = byId.get(p.id as string);
+      if (d && d.status !== "Owned" && d.status !== "Under Contract" && d.status !== "Sold") {
+        return { id: p.id, name: p.name, status: p.status, city: p.city, state: p.state,
+                 capRate: p.capRate, askingPrice: p.askingPrice, totalSF: p.totalSF,
+                 dealScore: p.dealScore, dealGrade: p.dealGrade };
+      }
+      return p;
+    });
+    trimNotes.push("pipeline (Prospect/Passed) deals reduced to a summary stub");
+  }
 
   const trimNote = trimNotes.length
     ? `\n\nNOTE: the library is large, so to fit the context window: ${trimNotes.join("; ")}. For anything trimmed, the full detail is on that deal's page — ask about the SPECIFIC deal or tenant and answer from what's shown, or say it's available there.`
@@ -1621,7 +1647,7 @@ Full, reconciled lease abstracts for specific tenants — assembled from the ori
 Lease abstracts (JSON):
 ${JSON.stringify(absOut)}`;
 
-  return `You are KPR Centers' in-house commercial real estate analyst. You specialize in RETAIL SHOPPING CENTERS (anchored strip/power/grocery centers — not residential, not office, not raw land). You are analyzing KPR's own deal library. Be precise, think like an experienced acquisitions principal, and reason from the structured data below — never invent numbers.
+  const prompt = `You are KPR Centers' in-house commercial real estate analyst. You specialize in RETAIL SHOPPING CENTERS (anchored strip/power/grocery centers — not residential, not office, not raw land). You are analyzing KPR's own deal library. Be precise, think like an experienced acquisitions principal, and reason from the structured data below — never invent numbers.
 
 === "KPR PORTFOLIO" vs "THE DATABASE" — READ THIS FIRST (most common source of confusion) ===
 Every deal has a "status". It is critical you interpret these correctly:
@@ -1714,6 +1740,21 @@ ${JSON.stringify(tenantBenchmarks)}
 - Format currency as $X,XXX,XXX (or $1.2M / $930K shorthand for large/round figures) and percentages to one decimal.
 - Show brief reasoning for non-trivial calculations so the user can sanity-check, then give the answer.
 - Keep responses focused and actionable. Today's date: ${new Date().toLocaleDateString()}.`;
+
+  // ── Absolute backstop ───────────────────────────────────────────────────────
+  // No matter what slipped past the trims above (a huge owned roster, oversized
+  // comps/benchmarks/house-view, anything new), the prompt must fit the model's
+  // 200K-token context. Hard-cap the FINAL string by characters; truncating the
+  // tail (lowest-value: trailing guidelines/benchmarks) degrades the answer instead
+  // of 400ing the whole request. Sized at the measured ratio with margin.
+  // Fixed, ratio-independent ceiling: even at a worst-case ~2.0 chars/token this is
+  // ~195K tokens, still under the 200K hard cap (at the measured ~2.3 it's ~170K).
+  const HARD_CHAR_CAP = 390_000;
+  if (prompt.length > HARD_CHAR_CAP) {
+    return prompt.slice(0, HARD_CHAR_CAP) +
+      "\n\n[Context truncated to fit the model's limit. Some lower-priority sections were cut — ask about a SPECIFIC deal or tenant for full detail.]";
+  }
+  return prompt;
 }
 
 export function cityState(d: Deal): string {
