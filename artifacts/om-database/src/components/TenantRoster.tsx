@@ -357,8 +357,12 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const leasableRows = tenants.filter(t => !isNAPTenant(t));
   const totalRosterSF = leasableRows.reduce((s, t) => s + sfOf(t), 0);
   const vacantSF = leasableRows.filter(isVacantRow).reduce((s, t) => s + sfOf(t), 0);
+  // Dark stores still pay rent (so they count as OCCUPIED in the headline figure),
+  // but they're vacancy-like risk — surfaced separately as "% vacant including dark."
+  const darkSF = leasableRows.filter(t => t.isDark && !isVacantRow(t)).reduce((s, t) => s + sfOf(t), 0);
   const pctOccupied = totalRosterSF > 0 ? ((totalRosterSF - vacantSF) / totalRosterSF) * 100 : null;
   const pctVacant = totalRosterSF > 0 ? (vacantSF / totalRosterSF) * 100 : null;
+  const pctVacantInclDark = totalRosterSF > 0 ? ((vacantSF + darkSF) / totalRosterSF) * 100 : null;
   const fmtPct = (v: number) => `${(Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "")}%`;
 
   const asOfDate = tenantsAsOf || omDate;
@@ -366,18 +370,12 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
 
   return (
     <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:13, flexWrap:"wrap" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:8, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
           <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length ? `${occupiedCount} tenant${occupiedCount!==1?"s":""}${vacantCount>0?` · ${vacantCount} vacant`:""}` : `${rows.length} of ${tenants.length}`}</div>
           {asOfDate && (
             <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color: tenantsSource==="rent-roll" ? "#0d9488" : "#a89f8f", background: tenantsSource==="rent-roll" ? "#f0fdfa" : "#f6f2ea", border:`1px solid ${tenantsSource==="rent-roll" ? "#99f6e4" : "#e3dccd"}`, borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
               AS OF {fmtAsOf(asOfDate)} · {asOfLabel}
-            </span>
-          )}
-          {pctOccupied != null && (
-            <span title="Occupied vs vacant by square footage (NAP / owner-occupied parcels excluded)"
-              style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
-              {fmtPct(pctOccupied)} OCCUPIED · <span style={{ color: (pctVacant ?? 0) > 0 ? "#c97a18" : "#3f7a1f" }}>{fmtPct(pctVacant ?? 0)} VACANT</span>
             </span>
           )}
         </div>
@@ -389,6 +387,17 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
             style={{ fontSize:12, padding:"5px 10px", border:"1px solid #e3dccd", borderRadius:7, color:"#383a37", background:"#fff", width:150, fontFamily:"'Inter',sans-serif" }}/>
         </div>
       </div>
+      {pctOccupied != null && (
+        <div style={{ marginBottom:13 }}>
+          <span title="Occupied vs vacant by square footage (NAP / owner-occupied parcels excluded; dark stores count as occupied since they still pay rent). The parenthetical adds dark — closed but still-paying — stores to vacancy."
+            style={{ display:"inline-block", fontSize:9, letterSpacing:"0.07em", fontWeight:600, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", borderRadius:8, padding:"3px 9px", textTransform:"uppercase", lineHeight:1.6 }}>
+            {fmtPct(pctOccupied)} OCCUPIED · <span style={{ color: (pctVacant ?? 0) > 0 ? "#c97a18" : "#3f7a1f" }}>{fmtPct(pctVacant ?? 0)} VACANT</span>
+            {darkSF > 0 && pctVacantInclDark != null && (
+              <span style={{ color:"#9a5b12", fontWeight:700 }}> ({fmtPct(pctVacantInclDark)} INC. DARK TENANTS)</span>
+            )}
+          </span>
+        </div>
+      )}
       <div style={{ overflowX:"auto" }}>
         <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:1180, width:"100%" }}>
           <thead>
