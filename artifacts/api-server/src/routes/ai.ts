@@ -19,7 +19,16 @@ router.post("/ai/messages", async (req, res) => {
   try {
     const resolvedModel = model || "claude-sonnet-4-5";
     const body: Record<string, unknown> = { model: resolvedModel, max_tokens, messages };
-    if (system) body.system = system;
+    if (system) {
+      // Prompt-cache a LARGE, stable system prompt (e.g. the Analyst's whole-library
+      // context) so follow-up turns and repeat queries reuse it at ~10% of the input
+      // cost instead of re-billing the full library every time — no answer-quality
+      // trade-off (the model still sees everything). Small prompts are sent plainly to
+      // avoid the cache-write premium. Cache lives ~5 min and keys on the exact prefix.
+      body.system = typeof system === "string" && system.length > 4000
+        ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
+        : system;
+    }
     if (tools) body.tools = tools;
 
     const upstream = await callAnthropicOnce(body);
