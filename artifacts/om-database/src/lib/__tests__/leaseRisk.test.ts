@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { Deal, LeaseAbstract, CoTenancyClause, TriggerNode } from "../idb";
 import {
   resolveTenantRisk, computeExposure, clauseTierForAnchor, evaluateTrigger,
-  buildAnchorDependencyGraph, seedAnchorStatus,
+  buildAnchorDependencyGraph, seedAnchorStatus, computeCombinedExposure,
 } from "../leaseRisk";
 import {
   checkUnverifiedCotenancy, checkScheduledIncreaseToLowerAmount,
@@ -168,6 +168,41 @@ describe("validators", () => {
     };
     const abstract: LeaseAbstract = { tenantName: "Big Lots", coTenancy: [] }; // executed lease: no co-tenancy
     expect(checkAbstractVsExecutedConflict(deal, [abstract]).some((w) => w.code === "abstract_vs_executed_conflict")).toBe(true);
+  });
+});
+
+describe("X-of-N anchor-count co-tenancy (Paddock-style '7 of 10 Key Stores')", () => {
+  const tenList = ["Total Wine", "Ulta", "Barnes & Noble", "Talbots", "Chico's", "Athleta", "Soft Surroundings", "Victoria's Secret", "LOFT", "Gap"];
+  const gapClause: CoTenancyClause = {
+    type: "operating",
+    triggerLogic: { operator: "OR", conditions: [
+      { type: "occupancy_threshold", direction: "below", pct: 75, scope: "GLA" },
+      { type: "anchor_count_below", anchors: tenList, openRequired: 7, totalNamed: 10 },
+    ] },
+    remedy: { mechanism: "percent_rent_reduction", value: 50 },
+    verifiedAgainstExecutedDoc: false,
+  };
+  const dealX = (): Deal => ({
+    id: "x", tenants: [{ name: "Apparel Co", annualRent: 300000 }],
+    leaseRisk: { coTenancyDisclosed: true, tenants: [{ tenant: "Apparel Co", baseRentAnnual: 300000, coTenancy: [gapClause] }] },
+  });
+
+  it("a single named store is LINKED but Tier 3 — does NOT trip alone (needs 4 of 10 dark)", () => {
+    expect(clauseTierForAnchor(gapClause, "Barnes & Noble")).toBe(3);
+    expect(clauseTierForAnchor(gapClause, "Ulta")).toBe(3);
+  });
+  it("a store NOT in the list is unlinked", () => {
+    expect(clauseTierForAnchor(gapClause, "Target")).toBe(0);
+  });
+  it("single-anchor exposure is $0 (no overstatement) but any-linkage sees it", () => {
+    const exp = computeExposure(resolveTenantRisk(dealX()), "Barnes & Noble");
+    expect(exp.tier1Rent).toBe(0);
+    expect(exp.tier3Rent).toBe(300000); // linked at Tier 3
+  });
+  it("combined: 3 of 10 dark does NOT trip; 4 of 10 DOES", () => {
+    const r = resolveTenantRisk(dealX());
+    expect(computeCombinedExposure(r, ["Total Wine", "Ulta", "Barnes & Noble"]).clauses.length).toBe(0);
+    expect(computeCombinedExposure(r, ["Total Wine", "Ulta", "Barnes & Noble", "Talbots"]).totalRent).toBe(300000);
   });
 });
 

@@ -418,8 +418,15 @@ export interface RiskFieldMeta {
 
 // One leaf condition in a co-tenancy trigger tree.
 export interface TriggerCondition {
-  type: string;                       // "named_anchor_dark" | "occupancy_threshold" | "anchor_replacement_failed" | "named_anchor_gone" | ...
+  type: string;                       // "named_anchor_dark" | "occupancy_threshold" | "anchor_replacement_failed" | "named_anchor_gone" | "anchor_count_below" | ...
   anchor?: string | null;             // for named_anchor_* — the anchor brand
+  // for "anchor_count_below" ("X of N" co-tenancy): the FULL named list and how many
+  // must stay open. The clause fails only when fewer than openRequired stay open —
+  // i.e. when (anchors.length − openRequired + 1) of them go dark. Losing ONE named
+  // store does NOT trip it (unless openRequired === anchors.length).
+  anchors?: string[] | null;
+  openRequired?: number | null;       // how many of `anchors` must remain open
+  totalNamed?: number | null;         // informational: N (usually anchors.length)
   scope?: string | null;              // for occupancy_threshold — e.g. "inline <15000 SF"
   direction?: "above" | "below" | null;
   pct?: number | null;                // threshold percent (occupancy_threshold)

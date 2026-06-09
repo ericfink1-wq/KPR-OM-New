@@ -33,23 +33,59 @@ export function collectLeaves(node: TriggerNode | null | undefined): TriggerCond
   return [node as TriggerCondition];
 }
 
-/** A leaf is a named-anchor condition referencing this anchor. */
-function leafNamesAnchor(c: TriggerCondition, anchor: string): boolean {
-  if (!c || !c.anchor) return false;
-  const t = String(c.type || "");
-  if (!/anchor/i.test(t)) return false;          // named_anchor_dark, named_anchor_gone, anchor_replacement_failed…
-  const a = normAnchor(c.anchor);
-  const target = normAnchor(anchor);
-  if (!a || !target) return false;
-  return a === target || a.includes(target) || target.includes(a);
+// ── anchor-count ("X of N") helpers ──────────────────────────────────────────────
+// A count leaf models "at least openRequired of these N named stores must stay open";
+// it FAILS (the co-tenancy trips) only when (N − openRequired + 1) of them go dark.
+function isCountLeaf(c: TriggerCondition): boolean {
+  return /count/i.test(String(c?.type || "")) && Array.isArray(c?.anchors);
+}
+function countDarkNeeded(c: TriggerCondition): number {
+  const n = (c.anchors || []).length;
+  const open = c.openRequired != null ? c.openRequired : n;
+  return Math.max(1, n - open + 1);
+}
+// Fuzzy "is this anchor in the dark set?" (brand-key match, like normAnchor).
+function setHasAnchor(darkSet: Set<string>, name: unknown): boolean {
+  const target = normAnchor(name);
+  if (!target) return false;
+  for (const d of darkSet) {
+    const nd = normAnchor(d);
+    if (nd && (nd === target || nd.includes(target) || target.includes(nd))) return true;
+  }
+  return false;
+}
+function anchorMatch(a: unknown, target: string): boolean {
+  const na = normAnchor(a);
+  return !!na && !!target && (na === target || na.includes(target) || target.includes(na));
 }
 
-/** Does any leaf in the tree reference this anchor? (Tier-3 "any linkage" test.) */
+/** A leaf references this anchor — a single named-anchor leaf OR an "X of N" count
+ *  leaf whose list includes it. (Drives linkage + the dependency graph + matrix.) */
+function leafNamesAnchor(c: TriggerCondition, anchor: string): boolean {
+  if (!c) return false;
+  const target = normAnchor(anchor);
+  if (!target) return false;
+  if (c.anchor && /anchor/i.test(String(c.type || "")) && anchorMatch(c.anchor, target)) return true;
+  if (isCountLeaf(c)) return (c.anchors || []).some((x) => anchorMatch(x, target));
+  return false;
+}
+
+/** Does any leaf in the tree reference this anchor? (linkage / "any linkage" test.) */
 export function triggerReferencesAnchor(node: TriggerNode | null | undefined, anchor: string): boolean {
   return collectLeaves(node).some((c) => leafNamesAnchor(c, anchor));
 }
 
-/** Evaluate a trigger tree given a predicate that says whether each leaf is satisfied. */
+/** Every distinct anchor named anywhere in a clause's trigger tree (single + count). */
+function treeAnchors(node: TriggerNode | null | undefined): string[] {
+  const out = new Map<string, string>();
+  for (const leaf of collectLeaves(node)) {
+    if (leaf.anchor && /anchor/i.test(String(leaf.type || ""))) { const k = normAnchor(leaf.anchor); if (k) out.set(k, leaf.anchor); }
+    if (isCountLeaf(leaf)) for (const a of (leaf.anchors || [])) { const k = normAnchor(a); if (k && !out.has(k)) out.set(k, a); }
+  }
+  return [...out.values()];
+}
+
+/** Legacy per-leaf evaluator — kept for callers/tests that pass a leaf predicate. */
 export function evaluateTrigger(
   node: TriggerNode | null | undefined,
   isTrue: (c: TriggerCondition) => boolean,
@@ -64,6 +100,30 @@ export function evaluateTrigger(
   return isTrue(node as TriggerCondition);
 }
 
+// Set-based evaluator: given the set of DARK anchors and whether occupancy is below
+// its threshold, does the trigger fire? This is what makes "X of N" accurate — a
+// count leaf fires only when ENOUGH of its named stores are dark.
+function leafTrips(c: TriggerCondition, darkSet: Set<string>, occBelow: boolean): boolean {
+  const t = String(c.type || "");
+  if (/occupancy_threshold/i.test(t)) return occBelow;
+  if (isCountLeaf(c)) {
+    const dark = (c.anchors || []).filter((a) => setHasAnchor(darkSet, a)).length;
+    return dark >= countDarkNeeded(c);
+  }
+  if (c.anchor && /anchor/i.test(t)) return setHasAnchor(darkSet, c.anchor);
+  return false; // unknown / non-anchor leaf — not driven by an anchor going dark
+}
+function evalTrigger(node: TriggerNode | null | undefined, darkSet: Set<string>, occBelow: boolean): boolean {
+  if (!node) return false;
+  if (isBranch(node)) {
+    if (!node.conditions.length) return false;
+    return node.operator === "AND"
+      ? node.conditions.every((c) => evalTrigger(c, darkSet, occBelow))
+      : node.conditions.some((c) => evalTrigger(c, darkSet, occBelow));
+  }
+  return leafTrips(node as TriggerCondition, darkSet, occBelow);
+}
+
 /** Plain-English rendering of a trigger tree for display / flags. */
 export function describeTrigger(node: TriggerNode | null | undefined): string {
   if (!node) return "";
@@ -75,6 +135,10 @@ export function describeTrigger(node: TriggerNode | null | undefined): string {
   }
   const c = node as TriggerCondition;
   const t = String(c.type || "");
+  if (isCountLeaf(c)) {
+    const n = (c.anchors || []).length, open = c.openRequired != null ? c.openRequired : n;
+    return `${n - open + 1}+ of ${n} dark (needs ${open} of ${n} open: ${(c.anchors || []).join(", ")})`;
+  }
   if (/named_anchor/i.test(t)) return `${c.anchor || "anchor"}${/dark/i.test(t) ? " dark" : /gone/i.test(t) ? " gone" : ""}`;
   if (/occupancy_threshold/i.test(t)) {
     const dir = c.direction === "below" ? "<" : c.direction === "above" ? ">" : "";
@@ -84,20 +148,21 @@ export function describeTrigger(node: TriggerNode | null | undefined): string {
   return c.note || t || "condition";
 }
 
-// Tier of a single co-tenancy clause for a given at-risk anchor.
+// Tier of a single co-tenancy clause for a given at-risk anchor. Occupancy is held at
+// NOT-below — anchor tiers isolate the ANCHOR effect (a broad-occupancy decline is a
+// separate risk axis), and the "events" counted toward Tier 2 are OTHER anchors going
+// dark. So an "X of N" store that needs several peers dark correctly lands at Tier 3.
 //   1 = trips on this anchor ALONE
-//   2 = trips when this anchor PLUS one more event occurs
-//   3 = linked to this anchor but needs ≥2 further events (or can't realistically trip)
+//   2 = trips when this anchor PLUS one other named anchor goes dark
+//   3 = linked to this anchor but needs ≥2 further anchor departures
 //   0 = not linked to this anchor
 export function clauseTierForAnchor(clause: CoTenancyClause, anchor: string): 0 | 1 | 2 | 3 {
   const tree = clause.triggerLogic;
   if (!triggerReferencesAnchor(tree, anchor)) return 0;
-  // Tier 1: only the at-risk anchor's leaves are true.
-  if (evaluateTrigger(tree, (c) => leafNamesAnchor(c, anchor))) return 1;
-  // Tier 2: the anchor plus exactly one OTHER leaf trips it.
-  const others = collectLeaves(tree).filter((c) => !leafNamesAnchor(c, anchor));
-  for (const L of others) {
-    if (evaluateTrigger(tree, (c) => leafNamesAnchor(c, anchor) || c === L)) return 2;
+  if (evalTrigger(tree, new Set([anchor]), false)) return 1;
+  const others = treeAnchors(tree).filter((a) => normAnchor(a) !== normAnchor(anchor));
+  for (const x of others) {
+    if (evalTrigger(tree, new Set([anchor, x]), false)) return 2;
   }
   return 3;
 }
@@ -201,16 +266,16 @@ export function anchorIsTripped(st: AnchorStatus | undefined): boolean {
   return st.status === "departing" || st.relocating === true;
 }
 
-/** Distinct anchor names referenced by any resolved co-tenancy trigger. */
+/** Distinct anchor names referenced by any resolved co-tenancy trigger — both single
+ *  named-anchor leaves AND every store named in an "X of N" count leaf. */
 export function anchorsReferenced(resolved: ResolvedTenantRisk[]): string[] {
   const seen = new Map<string, string>();
+  const add = (name: unknown) => { const k = normAnchor(name); if (k && !seen.has(k)) seen.set(k, String(name)); };
   for (const r of resolved) {
     for (const c of r.coTenancy) {
       for (const leaf of collectLeaves(c.triggerLogic)) {
-        if (leaf.anchor && /anchor/i.test(String(leaf.type || ""))) {
-          const k = normAnchor(leaf.anchor);
-          if (k && !seen.has(k)) seen.set(k, String(leaf.anchor));
-        }
+        if (leaf.anchor && /anchor/i.test(String(leaf.type || ""))) add(leaf.anchor);
+        if (isCountLeaf(leaf)) for (const a of (leaf.anchors || [])) add(a);
       }
     }
   }
@@ -348,13 +413,14 @@ export interface CombinedExposure {
 
 export function computeCombinedExposure(resolved: ResolvedTenantRisk[], anchors: string[]): CombinedExposure {
   const sel = anchors.filter(Boolean);
-  const darkLeaf = (c: TriggerCondition) => sel.some((a) => leafNamesAnchor(c, a));
+  const darkSet = new Set(sel);
   const clauses: CombinedClause[] = [];
   for (const r of resolved) {
     for (const c of r.coTenancy) {
-      if (!sel.some((a) => triggerReferencesAnchor(c.triggerLogic, a))) continue; // unrelated to the selected set
-      if (!evaluateTrigger(c.triggerLogic, darkLeaf)) continue;                    // doesn't trip under the combination
-      const tripsSingle = sel.some((a) => evaluateTrigger(c.triggerLogic, (x) => leafNamesAnchor(x, a)));
+      if (!sel.some((a) => triggerReferencesAnchor(c.triggerLogic, a))) continue;  // unrelated to the selected set
+      if (!evalTrigger(c.triggerLogic, darkSet, false)) continue;                  // doesn't trip even with all selected dark
+      // comboOnly = trips under the combination but NOT from any single selected anchor alone
+      const tripsSingle = sel.some((a) => evalTrigger(c.triggerLogic, new Set([a]), false));
       clauses.push({
         tenant: r.tenant,
         baseRentAnnual: r.baseRentAnnual,
