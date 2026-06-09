@@ -282,52 +282,16 @@ export async function _captureSitePlan(pdf: any, pageNum: number, lib: any): Pro
   pctx.fillRect(0, 0, pc.width, pc.height);
   await page.render({ canvasContext: pctx, viewport }).promise; // also resolves image objects
 
-  // Find the largest embedded raster image on the page.
-  let best: { img: any; w: number; h: number } | null = null;
-  let bestArea = 0;
-  try {
-    const OPS = lib.OPS;
-    const opList = await page.getOperatorList();
-    const names = new Set<string>();
-    for (let i = 0; i < opList.fnArray.length; i++) {
-      const fn = opList.fnArray[i], args = opList.argsArray[i];
-      if ((fn === OPS.paintImageXObject || fn === OPS.paintJpegXObject) && typeof args[0] === "string") names.add(args[0]);
-    }
-    for (const name of names) {
-      let img: any = null;
-      try { img = page.objs.get(name); } catch { img = null; }
-      if (!img) continue;
-      const w = img.width || (img.bitmap && img.bitmap.width) || 0;
-      const h = img.height || (img.bitmap && img.bitmap.height) || 0;
-      if (w * h > bestArea) { bestArea = w * h; best = { img, w, h }; }
-    }
-  } catch {}
-
-  // A large embedded image IS the site-plan graphic — extract it directly.
-  if (best && best.w >= 500 && best.h >= 320) {
-    const ic = document.createElement("canvas");
-    ic.width = best.w; ic.height = best.h;
-    const ictx = ic.getContext("2d")!;
-    const im = best.img;
-    let ok = false;
-    if (im.bitmap) { ictx.drawImage(im.bitmap, 0, 0); ok = true; }
-    else if (im.data) {
-      const out = new Uint8ClampedArray(best.w * best.h * 4);
-      const d = im.data;
-      if (im.kind === 3) { out.set(d.subarray(0, out.length)); ok = true; }
-      else if (im.kind === 2) {
-        for (let p = 0, q = 0; q < out.length; p += 3, q += 4) { out[q] = d[p]; out[q + 1] = d[p + 1]; out[q + 2] = d[p + 2]; out[q + 3] = 255; }
-        ok = true;
-      }
-      if (ok) ictx.putImageData(new ImageData(out, best.w, best.h), 0, 0);
-    }
-    if (ok) { const url = _scaleCanvas(ic, 1600, 0.82); ic.width = ic.height = 0; pc.width = pc.height = 0; return url; }
-    ic.width = ic.height = 0;
-  }
-
-  // Vector site plan — auto-crop the page render to its content.
+  // Site plans are COMPOSED pages — an aerial/base layer with vector building
+  // outlines, color fills, labels and (very often) image MASKS layered on top.
+  // Pulling the "largest embedded image" grabbed the wrong object: usually a 1-bpp
+  // stencil mask (which decodes to white blobs on a black field — the "weird" image
+  // we were storing), or at best the bare aerial background with no labels. The real
+  // site plan is the COMPOSED page render (exactly what you see in the PDF), so we
+  // render the page and auto-crop it to its content. (Same lesson cover photos
+  // already learned via preferPageRender.)
   const cropped = _autoCropCanvas(pc);
-  const url = _scaleCanvas(cropped, 1500, 0.78);
+  const url = _scaleCanvas(cropped, 1600, 0.82);
   if (cropped !== pc) { cropped.width = cropped.height = 0; }
   pc.width = pc.height = 0;
   return url;
