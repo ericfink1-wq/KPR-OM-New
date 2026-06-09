@@ -87,10 +87,19 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     });
   }, [rows, sortKey, sortDir]);
 
-  const sfVals      = rows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
-  const rentVals    = rows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
-  const rentPSFVals = rows.map(r => num(r.t.rentPerSF)).filter((v): v is number => v != null);
-  const salesVals   = rows.map(r => num(r.t.salesPSF)).filter((v): v is number => v != null);
+  // Averages exclude NAP / shadow / vacant / ground-lease / outparcel rows (often a
+  // real brand name carried at 0 SF) and any non-positive value, so they don't skew
+  // the stat tiles — matching the Tenant page and the benchmark engine.
+  const isRentable = (r: typeof rows[number]) => {
+    if (isNAPTenant(r.t)) return false;
+    return !/\b(shadow|vacant|ground.?lease|outparcel)\b/i.test((r.t.name || "").toLowerCase());
+  };
+  const rentableRows = rows.filter(isRentable);
+  const pos = (v: number | null): v is number => v != null && v > 0;
+  const sfVals      = rentableRows.map(r => num(r.t.sf)).filter(pos);
+  const rentVals    = rentableRows.map(r => num(r.t.annualRent)).filter(pos);
+  const rentPSFVals = rentableRows.map(r => num(r.t.rentPerSF)).filter(pos);
+  const salesVals   = rentableRows.map(r => num(r.t.salesPSF)).filter(pos);
   const avgSF       = sfVals.length ? Math.round(sfVals.reduce((a,b)=>a+b,0)/sfVals.length) : null;
   const avgRentPSF  = rentPSFVals.length ? rentPSFVals.reduce((a,b)=>a+b,0)/rentPSFVals.length : null;
   const avgAnnRent  = rentVals.length ? rentVals.reduce((a,b)=>a+b,0)/rentVals.length : null;
