@@ -1001,6 +1001,8 @@ export function estimateRecoveries(deal: {
 
 export interface LatestSale {
   salesPSF: number | null;
+  grossSales: number | null;
+  salesYear: number | null;
   occupancyCost: number | null;
   occSource?: "stated" | "computed";
   occBreakdown?: import("./idb").OccBreakdown | null;
@@ -1033,7 +1035,7 @@ export function buildLatestSales(deal: {
     }
   }
 
-  for (const [key, { r }] of latestByKey) {
+  for (const [key, { r, year }] of latestByKey) {
     const rt = roster.get(key);
     let sf = _num(r.sf) ?? _num(rt?.sf);
     let psf = _num(r.salesPSF);
@@ -1059,7 +1061,7 @@ export function buildLatestSales(deal: {
       occSource = "computed";
       occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
     }
-    out.set(key, { salesPSF: psf, occupancyCost, occSource, occBreakdown });
+    out.set(key, { salesPSF: psf, grossSales: gross, salesYear: year ?? null, occupancyCost, occSource, occBreakdown });
   }
   return out;
 }
@@ -1235,6 +1237,36 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
   const bySt = Object.fromEntries(statuses.map(s => [s, active.filter(d => d.status === s).length]));
   const nz = (v: unknown) => v != null && v !== "" && !(typeof v === "number" && isNaN(v));
 
+  // Resolve each deal's sales the SAME way the deal page / cross-property views do —
+  // uploaded sales (tenantSalesHistory) WIN over the raw roster `salesPSF` (which the
+  // sales-upload path never writes back). Without this the analyst only ever saw
+  // OM-stated roster sales and was blind to everything Eric uploaded. Surfaces, per
+  // tenant: latest sales PSF + gross $ volume + the reporting year + occupancy-cost %.
+  const salesByDeal = buildSalesByDeal(active);
+  // Compact multi-year history per tenant (only tenants with reported sales get one),
+  // so year-over-year / trend questions are answerable from the prompt.
+  const salesHistByDeal = new Map<string, Map<string, Array<{ year: number; salesPSF: number | null; grossSales: number | null; occCostPct: number | null }>>>();
+  for (const d of active) {
+    const perTenant = new Map<string, Array<{ year: number; salesPSF: number | null; grossSales: number | null; occCostPct: number | null }>>();
+    for (const snap of (d.tenantSalesHistory || [])) {
+      for (const r of (snap.tenants || [])) {
+        if (r.removed) continue;
+        const key = tenantKey(stripSuiteCode(r.name));
+        let psf = _num(r.salesPSF), gross = _num(r.annualSales);
+        const sf = _num(r.sf);
+        if (psf == null && gross != null && sf != null && sf > 0) psf = Math.round((gross / sf) * 100) / 100;
+        if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
+        if (psf == null && gross == null) continue;
+        const arr = perTenant.get(key) || [];
+        arr.push({ year: snap.year, salesPSF: psf, grossSales: gross, occCostPct: _num(r.occupancyCost) });
+        perTenant.set(key, arr);
+      }
+    }
+    // newest year first; keep one record per year (uploads already deduped on write)
+    for (const [k, arr] of perTenant) perTenant.set(k, arr.sort((a, b) => b.year - a.year));
+    salesHistByDeal.set(d.id, perTenant);
+  }
+
   // KPR's own deal economics — only meaningful for deals KPR has transacted on
   // (Owned / Under Contract / Sold). Built compactly and only when present, so
   // the prompt stays lean for the larger Prospect/Passed pipeline.
@@ -1269,24 +1301,42 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
   const portfolio = active.map(d => {
     const isPassed = d.status === "Passed";
     const tenantList = (d.tenants || []);
+    const latestSales = salesByDeal.get(d.id);
+    const hist = salesHistByDeal.get(d.id);
     // Active deals: full roster. Passed deals: anchor-only compact summary to save tokens.
     const tenants = isPassed
       ? tenantList
           .filter(t => t.isAnchor || (t.sf && Number(t.sf) >= 5000))
-          .map(t => ({ name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry, isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined }))
-      : tenantList.map(t => ({
-          name: t.name,
-          sf: t.sf,
-          rentPSF: t.rentPerSF,
-          annualRent: t.annualRent,
-          expiry: t.leaseExpiry,
-          salesPSF: t.salesPSF ?? undefined,
-          anchor: t.isAnchor || undefined,
-          isNAP: t.isNAP || undefined,
-          isDark: t.isDark || undefined,
-          reimb: t.reimbursementMethod ?? undefined,
-          isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined,
-        }));
+          .map(t => {
+            const ls = latestSales?.get(tenantKey(t.canonicalName ?? t.name));
+            return { name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry,
+              salesPSF: (ls?.salesPSF ?? _num(t.salesPSF)) ?? undefined,
+              isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined };
+          })
+      : tenantList.map(t => {
+          // Resolved latest sales (uploads-over-OM), falling back to roster salesPSF.
+          const ls = latestSales?.get(tenantKey(t.canonicalName ?? t.name));
+          const salesPSF = (ls?.salesPSF ?? _num(t.salesPSF)) ?? undefined;
+          const h = hist?.get(tenantKey(t.canonicalName ?? t.name));
+          return {
+            name: t.name,
+            sf: t.sf,
+            rentPSF: t.rentPerSF,
+            annualRent: t.annualRent,
+            expiry: t.leaseExpiry,
+            salesPSF,
+            salesGross: ls?.grossSales ?? undefined,
+            salesYear: ls?.salesYear ?? t.salesYear ?? undefined,
+            occCostPct: ls?.occupancyCost ?? _num(t.occupancyCost) ?? undefined,
+            // Multi-year history (newest first) for YoY / trend questions — only when 2+ years on file.
+            salesHistory: h && h.length >= 2 ? h : undefined,
+            anchor: t.isAnchor || undefined,
+            isNAP: t.isNAP || undefined,
+            isDark: t.isDark || undefined,
+            reimb: t.reimbursementMethod ?? undefined,
+            isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined,
+          };
+        });
     // KPR economics only for deals KPR has actually transacted on.
     const kpr = (d.status === "Owned" || d.status === "Under Contract" || d.status === "Sold")
       ? kprEconomics(d) : undefined;
@@ -1302,6 +1352,11 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
       yearBuilt: d.yearBuilt ?? undefined,
       renovationYear: d.renovationYear ?? undefined,
       roofData: d.roofData ?? undefined,
+      // Which sales-report years are on file for this deal (so trend questions are
+      // answerable, and survive even if rosters get trimmed for context size).
+      salesYearsOnFile: (d.tenantSalesHistory && d.tenantSalesHistory.length)
+        ? Array.from(new Set(d.tenantSalesHistory.map(s => s.year))).sort((a, b) => b - a)
+        : undefined,
       tenants: tenants.length ? tenants : undefined,
       kpr,
     };
@@ -1329,10 +1384,19 @@ export function buildSystemPrompt(deals: Deal[], abstracts: LeaseAbstract[] = []
   // → abstract bodies — until the data fits a safe char budget (~3.2 chars/token).
   const DATA_BUDGET = 500_000; // ~150K tokens; leaves headroom for instructions + full chat history
   const byId = new Map(active.map(d => [d.id, d] as const));
-  const compactRoster = (d: Deal) => (d.tenants || [])
-    .filter(t => t.isAnchor || (t.sf != null && Number(t.sf) >= 8000))
-    .map(t => ({ name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry,
-                 rentPSF: t.rentPerSF ?? undefined, isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined }));
+  const compactRoster = (d: Deal) => {
+    const latestSales = salesByDeal.get(d.id);
+    return (d.tenants || [])
+      .filter(t => t.isAnchor || (t.sf != null && Number(t.sf) >= 8000))
+      .map(t => {
+        const ls = latestSales?.get(tenantKey(t.canonicalName ?? t.name));
+        return { name: t.name, sf: t.sf, anchor: t.isAnchor || undefined, expiry: t.leaseExpiry,
+                 rentPSF: t.rentPerSF ?? undefined,
+                 salesPSF: (ls?.salesPSF ?? _num(t.salesPSF)) ?? undefined,
+                 salesYear: ls?.salesYear ?? undefined,
+                 isIG: isInvestmentGrade(t.name || "", t.creditRating) || undefined };
+      });
+  };
 
   let portfolioOut: unknown[] = portfolio;
   let absOut: unknown[] = absForPrompt;
@@ -1422,6 +1486,13 @@ For Owned / Under Contract / Sold deals, a "kpr" object holds KPR's ACTUAL deal 
 - WALT: weighted-average lease term remaining (years), SF-weighted — higher = more durable income.
 - Occupancy: % of leasable SF leased. Cap rate: NOI ÷ price. weightedAvgRentPSF: SF-weighted in-place base rent per SF.
 - Vacant suites may appear in rosters; exclude vacants from rent/occupied-SF math but include them when discussing lease-up upside.
+
+=== TENANT SALES DATA (per tenant, when reported) ===
+Sales figures shown are the MOST RECENT on file, resolving uploaded sales reports OVER the OM-stated roster figure (an uploaded sales report always wins over the OM). Per tenant:
+- salesPSF = latest reported sales per SF. salesGross = latest total annual sales $ volume. salesYear = the reporting year those figures belong to (always state the year when you quote sales — sales without a year are nearly meaningless).
+- occCostPct = occupancy cost as a % of sales = (base rent + reimbursements + percentage rent + other) ÷ gross sales. This is the key health metric: low (grocers often <3%, inline apparel healthy <10–12%, stressed >15%) = the tenant can comfortably afford its rent and there's mark-to-market room; high = rent is stretched relative to sales, a closure/renewal risk. Never compute occ cost as rent÷sales alone, and never invent it — use the value given.
+- salesHistory = an array (newest year first) of {year, salesPSF, grossSales, occCostPct} when 2+ years are on file — use it for year-over-year / trend ("sales up/down X% since 20YY"). salesYearsOnFile (deal level) lists which sales-report years exist for the deal even if a roster was trimmed.
+- A tenant with NO sales fields simply has no reported sales — say so; do not infer sales from rent. When quoting a cross-tenant sales benchmark, it's sourced from the database (uploaded + OM sales across deals) — cite the year basis and tenant count, use medians, and never quote a sales-PSF average off a tiny sample.
 
 Portfolio counts: ${active.length} total deals — ${statuses.map(s => `${bySt[s]} ${s}`).join(", ")}.
 
