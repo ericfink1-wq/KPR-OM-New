@@ -8,6 +8,8 @@ import Members from "./Members";
 import ChangePassword from "./ChangePassword";
 import HouseViewModal from "./HouseViewModal";
 import { dedupeStoredAddress } from "../lib/utils";
+import { computeImportPlan, type ImportPlan } from "../lib/importDiff";
+import ImportDiffModal from "./ImportDiffModal";
 
 interface Props {
   tab: string;
@@ -65,7 +67,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [analyticsRect, setAnalyticsRect] = useState<DOMRect | null>(null);
   const pAnalyticsRef = useRef<HTMLDivElement>(null);
   const tAnalyticsRef = useRef<HTMLDivElement>(null);
-  const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number; mergedNames?: string[] } | null>(null);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number; mergedNames?: string[]; undo?: () => void; undone?: boolean } | null>(null);
+  const [importPlan, setImportPlan] = useState<{ plan: ImportPlan; deals: Deal[] } | null>(null);
   const [snapshotModal, setSnapshotModal] = useState(false);
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
@@ -247,33 +250,39 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     }
 
     const existingActive = deals.filter(d => !d.trashedAt);
-    const existingNames = new Set(existingActive.map(d => (d.propertyName || "").trim().toLowerCase()));
-    const willUpdate = allDeals.filter(d => existingNames.has((d.propertyName || "").trim().toLowerCase())).length;
-    const willAdd = allDeals.length - willUpdate;
-
-    if (allDeals.length > 10 || willUpdate > 0) {
-      const msg = `Import ${allDeals.length} deal(s)?\n\n${willUpdate > 0 ? `${willUpdate} will update existing deal(s).\n` : ""}${willAdd} will be added.\n\nContinue?`;
-      if (!window.confirm(msg)) {
-        setImportProgress(null);
-        return;
-      }
+    // Show a field-level "what will change" preview whenever an upload updates an
+    // existing deal (or it's a large batch). The modal confirms; runJsonImport does
+    // the work. Pure small additions skip straight through.
+    const plan = computeImportPlan(allDeals, existingActive);
+    if (plan.updates.length > 0 || allDeals.length > 10) {
+      setImportPlan({ plan, deals: allDeals });
+      return;
     }
+    await runJsonImport(allDeals);
+  };
 
+  // Execute a confirmed JSON import. Captures each updated deal's prior version
+  // (by the id the server merged into) so the completion toast can offer a true
+  // one-click Undo that restores exactly what the import overwrote.
+  const runJsonImport = async (allDeals: Deal[]) => {
+    const existingById = new Map(deals.map(d => [d.id, d]));
     await apiCreateSnapshot("before-import").catch(() => {});
 
     const succeeded: Deal[] = [];
     const mergedNames: string[] = [];
+    const priors: Deal[] = [];
     let failed = 0;
     for (let i = 0; i < allDeals.length; i++) {
       setImportProgress({ current: i + 1, total: allDeals.length });
       try {
         const result = await apiImportDeal(allDeals[i]);
-        // For merged deals, update the local deal id to match the existing one
-        const deal = result.merged
-          ? { ...allDeals[i], id: result.id }
-          : allDeals[i];
+        const deal = result.merged ? { ...allDeals[i], id: result.id } : allDeals[i];
         succeeded.push(deal);
-        if (result.merged) mergedNames.push(result.propertyName || allDeals[i].propertyName || "");
+        if (result.merged) {
+          mergedNames.push(result.propertyName || allDeals[i].propertyName || "");
+          const prior = existingById.get(result.id);
+          if (prior) priors.push(prior);
+        }
       } catch (err) {
         console.warn("[json import] failed:", allDeals[i].propertyName, err instanceof Error ? err.message : err);
         failed++;
@@ -282,8 +291,17 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
     if (succeeded.length > 0 && onDealsAdded) onDealsAdded(succeeded);
 
-    setImportProgress({ current: allDeals.length, total: allDeals.length, done: succeeded.length, failed, mergedNames });
-    setTimeout(() => setImportProgress(null), mergedNames.length > 0 ? 6000 : 3500);
+    // Restore the captured prior versions of every deal the import updated.
+    const undo = priors.length > 0 ? async () => {
+      setImportProgress(p => p ? { ...p, undone: true } : p);
+      for (const prior of priors) { await apiSaveDeal(prior).catch(() => {}); }
+      if (onDealsAdded) onDealsAdded(priors);
+      setTimeout(() => setImportProgress(null), 2500);
+    } : undefined;
+
+    setImportProgress({ current: allDeals.length, total: allDeals.length, done: succeeded.length, failed, mergedNames, undo });
+    // Leave the toast up longer when an Undo is offered so it isn't missed.
+    setTimeout(() => setImportProgress(p => (p && p.undone) ? p : null), undo ? 12000 : (mergedNames.length > 0 ? 6000 : 3500));
   };
 
   const exportCSV = () => {
@@ -728,6 +746,14 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       </div>
     </div>
 
+    {importPlan && (
+      <ImportDiffModal
+        plan={importPlan.plan}
+        onCancel={() => { setImportPlan(null); setImportProgress(null); }}
+        onConfirm={() => { const d = importPlan.deals; setImportPlan(null); runJsonImport(d); }}
+      />
+    )}
+
     {importProgress && createPortal(
       <div style={{
         position: "fixed",
@@ -764,6 +790,21 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                 ))}
               </div>
             ) : null}
+            {importProgress.undo && (
+              <div style={{ marginTop: 8, borderTop: "1px solid #f1eadc", paddingTop: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                {importProgress.undone ? (
+                  <span style={{ fontSize: 11, color: "#7d766a" }}>Reverting…</span>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 11, color: "#7d766a" }}>Not what you expected?</span>
+                    <button onClick={() => importProgress.undo?.()}
+                      style={{ border: "1px solid #c98b8b", background: "#fff", color: "#a33a3a", borderRadius: 6, padding: "4px 12px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+                      Undo this import
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div>
