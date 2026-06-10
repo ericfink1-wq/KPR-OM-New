@@ -3,6 +3,7 @@ import { EyeOff } from "lucide-react";
 import { exportCompsToExcel } from "../lib/exportExcel";
 import { extractAnyFile, isPdf, isSpreadsheet } from "../lib/fileExtract";
 import { extractCompsFromText } from "../lib/compsImport";
+import { stickyFirstCol } from "../lib/stickyCol";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1077,7 +1078,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f1eadc" }}>
-                  <SortTh label="Property" sortKey="name_asc"   current={sort} onSort={handleSort} style={{ minWidth: 180 }} />
+                  <SortTh label="Property" sortKey="name_asc"   current={sort} onSort={handleSort} style={{ minWidth: 180, ...stickyFirstCol("#faf7f0", true) }} />
                   <SortTh label="City"     sortKey="market_asc" current={sort} onSort={handleSort} style={{ minWidth: 100 }} />
                   {hasState   && <SortTh label="State"  sortKey="state_asc"  current={sort} onSort={handleSort} style={{ minWidth: 50 }} />}
                   <SortTh label="Sale Date"  sortKey="date_desc"          current={sort} onSort={handleSort} />
@@ -1131,15 +1132,17 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                       onMouseEnter={e => {
                         const bg = row.isOwnTransaction ? "#e8f5e3" : row.isManual ? "#eef7e8" : "#faf7f0";
                         e.currentTarget.style.background = bg;
+                        (e.currentTarget.firstElementChild as HTMLElement).style.background = bg;
                         (e.currentTarget.lastElementChild as HTMLElement).style.background = bg;
                       }}
                       onMouseLeave={e => {
                         const bg = row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "";
                         e.currentTarget.style.background = bg;
+                        (e.currentTarget.firstElementChild as HTMLElement).style.background = bg || "#fff";
                         (e.currentTarget.lastElementChild as HTMLElement).style.background = bg || "#fff";
                       }}
                     >
-                      <td style={{ padding: "9px 10px", maxWidth: 240 }}>
+                      <td style={{ padding: "9px 10px", maxWidth: 240, ...stickyFirstCol(row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff") }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
                           {row.isOwnTransaction ? (

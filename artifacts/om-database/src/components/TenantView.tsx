@@ -5,6 +5,7 @@ import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, fmtUSD, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName, buildSalesByDeal, resolveSalesPSF } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
+import { stickyFirstCol } from "../lib/stickyCol";
 
 interface Props {
   tenantName: string;
@@ -271,9 +272,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
               <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
-                    {cols.map(([k, label, right]) => (
+                    {cols.map(([k, label, right], idx) => (
                       <th key={k} onClick={() => setSort(k)}
-                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600 }}>
+                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
                         {label}{arrow(k)}
                       </th>
                     ))}
@@ -307,15 +308,19 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         onMouseEnter={e => {
                           const bg = owned ? "#eaf5e2" : "#faf7f0";
                           e.currentTarget.style.background = bg;
+                          (e.currentTarget.firstElementChild as HTMLElement).style.background = bg;
                           (e.currentTarget.lastElementChild as HTMLElement).style.background = bg;
                         }}
                         onMouseLeave={e => {
                           const bg = ignored ? "transparent" : owned ? "#f3faef" : "transparent";
                           e.currentTarget.style.background = bg;
-                          (e.currentTarget.lastElementChild as HTMLElement).style.background = bg || "#fff";
+                          // Frozen cells must rest on an OPAQUE colour (not "transparent")
+                          // or the scrolled-under columns bleed through them.
+                          (e.currentTarget.firstElementChild as HTMLElement).style.background = owned ? "#f3faef" : "#fff";
+                          (e.currentTarget.lastElementChild as HTMLElement).style.background = owned ? "#f3faef" : "#fff";
                         }}
                       >
-                        <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap" }}>
+                        <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap", ...stickyFirstCol(owned ? "#f3faef" : "#fff") }}>
                           {r.deal.propertyName || "Untitled"}
                           {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
                           {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
