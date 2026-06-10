@@ -14,6 +14,7 @@ import Login from "./components/Login";
 import HelpModal from "./components/HelpModal";
 import ClosingCostEstimator from "./components/ClosingCostEstimator";
 import AiProgressBar from "./components/AiProgressBar";
+import SaveStatusIndicator from "./components/SaveStatusIndicator";
 import { isSupportedUpload } from "./lib/fileExtract";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
@@ -693,6 +694,7 @@ function AppInner() {
         existingDeals={deals}
         onPanelHeightChange={setUploadPanelH}
       />
+      <SaveStatusIndicator />
     </div>
   );
 }

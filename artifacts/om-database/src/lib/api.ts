@@ -4,6 +4,7 @@
 import type { Deal, ImageBundle, LeaseAbstract } from "./idb";
 import { normalizeDeal } from "./utils";
 import type { CompInput } from "./compsSummary";
+import { beginSave, endSaveOk, endSaveError } from "./saveStatus";
 
 const BASE = "/api";
 
@@ -209,13 +210,41 @@ export async function apiLoadDeals(): Promise<Deal[]> {
   return deals.map(normalizeDeal);
 }
 
+// Save a deal, retrying transient failures (network drop, 5xx) with backoff. A 4xx
+// is a real rejection — don't retry it. Throws after the final attempt fails.
+async function putDealWithRetry(id: string, rest: Record<string, unknown>): Promise<void> {
+  const delays = [400, 1200, 3000];
+  let lastErr = "Failed to save deal";
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const resp = await apiFetch(`/deals/${id}`, { method: "PUT", body: JSON.stringify(rest) });
+      if (resp.ok) return;
+      if (resp.status >= 400 && resp.status < 500) {
+        throw new Error(resp.status === 401 ? "Signed out — please sign in again." : `Save rejected (HTTP ${resp.status}).`);
+      }
+      lastErr = `Server error (HTTP ${resp.status}).`;
+    } catch (e) {
+      // A thrown 4xx above is final; rethrow it rather than retrying.
+      if (e instanceof Error && /Signed out|Save rejected/.test(e.message)) throw e;
+      lastErr = "Network error — couldn't reach the server.";
+    }
+    if (attempt < delays.length) await new Promise(r => setTimeout(r, delays[attempt]));
+  }
+  throw new Error(lastErr);
+}
+
 export async function apiSaveDeal(deal: Deal): Promise<void> {
   const { id, ...rest } = deal;
-  const resp = await apiFetch(`/deals/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ ...rest }),
-  });
-  if (!resp.ok) throw new Error("Failed to save deal");
+  beginSave();
+  try {
+    await putDealWithRetry(id, rest);
+    endSaveOk(id);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Failed to save deal";
+    endSaveError(id, () => apiSaveDeal(deal), msg);
+    reportClientError("Deal save failed", `${id}: ${msg}`);
+    throw e;
+  }
 }
 
 export interface ImportDealResult {
