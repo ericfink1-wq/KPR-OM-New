@@ -46,6 +46,73 @@ function composeAddressForGeocoder(deal: {
   return parts.join(", ");
 }
 
+// US state names → abbreviations, for confidently detecting the "CITY, ST ZIP"
+// tail of an address string (so a suite/route line isn't mistaken for a state).
+const US_STATES: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE", "district of columbia": "DC",
+  florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN",
+  iowa: "IA", kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS", missouri: "MO",
+  montana: "MT", nebraska: "NE", nevada: "NV", "new hampshire": "NH", "new jersey": "NJ",
+  "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND",
+  ohio: "OH", oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI",
+  "south carolina": "SC", "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT",
+  vermont: "VT", virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI",
+  wyoming: "WY", "puerto rico": "PR",
+};
+const US_STATE_ABBRS = new Set(Object.values(US_STATES));
+
+// Split a free-text US address ("248 Flanders Road, East Lyme, CT 06357") into its
+// parts, working right-to-left. Returns null unless a real state or ZIP is found,
+// so a plain street ("248 Flanders Road") or a suite/route line is left untouched.
+function parseUsAddress(full: string): { street: string; city: string | null; state: string | null; zip: string | null } | null {
+  let s = full.trim().replace(/\s+/g, " ");
+  let zip: string | null = null;
+  let state: string | null = null;
+
+  const zipM = s.match(/[, ]\s*(\d{5}(?:-\d{4})?)\s*$/);
+  if (zipM && zipM.index !== undefined) { zip = zipM[1]; s = s.slice(0, zipM.index).trim().replace(/,\s*$/, ""); }
+
+  // Trailing state: 2-letter abbreviation or a full state name. Only commit the
+  // strip when a ZIP was already found or a comma (i.e. a city) still precedes it —
+  // otherwise a city that happens to look like a state ("…, Washington") is safe.
+  const abbrM = s.match(/[, ]\s*([A-Za-z]{2})\s*$/);
+  const nameM = s.match(/[,]\s*([A-Za-z][A-Za-z .]+?)\s*$/);
+  if (abbrM && abbrM.index !== undefined && US_STATE_ABBRS.has(abbrM[1].toUpperCase())) {
+    const after = s.slice(0, abbrM.index).trim().replace(/,\s*$/, "");
+    if (zip !== null || after.includes(",")) { state = abbrM[1].toUpperCase(); s = after; }
+  } else if (nameM && nameM.index !== undefined && US_STATES[nameM[1].trim().toLowerCase()]) {
+    const after = s.slice(0, nameM.index).trim().replace(/,\s*$/, "");
+    if (zip !== null || after.includes(",")) { state = US_STATES[nameM[1].trim().toLowerCase()]; s = after; }
+  }
+
+  if (!state && !zip) return null;  // not confidently a combined address
+
+  // Whatever remains is "STREET, CITY" (city = last comma segment) or just "STREET".
+  let city: string | null = null;
+  let street = s;
+  const ci = s.lastIndexOf(",");
+  if (ci !== -1) { city = s.slice(ci + 1).trim() || null; street = s.slice(0, ci).trim(); }
+  return { street, city, state, zip };
+}
+
+// When the street field actually holds a full "street, city, state zip" string,
+// reduce it to just the street and backfill any blank city/state/zip. Only rewrites
+// the street when a city was positively identified (so a street we're unsure about
+// is never destroyed), and never overwrites a city/state/zip already populated.
+function normalizeDealAddress(data: Record<string, unknown>): void {
+  const raw = typeof data.address === "string" ? data.address.trim() : "";
+  if (!raw) return;
+  const parsed = parseUsAddress(raw);
+  if (!parsed) return;
+  const blank = (v: unknown) => !(typeof v === "string" && v.trim());
+  if (parsed.city && parsed.street && parsed.street !== raw) data.address = parsed.street;
+  if (parsed.city && blank(data.city)) data.city = parsed.city;
+  if (parsed.state && blank(data.state)) data.state = parsed.state;
+  if (parsed.zip && blank(data.zip)) data.zip = parsed.zip;
+}
+
 // Auto-derive Market / Submarket from the address when the OM didn't state them.
 // Fills ONLY blank fields (an OM-stated or hand-entered market always wins), reuses
 // a prior derivation when present (so the free geocoder is hit at most once), and
@@ -277,6 +344,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
 
       const id = existingRow.id;
       const clean = sanitize(merged);
+      normalizeDealAddress(clean);   // street-only address + backfill blank city/state/zip
       req.log.info({ id, fieldCount: Object.keys(clean).length }, "import merge: updating existing deal");
       try {
         await db.update(dealsTable)
@@ -301,6 +369,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
         ? uploadedId
         : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
       const clean = sanitize(uploadedData);
+      normalizeDealAddress(clean);   // street-only address + backfill blank city/state/zip
       req.log.info({ id, fieldCount: Object.keys(clean).length }, "import new: inserting deal");
       try {
         await db.insert(dealsTable).values({ id, data: clean });
@@ -353,6 +422,7 @@ router.post("/deals", requireAuth, async (req, res) => {
       return;
     }
     const rest = coerceDealArrays(rest0);
+    normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
     await db.insert(dealsTable).values({ id, data: rest });
     res.status(201).json({ ok: true, id });
     setImmediate(() => { syncOwnTransactionComps(id, rest).catch(() => {}); });
@@ -368,6 +438,7 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     const id = req.params.id as string;
     const { id: _bodyId, ...rest0 } = req.body as Record<string, unknown>;
     const rest = coerceDealArrays(rest0);
+    normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
     // Capture the prior "Our Take" so we only re-learn the House View when it changes.
     const prevRows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
     const prevReview = typeof (prevRows[0]?.data as Record<string, unknown> | undefined)?.dealReview === "string"
