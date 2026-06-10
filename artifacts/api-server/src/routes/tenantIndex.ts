@@ -4,7 +4,7 @@ import { tenantIndexTable, dealsTable } from "@workspace/db";
 import { and, eq, lt, lte, gte, ilike, SQL } from "drizzle-orm";
 import { rebuildTenantIndex, ensureTenantIndexColumns } from "../lib/tenantIndex";
 
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -60,7 +60,7 @@ router.get("/tenant-index", requireAuth, async (req, res) => {
 
 // POST /api/tenant-index/rebuild-all
 // One-time (or on-demand) full rebuild from deals.data. Auth required.
-router.post("/tenant-index/rebuild-all", requireAuth, async (req, res) => {
+router.post("/tenant-index/rebuild-all", requireAdmin, async (req, res) => {
   try {
     const dealRows = await db.select().from(dealsTable);
     const active = dealRows.filter(r => !r.data._processing && !r.data._processingError);

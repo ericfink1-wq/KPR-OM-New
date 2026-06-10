@@ -2,9 +2,21 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import { randomBytes } from "crypto";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { makeSessionStore } from "./lib/sessionStore";
+
+// Session signing secret. A hardcoded fallback used to live here, but this repo is
+// public — a known secret lets anyone forge a logged-in session cookie. Require the
+// env var; if it's missing, generate a random one for THIS process so the app still
+// boots (no hardcoded value ever ships). The trade-off when unset: a restart issues
+// a new secret, so everyone is logged out and must sign in again. Set SESSION_SECRET
+// in the deployment to make sessions persist across restarts.
+const SESSION_SECRET = process.env.SESSION_SECRET || (() => {
+  logger.warn("SESSION_SECRET is not set — using a random per-process secret. Set SESSION_SECRET in the deployment so logins survive restarts.");
+  return randomBytes(32).toString("hex");
+})();
 
 const app: Express = express();
 
@@ -55,7 +67,7 @@ const ABSOLUTE_SESSION_MAX_MS = 30 * 24 * 60 * 60 * 1000; // hard re-login cap: 
 // earlier attempt.
 app.use(session({
   store: makeSessionStore(),
-  secret: process.env.SESSION_SECRET || "kpr-om-database-secret",
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   rolling: true, // extend the idle window on each response while active

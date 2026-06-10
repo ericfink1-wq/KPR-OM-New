@@ -513,7 +513,7 @@ router.post("/comps/benchmark", requireAuth, async (req, res) => {
 // POST /api/comps/rebuild-all — full backfill from all deals
 // Preserves manually entered comps.
 // ---------------------------------------------------------------------------
-router.post("/comps/rebuild-all", requireAuth, async (req, res) => {
+router.post("/comps/rebuild-all", requireAdmin, async (req, res) => {
   try {
     // Save manual rows before rebuild wipes non-manual rows
     const manualRows = await db.select().from(compsIndexTable).where(eq(compsIndexTable.isManual, true));

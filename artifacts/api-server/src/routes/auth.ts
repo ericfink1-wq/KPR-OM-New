@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request } from "express";
-import { randomBytes } from "crypto";
+import { randomBytes, timingSafeEqual } from "crypto";
 import { db, usersTable, loginEventsTable } from "@workspace/db";
 import { eq, and, gt, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, validatePassword, sha256 } from "../lib/password";
@@ -239,15 +239,39 @@ router.post("/auth/logout", (req, res) => {
   req.session.destroy(() => { res.json({ ok: true }); });
 });
 
+// In-memory throttle for admin-unlock guesses, keyed per signed-in user. The 5-tap
+// admin prompt has no other rate limit, so without this a logged-in user could
+// brute-force ADMIN_PASSWORD. Single-process deploy, so a Map is sufficient.
+const adminUnlockFails = new Map<string, { count: number; first: number }>();
+const ADMIN_UNLOCK_WINDOW_MS = 15 * 60 * 1000;
+const ADMIN_UNLOCK_MAX = 5;
+
+// Constant-time string compare (hash to a fixed length first so timingSafeEqual
+// never sees mismatched buffer lengths and so the length itself doesn't leak).
+function safeEqual(a: string, b: string): boolean {
+  const ha = sha256(a), hb = sha256(b);
+  return timingSafeEqual(Buffer.from(ha, "hex"), Buffer.from(hb, "hex"));
+}
+
 // POST /api/auth/admin-unlock — legacy fallback elevation via ADMIN_PASSWORD
 // (account admins already get isAdmin on login; kept so the 5-tap still works).
 router.post("/auth/admin-unlock", (req, res) => {
   if (!req.session.authenticated) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const who = req.session.userId || req.session.userEmail || "unknown";
+  const now = Date.now();
+  const rec = adminUnlockFails.get(who);
+  if (rec && now - rec.first < ADMIN_UNLOCK_WINDOW_MS && rec.count >= ADMIN_UNLOCK_MAX) {
+    res.status(429).json({ error: "Too many attempts. Please wait about 15 minutes." });
+    return;
+  }
   const { password } = req.body as { password?: string };
-  if (!ADMIN_PASSWORD || !password || password !== ADMIN_PASSWORD) {
+  if (!ADMIN_PASSWORD || !password || !safeEqual(password, ADMIN_PASSWORD)) {
+    const next = rec && now - rec.first < ADMIN_UNLOCK_WINDOW_MS ? { count: rec.count + 1, first: rec.first } : { count: 1, first: now };
+    adminUnlockFails.set(who, next);
     res.status(403).json({ error: "Invalid admin password" });
     return;
   }
+  adminUnlockFails.delete(who);
   req.session.isAdmin = true;
   res.json({ ok: true });
 });

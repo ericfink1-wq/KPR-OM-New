@@ -22,6 +22,11 @@ export function ensureTenantIndexColumns(): Promise<void> {
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS sales_psf double precision`);
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS sales_year double precision`);
       await db.execute(sql`ALTER TABLE tenant_index ADD COLUMN IF NOT EXISTS is_nap boolean`);
+      // Indexes for the per-deal lookups done on every deal write/delete and on
+      // analytics filters. Created here (not via a migration) because the deploy
+      // can't run drizzle-kit; IF NOT EXISTS keeps it idempotent.
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS tenant_index_deal_id_idx ON tenant_index (deal_id)`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS comps_index_source_deal_id_idx ON comps_index (source_deal_id)`);
     })().catch((err) => { columnsReady = null; throw err; });
   }
   return columnsReady;
