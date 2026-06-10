@@ -4,13 +4,18 @@ import { eq } from "drizzle-orm";
 import { runBackgroundExtraction } from "../lib/extract";
 
 import { requireAuth } from "../middleware/auth";
+import { rateLimit } from "../middleware/rateLimit";
 
 const router = Router();
+
+// OM ingestion is the heaviest token spender (full extraction); cap it per user so
+// a bulk drag-drop of many files can't fan out into an unbounded Anthropic bill.
+const ingestLimit = rateLimit({ bucket: "ingest", perMinute: 12, perHour: 120 });
 
 // POST /api/deals/ingest
 // Immediately creates a "processing" deal row and returns the id.
 // The actual Claude extraction runs in the background.
-router.post("/deals/ingest", requireAuth, async (req, res) => {
+router.post("/deals/ingest", requireAuth, ingestLimit, async (req, res) => {
   const { id, text, fileName, pageCount, correctionsNote } = req.body as {
     id?: string;
     text?: string;

@@ -1,13 +1,18 @@
 import { Router } from "express";
 import { callAnthropicOnce, robustParseJSON, runOmExtraction } from "../lib/extract";
 import { requireAuth } from "../middleware/auth";
+import { rateLimit } from "../middleware/rateLimit";
 
 const router = Router();
+
+// Per-user ceilings on the LLM endpoints — defense against a runaway retry loop or
+// one user monopolizing the Anthropic budget. Generous enough for normal analyst use.
+const aiLimit = rateLimit({ bucket: "ai", perMinute: 20, perHour: 240 });
 
 // POST /api/ai/messages — generic Claude proxy (used by AnalystChat, DetailView lookups).
 // requireAuth is essential here: without it the public URL is an open proxy to the
 // Anthropic API key for anyone on the internet.
-router.post("/ai/messages", requireAuth, async (req, res) => {
+router.post("/ai/messages", requireAuth, aiLimit, async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
     return;
@@ -54,7 +59,7 @@ router.post("/ai/messages", requireAuth, async (req, res) => {
 });
 
 // POST /api/ai/extract — kept for backward compatibility; prefer /api/deals/ingest for PDF uploads
-router.post("/ai/extract", requireAuth, async (req, res) => {
+router.post("/ai/extract", requireAuth, aiLimit, async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
     return;
