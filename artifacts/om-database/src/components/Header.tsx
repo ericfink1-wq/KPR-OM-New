@@ -577,11 +577,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
 
-        {/* Global search (also Cmd/Ctrl+K) */}
+        {/* Global search (also Cmd/Ctrl+K) — styled like a real search field so it
+            reads as a search bar, not just another action button. */}
         {onOpenSearch && (
           <button onClick={onOpenSearch} title="Search deals & tenants (⌘K)"
-            style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#5c5047", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-            ⌕ Search
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#8a8170", padding: "8px 12px", borderRadius: 999, cursor: "text", fontSize: 12.5, fontWeight: 500, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap", minWidth: 0, boxShadow: "inset 0 1px 2px rgba(56,58,55,0.04)" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#6dba43"; e.currentTarget.style.background = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#cdbf9f"; e.currentTarget.style.background = "#fbf9f4"; }}>
+            <span style={{ fontSize: 14, color: "#6dba43", fontWeight: 700, lineHeight: 1 }}>⌕</span>
+            <span style={{ flex: 1, textAlign: "left" }}>Search deals &amp; tenants…</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#a89f8f", background: "#efe9dc", borderRadius: 4, padding: "2px 5px", letterSpacing: "0.02em" }}>⌘K</span>
           </button>
         )}
 

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Deal } from "../lib/idb";
 import { parseLeaseDate, isVacant, isNAPTenant } from "../lib/utils";
+import ScopeToggle, { scopeDeals, type Scope } from "./ScopeToggle";
 
 interface Props {
   deals: Deal[];
@@ -63,10 +64,15 @@ function relLabel(days: number): string {
 export default function CriticalDates({ deals, onOpenDeal }: Props) {
   const [horizonDays, setHorizonDays] = useState<number | null>(365);
   const [kinds, setKinds] = useState<Set<Kind>>(new Set(["Lease expiry", "Debt maturity", "Pref maturity"]));
+  const [scope, setScope] = useState<Scope>("owned");
+
+  const ownedCount = useMemo(() => deals.filter(d => !d.trashedAt && d.status === "Owned").length, [deals]);
+  const allCount = useMemo(() => deals.filter(d => !d.trashedAt).length, [deals]);
 
   const allEvents = useMemo<Ev[]>(() => {
     const out: Ev[] = [];
-    for (const d of deals) {
+    for (const d of scopeDeals(deals, scope)) {
+      if (d.trashedAt) continue;
       const dealName = d.propertyName || d.address || "Untitled deal";
       // Lease expiries — real, occupied lease occupants only.
       for (const t of d.tenants || []) {
@@ -94,7 +100,7 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
     }
     out.sort((a, b) => a.date.getTime() - b.date.getTime());
     return out;
-  }, [deals]);
+  }, [deals, scope]);
 
   const today = useMemo(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }, []);
 
@@ -163,6 +169,9 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
       </p>
 
       {/* Controls */}
+      <div style={{ marginBottom: 12 }}>
+        <ScopeToggle scope={scope} onChange={setScope} ownedCount={ownedCount} allCount={allCount} />
+      </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 6 }}>
         {HORIZONS.map(h => (
           <button key={h.label} onClick={() => setHorizonDays(h.days)}

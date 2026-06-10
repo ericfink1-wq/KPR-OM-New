@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Deal } from "../lib/idb";
 import { isVacant, isNAPTenant, tenantKey } from "../lib/utils";
 import { apiLoadTenantBenchmarks, type AnalystTenantBenchmark } from "../lib/api";
+import ScopeToggle, { scopeDeals, type Scope } from "./ScopeToggle";
 
 interface Props {
   deals: Deal[];
@@ -45,8 +46,19 @@ function fmtMoney(n: number): string {
 export default function MarkToMarket({ deals, onOpenDeal }: Props) {
   const [benchmarks, setBenchmarks] = useState<AnalystTenantBenchmark[] | null>(null);
   const [threshold, setThreshold] = useState(15);
+  const [scope, setScope] = useState<Scope>("owned");
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   useEffect(() => { apiLoadTenantBenchmarks().then(setBenchmarks).catch(() => setBenchmarks([])); }, []);
+
+  const ownedCount = useMemo(() => deals.filter(d => !d.trashedAt && d.status === "Owned").length, [deals]);
+  const allCount = useMemo(() => deals.filter(d => !d.trashedAt).length, [deals]);
+  const scopedDeals = useMemo(() => scopeDeals(deals, scope), [deals, scope]);
+  const toggleCollapse = (id: string) => setCollapsed(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const benchByKey = useMemo(() => {
     const m = new Map<string, AnalystTenantBenchmark>();
@@ -59,7 +71,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
 
   const perDeal = useMemo<DealMtm[]>(() => {
     const out: DealMtm[] = [];
-    for (const d of deals) {
+    for (const d of scopedDeals) {
       if (d.trashedAt) continue;
       const rows: Gap[] = [];
       for (const t of d.tenants || []) {
@@ -82,7 +94,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
     }
     out.sort((a, b) => b.belowUpside - a.belowUpside);
     return out;
-  }, [deals, benchByKey, threshold]);
+  }, [scopedDeals, benchByKey, threshold]);
 
   const totalUpside = perDeal.reduce((s, d) => s + d.belowUpside, 0);
   const totalLeases = perDeal.reduce((s, d) => s + d.belowCount, 0);
@@ -94,6 +106,10 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
         In-place rents that sit below the same brand's portfolio-median rent — the rent you could recapture at rollover.
         Benchmarks are recency-weighted medians across your database (2+ locations), not third-party market data, so treat them as directional.
       </p>
+
+      <div style={{ marginBottom: 12 }}>
+        <ScopeToggle scope={scope} onChange={setScope} ownedCount={ownedCount} allCount={allCount} />
+      </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 16 }}>
         <span style={{ fontSize: 12, color: "#8b8578", fontWeight: 600 }}>At least</span>
@@ -130,33 +146,58 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
 
           {perDeal.length === 0 ? (
             <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>
-              No leases are {threshold}%+ below their brand benchmark. Lower the threshold, or this may mean rents are at/above market —
+              No leases are {threshold}%+ below their brand benchmark{scope === "owned" ? " among your owned deals" : ""}.
+              {scope === "owned" ? " Switch to All deals, or l" : " L"}ower the threshold — or this may mean rents are at/above market,
               or that few tenants have a 2+ location benchmark yet.
             </p>
-          ) : perDeal.map(dm => (
-            <div key={dm.dealId} style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, padding: "12px 16px", marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                <button onClick={() => onOpenDeal(dm.dealId)}
-                  style={{ background: "none", border: "none", padding: 0, color: "#26281f", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "'Fraunces',Georgia,serif", textAlign: "left" }}>
-                  {dm.dealName}
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button onClick={() => setCollapsed(collapsed.size ? new Set() : new Set(perDeal.map(d => d.dealId)))}
+                  style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 11.5, fontWeight: 700 }}>
+                  {collapsed.size ? "Expand all" : "Collapse all"}
                 </button>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#2f6b1f" }}>
-                  {fmtMoney(dm.belowUpside)}/yr · {dm.belowCount} lease{dm.belowCount === 1 ? "" : "s"}
-                </span>
               </div>
-              {dm.rows.map((r, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderTop: i === 0 ? "none" : "1px solid #f4efe4", fontSize: 12.5 }}>
-                  <div style={{ flex: 1, minWidth: 0, fontWeight: 600, color: "#2a2c28", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
-                  <div style={{ color: "#7d766a", whiteSpace: "nowrap" }}>
-                    ${r.inPlace.toFixed(2)} vs ${r.median.toFixed(2)} median
-                    <span style={{ color: "#a89f8f" }}> ({r.locations} locs)</span>
-                  </div>
-                  <div style={{ width: 56, textAlign: "right", fontWeight: 700, color: "#b3711a" }}>{Math.round(r.gapPct)}%</div>
-                  <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: "#2f6b1f" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
+              {perDeal.map(dm => {
+            const isOpen = !collapsed.has(dm.dealId);
+            return (
+            <div key={dm.dealId} style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, padding: "10px 16px", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <button onClick={() => toggleCollapse(dm.dealId)} title={isOpen ? "Collapse" : "Expand"}
+                    style={{ background: "none", border: "none", padding: 0, color: "#a89f8f", cursor: "pointer", fontSize: 13, width: 14, flexShrink: 0 }}>
+                    {isOpen ? "▾" : "▸"}
+                  </button>
+                  <button onClick={() => onOpenDeal(dm.dealId)}
+                    style={{ background: "none", border: "none", padding: 0, color: "#26281f", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "'Fraunces',Georgia,serif", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {dm.dealName}
+                  </button>
                 </div>
-              ))}
+                <button onClick={() => toggleCollapse(dm.dealId)}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#2f6b1f", whiteSpace: "nowrap" }}>
+                  {fmtMoney(dm.belowUpside)}/yr · {dm.belowCount} lease{dm.belowCount === 1 ? "" : "s"}
+                </button>
+              </div>
+              {isOpen && (
+                <div style={{ marginTop: 6 }}>
+                  {dm.rows.map((r, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderTop: "1px solid #f4efe4", fontSize: 12.5 }}>
+                      <div style={{ flex: 1, minWidth: 0, fontWeight: 600, color: "#2a2c28", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
+                      <div style={{ color: "#7d766a", whiteSpace: "nowrap" }}>
+                        ${r.inPlace.toFixed(2)} vs ${r.median.toFixed(2)} median
+                        <span style={{ color: "#a89f8f" }}> ({r.locations} locs)</span>
+                      </div>
+                      <div style={{ width: 56, textAlign: "right", fontWeight: 700, color: "#b3711a" }}>{Math.round(r.gapPct)}%</div>
+                      <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: "#2f6b1f" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
+            </>
+          )}
         </>
       )}
     </div>

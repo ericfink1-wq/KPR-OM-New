@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { resolveTenantRisk, computeExposure, anchorsReferenced, type ExposureResult } from "../lib/leaseRisk";
 import { apiListAllLeaseAbstracts } from "../lib/api";
+import ScopeToggle, { scopeDeals, type Scope } from "./ScopeToggle";
 
 interface Props {
   deals: Deal[];
@@ -38,6 +39,10 @@ const TIER_LABEL: Record<number, string> = {
 export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
   const [abstracts, setAbstracts] = useState<LeaseAbstract[] | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [scope, setScope] = useState<Scope>("owned");
+
+  const ownedCount = useMemo(() => deals.filter(d => !d.trashedAt && d.status === "Owned").length, [deals]);
+  const allCount = useMemo(() => deals.filter(d => !d.trashedAt).length, [deals]);
 
   useEffect(() => { apiListAllLeaseAbstracts().then(setAbstracts).catch(() => setAbstracts([])); }, []);
 
@@ -54,7 +59,7 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
 
   const rows = useMemo<AnchorRow[]>(() => {
     const byAnchor = new Map<string, AnchorRow>();
-    for (const d of deals) {
+    for (const d of scopeDeals(deals, scope)) {
       if (d.trashedAt) continue;
       const resolved = resolveTenantRisk(d, abstractsByDeal.get(d.id) || []);
       const anchors = anchorsReferenced(resolved);
@@ -78,7 +83,7 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
     // Most portfolio-wide single-anchor exposure first; fall back to any-linkage rent.
     out.sort((a, b) => b.tier1Rent - a.tier1Rent || b.tier3Rent - a.tier3Rent);
     return out;
-  }, [deals, abstractsByDeal]);
+  }, [deals, abstractsByDeal, scope]);
 
   const toggle = (k: string) => setExpanded(prev => {
     const next = new Set(prev);
@@ -94,6 +99,10 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
         The headline number is rent that trips on <strong>that anchor alone</strong> (a single-anchor dependency); "any linkage" also
         counts clauses that need additional events (e.g. an X-of-N occupancy test), so it's an upper bound, not a single-anchor figure.
       </p>
+
+      <div style={{ marginBottom: 14 }}>
+        <ScopeToggle scope={scope} onChange={setScope} ownedCount={ownedCount} allCount={allCount} />
+      </div>
 
       {abstracts == null ? (
         <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>Loading lease-risk data…</p>
