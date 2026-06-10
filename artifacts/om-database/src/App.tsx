@@ -18,6 +18,7 @@ import SaveStatusIndicator from "./components/SaveStatusIndicator";
 import CriticalDates from "./components/CriticalDates";
 import MarkToMarket from "./components/MarkToMarket";
 import CoTenancyCascade from "./components/CoTenancyCascade";
+import GlobalSearch from "./components/GlobalSearch";
 import { isSupportedUpload } from "./lib/fileExtract";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
@@ -186,6 +187,7 @@ function AppInner() {
   const [uploadPanelH, setUploadPanelH] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
   const [closingCalcOpen, setClosingCalcOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy">("tenant");
 
@@ -343,9 +345,13 @@ function AppInner() {
     if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   };
 
-  // Hide overlay on Escape and on any window dragleave that exits the document
+  // Hide overlay on Escape and on any window dragleave that exits the document.
+  // Cmd/Ctrl+K opens global search (the standard shortcut).
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") { dragCounter.current = 0; setDragging(false); setChatOpen(false); } };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); setSearchOpen(o => !o); return; }
+      if (e.key === "Escape") { dragCounter.current = 0; setDragging(false); setChatOpen(false); setSearchOpen(false); }
+    };
     const onDragLeaveDoc = (e: DragEvent) => { if (!e.relatedTarget) { dragCounter.current = 0; setDragging(false); } };
     window.addEventListener("keydown", onKeyDown);
     document.addEventListener("dragleave", onDragLeaveDoc);
@@ -427,6 +433,7 @@ function AppInner() {
         isAdmin={isAdmin}
         onAdminChange={checkAuth}
         onAnalyticsNav={onAnalyticsNav}
+        onOpenSearch={() => setSearchOpen(true)}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} />
       {closingCalcOpen && <ClosingCostEstimator deals={deals} onClose={() => setClosingCalcOpen(false)} />}
@@ -707,6 +714,7 @@ function AppInner() {
         onPanelHeightChange={setUploadPanelH}
       />
       <SaveStatusIndicator />
+      <GlobalSearch open={searchOpen} deals={deals} onClose={() => setSearchOpen(false)} onOpenDeal={handleOpenDeal} />
     </div>
   );
 }

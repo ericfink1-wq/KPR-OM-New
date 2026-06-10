@@ -22,9 +22,10 @@ interface Props {
   onAdminChange?: () => void;
   onAnalyticsNav?: (dest: string) => void;
   onClosingCalc?: () => void;
+  onOpenSearch?: () => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -557,6 +558,14 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFolder(e.target.files)} />
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
+
+        {/* Global search (also Cmd/Ctrl+K) */}
+        {onOpenSearch && (
+          <button onClick={onOpenSearch} title="Search deals & tenants (⌘K)"
+            style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#5c5047", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+            ⌕ Search
+          </button>
+        )}
 
         {/* Today's Rates */}
         <button onClick={() => setRatesOpen(true)} title="Today's benchmark interest rates"
