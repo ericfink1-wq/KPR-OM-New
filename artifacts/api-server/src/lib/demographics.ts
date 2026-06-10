@@ -8,12 +8,30 @@ import { fetchWithTimeout } from "./http";
 // authoritative public data, not an AI guess — but still surfaced as "derived
 // from address" so it's never confused with an OM-stated value.
 export interface MarketGeo {
-  market?: string | null;       // CBSA / metro, e.g. "Lancaster, PA Metro Area"
-  submarket?: string | null;    // place/township proxy, e.g. "Lititz borough"
+  market?: string | null;       // trimmed MSA, e.g. "Allentown, PA" (from the full CBSA below)
+  cbsa?: string | null;         // full CBSA name as returned, e.g. "Allentown-Bethlehem-Easton, PA-NJ Metro Area"
+  submarket?: string | null;    // place/township proxy, e.g. "Lititz"
   county?: string | null;
   matchedAddress?: string | null;
   source?: string;
   lookedUpAt?: string;
+}
+
+// "Allentown-Bethlehem-Easton, PA-NJ Metro Area" -> "Allentown, PA". Keeps the
+// market at the MSA level but drops the long principal-cities string and extra
+// states so the label is the broad metro, not an overly specific multi-city name.
+function trimMsaName(name: string): string {
+  const cleaned = name.replace(/\s+(Metro(politan)?|Micro(politan)?)(\s+Statistical)?\s+Area$/i, "").trim();
+  const ci = cleaned.lastIndexOf(",");
+  if (ci === -1) return cleaned;
+  const firstCity = cleaned.slice(0, ci).trim().split(/[-/]/)[0].trim();
+  const firstState = cleaned.slice(ci + 1).trim().split(/[-/]/)[0].trim();
+  return firstState ? `${firstCity}, ${firstState}` : firstCity;
+}
+
+// "Lititz borough" -> "Lititz"; "Mount Joy CDP" -> "Mount Joy".
+function trimPlaceName(name: string): string {
+  return name.replace(/\s+(borough|city|town|village|township|CDP|municipality|\(balance\))$/i, "").trim();
 }
 
 export async function fetchAddressMarket(address: string): Promise<MarketGeo | null> {
@@ -42,19 +60,20 @@ export async function fetchAddressMarket(address: string): Promise<MarketGeo | n
       }
       return null;
     };
-    // Metro = Metropolitan/Micropolitan Statistical Area (CBSA). Note "Combined
-    // Statistical Areas" is intentionally NOT matched (too broad for a market).
-    const market = nameFrom(k => /metropolitan.*statistical|micropolitan.*statistical|core based statistical|\bcbsa\b/i.test(k));
+    // Metro = Metropolitan/Micropolitan Statistical Area (CBSA), NOT a metro
+    // division (narrower) and NOT a combined statistical area (too broad).
+    const cbsa = nameFrom(k => /metropolitan.*statistical|micropolitan.*statistical|core based statistical|\bcbsa\b/i.test(k) && !/division/i.test(k));
     // Submarket proxy: the incorporated place / CDP (city), else the county subdivision (township).
-    const submarket =
+    const submarketRaw =
       nameFrom(k => /incorporated place|census designated place/i.test(k)) ||
       nameFrom(k => /county subdivision/i.test(k));
     const county = nameFrom(k => /count(y|ies)/i.test(k) && !/subdivision/i.test(k));
-    if (!market && !submarket && !county) return null;
+    if (!cbsa && !submarketRaw && !county) return null;
 
     return {
-      market: market ?? null,
-      submarket: submarket ?? county ?? null,
+      market: cbsa ? trimMsaName(cbsa) : null,     // "Allentown, PA"
+      cbsa: cbsa ?? null,                          // full name kept for reference
+      submarket: submarketRaw ? trimPlaceName(submarketRaw) : (county ?? null),
       county: county ?? null,
       matchedAddress: match?.matchedAddress ?? null,
       source: "US Census Bureau geocoder (TIGER)",

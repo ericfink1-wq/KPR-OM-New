@@ -832,13 +832,16 @@ router.post("/deals/:id/refresh-market", requireAuth, async (req, res) => {
     const composed = composeAddressForGeocoder(current as { address?: string | null; city?: string | null; state?: string | null });
     if (!composed) { res.status(400).json({ error: "Deal has no address" }); return; }
     const geo = await fetchAddressMarket(composed);
+    // Fill blanks only — never overwrite a Market/Submarket the OM already set.
+    const curMarket = typeof current.market === "string" ? current.market.trim() : "";
+    const curSub = typeof current.submarket === "string" ? current.submarket.trim() : "";
     const patch: Record<string, unknown> = { marketGeo: geo, marketGeoChecked: new Date().toISOString() };
-    if (geo?.market) patch.market = geo.market;
-    if (geo?.submarket) patch.submarket = geo.submarket;
+    if (!curMarket && geo?.market) patch.market = geo.market;
+    if (!curSub && geo?.submarket) patch.submarket = geo.submarket;
     await db.update(dealsTable)
       .set({ data: { ...current, ...patch }, updatedAt: new Date() })
       .where(eq(dealsTable.id, id));
-    res.json({ ok: true, marketGeo: geo, market: patch.market ?? current.market ?? null, submarket: patch.submarket ?? current.submarket ?? null });
+    res.json({ ok: true, marketGeo: geo, market: (patch.market ?? current.market ?? null) as string | null, submarket: (patch.submarket ?? current.submarket ?? null) as string | null });
   } catch (err) {
     req.log.error({ err }, "Failed to refresh market");
     res.status(500).json({ error: "Failed to refresh market" });

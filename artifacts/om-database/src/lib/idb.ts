@@ -683,7 +683,8 @@ export interface MarketSale {
 // geocoder. Authoritative public data, but surfaced as "derived from address" so
 // it's distinguishable from an OM-stated market.
 export interface MarketGeo {
-  market?: string | null;
+  market?: string | null;      // trimmed MSA, e.g. "Allentown, PA"
+  cbsa?: string | null;        // full CBSA name, e.g. "Allentown-Bethlehem-Easton, PA-NJ Metro Area"
   submarket?: string | null;
   county?: string | null;
   matchedAddress?: string | null;
