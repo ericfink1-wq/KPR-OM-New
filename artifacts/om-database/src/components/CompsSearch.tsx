@@ -518,7 +518,18 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [rows, setRows] = useState<CompRow[]>([]);
   // Client-side multi-select state filter (the full list is already fetched).
-  const [selectedStates, setSelectedStates] = useState<string[]>([]);
+  // State filter — persisted to localStorage so it survives a refresh.
+  const [selectedStates, setSelectedStatesRaw] = useState<string[]>(() => {
+    try { const s = localStorage.getItem("cs-selected-states"); return s ? JSON.parse(s) as string[] : []; }
+    catch { return []; }
+  });
+  const setSelectedStates: typeof setSelectedStatesRaw = (v) => {
+    setSelectedStatesRaw(prev => {
+      const next = typeof v === "function" ? (v as (p: string[]) => string[])(prev) : v;
+      try { localStorage.setItem("cs-selected-states", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
   const [stateMenuOpen, setStateMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

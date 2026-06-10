@@ -3,7 +3,7 @@ import {
   ResponsiveContainer, Tooltip, ReferenceLine,
 } from "recharts";
 import type { Tenant } from "../lib/idb";
-import { isVacant } from "../lib/utils";
+import { isVacant, parseLeaseDate } from "../lib/utils";
 
 interface Props {
   tenants: Tenant[];
@@ -30,76 +30,12 @@ interface BucketDatum {
   sf: number;
   count: number;
   nearTerm: boolean;
+  isPast: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Robust date parser — handles:
-//   YYYY-MM-DD  (ISO)
-//   YYYY-MM     (end of that month)
-//   MM/DD/YYYY  M/D/YY  M/D/YYYY
-//   Mon-YYYY    Mon YYYY  (e.g. "Jan-2030", "January 2030") → end of month
-//   YYYY        (bare year → Dec 31)
-// ---------------------------------------------------------------------------
-const MONTH_MAP: Record<string, number> = {
-  jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
-  jul:6, aug:7, sep:8, oct:9, nov:10, dec:11,
-};
-
-function parseLeaseDate(raw: string | null | undefined): Date | null {
-  if (!raw) return null;
-  const s = raw.trim();
-  if (!s) return null;
-
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const d = new Date(s + "T12:00:00");
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  // YYYY-MM → end of that month
-  if (/^\d{4}-\d{2}$/.test(s)) {
-    const [y, m] = s.split("-").map(Number);
-    return new Date(y, m, 0, 12, 0, 0); // day 0 = last day of month m
-  }
-
-  // MM/DD/YYYY or M/D/YY or M/D/YYYY
-  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) {
-    const [mo, d, y] = s.split("/").map(Number);
-    const fullY = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
-    const dt = new Date(fullY, mo - 1, d, 12, 0, 0);
-    return isNaN(dt.getTime()) ? null : dt;
-  }
-
-  // M/YY or MM/YY or MM/YYYY (month/year, no day) → end of that month
-  if (/^\d{1,2}\/\d{2,4}$/.test(s)) {
-    const [mo, y] = s.split("/").map(Number);
-    const fullY = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
-    if (mo >= 1 && mo <= 12) {
-      return new Date(fullY, mo, 0, 12, 0, 0); // day 0 = last day of month mo
-    }
-  }
-
-  // Mon-YYYY/Mon-YY or Mon YYYY/Mon YY (e.g. "Jan-2030", "Sep-34", "January 2030")
-  const monYear = s.match(/^([A-Za-z]{3,9})[-\s](\d{2}|\d{4})$/);
-  if (monYear) {
-    const key = monYear[1].toLowerCase().slice(0, 3);
-    const mon = MONTH_MAP[key];
-    const rawYr = parseInt(monYear[2], 10);
-    const yr = rawYr < 100 ? (rawYr < 50 ? 2000 + rawYr : 1900 + rawYr) : rawYr;
-    if (mon !== undefined && !isNaN(yr)) {
-      return new Date(yr, mon + 1, 0, 12, 0, 0); // last day of that month
-    }
-  }
-
-  // Bare YYYY → Dec 31
-  if (/^\d{4}$/.test(s)) {
-    return new Date(parseInt(s, 10), 11, 31, 12, 0, 0);
-  }
-
-  // Native fallback
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
-}
+// Date parsing is shared from lib/utils (parseLeaseDate) so the rollover chart,
+// roster math, and WALT all bucket dates identically — a local copy here once
+// drifted and is exactly the kind of inconsistency to avoid.
 
 export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
   const occupied = tenants.filter(t => !isVacant(t.name));
@@ -138,20 +74,28 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
   const waltRentDen = withRent.reduce((acc, t) => acc + toNum(t.annualRent), 0);
   const waltRent = waltRentDen > 0 ? waltRentNum / waltRentDen : null;
 
-  // Rollover buckets: year+0 … year+9, then "10+"
+  // Rollover buckets: year+0 … year+9, then "10+". Leases that already expired
+  // (offset < 0) are holdovers/MTM — they used to be silently lumped into the
+  // current-year bar, which hid them. Collect them in a leading "Past" bucket so
+  // an analyst can see month-to-month exposure at a glance.
   const raw: { label: string; sf: number; rent: number; count: number }[] = [];
   for (let i = 0; i <= 9; i++) {
     raw.push({ label: String(refYear + i), sf: 0, rent: 0, count: 0 });
   }
   raw.push({ label: "10+", sf: 0, rent: 0, count: 0 });
+  const past = { label: "Past/MTM", sf: 0, rent: 0, count: 0 };
 
   for (const t of withExpiry) {
     const offset = t.expYear - refYear;
-    const idx = offset >= 10 ? 10 : Math.max(0, offset);
-    raw[idx].sf += toNum(t.sf);
-    raw[idx].rent += toNum(t.annualRent);
-    raw[idx].count += 1;
+    const bucket = offset < 0 ? past : raw[offset >= 10 ? 10 : offset];
+    bucket.sf += toNum(t.sf);
+    bucket.rent += toNum(t.annualRent);
+    bucket.count += 1;
   }
+
+  // Only surface the Past bucket when there's actually holdover exposure, so a
+  // clean roster looks exactly as it did before.
+  const displayBuckets = past.count > 0 ? [past, ...raw] : raw;
 
   const totalOccupiedRent = occupied.reduce((acc, t) => acc + toNum(t.annualRent), 0);
 
@@ -160,11 +104,13 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
   const coveragePct = totalOccupiedRent > 0 ? Math.round((coveredRent / totalOccupiedRent) * 100) : 100;
   const showCoverageWarning = totalOccupiedRent > 0 && coveragePct < 90;
 
+  const curLabel = String(refYear), nextLabel = String(refYear + 1);
   // Build chart data with cumulative %
   let running = 0;
-  const chartData: BucketDatum[] = raw.map((b, i) => {
+  const chartData: BucketDatum[] = displayBuckets.map((b) => {
     const pct = totalOccupiedRent > 0 ? (b.rent / totalOccupiedRent) * 100 : 0;
     running += pct;
+    const isPast = b.label === "Past/MTM";
     return {
       label: b.label,
       pct,
@@ -172,11 +118,12 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
       rent: b.rent,
       sf: b.sf,
       count: b.count,
-      nearTerm: i <= 1,
+      nearTerm: b.label === curLabel || b.label === nextLabel,
+      isPast,
     };
   });
 
-  // 24-month summary: buckets 0, 1, 2 per spec
+  // 24-month summary: current year + next two (Past excluded — it has already rolled)
   const rent24mo = raw.slice(0, 3).reduce((acc, b) => acc + b.rent, 0);
   const pct24mo = totalOccupiedRent > 0
     ? Math.round((rent24mo / totalOccupiedRent) * 100)
@@ -250,7 +197,7 @@ export default function LeaseRollover({ tenants, tenantsAsOf }: Props) {
               />
               <Bar yAxisId="bar" dataKey="pct" radius={[3, 3, 0, 0]} maxBarSize={44}>
                 {chartData.map((entry, index) => (
-                  <Cell key={index} fill={entry.nearTerm ? "#8cbf63" : "#3f7a1f"} />
+                  <Cell key={index} fill={entry.isPast ? "#c97a18" : entry.nearTerm ? "#8cbf63" : "#3f7a1f"} />
                 ))}
                 <LabelList
                   dataKey="pct"
