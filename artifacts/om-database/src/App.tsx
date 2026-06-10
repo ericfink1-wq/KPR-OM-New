@@ -15,6 +15,7 @@ import HelpModal from "./components/HelpModal";
 import ClosingCostEstimator from "./components/ClosingCostEstimator";
 import AiProgressBar from "./components/AiProgressBar";
 import SaveStatusIndicator from "./components/SaveStatusIndicator";
+import CriticalDates from "./components/CriticalDates";
 import { isSupportedUpload } from "./lib/fileExtract";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
@@ -166,6 +167,7 @@ function AppInner() {
     resetToList();
     if (dest === "portfolio-overview" || dest === "lease-rollover") setAnalyticsView("portfolio");
     else if (dest === "watchlist") setAnalyticsView("watchlist");
+    else if (dest === "critical-dates") setAnalyticsView("calendar");
     else setAnalyticsView("tenant");
     if (dest === "lease-rollover") {
       setTimeout(() => document.getElementById("section-lease-rollover")?.scrollIntoView({ behavior: "smooth", block: "start" }), 140);
@@ -181,7 +183,7 @@ function AppInner() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [closingCalcOpen, setClosingCalcOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist">("tenant");
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar">("tenant");
 
   // Scroll analytics content to top whenever the view changes
   useEffect(() => {
@@ -493,6 +495,8 @@ function AppInner() {
               <>
                 {analyticsView === "portfolio" ? (
                   <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
+                ) : analyticsView === "calendar" ? (
+                  <CriticalDates deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "watchlist" ? (
                   <div style={{ padding: "24px 18px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
                     <RetailerWatchlist deals={activeDeals} onOpenDeal={handleOpenDeal} onTenantClick={handleOpenTenant} />

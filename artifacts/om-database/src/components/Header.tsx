@@ -528,7 +528,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden",
             }}>
               {(analyticsMenu === "portfolio"
-                ? [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"]]
+                ? [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"], ["Critical Dates", "critical-dates"]]
                 : [["Tenant Analytics", "tenant-list"], ["Retailer Watchlist", "watchlist"], ["Tenant Name Audit", "tenant-audit"], ["Link Tenants", "link-tenants"]]
               ).map(([label, dest], i, arr) => (
                 <button key={dest} onClick={() => { setAnalyticsMenu(null); onAnalyticsNav?.(dest); }}
