@@ -17,6 +17,7 @@ import AiProgressBar from "./components/AiProgressBar";
 import SaveStatusIndicator from "./components/SaveStatusIndicator";
 import CriticalDates from "./components/CriticalDates";
 import MarkToMarket from "./components/MarkToMarket";
+import CoTenancyCascade from "./components/CoTenancyCascade";
 import { isSupportedUpload } from "./lib/fileExtract";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
@@ -170,6 +171,7 @@ function AppInner() {
     else if (dest === "watchlist") setAnalyticsView("watchlist");
     else if (dest === "critical-dates") setAnalyticsView("calendar");
     else if (dest === "mark-to-market") setAnalyticsView("marktomarket");
+    else if (dest === "cotenancy-cascade") setAnalyticsView("cotenancy");
     else setAnalyticsView("tenant");
     if (dest === "lease-rollover") {
       setTimeout(() => document.getElementById("section-lease-rollover")?.scrollIntoView({ behavior: "smooth", block: "start" }), 140);
@@ -185,7 +187,7 @@ function AppInner() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [closingCalcOpen, setClosingCalcOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket">("tenant");
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy">("tenant");
 
   // Scroll analytics content to top whenever the view changes
   useEffect(() => {
@@ -501,6 +503,8 @@ function AppInner() {
                   <CriticalDates deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "marktomarket" ? (
                   <MarkToMarket deals={activeDeals} onOpenDeal={handleOpenDeal} />
+                ) : analyticsView === "cotenancy" ? (
+                  <CoTenancyCascade deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "watchlist" ? (
                   <div style={{ padding: "24px 18px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
                     <RetailerWatchlist deals={activeDeals} onOpenDeal={handleOpenDeal} onTenantClick={handleOpenTenant} />
