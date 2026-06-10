@@ -538,6 +538,14 @@ export async function apiRefreshDemographics(dealId: string): Promise<import("./
   return data.marketDemographics ?? null;
 }
 
+// Derive Market/Submarket from the deal's address (free Census geocoder).
+export async function apiRefreshMarket(dealId: string): Promise<{ marketGeo: import("./idb").MarketGeo | null; market: string | null; submarket: string | null }> {
+  const resp = await apiFetch(`/deals/${dealId}/refresh-market`, { method: "POST" });
+  if (!resp.ok) throw new Error(`Market lookup failed: ${resp.status}`);
+  const data = await resp.json() as { marketGeo?: import("./idb").MarketGeo | null; market?: string | null; submarket?: string | null };
+  return { marketGeo: data.marketGeo ?? null, market: data.market ?? null, submarket: data.submarket ?? null };
+}
+
 // Refresh score using latest tenant benchmarks — no re-extraction, no PDF needed
 export async function apiRescore(id: string): Promise<{
   dealScore?: unknown;

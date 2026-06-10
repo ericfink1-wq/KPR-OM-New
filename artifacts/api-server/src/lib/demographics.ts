@@ -1,6 +1,70 @@
 // fetchCensusDemographics — free US Census Bureau APIs, no key required.
 import { fetchWithTimeout } from "./http";
 
+// ── Address → market (MSA/metro) + submarket ─────────────────────────────────
+// Derives the metro market and a submarket proxy from an address using the free
+// US Census GEOGRAPHIES geocoder. The geocoder needs NO API key (only the ACS
+// data API does), so this works even when CENSUS_API_KEY isn't configured. It's
+// authoritative public data, not an AI guess — but still surfaced as "derived
+// from address" so it's never confused with an OM-stated value.
+export interface MarketGeo {
+  market?: string | null;       // CBSA / metro, e.g. "Lancaster, PA Metro Area"
+  submarket?: string | null;    // place/township proxy, e.g. "Lititz borough"
+  county?: string | null;
+  matchedAddress?: string | null;
+  source?: string;
+  lookedUpAt?: string;
+}
+
+export async function fetchAddressMarket(address: string): Promise<MarketGeo | null> {
+  try {
+    const url =
+      `https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress` +
+      `?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
+    const resp = await fetchWithTimeout(url);
+    if (!resp.ok) return null;
+    const text = await resp.text();
+    if (text.trim().startsWith("<")) return null; // HTML error page, not JSON
+    const json = JSON.parse(text) as {
+      result?: { addressMatches?: Array<{ matchedAddress?: string; geographies?: Record<string, Array<Record<string, unknown>>> }> };
+    };
+    const match = json?.result?.addressMatches?.[0];
+    const geos = match?.geographies;
+    if (!geos) return null;
+
+    // First non-empty NAME under any geography layer whose key matches the predicate.
+    const nameFrom = (pred: (k: string) => boolean): string | null => {
+      for (const k of Object.keys(geos)) {
+        if (!pred(k)) continue;
+        const f = geos[k]?.[0];
+        const n = f && typeof f.NAME === "string" ? f.NAME.trim() : "";
+        if (n) return n;
+      }
+      return null;
+    };
+    // Metro = Metropolitan/Micropolitan Statistical Area (CBSA). Note "Combined
+    // Statistical Areas" is intentionally NOT matched (too broad for a market).
+    const market = nameFrom(k => /metropolitan.*statistical|micropolitan.*statistical|core based statistical|\bcbsa\b/i.test(k));
+    // Submarket proxy: the incorporated place / CDP (city), else the county subdivision (township).
+    const submarket =
+      nameFrom(k => /incorporated place|census designated place/i.test(k)) ||
+      nameFrom(k => /county subdivision/i.test(k));
+    const county = nameFrom(k => /count(y|ies)/i.test(k) && !/subdivision/i.test(k));
+    if (!market && !submarket && !county) return null;
+
+    return {
+      market: market ?? null,
+      submarket: submarket ?? county ?? null,
+      county: county ?? null,
+      matchedAddress: match?.matchedAddress ?? null,
+      source: "US Census Bureau geocoder (TIGER)",
+      lookedUpAt: new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface MarketDemographics {
   pop1mi?: number | null;
   pop3mi?: number | null;

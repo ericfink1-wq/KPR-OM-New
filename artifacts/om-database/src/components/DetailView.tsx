@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRescore, apiGetRates,
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
   apiListLeaseAbstracts } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD } from "../lib/utils";
@@ -1374,6 +1374,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [showAbstractUpload, setShowAbstractUpload] = useState(false);
   const [saleBusy, setSaleBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
+  const [marketBusy, setMarketBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [tab, setTab] = useState<"overview" | "ai" | "tenants" | "transaction" | "financing" | "market" | "underwriting">("overview");
@@ -1724,6 +1725,20 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       finishAiTask(taskId, "error", err instanceof Error ? err.message : "Demographics lookup failed");
     }
     finally { setDemoBusy(false); }
+  };
+
+  // Derive Market / Submarket from the address — free Census geocoder, no AI/tokens,
+  // so no confirmation prompt. Fills the PROPERTY INFO rows the OM left blank.
+  const onGetMarket = async (id: string) => {
+    setMarketBusy(true);
+    try {
+      const r = await apiRefreshMarket(id);
+      onUpdate(id, { market: r.market ?? undefined, submarket: r.submarket ?? undefined, marketGeo: r.marketGeo, marketGeoChecked: new Date().toISOString() });
+    } catch {
+      /* non-fatal — leave fields as-is */
+    } finally {
+      setMarketBusy(false);
+    }
   };
 
   const parsePageSpec = (spec: string, max: number): number[] => {
@@ -3350,8 +3365,34 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* Property info */}
       <div id="section-property-info" style={{ marginBottom:12 }}>
         <Card title="PROPERTY INFO">
-          <Row l="MARKET" v={d.market}/>
-          <Row l="SUBMARKET" v={d.submarket}/>
+          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:2 }}>
+            <button onClick={() => onGetMarket(d.id)} disabled={marketBusy || !(d.address || d.city || d.state)}
+              title="Derive Market & Submarket from the address (free US Census geocoder — no tokens)"
+              style={{ background:"transparent", border:"1px solid #0d9488", color:(marketBusy||!(d.address||d.city||d.state))?"#a69e91":"#0d9488", padding:"4px 10px", borderRadius:5, cursor:(marketBusy||!(d.address||d.city||d.state))?"default":"pointer", fontSize:9.5, fontWeight:600, fontFamily:"'Inter',sans-serif", letterSpacing:"0.04em" }}>
+              {marketBusy ? "PULLING…" : ((d.market||d.submarket) ? "RE-PULL MARKET" : "PULL MARKET FROM ADDRESS")}
+            </button>
+          </div>
+          {(() => {
+            const tag = (
+              <span title="Derived from the address via the US Census geocoder — verify before relying on it"
+                style={{ fontSize:7.5, fontWeight:700, color:"#0d9488", background:"#0d948815", border:"1px solid #0d948840", borderRadius:4, padding:"1px 4px", letterSpacing:"0.04em", whiteSpace:"nowrap" }}>AUTO · VERIFY</span>
+            );
+            const derivedMkt = !!(d.marketGeo?.market && d.market && d.market === d.marketGeo.market);
+            const derivedSub = !!(d.marketGeo?.submarket && d.submarket && d.submarket === d.marketGeo.submarket);
+            const infoRow = (l: string, v: unknown, derived: boolean) => (
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e7e0d2" }}>
+                <span style={{ fontSize:10, color:"#6f6a5f", letterSpacing:"0.05em" }}>{l}</span>
+                <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  {derived && tag}
+                  <span style={{ fontSize:11, color:"#383a37", fontWeight:500 }}>{(v != null && v !== "") ? String(v) : <span style={{ color:"#958d80" }}>—</span>}</span>
+                </span>
+              </div>
+            );
+            return (<>
+              {infoRow("MARKET", d.market, derivedMkt)}
+              {infoRow("SUBMARKET", d.submarket, derivedSub)}
+            </>);
+          })()}
           {/* Broker & Seller are LINKED with the Transaction Details fields —
               editing here writes both so you only enter each once. */}
           <EditableTextRow label="BROKER" value={d.broker ?? d.acqBroker} placeholder="Listing / deal broker" onSave={v => onUpdate(d.id, { broker: v, acqBroker: v })} />

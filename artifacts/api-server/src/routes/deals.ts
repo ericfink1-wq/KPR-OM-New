@@ -6,7 +6,7 @@ import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHou
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
-import { fetchCensusDemographics } from "../lib/demographics";
+import { fetchCensusDemographics, fetchAddressMarket } from "../lib/demographics";
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { requireAuth } from "../middleware/auth";
 import type { Logger } from "pino";
@@ -44,6 +44,40 @@ function composeAddressForGeocoder(deal: {
   const street = parts[0];
   if (parts.length === 1 && /,.*\b[A-Z]{2}\b/.test(street)) return street;
   return parts.join(", ");
+}
+
+// Auto-derive Market / Submarket from the address when the OM didn't state them.
+// Fills ONLY blank fields (an OM-stated or hand-entered market always wins), reuses
+// a prior derivation when present (so the free geocoder is hit at most once), and
+// stamps marketGeoChecked so a blank result isn't retried on every save. Mirrors the
+// auto-demographics pattern; safe to call in the background (re-reads the row before
+// writing so it never clobbers a concurrent update).
+async function maybeFillMarketFromAddress(id: string, data: Record<string, unknown>): Promise<void> {
+  const market = typeof data.market === "string" ? data.market.trim() : "";
+  const submarket = typeof data.submarket === "string" ? data.submarket.trim() : "";
+  if (market && submarket) return;                       // nothing blank to fill
+  const composed = composeAddressForGeocoder(data as { address?: string | null; city?: string | null; state?: string | null });
+  if (!composed) return;                                 // no address yet
+  if (data.marketGeoChecked && !data.marketGeo) return;  // already tried, found nothing
+
+  let geo = (data.marketGeo ?? null) as { market?: string | null; submarket?: string | null } | null;
+  if (!geo) geo = await fetchAddressMarket(composed);
+
+  const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+  if (!rows.length) return;
+  const current = rows[0].data as Record<string, unknown>;
+  const curMarket = typeof current.market === "string" ? current.market.trim() : "";
+  const curSub = typeof current.submarket === "string" ? current.submarket.trim() : "";
+
+  const patch: Record<string, unknown> = { marketGeoChecked: new Date().toISOString() };
+  if (geo) {
+    patch.marketGeo = geo;
+    if (!curMarket && geo.market) patch.market = geo.market;
+    if (!curSub && geo.submarket) patch.submarket = geo.submarket;
+  }
+  await db.update(dealsTable)
+    .set({ data: { ...current, ...patch }, updatedAt: new Date() })
+    .where(eq(dealsTable.id, id));
 }
 
 async function loadAliasMap(): Promise<Record<string, string>> {
@@ -94,6 +128,7 @@ const USER_PRESERVED_KEYS = new Set([
   "tenants", "tenantsAsOf", "tenantsManual", "tenantsSource", "occupancy", "walt", "weightedAvgRentPSF",
   "marketSale", "marketSaleChecked",
   "marketDemographics", "demoChecked",
+  "marketGeo", "marketGeoChecked",
   "verified", "propertyGroupId", "editHistory", "aka",
   "trashedAt", "uploadedAt", "fileName", "pdfPages", "imageMeta", "dealScore",
   "prefLender", "prefAmount", "prefRateCurrent", "prefRateAllIn", "prefReturnType", "prefOriginationDate", "prefMaturityDate", "prefTermYears", "prefRecourse", "prefNotes",
@@ -287,6 +322,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
               } catch {}
             }
           }
+          await maybeFillMarketFromAddress(id, clean).catch(() => {});
         })();
       });
       res.status(201).json({ ok: true, id, merged: false, propertyName: String(clean.propertyName ?? "") });
@@ -338,28 +374,33 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
       // background (re-distills unless the House View was hand-edited).
       const newReview = typeof rest.dealReview === "string" ? rest.dealReview.trim() : "";
       if (newReview !== prevReview) autoUpdateHouseViewOnReview(req.session.userEmail || null).catch(() => {});
-      // Auto-fetch demographics for new deals that have an address but no demo data yet
-      if (!rest.marketDemographics && !rest.demoChecked) {
-        (async () => {
+      // Auto-fetch demographics for new deals that have an address but no demo data yet,
+      // then auto-derive Market/Submarket from the address (free Census geocoder) when
+      // those are blank — runs on edit too (this is the upsert path), so adding an
+      // address later backfills the market.
+      (async () => {
+        if (!rest.marketDemographics && !rest.demoChecked) {
           const composed = composeAddressForGeocoder(rest as { address?: string | null; city?: string | null; state?: string | null });
-          if (!composed) return;
-          try {
-            const demo = await fetchCensusDemographics(composed);
-            if (demo) {
-              const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
-              if (rows.length) {
-                const current = rows[0].data as Record<string, unknown>;
-                await db.update(dealsTable)
-                  .set({
-                    data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() },
-                    updatedAt: new Date(),
-                  })
-                  .where(eq(dealsTable.id, id));
+          if (composed) {
+            try {
+              const demo = await fetchCensusDemographics(composed);
+              if (demo) {
+                const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+                if (rows.length) {
+                  const current = rows[0].data as Record<string, unknown>;
+                  await db.update(dealsTable)
+                    .set({
+                      data: { ...current, marketDemographics: demo, demoChecked: new Date().toISOString() },
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(dealsTable.id, id));
+                }
               }
-            }
-          } catch {}
-        })();
-      }
+            } catch {}
+          }
+        }
+        await maybeFillMarketFromAddress(id, rest).catch(() => {});
+      })();
     });
   } catch (err) {
     req.log.error({ err }, "Failed to upsert deal");
@@ -776,6 +817,31 @@ router.post("/deals/:id/refresh-demographics", requireAuth, async (req, res) => 
   } catch (err) {
     req.log.error({ err }, "Failed to refresh demographics");
     res.status(500).json({ error: "Failed to refresh demographics" });
+  }
+});
+
+// POST /api/deals/:id/refresh-market — derive Market/Submarket from the address
+// (free Census geocoder). Manual re-pull; overwrites both with the derived values
+// (these fields aren't hand-edited in the UI) and stamps marketGeo for provenance.
+router.post("/deals/:id/refresh-market", requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    if (!rows.length) { res.status(404).json({ error: "Deal not found" }); return; }
+    const current = rows[0].data as Record<string, unknown>;
+    const composed = composeAddressForGeocoder(current as { address?: string | null; city?: string | null; state?: string | null });
+    if (!composed) { res.status(400).json({ error: "Deal has no address" }); return; }
+    const geo = await fetchAddressMarket(composed);
+    const patch: Record<string, unknown> = { marketGeo: geo, marketGeoChecked: new Date().toISOString() };
+    if (geo?.market) patch.market = geo.market;
+    if (geo?.submarket) patch.submarket = geo.submarket;
+    await db.update(dealsTable)
+      .set({ data: { ...current, ...patch }, updatedAt: new Date() })
+      .where(eq(dealsTable.id, id));
+    res.json({ ok: true, marketGeo: geo, market: patch.market ?? current.market ?? null, submarket: patch.submarket ?? current.submarket ?? null });
+  } catch (err) {
+    req.log.error({ err }, "Failed to refresh market");
+    res.status(500).json({ error: "Failed to refresh market" });
   }
 });
 

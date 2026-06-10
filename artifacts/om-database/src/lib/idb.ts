@@ -679,6 +679,18 @@ export interface MarketSale {
   lookedUpAt?: string;
 }
 
+// Address-derived market (metro/MSA) + submarket proxy, from the free Census
+// geocoder. Authoritative public data, but surfaced as "derived from address" so
+// it's distinguishable from an OM-stated market.
+export interface MarketGeo {
+  market?: string | null;
+  submarket?: string | null;
+  county?: string | null;
+  matchedAddress?: string | null;
+  source?: string;
+  lookedUpAt?: string;
+}
+
 export interface MarketDemographics {
   pop1mi?: number | null;
   pop3mi?: number | null;
@@ -853,6 +865,9 @@ export interface Deal {
   marketSaleChecked?: string | null;
   marketDemographics?: MarketDemographics | null;
   demoChecked?: string | null;
+  // Address-derived market/submarket (free Census geocoder) + when last checked.
+  marketGeo?: MarketGeo | null;
+  marketGeoChecked?: string | null;
   // Transaction fields (user-entered)
   txnPurchasePrice?: number | null;
   txnSeller?: string | null;
