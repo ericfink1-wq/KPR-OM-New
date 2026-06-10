@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
-import { tenantKey, stripSuiteCode, isVacant } from "../lib/utils";
+import { tenantKey, stripSuiteCode, isVacant, assessClosureRisk } from "../lib/utils";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
@@ -364,6 +364,16 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
 
   const displayYears = selectedYear === "all" ? years : [selectedYear as number];
 
+  // Closure-risk read per tenant: newest year on file vs the prior year, using the
+  // (live-derived) occupancy cost + sales trend. Drives the badge in the name cell.
+  const riskFor = (row: MergedRow): ReturnType<typeof assessClosureRisk> => {
+    const yrs = years.filter(y => row.byYear[y]);
+    if (!yrs.length) return null;
+    const latest = row.byYear[yrs[0]];
+    const prior = yrs.length > 1 ? row.byYear[yrs[1]] : null;
+    return assessClosureRisk(latest?.occupancyCost ?? null, latest?.salesPSF ?? null, prior?.salesPSF ?? null);
+  };
+
   const rows = useMemo(() => {
     let r = allRows.filter(row =>
       !filter.trim() || row.name.toLowerCase().includes(filter.toLowerCase())
@@ -616,8 +626,24 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                   {rows.map((row, i) => (
                     <tr key={row.name} style={{ background: row.removed ? "#f6f4ef" : (i % 2 === 0 ? "#fff" : "#f8fbf5"), borderBottom: "1px solid #eef0eb", opacity: row.removed ? 0.65 : 1 }}>
                       <td style={{ padding: "7px 10px", fontWeight: 600, color: "#262724", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                           <span style={row.removed ? { textDecoration: "line-through", color: "#a89f8f", fontWeight: 500 } : undefined}>{row.name}</span>
+                          {!row.removed && (() => {
+                            const r = riskFor(row);
+                            if (!r) return null;
+                            const high = r.level === "high";
+                            return (
+                              <span title={r.reason} style={{
+                                fontSize: 8.5, fontWeight: 700, letterSpacing: "0.04em", whiteSpace: "nowrap",
+                                color: high ? "#b3403f" : "#9a6a12",
+                                background: high ? "#fdecec" : "#fff3df",
+                                border: `1px solid ${high ? "#f0bcbc" : "#f2d4a0"}`,
+                                borderRadius: 3, padding: "1px 6px", cursor: "help",
+                              }}>
+                                {high ? "⚠ CLOSURE RISK" : "WATCH"}
+                              </span>
+                            );
+                          })()}
                           {onChangeSalesHistory && (
                             row.removed ? (
                               <button onClick={() => applySalesEdit(row.key, { type: "readd" })} title="Removed — click to re-add if that was a mistake / the tenant is back" style={{ fontSize: 9, fontWeight: 700, color: "#3f7a1f", background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 3, padding: "1px 6px", cursor: "pointer" }}>↩ Re-add</button>

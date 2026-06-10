@@ -1069,6 +1069,32 @@ export function buildLatestSales(deal: {
   return out;
 }
 
+// Closure-risk read on a single tenant from its occupancy cost + year-over-year
+// sales trend. Occupancy cost is the share of a tenant's sales eaten by rent+
+// recoveries; the rough retail rules of thumb are <10% healthy, 10–15% workable,
+// >15% stressed, >20% generally unsustainable. A store that's both stressed AND
+// shrinking is the classic pre-closure signature — that's "high"; stressed-but-flat
+// or a sharp sales drop alone is "watch". Returns null when there's nothing to flag.
+export interface ClosureRisk { level: "high" | "watch"; reason: string; occCost: number | null; yoyPct: number | null }
+export function assessClosureRisk(occCost: number | null, latestPSF: number | null, priorPSF: number | null): ClosureRisk | null {
+  const yoyPct = (latestPSF != null && priorPSF != null && priorPSF > 0 && latestPSF !== priorPSF)
+    ? ((latestPSF - priorPSF) / priorPSF) * 100 : null;
+  const occ = occCost;
+  if (occ != null && occ > 20) {
+    return { level: "high", reason: `Occupancy cost ${occ.toFixed(1)}% — generally unsustainable`, occCost: occ, yoyPct };
+  }
+  if (occ != null && occ > 15 && yoyPct != null && yoyPct < 0) {
+    return { level: "high", reason: `Occupancy cost ${occ.toFixed(1)}% and sales down ${Math.abs(yoyPct).toFixed(1)}% YoY`, occCost: occ, yoyPct };
+  }
+  if (occ != null && occ > 15) {
+    return { level: "watch", reason: `Occupancy cost ${occ.toFixed(1)}% — elevated`, occCost: occ, yoyPct };
+  }
+  if (yoyPct != null && yoyPct < -10) {
+    return { level: "watch", reason: `Sales down ${Math.abs(yoyPct).toFixed(1)}% YoY`, occCost: occ, yoyPct };
+  }
+  return null;
+}
+
 /**
  * Build a per-deal map of resolved latest sales, keyed by deal id (then fileName).
  * Lets cross-property views (Tenant page, Parent page, Tenant Analytics) surface
