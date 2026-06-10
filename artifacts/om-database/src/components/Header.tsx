@@ -529,7 +529,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             }}>
               {(analyticsMenu === "portfolio"
                 ? [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"], ["Critical Dates", "critical-dates"]]
-                : [["Tenant Analytics", "tenant-list"], ["Retailer Watchlist", "watchlist"], ["Tenant Name Audit", "tenant-audit"], ["Link Tenants", "link-tenants"]]
+                : [["Tenant Analytics", "tenant-list"], ["Mark-to-Market", "mark-to-market"], ["Retailer Watchlist", "watchlist"], ["Tenant Name Audit", "tenant-audit"], ["Link Tenants", "link-tenants"]]
               ).map(([label, dest], i, arr) => (
                 <button key={dest} onClick={() => { setAnalyticsMenu(null); onAnalyticsNav?.(dest); }}
                   style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: i < arr.length - 1 ? "1px solid #f1eadc" : "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#383a37", fontWeight: 600, whiteSpace: "nowrap" }}
