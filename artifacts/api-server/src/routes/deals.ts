@@ -6,7 +6,7 @@ import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHou
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
-import { fetchCensusDemographics, fetchAddressMarket } from "../lib/demographics";
+import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from "../lib/demographics";
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
@@ -58,10 +58,16 @@ async function maybeFillMarketFromAddress(id: string, data: Record<string, unkno
   if (market && submarket) return;                       // nothing blank to fill
   const composed = composeAddressForGeocoder(data as { address?: string | null; city?: string | null; state?: string | null });
   if (!composed) return;                                 // no address yet
-  if (data.marketGeoChecked && !data.marketGeo) return;  // already tried, found nothing
 
-  let geo = (data.marketGeo ?? null) as { market?: string | null; submarket?: string | null } | null;
-  if (!geo) geo = await fetchAddressMarket(composed);
+  // Only hit the geocoder when we haven't already derived with the CURRENT logic.
+  // `marketGeoVersion` is stamped on every attempt (even one that found nothing), so
+  // an unresolvable address isn't re-fetched on every save — but a cache from older
+  // logic (e.g. before layers=all) IS re-fetched, so deals saved earlier backfill
+  // their market. A current-but-blank cache is final: nothing more to find here.
+  const cached = (data.marketGeo ?? null) as { market?: string | null; submarket?: string | null } | null;
+  const alreadyCurrent = data.marketGeoVersion === MARKET_GEO_VERSION;
+  const geo = alreadyCurrent ? cached : await fetchAddressMarket(composed);
+  if (alreadyCurrent && !geo) return;                    // already tried, nothing to apply
 
   const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
   if (!rows.length) return;
@@ -69,7 +75,10 @@ async function maybeFillMarketFromAddress(id: string, data: Record<string, unkno
   const curMarket = typeof current.market === "string" ? current.market.trim() : "";
   const curSub = typeof current.submarket === "string" ? current.submarket.trim() : "";
 
-  const patch: Record<string, unknown> = { marketGeoChecked: new Date().toISOString() };
+  const patch: Record<string, unknown> = {
+    marketGeoChecked: new Date().toISOString(),
+    marketGeoVersion: MARKET_GEO_VERSION,
+  };
   if (geo) {
     patch.marketGeo = geo;
     if (!curMarket && geo.market) patch.market = geo.market;
@@ -839,7 +848,7 @@ router.post("/deals/:id/refresh-market", requireAuth, async (req, res) => {
     // Fill blanks only — never overwrite a Market/Submarket the OM already set.
     const curMarket = typeof current.market === "string" ? current.market.trim() : "";
     const curSub = typeof current.submarket === "string" ? current.submarket.trim() : "";
-    const patch: Record<string, unknown> = { marketGeo: geo, marketGeoChecked: new Date().toISOString() };
+    const patch: Record<string, unknown> = { marketGeo: geo, marketGeoChecked: new Date().toISOString(), marketGeoVersion: MARKET_GEO_VERSION };
     if (!curMarket && geo?.market) patch.market = geo.market;
     if (!curSub && geo?.submarket) patch.submarket = geo.submarket;
     await db.update(dealsTable)

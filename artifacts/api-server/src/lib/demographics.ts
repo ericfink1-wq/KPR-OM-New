@@ -7,6 +7,11 @@ import { fetchWithTimeout } from "./http";
 // data API does), so this works even when CENSUS_API_KEY isn't configured. It's
 // authoritative public data, not an AI guess — but still surfaced as "derived
 // from address" so it's never confused with an OM-stated value.
+// Bump when the derivation logic changes so cached results from older logic are
+// re-fetched instead of trusted. v2 = adds layers=all (so the metro/MSA layer is
+// actually returned) + a city/state centroid fallback.
+export const MARKET_GEO_VERSION = 2;
+
 export interface MarketGeo {
   market?: string | null;       // trimmed MSA, e.g. "Allentown, PA" (from the full CBSA below)
   cbsa?: string | null;         // full CBSA name as returned, e.g. "Allentown-Bethlehem-Easton, PA-NJ Metro Area"
@@ -15,6 +20,7 @@ export interface MarketGeo {
   matchedAddress?: string | null;
   source?: string;
   lookedUpAt?: string;
+  geoVersion?: number;          // MARKET_GEO_VERSION stamped at derivation time
 }
 
 // "Allentown-Bethlehem-Easton, PA-NJ Metro Area" -> "Allentown, PA". Keeps the
@@ -34,51 +40,121 @@ function trimPlaceName(name: string): string {
   return name.replace(/\s+(borough|city|town|village|township|CDP|municipality|\(balance\))$/i, "").trim();
 }
 
+// Pull market / submarket / county names out of a Census "geographies" object.
+// Shared by the onelineaddress (exact-address) and coordinates (centroid) paths,
+// which return the same layer structure.
+function parseGeographies(geos: Record<string, Array<Record<string, unknown>>>): {
+  cbsa: string | null; submarketRaw: string | null; county: string | null;
+} {
+  // First non-empty NAME under any geography layer whose key matches the predicate.
+  const nameFrom = (pred: (k: string) => boolean): string | null => {
+    for (const k of Object.keys(geos)) {
+      if (!pred(k)) continue;
+      const f = geos[k]?.[0];
+      const n = f && typeof f.NAME === "string" ? f.NAME.trim() : "";
+      if (n) return n;
+    }
+    return null;
+  };
+  // Metro = Metropolitan/Micropolitan Statistical Area (CBSA), NOT a metro
+  // division (narrower) and NOT a combined statistical area (too broad).
+  const cbsa = nameFrom(k => /metropolitan.*statistical|micropolitan.*statistical|core based statistical|\bcbsa\b/i.test(k) && !/division/i.test(k));
+  // Submarket proxy: the incorporated place / CDP (city), else the county subdivision (township).
+  const submarketRaw =
+    nameFrom(k => /incorporated place|census designated place/i.test(k)) ||
+    nameFrom(k => /county subdivision/i.test(k));
+  const county = nameFrom(k => /count(y|ies)/i.test(k) && !/subdivision/i.test(k));
+  return { cbsa, submarketRaw, county };
+}
+
+function toMarketGeo(
+  parsed: { cbsa: string | null; submarketRaw: string | null; county: string | null },
+  matchedAddress: string | null,
+  source: string,
+): MarketGeo | null {
+  const { cbsa, submarketRaw, county } = parsed;
+  if (!cbsa && !submarketRaw && !county) return null;
+  return {
+    market: cbsa ? trimMsaName(cbsa) : null,     // "Allentown, PA"
+    cbsa: cbsa ?? null,                          // full name kept for reference
+    submarket: submarketRaw ? trimPlaceName(submarketRaw) : (county ?? null),
+    county: county ?? null,
+    matchedAddress,
+    source,
+    lookedUpAt: new Date().toISOString(),
+    geoVersion: MARKET_GEO_VERSION,
+  };
+}
+
+// Free OpenStreetMap (Nominatim) geocode of a free-text place ("City, ST" or a
+// full address) to a centroid. No API key; usage policy asks for a descriptive
+// User-Agent and low volume — we call this at most once per deal, then cache.
+async function geocodeCentroid(query: string): Promise<{ lat: string; lon: string; label: string | null } | null> {
+  try {
+    const url =
+      `https://nominatim.openstreetmap.org/search` +
+      `?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(query)}`;
+    const resp = await fetchWithTimeout(url, 10_000, {
+      headers: { "User-Agent": "KPR-OM-Database/1.0 (ericfink1@gmail.com)" },
+    });
+    if (!resp.ok) return null;
+    const arr = (await resp.json()) as Array<{ lat?: string; lon?: string; display_name?: string }>;
+    const hit = arr?.[0];
+    if (hit?.lat && hit?.lon) return { lat: hit.lat, lon: hit.lon, label: hit.display_name ?? null };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchAddressMarket(address: string): Promise<MarketGeo | null> {
+  // Path 1 — exact address: the Census geographies/onelineaddress geocoder.
+  // layers=all is REQUIRED: the metro/MSA (CBSA), Incorporated Place and County
+  // Subdivision layers are NOT in the geocoder's default layer set, so without it
+  // the market always comes back blank even on a perfectly matched address.
   try {
     const url =
       `https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress` +
-      `?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
+      `?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=json`;
+    const resp = await fetchWithTimeout(url);
+    if (resp.ok) {
+      const text = await resp.text();
+      if (!text.trim().startsWith("<")) {
+        const json = JSON.parse(text) as {
+          result?: { addressMatches?: Array<{ matchedAddress?: string; geographies?: Record<string, Array<Record<string, unknown>>> }> };
+        };
+        const match = json?.result?.addressMatches?.[0];
+        if (match?.geographies) {
+          const geo = toMarketGeo(parseGeographies(match.geographies), match.matchedAddress ?? null, "US Census Bureau geocoder (TIGER)");
+          if (geo) return geo;
+        }
+      }
+    }
+  } catch {
+    // fall through to the centroid path
+  }
+
+  // Path 2 — city/state (or an address the street geocoder couldn't match):
+  // onelineaddress needs a street number, so "City, ST" returns nothing. Geocode
+  // the free-text string to a centroid (OpenStreetMap), then resolve geographies
+  // from those coordinates via the Census coordinates endpoint.
+  try {
+    const coords = await geocodeCentroid(address);
+    if (!coords) return null;
+    const url =
+      `https://geocoding.geo.census.gov/geocoder/geographies/coordinates` +
+      `?x=${encodeURIComponent(coords.lon)}&y=${encodeURIComponent(coords.lat)}` +
+      `&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=json`;
     const resp = await fetchWithTimeout(url);
     if (!resp.ok) return null;
     const text = await resp.text();
     if (text.trim().startsWith("<")) return null; // HTML error page, not JSON
     const json = JSON.parse(text) as {
-      result?: { addressMatches?: Array<{ matchedAddress?: string; geographies?: Record<string, Array<Record<string, unknown>>> }> };
+      result?: { geographies?: Record<string, Array<Record<string, unknown>>> };
     };
-    const match = json?.result?.addressMatches?.[0];
-    const geos = match?.geographies;
+    const geos = json?.result?.geographies;
     if (!geos) return null;
-
-    // First non-empty NAME under any geography layer whose key matches the predicate.
-    const nameFrom = (pred: (k: string) => boolean): string | null => {
-      for (const k of Object.keys(geos)) {
-        if (!pred(k)) continue;
-        const f = geos[k]?.[0];
-        const n = f && typeof f.NAME === "string" ? f.NAME.trim() : "";
-        if (n) return n;
-      }
-      return null;
-    };
-    // Metro = Metropolitan/Micropolitan Statistical Area (CBSA), NOT a metro
-    // division (narrower) and NOT a combined statistical area (too broad).
-    const cbsa = nameFrom(k => /metropolitan.*statistical|micropolitan.*statistical|core based statistical|\bcbsa\b/i.test(k) && !/division/i.test(k));
-    // Submarket proxy: the incorporated place / CDP (city), else the county subdivision (township).
-    const submarketRaw =
-      nameFrom(k => /incorporated place|census designated place/i.test(k)) ||
-      nameFrom(k => /county subdivision/i.test(k));
-    const county = nameFrom(k => /count(y|ies)/i.test(k) && !/subdivision/i.test(k));
-    if (!cbsa && !submarketRaw && !county) return null;
-
-    return {
-      market: cbsa ? trimMsaName(cbsa) : null,     // "Allentown, PA"
-      cbsa: cbsa ?? null,                          // full name kept for reference
-      submarket: submarketRaw ? trimPlaceName(submarketRaw) : (county ?? null),
-      county: county ?? null,
-      matchedAddress: match?.matchedAddress ?? null,
-      source: "US Census Bureau geocoder (TIGER)",
-      lookedUpAt: new Date().toISOString(),
-    };
+    return toMarketGeo(parseGeographies(geos), coords.label, "US Census Bureau geocoder (TIGER) via OpenStreetMap centroid");
   } catch {
     return null;
   }
