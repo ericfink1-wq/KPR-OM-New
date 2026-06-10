@@ -240,24 +240,28 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
         </>
       )}
 
-      {/* Auto diligence to-do */}
-      {diligence.length > 0 && (
+      {/* Auto diligence to-do. "Verified none" confirmations are listed but NOT counted
+          as to-dos (they're cleared items: the executed lease was pulled and has no clause). */}
+      {diligence.length > 0 && (() => {
+        const todoCount = diligence.filter((d) => d.kind !== "cotenancy_none_verified").length;
+        return (
         <div style={{ marginTop: 12 }}>
           <button onClick={() => setShowDil((s) => !s)}
             style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            {showDil ? "▾" : "▸"} Diligence to-do ({diligence.length})
+            {showDil ? "▾" : "▸"} {todoCount > 0 ? `Diligence to-do (${todoCount})` : "Lease risk — co-tenancy verified"}
           </button>
           {showDil && (
             <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
               {diligence.map((d, i) => (
                 <div key={i} style={{ fontSize: 12, color: C.ink, lineHeight: 1.45, paddingLeft: 4 }}>
-                  <span style={{ color: d.kind === "verify_unverified" ? C.amber : C.faint }}>• </span>{d.message}
+                  <span style={{ color: d.kind === "verify_unverified" ? C.amber : d.kind === "cotenancy_none_verified" ? C.green : C.faint }}>{d.kind === "cotenancy_none_verified" ? "✓ " : "• "}</span>{d.message}
                 </div>
               ))}
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

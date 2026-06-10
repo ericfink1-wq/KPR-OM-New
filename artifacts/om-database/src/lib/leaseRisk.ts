@@ -544,7 +544,7 @@ export function buildRiskMatrix(resolved: ResolvedTenantRisk[]): RiskMatrix {
 
 // ── auto-generated diligence to-do list ──────────────────────────────────────────
 export interface DiligenceItem {
-  kind: "verify_unverified" | "pull_leases_no_cotenancy";
+  kind: "verify_unverified" | "pull_leases_no_cotenancy" | "cotenancy_none_verified";
   tenant: string;
   message: string;
 }
@@ -552,7 +552,10 @@ export interface DiligenceItem {
 /**
  * Auto diligence list:
  *  - every co-tenancy/kickout clause not yet verified against an executed doc → "verify";
- *  - every real (non-vacant, non-shadow/NAP) roster tenant with NO co-tenancy captured →
+ *  - every real (non-vacant, non-shadow/NAP) roster tenant whose EXECUTED lease we've
+ *    abstracted but that has NO co-tenancy/kickout → "verified none" (we pulled the lease
+ *    and confirmed there's no clause — distinct from the OM merely being silent);
+ *  - every real roster tenant with NO clause AND NO abstract (lease not yet pulled) →
  *    "co-tenancy not disclosed in OM — pull leases" (the OM's silence is not evidence
  *    of no risk).
  */
@@ -567,14 +570,19 @@ export function buildDiligenceList(deal: Deal, abstracts: LeaseAbstract[] = []):
       items.push({ kind: "verify_unverified", tenant: r.tenant, message: `${r.tenant}: clause captured from a summary — pull and verify against the executed lease.` });
     }
   }
-  // Only emit "pull leases" once the OM has actually been processed for lease risk
-  // (deal.leaseRisk present). On older deals with no lease-risk data we have no
-  // basis to claim co-tenancy is "not disclosed", and we don't want a noisy list.
-  if (deal.leaseRisk) {
-    for (const t of deal.tenants || []) {
-      if (!t.name || isVacant(t.name)) continue;
-      if (t.isNAP || (t.isAnchor && (t.isDark || t.isNAP))) continue; // shadow/unowned anchors aren't "our" leases to pull
-      if (haveCoTenancy.has(tenantKey(t.canonicalName || t.name))) continue;
+  // A lease abstract means the EXECUTED lease was pulled and read for co-tenancy, so its
+  // absence of a clause is positive evidence ("verified none"), NOT "not disclosed". Only
+  // when we have neither a captured clause nor an abstract — and the OM was actually
+  // processed for lease risk (deal.leaseRisk) — do we say "pull leases".
+  const absKeys = new Set((abstracts || []).filter((a) => a?.tenantName).map((a) => tenantKey(a.tenantName!)));
+  for (const t of deal.tenants || []) {
+    if (!t.name || isVacant(t.name)) continue;
+    if (t.isNAP || (t.isAnchor && (t.isDark || t.isNAP))) continue; // shadow/unowned anchors aren't "our" leases to pull
+    const k = tenantKey(t.canonicalName || t.name);
+    if (haveCoTenancy.has(k)) continue; // co-tenancy captured → handled above
+    if (absKeys.has(k)) {
+      items.push({ kind: "cotenancy_none_verified", tenant: t.canonicalName || t.name, message: `${t.canonicalName || t.name}: no co-tenancy or sales-kickout in the executed lease — verified none.` });
+    } else if (deal.leaseRisk) {
       items.push({ kind: "pull_leases_no_cotenancy", tenant: t.canonicalName || t.name, message: `${t.canonicalName || t.name}: co-tenancy not disclosed in OM — pull leases.` });
     }
   }
