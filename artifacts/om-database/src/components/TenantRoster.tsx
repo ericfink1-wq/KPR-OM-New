@@ -141,7 +141,10 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
   const showTimer = useRef<number | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
-  const isMobile = useIsMobile();
+  // Treat touch devices as "mobile" for this tooltip even when the viewport is wide
+  // (e.g. Safari "Request Desktop Website" on a phone) — so a tap opens the readable
+  // centered modal instead of the hover popover, which gets clipped on a phone.
+  const isMobile = useIsMobile() || (typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);
 
   const place = () => {
     const r = ref.current?.getBoundingClientRect();
