@@ -4287,8 +4287,15 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
                 <input value={manualDraft.floatingIndex} onChange={e => setManualDraft(d => ({ ...d, floatingIndex: e.target.value }))} placeholder="e.g. USD-SOFR CME Term 1M"
                   style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
                 {(() => {
-                  const rec = recognizeRateIndex(manualDraft.floatingIndex);
-                  if (!rec) return null;
+                  const v = manualDraft.floatingIndex.trim();
+                  if (!v) return null;
+                  const rec = recognizeRateIndex(v);
+                  if (!rec) return (
+                    <span title="Not a recognized rate index — double-check the name/tenor (e.g. 'USD-SOFR CME Term 1M', 'WSJ Prime', 'Fed Funds')"
+                      style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:11, fontWeight:700, whiteSpace:"nowrap", color:"#b3403f" }}>
+                      ⚠ unrecognized
+                    </span>
+                  );
                   return (
                     <span title={rec.note ? `${rec.label} — ${rec.note}` : `Recognized rate index: ${rec.label}`}
                       style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:11, fontWeight:700, whiteSpace:"nowrap", color: rec.warn ? "#9a6a12" : "#3f7a1f" }}>
@@ -4356,7 +4363,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
             <span>Fixed <b style={{ color:"#383a37" }}>{swap.fixedRatePct != null ? `${swap.fixedRatePct}%` : "—"}</b></span>
             {swap.floatingIndex && <span>Float <b style={{ color:"#383a37" }}>{swap.floatingIndex}{swap.floatingSpreadBps != null ? ` + ${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""}</b>{(() => {
               const rec = recognizeRateIndex(swap.floatingIndex);
-              if (!rec) return null;
+              if (!rec) return <span title="Not a recognized rate index — double-check the name/tenor" style={{ marginLeft:4, fontWeight:700, color:"#b3403f" }}>⚠ unrecognized</span>;
               return <span title={rec.note ? `${rec.label} — ${rec.note}` : `Recognized rate index: ${rec.label}`} style={{ marginLeft:4, fontWeight:700, color: rec.warn ? "#9a6a12" : "#3f7a1f" }}>{rec.warn ? "⚠" : "✓"}</span>;
             })()}</span>}
             <span>Matures <b style={{ color:"#383a37" }}>{swap.terminationDate || "—"}</b></span>
