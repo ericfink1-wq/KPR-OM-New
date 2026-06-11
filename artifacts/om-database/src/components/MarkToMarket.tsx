@@ -163,14 +163,14 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
             return (
             <div key={dm.dealId} style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, padding: "10px 16px", marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <button onClick={() => toggleCollapse(dm.dealId)} title={isOpen ? "Collapse" : "Expand"}
-                    style={{ background: "none", border: "none", padding: 0, color: "#a89f8f", cursor: "pointer", fontSize: 13, width: 14, flexShrink: 0 }}>
-                    {isOpen ? "▾" : "▸"}
-                  </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
                   <button onClick={() => onOpenDeal(dm.dealId)}
-                    style={{ background: "none", border: "none", padding: 0, color: "#26281f", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "'Fraunces',Georgia,serif", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    style={{ background: "none", border: "none", padding: 0, color: "#26281f", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "'Fraunces',Georgia,serif", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
                     {dm.dealName}
+                  </button>
+                  <button onClick={() => toggleCollapse(dm.dealId)} title={isOpen ? "Collapse" : "Expand"} aria-expanded={isOpen}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#f4f1ea", border: "1px solid #e3dccd", borderRadius: 8, padding: "4px 10px", color: "#6b6356", cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    <span style={{ fontSize: 12, lineHeight: 1 }}>{isOpen ? "▾" : "▸"}</span>{isOpen ? "Collapse" : "Expand"}
                   </button>
                 </div>
                 <button onClick={() => toggleCollapse(dm.dealId)}
