@@ -4354,7 +4354,11 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
           <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:11.5, color:"#6f6a5f", marginBottom:10 }}>
             <span>Notional <b style={{ color:"#383a37" }}>{fmt$(swap.notional ?? null)}</b></span>
             <span>Fixed <b style={{ color:"#383a37" }}>{swap.fixedRatePct != null ? `${swap.fixedRatePct}%` : "—"}</b></span>
-            {swap.floatingIndex && <span>Float <b style={{ color:"#383a37" }}>{swap.floatingIndex}{swap.floatingSpreadBps != null ? ` + ${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""}</b></span>}
+            {swap.floatingIndex && <span>Float <b style={{ color:"#383a37" }}>{swap.floatingIndex}{swap.floatingSpreadBps != null ? ` + ${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""}</b>{(() => {
+              const rec = recognizeRateIndex(swap.floatingIndex);
+              if (!rec) return null;
+              return <span title={rec.note ? `${rec.label} — ${rec.note}` : `Recognized rate index: ${rec.label}`} style={{ marginLeft:4, fontWeight:700, color: rec.warn ? "#9a6a12" : "#3f7a1f" }}>{rec.warn ? "⚠" : "✓"}</span>;
+            })()}</span>}
             <span>Matures <b style={{ color:"#383a37" }}>{swap.terminationDate || "—"}</b></span>
             {swap.counterparty && <span>Dealer <b style={{ color:"#383a37" }}>{swap.counterparty}</b></span>}
           </div>
