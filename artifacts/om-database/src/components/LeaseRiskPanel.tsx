@@ -110,7 +110,7 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
   const tier1Delta = (exp && expOM && expOM.tier1Rent !== exp.tier1Rent);
 
   return (
-    <div id="section-lease-risk" data-jump="Lease Risk" style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: isMobile ? "12px 13px" : "14px 16px", marginTop: 14 }}>
+    <div id="section-lease-risk" data-jump="Lease Risk" style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: isMobile ? "12px 13px" : "14px 16px", marginTop: 14, marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>LEASE RISK · ANCHOR DEPENDENCY</div>
         {hasMatrix && (
