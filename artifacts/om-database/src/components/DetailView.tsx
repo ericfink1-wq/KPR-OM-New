@@ -6,7 +6,7 @@ import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, api
   apiListLeaseAbstracts } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
-import { extractSwap, buildSwapPatch } from "../lib/swapExtract";
+import { extractSwap, buildSwapPatch, recognizeRateIndex } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
 import { extractLoan, buildLoanPatch } from "../lib/loanExtract";
 import { amortForDeal, currentBalanceFromRows } from "../lib/amortize";
@@ -4283,8 +4283,20 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
             </label>
             <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
               Floating index (optional)
-              <input value={manualDraft.floatingIndex} onChange={e => setManualDraft(d => ({ ...d, floatingIndex: e.target.value }))} placeholder="e.g. USD-SOFR CME Term 1M"
-                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <input value={manualDraft.floatingIndex} onChange={e => setManualDraft(d => ({ ...d, floatingIndex: e.target.value }))} placeholder="e.g. USD-SOFR CME Term 1M"
+                  style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+                {(() => {
+                  const rec = recognizeRateIndex(manualDraft.floatingIndex);
+                  if (!rec) return null;
+                  return (
+                    <span title={rec.note ? `${rec.label} — ${rec.note}` : `Recognized rate index: ${rec.label}`}
+                      style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:11, fontWeight:700, whiteSpace:"nowrap", color: rec.warn ? "#9a6a12" : "#3f7a1f" }}>
+                      {rec.warn ? "⚠" : "✓"} {rec.label}
+                    </span>
+                  );
+                })()}
+              </div>
             </label>
             <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
               Floating spread (bps, optional)

@@ -2,6 +2,36 @@ import type { Deal, InterestRateSwap } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON } from "./utils";
 
+// Recognize a free-text floating-rate index against the common CRE benchmarks, so the
+// swap editor can confirm (green check) that what was typed IS a known index, and name
+// it. Returns null when blank/unrecognized; warn=true for legacy/discontinued benchmarks
+// (LIBOR, BSBY) that should no longer be the operative index.
+export function recognizeRateIndex(raw: string | null | undefined): { label: string; note?: string; warn?: boolean } | null {
+  const t = (raw || "").trim().toLowerCase();
+  if (!t) return null;
+  const tenor = (): string | null => {
+    const m = t.match(/\b(1|3|6|12)\s*-?\s*(?:m|mo|month)s?\b/);
+    if (m) return `${m[1]}M`;
+    if (/\bdaily\s*simple\b/.test(t)) return "Daily Simple";
+    if (/\bcompounded\b/.test(t)) return "Compounded";
+    if (/\baverage\b/.test(t)) return "Average";
+    if (/\bovernight\b/.test(t)) return "Overnight";
+    return null;
+  };
+  if (/\bsofr\b/.test(t)) {
+    const tn = tenor();
+    const isTerm = (/\bterm\b/.test(t) || /\bcme\b/.test(t)) && !/daily|average|compounded/.test(t);
+    return { label: `${isTerm ? "Term SOFR" : "SOFR"}${tn ? ` · ${tn}` : ""}` };
+  }
+  if (/\bbsby\b/.test(t)) return { label: "BSBY", note: "discontinued Nov 2024 — confirm the fallback index", warn: true };
+  if (/\blibor\b/.test(t)) return { label: "USD LIBOR", note: "ceased — legacy; confirm SOFR fallback", warn: true };
+  if (/\bameribor\b/.test(t)) return { label: "AMERIBOR" };
+  if (/\b(?:effr|obfr)\b/.test(t) || /\b(?:fed|federal)\s*funds\b/.test(t)) return { label: "Fed Funds (EFFR)" };
+  if (/\bprime\b/.test(t)) return { label: "WSJ Prime Rate" };
+  if (/\b(?:cmt|constant\s*maturity|treasury|ust|t-?bill)\b/.test(t)) return { label: "Treasury / CMT" };
+  return null;
+}
+
 // Build the deal patch from an imported swap: store the terms, set the loan's
 // all-in rate to the swap's fixed rate (the confirmation's floating leg already
 // carries the credit spread, so the fixed IS the all-in), default the loan to
