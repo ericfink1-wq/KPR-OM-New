@@ -148,6 +148,48 @@ function fullLeaseNotes(a: LeaseAbstract): Map<string, { value: string; cite?: A
   return m;
 }
 
+// --- Issues Summary helpers (the cross-tenant matrix, KPR's lead tab) -----------
+const tenantLabel = (a: LeaseAbstract): string => sv(a.tenantName) || sv(a.dba) || "Tenant";
+
+// One issue's value for a tenant, pulled from the merged lease-notes map. A blank
+// (never-populated) issue renders "None" to mirror KPR's convention — so abstracts
+// MUST carry an explicit value or explicit "None" for each tracked dimension.
+function issueValue(map: Map<string, { value: string }>, code: string): string {
+  const n = map.get(code);
+  return n && n.value ? n.value : "None";
+}
+
+// Add N days to an ISO date → m/d/yyyy. Used for "1st Option Begins" (= day after
+// the current lease expiration, which is when the first renewal term starts).
+function addDaysMDY(iso: string | null | undefined, days: number): string {
+  if (!iso) return "";
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  const dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return `${dt.getUTCMonth() + 1}/${dt.getUTCDate()}/${dt.getUTCFullYear()}`;
+}
+
+// Renewal-options summary: "N @ Y years" | first-option-begins | first-option PSF.
+function renewalCells(a: LeaseAbstract): [string, string, string] {
+  const opts = (a.options || []).filter(Boolean);
+  if (!opts.length) return ["None", "", ""];
+  const n = opts.length;
+  const yrs = opts.map((o) => (o.termMonths != null && o.termMonths !== "" ? Math.round(Number(o.termMonths) / 12) : null));
+  const uniform = yrs.every((y) => y != null && y === yrs[0]);
+  const lenTxt = uniform && yrs[0] ? `${n} @ ${yrs[0]} years` : `${n} option${n > 1 ? "s" : ""}`;
+  const begins = addDaysMDY(a.expiration, 1) || mdy(opts[0].windowStart);
+  const r0 = opts[0].ratePSF;
+  const rate = r0 != null && r0 !== "" ? `$${Number(r0).toFixed(2)}` : "";
+  return [lenTxt, begins, rate];
+}
+
+const depositText = (a: LeaseAbstract): string => fval(a.securityDeposit) || sv(a.deposit?.cashDeposit) || "None";
+function depositDollars(s: string): number {
+  const m = s.replace(/,/g, "").match(/\$?\s*(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : 0;
+}
+
 type WS = ExcelJS.Worksheet;
 
 // A small cursor-based writer over one worksheet.
@@ -413,6 +455,80 @@ function writeTab(ws: WS, a: LeaseAbstract): void {
   }
 }
 
+// The "Issues Summary" tab: KPR's lead sheet — one section per issue, every tenant
+// a row, so the whole center's risk reads on one page. Mirrors the section order in
+// Eric's workbook: Renewal Options, Radius, Security Deposits (+ total), Landlord
+// Restrictions, Tenant Restrictions, Co-Tenancy, Exclusives, Tenant Termination,
+// Landlord Termination, Relocate.
+function writeIssuesSummary(ws: WS, abstracts: LeaseAbstract[]): void {
+  const w = makeWriter(ws);
+  ws.views = [{ state: "frozen", ySplit: 1, xSplit: 0 }];
+  w.title("Issues Summary");
+
+  const maps = new Map(abstracts.map((a) => [a, fullLeaseNotes(a)]));
+
+  // Renewal Options (three sub-columns).
+  w.section("Renewal Options");
+  {
+    const hr = w.row();
+    const sub: [number, number, string][] = [[3, 6, "Number/Length"], [7, 9, "1st Option Begins"], [10, 13, "Initial Annual Rent/sf"]];
+    for (const [c1, c2, label] of sub) { w.set(hr, c1, label, { font: { bold: true, size: 9, color: { argb: SUB } }, alignment: { vertical: "middle" } }); w.merge(hr, c1, c2); }
+    w.next();
+    for (const a of abstracts) {
+      const rr = w.row();
+      const [len, begins, rate] = renewalCells(a);
+      w.set(rr, 1, tenantLabel(a), { font: { bold: true, size: 9.5, color: { argb: INK } }, alignment: { vertical: "top", wrapText: true } }); w.merge(rr, 1, 2);
+      w.set(rr, 3, len, { font: { size: 9.5, color: { argb: len === "None" ? FAINT : INK } }, alignment: { vertical: "top" } }); w.merge(rr, 3, 6);
+      w.set(rr, 7, begins, { font: { size: 9.5, color: { argb: INK } }, alignment: { vertical: "top" } }); w.merge(rr, 7, 9);
+      w.set(rr, 10, rate, { font: { size: 9.5, color: { argb: INK } }, alignment: { vertical: "top" } }); w.merge(rr, 10, 13);
+      w.next();
+    }
+    w.blank();
+  }
+
+  // Single-value issue sections.
+  const valueSection = (title: string, get: (a: LeaseAbstract) => string) => {
+    w.section(title);
+    for (const a of abstracts) {
+      const rr = w.row();
+      const val = get(a) || "None";
+      w.set(rr, 1, tenantLabel(a), { font: { bold: true, size: 9.5, color: { argb: INK } }, alignment: { vertical: "top", wrapText: true } }); w.merge(rr, 1, 2);
+      w.set(rr, 3, val, { font: { size: 9.5, color: { argb: val === "None" ? FAINT : INK } }, alignment: { vertical: "top", wrapText: true } }); w.merge(rr, 3, LAST_COL);
+      w.bumpHeight(rr, 3, LAST_COL, val);
+      w.next();
+    }
+    w.blank();
+  };
+
+  valueSection("Radius Restriction", (a) => issueValue(maps.get(a)!, "RADIUS"));
+
+  // Security Deposits + grand total.
+  {
+    w.section("Security Deposits");
+    let total = 0;
+    for (const a of abstracts) {
+      const rr = w.row();
+      const val = depositText(a);
+      total += depositDollars(val);
+      w.set(rr, 1, tenantLabel(a), { font: { bold: true, size: 9.5, color: { argb: INK } }, alignment: { vertical: "top", wrapText: true } }); w.merge(rr, 1, 2);
+      w.set(rr, 3, val, { font: { size: 9.5, color: { argb: val === "None" ? FAINT : INK } }, alignment: { vertical: "top" } }); w.merge(rr, 3, LAST_COL);
+      w.next();
+    }
+    const tr = w.row();
+    w.set(tr, 1, "Total Security Deposits:", { font: { bold: true, size: 9.5, color: { argb: INK } } }); w.merge(tr, 1, 2);
+    w.set(tr, 3, `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, { font: { bold: true, size: 9.5, color: { argb: INK } } }); w.merge(tr, 3, LAST_COL);
+    w.next(); w.blank();
+  }
+
+  valueSection("Landlord Restrictions", (a) => issueValue(maps.get(a)!, "NBNC"));
+  valueSection("Tenant Restrictions", (a) => issueValue(maps.get(a)!, "TRSTR"));
+  valueSection("Co-Tenancy", (a) => issueValue(maps.get(a)!, "COTENCY"));
+  valueSection("Exclusives", (a) => issueValue(maps.get(a)!, "EXCLUSI"));
+  valueSection("Tenant Termination Rights", (a) => issueValue(maps.get(a)!, "KICKTN"));
+  valueSection("Landlord Termination Rights", (a) => issueValue(maps.get(a)!, "KICKLL"));
+  valueSection("Relocate", (a) => issueValue(maps.get(a)!, "RELOCAT"));
+}
+
 function sheetName(name: string): string {
   return (name || "Sheet").replace(/[\\/?*:[\]]/g, "-").slice(0, 31) || "Sheet";
 }
@@ -437,10 +553,12 @@ export async function exportLeaseAbstract(a: LeaseAbstract): Promise<void> {
   await downloadWorkbook(wb, `KPR_LeaseAbstract_${safe}_${today()}.xlsx`);
 }
 
-// Deal → workbook with one styled tab per tenant.
+// Deal → workbook that mirrors Eric's: an "Issues Summary" cross-tenant matrix tab
+// first, then one styled detail tab per tenant.
 export async function exportLeaseAbstractsWorkbook(dealName: string, abstracts: LeaseAbstract[]): Promise<void> {
   if (!abstracts.length) return;
   const wb = new ExcelJS.Workbook();
+  writeIssuesSummary(wb.addWorksheet("Issues Summary"), abstracts);
   for (const a of abstracts) writeTab(wb.addWorksheet(sheetName(a.tenantName || a.dba || "Tenant")), a);
   const safe = (dealName || "deal").replace(/[/\\?%*:|"<>]/g, "-").slice(0, 60);
   await downloadWorkbook(wb, `KPR_LeaseAbstracts_${safe}_${today()}.xlsx`);
