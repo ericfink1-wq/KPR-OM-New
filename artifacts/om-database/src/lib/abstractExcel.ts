@@ -7,6 +7,7 @@
 import ExcelJS from "exceljs";
 import type {
   LeaseAbstract, AbstractCitation, AbstractField, AbstractOption, AbstractRentStep,
+  CoTenancyClause, CoTenancyRemedy, TriggerNode, TriggerCondition,
 } from "./idb";
 import { LEASE_NOTE_SECTIONS } from "./idb";
 
@@ -45,6 +46,106 @@ function citeShort(c?: AbstractCitation | null): string {
   let secPart = ""; if (sec) secPart = /sec\.|§|exh/i.test(sec) ? sec.replace(/§/g, "Sec. ") : `Sec. ${sec}`;
   const pagePart = page ? `p. ${page}` : "";
   return [prefix, secPart, pagePart].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+// --- Lease-Notes enrichment -----------------------------------------------------
+// A KPR abstract's body is the section-keyed Lease-Notes table (Use, Exclusive,
+// Co-tenancy, Kickout, Guaranty, Security Deposit, Go-Dark, …). Many abstracts only
+// hand-key a few of those codes but DO carry the same facts in the structured
+// fields (coTenancy[], salesKickout[], otherRiskClauses, guaranties[], exclusives[],
+// securityDeposit, assignment, camTax). Without this, co-tenancy in particular
+// renders NOWHERE in the export. We seed the table from explicit leaseNotes, then
+// fill any gaps from those structured fields so the export always looks complete.
+
+function triggerText(node?: TriggerNode | null): string {
+  if (!node) return "";
+  if ("operator" in node && Array.isArray((node as { conditions?: TriggerNode[] }).conditions)) {
+    const br = node as { operator: "AND" | "OR"; conditions: TriggerNode[] };
+    const parts = br.conditions.map(triggerText).filter(Boolean);
+    return parts.length > 1 ? parts.join(` ${br.operator} `) : parts.join("");
+  }
+  const c = node as TriggerCondition;
+  switch (c.type) {
+    case "named_anchor_dark":
+    case "named_anchor_gone":
+      return `${c.anchor || "a named anchor"} goes dark`;
+    case "anchor_count_below": {
+      const names = (c.anchors || []).filter(Boolean).join(", ");
+      const need = c.openRequired;
+      const n = c.totalNamed ?? (c.anchors ? c.anchors.length : null);
+      return need != null && n != null
+        ? `fewer than ${need} of ${n} stay open (${names})`
+        : `co-tenant basket falls below floor${names ? ` (${names})` : ""}`;
+    }
+    case "anchor_replacement_failed":
+      return `${c.anchor || "anchor"} not replaced by a suitable tenant`;
+    case "occupancy_threshold":
+      return `occupancy ${c.direction || "below"} ${c.pct != null ? c.pct + "%" : "threshold"}${c.scope ? ` (${c.scope})` : ""}`;
+    default:
+      return c.note || c.type || "";
+  }
+}
+
+function remedyText(r?: CoTenancyRemedy | null): string {
+  if (!r) return "";
+  const treat = r.additionalRentTreatment === "tenant_continues" ? "; other charges continue" : "";
+  if (r.mechanism === "alternate_rent_pct_sales") return `pay ${r.value ?? "?"}% of gross sales in lieu of minimum rent${r.cap ? ` (capped at ${r.cap.replace(/_/g, " ")})` : ""}${treat}`;
+  if (r.mechanism === "percent_rent_reduction") return `minimum rent reduced ${r.value ?? "?"}%${treat}`;
+  if (r.mechanism === "fixed_reduction") return `fixed rent reduction${r.value != null ? ` of ${r.value}` : ""}${treat}`;
+  return (r.mechanism || "").replace(/_/g, " ");
+}
+
+function coTenancySummary(clauses?: CoTenancyClause[] | null): string {
+  if (!clauses || !clauses.length) return "";
+  return clauses.map((cl) => {
+    const kind = cl.type ? cl.type.charAt(0).toUpperCase() + cl.type.slice(1) + " co-tenancy" : "Co-tenancy";
+    const trig = triggerText(cl.triggerLogic);
+    const rem = remedyText(cl.remedy);
+    const relief = cl.reliefPeriodMonthsBeforeTermination != null ? `; termination right after ${cl.reliefPeriodMonthsBeforeTermination} mo unsatisfied` : "";
+    const notice = cl.terminationNoticeDays != null ? ` (${cl.terminationNoticeDays}-day notice)` : "";
+    const ver = cl.verifiedAgainstExecutedDoc === false ? " [unverified — from summary]" : "";
+    return `${kind}: trips if ${trig || "—"}. Remedy: ${rem || "—"}${relief}${notice}.${ver}`;
+  }).join("\n");
+}
+
+// Merge explicit leaseNotes with notes derived from the structured fields.
+function fullLeaseNotes(a: LeaseAbstract): Map<string, { value: string; cite?: AbstractCitation | null }> {
+  const m = new Map<string, { value: string; cite?: AbstractCitation | null }>();
+  for (const n of a.leaseNotes || []) if (n.code && n.value) m.set(n.code, { value: n.value, cite: n.cite });
+  const fill = (code: string, value: string, cite?: AbstractCitation | null) => {
+    if (value && !m.has(code)) m.set(code, { value, cite: cite ?? null });
+  };
+  fill("SECDEP", fval(a.securityDeposit), a.securityDeposit?.cite);
+  const ex: string[] = [];
+  for (const e of a.exclusives || []) if (e.description) ex.push(e.description);
+  if (a.otherRiskClauses?.exclusiveUse?.summary) ex.push(a.otherRiskClauses.exclusiveUse.summary);
+  fill("EXCLUSI", ex.join("\n"));
+  fill("COTENCY", coTenancySummary(a.coTenancy));
+  const kick: string[] = [];
+  for (const sk of a.salesKickout || []) {
+    const bits = [
+      sk.salesThresholdAmount != null ? `sales below $${Number(sk.salesThresholdAmount).toLocaleString()}` : (sk.salesThresholdPSF != null ? `sales below $${sk.salesThresholdPSF}/SF` : ""),
+      sk.measurementPeriod ? `measured over ${sk.measurementPeriod}` : "",
+      sk.noticeWindowDays != null ? `${sk.noticeWindowDays}-day exercise window` : "",
+      sk.terminationFee != null ? `termination fee $${Number(sk.terminationFee).toLocaleString()}` : "",
+    ].filter(Boolean);
+    if (bits.length) kick.push(`Sales kickout: ${bits.join("; ")}.`);
+  }
+  if (a.otherRiskClauses?.earlyTerminationOption?.summary) kick.push(a.otherRiskClauses.earlyTerminationOption.summary);
+  fill("KICKTN", kick.join("\n"));
+  if (a.otherRiskClauses?.continuousOperationCovenant?.summary) fill("OPC", a.otherRiskClauses.continuousOperationCovenant.summary);
+  if (a.otherRiskClauses?.goDarkRight?.summary) fill("GO DARK", a.otherRiskClauses.goDarkRight.summary);
+  fill("GO DARK", fval(a.goDark), a.goDark?.cite);
+  const gua: string[] = [];
+  for (const g of a.guaranties || []) {
+    const bits = [g.guarantor, g.scope, g.cap ? `cap: ${g.cap}` : "", g.inForce === false ? "(released)" : g.inForce ? "(in force)" : ""].filter(Boolean);
+    if (bits.length) gua.push(bits.join(" — "));
+  }
+  fill("GUARANT", gua.join("\n"));
+  fill("ASSNSUB", fval(a.assignment), a.assignment?.cite);
+  fill("CAM", fval(a.camTax), a.camTax?.cite);
+  fill("DEFAULT", fval(a.defaultTerms), a.defaultTerms?.cite);
+  return m;
 }
 
 type WS = ExcelJS.Worksheet;
@@ -284,7 +385,7 @@ function writeTab(ws: WS, a: LeaseAbstract): void {
     w.set(hr, 4, "Category", { font: { bold: true, size: 9, color: { argb: INK } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } }, border: allBorders }); w.merge(hr, 4, 6);
     w.set(hr, 7, "Notes", { font: { bold: true, size: 9, color: { argb: INK } }, fill: { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } }, border: allBorders }); w.merge(hr, 7, LAST_COL);
     w.next();
-    const byCode = new Map((a.leaseNotes || []).map((n) => [n.code, n]));
+    const byCode = fullLeaseNotes(a);
     for (const sec of LEASE_NOTE_SECTIONS) {
       const n = byCode.get(sec.code); if (!n) continue;
       const rr = w.row();
