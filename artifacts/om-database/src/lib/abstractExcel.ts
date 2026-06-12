@@ -252,10 +252,10 @@ function writeTab(ws: WS, a: LeaseAbstract): void {
     const left: [string, string, AbstractCitation | null | undefined][] = [
       ["Lease Date", fdate(d.leaseDate), d.leaseDate?.cite],
       ["Open Date", fdate(d.openDate), d.openDate?.cite],
-      ["Lease Comm.", fdate(d.leaseCommencement), d.leaseCommencement?.cite],
+      ["Lease Comm.", fdate(d.leaseCommencement) || mdy(a.commencement), d.leaseCommencement?.cite],
       ["Cancel", fdate(d.cancelDate), d.cancelDate?.cite],
       ["Insurance Cert. Exp.", sv(dep.insuranceCertExp), null],
-      ["Lease Expiration", fdate(d.leaseExpiration), d.leaseExpiration?.cite],
+      ["Lease Expiration", fdate(d.leaseExpiration) || mdy(a.expiration), d.leaseExpiration?.cite],
       ["Rent Start Date", fdate(d.rentStartDate), d.rentStartDate?.cite],
     ];
     const right: [string, string][] = [
