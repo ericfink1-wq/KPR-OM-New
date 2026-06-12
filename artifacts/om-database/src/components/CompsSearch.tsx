@@ -185,13 +185,14 @@ function fmtVolume(v: number): string {
 // Sort header cell
 // ---------------------------------------------------------------------------
 function SortTh({
-  label, sortKey, current, onSort, style,
+  label, sortKey, current, onSort, style, className,
 }: {
   label: string;
   sortKey: SortKey;
   current: SortKey;
   onSort: (k: SortKey) => void;
   style?: React.CSSProperties;
+  className?: string;
 }) {
   const active = current === sortKey;
   const isDesc = sortKey.endsWith("_desc");
@@ -201,6 +202,7 @@ function SortTh({
   return (
     <th
       onClick={() => onSort(toggle)}
+      className={className}
       style={{
         padding: "9px 10px",
         textAlign: "left",
@@ -1078,7 +1080,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f1eadc" }}>
-                  <SortTh label="Property" sortKey="name_asc"   current={sort} onSort={handleSort} style={{ minWidth: 180, ...stickyFirstCol("#faf7f0", true) }} />
+                  <SortTh label="Property" sortKey="name_asc"   current={sort} onSort={handleSort} className="freeze-col" style={{ minWidth: 180, ...stickyFirstCol("#faf7f0", true) }} />
                   <SortTh label="City"     sortKey="market_asc" current={sort} onSort={handleSort} style={{ minWidth: 100 }} />
                   {hasState   && <SortTh label="State"  sortKey="state_asc"  current={sort} onSort={handleSort} style={{ minWidth: 50 }} />}
                   <SortTh label="Sale Date"  sortKey="date_desc"          current={sort} onSort={handleSort} />
@@ -1091,7 +1093,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                   <SortTh label="Occupancy"  sortKey="occ_desc"           current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
                   {hasAnchor  && <SortTh label="Anchor" sortKey="anchor_asc" current={sort} onSort={handleSort} style={{ maxWidth: 220 }} />}
                   {hasType    && <SortTh label="Type"   sortKey="type_asc"   current={sort} onSort={handleSort} />}
-                  <th style={{
+                  <th className="freeze-col" style={{
                     padding: "9px 6px", width: 72,
                     position: "sticky", right: 0, zIndex: 3,
                     background: "#faf7f0",
@@ -1142,7 +1144,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                         (e.currentTarget.lastElementChild as HTMLElement).style.background = bg || "#fff";
                       }}
                     >
-                      <td style={{ padding: "9px 10px", maxWidth: 240, ...stickyFirstCol(row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff") }}>
+                      <td className="freeze-col" style={{ padding: "9px 10px", maxWidth: 240, ...stickyFirstCol(row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff") }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
                           {row.isOwnTransaction ? (
@@ -1191,7 +1193,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                         </td>
                       )}
                       {hasType   && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.propertyType || "—"}</td>}
-                      <td style={{
+                      <td className="freeze-col" style={{
                         padding: "9px 8px", whiteSpace: "nowrap",
                         position: "sticky", right: 0, zIndex: 2,
                         background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff",

@@ -321,7 +321,7 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
           <table style={{ borderCollapse: "collapse", width: "100%", background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
             <thead>
               <tr style={{ background: "#faf7f0" }}>
-                <th style={{ padding: "12px 14px", textAlign: "left", fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", width: 180, position: "sticky", left: 0, background: "#faf7f0", zIndex: 1 }}>Metric</th>
+                <th className="freeze-col" style={{ padding: "12px 14px", textAlign: "left", fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", width: 180, position: "sticky", left: 0, background: "#faf7f0", zIndex: 1 }}>Metric</th>
                 {deals.map(d => (
                   <th key={d.id} style={{ padding: "12px 14px", textAlign: "left", minWidth: 175 }}>
                     <button onClick={() => onOpen(d.id)} style={{ background: "transparent", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>
@@ -342,7 +342,7 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
                     const winners = winnersFor(r);
                     return (
                       <tr key={r.label} style={{ borderTop: "1px solid #f1eadc" }}>
-                        <td style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, color: "#7d766a", whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{r.label}</td>
+                        <td className="freeze-col" style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, color: "#7d766a", whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{r.label}</td>
                         {deals.map((d, di) => (
                           <td key={d.id} style={{ padding: "9px 14px", fontSize: 12.5, color: "#383a37", fontWeight: 500, ...(winners.has(di) ? winCell : {}) }}>
                             {r.disp(d)}{winners.has(di) ? " ★" : ""}

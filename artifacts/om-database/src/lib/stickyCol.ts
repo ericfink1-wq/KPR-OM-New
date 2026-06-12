@@ -7,8 +7,11 @@ import type { CSSProperties } from "react";
 //
 // Mirrors the sticky-RIGHT action columns already used in CompsSearch / TenantView
 // and the frozen label column in DetailView's cash-flow table, so the look (hairline
-// divider + soft shadow on the frozen edge) is consistent across the app. Works on
-// desktop and mobile (the table's own horizontal scroll is what's being pinned).
+// divider + soft shadow on the frozen edge) is consistent across the app.
+//
+// DESKTOP ONLY: pair this with className="freeze-col" on the cell. The `.freeze-col`
+// rule in index.css releases the freeze below 768px (useIsMobile's breakpoint), because
+// on a phone a frozen column eats most of the width and blocks horizontal scrolling.
 export function stickyFirstCol(bg: string, isHeader = false): CSSProperties {
   return {
     position: "sticky",

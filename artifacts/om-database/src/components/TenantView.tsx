@@ -273,13 +273,13 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
                     {cols.map(([k, label, right], idx) => (
-                      <th key={k} onClick={() => setSort(k)}
+                      <th key={k} onClick={() => setSort(k)} className={idx === 0 ? "freeze-col" : undefined}
                         style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
                         {label}{arrow(k)}
                       </th>
                     ))}
                     {/* Ignore + Unlink buttons column — sticky right */}
-                    <th style={{
+                    <th className="freeze-col" style={{
                       width:76, padding:"6px 6px",
                       position:"sticky", right:0, zIndex:3,
                       background:"#fff",
@@ -320,7 +320,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                           (e.currentTarget.lastElementChild as HTMLElement).style.background = owned ? "#f3faef" : "#fff";
                         }}
                       >
-                        <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap", ...stickyFirstCol(owned ? "#f3faef" : "#fff") }}>
+                        <td className="freeze-col" style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap", ...stickyFirstCol(owned ? "#f3faef" : "#fff") }}>
                           {r.deal.propertyName || "Untitled"}
                           {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
                           {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
@@ -346,6 +346,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
                         {/* Ignore + Unlink — sticky right, stopPropagation so they don't open the deal */}
                         <td
+                          className="freeze-col"
                           style={{
                             padding:"4px 4px", width:76, textAlign:"center",
                             position:"sticky", right:0, zIndex:2,

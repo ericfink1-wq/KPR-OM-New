@@ -201,7 +201,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
                     {cols.map(([k, label, right], idx) => (
-                      <th key={k} onClick={() => setSort(k)}
+                      <th key={k} onClick={() => setSort(k)} className={idx === 0 ? "freeze-col" : undefined}
                         style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
                         {label}{arrow(k)}
                       </th>
@@ -216,7 +216,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                         style={{ borderTop:"1px solid #f1eadc", cursor:"pointer", background: owned ? "#f3faef" : "transparent", borderLeft: owned ? "3px solid #6dba43" : "3px solid transparent" }}
                         onMouseEnter={e => { const bg = owned ? "#eaf5e2" : "#faf7f0"; e.currentTarget.style.background = bg; (e.currentTarget.firstElementChild as HTMLElement).style.background = bg; }}
                         onMouseLeave={e => { e.currentTarget.style.background = owned ? "#f3faef" : "transparent"; (e.currentTarget.firstElementChild as HTMLElement).style.background = owned ? "#f3faef" : "#fff"; }}>
-                        <td style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap", ...stickyFirstCol(owned ? "#f3faef" : "#fff") }}>
+                        <td className="freeze-col" style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap", ...stickyFirstCol(owned ? "#f3faef" : "#fff") }}>
                           {r.deal.propertyName || "Untitled"}
                           {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
                         </td>

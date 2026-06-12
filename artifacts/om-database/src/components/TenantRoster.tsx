@@ -407,14 +407,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} onClick={k === "abstract" ? undefined : () => setSort(k)} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: k === "abstract" ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{k === "abstract" ? null : arrow(k)}</th>
+                <th key={k} onClick={k === "abstract" ? undefined : () => setSort(k)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: k === "abstract" ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{k === "abstract" ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((t,i) => (
               <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1, background: t.isDark && !isVacantRow(t) ? "#fbf1e4" : undefined }}>
-                <td style={{ padding:"8px 10px", whiteSpace:"nowrap", ...stickyFirstCol(t.isDark && !isVacantRow(t) ? "#fbf1e4" : "#fff") }}>
+                <td className="freeze-col" style={{ padding:"8px 10px", whiteSpace:"nowrap", ...stickyFirstCol(t.isDark && !isVacantRow(t) ? "#fbf1e4" : "#fff") }}>
                   {isVacantRow(t) ? (
                     <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
                   ) : (

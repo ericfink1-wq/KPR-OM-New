@@ -171,3 +171,16 @@ body { background: #f1ece1; font-family: 'Inter', -apple-system, sans-serif; -we
   .hover-elevate-2:hover:not(.no-default-hover-elevate)::after, .active-elevate-2:active:not(.no-default-active-elevate)::after { background-color: var(--elevate-2); }
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after, .border.active-elevate:not(.no-active-interaction-elevate)::after, .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after, .border.active-elevate-2:not(.no-active-interaction-elevate)::after { inset: -1px; }
 }
+
+/* Frozen table columns (.freeze-col): pinned on desktop so the name/identifier or
+   metric/label column stays visible while scrolling wide tables sideways. On phones
+   a frozen column eats most of the width and blocks horizontal scrolling, so release
+   it below the mobile breakpoint (matches useIsMobile's 768px). */
+@media (max-width: 767px) {
+  .freeze-col {
+    position: static !important;
+    box-shadow: none !important;
+    border-right: 0 !important;
+    border-left: 0 !important;
+  }
+}
