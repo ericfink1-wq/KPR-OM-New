@@ -66,10 +66,11 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
     return cands.length === 1 ? cands[0] : null; // only auto-match when unambiguous
   }
 
-  function parse() {
+  function parse(rawArg?: string) {
     setErr(null); setResult(null);
+    const raw = rawArg ?? text;
     let data: unknown;
-    try { data = JSON.parse(text); }
+    try { data = JSON.parse(raw); }
     catch { setErr("That isn't valid JSON. Paste the abstract JSON — one tenant, or an array of tenants."); return; }
 
     let arr: unknown[];
@@ -142,14 +143,26 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
               placeholder={'{ "tenantName": "...", ... }   — or —   [ {...}, {...} ]'}
               style={{ width: "100%", minHeight: 150, fontSize: 11.5, padding: "9px 11px", border: `1px solid ${C.line}`,
                 borderRadius: 8, fontFamily: "monospace", resize: "vertical", color: C.ink, boxSizing: "border-box" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
-              <button onClick={parse} disabled={!text.trim()} style={btn(C.blue, !!text.trim())}>Match tenants</button>
-              <label style={{ fontSize: 11.5, color: C.sub, cursor: "pointer", textDecoration: "underline" }}>
-                or choose a .json file
-                <input type="file" accept=".json,application/json" style={{ display: "none" }}
-                  onChange={async (e) => { const f = e.target.files?.[0]; if (f) setText(await f.text()); }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+              {/* File-first: reads the file and parses it directly (no pasting, no giant
+                  string in the textarea). NOTE: no `accept` attribute — iOS Files greys
+                  out .json when accept is set, which blocked file selection on mobile. */}
+              <label style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: C.green, border: "none",
+                borderRadius: 8, padding: "9px 18px", cursor: "pointer", minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                ⬆ Choose .json file
+                <input type="file" style={{ display: "none" }}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0]; e.target.value = "";
+                    if (!f) return;
+                    setErr(null);
+                    let raw: string;
+                    try { raw = await f.text(); } catch { setErr("Couldn't read that file."); return; }
+                    parse(raw);
+                  }} />
               </label>
+              <button onClick={() => parse()} disabled={!text.trim()} style={btn(C.blue, !!text.trim())}>Match pasted text</button>
             </div>
+            <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>On a phone, tap “Choose .json file” and pick the file Claude sent — no pasting needed.</div>
           </>
         )}
 
