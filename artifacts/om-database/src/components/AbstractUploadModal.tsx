@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LeaseAbstract } from "../lib/idb";
 import { apiSaveLeaseAbstract } from "../lib/api";
@@ -43,6 +43,19 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ saved: number; failed: number } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Read the chosen file and parse it straight to the match preview. Kept separate
+  // from the textarea so a multi-hundred-KB whole-property file never has to be pasted.
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // let the same file be re-picked
+    if (!f) return;
+    setErr(null);
+    let raw: string;
+    try { raw = await f.text(); } catch { setErr("Couldn't read that file."); return; }
+    parse(raw);
+  };
 
   const normMap = useMemo(() => {
     const m = new Map<string, string>(); // normalized -> exact roster name
@@ -144,22 +157,16 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
               style={{ width: "100%", minHeight: 150, fontSize: 11.5, padding: "9px 11px", border: `1px solid ${C.line}`,
                 borderRadius: 8, fontFamily: "monospace", resize: "vertical", color: C.ink, boxSizing: "border-box" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-              {/* File-first: reads the file and parses it directly (no pasting, no giant
-                  string in the textarea). NOTE: no `accept` attribute — iOS Files greys
-                  out .json when accept is set, which blocked file selection on mobile. */}
-              <label style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: C.green, border: "none",
-                borderRadius: 8, padding: "9px 18px", cursor: "pointer", minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {/* iOS-safe file picker: a real button calls the input's .click() via a ref.
+                  The input must stay in the layout (NOT display:none) and have NO `accept`
+                  attribute, or iOS Safari refuses to open the picker / greys out .json. */}
+              <button type="button" onClick={() => fileRef.current?.click()}
+                style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: C.green, border: "none",
+                  borderRadius: 8, padding: "9px 18px", cursor: "pointer", minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }}>
                 ⬆ Choose .json file
-                <input type="file" style={{ display: "none" }}
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0]; e.target.value = "";
-                    if (!f) return;
-                    setErr(null);
-                    let raw: string;
-                    try { raw = await f.text(); } catch { setErr("Couldn't read that file."); return; }
-                    parse(raw);
-                  }} />
-              </label>
+              </button>
+              <input ref={fileRef} type="file" onChange={onPickFile}
+                style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
               <button onClick={() => parse()} disabled={!text.trim()} style={btn(C.blue, !!text.trim())}>Match pasted text</button>
             </div>
             <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>On a phone, tap “Choose .json file” and pick the file Claude sent — no pasting needed.</div>
