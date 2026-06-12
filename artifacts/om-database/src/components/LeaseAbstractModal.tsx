@@ -362,11 +362,11 @@ function PasteBody({ dealId, lockTenant, onSaved }: {
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
+  const doSave = async (raw: string) => {
     setErr(null);
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(raw);
     } catch {
       setErr("That isn't valid JSON. Paste the abstract JSON Claude gave you — a single object, an array, or { \"abstracts\": [...] }.");
       return;
@@ -398,6 +398,22 @@ function PasteBody({ dealId, lockTenant, onSaved }: {
     onSaved({ ...single, id: res.id, dealId, version: res.version });
   };
 
+  const save = () => doSave(text);
+
+  // Phone-friendly path: pick the .json file and save it straight from the file
+  // (don't stuff a multi-hundred-KB whole-property file into the textarea).
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!f) return;
+    setErr(null); setSaving(true);
+    let raw: string;
+    try { raw = await f.text(); }
+    catch { setSaving(false); setErr("Couldn't read that file."); return; }
+    setSaving(false);
+    await doSave(raw);
+  };
+
   return (
     <div>
       <p style={{ fontSize:12.5, color:C.sub, lineHeight:1.5, margin:"0 0 10px" }}>
@@ -411,12 +427,17 @@ function PasteBody({ dealId, lockTenant, onSaved }: {
         style={{ width:"100%", height:200, fontFamily:"'SF Mono',ui-monospace,monospace", fontSize:12, color:C.ink, border:`1px solid ${C.line}`, borderRadius:8, padding:"10px 12px", resize:"vertical", boxSizing:"border-box" }}
       />
       {err && <div style={{ marginTop:8, fontSize:12, color:C.red, background:C.redBg, border:`1px solid ${C.redBorder}`, borderRadius:8, padding:"8px 10px" }}>{err}</div>}
-      <div style={{ marginTop:12, display:"flex", justifyContent:"flex-end" }}>
+      <div style={{ marginTop:12, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+        <label style={{ fontSize:13, fontWeight:700, color: saving ? C.faint : C.green, background:"#fff", border:`1px solid ${saving ? C.line : C.green}`, borderRadius:8, padding:"8px 16px", cursor: saving ? "default" : "pointer", minHeight:38, display:"inline-flex", alignItems:"center" }}>
+          ⬆ Choose .json file
+          <input type="file" accept=".json,application/json" disabled={saving} onChange={onPickFile} style={{ display:"none" }} />
+        </label>
         <button onClick={save} disabled={saving || !text.trim()}
-          style={{ fontSize:13, fontWeight:700, color:"#fff", background: saving || !text.trim() ? C.faint : C.green, border:"none", borderRadius:8, padding:"9px 18px", cursor: saving || !text.trim() ? "default" : "pointer" }}>
-          {saving ? "Saving…" : "Save abstract"}
+          style={{ fontSize:13, fontWeight:700, color:"#fff", background: saving || !text.trim() ? C.faint : C.green, border:"none", borderRadius:8, padding:"9px 18px", cursor: saving || !text.trim() ? "default" : "pointer", minHeight:38 }}>
+          {saving ? "Saving…" : "Save pasted"}
         </button>
       </div>
+      <div style={{ marginTop:8, fontSize:11, color:C.faint }}>On a phone: tap “Choose .json file” and pick the file Claude sent — no pasting needed.</div>
     </div>
   );
 }
