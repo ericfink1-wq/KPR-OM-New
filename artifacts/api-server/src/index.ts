@@ -7,6 +7,7 @@ import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
 import { ensureSessionTable } from "./lib/sessionStore";
 import { ensureUploadLogTable } from "./routes/uploadLog";
 import { ensureLeaseAbstractsTable } from "./routes/leaseAbstracts";
+import { ensureSiteAgreementsTable } from "./routes/siteAgreements";
 
 const rawPort = process.env["PORT"];
 
@@ -67,6 +68,12 @@ ensureUploadLogTable()
 ensureLeaseAbstractsTable()
   .then(() => logger.info("lease_abstracts table ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureLeaseAbstractsTable failed on startup (will retry on first use)"));
+
+// Provision the site-agreements (REA) table on startup, mirroring lease_abstracts.
+// Best-effort. Keep in sync with schema/siteAgreements.ts and routes/siteAgreements.ts.
+ensureSiteAgreementsTable()
+  .then(() => logger.info("site_agreements table ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureSiteAgreementsTable failed on startup (will retry on first use)"));
 
 // Clear ZOMBIE database connections on every boot. A stuck/idle-in-transaction
 // connection (left by an earlier hung request, and kept alive across app restarts

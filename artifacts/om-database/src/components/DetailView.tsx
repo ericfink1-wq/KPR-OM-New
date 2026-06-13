@@ -21,6 +21,7 @@ import RecencyBadge from "./RecencyBadge";
 import TenantRoster from "./TenantRoster";
 import LeaseAbstractModal from "./LeaseAbstractModal";
 import AbstractUploadModal from "./AbstractUploadModal";
+import SiteAgreementsCard from "./SiteAgreementsCard";
 import { computeAbstractChecks } from "../lib/abstractChecks";
 import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
@@ -2780,6 +2781,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
         /></div>
       )}
+
+      {/* Center-level recorded documents (REAs / OEAs / operating agreements / easements). */}
+      <SiteAgreementsCard dealId={d.id} isAdmin={isAdmin} />
 
       <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
 

@@ -584,6 +584,71 @@ export interface LeaseAbstract {
   updatedAt?: string | null;
 }
 
+// ---- Site agreements / REAs (center-level) -----------------------------------
+// A structured abstract of a CENTER-LEVEL recorded agreement that binds the land
+// rather than a single tenant: Operating Agreement, OEA, Reciprocal Easement, Pad
+// Declaration, use-restriction, cost-share/maintenance agreement, or utility
+// easement. Stored in its own collection (site_agreements), keyed to a deal and an
+// agreementName — the parallel of LeaseAbstract for property-level documents.
+export interface SiteAgreementDoc {
+  name?: string | null;
+  date?: string | null;            // ISO
+  recording?: string | null;       // Book/Page or Instrument #
+  role?: string | null;            // original | amendment | supplement | restatement | assignment | memo | estoppel
+}
+export interface SiteAgreementFlag {
+  severity?: "critical" | "watch" | "info" | string | null;
+  issue?: string | null;
+  detail?: string | null;
+  verifiedAgainstExecutedDoc?: boolean | null;
+}
+export interface SiteAgreementSourceDoc {
+  name?: string | null;
+  date?: string | null;
+  fileId?: string | null;
+  read?: boolean | null;
+  readNote?: string | null;
+}
+export interface SiteAgreement {
+  id?: string;                      // record id (sa_...)
+  dealId?: string;                  // owning deal id
+  agreementName: string;            // unique key within a deal
+  version?: number | null;
+
+  center?: string | null;           // "Rockaway Commons" | "Multiple (cross-center)" | …
+  type?: string | null;             // operating_agreement | reciprocal_easement_OEA | pad_declaration | maintenance_easement | use_restriction | developer_agreement | drainage_easement | utility_easement | other
+  documentChain?: SiteAgreementDoc[] | null;
+  parties?: string[] | null;
+  parcelsCovered?: string | null;
+  effectiveTerm?: string | null;    // "perpetual" | "YYYY-MM-DD to YYYY-MM-DD"
+  runsWithLand?: boolean | null;
+  summary?: string | null;
+
+  // Substantive dimensions (each an array of cited prose findings, or "None").
+  useRestrictions?: string[] | null;
+  buildingRestrictions?: string[] | null;
+  operatingCovenants?: string[] | null;
+  approvalRights?: string[] | null;
+  easements?: string[] | null;
+  maintenanceObligations?: string[] | null;
+  costSharing?: string[] | null;
+  purchaseRightsROFR?: string[] | null;   // the deal-defining dimension
+  terminationRecapture?: string[] | null;
+  assignmentTransfer?: string | null;
+  defaultRemedies?: string | null;
+
+  kprImpact?: string | null;              // what KPR inherits as owner
+  materialityAssessment?: string | null;  // material | minor | boilerplate + why
+  crossCheckVsEricSummary?: string | null;
+
+  flags?: SiteAgreementFlag[] | null;
+  sourceDocuments?: SiteAgreementSourceDoc[] | null;
+  verifiedAgainstExecutedDoc?: boolean | null;
+
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface OccBreakdown {
   base: number;
   reimbursements: number;

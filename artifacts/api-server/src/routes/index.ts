@@ -18,6 +18,7 @@ import ratesRouter from "./rates";
 import uploadLogRouter from "./uploadLog";
 import extractionLessonsRouter from "./extractionLessons";
 import leaseAbstractsRouter from "./leaseAbstracts";
+import siteAgreementsRouter from "./siteAgreements";
 import houseViewRouter from "./houseView";
 
 const router: IRouter = Router();
@@ -40,6 +41,7 @@ router.use(ratesRouter);
 router.use(uploadLogRouter);
 router.use(extractionLessonsRouter);
 router.use(leaseAbstractsRouter);
+router.use(siteAgreementsRouter);
 router.use(houseViewRouter);
 router.use(aiRouter);
 

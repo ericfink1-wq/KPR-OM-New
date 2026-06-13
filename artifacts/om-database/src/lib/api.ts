@@ -1,7 +1,7 @@
 // API layer — replaces IndexedDB with backend calls
 // All functions maintain the same signatures as idb.ts for easy drop-in replacement
 
-import type { Deal, ImageBundle, LeaseAbstract } from "./idb";
+import type { Deal, ImageBundle, LeaseAbstract, SiteAgreement } from "./idb";
 import { normalizeDeal } from "./utils";
 import type { CompInput } from "./compsSummary";
 import { beginSave, endSaveOk, endSaveError } from "./saveStatus";
@@ -858,6 +858,54 @@ export async function apiBulkSaveLeaseAbstracts(
       return { ok: false, error: body.error || "Couldn't bulk-save the abstracts" };
     }
     return resp.json() as Promise<{ ok: boolean; saved?: number; skipped?: string[] }>;
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
+}
+
+// ── Site agreements / REAs (center-level) ─────────────────────────────────────
+// All site agreements on file for a deal (powers the deal page's "Site Agreements
+// / REAs" section). Returns [] on any failure so the page never breaks.
+export async function apiListSiteAgreements(dealId: string): Promise<SiteAgreement[]> {
+  try {
+    const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/site-agreements`);
+    if (!resp.ok) return [];
+    return resp.json() as Promise<SiteAgreement[]>;
+  } catch {
+    return [];
+  }
+}
+
+// Bulk-upsert a whole property's REA set in one call. Accepts the same
+// { siteAgreements: [...] } envelope the compiled REA file uses (or a raw array).
+export async function apiBulkSaveSiteAgreements(
+  dealId: string,
+  siteAgreements: SiteAgreement[],
+): Promise<{ ok: boolean; saved?: number; skipped?: string[]; error?: string }> {
+  try {
+    const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/site-agreements/bulk`, {
+      method: "POST",
+      body: JSON.stringify({ siteAgreements }),
+    });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Couldn't bulk-save the site agreements" };
+    }
+    return resp.json() as Promise<{ ok: boolean; saved?: number; skipped?: string[] }>;
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
+}
+
+// Delete a site agreement (admin only on the server).
+export async function apiDeleteSiteAgreement(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const resp = await apiFetch(`/site-agreements/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Couldn't delete the site agreement" };
+    }
+    return { ok: true };
   } catch {
     return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
   }
