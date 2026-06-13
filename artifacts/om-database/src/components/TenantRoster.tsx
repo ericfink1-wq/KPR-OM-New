@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
@@ -293,49 +293,56 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const [editVals, setEditVals] = useState<{ reimb: string; pctRent: string; other: string }>({ reimb: "", pctRent: "", other: "" });
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
-  let rows = tenants.slice();
-  if (quick==="anchors") rows = rows.filter(t => t.isAnchor);
-  else if (quick==="dark") rows = rows.filter(t => t.isDark);
-  else if (quick==="expiring") rows = rows.filter(t => n(t.remainingTermYears) != null && n(t.remainingTermYears)! < 2);
-  else if (quick==="footnotes") rows = rows.filter(t => t.assumptionNote);
-  if (q.trim()) { const s = q.toLowerCase(); rows = rows.filter(t => (t.name||"").toLowerCase().includes(s)); }
+  // Filter + sort the roster. Previously ran in the render body on every render;
+  // memoized here so it only recomputes when its real inputs change. The sort
+  // helpers (effSalesPSF/effOccCost) live inside so they aren't recreated per
+  // render. Logic is unchanged.
+  const rows = useMemo(() => {
+    let rows = tenants.slice();
+    if (quick==="anchors") rows = rows.filter(t => t.isAnchor);
+    else if (quick==="dark") rows = rows.filter(t => t.isDark);
+    else if (quick==="expiring") rows = rows.filter(t => n(t.remainingTermYears) != null && n(t.remainingTermYears)! < 2);
+    else if (quick==="footnotes") rows = rows.filter(t => t.assumptionNote);
+    if (q.trim()) { const s = q.toLowerCase(); rows = rows.filter(t => (t.name||"").toLowerCase().includes(s)); }
 
-  const numKeys = new Set(["sf","rentPerSF","annualRent","salesPSF","occupancyCost"]);
-  // Sales and Occ Cost are DISPLAYED from the resolved latest-sales figure (or the
-  // computed rent-stack value), not the raw tenant field — so sort by that SAME
-  // value, else the two columns appear unsorted. Mirrors the cell render exactly.
-  const tk = (t: Tenant) => tenantKey(t.canonicalName || t.name);
-  const effSalesPSF = (t: Tenant): number | null => (latestSales?.get(tk(t))?.salesPSF ?? null) ?? n(t.salesPSF);
-  const effOccCost = (t: Tenant): number | null => {
-    const ls = latestSales?.get(tk(t));
-    if (ls && ls.occupancyCost != null && ls.occSource) return ls.occupancyCost;
-    const stated = n(t.occupancyCost);
-    if (stated != null) return stated;
-    const base = n(t.annualRent);
-    const disclosedReimb = n(t.expenseReimbursements);
-    const est = estimatedRecoveries?.get(tk(t));
-    const reimb = disclosedReimb ?? (est ? est.value : null);
-    const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
-    const other = n(t.otherRent) ?? 0;
-    const sp = n(t.salesPSF), sfn = n(t.sf);
-    const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
-    if (base != null && reimb != null && sales != null && sales > 0) return ((base + reimb + pctRent + other) / sales) * 100;
-    return null;
-  };
-  const sortVal = (t: Tenant): number | null =>
-    sortKey === "salesPSF" ? effSalesPSF(t) : sortKey === "occupancyCost" ? effOccCost(t) : n((t as any)[sortKey]);
-  if (sortKey) {
-    rows = rows.slice().sort((a, b) => {
-      if (numKeys.has(sortKey)) {
-        let av = sortVal(a), bv = sortVal(b);
-        av = av==null?-Infinity:av; bv = bv==null?-Infinity:bv;
-        return sortDir==="asc" ? av-bv : bv-av;
-      }
-      const av = ((a as any)[sortKey]==null?"":String((a as any)[sortKey])).toLowerCase();
-      const bv = ((b as any)[sortKey]==null?"":String((b as any)[sortKey])).toLowerCase();
-      return sortDir==="asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-    });
-  }
+    const numKeys = new Set(["sf","rentPerSF","annualRent","salesPSF","occupancyCost"]);
+    // Sales and Occ Cost are DISPLAYED from the resolved latest-sales figure (or the
+    // computed rent-stack value), not the raw tenant field — so sort by that SAME
+    // value, else the two columns appear unsorted. Mirrors the cell render exactly.
+    const tk = (t: Tenant) => tenantKey(t.canonicalName || t.name);
+    const effSalesPSF = (t: Tenant): number | null => (latestSales?.get(tk(t))?.salesPSF ?? null) ?? n(t.salesPSF);
+    const effOccCost = (t: Tenant): number | null => {
+      const ls = latestSales?.get(tk(t));
+      if (ls && ls.occupancyCost != null && ls.occSource) return ls.occupancyCost;
+      const stated = n(t.occupancyCost);
+      if (stated != null) return stated;
+      const base = n(t.annualRent);
+      const disclosedReimb = n(t.expenseReimbursements);
+      const est = estimatedRecoveries?.get(tk(t));
+      const reimb = disclosedReimb ?? (est ? est.value : null);
+      const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
+      const other = n(t.otherRent) ?? 0;
+      const sp = n(t.salesPSF), sfn = n(t.sf);
+      const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
+      if (base != null && reimb != null && sales != null && sales > 0) return ((base + reimb + pctRent + other) / sales) * 100;
+      return null;
+    };
+    const sortVal = (t: Tenant): number | null =>
+      sortKey === "salesPSF" ? effSalesPSF(t) : sortKey === "occupancyCost" ? effOccCost(t) : n((t as any)[sortKey]);
+    if (sortKey) {
+      rows = rows.slice().sort((a, b) => {
+        if (numKeys.has(sortKey)) {
+          let av = sortVal(a), bv = sortVal(b);
+          av = av==null?-Infinity:av; bv = bv==null?-Infinity:bv;
+          return sortDir==="asc" ? av-bv : bv-av;
+        }
+        const av = ((a as any)[sortKey]==null?"":String((a as any)[sortKey])).toLowerCase();
+        const bv = ((b as any)[sortKey]==null?"":String((b as any)[sortKey])).toLowerCase();
+        return sortDir==="asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+    }
+    return rows;
+  }, [tenants, quick, q, sortKey, sortDir, latestSales, estimatedRecoveries]);
 
   const setSort = (k: string) => { if (sortKey===k) setSortDir(x => x==="asc"?"desc":"asc"); else { setSortKey(k); setSortDir("asc"); } };
   const arrow = (k: string) => sortKey===k ? (sortDir==="asc"?" ▲":" ▼") : "";
@@ -351,22 +358,28 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   ];
 
   const isVacantRow = (t: Tenant) => isVacant(t.name);
-  const vacantCount = tenants.filter(isVacantRow).length;
-  const occupiedCount = tenants.length - vacantCount;
 
-  // Occupancy by SQUARE FOOTAGE (the CRE standard), over the FULL roster: NAP
-  // parcels are excluded (owner-occupied, not leasable GLA) and dark stores count
-  // as occupied (still leased/paying). Null when there's no SF to compute from.
-  const sfOf = (t: Tenant) => { const v = n(t.sf); return v != null && v > 0 ? v : 0; };
-  const leasableRows = tenants.filter(t => !isNAPTenant(t));
-  const totalRosterSF = leasableRows.reduce((s, t) => s + sfOf(t), 0);
-  const vacantSF = leasableRows.filter(isVacantRow).reduce((s, t) => s + sfOf(t), 0);
-  // Dark stores still pay rent (so they count as OCCUPIED in the headline figure),
-  // but they're vacancy-like risk — surfaced separately as "% vacant including dark."
-  const darkSF = leasableRows.filter(t => t.isDark && !isVacantRow(t)).reduce((s, t) => s + sfOf(t), 0);
-  const pctOccupied = totalRosterSF > 0 ? ((totalRosterSF - vacantSF) / totalRosterSF) * 100 : null;
-  const pctVacant = totalRosterSF > 0 ? (vacantSF / totalRosterSF) * 100 : null;
-  const pctVacantInclDark = totalRosterSF > 0 ? ((vacantSF + darkSF) / totalRosterSF) * 100 : null;
+  // Roster occupancy aggregates by SQUARE FOOTAGE (the CRE standard), over the FULL
+  // roster: NAP parcels are excluded (owner-occupied, not leasable GLA) and dark
+  // stores count as occupied (still leased/paying). Null when there's no SF to
+  // compute from. Memoized so the several passes over the roster only run when the
+  // tenant list changes (not on every keystroke / sort toggle). Logic unchanged.
+  const { vacantCount, occupiedCount, totalRosterSF, vacantSF, darkSF, pctOccupied, pctVacant, pctVacantInclDark } = useMemo(() => {
+    const vacant = (t: Tenant) => isVacant(t.name);
+    const sfOf = (t: Tenant) => { const v = n(t.sf); return v != null && v > 0 ? v : 0; };
+    const vacantCount = tenants.filter(vacant).length;
+    const occupiedCount = tenants.length - vacantCount;
+    const leasableRows = tenants.filter(t => !isNAPTenant(t));
+    const totalRosterSF = leasableRows.reduce((s, t) => s + sfOf(t), 0);
+    const vacantSF = leasableRows.filter(vacant).reduce((s, t) => s + sfOf(t), 0);
+    // Dark stores still pay rent (so they count as OCCUPIED in the headline figure),
+    // but they're vacancy-like risk — surfaced separately as "% vacant including dark."
+    const darkSF = leasableRows.filter(t => t.isDark && !vacant(t)).reduce((s, t) => s + sfOf(t), 0);
+    const pctOccupied = totalRosterSF > 0 ? ((totalRosterSF - vacantSF) / totalRosterSF) * 100 : null;
+    const pctVacant = totalRosterSF > 0 ? (vacantSF / totalRosterSF) * 100 : null;
+    const pctVacantInclDark = totalRosterSF > 0 ? ((vacantSF + darkSF) / totalRosterSF) * 100 : null;
+    return { vacantCount, occupiedCount, totalRosterSF, vacantSF, darkSF, pctOccupied, pctVacant, pctVacantInclDark };
+  }, [tenants]);
   const fmtPct = (v: number) => `${(Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "")}%`;
 
   const asOfDate = tenantsAsOf || omDate;
