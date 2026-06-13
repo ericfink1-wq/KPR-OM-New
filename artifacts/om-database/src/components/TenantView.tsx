@@ -125,23 +125,40 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     return cmp;
   });
 
-  // Averages — derive from ACTIVE rows (excludes ignored locations)
-  const isRentable = (r: typeof rows[number]) => {
-    if (isNAPTenant(r.t)) return false;
-    const name = (r.t.name || "").toLowerCase();
-    return !/\b(shadow|vacant|ground.?lease|outparcel)\b/i.test(name);
-  };
-  const rentRows     = activeRows.filter(isRentable);
-  const sfVals       = rentRows.map(r => num(r.t.sf)).filter((v): v is number => v != null);
-  const rentVals     = rentRows.map(r => num(r.t.annualRent)).filter((v): v is number => v != null);
-  const salesVals    = activeRows.map(r => effSales(r)).filter((v): v is number => v != null);
-  const totalSFAll   = sfVals.reduce((s, v) => s + v, 0);
-  const totalRentAll = rentVals.reduce((s, v) => s + v, 0);
+  // Averages — derive from ACTIVE rows (excludes ignored locations).
+  //
+  // 0-SF rows used to leak in and distort these. Methodology now:
+  //  • SF metrics (Avg Size; the SF denominator of Rent/SF) only count rows with
+  //    real leasable SF (> 0).
+  //  • Rent metrics (Avg Annual Rent) only count rows with real base rent (> 0) —
+  //    which KEEPS a true ground lease (base rent, no SF, e.g. a pad) but DROPS
+  //    unowned $0 NAP / shadow markers.
+  //  • Rent/SF is SF-weighted over rows that have BOTH SF and rent, so a ground
+  //    lease's rent can't enter the numerator without SF in the denominator (which
+  //    previously inflated $/SF).
+  //  • A row with neither SF nor rent is an unowned marker (NAP / shadow pad) and
+  //    is dropped from every average. (isNAPTenant only catches occupied $0-rent
+  //    space, so 0-SF markers are caught here by the no-SF-and-no-rent test.)
+  const sfOf   = (r: typeof rows[number]) => { const v = num(r.t.sf); return v != null && v > 0 ? v : null; };
+  const rentOf = (r: typeof rows[number]) => { const v = num(r.t.annualRent); return v != null && v > 0 ? v : null; };
+  const isMarker = (r: typeof rows[number]) =>
+    isNAPTenant(r.t)
+    || /\b(shadow|vacant|outparcel)\b/i.test((r.t.name || "").toLowerCase())
+    || (sfOf(r) == null && rentOf(r) == null);
+  const isGroundLease = (r: typeof rows[number]) => !isMarker(r) && sfOf(r) == null && rentOf(r) != null;
 
-  const avgSF        = sfVals.length ? Math.round(totalSFAll / sfVals.length) : null;
-  const avgRentPSF   = totalSFAll ? totalRentAll / totalSFAll : null;  // SF-weighted
-  const avgAnnRent   = rentVals.length ? totalRentAll / rentVals.length : null;
-  const avgSales     = salesVals.length ? salesVals.reduce((a, b) => a + b, 0) / salesVals.length : null;
+  const metricRows = activeRows.filter(r => !isMarker(r));
+  const sfVals     = metricRows.map(sfOf).filter((v): v is number => v != null);
+  const rentVals   = metricRows.map(rentOf).filter((v): v is number => v != null);
+  const psfRows    = metricRows.filter(r => sfOf(r) != null && rentOf(r) != null);
+  const salesVals  = metricRows.map(r => effSales(r)).filter((v): v is number => v != null);
+  const psfSF      = psfRows.reduce((s, r) => s + sfOf(r)!, 0);
+  const psfRent    = psfRows.reduce((s, r) => s + rentOf(r)!, 0);
+
+  const avgSF      = sfVals.length ? Math.round(sfVals.reduce((s, v) => s + v, 0) / sfVals.length) : null;
+  const avgRentPSF = psfSF ? psfRent / psfSF : null;  // SF-weighted, SF + rent paired
+  const avgAnnRent = rentVals.length ? rentVals.reduce((s, v) => s + v, 0) / rentVals.length : null;
+  const avgSales   = salesVals.length ? salesVals.reduce((a, b) => a + b, 0) / salesVals.length : null;
 
   const anchors = allRows.filter(r => r.t.isAnchor).length;
   const credit  = allRows.map(r => r.t.creditRating).find(Boolean);
@@ -162,10 +179,12 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     </div>
   );
 
-  const napCount = allRows.filter(r => isNAPTenant(r.t)).length;
+  const napCount    = rows.filter(isMarker).length;
+  const groundCount = rows.filter(isGroundLease).length;
+  const extra = `${napCount > 0 ? ` · ${napCount} NAP` : ""}${groundCount > 0 ? ` · ${groundCount} ground lease` : ""}`;
   const subtitle = scope === "owned"
-    ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}${napCount > 0 ? ` · ${napCount} NAP` : ""}`
-    : `Across ${rows.length} ${rows.length === 1 ? "property" : "properties"} in your database${napCount > 0 ? ` · ${napCount} NAP` : ""}`;
+    ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}${extra}`
+    : `Across ${rows.length} ${rows.length === 1 ? "property" : "properties"} in your database${extra}`;
 
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
@@ -242,10 +261,14 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
               value={String(activeRows.length)}
               sub={ignoredCount > 0 ? `${ignoredCount} ignored` : undefined}
             />
-            <Stat label="Avg Size (SF)"   value={avgSF != null ? avgSF.toLocaleString() : "—"} />
-            <Stat label="Avg Rent / SF"   value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"} />
-            <Stat label="Avg Annual Rent" value={avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—"} />
-            <Stat label="Avg Sales / SF"  value={avgSales != null ? `$${Math.round(avgSales).toLocaleString()}` : "—"} />
+            <Stat label="Avg Size (SF)"   value={avgSF != null ? avgSF.toLocaleString() : "—"}
+              sub={avgSF != null && sfVals.length < activeRows.length ? `over ${sfVals.length} of ${activeRows.length}` : undefined} />
+            <Stat label="Avg Rent / SF"   value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"}
+              sub={avgRentPSF != null && psfRows.length < activeRows.length ? `over ${psfRows.length} of ${activeRows.length}` : undefined} />
+            <Stat label="Avg Annual Rent" value={avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—"}
+              sub={avgAnnRent != null && rentVals.length < activeRows.length ? `over ${rentVals.length} of ${activeRows.length}` : undefined} />
+            <Stat label="Avg Sales / SF"  value={avgSales != null ? `$${Math.round(avgSales).toLocaleString()}` : "—"}
+              sub={avgSales != null && salesVals.length < activeRows.length ? `over ${salesVals.length} of ${activeRows.length}` : undefined} />
           </div>
 
           <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
@@ -324,7 +347,8 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                           {r.deal.propertyName || "Untitled"}
                           {r.deal.status && <span style={{ marginLeft:6, display:"inline-block", verticalAlign:"middle" }}><StatusTag status={r.deal.status} size="sm" /></span>}
                           {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
-                          {isNAPTenant(r.t) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
+                          {isGroundLease(r) && <span style={{ fontSize:9, color:"#3a5b7c", background:"#e8eff5", border:"1px solid #b8cce0", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>GROUND LEASE</span>}
+                          {(isNAPTenant(r.t) || (!isGroundLease(r) && sfOf(r) == null && rentOf(r) == null)) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
                         </td>
                         {(() => {
                           // The tenant name actually recorded at this property — its own column,
