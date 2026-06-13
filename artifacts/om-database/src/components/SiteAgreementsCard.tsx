@@ -84,7 +84,7 @@ export default function SiteAgreementsCard({ dealId, dealName, isAdmin }: { deal
     [items],
   );
 
-  const sectionStyle: React.CSSProperties = { marginTop: 18 };
+  const sectionStyle: React.CSSProperties = { marginTop: 18, marginBottom: 22 };
   const headStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" };
 
   return (
