@@ -544,6 +544,9 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [showDupsOnly, setShowDupsOnly] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Clear any pending debounced fetch on unmount so it can't fire setState after
+  // the component is gone (avoids the React unmounted-setState warning / wasted work).
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   // Per-row hide/ignore — persisted to localStorage
   const [ignoredComps, setIgnoredComps] = useState<Set<number>>(() => {
