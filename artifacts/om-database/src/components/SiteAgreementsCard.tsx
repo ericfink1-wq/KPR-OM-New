@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { SiteAgreement, SiteAgreementFlag } from "../lib/idb";
 import { apiListSiteAgreements, apiBulkSaveSiteAgreements, apiDeleteSiteAgreement } from "../lib/api";
+import { exportSiteAgreementsWorkbook } from "../lib/siteAgreementExcel";
 
 // Center-level "Site Agreements / REAs" section for the deal page. Mirrors the
 // lease-abstract system but for property-level recorded documents (Operating
@@ -56,7 +57,7 @@ function hasRealRofr(a: SiteAgreement): boolean {
   });
 }
 
-export default function SiteAgreementsCard({ dealId, isAdmin }: { dealId: string; isAdmin?: boolean }) {
+export default function SiteAgreementsCard({ dealId, dealName, isAdmin }: { dealId: string; dealName?: string; isAdmin?: boolean }) {
   const [items, setItems] = useState<SiteAgreement[] | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [viewing, setViewing] = useState<SiteAgreement | null>(null);
@@ -100,11 +101,20 @@ export default function SiteAgreementsCard({ dealId, isAdmin }: { dealId: string
             </span>
           )}
         </div>
-        <button onClick={() => setShowUpload(true)}
-          title="Upload a property's REA / easement / operating-agreement abstracts (one JSON, or a whole-property file)"
-          style={{ background: "#fff", border: "1px solid #c2d6f0", color: "#1f4d8f", padding: "6px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
-          ⬆ Upload site agreements
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {items && items.length > 0 && (
+            <button onClick={() => { void exportSiteAgreementsWorkbook(dealName || "deal", items).catch(() => {}); }}
+              title="Export the REA / easement abstracts to Excel — a REA & Easements summary index plus one detailed tab per agreement"
+              style={{ background: "#eafaf0", border: "1px solid #b7e4c7", color: "#1f6f43", padding: "6px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
+              ⬇ REA &amp; Easements — Excel
+            </button>
+          )}
+          <button onClick={() => setShowUpload(true)}
+            title="Upload a property's REA / easement / operating-agreement abstracts (one JSON, or a whole-property file)"
+            style={{ background: "#fff", border: "1px solid #c2d6f0", color: "#1f4d8f", padding: "6px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
+            ⬆ Upload site agreements
+          </button>
+        </div>
       </div>
 
       {items === null && <div style={{ fontSize: 12, color: C.faint }}>Loading…</div>}

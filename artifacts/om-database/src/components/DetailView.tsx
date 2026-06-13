@@ -2783,7 +2783,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       )}
 
       {/* Center-level recorded documents (REAs / OEAs / operating agreements / easements). */}
-      <SiteAgreementsCard dealId={d.id} isAdmin={isAdmin} />
+      <SiteAgreementsCard dealId={d.id} dealName={d.propertyName || d.fileName || "deal"} isAdmin={isAdmin} />
 
       <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
 
