@@ -42,6 +42,19 @@ export function currentAnnualRent(a: LeaseAbstract): number | null {
     const s = r.periodStart ? String(r.periodStart) : ""; const e = r.periodEnd ? String(r.periodEnd) : "";
     if (s && e && s <= today && today <= e) { const n = pnum(r.annualRent); if (n) return n; }
   }
+  // No dated period covers today. Prefer the curated in-place base rent — for a
+  // not-yet-commenced or undated rent schedule this is the rent that will be (or is)
+  // in place, which is what the roster's "current rent" reflects. Without this the
+  // fallback would grab the LAST schedule row — a far-future OPTION-period rent — and
+  // raise a false "roster vs lease" discrepancy (e.g. a build-to-suit not yet open).
+  const base = pnum(a.baseRentAnnual);
+  if (base) return base;
+  // Nothing curated: if the term hasn't commenced (no dated period at/ before today),
+  // the initial (FIRST) step is the in-place rent — not the last/option step.
+  const starts = rs.map((r) => (r.periodStart ? String(r.periodStart) : "")).filter(Boolean).sort();
+  const notCommenced = !starts.length || today < starts[0];
+  if (notCommenced) { for (const r of rs) { const n = pnum(r.annualRent); if (n) return n; } }
+  // Otherwise today is past all known periods (holdover) — use the last step.
   for (let i = rs.length - 1; i >= 0; i--) { const n = pnum(rs[i].annualRent); if (n) return n; }
   return null;
 }
