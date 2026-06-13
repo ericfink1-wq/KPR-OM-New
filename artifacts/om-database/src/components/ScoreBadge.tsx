@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { GRADE_COLORS } from "../lib/constants";
 import type { Deal } from "../lib/idb";
 
@@ -6,7 +7,9 @@ interface Props {
   size?: number;
 }
 
-export default function ScoreBadge({ score, size = 14 }: Props) {
+// Pure presentational leaf (one per deal row) — memoized so it doesn't re-render
+// when an unrelated parent state change (modal/selection) re-renders the grid.
+function ScoreBadge({ score, size = 14 }: Props) {
   if (!score) return null;
   const color = GRADE_COLORS[score.grade] || "#a69e91";
   return (
@@ -22,3 +25,5 @@ export default function ScoreBadge({ score, size = 14 }: Props) {
     </span>
   );
 }
+
+export default memo(ScoreBadge);

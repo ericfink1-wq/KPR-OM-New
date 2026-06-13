@@ -1,7 +1,10 @@
+import { memo } from "react";
 import { getRecency } from "../lib/utils";
 import type { Deal } from "../lib/idb";
 
-export default function RecencyBadge({ deal }: { deal: Deal }) {
+// Pure presentational leaf (one per deal row) — memoized so it doesn't recompute
+// getRecency / re-render when an unrelated parent state change re-renders the grid.
+function RecencyBadge({ deal }: { deal: Deal }) {
   const r = getRecency(deal);
   if (!r) return null;
   return (
@@ -14,3 +17,5 @@ export default function RecencyBadge({ deal }: { deal: Deal }) {
     </span>
   );
 }
+
+export default memo(RecencyBadge);
