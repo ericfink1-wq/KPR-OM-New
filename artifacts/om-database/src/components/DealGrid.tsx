@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Deal } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
@@ -32,6 +32,13 @@ function leadAnchorName(d: Deal): string {
   const best = anchors.reduce((a, b) => (Number(b.sf) || 0) > (Number(a.sf) || 0) ? b : a);
   return (best.canonicalName || best.name || "").trim();
 }
+
+// Sort/grouping constants — hoisted to module scope so they aren't re-created on
+// every sort comparison (and every render).
+const STATUS_ORDER: Record<string, number> = {
+  "Under Contract": 0, "Prospect": 1, "Owned": 2, "Sold": 3, "Passed": 4,
+};
+const NUM_SORT_KEYS = new Set(["capRate", "noi", "askingPrice", "totalSF", "occupancy", "walt"]);
 
 // Compact price for a narrow column, e.g. "$28.0M", "$930K".
 function fmtPriceShort(v: number | null | undefined): string {
@@ -300,65 +307,76 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     confirmResolverRef.current = null;
   };
 
-  const types = Array.from(new Set(deals.map(d => d.assetType).filter(Boolean))) as string[];
-  const states = Array.from(new Set(deals.map(d => d.state as unknown as string | null | undefined).filter((s): s is string => Boolean(s)))).sort();
-  const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+  // Filter-dropdown option lists — derived from the deal set, so only recompute
+  // when `deals` changes (not on every keystroke / filter toggle).
+  const types = useMemo(
+    () => Array.from(new Set(deals.map(d => d.assetType).filter(Boolean))) as string[],
+    [deals],
+  );
+  const states = useMemo(
+    () => Array.from(new Set(deals.map(d => d.state as unknown as string | null | undefined).filter((s): s is string => Boolean(s)))).sort(),
+    [deals],
+  );
 
-  let rows = deals.slice();
-  if (filterStatuses.length > 0) rows = rows.filter(d => d.status != null && filterStatuses.includes(d.status));
-  if (filterStates.length > 0) rows = rows.filter(d => { const s = d.state as unknown as string | null; return s != null && filterStates.includes(s); });
-  if (filterTypes.length > 0) rows = rows.filter(d => d.assetType != null && filterTypes.includes(d.assetType));
-  if (q.trim()) {
-    const s = q.toLowerCase();
-    // Match ONLY the columns visible in the Deal Library row — property name,
-    // status, city, state, MSA, lead anchor, seller. We deliberately do NOT search
-    // hidden/deep data (street address, notes, thesis, the full tenant roster,
-    // lenders, red flags), which made the box feel over-sensitive (e.g. "floriss"
-    // matching a street address). Results now always map to something on screen.
-    // Exception: aliases (`aka`) — searched even though not shown, so an alternate
-    // name (borrowing LLC, broker's phase name) still routes you to the deal.
-    const hay = (d: Deal): string => {
-      const parts: (string | null | undefined)[] = [
-        d.propertyName, d.status, d.city, d.state, d.market, d.seller, leadAnchorName(d),
-        ...(d.aka || []),
-      ];
-      return parts.filter(Boolean).join(" ").toLowerCase();
-    };
-    rows = rows.filter(d => hay(d).includes(s));
-  }
-  const STATUS_ORDER: Record<string, number> = {
-    "Under Contract": 0, "Prospect": 1, "Owned": 2, "Sold": 3, "Passed": 4,
-  };
-  rows.sort((a, b) => {
-    if (sortKey === "status") {
-      const ao = STATUS_ORDER[a.status || ""] ?? 99;
-      const bo = STATUS_ORDER[b.status || ""] ?? 99;
-      if (ao !== bo) return sortDir === "asc" ? ao - bo : bo - ao;
-      // Within same status group: alphabetical by property name
-      const an = (a.propertyName || a.fileName || "").toLowerCase();
-      const bn = (b.propertyName || b.fileName || "").toLowerCase();
-      return an.localeCompare(bn);
+  // The full filter → search → sort pipeline. Previously this ran in the render
+  // body on EVERY render (every unrelated state change re-filtered and re-sorted
+  // the whole library). Memoized here so it only recomputes when one of its real
+  // inputs changes. Logic is unchanged.
+  const rows = useMemo(() => {
+    const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+    let rows = deals.slice();
+    if (filterStatuses.length > 0) rows = rows.filter(d => d.status != null && filterStatuses.includes(d.status));
+    if (filterStates.length > 0) rows = rows.filter(d => { const s = d.state as unknown as string | null; return s != null && filterStates.includes(s); });
+    if (filterTypes.length > 0) rows = rows.filter(d => d.assetType != null && filterTypes.includes(d.assetType));
+    if (q.trim()) {
+      const s = q.toLowerCase();
+      // Match ONLY the columns visible in the Deal Library row — property name,
+      // status, city, state, MSA, lead anchor, seller. We deliberately do NOT search
+      // hidden/deep data (street address, notes, thesis, the full tenant roster,
+      // lenders, red flags), which made the box feel over-sensitive (e.g. "floriss"
+      // matching a street address). Results now always map to something on screen.
+      // Exception: aliases (`aka`) — searched even though not shown, so an alternate
+      // name (borrowing LLC, broker's phase name) still routes you to the deal.
+      const hay = (d: Deal): string => {
+        const parts: (string | null | undefined)[] = [
+          d.propertyName, d.status, d.city, d.state, d.market, d.seller, leadAnchorName(d),
+          ...(d.aka || []),
+        ];
+        return parts.filter(Boolean).join(" ").toLowerCase();
+      };
+      rows = rows.filter(d => hay(d).includes(s));
     }
-    if (sortKey === "anchor") {
-      const av = leadAnchorName(a).toLowerCase();
-      const bv = leadAnchorName(b).toLowerCase();
+    rows.sort((a, b) => {
+      if (sortKey === "status") {
+        const ao = STATUS_ORDER[a.status || ""] ?? 99;
+        const bo = STATUS_ORDER[b.status || ""] ?? 99;
+        if (ao !== bo) return sortDir === "asc" ? ao - bo : bo - ao;
+        // Within same status group: alphabetical by property name
+        const an = (a.propertyName || a.fileName || "").toLowerCase();
+        const bn = (b.propertyName || b.fileName || "").toLowerCase();
+        return an.localeCompare(bn);
+      }
+      if (sortKey === "anchor") {
+        const av = leadAnchorName(a).toLowerCase();
+        const bv = leadAnchorName(b).toLowerCase();
+        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      if (sortKey === "lastUploadAt") {
+        const av = _ts(a.lastUploadAt) || _ts(a.uploadedAt);
+        const bv = _ts(b.lastUploadAt) || _ts(b.uploadedAt);
+        return sortDir === "asc" ? av - bv : bv - av;
+      }
+      if (NUM_SORT_KEYS.has(sortKey)) {
+        const av = n(a[sortKey as keyof Deal]) ?? -Infinity;
+        const bv = n(b[sortKey as keyof Deal]) ?? -Infinity;
+        return sortDir === "asc" ? av - bv : bv - av;
+      }
+      const av = String(a[sortKey as keyof Deal] || "");
+      const bv = String(b[sortKey as keyof Deal] || "");
       return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-    }
-    if (sortKey === "lastUploadAt") {
-      const av = _ts(a.lastUploadAt) || _ts(a.uploadedAt);
-      const bv = _ts(b.lastUploadAt) || _ts(b.uploadedAt);
-      return sortDir === "asc" ? av - bv : bv - av;
-    }
-    const numKeys = ["capRate","noi","askingPrice","totalSF","occupancy","walt"];
-    if (numKeys.includes(sortKey)) {
-      const av = n(a[sortKey as keyof Deal]) ?? -Infinity;
-      const bv = n(b[sortKey as keyof Deal]) ?? -Infinity;
-      return sortDir === "asc" ? av - bv : bv - av;
-    }
-    const av = String(a[sortKey as keyof Deal] || "");
-    const bv = String(b[sortKey as keyof Deal] || "");
-    return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
+    });
+    return rows;
+  }, [deals, filterStatuses, filterStates, filterTypes, q, sortKey, sortDir]);
 
   // Report how many deals are showing vs the total, so the header can read
   // "39 of 94 …" while a search/filter is active.
