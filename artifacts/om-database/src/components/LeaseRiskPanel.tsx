@@ -58,20 +58,28 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
   const anchors = useMemo(() => anchorsReferenced(resolved), [resolved]);
   const diligence = useMemo(() => buildDiligenceList(deal, abstracts), [deal, abstracts]);
 
-  // How many tenants depend on each anchor — drives the per-chip count and ordering
-  // (specific named anchors first; generic "any anchor" descriptors sink to the end).
+  // How many tenants depend on each anchor — drives the per-chip count.
   const depByAnchor = useMemo(() => {
     const m = new Map<string, number>();
     for (const g of buildAnchorDependencyGraph(resolved)) m.set(g.anchor, g.dependents.length);
+    return m;
+  }, [resolved]);
+  // Tier-1 rent at stake per anchor (base rent that trips if THIS anchor alone goes
+  // dark) — the same engine the export matrix uses. Drives chip ORDER so the biggest
+  // dollar exposure leads, not merely the anchor with the most dependent leases.
+  const tier1ByAnchor = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of buildRiskMatrix(resolved).anchors) m.set(a.anchor, a.tier1Rent);
     return m;
   }, [resolved]);
   const isGeneric = (a: string) => /anchor tenant|premises|exhibit|replacement/i.test(a) || a.length > 34;
   const sortedAnchors = useMemo(() =>
     [...anchors].sort((x, y) =>
       (Number(isGeneric(x)) - Number(isGeneric(y))) ||
+      ((tier1ByAnchor.get(y) ?? 0) - (tier1ByAnchor.get(x) ?? 0)) ||
       ((depByAnchor.get(y) ?? 0) - (depByAnchor.get(x) ?? 0)) ||
       x.localeCompare(y)),
-    [anchors, depByAnchor]);
+    [anchors, tier1ByAnchor, depByAnchor]);
 
   const [selected, setSelected] = useState<string[]>([]);
   const [showDil, setShowDil] = useState(false);

@@ -16,8 +16,19 @@ import { tenantKey, isVacant } from "./utils";
 // Anchor names are matched loosely so "Dick's", "Dick's Sporting Goods", and
 // "DICKS" collapse together. Re-uses tenantKey (the roster/comp grouping key) so
 // a co-tenancy reference and a roster anchor line resolve to the same anchor.
+// Anchor names sometimes arrive with a trailing size parenthetical baked in by the
+// abstracter (e.g. "Best Buy (44,518 SF)"). Strip it so the NAME is just the brand —
+// both for display (the chips) and so size-variants collapse to one anchor when
+// matching ("Best Buy (44,518 SF)" and "Best Buy" are the same anchor).
+export function cleanAnchorName(s: unknown): string {
+  const t = String(s ?? "").trim();
+  return t
+    .replace(/\s*\([^()]*\b(?:sf|sq\.?\s*ft\.?)\b[^()]*\)\s*$/i, "") // "Best Buy (44,518 SF)" / "(35,000 sq. ft.)"
+    .replace(/\s*[-–,]\s*[\d,]+\s*(?:sq\.?\s*ft\.?|sf)\.?\s*$/i, "") // "Best Buy - 44,518 SF"
+    .trim() || t;
+}
 function normAnchor(s: unknown): string {
-  return tenantKey(s);
+  return tenantKey(cleanAnchorName(s));
 }
 
 // ── trigger tree helpers ────────────────────────────────────────────────────────
@@ -79,8 +90,8 @@ export function triggerReferencesAnchor(node: TriggerNode | null | undefined, an
 function treeAnchors(node: TriggerNode | null | undefined): string[] {
   const out = new Map<string, string>();
   for (const leaf of collectLeaves(node)) {
-    if (leaf.anchor && /anchor/i.test(String(leaf.type || ""))) { const k = normAnchor(leaf.anchor); if (k) out.set(k, leaf.anchor); }
-    if (isCountLeaf(leaf)) for (const a of (leaf.anchors || [])) { const k = normAnchor(a); if (k && !out.has(k)) out.set(k, a); }
+    if (leaf.anchor && /anchor/i.test(String(leaf.type || ""))) { const k = normAnchor(leaf.anchor); if (k) out.set(k, cleanAnchorName(leaf.anchor)); }
+    if (isCountLeaf(leaf)) for (const a of (leaf.anchors || [])) { const k = normAnchor(a); if (k && !out.has(k)) out.set(k, cleanAnchorName(a)); }
   }
   return [...out.values()];
 }
@@ -137,7 +148,7 @@ export function describeTrigger(node: TriggerNode | null | undefined): string {
   const t = String(c.type || "");
   if (isCountLeaf(c)) {
     const n = (c.anchors || []).length, open = c.openRequired != null ? c.openRequired : n;
-    return `${n - open + 1}+ of ${n} dark (needs ${open} of ${n} open: ${(c.anchors || []).join(", ")})`;
+    return `${n - open + 1}+ of ${n} dark (needs ${open} of ${n} open: ${(c.anchors || []).map(cleanAnchorName).join(", ")})`;
   }
   if (/named_anchor/i.test(t)) return `${c.anchor || "anchor"}${/dark/i.test(t) ? " dark" : /gone/i.test(t) ? " gone" : ""}`;
   if (/occupancy_threshold/i.test(t)) {
@@ -270,7 +281,7 @@ export function anchorIsTripped(st: AnchorStatus | undefined): boolean {
  *  named-anchor leaves AND every store named in an "X of N" count leaf. */
 export function anchorsReferenced(resolved: ResolvedTenantRisk[]): string[] {
   const seen = new Map<string, string>();
-  const add = (name: unknown) => { const k = normAnchor(name); if (k && !seen.has(k)) seen.set(k, String(name)); };
+  const add = (name: unknown) => { const k = normAnchor(name); if (k && !seen.has(k)) seen.set(k, cleanAnchorName(name)); };
   for (const r of resolved) {
     for (const c of r.coTenancy) {
       for (const leaf of collectLeaves(c.triggerLogic)) {
