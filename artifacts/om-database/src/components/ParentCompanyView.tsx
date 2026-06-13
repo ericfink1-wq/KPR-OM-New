@@ -93,33 +93,49 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     });
   }, [rows, sortKey, sortDir]);
 
-  // Averages exclude NAP / shadow / vacant / ground-lease / outparcel rows (often a
-  // real brand name carried at 0 SF) and any non-positive value, so they don't skew
-  // the stat tiles — matching the Tenant page and the benchmark engine.
-  const isRentable = (r: typeof rows[number]) => {
-    if (isNAPTenant(r.t)) return false;
-    return !/\b(shadow|vacant|ground.?lease|outparcel)\b/i.test((r.t.name || "").toLowerCase());
-  };
-  const rentableRows = rows.filter(isRentable);
-  const pos = (v: number | null): v is number => v != null && v > 0;
-  const sfVals      = rentableRows.map(r => num(r.t.sf)).filter(pos);
-  const rentVals    = rentableRows.map(r => num(r.t.annualRent)).filter(pos);
-  const rentPSFVals = rentableRows.map(r => num(r.t.rentPerSF)).filter(pos);
-  const salesVals   = rentableRows.map(r => effSales(r)).filter(pos);
-  const avgSF       = sfVals.length ? Math.round(sfVals.reduce((a,b)=>a+b,0)/sfVals.length) : null;
-  const avgRentPSF  = rentPSFVals.length ? rentPSFVals.reduce((a,b)=>a+b,0)/rentPSFVals.length : null;
-  const avgAnnRent  = rentVals.length ? rentVals.reduce((a,b)=>a+b,0)/rentVals.length : null;
-  const avgSales    = salesVals.length ? Math.round(salesVals.reduce((a,b)=>a+b,0)/salesVals.length) : null;
+  // Averages — same methodology as the Tenant page so the two read consistently:
+  //  • SF metrics (Avg Size; the SF denominator of Rent/SF) count only rows with
+  //    real leasable SF (> 0).
+  //  • Avg Annual Rent counts only rows with real base rent (> 0) — KEEPS a true
+  //    ground lease (rent, no SF) and DROPS unowned $0 NAP / shadow markers.
+  //  • Rent/SF is SF-weighted over rows that have BOTH SF and rent (paired), so a
+  //    ground lease's rent can't inflate $/SF.
+  //  • A row with neither SF nor rent is an unowned marker, excluded everywhere.
+  //    (isNAPTenant only catches occupied $0-rent space; 0-SF markers are caught
+  //    here by the no-SF-and-no-rent test.)
+  const sfOf   = (r: typeof rows[number]) => { const v = num(r.t.sf); return v != null && v > 0 ? v : null; };
+  const rentOf = (r: typeof rows[number]) => { const v = num(r.t.annualRent); return v != null && v > 0 ? v : null; };
+  const isMarker = (r: typeof rows[number]) =>
+    isNAPTenant(r.t)
+    || /\b(shadow|vacant|outparcel)\b/i.test((r.t.name || "").toLowerCase())
+    || (sfOf(r) == null && rentOf(r) == null);
+  const isGroundLease = (r: typeof rows[number]) => !isMarker(r) && sfOf(r) == null && rentOf(r) != null;
+
+  const metricRows = rows.filter(r => !isMarker(r));
+  const sfVals     = metricRows.map(sfOf).filter((v): v is number => v != null);
+  const rentVals   = metricRows.map(rentOf).filter((v): v is number => v != null);
+  const psfRows    = metricRows.filter(r => sfOf(r) != null && rentOf(r) != null);
+  const salesVals  = metricRows.map(r => effSales(r)).filter((v): v is number => v != null);
+  const psfSF      = psfRows.reduce((s, r) => s + sfOf(r)!, 0);
+  const psfRent    = psfRows.reduce((s, r) => s + rentOf(r)!, 0);
+  const avgSF       = sfVals.length ? Math.round(sfVals.reduce((a, b) => a + b, 0) / sfVals.length) : null;
+  const avgRentPSF  = psfSF ? psfRent / psfSF : null;  // SF-weighted, SF + rent paired
+  const avgAnnRent  = rentVals.length ? rentVals.reduce((a, b) => a + b, 0) / rentVals.length : null;
+  const avgSales    = salesVals.length ? Math.round(salesVals.reduce((a, b) => a + b, 0) / salesVals.length) : null;
   const uniqueBrands = new Set(allRows.map(r => r.brandLabel)).size;
 
+  const napCount    = rows.filter(isMarker).length;
+  const groundCount = rows.filter(isGroundLease).length;
+  const extra = `${napCount > 0 ? ` · ${napCount} NAP` : ""}${groundCount > 0 ? ` · ${groundCount} ground lease` : ""}`;
   const subtitle = scope === "owned"
-    ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}`
-    : `${uniqueBrands} brand${uniqueBrands !== 1 ? "s" : ""} · ${allRows.length} location${allRows.length !== 1 ? "s" : ""}`;
+    ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}${extra}`
+    : `${uniqueBrands} brand${uniqueBrands !== 1 ? "s" : ""} · ${allRows.length} location${allRows.length !== 1 ? "s" : ""}${extra}`;
 
-  const Stat = ({ label, value }: { label: string; value: string }) => (
+  const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
     <div style={{ flex:"1 1 130px", background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"13px 16px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ fontSize:10, letterSpacing:"0.06em", color:"#a69e91", marginBottom:6, fontWeight:500, textTransform:"uppercase" }}>{label}</div>
       <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:"#383a37", lineHeight:1 }}>{value}</div>
+      {sub && <div style={{ fontSize:9, color:"#b8b0a3", marginTop:3 }}>{sub}</div>}
     </div>
   );
 
@@ -187,9 +203,12 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
           <div style={{ display:"flex", gap:11, flexWrap:"wrap", marginBottom:22 }}>
             <Stat label="Brands"         value={String(uniqueBrands)} />
             <Stat label="Locations"      value={String(rows.length)} />
-            <Stat label="Avg Size (SF)"  value={avgSF != null ? avgSF.toLocaleString() : "—"} />
-            <Stat label="Avg Rent / SF"  value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"} />
-            <Stat label="Avg Annual Rent" value={avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—"} />
+            <Stat label="Avg Size (SF)"  value={avgSF != null ? avgSF.toLocaleString() : "—"}
+              sub={avgSF != null && sfVals.length < rows.length ? `over ${sfVals.length} of ${rows.length}` : undefined} />
+            <Stat label="Avg Rent / SF"  value={avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—"}
+              sub={avgRentPSF != null && psfRows.length < rows.length ? `over ${psfRows.length} of ${rows.length}` : undefined} />
+            <Stat label="Avg Annual Rent" value={avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—"}
+              sub={avgAnnRent != null && rentVals.length < rows.length ? `over ${rentVals.length} of ${rows.length}` : undefined} />
             {avgSales != null && <Stat label="Avg Sales / SF" value={`$${avgSales.toLocaleString()}`} />}
           </div>
 
@@ -226,7 +245,8 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                             {r.brandLabel}
                           </button>
                           {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
-                          {isNAPTenant(r.t) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
+                          {isGroundLease(r) && <span style={{ fontSize:9, color:"#3a5b7c", background:"#e8eff5", border:"1px solid #b8cce0", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>GROUND LEASE</span>}
+                          {(isNAPTenant(r.t) || (!isGroundLease(r) && sfOf(r) == null && rentOf(r) == null)) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
                           {(r.t.name || "") && isInvestmentGrade(r.t.name || "", r.t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>Investment Grade</span>}
                           {(() => { const w = lookupWatch(watchMap, r.t.name); if (!w) return null; const m = WATCH_STATUS_META[w.status] || WATCH_STATUS_META.watch; return (
                             <span title={`Retailer watchlist — ${m.label}: ${w.note || w.brand}`} style={{ fontSize:9, color:m.color, background:m.bg, border:`1px solid ${m.border}`, padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.03em" }}>⚠ {m.label}</span>

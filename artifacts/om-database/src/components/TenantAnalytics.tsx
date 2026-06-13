@@ -920,6 +920,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                           {isATM(row.displayName, row.totalSF) && (
                             <span style={{ fontSize: 8.5, color: "#5a6b8c", background: "#eef1f7", border: "1px solid #cdd6e6", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="ATM — tracked separately from full bank branches (same parent company)">ATM</span>
                           )}
+                          {!isATM(row.displayName, row.totalSF) && row.totalSF === 0 && row.totalAnnualRent > 0 && (
+                            <span style={{ fontSize: 8.5, color: "#3a5b7c", background: "#e8eff5", border: "1px solid #b8cce0", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="Ground lease — base rent with no leasable SF; excluded from SF-based averages">GROUND LEASE</span>
+                          )}
                         </div>
                         <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
                           <span>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
