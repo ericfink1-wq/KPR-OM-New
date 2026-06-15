@@ -38,7 +38,7 @@ export function reportClientError(message: string, detail?: string): void {
 
 // --- Auth ---
 
-export async function apiLogin(email: string, password: string): Promise<{ ok: boolean; error?: string; needsVerification?: boolean }> {
+export async function apiLogin(email: string, password: string): Promise<{ ok: boolean; error?: string; needsVerification?: boolean; twoFactorRequired?: boolean }> {
   try {
     const resp = await apiFetch("/auth/login", {
       method: "POST",
@@ -48,10 +48,50 @@ export async function apiLogin(email: string, password: string): Promise<{ ok: b
       const body = await resp.json().catch(() => ({})) as { error?: string; needsVerification?: boolean };
       return { ok: false, error: body.error || "Login failed", needsVerification: body.needsVerification };
     }
+    const body = await resp.json().catch(() => ({})) as { twoFactorRequired?: boolean };
+    if (body.twoFactorRequired) return { ok: false, twoFactorRequired: true };
     return { ok: true };
   } catch {
     return { ok: false, error: "Couldn't reach the server. Check your connection and that the app finished publishing, then try again." };
   }
+}
+
+// Second login step when 2FA is enabled: submit the authenticator (or backup) code.
+export async function apiVerify2fa(code: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const resp = await apiFetch("/auth/2fa/verify", { method: "POST", body: JSON.stringify({ code }) });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      return { ok: false, error: body.error || "Verification failed" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
+  }
+}
+
+export interface TwoFactorStatus { enabled: boolean; backupCodesRemaining: number }
+export async function api2faStatus(): Promise<TwoFactorStatus> {
+  try {
+    const resp = await apiFetch("/auth/2fa/status");
+    if (!resp.ok) return { enabled: false, backupCodesRemaining: 0 };
+    return await resp.json() as TwoFactorStatus;
+  } catch { return { enabled: false, backupCodesRemaining: 0 }; }
+}
+export async function api2faSetup(): Promise<{ ok: boolean; secret?: string; otpauthUri?: string; qrDataUrl?: string; error?: string }> {
+  const resp = await apiFetch("/auth/2fa/setup", { method: "POST" });
+  const body = await resp.json().catch(() => ({})) as { secret?: string; otpauthUri?: string; qrDataUrl?: string; error?: string };
+  return resp.ok ? { ok: true, ...body } : { ok: false, error: body.error || "Could not start setup" };
+}
+export async function api2faEnable(code: string): Promise<{ ok: boolean; backupCodes?: string[]; error?: string }> {
+  const resp = await apiFetch("/auth/2fa/enable", { method: "POST", body: JSON.stringify({ code }) });
+  const body = await resp.json().catch(() => ({})) as { backupCodes?: string[]; error?: string };
+  return resp.ok ? { ok: true, backupCodes: body.backupCodes } : { ok: false, error: body.error || "Could not enable two-factor" };
+}
+export async function api2faDisable(opts: { code?: string; password?: string }): Promise<{ ok: boolean; error?: string }> {
+  const resp = await apiFetch("/auth/2fa/disable", { method: "POST", body: JSON.stringify(opts) });
+  const body = await resp.json().catch(() => ({})) as { error?: string };
+  return resp.ok ? { ok: true } : { ok: false, error: body.error || "Could not disable two-factor" };
 }
 
 export async function apiRegister(name: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> {
@@ -86,13 +126,13 @@ export async function apiChangePassword(currentPassword: string, newPassword: st
   return { ok: true };
 }
 
-export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null }
+export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null; twoFactorPending?: boolean }
 export async function apiCheckAuth(): Promise<AuthState> {
   try {
     const resp = await apiFetch("/auth/me");
     if (!resp.ok) return { authenticated: false, isAdmin: false, email: null, name: null };
-    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null };
-    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null };
+    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null; twoFactorPending?: boolean };
+    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null, twoFactorPending: !!body.twoFactorPending };
   } catch {
     return { authenticated: false, isAdmin: false, email: null, name: null };
   }

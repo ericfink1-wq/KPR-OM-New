@@ -21,4 +21,12 @@ export const usersTable = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   verifyTokenHash: text("verify_token_hash"),
   verifyTokenExpires: timestamp("verify_token_expires", { withTimezone: true }),
+  // Two-factor authentication (TOTP / authenticator app). totpSecret holds the
+  // confirmed base32 secret once enabled; totpPendingSecret holds it during
+  // enrollment (before the first code is verified); totpBackupCodes is a JSON array
+  // of sha256-hashed single-use recovery codes.
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
+  totpSecret: text("totp_secret"),
+  totpPendingSecret: text("totp_pending_secret"),
+  totpBackupCodes: text("totp_backup_codes"),
 });

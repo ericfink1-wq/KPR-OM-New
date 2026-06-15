@@ -6,6 +6,8 @@ import { eq, and, gt, desc, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, validatePassword, sha256 } from "../lib/password";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { logger } from "../lib/logger";
+import QRCode from "qrcode";
+import { generateSecret, verifyTotp, otpauthUri } from "../lib/totp";
 
 const router = Router();
 
@@ -45,6 +47,24 @@ const normEmail = (v: unknown) => typeof v === "string" ? v.trim().toLowerCase()
 const genId = () => `usr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+// Promote a password-(and, when enabled, 2FA-)verified user to a full session.
+async function completeLogin(req: Request, user: { id: string; email: string; name: string | null; isAdmin: boolean }): Promise<void> {
+  req.session.authenticated = true;
+  req.session.userId = user.id;
+  req.session.userEmail = user.email;
+  req.session.userName = user.name ?? null;
+  req.session.isAdmin = user.isAdmin;
+  req.session.loginAt = Date.now();
+  delete req.session.pending2faUserId;
+  delete req.session.pending2faAt;
+  await db.update(usersTable).set({ lastLoginAt: new Date() }).where(eq(usersTable.id, user.id));
+}
+
+// 2FA backup recovery codes — single-use, shown once at enrollment, stored hashed.
+const fmtBackup = () => { const h = randomBytes(4).toString("hex").toUpperCase(); return `${h.slice(0, 4)}-${h.slice(4)}`; };
+const normBackup = (s: string) => (s || "").replace(/[^a-z0-9]/gi, "").toUpperCase();
+const jsonArr = (s: string | null | undefined): string[] => { try { const a = JSON.parse(s || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } };
+
 // Create the users table if it doesn't exist (Eric can't run migrations), and
 // seed the owner admin account from ADMIN_PASSWORD so it exists pre-approved and
 // can't be squatted. ON CONFLICT DO NOTHING — never overwrites a later password
@@ -72,6 +92,11 @@ export function ensureUsersTable(): Promise<void> {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token_hash text`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token_expires timestamptz`);
+      // Two-factor auth (TOTP / authenticator app).
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled boolean NOT NULL DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret text`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_pending_secret text`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_backup_codes text`);
       // Grandfather: anyone already approved predates email verification — treat
       // them as verified so the new check never locks out an existing user.
       await db.execute(sql`UPDATE users SET email_verified = true WHERE status = 'approved' AND email_verified = false`);
@@ -219,18 +244,150 @@ router.post("/auth/login", async (req, res) => {
         : "Your account is awaiting approval. You'll be able to sign in once it's approved." });
       return;
     }
-    req.session.authenticated = true;
-    req.session.userId = user.id;
-    req.session.userEmail = user.email;
-    req.session.userName = user.name ?? null;
-    req.session.isAdmin = user.isAdmin;
-    req.session.loginAt = Date.now();
-    await db.update(usersTable).set({ lastLoginAt: new Date() }).where(eq(usersTable.id, user.id));
+    if (user.totpEnabled && user.totpSecret) {
+      // Password OK, but two-factor is on — hold a partial session until a valid
+      // code is entered at POST /auth/2fa/verify. Not yet authenticated.
+      req.session.authenticated = false;
+      req.session.pending2faUserId = user.id;
+      req.session.pending2faAt = Date.now();
+      res.json({ twoFactorRequired: true });
+      return;
+    }
+    await completeLogin(req, user);
     await recordLoginEvent(req, email, user.id, true);
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Login failed");
     res.status(500).json({ error: "Login failed — please try again." });
+  }
+});
+
+// POST /api/auth/2fa/verify — second step of login: validate the TOTP (or a backup
+// code) for the partial session created by /auth/login when 2FA is enabled.
+router.post("/auth/2fa/verify", async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const uid = req.session.pending2faUserId;
+    const startedAt = req.session.pending2faAt || 0;
+    if (!uid || Date.now() - startedAt > 10 * 60 * 1000) {
+      delete req.session.pending2faUserId; delete req.session.pending2faAt;
+      res.status(401).json({ error: "Your sign-in timed out. Please enter your email and password again." });
+      return;
+    }
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, uid)))[0];
+    if (!user || !user.totpEnabled || !user.totpSecret) {
+      res.status(400).json({ error: "Two-factor is not set up for this account." });
+      return;
+    }
+    // Brute-force lockout on the 2FA step (shares the email fail counter).
+    const since = new Date(Date.now() - FAIL_WINDOW_MS);
+    const fails = await db.select().from(loginEventsTable)
+      .where(and(eq(loginEventsTable.email, user.email), eq(loginEventsTable.success, false), gt(loginEventsTable.createdAt, since)));
+    if (fails.length >= MAX_FAILS) {
+      res.status(429).json({ error: "Too many failed codes. Please wait about 15 minutes and try again." });
+      return;
+    }
+    const code = typeof (req.body as Record<string, unknown>)?.code === "string" ? (req.body as Record<string, string>).code.trim() : "";
+    let ok = verifyTotp(user.totpSecret, code);
+    let usedBackup = false;
+    if (!ok && code) {
+      const codes = jsonArr(user.totpBackupCodes);
+      const idx = codes.indexOf(sha256(normBackup(code)));
+      if (idx >= 0) {
+        codes.splice(idx, 1);
+        await db.update(usersTable).set({ totpBackupCodes: JSON.stringify(codes) }).where(eq(usersTable.id, user.id));
+        ok = true; usedBackup = true;
+      }
+    }
+    if (!ok) {
+      await recordLoginEvent(req, user.email, user.id, false);
+      res.status(401).json({ error: "Invalid authentication code." });
+      return;
+    }
+    await completeLogin(req, user);
+    await recordLoginEvent(req, user.email, user.id, true);
+    res.json({ ok: true, usedBackup });
+  } catch (err) {
+    req.log.error({ err }, "2FA verify failed");
+    res.status(500).json({ error: "Verification failed — please try again." });
+  }
+});
+
+// POST /api/auth/2fa/setup — begin enrollment: issue a pending secret + QR.
+router.post("/auth/2fa/setup", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const uid = req.session.userId!;
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, uid)))[0];
+    if (!user) { res.status(404).json({ error: "Account not found." }); return; }
+    if (user.totpEnabled) { res.status(400).json({ error: "Two-factor is already enabled. Turn it off first to re-enroll." }); return; }
+    const secret = generateSecret();
+    await db.update(usersTable).set({ totpPendingSecret: secret }).where(eq(usersTable.id, uid));
+    const uri = otpauthUri(secret, user.email);
+    const qrDataUrl = await QRCode.toDataURL(uri, { margin: 1, width: 220 });
+    res.json({ secret, otpauthUri: uri, qrDataUrl });
+  } catch (err) {
+    req.log.error({ err }, "2FA setup failed");
+    res.status(500).json({ error: "Could not start two-factor setup." });
+  }
+});
+
+// POST /api/auth/2fa/enable — confirm a code from the authenticator, turn 2FA on,
+// and return the one-time backup codes (shown to the user exactly once).
+router.post("/auth/2fa/enable", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const uid = req.session.userId!;
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, uid)))[0];
+    if (!user?.totpPendingSecret) { res.status(400).json({ error: "Start two-factor setup first." }); return; }
+    const code = typeof (req.body as Record<string, unknown>)?.code === "string" ? (req.body as Record<string, string>).code.trim() : "";
+    if (!verifyTotp(user.totpPendingSecret, code)) {
+      res.status(400).json({ error: "That code didn't match. Check your phone's clock and enter the current 6-digit code." });
+      return;
+    }
+    const backupCodes = Array.from({ length: 10 }, fmtBackup);
+    const hashed = backupCodes.map(c => sha256(normBackup(c)));
+    await db.update(usersTable).set({ totpEnabled: true, totpSecret: user.totpPendingSecret, totpPendingSecret: null, totpBackupCodes: JSON.stringify(hashed) }).where(eq(usersTable.id, uid));
+    res.json({ ok: true, backupCodes });
+  } catch (err) {
+    req.log.error({ err }, "2FA enable failed");
+    res.status(500).json({ error: "Could not enable two-factor." });
+  }
+});
+
+// POST /api/auth/2fa/disable — turn 2FA off (requires a current code or the password).
+router.post("/auth/2fa/disable", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const uid = req.session.userId!;
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, uid)))[0];
+    if (!user?.totpEnabled || !user.totpSecret) { res.status(400).json({ error: "Two-factor isn't enabled." }); return; }
+    const body = (req.body as Record<string, unknown>) || {};
+    const code = typeof body.code === "string" ? body.code.trim() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    const codeOk = !!code && (verifyTotp(user.totpSecret, code) || jsonArr(user.totpBackupCodes).includes(sha256(normBackup(code))));
+    const pwOk = !!password && verifyPassword(password, user.passwordHash);
+    if (!codeOk && !pwOk) {
+      res.status(400).json({ error: "Enter a current authenticator code or your password to turn off two-factor." });
+      return;
+    }
+    await db.update(usersTable).set({ totpEnabled: false, totpSecret: null, totpPendingSecret: null, totpBackupCodes: null }).where(eq(usersTable.id, uid));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "2FA disable failed");
+    res.status(500).json({ error: "Could not disable two-factor." });
+  }
+});
+
+// GET /api/auth/2fa/status — whether 2FA is on, and backup codes remaining.
+router.get("/auth/2fa/status", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)))[0];
+    res.json({ enabled: !!user?.totpEnabled, backupCodesRemaining: jsonArr(user?.totpBackupCodes).length });
+  } catch (err) {
+    req.log.error({ err }, "2FA status failed");
+    res.status(500).json({ error: "Could not load two-factor status." });
   }
 });
 
@@ -289,6 +446,7 @@ router.get("/auth/me", (req, res) => {
     isAdmin: !!req.session.isAdmin,
     email: req.session.userEmail || null,
     name: req.session.userName || null,
+    twoFactorPending: !!req.session.pending2faUserId && !req.session.authenticated,
   });
 });
 

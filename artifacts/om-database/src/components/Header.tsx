@@ -5,6 +5,7 @@ import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
+import TwoFactorModal from "./TwoFactorModal";
 import ChangePassword from "./ChangePassword";
 import HouseViewModal from "./HouseViewModal";
 import { dedupeStoredAddress } from "../lib/utils";
@@ -39,6 +40,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [ratesOpen, setRatesOpen] = useState(false);
   const [houseViewOpen, setHouseViewOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [twoFAOpen, setTwoFAOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
@@ -741,6 +743,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         </button>
         {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}
 
+        {onLogout && (
+          <button onClick={() => setTwoFAOpen(true)} title="Two-factor authentication"
+            style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "6px 11px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", letterSpacing: "0.04em" }}>
+            🔒 Security
+          </button>
+        )}
+        {twoFAOpen && <TwoFactorModal onClose={() => setTwoFAOpen(false)} />}
         {onLogout && (
           <button onClick={onLogout}
             style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "6px 11px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", letterSpacing: "0.04em" }}>

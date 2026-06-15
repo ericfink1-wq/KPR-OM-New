@@ -1,11 +1,14 @@
 import { useState, FormEvent } from "react";
-import { apiLogin, apiRegister, apiForgotPassword, apiResendVerification } from "../lib/api";
+import { apiLogin, apiRegister, apiForgotPassword, apiResendVerification, apiVerify2fa } from "../lib/api";
 
 interface Props {
   onLogin: () => void;
+  // When the page reloads mid-login (password done, 2FA code still owed), start on
+  // the code step instead of the password form.
+  startOn2fa?: boolean;
 }
 
-type Mode = "login" | "register" | "forgot";
+type Mode = "login" | "register" | "forgot" | "twofa";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "10px 14px",
@@ -17,11 +20,12 @@ const labelStyle: React.CSSProperties = {
   color: "#a89f8f", textTransform: "uppercase", marginBottom: 6,
 };
 
-export default function Login({ onLogin }: Props) {
-  const [mode, setMode] = useState<Mode>("login");
+export default function Login({ onLogin, startOn2fa }: Props) {
+  const [mode, setMode] = useState<Mode>(startOn2fa ? "twofa" : "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,7 +33,7 @@ export default function Login({ onLogin }: Props) {
   // email, or right after requesting an account.
   const [needsVerify, setNeedsVerify] = useState(false);
 
-  const switchMode = (m: Mode) => { setMode(m); setError(null); setNotice(null); setPassword(""); setNeedsVerify(false); };
+  const switchMode = (m: Mode) => { setMode(m); setError(null); setNotice(null); setPassword(""); setCode(""); setNeedsVerify(false); };
 
   const resendVerify = async () => {
     if (!email.trim()) return;
@@ -49,7 +53,19 @@ export default function Login({ onLogin }: Props) {
       const result = await apiLogin(email.trim(), password);
       setLoading(false);
       if (result.ok) onLogin();
+      else if (result.twoFactorRequired) { setMode("twofa"); setCode(""); }
       else { setError(result.error || "Incorrect email or password"); setNeedsVerify(!!result.needsVerification); }
+      return;
+    }
+
+    if (mode === "twofa") {
+      const c = code.replace(/\s+/g, "");
+      if (!c) return;
+      setLoading(true);
+      const result = await apiVerify2fa(c);
+      setLoading(false);
+      if (result.ok) onLogin();
+      else setError(result.error || "Invalid code");
       return;
     }
 
@@ -80,14 +96,16 @@ export default function Login({ onLogin }: Props) {
 
   const canSubmit = mode === "login" ? !!email.trim() && !!password
     : mode === "forgot" ? !!email.trim()
+    : mode === "twofa" ? !!code.trim()
     : !!email.trim() && password.length >= 10;
 
   const subtitle = mode === "login" ? "Sign in to your account"
     : mode === "register" ? "Request an account"
+    : mode === "twofa" ? "Two-factor authentication"
     : "Reset your password";
   const submitLabel = loading
-    ? (mode === "register" ? "Submitting…" : mode === "forgot" ? "Sending…" : "Signing in…")
-    : (mode === "register" ? "Request access" : mode === "forgot" ? "Send reset link" : "Sign in");
+    ? (mode === "register" ? "Submitting…" : mode === "forgot" ? "Sending…" : mode === "twofa" ? "Verifying…" : "Signing in…")
+    : (mode === "register" ? "Request access" : mode === "forgot" ? "Send reset link" : mode === "twofa" ? "Verify" : "Sign in");
 
   return (
     <div style={{ minHeight: "100vh", background: "#f1ece1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 16 }}>
@@ -107,15 +125,29 @@ export default function Login({ onLogin }: Props) {
             </div>
           )}
 
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Email</label>
-            <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus={mode !== "register"} placeholder="you@company.com" style={inputStyle} />
-          </div>
+          {mode !== "twofa" && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Email</label>
+              <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} autoFocus={mode !== "register"} placeholder="you@company.com" style={inputStyle} />
+            </div>
+          )}
 
-          {mode !== "forgot" && (
+          {mode !== "forgot" && mode !== "twofa" && (
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Password</label>
               <input type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder={mode === "register" ? "At least 10 characters" : "Your password"} style={inputStyle} />
+            </div>
+          )}
+
+          {mode === "twofa" && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Authentication code</label>
+              <input type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus value={code}
+                onChange={e => setCode(e.target.value)} placeholder="6-digit code"
+                style={{ ...inputStyle, letterSpacing: "0.3em", fontSize: 18, textAlign: "center" }} />
+              <div style={{ fontSize: 11.5, color: "#a89f8f", marginTop: 7, lineHeight: 1.45 }}>
+                Enter the 6-digit code from your authenticator app. Lost your phone? Enter one of your backup codes instead.
+              </div>
             </div>
           )}
 
@@ -144,7 +176,7 @@ export default function Login({ onLogin }: Props) {
         <div style={{ marginTop: 16, textAlign: "center", fontSize: 14, color: "#7d766a" }}>
           {mode === "login" && <>New here? <button onClick={() => switchMode("register")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Create an account</button></>}
           {mode === "register" && <>Already have an account? <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Sign in</button></>}
-          {mode === "forgot" && <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>← Back to sign in</button>}
+          {(mode === "forgot" || mode === "twofa") && <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>← Back to sign in</button>}
         </div>
       </div>
     </div>

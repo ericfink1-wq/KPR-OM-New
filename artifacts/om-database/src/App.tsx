@@ -83,6 +83,7 @@ type AuthState = "checking" | "authenticated" | "unauthenticated";
 
 function AppInner() {
   const [auth, setAuth] = useState<AuthState>("checking");
+  const [twoFAPending, setTwoFAPending] = useState(false);
   // Password-reset deep link (?reset=1&email=…&token=…) from the reset email.
   const [resetParams, setResetParams] = useState<{ email: string; token: string } | null>(() => {
     try {
@@ -204,9 +205,10 @@ function AppInner() {
   }, []);
 
   const checkAuth = useCallback(() => {
-    apiCheckAuth().then(({ authenticated, isAdmin }) => {
+    apiCheckAuth().then(({ authenticated, isAdmin, twoFactorPending }) => {
       setAuth(authenticated ? "authenticated" : "unauthenticated");
       setIsAdmin(isAdmin);
+      setTwoFAPending(!!twoFactorPending);
     });
   }, []);
 
@@ -394,7 +396,7 @@ function AppInner() {
   }
 
   if (auth === "unauthenticated") {
-    return <Login onLogin={() => { checkAuth(); }} />;
+    return <Login startOn2fa={twoFAPending} onLogin={() => { checkAuth(); }} />;
   }
 
   if (!loaded) {
