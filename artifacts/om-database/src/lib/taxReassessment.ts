@@ -417,7 +417,8 @@ export interface ReassessInput {
   county?: string | null;                // refines cycle/ratio in county-driven states
   acquisitionPrice: number | null;       // the price we'd pay
   currentAssessedValue?: number | null;  // current taxable/assessed value from the OM tax page
-  currentAnnualTaxes?: number | null;    // current annual RE taxes from the OM
+  currentAnnualTaxes?: number | null;    // current annual RE taxes from the OM (TOTAL bill)
+  nonAdValoremAnnual?: number | null;    // $ of non-ad-valorem charges inside the total — netted out of the reassessing base
   applyScAtiExemption?: boolean;         // SC only — model the optional 25% ATI exemption
 }
 
@@ -449,9 +450,17 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
   const curTaxes = numOrNull(input.currentAnnualTaxes);
   const ratio = j?.assessmentRatioCommercialPct ?? null;
 
-  // The property's REAL effective rate on its assessed value — the most accurate
-  // multiplier for a new assessment. Falls back to null when we lack the bill.
-  const effRate = curTaxes != null && curAssessed != null && curAssessed > 0 ? curTaxes / curAssessed : null;
+  // Isolate the AD-VALOREM (value-based) portion of the bill — only that reassesses.
+  // Non-ad-valorem special-district / fixed charges (CDD, Mello-Roos, BID, PACE) are
+  // flat: scaling them up with the new value would OVERSTATE the step-up. Net them out
+  // of the rate base, then add them back unchanged to the post-sale total.
+  const nav = numOrNull(input.nonAdValoremAnnual);
+  const navInBill = nav != null && curTaxes != null && nav < curTaxes ? nav : 0;
+  const adValoremTaxes = curTaxes != null ? curTaxes - navInBill : null;
+
+  // The property's REAL ad-valorem effective rate on its assessed value — the most
+  // accurate multiplier for a new assessment. Null when we lack the bill.
+  const effRate = adValoremTaxes != null && curAssessed != null && curAssessed > 0 ? adValoremTaxes / curAssessed : null;
   const impliedMarket = curAssessed != null && ratio != null && ratio > 0 ? curAssessed / (ratio / 100) : null;
 
   const detail: string[] = [];
@@ -485,17 +494,18 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
     detail.push(j.saleTriggerNote);
     if (effRate != null && fullValueAssessed != null && curTaxes != null) {
       out.estPostSaleAssessed = r2(fullValueAssessed);
-      out.estPostSaleTaxes = r2(fullValueAssessed * effRate);
+      out.estPostSaleTaxes = r2(fullValueAssessed * effRate + navInBill);
     }
     return out;
   }
 
   if (reset && fullValueAssessed != null && effRate != null && curTaxes != null) {
-    const postTaxes = fullValueAssessed * effRate;
+    const postTaxes = fullValueAssessed * effRate + navInBill; // reassessed ad-valorem + flat non-ad-valorem
     out.estPostSaleAssessed = r2(fullValueAssessed);
     out.estPostSaleTaxes = r2(postTaxes);
     out.estAnnualStepUp = r2(postTaxes - curTaxes);
     out.stepUpPct = curTaxes > 0 ? Math.round(((postTaxes - curTaxes) / curTaxes) * 100) : null;
+    if (navInBill > 0) detail.push(`Excludes $${navInBill.toLocaleString()}/yr of non-ad-valorem special-district charges from the reassessing base (they're flat — added back unchanged).`);
     const basisWord = j.reassessmentBasis === "acquisition_price" ? "your purchase price"
       : j.reassessmentBasis === "equalized_value" ? "the equalized value (≈50% of price)"
       : "full market value";
@@ -516,7 +526,7 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
     else if (j.assessmentCycleYears === 1) detail.push("Valued to market annually, so a price above the current assessment can flow in within a year or two.");
     else detail.push("No fixed cycle — confirm the county's reassessment cadence (and equalization ratio).");
     if (fullValueAssessed != null && effRate != null && curTaxes != null && impliedMarket != null && price != null && price > impliedMarket * 1.05) {
-      const nextTaxes = fullValueAssessed * effRate;
+      const nextTaxes = fullValueAssessed * effRate + navInBill; // reassessed ad-valorem + flat non-ad-valorem
       out.estNextCycleTaxes = r2(nextTaxes);
       out.estNextCycleStepUp = r2(nextTaxes - curTaxes);
       detail.push(`If/when reassessed to your ~$${price.toLocaleString()} basis: taxes ≈ $${r2(nextTaxes).toLocaleString()}/yr (≈ +$${(out.estNextCycleStepUp!).toLocaleString()}/yr vs. today) — model this at the next cycle, not day one.`);
@@ -542,6 +552,7 @@ interface TaxDealLike {
   taxParcels?: TaxParcelLike[] | null;
   taxAbatement?: { present?: boolean | null; type?: string | null; note?: string | null; expiry?: string | null } | null;
   specialAssessments?: string | null;
+  nonAdValoremAnnual?: unknown;
   expenseBreakdown?: Record<string, number | null> | null;
 }
 
@@ -554,7 +565,8 @@ export interface TaxCaptureCheck {
   // The totals to USE — the deterministic parcel sum when parcels exist, else the
   // extractor's stated total. (source tells the UI which.)
   assessed: number | null;
-  taxes: number | null;
+  taxes: number | null;             // TOTAL current bill
+  nonAdValorem: number | null;      // non-ad-valorem portion to net out of the reassessing base
   assessedSource: "parcels" | "stated" | "none";
   taxesSource: "parcels" | "stated" | "none";
   impliedRatioPct: number | null;   // assessed ÷ market × 100
@@ -615,9 +627,22 @@ export function reconcileTaxCapture(deal: TaxDealLike): TaxCaptureCheck {
     const exp = deal.taxAbatement.expiry ? ` (expires ${deal.taxAbatement.expiry})` : "";
     warnings.push({ severity: "high", message: `Tax ${t}abatement in place${exp} — current taxes are artificially LOW. Confirm whether it survives the sale, and underwrite the un-abated taxes.` });
   }
+  // Non-ad-valorem $ to net out of the reassessing base (a flat charge mustn't scale
+  // with value). Guard against a captured value that exceeds the whole bill.
+  const navRaw = numOrNull(deal.nonAdValoremAnnual);
+  let nonAdValorem: number | null = null;
+  if (navRaw != null) {
+    if (taxes != null && navRaw >= taxes) {
+      warnings.push({ severity: "medium", message: `Captured non-ad-valorem charges ($${Math.round(navRaw).toLocaleString()}/yr) are not less than the total tax bill ($${Math.round(taxes).toLocaleString()}/yr) — that can't be right, so it's ignored until corrected.` });
+    } else {
+      nonAdValorem = navRaw;
+    }
+  }
   if (deal.specialAssessments && String(deal.specialAssessments).trim()) {
-    warnings.push({ severity: "info", message: `Special / non-ad-valorem assessments present (${String(deal.specialAssessments).trim()}) — these don't reassess like ad-valorem taxes; keep them separate from the reassessment estimate.` });
+    warnings.push({ severity: "info", message: nonAdValorem != null
+      ? `Special / non-ad-valorem assessments present (${String(deal.specialAssessments).trim()}); ~$${Math.round(nonAdValorem).toLocaleString()}/yr is netted OUT of the reassessing base and added back flat.`
+      : `Special / non-ad-valorem assessments present (${String(deal.specialAssessments).trim()}) — these don't reassess like ad-valorem taxes. Enter their annual $ below so they're netted out of the step-up.` });
   }
 
-  return { parcelCount: parcels.length, parcelSumAssessed, parcelSumTaxes, assessed, taxes, assessedSource, taxesSource, impliedRatioPct, warnings };
+  return { parcelCount: parcels.length, parcelSumAssessed, parcelSumTaxes, assessed, taxes, nonAdValorem, assessedSource, taxesSource, impliedRatioPct, warnings };
 }

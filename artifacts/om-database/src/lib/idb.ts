@@ -939,6 +939,11 @@ export interface Deal {
   taxParcels?: TaxParcel[] | null;
   taxAbatement?: TaxAbatement | null;
   specialAssessments?: string | null;      // CDD / Mello-Roos / BID / special-district lines (don't reassess like ad valorem)
+  // Annual $ of the NON-AD-VALOREM (special-district / fixed) charges that are INCLUDED
+  // in currentAnnualTaxes. Netted out of the reassessing base so a flat CDD/BID charge
+  // isn't scaled up with value (which would overstate the post-sale step-up). Null when
+  // the bill is purely ad-valorem or the split isn't disclosed.
+  nonAdValoremAnnual?: number | null;
   walt?: number | null;
   // Property
   yearBuilt?: number | null;

@@ -56,15 +56,18 @@ export default function TaxReassessmentCard({ deal }: Props) {
   const defaultAssessed = Number(check.assessed ?? 0) || 0;
   const defaultTaxes = Number(check.taxes ?? deal.expenseBreakdown?.realEstateTax ?? 0) || 0;
 
+  const defaultNav = Number(check.nonAdValorem ?? 0) || 0;
   const [price, setPrice] = useState(defaultPrice ? Math.round(defaultPrice).toLocaleString("en-US") : "");
   const [assessed, setAssessed] = useState(defaultAssessed ? Math.round(defaultAssessed).toLocaleString("en-US") : "");
   const [taxes, setTaxes] = useState(defaultTaxes ? Math.round(defaultTaxes).toLocaleString("en-US") : "");
+  const [nav, setNav] = useState(defaultNav ? Math.round(defaultNav).toLocaleString("en-US") : "");
   const [ati, setAti] = useState(false);
 
   const r = useMemo(() => estimateReassessment({
     state: deal.state, county, acquisitionPrice: parseNum(price),
-    currentAssessedValue: parseNum(assessed), currentAnnualTaxes: parseNum(taxes), applyScAtiExemption: ati,
-  }), [deal.state, county, price, assessed, taxes, ati]);
+    currentAssessedValue: parseNum(assessed), currentAnnualTaxes: parseNum(taxes),
+    nonAdValoremAnnual: parseNum(nav), applyScAtiExemption: ati,
+  }), [deal.state, county, price, assessed, taxes, nav, ati]);
 
   const cm = confMeta(r.confidence);
   // Color the headline by outcome: a real step-up is red; a no-reset / protective
@@ -160,6 +163,7 @@ export default function TaxReassessmentCard({ deal }: Props) {
         <NumIn label="Acquisition price" value={price} onChange={setPrice} hint={defaultPrice ? undefined : "from this deal, or type one"} />
         <NumIn label="Current assessed value" value={assessed} onChange={setAssessed} hint={defaultAssessed ? `OM ${deal.assessmentYear || ""}`.trim() : "from the OM tax page"} />
         <NumIn label="Current annual taxes" value={taxes} onChange={setTaxes} hint={defaultTaxes ? undefined : "from the OM tax page"} />
+        <NumIn label="Non-ad-valorem $ (in bill)" value={nav} onChange={setNav} hint="CDD/Mello-Roos/BID — netted from the reassessing base" />
       </div>
       {parseNum(assessed) == null || parseNum(taxes) == null ? (
         <div style={{ marginTop: 6, fontSize: 11, color: C.amber }}>Enter the current assessed value and taxes (from the OM's tax page) to size the dollar step-up.</div>

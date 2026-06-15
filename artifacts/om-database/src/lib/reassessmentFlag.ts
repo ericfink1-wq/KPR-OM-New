@@ -30,6 +30,7 @@ export function deriveReassessmentFlag(deal: Deal): DerivedFlag | null {
     acquisitionPrice: price,
     currentAssessedValue: assessed || null,
     currentAnnualTaxes: taxes || null,
+    nonAdValoremAnnual: check.nonAdValorem ?? null,
   });
 
   // No current bill to size the step-up against — but if this jurisdiction resets on
