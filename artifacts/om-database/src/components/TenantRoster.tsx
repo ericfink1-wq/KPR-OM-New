@@ -528,20 +528,32 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     // fall back to the EXECUTED lease abstract on file — more authoritative
                     // than an OM/roll. We only FILL a blank; we never override a stated
                     // roster value (a real conflict is surfaced by the Abstract ⚠ pill).
-                    const absM = !rosterM ? reimbursementFromAbstract(abstractsByTenant?.get((t.name || "").trim().toLowerCase())) : null;
-                    const m = rosterM || absM || "";
-                    const fromAbstract = !rosterM && !!absM;
+                    const absInfo = !rosterM ? reimbursementFromAbstract(abstractsByTenant?.get((t.name || "").trim().toLowerCase())) : null;
+                    const m = rosterM || absInfo?.text || "";
+                    const fromAbstract = !rosterM && !!absInfo;
                     if (!m) return <span style={{ color:"#c4bbaa" }}>—</span>;
-                    const gross = /gross/i.test(m), fixed = /\bfixed\b/i.test(m);
-                    const flag = gross ? { t:"GROSS", c:"#b91c1c", bg:"#fdecea", tip:"Gross lease — landlord absorbs expense growth (no recovery)" }
-                              : fixed ? { t:"FIXED", c:"#b45309", bg:"#fbe6cf", tip:"Fixed reimbursement — landlord absorbs expense growth above the fixed amount" } : null;
+                    // Flag the recovery structure. For ABSTRACT-sourced text we use the
+                    // abstract's structural classification (substance over keywords) — a
+                    // cap, a fixed "OC Charge", or a "gross-up" does NOT make a net lease
+                    // gross/fixed; reimbursing CAM/taxes/insurance is NNN. For a short
+                    // OM/roll-stated method we keep the simple keyword read of that label.
+                    let flag: { t: string; c: string; bg: string; tip: string; warn: boolean } | null = null;
+                    if (fromAbstract && absInfo) {
+                      if (absInfo.structure === "gross") flag = { t:"GROSS", c:"#b91c1c", bg:"#fdecea", tip:"Gross lease — landlord absorbs expense growth (no recovery)", warn:true };
+                      else if (absInfo.structure === "nnn") flag = { t:"NNN", c:"#3f7a1f", bg:"#eef3e6", tip:"Net (NNN) — tenant reimburses CAM / taxes / insurance per the executed lease. A cap or fixed 'OC Charge' does not make it gross or fixed.", warn:false };
+                    } else {
+                      const gross = /gross/i.test(m), fixed = /\bfixed\b/i.test(m);
+                      if (gross) flag = { t:"GROSS", c:"#b91c1c", bg:"#fdecea", tip:"Gross lease — landlord absorbs expense growth (no recovery)", warn:true };
+                      else if (fixed) flag = { t:"FIXED", c:"#b45309", bg:"#fbe6cf", tip:"Fixed reimbursement — landlord absorbs expense growth above the fixed amount", warn:true };
+                    }
+                    const textColor = flag && flag.warn ? flag.c : "#5c5f57";
                     const absPill = fromAbstract ? (
                       <span title="From the executed lease abstract — more authoritative than the OM / rent roll" style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 6px", borderRadius:9, flexShrink:0 }}>ABSTRACT</span>
                     ) : null;
                     if (expandedReimb !== i) {
                       return (
-                        <span title="Click to expand" style={{ display:"inline-flex", alignItems:"center", gap:6, color:flag?flag.c:"#5c5f57", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
-                          {flag && <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.c, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.t}</span>}
+                        <span title={flag?.tip || "Click to expand"} style={{ display:"inline-flex", alignItems:"center", gap:6, color:textColor, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
+                          {flag && <span title={flag.tip} style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.c, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.t}</span>}
                           {absPill}
                           <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{m}</span>
                           <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>
@@ -550,8 +562,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     }
                     return (
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:flag?flag.c:"#5c5f57", whiteSpace:"normal", lineHeight:1.5 }}>
-                          {flag && <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.c, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.t}</span>}
+                        <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:textColor, whiteSpace:"normal", lineHeight:1.5 }}>
+                          {flag && <span title={flag.tip} style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.c, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.t}</span>}
                           {absPill}
                           {m}
                         </span>
