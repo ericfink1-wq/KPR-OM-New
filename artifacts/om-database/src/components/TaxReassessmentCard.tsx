@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
-import { estimateReassessment, resolveJurisdiction, reconcileTaxCapture } from "../lib/taxReassessment";
+import { estimateReassessment, resolveJurisdiction, reconcileTaxCapture, assessTaxTriggers } from "../lib/taxReassessment";
 import { forecastTaxes } from "../lib/taxForecast";
 
 // Property-tax reassessment estimator. Answers "if we buy this center, do the
@@ -71,7 +71,7 @@ export default function TaxReassessmentCard({ deal }: Props) {
   }), [deal.state, county, price, assessed, taxes, nav, ati]);
 
   // Multi-year forecast (informational): hold period from the deal, growth from the
-  // state's statutory cap (editable), abatement expiry noted if disclosed.
+  // state's statutory cap (editable), abatement burn-off + pro-forma cross-check.
   const [growthPct, setGrowthPct] = useState("");
   const holdYears = Number(deal.acqHoldPeriod) || (Array.isArray(deal.cashFlowProjection) ? deal.cashFlowProjection.length : 0) || 10;
   const abatementExpiryYears = (() => {
@@ -79,12 +79,38 @@ export default function TaxReassessmentCard({ deal }: Props) {
     const m = String(exp).match(/\b(20\d{2})\b/); if (!m) return null;
     return Math.max(0, Number(m[1]) - new Date().getFullYear());
   })();
+  // Un-abated ("stabilized") bill — editable so the step-up at expiry can be modeled
+  // even when the OM only states the abated figure.
+  const defaultUnabated = Number(deal.taxAbatement?.unabatedAnnualTaxes ?? 0) || 0;
+  const [unabated, setUnabated] = useState(defaultUnabated ? Math.round(defaultUnabated).toLocaleString("en-US") : "");
+  const proformaTax = Number(deal.expenseBreakdown?.realEstateTax ?? 0) || 0;
   const fc = useMemo(() => forecastTaxes({
     state: deal.state, county, acquisitionPrice: parseNum(price),
     currentAssessedValue: parseNum(assessed), currentAnnualTaxes: parseNum(taxes),
     nonAdValoremAnnual: parseNum(nav), applyScAtiExemption: ati,
     holdYears, growthPctOverride: parseNum(growthPct), abatementExpiryYears,
-  }), [deal.state, county, price, assessed, taxes, nav, ati, holdYears, growthPct, abatementExpiryYears]);
+    unabatedAnnualTaxes: parseNum(unabated),
+    abatementPct: deal.taxAbatement?.abatementPct ?? null,
+    abatementPhaseOutYears: deal.taxAbatement?.phaseOutYears ?? null,
+    proformaAnnualTaxes: proformaTax || null,
+  }), [deal.state, county, price, assessed, taxes, nav, ati, holdYears, growthPct, abatementExpiryYears, unabated, deal.taxAbatement?.abatementPct, deal.taxAbatement?.phaseOutYears, proformaTax]);
+
+  // Forward-looking triggers beyond the sale reset (exemption loss, ag rollback,
+  // renovation, abatement expiry, scheduled law changes).
+  const triggers = useMemo(() => assessTaxTriggers({
+    state: deal.state, county, acquisitionPrice: parseNum(price),
+    currentAnnualTaxes: parseNum(taxes), currentAssessedValue: parseNum(assessed),
+    nonAdValoremAnnual: parseNum(nav),
+    sellerName: deal.txnSeller ?? deal.seller ?? null,
+    sellerTaxExempt: deal.sellerTaxExempt ?? null,
+    agOrGreenbeltAssessed: deal.agOrGreenbeltAssessed ?? null,
+    taxAbatement: deal.taxAbatement ?? null,
+    specialAssessments: deal.specialAssessments ?? null,
+    renovationYear: deal.renovationYear ?? null,
+    acqStrategy: deal.acqStrategy ?? null,
+    notes: deal.notes ?? null,
+    holdYears,
+  }), [deal.state, county, price, taxes, assessed, nav, deal.txnSeller, deal.seller, deal.sellerTaxExempt, deal.agOrGreenbeltAssessed, deal.taxAbatement, deal.specialAssessments, deal.renovationYear, deal.acqStrategy, deal.notes, holdYears]);
 
   const cm = confMeta(r.confidence);
   // Color the headline by outcome: a real step-up is red; a no-reset / protective
@@ -151,6 +177,29 @@ export default function TaxReassessmentCard({ deal }: Props) {
         </div>
       )}
 
+      {/* Forward-looking triggers beyond the sale reset */}
+      {triggers.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#958d80", marginBottom: 5 }}>OTHER REASSESSMENT TRIGGERS</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {triggers.map((t, i) => {
+              const tone = t.severity === "high" ? { fg: C.red, bg: C.redBg, bd: C.redBd }
+                : t.severity === "medium" ? { fg: C.amber, bg: C.amberBg, bd: C.amberBd }
+                : { fg: C.sub, bg: "#fff", bd: C.line };
+              return (
+                <div key={i} style={{ background: tone.bg, border: `1px solid ${tone.bd}`, borderRadius: 7, padding: "7px 9px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: tone.fg }}>{t.title}</span>
+                    <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: "0.04em", color: tone.fg, textTransform: "uppercase", whiteSpace: "nowrap" }}>{t.severity} · {t.confidence} conf</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.ink, lineHeight: 1.45, marginTop: 2 }}>{t.message}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Multi-year forecast (informational) */}
       {fc && (
         <div style={{ marginTop: 12, border: `1px solid ${C.line}`, borderRadius: 8, padding: "10px 12px", background: "#fff" }}>
@@ -158,10 +207,18 @@ export default function TaxReassessmentCard({ deal }: Props) {
             <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", color: C.sub, textTransform: "uppercase" }}>Multi-year forecast · through year {fc.years.length - 1}</div>
             <div style={{ fontSize: 9.5, color: C.sub }}>confidence: {fc.confidence}</div>
           </div>
+          {fc.validation && (
+            <div style={{ marginTop: 8, background: fc.validation.kind === "match" ? C.greenBg : fc.validation.kind === "understated" ? C.redBg : C.amberBg,
+              border: `1px solid ${fc.validation.kind === "match" ? C.greenBd : fc.validation.kind === "understated" ? C.redBd : C.amberBd}`,
+              borderRadius: 7, padding: "7px 9px", fontSize: 11, color: C.ink, lineHeight: 1.45 }}>
+              {fc.validation.kind === "match" ? "✓ " : "⚠ "}{fc.validation.message}
+            </div>
+          )}
           <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
             {([
               ["Today", fmt$(fc.startTaxes)] as [string, string],
               fc.reassessYear != null ? ([`Year ${fc.reassessYear} (reassess)`, fmt$(fc.years[Math.min(fc.reassessYear + fc.phaseInYears - 1, fc.years.length - 1)].taxes)] as [string, string]) : null,
+              fc.abatementStepYear != null ? ([`Year ${fc.abatementStepYear} (un-abated)`, fmt$(fc.years[Math.min(fc.abatementStepYear, fc.years.length - 1)].taxes)] as [string, string]) : null,
               [`Year ${fc.years.length - 1}`, `${fmt$(fc.endTaxes)} · +${fc.totalIncreasePct}%`] as [string, string],
             ].filter(Boolean) as [string, string][]).map(([l, v], i) => (
               <div key={i} style={{ flex: "1 1 110px", background: C.panel, border: `1px solid ${C.line}`, borderRadius: 7, padding: "7px 9px", minWidth: 0 }}>
@@ -216,6 +273,18 @@ export default function TaxReassessmentCard({ deal }: Props) {
       {parseNum(assessed) == null || parseNum(taxes) == null ? (
         <div style={{ marginTop: 6, fontSize: 11, color: C.amber }}>Enter the current assessed value and taxes (from the OM's tax page) to size the dollar step-up.</div>
       ) : null}
+
+      {deal.taxAbatement?.present && (
+        <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <NumIn label="Un-abated (stabilized) taxes" value={unabated} onChange={setUnabated}
+            hint={`abatement${deal.taxAbatement.expiry ? ` expires ${deal.taxAbatement.expiry}` : ""} — full bill once it ends, to model the step-up`} />
+          {!parseNum(unabated) && !deal.taxAbatement.abatementPct && (
+            <div style={{ flex: "2 1 200px", fontSize: 10.5, color: C.amber, paddingBottom: 6 }}>
+              Enter the un-abated bill (or capture the abatement %) so the step UP at expiry is modeled, not just noted.
+            </div>
+          )}
+        </div>
+      )}
 
       {j?.scAtiExemption && (
         <label style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: C.sub, cursor: "pointer" }}>

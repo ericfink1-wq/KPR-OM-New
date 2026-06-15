@@ -49,6 +49,7 @@ import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
 import { deriveReassessmentFlag } from "../lib/reassessmentFlag";
+import { deriveTaxTriggerFlags } from "../lib/taxTriggerFlags";
 import { deriveRolloverFlag } from "../lib/rolloverRisk";
 import { deriveConcentrationFlag } from "../lib/concentrationRisk";
 import { deriveSpecialAssessmentFlag } from "../lib/specialAssessmentRisk";
@@ -2951,7 +2952,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const concentrationFlag = deriveConcentrationFlag(d);
         const specialAssessFlag = deriveSpecialAssessmentFlag(d);
         const stateTaxFlag = deriveStateTaxNuanceFlag(d);
-        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag].filter((f): f is NonNullable<typeof f> => !!f);
+        const taxTriggerFlags = deriveTaxTriggerFlags(d);
+        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));

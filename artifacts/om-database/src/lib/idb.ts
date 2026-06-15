@@ -847,6 +847,12 @@ export interface TaxAbatement {
   type?: string | null;           // "abatement" | "PILOT" | "TIF" | "enterprise zone" | ...
   note?: string | null;
   expiry?: string | null;         // ISO or year, when stated
+  // Sizing the UN-ABATED ("stabilized") bill so the step-up at expiry can be modeled
+  // rather than just noted. Prefer the OM-disclosed full figure; else the % reduction.
+  unabatedAnnualTaxes?: number | null; // the FULL annual taxes once the break ends, when the OM states it (a "stabilized"/"fully-assessed" tax line)
+  abatementPct?: number | null;        // % the break cuts off the un-abated bill (e.g. 50 = taxes are 50% of full). Lets us gross the abated figure up to un-abated.
+  phaseOutYears?: number | null;       // some abatements burn off gradually (e.g. 100%→0 over 10 yrs) instead of a cliff; years over which it phases out
+  survivesSale?: boolean | null;       // whether the break TRANSFERS to a buyer (PILOTs/TIF often do; statutory exemptions usually do NOT). Null = unknown → underwrite both.
 }
 
 export interface CashFlowRow {
@@ -944,6 +950,18 @@ export interface Deal {
   // isn't scaled up with value (which would overstate the post-sale step-up). Null when
   // the bill is purely ad-valorem or the split isn't disclosed.
   nonAdValoremAnnual?: number | null;
+  // LOSS-OF-EXEMPTION / CHANGE-OF-USE reassessment triggers — situations where the
+  // CURRENT bill understates what a taxable KPR buyer will pay, independent of the
+  // ordinary sale-reset rules:
+  //  • sellerTaxExempt: the current owner is a non-profit / government / religious /
+  //    hospital / university / housing-authority owner, so the parcel is off the roll
+  //    (or PILOT-only) and a taxable buyer faces a NEW, fully-assessed bill — the
+  //    biggest "the OM shows ~$0 taxes" trap.
+  //  • agOrGreenbeltAssessed: the parcel is assessed under an agricultural / greenbelt
+  //    / use-value / open-space program; converting to retail use triggers ROLLBACK
+  //    (recapture) taxes — back taxes for the deferred years plus a step to full value.
+  sellerTaxExempt?: boolean | null;
+  agOrGreenbeltAssessed?: boolean | null;
   walt?: number | null;
   // Property
   yearBuilt?: number | null;

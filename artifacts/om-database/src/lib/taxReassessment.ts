@@ -51,6 +51,9 @@ export interface TaxJurisdiction {
   countyDriven?: boolean;   // cycle/ratio set at county/municipal level
   buyerFavorableCeiling?: boolean; // sale sets a one-year MAX value (GA) — protective, not a step-up
   scAtiExemption?: boolean; // SC: optional up-to-25% ATI exemption on the post-sale value
+  // Known SCHEDULED statutory changes (ratio phase-downs, cap sunsets) with an
+  // effective date — surfaced as a forward-looking trigger when they fall in the hold.
+  upcomingChanges?: { effective: string; direction: "increase" | "decrease" | "uncertain"; note: string }[];
   confidence: Confidence;
   sources: TaxSource[];
   caveat?: string;
@@ -77,6 +80,7 @@ export const TAX_JURISDICTIONS: Record<string, TaxJurisdiction> = {
     assessmentCycleYears: 1, cycleNote: "Annual; LPV recomputed under the 5% cap, reset only on new construction/use change/split.",
     assessmentRatioCommercialPct: 16, ratioNote: "Class 1 commercial ratio, phasing ~0.5%/yr toward 15% (~2027); 16% for TY2025.",
     annualCapPctCommercial: 5, capType: "assessment", capNote: "5% LPV cap; NOT reset by sale.",
+    upcomingChanges: [{ effective: "2027", direction: "decrease", note: "SB1828 phases the Class 1 (commercial) assessment ratio down toward 15% (~0.5%/yr) — a modest tailwind on the assessed-value side." }],
     confidence: "high", sources: [{ title: "Arizona DOR — Limited Property Value (Prop 117)", url: "https://azdor.gov/sites/default/files/2023-03/PROPERTY_LimitedPropertyValue.pdf" }],
     caveat: "Commercial ratio is a moving target (SB1828 phase-down); confirm the exact current-year ratio." },
   AR: { state: "AR", stateName: "Arkansas", saleTriggersReassessment: "partial", reassessmentBasis: "market_value",
@@ -94,7 +98,9 @@ export const TAX_JURISDICTIONS: Record<string, TaxJurisdiction> = {
     saleTriggerNote: "Biennial reappraisal to market; a sale does not reset the parcel. Next odd-year reappraisal steps toward market.",
     assessmentCycleYears: 2, cycleNote: "Biennial (odd-year) reappraisal.",
     assessmentRatioCommercialPct: 25, ratioNote: "Improved commercial 25% (2025/26); general nonresidential 27%→25% by 2027.",
-    annualCapPctCommercial: null, confidence: "high", sources: [{ title: "Colorado General Assembly — SB24-233", url: "https://leg.colorado.gov/bills/sb24-233" }] },
+    annualCapPctCommercial: null,
+    upcomingChanges: [{ effective: "2027", direction: "decrease", note: "SB24-233 steps the general nonresidential assessment ratio from 27% down to 25% by 2027 — a slight assessed-value reduction." }],
+    confidence: "high", sources: [{ title: "Colorado General Assembly — SB24-233", url: "https://leg.colorado.gov/bills/sb24-233" }] },
   CT: { state: "CT", stateName: "Connecticut", saleTriggersReassessment: "no", reassessmentBasis: "none",
     saleTriggerNote: "Assessed at 70% of market from the town's last revaluation; value is frozen between 5-yr revals (except new construction). A sale does not trigger reassessment.",
     assessmentCycleYears: 5, cycleNote: "Municipal revaluation ≥ every 5 yrs (CGS 12-62).",
@@ -283,6 +289,7 @@ export const TAX_JURISDICTIONS: Record<string, TaxJurisdiction> = {
     saleTriggerNote: "No acquisition-value system. Appraised to Jan 1 market value ANNUALLY (Tax Code 23.01) — a sale is one comparable among many, not a reset. The 10% appraisal cap is homestead-only; commercial is effectively uncapped.",
     assessmentCycleYears: 1, cycleNote: "Annual to market (districts reappraise ≥ every 3 yrs; practice is annual).",
     assessmentRatioCommercialPct: 100, annualCapPctCommercial: null,
+    upcomingChanges: [{ effective: "2027", direction: "increase", note: "The temporary 20% circuit-breaker appraisal cap on smaller commercial parcels (≤ ~$5.3M) SUNSETS after TY2026 — a small center now sheltered by it can jump to full market value in 2027." }],
     confidence: "high", sources: [{ title: "Texas Comptroller — Valuing Property", url: "https://www.comptroller.texas.gov/taxes/property-tax/valuing-property.php" }],
     caveat: "Commercial is annual-to-market and uncapped for most retail (>$5.3M); a temporary 20% small-parcel circuit-breaker sunsets after TY2026." },
   IL: { state: "IL", stateName: "Illinois", saleTriggersReassessment: "no", reassessmentBasis: "equalized_value",
@@ -362,6 +369,7 @@ export function getTaxJurisdiction(state: string | null | undefined): TaxJurisdi
 export interface CountyTaxOverride {
   assessmentCycleYears?: number;
   assessmentRatioCommercialPct?: number | null;
+  phaseInYears?: number;        // a reassessment increase that phases in over N yrs (NYC Class 4 = 5 yrs at 20%/yr)
   note: string;                 // county-specific mechanic (CLR, multiplier, cycle, base year)
   confidence?: Confidence;
 }
@@ -384,11 +392,30 @@ export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
   "NJ|monmouth": { assessmentCycleYears: 1, note: "Monmouth County (Assessment Demonstration Program): true ANNUAL reassessment to market — a recent purchase can pull the assessment up the next year via the lawful annual reval.", confidence: "high" },
   "NJ|gloucester": { assessmentCycleYears: 1, note: "Gloucester County (Demonstration Program): annual reassessment to market.", confidence: "high" },
   // New York — NYC's five boroughs run the Class 4 (45% / 5-yr transitional) system.
-  "NY|new york": { assessmentRatioCommercialPct: 45, note: "NYC Class 4 commercial: assessed at 45% of DOF market value, increases phased in 20%/yr over 5 yrs (transitional assessment).", confidence: "high" },
-  "NY|kings": { assessmentRatioCommercialPct: 45, note: "NYC (Brooklyn) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
-  "NY|queens": { assessmentRatioCommercialPct: 45, note: "NYC (Queens) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
-  "NY|bronx": { assessmentRatioCommercialPct: 45, note: "NYC (Bronx) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
-  "NY|richmond": { assessmentRatioCommercialPct: 45, note: "NYC (Staten Island) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
+  // Increases to a Class 4 assessment phase in at 20%/yr over 5 yrs (transitional AV).
+  "NY|new york": { assessmentRatioCommercialPct: 45, phaseInYears: 5, note: "NYC Class 4 commercial: assessed at 45% of DOF market value, increases phased in 20%/yr over 5 yrs (transitional assessment).", confidence: "high" },
+  "NY|kings": { assessmentRatioCommercialPct: 45, phaseInYears: 5, note: "NYC (Brooklyn) Class 4: 45% of DOF market, 5-yr transitional phase-in (20%/yr).", confidence: "high" },
+  "NY|queens": { assessmentRatioCommercialPct: 45, phaseInYears: 5, note: "NYC (Queens) Class 4: 45% of DOF market, 5-yr transitional phase-in (20%/yr).", confidence: "high" },
+  "NY|bronx": { assessmentRatioCommercialPct: 45, phaseInYears: 5, note: "NYC (Bronx) Class 4: 45% of DOF market, 5-yr transitional phase-in (20%/yr).", confidence: "high" },
+  "NY|richmond": { assessmentRatioCommercialPct: 45, phaseInYears: 5, note: "NYC (Staten Island) Class 4: 45% of DOF market, 5-yr transitional phase-in (20%/yr).", confidence: "high" },
+  // Texas — major metro appraisal districts reappraise annually to market; a recent
+  // arm's-length price is strong evidence ARB will chase the next Jan 1 value to it.
+  "TX|harris": { assessmentCycleYears: 1, note: "Harris County (Houston/HCAD): annual reappraisal to Jan 1 market; commercial is uncapped, so a recent purchase price commonly pulls next year's value toward it. Protest annually.", confidence: "high" },
+  "TX|dallas": { assessmentCycleYears: 1, note: "Dallas County (DCAD): annual reappraisal to market; uncapped commercial — expect the value to track a recent sale within a year or two.", confidence: "high" },
+  "TX|tarrant": { assessmentCycleYears: 1, note: "Tarrant County (TAD/Fort Worth): annual reappraisal to market; uncapped commercial.", confidence: "high" },
+  "TX|bexar": { assessmentCycleYears: 1, note: "Bexar County (BCAD/San Antonio): annual reappraisal to market; uncapped commercial.", confidence: "high" },
+  "TX|travis": { assessmentCycleYears: 1, note: "Travis County (TCAD/Austin): annual reappraisal to market; uncapped commercial.", confidence: "high" },
+  "TX|collin": { assessmentCycleYears: 1, note: "Collin County (CCAD): annual reappraisal to market; uncapped commercial.", confidence: "high" },
+  // Florida — county property appraisers reset the non-homestead 10% cap to full just
+  // value the Jan 1 after a qualifying change of ownership (school millage uncapped anyway).
+  "FL|miami-dade": { assessmentCycleYears: 1, note: "Miami-Dade: just-value annually; the 10% non-homestead cap RESETS to full market the Jan 1 after sale — model the step to your basis.", confidence: "high" },
+  "FL|broward": { assessmentCycleYears: 1, note: "Broward: 10% non-homestead cap resets on a change of ownership; value steps to full just value the next Jan 1.", confidence: "high" },
+  "FL|hillsborough": { assessmentCycleYears: 1, note: "Hillsborough (Tampa): 10% non-homestead cap resets on sale; CDD lines are common — net them out as non-ad-valorem.", confidence: "high" },
+  "FL|orange": { assessmentCycleYears: 1, note: "Orange (Orlando): 10% non-homestead cap resets on sale; watch for CDD/special-district lines (non-ad-valorem).", confidence: "high" },
+  // Georgia — sale price sets the MAX next-year value (buyer-favorable ceiling) but the
+  // 40% ratio and annual valuation still apply; large metros are aggressive on reval.
+  "GA|fulton": { assessmentCycleYears: 1, note: "Fulton (Atlanta): annual valuation at 40% of market; a recent sale CAPS next year's value at the price (O.C.G.A. 48-5-2) — protective, not a step-up.", confidence: "high" },
+  "GA|gwinnett": { assessmentCycleYears: 1, note: "Gwinnett: annual valuation at 40% of market; sale price = max next-year value.", confidence: "high" },
 };
 
 export function getCountyOverride(state: string | null | undefined, county: string | null | undefined): CountyTaxOverride | null {
@@ -397,17 +424,18 @@ export function getCountyOverride(state: string | null | undefined, county: stri
 }
 
 // State framework with any county override merged in (ratio/cycle/note).
-export interface ResolvedJurisdiction extends TaxJurisdiction { countyNote?: string | null }
+export interface ResolvedJurisdiction extends TaxJurisdiction { countyNote?: string | null; countyPhaseInYears?: number | null }
 export function resolveJurisdiction(state: string | null | undefined, county?: string | null): ResolvedJurisdiction | null {
   const base = getTaxJurisdiction(state);
   if (!base) return null;
   const co = getCountyOverride(state, county);
-  if (!co) return { ...base, countyNote: null };
+  if (!co) return { ...base, countyNote: null, countyPhaseInYears: null };
   return {
     ...base,
     assessmentCycleYears: co.assessmentCycleYears ?? base.assessmentCycleYears,
     assessmentRatioCommercialPct: co.assessmentRatioCommercialPct !== undefined ? co.assessmentRatioCommercialPct : base.assessmentRatioCommercialPct,
     countyNote: co.note,
+    countyPhaseInYears: co.phaseInYears ?? null,
   };
 }
 
@@ -423,7 +451,7 @@ export interface ReassessInput {
 }
 
 export interface ReassessResult {
-  jurisdiction: TaxJurisdiction | null;
+  jurisdiction: ResolvedJurisdiction | null;
   codified: boolean;
   // sale-time reset
   resetsOnSale: boolean;            // yes/partial (and not a buyer-favorable ceiling)
@@ -645,4 +673,148 @@ export function reconcileTaxCapture(deal: TaxDealLike): TaxCaptureCheck {
   }
 
   return { parcelCount: parcels.length, parcelSumAssessed, parcelSumTaxes, assessed, taxes, nonAdValorem, assessedSource, taxesSource, impliedRatioPct, warnings };
+}
+
+// ── Forward-looking REASSESSMENT TRIGGERS beyond the ordinary sale-reset ───────
+// The sale-reset engine above answers "do taxes reset when we buy?" These are the
+// OTHER levers that move a tax bill during the hold, each of which the broker pro
+// forma quietly ignores. All deterministic; dollar magnitudes are sized only when
+// the inputs allow an honest number (never fabricated — see the project notes).
+export type TaxTriggerKind = "exemption_loss" | "low_tax_trap" | "ag_rollback" | "renovation" | "abatement_expiry" | "law_change";
+
+export interface TaxTrigger {
+  kind: TaxTriggerKind;
+  severity: "high" | "medium" | "low";
+  title: string;
+  message: string;
+  confidence: Confidence;
+}
+
+export interface TaxTriggerInput {
+  state?: string | null;
+  county?: string | null;
+  acquisitionPrice?: number | null;
+  currentAnnualTaxes?: number | null;
+  currentAssessedValue?: number | null;
+  nonAdValoremAnnual?: number | null;
+  sellerName?: string | null;            // deal.seller / txnSeller — heuristic exemption detector
+  sellerTaxExempt?: boolean | null;
+  agOrGreenbeltAssessed?: boolean | null;
+  taxAbatement?: { present?: boolean | null; type?: string | null; expiry?: string | null; survivesSale?: boolean | null; unabatedAnnualTaxes?: number | null; abatementPct?: number | null } | null;
+  specialAssessments?: string | null;
+  renovationYear?: number | null;
+  acqStrategy?: string | null;           // value-add / reposition / redevelopment keywords
+  notes?: string | null;
+  holdYears?: number | null;
+}
+
+// Entities whose ownership usually means the parcel is off the tax roll (or PILOT-only).
+// Deliberately CONSERVATIVE: only unambiguous institutional-owner phrases, NOT bare
+// nouns like "university"/"church"/"college" that routinely appear in retail center
+// names (e.g. "University Plaza LLC", "Church Street Plaza") and would false-positive.
+// Confirmed cases still flag HIGH via the explicit sellerTaxExempt field.
+const EXEMPT_OWNER_RE = /\b(city of|county of|town of|village of|township of|state of|united states|u\.s\. government|federal government|housing authority|redevelopment authority|public housing|school district|board of education|diocese of|archdiocese|ministries\b|salvation army|goodwill industries|habitat for humanity|young men's christian|ymca|catholic charities|lutheran social|jewish federation|not-?for-?profit corporation|non-?profit corporation|501\(c\)|port authority|transit authority)\b/i;
+const AG_GREENBELT_RE = /\b(greenbelt|green belt|agricultural|agriculture|use[- ]value|open[- ]space|farmland|williamson act|rollback|roll-back|current use|conservation use)\b/i;
+const VALUE_ADD_RE = /\b(value[- ]?add|reposition|redevelop|re-?develop|renovat|remodel|expansion|expand|densif|ground[- ]up|new construction|build[- ]?out|pad (site|development)|outparcel develop)\b/i;
+
+const yearsUntil = (expiry: string | null | undefined): number | null => {
+  if (!expiry) return null;
+  const s = String(expiry).trim();
+  const yr = /^\d{4}$/.test(s) ? Number(s) : (Date.parse(s) ? new Date(Date.parse(s)).getFullYear() : null);
+  if (yr == null || !Number.isFinite(yr)) return null;
+  return yr - new Date().getFullYear();
+};
+const fmtUSD = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n).toLocaleString()}`;
+
+export function assessTaxTriggers(input: TaxTriggerInput): TaxTrigger[] {
+  const out: TaxTrigger[] = [];
+  const j = resolveJurisdiction(input.state, input.county);
+  const price = numOrNull(input.acquisitionPrice);
+  const taxes = numOrNull(input.currentAnnualTaxes);
+  const hold = input.holdYears != null && Number.isFinite(Number(input.holdYears)) ? Math.round(Number(input.holdYears)) : 10;
+
+  // 1) Loss of exemption — a tax-exempt seller means the OM's current-tax figure is
+  // NOT what a taxable KPR buyer will pay. The single biggest "taxes look like ~$0" trap.
+  const sellerLooksExempt = !!input.sellerName && EXEMPT_OWNER_RE.test(input.sellerName);
+  if (input.sellerTaxExempt === true || sellerLooksExempt) {
+    out.push({
+      kind: "exemption_loss",
+      severity: "high",
+      title: "Loss of tax exemption on sale",
+      message: `The current owner appears to be a tax-exempt entity${sellerLooksExempt && input.sellerName ? ` (${input.sellerName.trim()})` : ""}, so the property is likely off the tax roll or PILOT-only today. A taxable buyer faces a NEW, fully-assessed ad-valorem bill the OM's current-tax line does not reflect — pull the assessor's market value × the local mill rate to size the post-close bill before underwriting. Do NOT trust the in-place tax figure.`,
+      confidence: input.sellerTaxExempt === true ? "high" : "medium",
+    });
+  } else if (price != null && taxes != null && taxes > 0 && taxes / price < 0.001) {
+    // 2) Abnormally low effective tax (no exempt-seller flag, but the bill is tiny vs
+    // price) — possible undisclosed exemption/abatement or a capture error. Flag to verify.
+    out.push({
+      kind: "low_tax_trap",
+      severity: "medium",
+      title: "Current taxes look abnormally low",
+      message: `Current taxes (${fmtUSD(taxes)}/yr) are under 0.1% of the ${fmtUSD(price)} price — unusually low for commercial. Confirm the bill isn't suppressed by an exemption, abatement, or a stale/partial assessment; a taxable, fully-assessed bill could be materially higher. Verify against the assessor record.`,
+      confidence: "low",
+    });
+  }
+
+  // 3) Agricultural / greenbelt rollback — change of use to retail recaptures deferred
+  // back-taxes plus steps the parcel to full value. Real on outparcels / converted land.
+  const agText = `${input.specialAssessments || ""} ${input.notes || ""}`;
+  if (input.agOrGreenbeltAssessed === true || AG_GREENBELT_RE.test(agText)) {
+    out.push({
+      kind: "ag_rollback",
+      severity: input.agOrGreenbeltAssessed === true ? "high" : "medium",
+      title: "Agricultural / greenbelt rollback risk",
+      message: `The parcel appears to be assessed under an agricultural / greenbelt / use-value program. Converting (or having already converted) it to retail use triggers ROLLBACK taxes — recapture of the deferred tax savings for the prior 3–7 years PLUS a step to full market assessment. Confirm the parcel's current-use status and quantify any rollback liability with the assessor; it can be a six-figure closing item.`,
+      confidence: input.agOrGreenbeltAssessed === true ? "medium" : "low",
+    });
+  }
+
+  // 4) Capital improvements / renovation — new construction is reassessed (the ADDED
+  // value) in virtually every state, INCLUDING acquisition-value states like CA where a
+  // plain sale otherwise wouldn't reset much. Relevant for any value-add business plan.
+  const renoText = `${input.acqStrategy || ""} ${input.notes || ""}`;
+  const planningReno = VALUE_ADD_RE.test(renoText);
+  const reno = numOrNull(input.renovationYear);
+  const nowY = new Date().getFullYear();
+  if (planningReno || (reno != null && reno >= nowY)) {
+    out.push({
+      kind: "renovation",
+      severity: "low",
+      title: "Capital improvements add assessed value",
+      message: `${planningReno ? "The business plan involves renovation / repositioning / new construction. " : `A renovation is dated ${reno}. `}Improvements are reassessed (the added value) in essentially every jurisdiction — even acquisition-value states like California reassess NEW construction while leaving the existing basis alone. Budget the incremental tax on the improved value, separate from any sale-driven reset.`,
+      confidence: "medium",
+    });
+  }
+
+  // 5) Abatement expiry — the bill steps to un-abated taxes when the break ends. (The
+  // forecaster sizes the step; this surfaces the timing + whether it survives the sale.)
+  if (input.taxAbatement?.present) {
+    const yrs = yearsUntil(input.taxAbatement.expiry);
+    const within = yrs != null && yrs >= 0 && yrs <= hold;
+    const survives = input.taxAbatement.survivesSale;
+    out.push({
+      kind: "abatement_expiry",
+      severity: within ? "high" : "medium",
+      title: "Tax abatement / PILOT in place",
+      message: `${input.taxAbatement.type ? `A ${input.taxAbatement.type} ` : "A tax break "}holds the CURRENT bill artificially low${input.taxAbatement.expiry ? ` and ${within ? `expires ~${input.taxAbatement.expiry} — within the ${hold}-yr hold` : `expires ${input.taxAbatement.expiry}`}` : ""}. ${survives === false ? "It does NOT transfer to a buyer — underwrite the full bill from day one. " : survives === true ? "It transfers to a buyer, but " : "Confirm whether it survives the sale; if not, the full bill hits at close. "}Model the step UP to un-abated taxes${within ? " inside the hold" : " at expiry"} — don't carry the abated figure to perpetuity.`,
+      confidence: "medium",
+    });
+  }
+
+  // 6) Known scheduled statutory changes within the hold (ratio phase-downs, cap sunsets).
+  if (j?.upcomingChanges?.length) {
+    for (const ch of j.upcomingChanges) {
+      const yrs = yearsUntil(ch.effective);
+      if (yrs != null && yrs > hold) continue; // beyond the hold — skip
+      out.push({
+        kind: "law_change",
+        severity: ch.direction === "increase" ? "medium" : "low",
+        title: `Scheduled ${j.stateName} tax-law change (${ch.effective})`,
+        message: `${ch.note}${ch.direction === "increase" ? " Treat as a headwind to underwrite." : ch.direction === "decrease" ? " A modest tailwind, but don't bank on it surviving future sessions." : " Monitor."}`,
+        confidence: j.confidence,
+      });
+    }
+  }
+
+  return out;
 }
