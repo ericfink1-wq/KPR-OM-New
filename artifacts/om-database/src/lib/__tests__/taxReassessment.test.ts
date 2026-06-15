@@ -103,3 +103,17 @@ describe("reconcileTaxCapture (fringe-case guards)", () => {
     expect(c.warnings.some((w) => w.severity === "high" && /abatement|survives the sale/i.test(w.message))).toBe(true);
   });
 });
+
+describe("county overrides", () => {
+  it("IL: Cook County overrides the 33⅓% state default to 25% + adds a note", () => {
+    const base = estimateReassessment({ state: "IL", acquisitionPrice: 10_000_000, currentAssessedValue: 2_000_000, currentAnnualTaxes: 100_000 });
+    const cook = estimateReassessment({ state: "IL", county: "Cook County", acquisitionPrice: 10_000_000, currentAssessedValue: 2_000_000, currentAnnualTaxes: 100_000 });
+    expect(base.jurisdiction?.assessmentRatioCommercialPct).toBeCloseTo(33.33, 1);
+    expect(cook.jurisdiction?.assessmentRatioCommercialPct).toBe(25);
+    expect(cook.detail.some((d) => /Cook County/i.test(d))).toBe(true);
+  });
+  it("unknown county falls back to the state framework", () => {
+    const r = estimateReassessment({ state: "IL", county: "DuPage County", acquisitionPrice: 10_000_000 });
+    expect(r.jurisdiction?.assessmentRatioCommercialPct).toBeCloseTo(33.33, 1);
+  });
+});

@@ -287,8 +287,8 @@ export const TAX_JURISDICTIONS: Record<string, TaxJurisdiction> = {
     caveat: "Commercial is annual-to-market and uncapped for most retail (>$5.3M); a temporary 20% small-parcel circuit-breaker sunsets after TY2026." },
   IL: { state: "IL", stateName: "Illinois", saleTriggersReassessment: "no", reassessmentBasis: "equalized_value",
     saleTriggerNote: "No acquisition-value reset. Assessed at a statutory fraction of market, then a state equalization multiplier is applied. A sale does NOT reset to purchase price.",
-    assessmentCycleYears: 3, cycleNote: "Cook County triennial; the other 101 counties quadrennial. Value as of Jan 1.",
-    assessmentRatioCommercialPct: 25, ratioNote: "Cook classifies commercial at 25% of market; all other counties uniform 33⅓%. A state multiplier then equalizes.",
+    assessmentCycleYears: 4, cycleNote: "Cook County triennial; the other 101 counties quadrennial. Value as of Jan 1.",
+    assessmentRatioCommercialPct: 33.33, ratioNote: "Most counties assess at 33⅓%; COOK County classifies commercial at 25% (see county override). A state multiplier then equalizes.",
     annualCapPctCommercial: null, countyDriven: true, confidence: "high",
     sources: [{ title: "Cook County Assessor — Assessment & Tax Bill", url: "https://www.cookcountyassessoril.gov/your-assessment-notice-and-tax-bill" }],
     caveat: "Cook bill = 25% commercial level × state multiplier (~3.0) × local rate; ratio shown is the classification level, not the effective burden." },
@@ -354,9 +354,67 @@ export function getTaxJurisdiction(state: string | null | undefined): TaxJurisdi
   return TAX_JURISDICTIONS[key] ?? null;
 }
 
+// ── County overrides ─────────────────────────────────────────────────────────
+// In county-driven states the CYCLE / RATIO / equalization is set locally. We can't
+// codify 3,000 counties, so this is a curated set for the high-volume retail
+// counties where the local rule materially differs from the state default. Anything
+// not listed falls back to the state framework (which flags "confirm locally").
+export interface CountyTaxOverride {
+  assessmentCycleYears?: number;
+  assessmentRatioCommercialPct?: number | null;
+  note: string;                 // county-specific mechanic (CLR, multiplier, cycle, base year)
+  confidence?: Confidence;
+}
+
+function normCounty(s: string): string {
+  return s.toLowerCase().replace(/\b(county|parish|borough|city and county|township)\b/g, "").replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+}
+
+export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
+  // Illinois — Cook is the exception to the 33⅓% norm.
+  "IL|cook": { assessmentCycleYears: 3, assessmentRatioCommercialPct: 25, confidence: "high",
+    note: "Cook County: commercial assessed at 25% (vs 33⅓% statewide), reassessed triennially, then a state equalization multiplier (~3.0) is applied. Your bill's effective rate already bakes in the multiplier." },
+  // Pennsylvania — no state cycle; each county runs a base year + Common Level Ratio.
+  "PA|philadelphia": { assessmentCycleYears: 1, assessmentRatioCommercialPct: 100, confidence: "high",
+    note: "Philadelphia (AVI): assessed at 100% of market, updated roughly annually by the OPA — closer to a market-value system than the rest of PA." },
+  "PA|allegheny": { assessmentCycleYears: 0, assessmentRatioCommercialPct: null, confidence: "medium",
+    note: "Allegheny County (Pittsburgh): 2012 base year; the annually-published Common Level Ratio bridges to market. A high purchase price commonly draws a school-district appeal." },
+  "PA|montgomery": { assessmentCycleYears: 0, note: "Montgomery County: stale base year; value bridged by the annual CLR. Watch for a school-district sale-price appeal.", confidence: "medium" },
+  // New Jersey — annual-reassessment (Demonstration Program) counties move toward market every year.
+  "NJ|monmouth": { assessmentCycleYears: 1, note: "Monmouth County (Assessment Demonstration Program): true ANNUAL reassessment to market — a recent purchase can pull the assessment up the next year via the lawful annual reval.", confidence: "high" },
+  "NJ|gloucester": { assessmentCycleYears: 1, note: "Gloucester County (Demonstration Program): annual reassessment to market.", confidence: "high" },
+  // New York — NYC's five boroughs run the Class 4 (45% / 5-yr transitional) system.
+  "NY|new york": { assessmentRatioCommercialPct: 45, note: "NYC Class 4 commercial: assessed at 45% of DOF market value, increases phased in 20%/yr over 5 yrs (transitional assessment).", confidence: "high" },
+  "NY|kings": { assessmentRatioCommercialPct: 45, note: "NYC (Brooklyn) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
+  "NY|queens": { assessmentRatioCommercialPct: 45, note: "NYC (Queens) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
+  "NY|bronx": { assessmentRatioCommercialPct: 45, note: "NYC (Bronx) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
+  "NY|richmond": { assessmentRatioCommercialPct: 45, note: "NYC (Staten Island) Class 4: 45% of DOF market, 5-yr transitional phase-in.", confidence: "high" },
+};
+
+export function getCountyOverride(state: string | null | undefined, county: string | null | undefined): CountyTaxOverride | null {
+  if (!state || !county) return null;
+  return COUNTY_TAX_OVERRIDES[`${state.trim().toUpperCase()}|${normCounty(county)}`] ?? null;
+}
+
+// State framework with any county override merged in (ratio/cycle/note).
+export interface ResolvedJurisdiction extends TaxJurisdiction { countyNote?: string | null }
+export function resolveJurisdiction(state: string | null | undefined, county?: string | null): ResolvedJurisdiction | null {
+  const base = getTaxJurisdiction(state);
+  if (!base) return null;
+  const co = getCountyOverride(state, county);
+  if (!co) return { ...base, countyNote: null };
+  return {
+    ...base,
+    assessmentCycleYears: co.assessmentCycleYears ?? base.assessmentCycleYears,
+    assessmentRatioCommercialPct: co.assessmentRatioCommercialPct !== undefined ? co.assessmentRatioCommercialPct : base.assessmentRatioCommercialPct,
+    countyNote: co.note,
+  };
+}
+
 // ── The estimator ────────────────────────────────────────────────────────────
 export interface ReassessInput {
   state: string | null | undefined;
+  county?: string | null;                // refines cycle/ratio in county-driven states
   acquisitionPrice: number | null;       // the price we'd pay
   currentAssessedValue?: number | null;  // current taxable/assessed value from the OM tax page
   currentAnnualTaxes?: number | null;    // current annual RE taxes from the OM
@@ -385,7 +443,7 @@ export interface ReassessResult {
 const r2 = (n: number) => Math.round(n);
 
 export function estimateReassessment(input: ReassessInput): ReassessResult {
-  const j = getTaxJurisdiction(input.state);
+  const j = resolveJurisdiction(input.state, input.county);
   const price = numOrNull(input.acquisitionPrice);
   const curAssessed = numOrNull(input.currentAssessedValue);
   const curTaxes = numOrNull(input.currentAnnualTaxes);
@@ -410,6 +468,8 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
     detail.push("Enter the current assessed value + taxes and the purchase price and we can still estimate the step-up once the rule is added.");
     return out;
   }
+
+  if (j.countyNote) detail.push(j.countyNote);
 
   // New assessment if the parcel is taken to full value at the purchase price.
   // SC ATI exemption optionally trims up to 25%. (For MI the ratio is 50 = SEV.)

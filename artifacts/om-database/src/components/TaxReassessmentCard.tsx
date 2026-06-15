@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
-import { estimateReassessment, getTaxJurisdiction, reconcileTaxCapture } from "../lib/taxReassessment";
+import { estimateReassessment, resolveJurisdiction, reconcileTaxCapture } from "../lib/taxReassessment";
 
 // Property-tax reassessment estimator. Answers "if we buy this center, do the
 // taxes reset — and by how much?" from the per-state ruleset, grounded in the
@@ -46,7 +46,8 @@ function NumIn({ label, value, onChange, hint }: { label: string; value: string;
 }
 
 export default function TaxReassessmentCard({ deal }: Props) {
-  const j = getTaxJurisdiction(deal.state);
+  const county = deal.marketGeo?.county ?? null;
+  const j = resolveJurisdiction(deal.state, county);
   // Reconcile the captured tax figures deterministically — prefer the SUM of the
   // parcel rows (added in code, not by the model) and surface completeness/sanity
   // warnings (missing parcel, market-vs-assessed swap, abatement).
@@ -61,9 +62,9 @@ export default function TaxReassessmentCard({ deal }: Props) {
   const [ati, setAti] = useState(false);
 
   const r = useMemo(() => estimateReassessment({
-    state: deal.state, acquisitionPrice: parseNum(price),
+    state: deal.state, county, acquisitionPrice: parseNum(price),
     currentAssessedValue: parseNum(assessed), currentAnnualTaxes: parseNum(taxes), applyScAtiExemption: ati,
-  }), [deal.state, price, assessed, taxes, ati]);
+  }), [deal.state, county, price, assessed, taxes, ati]);
 
   const cm = confMeta(r.confidence);
   // Color the headline by outcome: a real step-up is red; a no-reset / protective
@@ -80,7 +81,7 @@ export default function TaxReassessmentCard({ deal }: Props) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>PROPERTY TAX · REASSESSMENT ON SALE</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{j ? j.stateName : (deal.state || "Unknown state")}{j?.countyDriven ? " · county-administered" : ""}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{j ? j.stateName : (deal.state || "Unknown state")}{county ? ` · ${county.replace(/\s+county$/i, "")} County` : j?.countyDriven ? " · county-administered" : ""}</div>
         </div>
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.04em", color: cm.fg, background: cm.bg, border: `1px solid ${cm.bd}`, borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" }}>{cm.t}</span>
       </div>
