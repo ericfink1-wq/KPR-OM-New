@@ -12,6 +12,7 @@ import DealGrid from "./components/DealGrid";
 import AnalystChat from "./components/AnalystChat";
 import Login from "./components/Login";
 import TwoFactorModal from "./components/TwoFactorModal";
+import Reverify2FAModal from "./components/Reverify2FAModal";
 import HelpModal from "./components/HelpModal";
 import ClosingCostEstimator from "./components/ClosingCostEstimator";
 import AiProgressBar from "./components/AiProgressBar";
@@ -86,6 +87,8 @@ function AppInner() {
   const [auth, setAuth] = useState<AuthState>("checking");
   const [twoFAPending, setTwoFAPending] = useState(false);
   const [needs2fa, setNeeds2fa] = useState(false);
+  const [needsReverify, setNeedsReverify] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   // Password-reset deep link (?reset=1&email=…&token=…) from the reset email.
   const [resetParams, setResetParams] = useState<{ email: string; token: string } | null>(() => {
     try {
@@ -207,20 +210,31 @@ function AppInner() {
   }, []);
 
   const checkAuth = useCallback(() => {
-    apiCheckAuth().then(({ authenticated, isAdmin, twoFactorPending, needs2faSetup }) => {
+    apiCheckAuth().then(({ authenticated, isAdmin, email, twoFactorPending, needs2faSetup, needs2faReverify }) => {
       setAuth(authenticated ? "authenticated" : "unauthenticated");
       setIsAdmin(isAdmin);
+      setUserEmail(email);
       setTwoFAPending(!!twoFactorPending);
       setNeeds2fa(!!needs2faSetup);
+      setNeedsReverify(!!needs2faReverify);
     });
   }, []);
+
+  // Catch a mid-session re-verification lapse when the user returns to the tab.
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") checkAuth(); };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
+  }, [checkAuth]);
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
   useEffect(() => {
-    if (auth !== "authenticated") return;
+    // Don't fetch data while a 2FA enrollment or step-up is owed — those routes 403.
+    // When the gate clears (needs2fa/needsReverify -> false) this effect re-runs.
+    if (auth !== "authenticated" || needs2fa || needsReverify) return;
     apiLoadDeals()
       .then(d => {
         const now = Date.now();
@@ -242,7 +256,7 @@ function AppInner() {
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
-  }, [auth]);
+  }, [auth, needs2fa, needsReverify]);
 
   const handleReloadDeals = useCallback(() => {
     apiLoadDeals().then(d => setDeals(d)).catch(() => {});
@@ -407,6 +421,11 @@ function AppInner() {
   // too — data routes return 2fa_setup_required until enrolled.
   if (needs2fa) {
     return <TwoFactorModal mandatory onClose={() => { checkAuth(); }} />;
+  }
+
+  // Periodic step-up: session still valid, but the 2FA window lapsed.
+  if (needsReverify) {
+    return <Reverify2FAModal email={userEmail} onVerified={() => { setNeedsReverify(false); checkAuth(); }} />;
   }
 
   if (!loaded) {

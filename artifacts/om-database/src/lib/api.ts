@@ -93,6 +93,14 @@ export async function api2faDisable(opts: { code?: string; password?: string }):
   const body = await resp.json().catch(() => ({})) as { error?: string };
   return resp.ok ? { ok: true } : { ok: false, error: body.error || "Could not disable two-factor" };
 }
+// Periodic step-up within a live session.
+export async function api2faReverify(code: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const resp = await apiFetch("/auth/2fa/reverify", { method: "POST", body: JSON.stringify({ code }) });
+    if (!resp.ok) { const body = await resp.json().catch(() => ({})) as { error?: string }; return { ok: false, error: body.error || "Verification failed" }; }
+    return { ok: true };
+  } catch { return { ok: false, error: "Couldn't reach the server. Try again in a moment." }; }
+}
 
 export async function apiRegister(name: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> {
   try {
@@ -126,13 +134,13 @@ export async function apiChangePassword(currentPassword: string, newPassword: st
   return { ok: true };
 }
 
-export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean }
+export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean; needs2faReverify?: boolean }
 export async function apiCheckAuth(): Promise<AuthState> {
   try {
     const resp = await apiFetch("/auth/me");
     if (!resp.ok) return { authenticated: false, isAdmin: false, email: null, name: null };
-    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean };
-    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null, twoFactorPending: !!body.twoFactorPending, needs2faSetup: !!body.needs2faSetup };
+    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean; needs2faReverify?: boolean };
+    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null, twoFactorPending: !!body.twoFactorPending, needs2faSetup: !!body.needs2faSetup, needs2faReverify: !!body.needs2faReverify };
   } catch {
     return { authenticated: false, isAdmin: false, email: null, name: null };
   }
@@ -202,6 +210,7 @@ export async function apiApproveMember(id: string): Promise<{ emailSent: boolean
 export async function apiRejectMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/reject`, { method: "POST" }); }
 export async function apiSetMemberAdmin(id: string, isAdmin: boolean): Promise<void> { await apiFetch(`/auth/users/${id}/set-admin`, { method: "POST", body: JSON.stringify({ isAdmin }) }); }
 export async function apiDeleteMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}`, { method: "DELETE" }); }
+export async function apiResetMember2fa(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/reset-2fa`, { method: "POST" }); }
 
 // --- Extraction lessons (operator-taught rules) ---
 export type LessonScope = "all" | "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan";

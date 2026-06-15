@@ -8,6 +8,7 @@ import { requireAuth, requireAdmin } from "../middleware/auth";
 import { logger } from "../lib/logger";
 import QRCode from "qrcode";
 import { generateSecret, verifyTotp, otpauthUri } from "../lib/totp";
+import { needs2faReverify } from "../lib/twoFactorPolicy";
 
 const router = Router();
 
@@ -55,6 +56,7 @@ async function completeLogin(req: Request, user: { id: string; email: string; na
   req.session.userName = user.name ?? null;
   req.session.isAdmin = user.isAdmin;
   req.session.twoFactorEnabled = !!user.totpEnabled;
+  req.session.twoFactorVerifiedAt = Date.now(); // a fresh login just proved the 2nd factor
   req.session.loginAt = Date.now();
   delete req.session.pending2faUserId;
   delete req.session.pending2faAt;
@@ -382,6 +384,33 @@ router.post("/auth/2fa/disable", requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/auth/2fa/reverify — periodic step-up within a live session: re-enter an
+// authenticator (or backup) code to refresh the verification window.
+router.post("/auth/2fa/reverify", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)))[0];
+    if (!user?.totpEnabled || !user.totpSecret) { res.status(400).json({ error: "Two-factor isn't enabled." }); return; }
+    const since = new Date(Date.now() - FAIL_WINDOW_MS);
+    const fails = await db.select().from(loginEventsTable)
+      .where(and(eq(loginEventsTable.email, user.email), eq(loginEventsTable.success, false), gt(loginEventsTable.createdAt, since)));
+    if (fails.length >= MAX_FAILS) { res.status(429).json({ error: "Too many failed codes. Please wait about 15 minutes and try again." }); return; }
+    const code = typeof (req.body as Record<string, unknown>)?.code === "string" ? (req.body as Record<string, string>).code.trim() : "";
+    let ok = verifyTotp(user.totpSecret, code);
+    if (!ok && code) {
+      const codes = jsonArr(user.totpBackupCodes);
+      const idx = codes.indexOf(sha256(normBackup(code)));
+      if (idx >= 0) { codes.splice(idx, 1); await db.update(usersTable).set({ totpBackupCodes: JSON.stringify(codes) }).where(eq(usersTable.id, user.id)); ok = true; }
+    }
+    if (!ok) { await recordLoginEvent(req, user.email, user.id, false); res.status(401).json({ error: "Invalid authentication code." }); return; }
+    req.session.twoFactorVerifiedAt = Date.now();
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "2FA reverify failed");
+    res.status(500).json({ error: "Verification failed — please try again." });
+  }
+});
+
 // GET /api/auth/2fa/status — whether 2FA is on, and backup codes remaining.
 router.get("/auth/2fa/status", requireAuth, async (req, res) => {
   try {
@@ -451,8 +480,10 @@ router.get("/auth/me", (req, res) => {
     name: req.session.userName || null,
     twoFactorPending: !!req.session.pending2faUserId && !req.session.authenticated,
     // 2FA is mandatory — an authenticated user who hasn't enrolled must set it up
-    // before the app will let them in (enforced server-side by require2faEnrolled).
+    // before the app will let them in (enforced server-side by the router gate).
     needs2faSetup: !!req.session.authenticated && !req.session.twoFactorEnabled,
+    // Periodic step-up: re-enter a code when the verification window has lapsed.
+    needs2faReverify: !!req.session.authenticated && needs2faReverify(req.session),
   });
 });
 
@@ -643,6 +674,16 @@ router.post("/auth/users/:id/set-admin", requireAdmin, async (req, res) => {
   const makeAdmin = !!(req.body as Record<string, unknown>).isAdmin;
   if (String(req.params.id) === req.session.userId && !makeAdmin) { res.status(400).json({ error: "You can't remove your own admin access." }); return; }
   await db.update(usersTable).set({ isAdmin: makeAdmin }).where(eq(usersTable.id, String(req.params.id)));
+  res.json({ ok: true });
+});
+
+// POST /api/auth/users/:id/reset-2fa — admin clears a member's 2FA so they can sign
+// in with just their password and re-enroll (recovery when a device is lost).
+router.post("/auth/users/:id/reset-2fa", requireAdmin, async (req, res) => {
+  await ensureUsersTable();
+  await db.update(usersTable)
+    .set({ totpEnabled: false, totpSecret: null, totpPendingSecret: null, totpBackupCodes: null })
+    .where(eq(usersTable.id, String(req.params.id)));
   res.json({ ok: true });
 });
 

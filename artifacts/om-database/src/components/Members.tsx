@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
+import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
 
 // Admin-only screen to approve / decline account requests and manage members.
 export default function Members({ onClose }: { onClose: () => void }) {
@@ -113,6 +113,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
         {u.status === "pending" && btn("Decline", () => act(u.id, () => apiRejectMember(u.id)), "#b3261e", busy === u.id)}
         {u.status === "rejected" && u.emailVerified && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#5c5047", busy === u.id)}
+        {u.status === "approved" && btn("Reset 2FA", () => { if (window.confirm(`Reset two-factor for ${u.email}? They'll sign in with just their password next time and set it up again. Use this if they've lost their authenticator and backup codes.`)) act(u.id, () => apiResetMember2fa(u.id)); }, "#9a5b12", busy === u.id)}
         {btn("Remove", () => { if (window.confirm(`Remove ${u.email}? They'll lose access and would have to request a new account.`)) act(u.id, () => apiDeleteMember(u.id)); }, "#c0392b", busy === u.id)}
       </div>
     </div>

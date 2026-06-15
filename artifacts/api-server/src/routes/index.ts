@@ -20,6 +20,7 @@ import extractionLessonsRouter from "./extractionLessons";
 import leaseAbstractsRouter from "./leaseAbstracts";
 import siteAgreementsRouter from "./siteAgreements";
 import houseViewRouter from "./houseView";
+import { needs2faReverify } from "./../lib/twoFactorPolicy";
 
 const router: IRouter = Router();
 
@@ -33,6 +34,11 @@ router.use(authRouter);
 router.use((req, res, next) => {
   if (req.session?.authenticated && !req.session.twoFactorEnabled) {
     res.status(403).json({ error: "Two-factor authentication setup is required.", code: "2fa_setup_required" });
+    return;
+  }
+  // Periodic step-up: re-enter a code once the verification window has lapsed.
+  if (req.session?.authenticated && needs2faReverify(req.session)) {
+    res.status(403).json({ error: "Please re-enter your authenticator code to continue.", code: "2fa_reverify_required" });
     return;
   }
   next();
