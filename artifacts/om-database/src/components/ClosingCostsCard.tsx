@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import type { Deal } from "../lib/idb";
 import {
   getJurisdiction, calculateClosingCosts, formatRate, getLocalityGroups, autoLocalities,
@@ -37,13 +37,46 @@ export default function ClosingCostsCard({ deal }: Props) {
   const [loanInput, setLoanInput] = useState<string>(defaultLoan ? Math.round(defaultLoan).toLocaleString("en-US") : "");
   const [entitySale, setEntitySale] = useState(false);
 
-  // Resolve the EXACT taxing jurisdiction from the street address (US Census),
-  // cached per deal+address. Degrades gracefully to the city match on any failure.
-  const fullAddress = useMemo(
+  // The deal's own address (default jurisdiction). The estimator can also be pointed
+  // at any address via the autocomplete below.
+  const dealAddress = useMemo(
     () => [deal.address, deal.city, deal.state].map((s) => (s || "").trim()).filter(Boolean).join(", "),
     [deal.address, deal.city, deal.state],
   );
-  const hasStreet = !!(deal.address && deal.address.trim());
+
+  // Live address autocomplete (free OSM geocoder via /api/closing/suggest — no API
+  // key, no LLM tokens). Lets you estimate ANY address or fix a deal's missing/wrong
+  // one; the picked address drives both the tax STATE and the exact locality.
+  const [addrOverride, setAddrOverride] = useState<{ address: string; state: string } | null>(null);
+  const [addrInput, setAddrInput] = useState("");
+  const [suggests, setSuggests] = useState<Array<{ label: string; address: string; state: string }>>([]);
+  const [sugOpen, setSugOpen] = useState(false);
+  const sugTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (sugTimer.current) clearTimeout(sugTimer.current); }, []);
+  useEffect(() => { setAddrOverride(null); setAddrInput(""); setSuggests([]); setSugOpen(false); }, [deal.id]);
+
+  const onAddrType = (v: string) => {
+    setAddrInput(v);
+    if (sugTimer.current) clearTimeout(sugTimer.current);
+    const q = v.trim();
+    if (q.length < 4) { setSuggests([]); setSugOpen(false); return; }
+    sugTimer.current = setTimeout(() => {
+      fetch(`/api/closing/suggest?q=${encodeURIComponent(q)}`, { credentials: "include" })
+        .then((r) => r.json() as Promise<{ suggestions: Array<{ label: string; address: string; state: string }> }>)
+        .then((d) => { setSuggests(d.suggestions || []); setSugOpen((d.suggestions || []).length > 0); })
+        .catch(() => { setSuggests([]); setSugOpen(false); });
+    }, 320);
+  };
+  const pickAddr = (s: { label: string; address: string; state: string }) => {
+    setAddrOverride({ address: s.address, state: s.state });
+    setAddrInput(s.label); setSuggests([]); setSugOpen(false);
+  };
+  const clearAddr = () => { setAddrOverride(null); setAddrInput(""); setSuggests([]); setSugOpen(false); };
+
+  // Effective address / state the estimator runs on: the picked override, else the deal.
+  const fullAddress = addrOverride?.address || dealAddress;
+  const effectiveState = (addrOverride?.state || deal.state || "") as string;
+  const hasStreet = !!(addrOverride || (deal.address && deal.address.trim()));
   const [geo, setGeo] = useState<ResolvedJurisdiction | null>(null);
   const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "done" | "failed">("idle");
 
@@ -70,10 +103,10 @@ export default function ClosingCostsCard({ deal }: Props) {
 
   // Auto-detected locality: geocoded jurisdiction first, then the city-string fallback.
   const detected = useMemo(() => {
-    const fromGeo = geo?.matched ? localitiesFromJurisdiction(deal.state, geo) : {};
-    const fromCity = autoLocalities(deal.state, deal.city);
+    const fromGeo = geo?.matched ? localitiesFromJurisdiction(effectiveState, geo) : {};
+    const fromCity = autoLocalities(effectiveState, addrOverride ? "" : (deal.city || ""));
     return { ...fromCity, ...fromGeo };
-  }, [geo, deal.state, deal.city]);
+  }, [geo, effectiveState, deal.city, addrOverride]);
 
   // User dropdown picks win over auto-detection; cleared when switching deals.
   const [override, setOverride] = useState<Record<string, string>>({});
@@ -83,7 +116,7 @@ export default function ClosingCostsCard({ deal }: Props) {
 
   const price = Number(priceInput.replace(/,/g, "")) || 0;
   const loan  = Number(loanInput.replace(/,/g, ""))  || 0;
-  const jurisdiction = useMemo(() => getJurisdiction(deal.state), [deal.state]);
+  const jurisdiction = useMemo(() => getJurisdiction(effectiveState), [effectiveState]);
   const localityGroups = useMemo(() => getLocalityGroups(jurisdiction), [jurisdiction]);
   const breakdown = useMemo(() => calculateClosingCosts(jurisdiction, price, loan, { includeEntityTaxes: entitySale, localities }), [jurisdiction, price, loan, entitySale, localities]);
 
@@ -143,6 +176,43 @@ export default function ClosingCostsCard({ deal }: Props) {
           </ul>
         </div>
       )}
+
+      {/* Address autocomplete — point the estimate at any address (free OSM geocoder, no key/tokens) */}
+      <div style={{ position: "relative", marginBottom: 10 }}>
+        <label style={{ display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          Property Address
+          <input
+            type="text"
+            value={addrInput}
+            onChange={(e) => onAddrType(e.target.value)}
+            onFocus={() => { if (suggests.length) setSugOpen(true); }}
+            onBlur={() => setTimeout(() => setSugOpen(false), 120)}
+            placeholder={dealAddress || "Type an address to estimate…"}
+            autoComplete="off"
+            style={inputStyle}
+          />
+        </label>
+        {sugOpen && suggests.length > 0 && (
+          <div style={{ position: "absolute", zIndex: 30, left: 0, right: 0, top: "100%", marginTop: 2, background: "#fff", border: "1px solid #e3dccd", borderRadius: 6, boxShadow: "0 6px 18px rgba(56,58,55,0.14)", overflow: "hidden" }}>
+            {suggests.map((s, i) => (
+              <div
+                key={i}
+                onMouseDown={(e) => { e.preventDefault(); pickAddr(s); }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f7f4ee")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                style={{ padding: "7px 10px", fontSize: 12, color: "#383a37", cursor: "pointer", borderTop: i ? "1px solid #f1eadc" : "none", lineHeight: 1.35 }}
+              >
+                {s.label}
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ fontSize: 10, color: "#a69e91", marginTop: 4 }}>
+          {addrOverride
+            ? <>Estimating a custom address ({effectiveState || "—"}). <span onClick={clearAddr} style={{ color: "#6dba43", cursor: "pointer", fontWeight: 600 }}>↺ use deal address</span></>
+            : (dealAddress ? "Using the deal address — type above to estimate a different one." : "Type an address to set the state & locality.")}
+        </div>
+      </div>
 
       {/* Inputs */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 6 }}>
