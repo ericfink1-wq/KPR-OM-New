@@ -179,6 +179,13 @@ export interface Tenant {
   occupancyCost?: number | string | null;
   expenseReimbursements?: number | null;  // annual CAM + RE-tax + insurance recoveries (OM-stated dollars)
   percentageRent?: number | null;         // annual overage/percentage rent (OM-stated dollars)
+  // Structured percentage-rent terms (refine the free-text percentageRentClause):
+  // rate %, the annual sales breakpoint $, and whether it's a natural or fixed
+  // breakpoint. Lets the app read whether a tenant is over breakpoint (a healthy
+  // signal / mark-to-market evidence). Null when not disclosed.
+  percentageRentRate?: number | null;
+  percentageRentBreakpoint?: number | null;
+  percentageRentBreakpointType?: "natural" | "fixed" | null;
   otherRent?: number | null;              // annual marketing fund, storage, specialty, other (OM-stated dollars)
   creditRating?: string | null;
   isAnchor?: boolean;

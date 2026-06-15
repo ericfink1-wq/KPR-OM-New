@@ -104,6 +104,9 @@ REQUIRED SCHEMA:
       "renewalOptions": "string or null",
       "recentlyExercisedRenewal": "string or null",
       "percentageRentClause": "string or null — text describing the percentage rent clause (e.g. '7% of gross sales above $500/SF natural breakpoint'). Null if no clause.",
+      "percentageRentRate": "number or null — the percentage-rent RATE as a percent (e.g. 6 for '6% of gross sales over breakpoint'), when disclosed.",
+      "percentageRentBreakpoint": "number or null — the ANNUAL sales BREAKPOINT in dollars above which percentage rent is owed (e.g. 2016000 for 'over $2,016,000'). When the OM gives multiple period breakpoints, use the CURRENT one. Null if natural-only with no stated amount.",
+      "percentageRentBreakpointType": "natural|fixed|null — 'natural' = breakpoint = base rent ÷ rate (computed); 'fixed' = a stated fixed dollar breakpoint; null if not disclosed.",
       "expenseReimbursements": "number or null — Populate ONLY when the OM explicitly discloses the annual CAM + real-estate-tax + insurance recoveries paid by this specific tenant in dollars. Never estimate, derive, or guess. If not disclosed, leave null.",
       "percentageRent": "number or null — Populate ONLY when the OM explicitly discloses the annual overage/percentage rent paid by this tenant in dollars. Never estimate. If not disclosed, leave null.",
       "otherRent": "number or null — Populate ONLY when the OM explicitly discloses annual marketing/promo fund, storage, specialty, or other rent paid by this tenant in dollars. Never estimate. If not disclosed, leave null.",
@@ -350,7 +353,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
-      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
+      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, percentageRentRate, percentageRentBreakpoint, percentageRentBreakpointType, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
       const _cStart = Date.now();

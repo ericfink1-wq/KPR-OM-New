@@ -460,6 +460,20 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       )}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
                       {(() => {
+                        // "OVERAGE" pill: tenant's sales exceed its percentage-rent
+                        // breakpoint, so it is paying (or near) overage rent — a sign
+                        // of a strong performer and mark-to-market evidence.
+                        const bp = n(t.percentageRentBreakpoint), sp = n(t.salesPSF), sfn = n(t.sf), rate = n(t.percentageRentRate);
+                        if (bp == null || bp <= 0 || sp == null || sfn == null) return null;
+                        const sales = sp * sfn;
+                        if (sales <= bp) return null;
+                        const overage = rate != null ? ((sales - bp) * rate) / 100 : null;
+                        return (
+                          <span title={`Sales ($${Math.round(sales).toLocaleString()}) exceed the percentage-rent breakpoint ($${Math.round(bp).toLocaleString()})${rate != null ? ` — paying ~$${Math.round(overage!).toLocaleString()}/yr overage at ${rate}%` : ""}. A strong-performer / mark-to-market signal.`}
+                            style={{ fontSize:9, color:"#0f6b46", background:"#e7f8f0", border:"1px solid #a7f3d0", padding:"1px 6px", borderRadius:4, fontWeight:700, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>OVERAGE</span>
+                        );
+                      })()}
+                      {(() => {
                         const w = lookupWatch(watchMap, t.name);
                         if (!w) return null;
                         const m = WATCH_STATUS_META[w.status] || WATCH_STATUS_META.watch;
