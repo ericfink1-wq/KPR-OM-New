@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { api2faStatus, api2faSetup, api2faEnable, api2faDisable } from "../lib/api";
 
-interface Props { onClose: () => void; }
+interface Props {
+  onClose: () => void;
+  // Mandatory enrollment gate: no dismiss, copy says it's required, and the user is
+  // dropped straight into setup. onClose is called once 2FA is on (re-checks auth).
+  mandatory?: boolean;
+}
 
 const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(28,30,25,0.45)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
 const card: React.CSSProperties = { background: "#fff", border: "1px solid #e7e0d2", borderRadius: 14, padding: "26px 28px", width: "min(420px, 100%)", boxSizing: "border-box", maxHeight: "90vh", overflowY: "auto", fontFamily: "'Inter', sans-serif" };
 const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "10px 14px", border: "1.5px solid #e7e0d2", borderRadius: 8, fontSize: 14, background: "#faf7f0", color: "#26281f", outline: "none" };
 const primaryBtn: React.CSSProperties = { width: "100%", padding: "10px 0", background: "#26281f", color: "#f1ece1", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", letterSpacing: "0.02em" };
 
-export default function TwoFactorModal({ onClose }: Props) {
+export default function TwoFactorModal({ onClose, mandatory }: Props) {
   // step: loading → off (offer setup) → setup (QR+code) → codes (show backup) → on (manage)
   const [step, setStep] = useState<"loading" | "off" | "setup" | "codes" | "on">("loading");
   const [busy, setBusy] = useState(false);
@@ -52,11 +57,11 @@ export default function TwoFactorModal({ onClose }: Props) {
   };
 
   return (
-    <div style={overlay} onClick={onClose}>
+    <div style={overlay} onClick={mandatory ? undefined : onClose}>
       <div style={card} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, color: "#26281f" }}>Two-Factor Authentication</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "#a89f8f", cursor: "pointer", lineHeight: 1 }}>×</button>
+          {!mandatory && <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "#a89f8f", cursor: "pointer", lineHeight: 1 }}>×</button>}
         </div>
 
         {step === "loading" && <div style={{ fontSize: 13, color: "#a89f8f", padding: "16px 0" }}>Loading…</div>}
@@ -64,6 +69,7 @@ export default function TwoFactorModal({ onClose }: Props) {
         {step === "off" && (
           <>
             <p style={{ fontSize: 13, color: "#5c5f57", lineHeight: 1.55, marginTop: 6 }}>
+              {mandatory ? "Two-factor authentication is required for all accounts. " : ""}
               Add a second step at sign-in using an authenticator app (Google Authenticator, Authy, 1Password). After your password, you'll enter a rotating 6-digit code.
             </p>
             {error && <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 10 }}>{error}</div>}

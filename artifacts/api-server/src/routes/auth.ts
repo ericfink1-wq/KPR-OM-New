@@ -48,12 +48,13 @@ const genId = () => `usr_${Date.now().toString(36)}_${Math.random().toString(36)
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // Promote a password-(and, when enabled, 2FA-)verified user to a full session.
-async function completeLogin(req: Request, user: { id: string; email: string; name: string | null; isAdmin: boolean }): Promise<void> {
+async function completeLogin(req: Request, user: { id: string; email: string; name: string | null; isAdmin: boolean; totpEnabled?: boolean }): Promise<void> {
   req.session.authenticated = true;
   req.session.userId = user.id;
   req.session.userEmail = user.email;
   req.session.userName = user.name ?? null;
   req.session.isAdmin = user.isAdmin;
+  req.session.twoFactorEnabled = !!user.totpEnabled;
   req.session.loginAt = Date.now();
   delete req.session.pending2faUserId;
   delete req.session.pending2faAt;
@@ -348,6 +349,7 @@ router.post("/auth/2fa/enable", requireAuth, async (req, res) => {
     const backupCodes = Array.from({ length: 10 }, fmtBackup);
     const hashed = backupCodes.map(c => sha256(normBackup(c)));
     await db.update(usersTable).set({ totpEnabled: true, totpSecret: user.totpPendingSecret, totpPendingSecret: null, totpBackupCodes: JSON.stringify(hashed) }).where(eq(usersTable.id, uid));
+    req.session.twoFactorEnabled = true; // clears the mandatory-enrollment gate
     res.json({ ok: true, backupCodes });
   } catch (err) {
     req.log.error({ err }, "2FA enable failed");
@@ -372,6 +374,7 @@ router.post("/auth/2fa/disable", requireAuth, async (req, res) => {
       return;
     }
     await db.update(usersTable).set({ totpEnabled: false, totpSecret: null, totpPendingSecret: null, totpBackupCodes: null }).where(eq(usersTable.id, uid));
+    req.session.twoFactorEnabled = false; // 2FA is mandatory — they'll be prompted to re-enroll
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "2FA disable failed");
@@ -447,6 +450,9 @@ router.get("/auth/me", (req, res) => {
     email: req.session.userEmail || null,
     name: req.session.userName || null,
     twoFactorPending: !!req.session.pending2faUserId && !req.session.authenticated,
+    // 2FA is mandatory — an authenticated user who hasn't enrolled must set it up
+    // before the app will let them in (enforced server-side by require2faEnrolled).
+    needs2faSetup: !!req.session.authenticated && !req.session.twoFactorEnabled,
   });
 });
 

@@ -25,6 +25,19 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+
+// MANDATORY two-factor: an authenticated user who hasn't enrolled in TOTP can reach
+// only the auth endpoints above (to enroll) — every data route below is blocked with
+// a 2fa_setup_required code until they turn 2FA on. (Health + /auth/* are registered
+// before this, so login, enrollment and status always work.)
+router.use((req, res, next) => {
+  if (req.session?.authenticated && !req.session.twoFactorEnabled) {
+    res.status(403).json({ error: "Two-factor authentication setup is required.", code: "2fa_setup_required" });
+    return;
+  }
+  next();
+});
+
 router.use(ingestRouter);
 router.use(dealsRouter);
 router.use(aliasesRouter);

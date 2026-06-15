@@ -11,6 +11,7 @@ import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import AnalystChat from "./components/AnalystChat";
 import Login from "./components/Login";
+import TwoFactorModal from "./components/TwoFactorModal";
 import HelpModal from "./components/HelpModal";
 import ClosingCostEstimator from "./components/ClosingCostEstimator";
 import AiProgressBar from "./components/AiProgressBar";
@@ -84,6 +85,7 @@ type AuthState = "checking" | "authenticated" | "unauthenticated";
 function AppInner() {
   const [auth, setAuth] = useState<AuthState>("checking");
   const [twoFAPending, setTwoFAPending] = useState(false);
+  const [needs2fa, setNeeds2fa] = useState(false);
   // Password-reset deep link (?reset=1&email=…&token=…) from the reset email.
   const [resetParams, setResetParams] = useState<{ email: string; token: string } | null>(() => {
     try {
@@ -205,10 +207,11 @@ function AppInner() {
   }, []);
 
   const checkAuth = useCallback(() => {
-    apiCheckAuth().then(({ authenticated, isAdmin, twoFactorPending }) => {
+    apiCheckAuth().then(({ authenticated, isAdmin, twoFactorPending, needs2faSetup }) => {
       setAuth(authenticated ? "authenticated" : "unauthenticated");
       setIsAdmin(isAdmin);
       setTwoFAPending(!!twoFactorPending);
+      setNeeds2fa(!!needs2faSetup);
     });
   }, []);
 
@@ -397,6 +400,13 @@ function AppInner() {
 
   if (auth === "unauthenticated") {
     return <Login startOn2fa={twoFAPending} onLogin={() => { checkAuth(); }} />;
+  }
+
+  // Mandatory 2FA: an authenticated user who hasn't enrolled is blocked behind the
+  // (non-dismissable) enrollment flow until they turn it on. The server enforces this
+  // too — data routes return 2fa_setup_required until enrolled.
+  if (needs2fa) {
+    return <TwoFactorModal mandatory onClose={() => { checkAuth(); }} />;
   }
 
   if (!loaded) {

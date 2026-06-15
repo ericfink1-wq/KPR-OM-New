@@ -126,13 +126,13 @@ export async function apiChangePassword(currentPassword: string, newPassword: st
   return { ok: true };
 }
 
-export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null; twoFactorPending?: boolean }
+export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean }
 export async function apiCheckAuth(): Promise<AuthState> {
   try {
     const resp = await apiFetch("/auth/me");
     if (!resp.ok) return { authenticated: false, isAdmin: false, email: null, name: null };
-    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null; twoFactorPending?: boolean };
-    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null, twoFactorPending: !!body.twoFactorPending };
+    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean };
+    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null, twoFactorPending: !!body.twoFactorPending, needs2faSetup: !!body.needs2faSetup };
   } catch {
     return { authenticated: false, isAdmin: false, email: null, name: null };
   }
