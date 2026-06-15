@@ -17,7 +17,7 @@ export async function extractRentRoll(text: string): Promise<RentRollResult> {
 Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","totalSF":number or null,"occupancy":number or null,"tenants":[{...}],"reviewQuestions":[{...}]}
 
 Each tenant object (omit unknown fields):
-{"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","rentBumps","rentSchedule","renewalOptions","recentlyExercisedRenewal","assumptionNote","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
+{"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","camCapPct","camCapBasis","adminFeePct","mgmtFeeInCam","grossUpPct","recoverySF","leaseStatus","rentBumps","rentSchedule","renewalOptions","recentlyExercisedRenewal","assumptionNote","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
 
 Rules:
 - Brand name only (no store #).
@@ -49,6 +49,8 @@ CRITICAL LESSONS (past extractions failed on these — do NOT repeat):
 - DEDUPE SECTIONS: a rent roll may have separate sections like "New Leases" / "Occupied" / "Vacant". If the same tenant or suite appears in BOTH a future/"New Leases" section AND an in-place "Occupied" section, output ONE row. Use the OCCUPIED current rent/SF; apply the EXECUTED RENEWAL rule above for the expiry. Never emit two rows for the same tenant/suite. Emit each "Vacant" suite as its own "Vacant" row per the VACANT SUITES rule (do NOT skip them) — but if a suite is listed BOTH as Vacant and as occupied/new-leased to a named tenant, keep only the occupied/named row.
 - suite: always capture the suite/unit id when present — it's the most reliable key for matching this tenant to an existing roster. The suite is the value in the LEFTMOST "Suite" / "Suite/Space" / "Unit" column, which is SEPARATE from the tenant-name column. CAPTURE IT EVEN WHEN IT IS PURELY NUMERIC — e.g. "38", "1", a zero-padded code like "00002"/"00011" (KPR rent rolls use these), or a range like "23-24" / "19N20". Do NOT mistake a numeric suite for a row number and skip it: every tenant row in these rolls leads with its suite code, so a leading number before the tenant name IS the suite → put it in the suite field (you may strip leading zeros, e.g. "00002" → "2"). Alphanumeric forms like "14-WALM", "15908A", "B" also go in suite. Never fold the suite into the tenant name.
 - leaseType is the REIMBURSEMENT / LEASE STRUCTURE (NNN, Gross, Modified Gross, NN, Base Year). It is NOT a renewal-option type. NEVER put option-type codes like "AUT" (automatic) or "REN" (renewal) in leaseType — those describe the renewal option; put that detail in renewalOptions, or omit it. Leave leaseType null if the structure isn't stated.
+- RECOVERY DETAIL → structured fields. When the roll's recovery / "Comments" column discloses recovery terms, ALSO populate the structured fields (not just the reimbursementMethod string): camCapPct (annual cap on controllable CAM, e.g. 5), camCapBasis ("cumulative"|"non-cumulative"), adminFeePct (admin fee % of CAM), mgmtFeeInCam (true=mgmt fee in CAM / false=excluded), grossUpPct (gross-up %), and recoverySF (the SF recoveries are BILLED on when it differs from the leased sf). Leave each null when not stated.
+- leaseStatus: set "executed" for a normal in-place tenant; "signed-not-open" when the lease is signed but rent has not commenced / store not open; "loi" or "proposed" when the deal is only an LOI / proposed (not executed) but the roll models it in place. These overstate income until signed.
 - ATM vs BANK BRANCH: a standalone ATM (e.g. "Chase Bank ATM", "Bank of America ATM", usually 0 or tiny SF) is NOT a bank branch. KEEP "ATM" in the name and list it as its OWN tenant row — never merge it into the bank's branch lease.
 
 reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with confidence from THIS rent roll — e.g. an unlabeled/ambiguous SF or rent column, a number that was blurry or split oddly, two rows that might be the same tenant, or an "as of" date you had to guess. Each: {"severity":"high|medium|low","field":"human label e.g. 'Five Below — SF'","question":"short confirm question","detail":"1 sentence on the ambiguity","suggestedValue":"what you captured, as a string","target":{"kind":"tenant","fieldKey":"exact tenant field key (sf, rentPerSF, annualRent, leaseStart, leaseExpiry, remainingTermYears, salesPSF)","tenantName":"exact tenant name from the tenants array","valueType":"number|text"}}. ALWAYS set target when the question is about one tenant's field so the user can fix it in one click; set target null only for non-field questions (e.g. possible duplicate rows). Only flag genuine uncertainty — NOT values simply absent from the roll. Empty array if the roll was clean.`;
@@ -201,9 +203,10 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
   // forward — so a "Lease Options" upload never wipes SF / rent / start dates.
   const CARRY_OVER = [
     "sf", "annualRent", "rentPerSF", "leaseStart", "leaseExpiry", "remainingTermYears",
-    "leaseType", "reimbursementMethod", "rentBumps", "rentSchedule", "salesPSF",
-    "salesYear", "expenseReimbursements", "percentageRent", "otherRent", "creditRating",
-    "isAnchor", "isNAP", "isDark", "parentCompany",
+    "leaseType", "reimbursementMethod", "camCapPct", "camCapBasis", "adminFeePct",
+    "mgmtFeeInCam", "grossUpPct", "recoverySF", "leaseStatus", "rentBumps", "rentSchedule",
+    "salesPSF", "salesYear", "expenseReimbursements", "percentageRent", "otherRent",
+    "creditRating", "isAnchor", "isNAP", "isDark", "parentCompany",
   ];
   const blank = (v: unknown) => v == null || v === "";
   const nrm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
