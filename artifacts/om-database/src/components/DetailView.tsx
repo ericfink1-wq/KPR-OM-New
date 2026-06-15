@@ -3018,6 +3018,23 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <Row l="PARKING RATIO" v={d.parkingRatio?`${d.parkingRatio}/1k SF`:null}/>
           <Row l="# BUILDINGS" v={d.numberOfBuildings}/>
         </Card>
+        {Array.isArray(d.otherIncome) && d.otherIncome.length > 0 && (
+          <Card title="OTHER INCOME">
+            {d.otherIncome.map((oi, i) => (
+              <Row
+                key={i}
+                l={(oi.source || oi.type || "Other").toUpperCase()}
+                v={oi.annualAmount != null ? fmtUSD(oi.annualAmount) : (oi.note || "—")}
+                c={oi.isMargin ? "#b45309" : undefined}
+              />
+            ))}
+            {d.otherIncome.some(oi => oi.isMargin) && (
+              <div style={{ fontSize:10, color:"#b45309", marginTop:6, lineHeight:1.5 }}>
+                ⚠ Margin income (e.g. utility resale) is a spread, not durable rent — underwrite cautiously / haircut.
+              </div>
+            )}
+          </Card>
+        )}
       </div>
 
       {/* Verified hint — under lease/financial metrics */}

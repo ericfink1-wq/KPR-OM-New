@@ -788,6 +788,20 @@ export interface MarketDemographics {
   lookedUpAt?: string;
 }
 
+// One center-level "other income" line the OM discloses beyond base rent and
+// expense recoveries — utility resale margin, EV-charging license, parking,
+// storage/license, marketing/promo fund, specialty/temp. Captured so underwriting
+// can see (and haircut) non-rent income that pads NOI. `isMargin` marks income
+// that is a spread/margin rather than durable contractual rent (e.g. landlord
+// buying wholesale power and reselling retail) — the kind to underwrite cautiously.
+export interface OtherIncomeItem {
+  source?: string | null;        // free label, e.g. "Bath & Body storage license", "EVgo charging"
+  type?: "utility-resale" | "ev-charging" | "parking" | "storage" | "license" | "marketing" | "specialty" | "other" | null;
+  annualAmount?: number | null;  // annual $ as disclosed
+  isMargin?: boolean | null;     // true = spread/margin income, not durable rent
+  note?: string | null;
+}
+
 export interface CashFlowRow {
   label?: string;
   totalBaseRent?: number | null;
@@ -916,6 +930,9 @@ export interface Deal {
   // Income/expense breakdown
   incomeBreakdown?: Record<string, number | null>;
   expenseBreakdown?: Record<string, number | null>;
+  // Center-level non-rent "other income" lines disclosed by the OM (utility resale
+  // margin, EV charging, parking, storage/license, marketing fund, specialty/temp).
+  otherIncome?: OtherIncomeItem[] | null;
   // Roof
   roofData?: RoofData | null;
   // Images meta. coverConfirmed / sitePlanConfirmed remember that the user has
