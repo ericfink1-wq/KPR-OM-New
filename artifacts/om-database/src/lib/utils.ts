@@ -810,50 +810,67 @@ export function isNAPTenant(t: { name?: string | null; sf?: number | string | nu
   return sf != null && sf > 0 && (rent == null || rent === 0) && (rentPSF == null || rentPSF === 0);
 }
 
-// Reimbursement / expense-recovery structure taken from a lease ABSTRACT — i.e. the
+// Reimbursement / expense-recovery TEXT taken from a lease ABSTRACT — i.e. the
 // executed lease, which is more authoritative than an OM or a seller's rent roll.
 // Used to fill the roster "Reimb." column when the OM/roll didn't state a method.
-// Returns the displayable text (prefers camTax, falls back to the CAM lease-note)
-// plus a STRUCTURE classification for the roster flag.
-//
-// The classification is substance-over-keywords: if the tenant reimburses CAM /
-// taxes / insurance — whether variable pro-rata OR a fixed "Operating Cost Charge" —
-// the lease is NET (NNN), regardless of caps, base-year OC charges, or
-// "gross-up"/"gross sales" wording (none of which make a lease gross or fixed). Only
-// a genuine gross lease (landlord absorbs expenses / no pass-through) is "gross".
-export interface AbstractReimbInfo {
-  text: string;
-  structure: "nnn" | "gross" | "other";
-}
-export function reimbursementFromAbstract(a: LeaseAbstract | null | undefined): AbstractReimbInfo | null {
+// Prefers the short camTax convenience field; falls back to the CAM lease-note prose.
+// Returns null when the abstract has nothing usable (or only an explicit "None").
+// Classify the returned text with reimbursementFlag().
+export function reimbursementFromAbstract(a: LeaseAbstract | null | undefined): string | null {
   if (!a) return null;
   const noteOf = (code: string) => (a.leaseNotes || []).find(n => (n.code || "").toUpperCase() === code)?.value?.trim() || "";
   const camTax = a.camTax?.value?.trim() || "";
   const camNote = noteOf("CAM");
-  const text = (camTax && !/^none\b/i.test(camTax)) ? camTax
-             : (camNote && !/^none\b/i.test(camNote)) ? camNote
-             : "";
-  if (!text) return null;
-  const blob = `${camTax} ${camNote} ${noteOf("RETX")} ${noteOf("INS")}`;
-  // Strip "gross" phrases that are NOT a gross-lease structure before testing.
-  const cleaned = blob
-    .replace(/\b(adjusted\s+)?gross\s+sales\b/gi, " ")
-    .replace(/\bgross(ed)?[- ]?up\b/gi, " ");
-  const grossLease = /\bgross\s+lease\b|\bfull[- ]?service\s+gross\b|\bfully\s+gross\b|landlord\s+(pays|bears|absorbs)\s+all|no\s+pass-?through|no\s+(expense\s+)?reimbursement|no\s+recovery/i.test(cleaned);
-  const nnn = /\b(triple\s*net|nnn|net\s+lease|pro-?\s?rata|proportionate\s+share|operating\s+cost\s+charge|\bOC\s+charge\b|base\s+year|reimburse|tenant'?s\s+(pro-?rata\s+)?share|tenant\s+(pays|shall\s+pay|bears|carries))/i.test(blob);
-  const structure: AbstractReimbInfo["structure"] = grossLease && !nnn ? "gross" : (nnn ? "nnn" : "other");
-  return { text, structure };
+  if (camTax && !/^none\b/i.test(camTax)) return camTax;
+  if (camNote && !/^none\b/i.test(camNote)) return camNote;
+  return null;
 }
 
-// Short reimbursement-method label ("NNN" | "Gross") derived from an abstract's
-// recovery structure — used to BACKFILL a tenant's reimbursementMethod when the OM /
-// rent roll left it blank (see computeAbstractChecks). The executed lease is
-// authoritative; once filled it flows to the recovery estimate, the expense-risk
-// flag, the roster and exports — all of which read reimbursementMethod.
+export interface ReimbFlag {
+  label: string;   // badge text shown in the roster: "NNN" | "FIXED CAM" | "GROSS"
+  method: string;  // canonical short method for backfilling reimbursementMethod
+  warn: boolean;   // true = landlord-expense-risk (amber/red); false = clean net (green)
+  color: string;
+  bg: string;
+  tip: string;
+}
+
+// Classify ANY reimbursement string (a short OM/roll-stated method OR an abstract's
+// CAM prose) into a roster flag — substance over keywords. The distinctions matter
+// for underwriting, so they are NOT collapsed:
+//  • GROSS    — genuine gross lease (landlord absorbs expenses / no pass-through).
+//               "gross-up", "gross sales" and "gross leasable area" are NOT gross.
+//  • FIXED CAM — NET lease, but CAM is a fixed/escalating amount (or a fixed "OC
+//               charge in lieu of variable CAM") rather than pro-rata, so the
+//               landlord bears CAM growth above the escalator. Taxes & insurance
+//               still pass through — it is NOT gross, and NOT the same as pro-rata NNN.
+//  • NNN      — tenant reimburses CAM/taxes/insurance pro-rata. A cap on controllable
+//               CAM does NOT make it gross or fixed — it stays NNN.
+export function reimbursementFlag(text: string | null | undefined): ReimbFlag | null {
+  const blob = (text || "").trim();
+  if (!blob) return null;
+  // Strip "gross" phrases that are NOT a gross-lease structure before the gross test.
+  const cleaned = blob
+    .replace(/\b(adjusted\s+)?gross\s+(sales|receipts)\b/gi, " ")
+    .replace(/\bgross(ed)?[- ]?up\b/gi, " ")
+    .replace(/\bgross\s+(leasable|rentable|floor)\s+area\b/gi, " ");
+  const grossLease = /\bgross\s+lease\b|\bfull[- ]?service\s+gross\b|\bfully\s+gross\b|\bmodified\s+gross\b|landlord\s+(pays|bears|absorbs)\s+all|no\s+pass-?through|no\s+(expense\s+)?reimbursement|no\s+recovery|(^|[^a-z])gross([^a-z]|$)/i.test(cleaned);
+  const net = /\b(triple\s*net|nnn|net\s+lease|pro-?\s?rata|\bprs\b|proportionate\s+share|operating\s+cost\s+charge|\boc\s+charge\b|base\s+year|reimburse|tenant'?s\s+(pro-?rata\s+)?share|tenant\s+(pays|shall\s+pay|bears|carries))/i.test(blob);
+  const fixedCam = /\bfixed[- ]?cam\b|\bflat[- ]?cam\b|\bfixed\s+expense\b/i.test(blob)
+    || (/(operating\s+cost\s+charge|\boc\s+charge\b)/i.test(blob) && /\b(in\s+lieu|not\s+(a\s+|an\s+)?(variable|open|pro-?rata)|fixed)\b/i.test(blob));
+  if (grossLease && !net) return { label: "GROSS", method: "Gross", warn: true, color: "#b91c1c", bg: "#fdecea", tip: "Gross lease — landlord absorbs expense growth (no recovery)." };
+  if (fixedCam) return { label: "FIXED CAM", method: "Fixed CAM", warn: true, color: "#b45309", bg: "#fbe6cf", tip: "Net lease, but CAM is a FIXED / escalating amount (not pro-rata) — the landlord bears CAM growth above the escalator. Taxes & insurance still pass through; not a gross lease and not the same as pro-rata NNN." };
+  if (net) return { label: "NNN", method: "NNN", warn: false, color: "#3f7a1f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata. A cap on controllable CAM does not make it gross or fixed." };
+  return null;
+}
+
+// Short reimbursement-method label ("NNN" | "Fixed CAM" | "Gross") derived from an
+// abstract's recovery structure — used to BACKFILL a tenant's reimbursementMethod when
+// the OM / rent roll left it blank (see computeAbstractChecks). The executed lease is
+// authoritative; once filled it flows to the recovery estimate, the expense-risk flag
+// (which has its own fixed_cam category), the roster and exports.
 export function reimbursementMethodFromAbstract(a: LeaseAbstract | null | undefined): string | null {
-  const info = reimbursementFromAbstract(a);
-  if (!info) return null;
-  return info.structure === "gross" ? "Gross" : info.structure === "nnn" ? "NNN" : null;
+  return reimbursementFlag(reimbursementFromAbstract(a))?.method ?? null;
 }
 
 const MONTH_MAP: Record<string, number> = {
