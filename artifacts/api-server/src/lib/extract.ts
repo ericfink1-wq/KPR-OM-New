@@ -116,6 +116,7 @@ REQUIRED SCHEMA:
       "isAnchor": "true|false",
       "isNAP": "true if this tenant is on an adjacent parcel NOT part of this sale/ownership (marked NAP, Not A Part, or outparcel on the site plan). false or null otherwise. IMPORTANT: a signed inline tenant whose rent has NOT yet commenced (future rent-commencement / lease-start date, $0 or blank current rent, in build-out/free-rent) is a REAL tenant, NOT NAP — set isNAP false, set leaseStart to the commencement date, and capture their contractual base rent (not $0).",
       "isDark": "true if this tenant is a 'dark' store — they still hold the lease and are paying rent, but the store is closed / no longer operating (look for words like 'dark', 'closed but paying', 'gone dark', 'not operating', 'vacated but obligated', 'lease in place, store closed'). false or null otherwise. Do NOT mark a unit dark just because it is vacant with no tenant — dark specifically means a paying tenant whose store is closed.",
+      "leaseStatus": "executed|signed-not-open|loi|proposed|null — the EXECUTION status of the lease the OM is underwriting for this tenant. Default 'executed' for a normal in-place rent-roll tenant. Use 'signed-not-open' when the lease is signed but the store has NOT opened / rent has not commenced (e.g. 'signed not open', in build-out, future rent-commencement date). Use 'loi' when the deal is only a Letter of Intent, and 'proposed' when it is a proposed / under-negotiation / spec deal that is NOT yet executed but the OM models it in place (look for 'LOI', 'proposed', 'under negotiation', 'JLL assumes [tenant] is in place at start of analysis', or a footnote that the lease is not yet signed). These NON-executed tenants overstate NOI until signed, so flag them here — do NOT silently treat them as executed.",
       "originalLeaseDate": "string or null",
       "remainingTermYears": "number or null"
     }
@@ -346,7 +347,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
-      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, remainingTermYears}. " +
+      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
       const _cStart = Date.now();
@@ -393,7 +394,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         `From the Offering Memorandum text above, extract ONLY the occupied tenants NOT already in this list (largest missing first):\n` +
         haveNames.join(", ") +
         `\n\nSame inclusion rule: actual lease occupants of THIS property only. Return ONLY {"tenants":[...]} with per-tenant schema ` +
-        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, remainingTermYears}. ` +
+        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, leaseStatus, remainingTermYears}. ` +
         `If none remain, return {"tenants":[]}. Output must start with { and end with }.`;
       try {
         const _gStart = Date.now();

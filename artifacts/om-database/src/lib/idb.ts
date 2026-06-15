@@ -179,6 +179,12 @@ export interface Tenant {
   isAnchor?: boolean;
   isNAP?: boolean | null;
   isDark?: boolean | null;                 // "dark" store — closed/not operating but still paying rent under the lease
+  // Execution status of the lease the OM is underwriting. "executed" = signed and
+  // in place (the default). "signed-not-open" = lease executed but the store has not
+  // opened / rent has not commenced. "loi"/"proposed" = NOT yet executed (letter of
+  // intent / proposed / under negotiation) but modeled in place — overstates NOI
+  // until signed. Drives the unexecuted-lease red flag.
+  leaseStatus?: "executed" | "signed-not-open" | "loi" | "proposed" | null;
   assumptionNote?: string | null;
   salesNotes?: string | null;
 }

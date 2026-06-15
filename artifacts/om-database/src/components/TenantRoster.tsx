@@ -452,6 +452,12 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                           <Moon size={9} strokeWidth={2.25} /> DARK
                         </span>
                       )}
+                      {(t.leaseStatus === "loi" || t.leaseStatus === "proposed") && (
+                        <span title="Lease NOT executed — only at Letter-of-Intent / proposed stage but modeled in place. In-place NOI is overstated until it's signed." style={{ fontSize:9, color:"#9a3412", background:"#fdecdc", border:"1px solid #f0c08a", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>{t.leaseStatus === "loi" ? "LOI" : "PROPOSED"}</span>
+                      )}
+                      {t.leaseStatus === "signed-not-open" && (
+                        <span title="Lease executed but the store has not opened / rent has not commenced — confirm rent-commencement date." style={{ fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>SIGNED · NOT OPEN</span>
+                      )}
                       {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
                       {(() => {
                         const w = lookupWatch(watchMap, t.name);
