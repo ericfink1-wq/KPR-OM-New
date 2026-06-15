@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot } from "./lib/api";
@@ -408,8 +408,14 @@ function AppInner() {
     );
   }
 
-  const activeDeals = deals.filter(d => !d.trashedAt);
-  const ownedDealIds = activeDeals.filter(d => d.status === "Owned" || d.status === "Sold").map(d => d.id);
+  const activeDeals = useMemo(() => deals.filter(d => !d.trashedAt), [deals]);
+  // Stable reference (only changes when the deal set changes) — it feeds the Owned
+  // scope filter on Portfolio Analytics, whose reload effect depends on it; a fresh
+  // array each render made the Owned view reload/reset on any unrelated App re-render.
+  const ownedDealIds = useMemo(
+    () => activeDeals.filter(d => d.status === "Owned" || d.status === "Sold").map(d => d.id),
+    [activeDeals],
+  );
   const currentDeal = view.type === "detail" ? deals.find(d => d.id === view.dealId) : null;
 
   return (
