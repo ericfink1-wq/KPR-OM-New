@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
-import { estimateReassessment, getTaxJurisdiction } from "../lib/taxReassessment";
+import { estimateReassessment, getTaxJurisdiction, reconcileTaxCapture } from "../lib/taxReassessment";
 
 // Property-tax reassessment estimator. Answers "if we buy this center, do the
 // taxes reset — and by how much?" from the per-state ruleset, grounded in the
@@ -47,9 +47,13 @@ function NumIn({ label, value, onChange, hint }: { label: string; value: string;
 
 export default function TaxReassessmentCard({ deal }: Props) {
   const j = getTaxJurisdiction(deal.state);
+  // Reconcile the captured tax figures deterministically — prefer the SUM of the
+  // parcel rows (added in code, not by the model) and surface completeness/sanity
+  // warnings (missing parcel, market-vs-assessed swap, abatement).
+  const check = useMemo(() => reconcileTaxCapture(deal), [deal]);
   const defaultPrice = Number(deal.txnPurchasePrice ?? deal.askingPrice ?? 0) || 0;
-  const defaultAssessed = Number(deal.currentAssessedValue ?? 0) || 0;
-  const defaultTaxes = Number(deal.currentAnnualTaxes ?? deal.expenseBreakdown?.realEstateTax ?? 0) || 0;
+  const defaultAssessed = Number(check.assessed ?? 0) || 0;
+  const defaultTaxes = Number(check.taxes ?? deal.expenseBreakdown?.realEstateTax ?? 0) || 0;
 
   const [price, setPrice] = useState(defaultPrice ? Math.round(defaultPrice).toLocaleString("en-US") : "");
   const [assessed, setAssessed] = useState(defaultAssessed ? Math.round(defaultAssessed).toLocaleString("en-US") : "");
@@ -85,6 +89,30 @@ export default function TaxReassessmentCard({ deal }: Props) {
       <div style={{ marginTop: 10, background: headBg, border: `1px solid ${headBd}`, borderRadius: 8, padding: "10px 12px" }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, lineHeight: 1.45 }}>{r.headline}</div>
       </div>
+
+      {/* Capture-completeness / sanity warnings — the fringe-case guards */}
+      {check.warnings.length > 0 && (
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+          {check.warnings.map((w, i) => {
+            const t = w.severity === "high" ? { fg: C.red, bg: C.redBg, bd: C.redBd, icon: "⚠" }
+              : w.severity === "medium" ? { fg: C.amber, bg: C.amberBg, bd: C.amberBd, icon: "⚠" }
+              : { fg: C.sub, bg: "#fff", bd: C.line, icon: "ℹ" };
+            return (
+              <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", background: t.bg, border: `1px solid ${t.bd}`, borderRadius: 7, padding: "7px 9px" }}>
+                <span style={{ color: t.fg, fontWeight: 800, fontSize: 11, flexShrink: 0 }}>{t.icon}</span>
+                <span style={{ fontSize: 11.5, color: C.ink, lineHeight: 1.45 }}>{w.message}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Parcel reconciliation — proves we summed every parcel, not just one */}
+      {check.parcelCount > 0 && (
+        <div style={{ marginTop: 6, fontSize: 10.5, color: C.green }}>
+          ✓ {check.parcelCount} parcel{check.parcelCount > 1 ? "s" : ""} captured, summed in code{check.parcelSumTaxes != null ? ` to $${Math.round(check.parcelSumTaxes).toLocaleString()} in taxes` : ""}.
+        </div>
+      )}
 
       {/* Step-up math */}
       {(r.estPostSaleTaxes != null || r.estNextCycleTaxes != null) && (

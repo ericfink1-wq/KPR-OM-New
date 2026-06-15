@@ -825,6 +825,30 @@ export interface OtherIncomeItem {
   note?: string | null;
 }
 
+// One row of the OM's real-estate-tax / parcel table. Captured so the totals can
+// be SUMMED deterministically (not trusted to an LLM's mental math) and reconciled
+// against the OM's stated total — a multi-parcel center must not silently capture
+// only the main parcel. Per-parcel allocation is not surfaced; this is for
+// completeness verification.
+export interface TaxParcel {
+  parcelId?: string | null;       // APN / parcel number
+  label?: string | null;          // e.g. "Main", "Panera outlot"
+  assessedValue?: number | null;  // assessed / taxable value (the basis the bill is computed on)
+  marketValue?: number | null;    // assessor's market value, when shown
+  annualTaxes?: number | null;    // annual RE taxes for this parcel
+  year?: number | null;
+}
+
+// A tax abatement / PILOT / TIF affecting the CURRENT tax bill — a real acquisition
+// risk because the break may or may not survive the sale (and current taxes are
+// artificially low while it runs).
+export interface TaxAbatement {
+  present?: boolean | null;
+  type?: string | null;           // "abatement" | "PILOT" | "TIF" | "enterprise zone" | ...
+  note?: string | null;
+  expiry?: string | null;         // ISO or year, when stated
+}
+
 export interface CashFlowRow {
   label?: string;
   totalBaseRent?: number | null;
@@ -906,9 +930,15 @@ export interface Deal {
   // Current property-tax facts from the OM's tax-overview / parcel table — drive the
   // tax-reassessment estimator (what taxes do on a sale). The total CURRENT assessed
   // (or taxable) value and the total CURRENT annual RE taxes, plus the tax year.
-  currentAssessedValue?: number | null;
+  currentAssessedValue?: number | null;   // total assessed/taxable value (basis the bill uses)
+  currentMarketValue?: number | null;      // assessor's total MARKET value (distinct from assessed)
   currentAnnualTaxes?: number | null;
   assessmentYear?: number | null;
+  // Per-parcel tax rows — captured to verify the totals are complete (sum vs stated
+  // total), NOT to allocate. taxAbatement / specialAssessments flag acquisition risks.
+  taxParcels?: TaxParcel[] | null;
+  taxAbatement?: TaxAbatement | null;
+  specialAssessments?: string | null;      // CDD / Mello-Roos / BID / special-district lines (don't reassess like ad valorem)
   walt?: number | null;
   // Property
   yearBuilt?: number | null;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { estimateReassessment, getTaxJurisdiction, TAX_JURISDICTIONS } from "../taxReassessment";
+import { estimateReassessment, getTaxJurisdiction, reconcileTaxCapture, TAX_JURISDICTIONS } from "../taxReassessment";
 
 describe("taxReassessment ruleset", () => {
   it("covers 51 jurisdictions (50 states + DC)", () => {
@@ -58,10 +58,48 @@ describe("estimateReassessment", () => {
     expect(r.headline).toMatch(/caps next year/i);
   });
 
-  it("uncodified state → graceful fallback, not a crash", () => {
+  it("uncodified-state estimate → graceful fallback, not a crash", () => {
     const r = estimateReassessment({ state: "ZZ", acquisitionPrice: 10_000_000, currentAssessedValue: 1, currentAnnualTaxes: 1 });
     expect(r.codified).toBe(false);
     expect(r.jurisdiction).toBeNull();
     expect(r.headline).toMatch(/isn't codified/i);
+  });
+});
+
+describe("reconcileTaxCapture (fringe-case guards)", () => {
+  it("prefers the deterministic parcel sum over the stated total", () => {
+    const c = reconcileTaxCapture({
+      state: "OH", currentAssessedValue: 999, currentAnnualTaxes: 999,
+      taxParcels: [{ assessedValue: 1_000_000, annualTaxes: 30_000 }, { assessedValue: 500_000, annualTaxes: 15_000 }],
+    });
+    expect(c.parcelCount).toBe(2);
+    expect(c.assessed).toBe(1_500_000);
+    expect(c.taxes).toBe(45_000);
+    expect(c.assessedSource).toBe("parcels");
+  });
+
+  it("flags a parcel sum that disagrees with the captured total (a dropped parcel)", () => {
+    const c = reconcileTaxCapture({
+      state: "OH", currentAnnualTaxes: 30_000,   // looks like only the Main parcel
+      taxParcels: [{ annualTaxes: 30_000 }, { annualTaxes: 12_000 }],
+    });
+    // parcel sum 42k vs stated 30k → high warning
+    expect(c.warnings.some((w) => w.severity === "high" && /parcel/i.test(w.message))).toBe(true);
+  });
+
+  it("flags capturing MARKET value where assessed/taxable was expected (OH 35%)", () => {
+    const c = reconcileTaxCapture({ state: "OH", currentAssessedValue: 48_000_000, currentMarketValue: 48_500_000, currentAnnualTaxes: 1_300_000 });
+    expect(c.impliedRatioPct).toBeGreaterThan(95);
+    expect(c.warnings.some((w) => w.severity === "high" && /market value/i.test(w.message))).toBe(true);
+  });
+
+  it("does NOT false-alarm when assessed correctly reflects the state ratio", () => {
+    const c = reconcileTaxCapture({ state: "OH", currentAssessedValue: 17_000_000, currentMarketValue: 48_500_000, currentAnnualTaxes: 1_300_000 });
+    expect(c.warnings.some((w) => /market value/i.test(w.message))).toBe(false); // ~35% implied
+  });
+
+  it("flags a tax abatement as an acquisition risk", () => {
+    const c = reconcileTaxCapture({ state: "TX", taxAbatement: { present: true, type: "PILOT", expiry: "2031" } });
+    expect(c.warnings.some((w) => w.severity === "high" && /abatement|survives the sale/i.test(w.message))).toBe(true);
   });
 });

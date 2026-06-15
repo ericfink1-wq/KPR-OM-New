@@ -470,3 +470,94 @@ function numOrNull(v: unknown): number | null {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
+
+// ── Capture-completeness / sanity checks (the fringe-case guards) ─────────────
+// These are DETERMINISTIC (no model): they verify the tax figures the extractor
+// captured are complete and internally consistent BEFORE the estimate is trusted.
+
+interface TaxParcelLike { assessedValue?: unknown; marketValue?: unknown; annualTaxes?: unknown }
+interface TaxDealLike {
+  state?: string | null;
+  currentAssessedValue?: unknown; currentMarketValue?: unknown; currentAnnualTaxes?: unknown;
+  taxParcels?: TaxParcelLike[] | null;
+  taxAbatement?: { present?: boolean | null; type?: string | null; note?: string | null; expiry?: string | null } | null;
+  specialAssessments?: string | null;
+  expenseBreakdown?: Record<string, number | null> | null;
+}
+
+export interface TaxWarning { severity: "high" | "medium" | "info"; message: string }
+
+export interface TaxCaptureCheck {
+  parcelCount: number;
+  parcelSumAssessed: number | null;
+  parcelSumTaxes: number | null;
+  // The totals to USE — the deterministic parcel sum when parcels exist, else the
+  // extractor's stated total. (source tells the UI which.)
+  assessed: number | null;
+  taxes: number | null;
+  assessedSource: "parcels" | "stated" | "none";
+  taxesSource: "parcels" | "stated" | "none";
+  impliedRatioPct: number | null;   // assessed ÷ market × 100
+  warnings: TaxWarning[];
+}
+
+const sum = (rows: TaxParcelLike[], key: keyof TaxParcelLike): number | null => {
+  const vals = rows.map((r) => numOrNull(r[key])).filter((v): v is number => v != null);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
+};
+
+export function reconcileTaxCapture(deal: TaxDealLike): TaxCaptureCheck {
+  const parcels = Array.isArray(deal.taxParcels) ? deal.taxParcels : [];
+  const parcelSumAssessed = parcels.length ? sum(parcels, "assessedValue") : null;
+  const parcelSumTaxes = parcels.length ? sum(parcels, "annualTaxes") : null;
+  const statedAssessed = numOrNull(deal.currentAssessedValue);
+  const statedTaxes = numOrNull(deal.currentAnnualTaxes);
+  const market = numOrNull(deal.currentMarketValue);
+  const j = getTaxJurisdiction(deal.state);
+  const warnings: TaxWarning[] = [];
+
+  // Prefer the deterministic parcel sum (we add the rows in code, not the model).
+  const assessed = parcelSumAssessed ?? statedAssessed;
+  const taxes = parcelSumTaxes ?? statedTaxes;
+  const assessedSource: TaxCaptureCheck["assessedSource"] = parcelSumAssessed != null ? "parcels" : statedAssessed != null ? "stated" : "none";
+  const taxesSource: TaxCaptureCheck["taxesSource"] = parcelSumTaxes != null ? "parcels" : statedTaxes != null ? "stated" : "none";
+
+  // 1) Parcel sum vs the extractor's stated total — a gap means a parcel was likely dropped.
+  const off = (a: number | null, b: number | null) => a != null && b != null && b > 0 && Math.abs(a - b) / b > 0.02;
+  if (parcelSumTaxes != null && off(parcelSumTaxes, statedTaxes)) {
+    warnings.push({ severity: "high", message: `${parcels.length} parcels sum to $${Math.round(parcelSumTaxes).toLocaleString()} in taxes, but the captured total is $${Math.round(statedTaxes!).toLocaleString()} — a parcel may be missing or double-counted. Verify against the OM's tax table.` });
+  }
+  if (parcelSumAssessed != null && off(parcelSumAssessed, statedAssessed)) {
+    warnings.push({ severity: "medium", message: `Parcel assessed values sum to $${Math.round(parcelSumAssessed).toLocaleString()} vs. the captured total $${Math.round(statedAssessed!).toLocaleString()} — confirm no parcel was dropped.` });
+  }
+
+  // 2) Market-vs-assessed: if the captured "assessed" looks like MARKET value (implied
+  // ratio well above the state's), we likely grabbed the wrong column → step-up understated.
+  let impliedRatioPct: number | null = null;
+  if (assessed != null && market != null && market > 0) {
+    impliedRatioPct = Math.round((assessed / market) * 1000) / 10;
+    if (assessed > market * 1.02) {
+      warnings.push({ severity: "high", message: `Captured assessed value ($${Math.round(assessed).toLocaleString()}) exceeds the market value ($${Math.round(market).toLocaleString()}) — these are likely swapped. Assessed/taxable should be ≤ market.` });
+    } else if (j?.assessmentRatioCommercialPct != null && j.assessmentRatioCommercialPct < 95 && impliedRatioPct > j.assessmentRatioCommercialPct * 1.4) {
+      warnings.push({ severity: "high", message: `The captured "assessed" value implies a ${impliedRatioPct}% ratio, but ${j.stateName} assesses commercial at ~${j.assessmentRatioCommercialPct}% — you may have captured the MARKET value instead of assessed/taxable, which would understate the post-sale step-up.` });
+    }
+  }
+
+  // 3) Current bill vs the pro-forma RE-tax line (a sanity tie, not necessarily an error).
+  const proformaTax = numOrNull(deal.expenseBreakdown?.realEstateTax);
+  if (taxes != null && proformaTax != null && Math.abs(taxes - proformaTax) / Math.max(taxes, proformaTax) > 0.15) {
+    warnings.push({ severity: "info", message: `Current taxes ($${Math.round(taxes).toLocaleString()}) differ >15% from the underwritten RE-tax line ($${Math.round(proformaTax).toLocaleString()}) — expected if the pro forma already steps taxes up, but worth a glance.` });
+  }
+
+  // 4) Abatement / special assessments — real acquisition risks the engine can't model.
+  if (deal.taxAbatement?.present) {
+    const t = deal.taxAbatement.type ? `${deal.taxAbatement.type} ` : "";
+    const exp = deal.taxAbatement.expiry ? ` (expires ${deal.taxAbatement.expiry})` : "";
+    warnings.push({ severity: "high", message: `Tax ${t}abatement in place${exp} — current taxes are artificially LOW. Confirm whether it survives the sale, and underwrite the un-abated taxes.` });
+  }
+  if (deal.specialAssessments && String(deal.specialAssessments).trim()) {
+    warnings.push({ severity: "info", message: `Special / non-ad-valorem assessments present (${String(deal.specialAssessments).trim()}) — these don't reassess like ad-valorem taxes; keep them separate from the reassessment estimate.` });
+  }
+
+  return { parcelCount: parcels.length, parcelSumAssessed, parcelSumTaxes, assessed, taxes, assessedSource, taxesSource, impliedRatioPct, warnings };
+}
