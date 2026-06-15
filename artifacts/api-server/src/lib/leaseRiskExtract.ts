@@ -38,6 +38,8 @@ export interface CoTenancyClause extends RiskMeta {
   terminationNoticeDays?: number | null;
   cureCondition?: string | null;
   suitableReplacementDefinition?: string | null;
+  currentlyInEffect?: boolean | null;     // tenant is ALREADY paying alternate/reduced rent today
+  currentStatusNote?: string | null;      // detail: effective date, expected cure, etc.
 }
 export interface SalesKickout extends RiskMeta {
   salesThresholdAmount?: number | null;
@@ -90,6 +92,8 @@ Return ONLY a single valid JSON object, no markdown:
           "terminationNoticeDays": <number or null>,
           "cureCondition": "string or null",
           "suitableReplacementDefinition": "string or null",
+          "currentlyInEffect": true|false,   // true ONLY if the OM says this clause is ALREADY triggered and the tenant is CURRENTLY paying alternate/reduced rent (e.g. "exercised its right to pay reduced rent effective 5/1/2026", "currently in co-tenancy / paying X% of sales"). This is a present fact affecting in-place rent, not a hypothetical. Default false.
+          "currentStatusNote": "string or null — when currentlyInEffect, the detail: effective date, current reduced amount, and any expected cure (e.g. 'reduced rent from 5/1/2026; expected to cure when the Cleveland Furniture lease commences')",
           "sectionRef": "string or null",
           "verbatimQuote": "the exact OM sentence(s) — required"
         }
@@ -172,6 +176,8 @@ function normCoTenancy(raw: unknown): CoTenancyClause | null {
     terminationNoticeDays: num(o.terminationNoticeDays),
     cureCondition: str(o.cureCondition),
     suitableReplacementDefinition: str(o.suitableReplacementDefinition),
+    currentlyInEffect: o.currentlyInEffect === true,
+    currentStatusNote: str(o.currentStatusNote),
     sectionRef: str(o.sectionRef),
     verbatimQuote: str(o.verbatimQuote),
     provenance: o.provenance === "inferred" ? "inferred" : "extracted",
@@ -412,6 +418,13 @@ export function summarizeLeaseRisk(dealData: Record<string, unknown>, abstracts:
     if (om.t1 !== e.t1) s += ` (Executed leases reduced Tier-1 from ${fmt$(om.t1)}.)`;
     lines.push(s);
   }
+  const live = resolved
+    .filter((r) => r.coTenancy.some((c) => c.currentlyInEffect))
+    .map((r) => {
+      const note = r.coTenancy.find((c) => c.currentlyInEffect)?.currentStatusNote;
+      return note ? `${r.tenant} (${note})` : r.tenant;
+    });
+  if (live.length) lines.push(`CURRENTLY IN EFFECT (tenant already paying reduced co-tenancy rent today — a present hit to in-place rent, not hypothetical): ${live.join("; ")}.`);
   const unverified = resolved.filter((r) => r.coTenancy.length && !r.verified).map((r) => r.tenant);
   const verified = resolved.filter((r) => r.verified).map((r) => r.tenant);
   if (verified.length) lines.push(`Verified against executed leases: ${verified.join(", ")}.`);
@@ -454,6 +467,26 @@ function parseRentSteps(s: unknown): { date: string | null; psf: number | null; 
 export function validateLeaseRiskAtExtraction(extracted: Record<string, unknown>): ReviewQuestionLike[] {
   const out: ReviewQuestionLike[] = [];
   const lr = extracted.leaseRisk as DealLeaseRisk | undefined;
+
+  // 0) currently-in-effect co-tenancy — a present fact (tenant already at reduced
+  // rent), so it gets its own HIGH review item ahead of the generic unverified one.
+  if (lr?.tenants?.length) {
+    const live = lr.tenants
+      .filter((t) => (t.coTenancy || []).some((c) => c.currentlyInEffect))
+      .map((t) => {
+        const note = (t.coTenancy || []).find((c) => c.currentlyInEffect)?.currentStatusNote;
+        return note ? `${t.tenant} (${note})` : t.tenant;
+      });
+    if (live.length) {
+      out.push({
+        id: "check-cotenancy-live", source: "check", severity: "high",
+        field: "Co-tenancy currently in effect",
+        question: `${live.length} tenant${live.length > 1 ? "s are" : " is"} CURRENTLY paying reduced co-tenancy rent — confirm the in-place rent reflects the reduced amount and whether/when it cures.`,
+        detail: `Already-triggered co-tenancy (not hypothetical): ${live.join("; ")}.`,
+        suggestedValue: null, target: null,
+      });
+    }
+  }
 
   // 1) unverified_cotenancy — aggregate, so Import Review gets one clear to-do.
   if (lr?.tenants?.length) {

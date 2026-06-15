@@ -469,6 +469,12 @@ export interface CoTenancyClause extends RiskFieldMeta {
   terminationNoticeDays?: number | null;
   cureCondition?: string | null;
   suitableReplacementDefinition?: string | null;
+  // Whether the clause is CURRENTLY triggered — the tenant is ALREADY paying
+  // alternate/reduced rent today (a present fact affecting in-place NOI), not a
+  // hypothetical "if an anchor leaves". currentStatusNote captures the detail
+  // (e.g. effective date, expected cure when a replacement opens).
+  currentlyInEffect?: boolean | null;
+  currentStatusNote?: string | null;
 }
 
 export interface SalesKickout extends RiskFieldMeta {

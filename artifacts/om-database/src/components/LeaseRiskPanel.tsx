@@ -133,6 +133,27 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
         Co-tenancy / kickout clauses that let a tenant cut or stop rent when an anchor leaves — invisible in a rent roll. Tap an anchor to model its departure; tap more than one to model them going dark <b>together</b>.
       </div>
 
+      {/* CURRENTLY-IN-EFFECT co-tenancy — a present hit to in-place rent (tenant
+          already paying reduced rent today), read straight from the OM-disclosed
+          lease risk, not a hypothetical scenario. */}
+      {(() => {
+        const live = (deal.leaseRisk?.tenants || [])
+          .filter((t) => (t.coTenancy || []).some((c) => c.currentlyInEffect))
+          .map((t) => ({ tenant: t.tenant, note: (t.coTenancy || []).find((c) => c.currentlyInEffect)?.currentStatusNote || null }));
+        if (!live.length) return null;
+        return (
+          <div style={{ background: C.redBg, border: `1px solid ${C.redBd}`, borderRadius: 8, padding: "9px 11px", marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.05em", color: C.red, textTransform: "uppercase", marginBottom: 3 }}>⚠ Co-tenancy currently in effect</div>
+            <div style={{ fontSize: 12, color: C.ink, lineHeight: 1.5 }}>
+              {live.map((l, i) => (
+                <div key={i}><b>{l.tenant}</b> is already paying reduced co-tenancy rent today{l.note ? ` — ${l.note}` : ""}.</div>
+              ))}
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>This is a present hit to in-place rent (not a hypothetical) — confirm the rent roll reflects the reduced amount and whether/when it cures.</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {anchors.length > 0 && (
         <>
           {/* Multi-select scenario chips. The trailing number = tenants whose
