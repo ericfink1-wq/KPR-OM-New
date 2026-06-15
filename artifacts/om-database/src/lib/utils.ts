@@ -845,6 +845,17 @@ export function reimbursementFromAbstract(a: LeaseAbstract | null | undefined): 
   return { text, structure };
 }
 
+// Short reimbursement-method label ("NNN" | "Gross") derived from an abstract's
+// recovery structure — used to BACKFILL a tenant's reimbursementMethod when the OM /
+// rent roll left it blank (see computeAbstractChecks). The executed lease is
+// authoritative; once filled it flows to the recovery estimate, the expense-risk
+// flag, the roster and exports — all of which read reimbursementMethod.
+export function reimbursementMethodFromAbstract(a: LeaseAbstract | null | undefined): string | null {
+  const info = reimbursementFromAbstract(a);
+  if (!info) return null;
+  return info.structure === "gross" ? "Gross" : info.structure === "nnn" ? "NNN" : null;
+}
+
 const MONTH_MAP: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
   jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
