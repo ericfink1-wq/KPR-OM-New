@@ -2997,6 +2997,23 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <Row l="EFF. GROSS INCOME" v={d.effectiveGrossIncome?fmtUSD(d.effectiveGrossIncome):null} field="effectiveGrossIncome"/>
           <Row l="OPERATING EXPENSES" v={d.operatingExpenses?fmtUSD(d.operatingExpenses):null} field="operatingExpenses"/>
           <Row l="NNN RECOVERIES" v={d.nnnRecoveries?fmtUSD(d.nnnRecoveries):null}/>
+          {(() => {
+            // Expense-recovery ratio = recoveries ÷ operating expenses — how
+            // genuinely NNN the center is. Near 100% = fully passed through; a low
+            // ratio means the landlord eats the gap (recovery leakage). Recoveries:
+            // prefer the stated NNN recoveries, else the income-breakdown recovery
+            // lines, else the sum of per-tenant disclosed recoveries.
+            const ib = d.incomeBreakdown || {};
+            const ibRecov = ["camReimbursements","realEstateTaxReimbursements","insuranceReimbursements"]
+              .reduce((s, k) => s + (Number(ib[k]) || 0), 0);
+            const tenantRecov = (d.tenants||[]).reduce((s, t) => s + (Number(t.expenseReimbursements) || 0), 0);
+            const recov = Number(d.nnnRecoveries) || ibRecov || tenantRecov || 0;
+            const opex = Number(d.operatingExpenses) || 0;
+            if (recov <= 0 || opex <= 0) return null;
+            const ratio = Math.round((recov / opex) * 100);
+            const c = ratio >= 75 ? "#0f9d63" : ratio >= 50 ? "#c97a18" : "#dc2626";
+            return <Row l="EXPENSE RECOVERY" v={`${ratio}% of opex`} c={c} />;
+          })()}
           <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null} warn={reconWarns.weightedAvgRentPSF}/>
         </Card>
         <Card title="LEASE METRICS">
