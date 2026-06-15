@@ -8,6 +8,8 @@ import { ensureSessionTable } from "./lib/sessionStore";
 import { ensureUploadLogTable } from "./routes/uploadLog";
 import { ensureLeaseAbstractsTable } from "./routes/leaseAbstracts";
 import { ensureSiteAgreementsTable } from "./routes/siteAgreements";
+import { ensureTraceTables } from "./lib/traceTables";
+import { ensureHouseViewTable } from "./lib/houseView";
 
 const rawPort = process.env["PORT"];
 
@@ -74,6 +76,22 @@ ensureLeaseAbstractsTable()
 ensureSiteAgreementsTable()
   .then(() => logger.info("site_agreements table ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureSiteAgreementsTable failed on startup (will retry on first use)"));
+
+// Provision the diagnostic trace tables (img_trace, upload_trace) on startup so the
+// DEV database matches PROD even when their endpoints aren't exercised in dev — this
+// keeps Replit's publish diff clean and stops it proposing to DROP these
+// runtime-created tables. Best-effort. Keep in sync with lib/traceTables.ts.
+ensureTraceTables()
+  .then(() => logger.info("img_trace / upload_trace tables ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureTraceTables failed on startup (will retry on first use)"));
+
+// Provision the Analyst House View table (analyst_house_view) on startup for the same
+// reason — otherwise it only exists once the house view is touched, so dev lacks it
+// and the publish proposes to DROP it from prod. Best-effort. Keep in sync with
+// lib/houseView.ts and schema/deals.ts (analystHouseViewTable).
+ensureHouseViewTable()
+  .then(() => logger.info("analyst_house_view table ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureHouseViewTable failed on startup (will retry on first use)"));
 
 // Clear ZOMBIE database connections on every boot. A stuck/idle-in-transaction
 // connection (left by an earlier hung request, and kept alive across app restarts
