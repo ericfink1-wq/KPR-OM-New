@@ -523,14 +523,13 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     // option type like "AUT"/"REN", which would be meaningless here.
                     const lt = t.leaseType || "";
                     const isStruct = /\b(nnn|nn|net|gross|modified gross|mg|base\s*year|stop|triple net|double net|single net|cam)\b/i.test(lt);
-                    const rosterM = t.reimbursementMethod || (isStruct ? lt : "");
-                    // When the OM / seller rent roll didn't state a reimbursement method,
-                    // fall back to the EXECUTED lease abstract on file — more authoritative
-                    // than an OM/roll. We only FILL a blank; we never override a stated
-                    // roster value (a real conflict is surfaced by the Abstract ⚠ pill).
-                    const absText = !rosterM ? reimbursementFromAbstract(abstractsByTenant?.get((t.name || "").trim().toLowerCase())) : null;
-                    const m = rosterM || absText || "";
-                    const fromAbstract = !rosterM && !!absText;
+                    const stated = t.reimbursementMethod || (isStruct ? lt : "");
+                    // The EXECUTED lease abstract (when on file) is the authoritative and
+                    // richest source for the recovery structure, so prefer its prose over a
+                    // short stated method — this is what surfaces Fixed CAM vs pro-rata NNN.
+                    const absText = reimbursementFromAbstract(abstractsByTenant?.get((t.name || "").trim().toLowerCase()));
+                    const m = absText || stated || "";
+                    const fromAbstract = !!absText;
                     if (!m) return <span style={{ color:"#c4bbaa" }}>—</span>;
                     // One substance-based classifier for BOTH a stated method and abstract
                     // prose: NNN (pro-rata, incl. capped controllable CAM), FIXED CAM (net
@@ -538,16 +537,32 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     // or GROSS (genuine). A cap / "gross-up" / "gross sales" never trips it.
                     const flag = reimbursementFlag(m);
                     const textColor = flag && flag.warn ? flag.color : "#5c5f57";
+                    // Body text shown NEXT TO the badge. Strip the leading classification
+                    // prefix from an abstract one-liner ("NNN — …", "Fixed CAM (net) — …")
+                    // so the badge isn't repeated; and hide the body entirely when it's just
+                    // the bare method the badge already shows (avoids the redundant "NNN NNN").
+                    const norm = (s: string) => s.replace(/[^a-z]/gi, "").toLowerCase();
+                    const body = (fromAbstract ? m.replace(/^\s*(fixed cam \(net\)|fixed cam|modified gross|nnn|gross)\s*[—\-:]\s*/i, "").trim() : m).trim();
+                    // On EXPAND, show a concise CAM / Taxes / Insurance breakdown pulled from
+                    // the abstract's component notes — a strong summary, not paragraphs.
+                    const absObj = abstractsByTenant?.get((t.name || "").trim().toLowerCase());
+                    const noteOf = (code: string) => (absObj?.leaseNotes || []).find(nn => (nn.code || "").toUpperCase() === code)?.value?.trim() || "";
+                    const concise = (s: string) => { const first = s.split(/(?<=[.;])\s+/)[0].trim(); return first.length > 200 ? first.slice(0, 200).trim() + "…" : first; };
+                    const breakdown = ([["CAM", noteOf("CAM")], ["Taxes", noteOf("RETX")], ["Insurance", noteOf("INS")]] as [string, string][])
+                      .filter(([, v]) => v && !/^none\b/i.test(v))
+                      .map(([k, v]) => [k, concise(v)] as [string, string]);
+                    const hasDetail = (!!body && !(flag && norm(body) === norm(flag.label))) || breakdown.length > 0;
                     const absPill = fromAbstract ? (
                       <span title="From the executed lease abstract — more authoritative than the OM / rent roll" style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 6px", borderRadius:9, flexShrink:0 }}>ABSTRACT</span>
                     ) : null;
-                    if (expandedReimb !== i) {
+                    const showBody = !!body && !(flag && norm(body) === norm(flag.label));
+                    if (expandedReimb !== i || !hasDetail) {
                       return (
-                        <span title={flag?.tip || "Click to expand"} style={{ display:"inline-flex", alignItems:"center", gap:6, color:textColor, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
+                        <span title={flag?.tip || (hasDetail ? "Click to expand" : "")} style={{ display:"inline-flex", alignItems:"center", gap:6, color:textColor, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
                           {flag && <span title={flag.tip} style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.color, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.label}</span>}
                           {absPill}
-                          <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{m}</span>
-                          <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>
+                          {showBody && <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{body}</span>}
+                          {hasDetail && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
                         </span>
                       );
                     }
@@ -556,8 +571,13 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:textColor, whiteSpace:"normal", lineHeight:1.5 }}>
                           {flag && <span title={flag.tip} style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.color, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.label}</span>}
                           {absPill}
-                          {m}
+                          {showBody && <span>{body}</span>}
                         </span>
+                        {breakdown.map(([k, v]) => (
+                          <div key={k} style={{ fontSize:10.5, color:"#5c5f57", whiteSpace:"normal", lineHeight:1.45 }}>
+                            <span style={{ fontWeight:700, color:"#383a37" }}>{k}:</span> {v}
+                          </div>
+                        ))}
                         <span style={{ fontSize:9, color:"#a69e91", marginTop:2 }}>▲ click to collapse</span>
                       </div>
                     );

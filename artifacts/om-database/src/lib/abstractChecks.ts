@@ -1,6 +1,5 @@
 import type { LeaseAbstract, Tenant } from "./idb";
 import type { WatchMap } from "./useWatchlist";
-import { reimbursementMethodFromAbstract } from "./utils";
 
 // Live, token-free reconciliation of a lease abstract against the roster:
 //  - fill:        roster fields the lease can supply where the roster is blank
@@ -81,12 +80,6 @@ export function computeAbstractChecks(a: LeaseAbstract, tenants: Tenant[], watch
     if (empty(t.annualRent) && aRent) { fill.annualRent = aRent; fillLabels.push(`annual rent $${Math.round(aRent).toLocaleString()}`); }
     if (empty(t.rentPerSF) && aRent && sf) { fill.rentPerSF = Math.round((aRent / sf) * 100) / 100; fillLabels.push(`rent/SF $${fill.rentPerSF}`); }
     if (empty(t.renewalOptions) && a.options?.length) { const len = a.options[0].length || ""; fill.renewalOptions = `${a.options.length} @ ${len}`.trim(); fillLabels.push(`options "${fill.renewalOptions}"`); }
-    // Reimbursement method from the executed lease's recovery structure (NNN/Gross),
-    // when the OM/rent roll left it blank. This is the field the occupancy-cost
-    // recovery estimate and the expense-risk flag read — so filling it here means a
-    // tenant that reimburses CAM/taxes/insurance is no longer mistaken for gross just
-    // because the OM didn't state recoveries. A cap or fixed OC charge stays NNN.
-    if (empty(t.reimbursementMethod)) { const rm = reimbursementMethodFromAbstract(a); if (rm) { fill.reimbursementMethod = rm; fillLabels.push(`reimbursement "${rm}"`); } }
     // Discrepancies (roster has a conflicting non-blank value).
     const rSF = pnum(t.sf);
     if (aSF && rSF && Math.abs(aSF - rSF) / rSF > 0.015) discrepancies.push(`SF — roster shows ${rSF.toLocaleString()}, lease shows ${aSF.toLocaleString()}.`);

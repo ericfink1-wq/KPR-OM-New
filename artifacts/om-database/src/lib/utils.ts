@@ -873,6 +873,27 @@ export function reimbursementMethodFromAbstract(a: LeaseAbstract | null | undefi
   return reimbursementFlag(reimbursementFromAbstract(a))?.method ?? null;
 }
 
+// Return a copy of the deal whose tenants' reimbursementMethod reflects the EXECUTED
+// lease abstract on file (keyed by lowercased tenant name) — the abstract being more
+// authoritative than the OM/rent roll. Computed at render time (NOT persisted), so it
+// always reflects the current classifier and can't leave a stale bare label on the
+// roster. Drives the occupancy-cost recovery estimate and the expense-risk flag (both
+// read reimbursementMethod) off the lease when the OM was silent on recoveries — and
+// keeps the Fixed-CAM vs pro-rata-NNN distinction. No-op when there are no abstracts.
+export function withAbstractRecoveries(deal: Deal, abstractsByTenant?: Map<string, LeaseAbstract> | null): Deal {
+  const tenants = deal.tenants;
+  if (!abstractsByTenant || abstractsByTenant.size === 0 || !tenants?.length) return deal;
+  let changed = false;
+  const next = tenants.map((t) => {
+    const name = (t.name || "").trim().toLowerCase();
+    const method = name ? reimbursementMethodFromAbstract(abstractsByTenant.get(name)) : null;
+    if (!method || method === t.reimbursementMethod) return t;
+    changed = true;
+    return { ...t, reimbursementMethod: method };
+  });
+  return changed ? { ...deal, tenants: next } : deal;
+}
+
 const MONTH_MAP: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
   jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,

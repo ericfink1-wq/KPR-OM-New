@@ -4,7 +4,7 @@ import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstrac
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
   apiListLeaseAbstracts } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch, recognizeRateIndex } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
@@ -1467,6 +1467,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     return m;
   }, [abstracts]);
 
+  // Deal whose tenant reimbursementMethods reflect the executed lease abstracts (when
+  // on file) — used for the recovery estimate and expense-risk flag so they classify
+  // off the authoritative lease (incl. Fixed CAM vs pro-rata NNN) when the OM was
+  // silent. Render-time only; the stored roster is untouched.
+  const dWithRecoveries = useMemo(() => withAbstractRecoveries(d, abstractsByTenant), [d, abstractsByTenant]);
+
   // Auto-apply lease-authoritative data to the roster: for every abstract that
   // matches a roster tenant, fill the fields the roster is MISSING (never
   // overwrites). Idempotent — once filled there are no blanks left, so it stops.
@@ -2775,7 +2781,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           tenantsAsOf={d.tenantsAsOf}
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}
-          estimatedRecoveries={estimateRecoveries(d).byName}
+          estimatedRecoveries={estimateRecoveries(dWithRecoveries).byName}
           latestSales={buildLatestSales(d)}
           abstractsByTenant={abstractsByTenant}
           abstractDiscrepancies={abstractDiscrepancies}
@@ -2823,7 +2829,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             salesHistory={d.tenantSalesHistory || []}
             omTenants={d.tenants}
             omDate={d.omDate}
-            recoveries={estimateRecoveries(d).byName}
+            recoveries={estimateRecoveries(dWithRecoveries).byName}
             onUpload={handleSalesUpload}
             uploadBusy={salesBusy}
             uploadError={salesError}
@@ -2928,7 +2934,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       {/* Red flags */}
       {(() => {
-        const expenseFlag = deriveExpenseRiskFlag(d);
+        const expenseFlag = deriveExpenseRiskFlag(dWithRecoveries);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
