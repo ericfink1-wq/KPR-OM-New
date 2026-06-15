@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import { stickyFirstCol } from "../lib/stickyCol";
@@ -523,15 +523,26 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     // option type like "AUT"/"REN", which would be meaningless here.
                     const lt = t.leaseType || "";
                     const isStruct = /\b(nnn|nn|net|gross|modified gross|mg|base\s*year|stop|triple net|double net|single net|cam)\b/i.test(lt);
-                    const m = t.reimbursementMethod || (isStruct ? lt : "");
+                    const rosterM = t.reimbursementMethod || (isStruct ? lt : "");
+                    // When the OM / seller rent roll didn't state a reimbursement method,
+                    // fall back to the EXECUTED lease abstract on file — more authoritative
+                    // than an OM/roll. We only FILL a blank; we never override a stated
+                    // roster value (a real conflict is surfaced by the Abstract ⚠ pill).
+                    const absM = !rosterM ? reimbursementFromAbstract(abstractsByTenant?.get((t.name || "").trim().toLowerCase())) : null;
+                    const m = rosterM || absM || "";
+                    const fromAbstract = !rosterM && !!absM;
                     if (!m) return <span style={{ color:"#c4bbaa" }}>—</span>;
                     const gross = /gross/i.test(m), fixed = /\bfixed\b/i.test(m);
                     const flag = gross ? { t:"GROSS", c:"#b91c1c", bg:"#fdecea", tip:"Gross lease — landlord absorbs expense growth (no recovery)" }
                               : fixed ? { t:"FIXED", c:"#b45309", bg:"#fbe6cf", tip:"Fixed reimbursement — landlord absorbs expense growth above the fixed amount" } : null;
+                    const absPill = fromAbstract ? (
+                      <span title="From the executed lease abstract — more authoritative than the OM / rent roll" style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 6px", borderRadius:9, flexShrink:0 }}>ABSTRACT</span>
+                    ) : null;
                     if (expandedReimb !== i) {
                       return (
                         <span title="Click to expand" style={{ display:"inline-flex", alignItems:"center", gap:6, color:flag?flag.c:"#5c5f57", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
                           {flag && <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.c, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.t}</span>}
+                          {absPill}
                           <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{m}</span>
                           <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>
                         </span>
@@ -541,6 +552,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                         <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:flag?flag.c:"#5c5f57", whiteSpace:"normal", lineHeight:1.5 }}>
                           {flag && <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.c, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.t}</span>}
+                          {absPill}
                           {m}
                         </span>
                         <span style={{ fontSize:9, color:"#a69e91", marginTop:2 }}>▲ click to collapse</span>

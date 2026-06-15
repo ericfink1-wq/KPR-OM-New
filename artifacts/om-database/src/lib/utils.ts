@@ -810,6 +810,21 @@ export function isNAPTenant(t: { name?: string | null; sf?: number | string | nu
   return sf != null && sf > 0 && (rent == null || rent === 0) && (rentPSF == null || rentPSF === 0);
 }
 
+// Reimbursement / expense-recovery structure taken from a lease ABSTRACT — i.e. the
+// executed lease, which is more authoritative than an OM or a seller's rent roll.
+// Used to fill the roster "Reimb." column when the OM/roll didn't state a method.
+// Prefers the short camTax convenience field; falls back to the CAM lease-note prose.
+// Returns null when the abstract has nothing usable (or only an explicit "None").
+export function reimbursementFromAbstract(a: LeaseAbstract | null | undefined): string | null {
+  if (!a) return null;
+  const cam = a.camTax?.value?.trim();
+  if (cam && !/^none\b/i.test(cam)) return cam;
+  const note = (a.leaseNotes || []).find(n => (n.code || "").toUpperCase() === "CAM");
+  const v = note?.value?.trim();
+  if (v && !/^none\b/i.test(v)) return v;
+  return null;
+}
+
 const MONTH_MAP: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
   jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
