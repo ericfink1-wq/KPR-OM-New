@@ -416,6 +416,19 @@ export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
   // 40% ratio and annual valuation still apply; large metros are aggressive on reval.
   "GA|fulton": { assessmentCycleYears: 1, note: "Fulton (Atlanta): annual valuation at 40% of market; a recent sale CAPS next year's value at the price (O.C.G.A. 48-5-2) — protective, not a step-up.", confidence: "high" },
   "GA|gwinnett": { assessmentCycleYears: 1, note: "Gwinnett: annual valuation at 40% of market; sale price = max next-year value.", confidence: "high" },
+  // ── Portfolio counties (county-driven states where the local cycle differs from the
+  // state default) — verified Jun 2026 against county-assessor schedules. ──
+  // Ohio — sexennial reappraisal + 3-yr update, staggered by county; commercial 35%.
+  "OH|cuyahoga": { assessmentCycleYears: 6, note: "Cuyahoga (Cleveland; incl. Rocky River): last full sexennial reappraisal 2024 (avg ~+32%), triennial update due 2027 — model the next step at the 2027 update. Commercial 35% of market; HB126 curbs sale-based value challenges.", confidence: "high" },
+  "OH|delaware": { assessmentCycleYears: 6, note: "Delaware County (Columbus suburb; incl. Powell): on Ohio's 6-yr reappraisal + 3-yr update cycle, next sexennial moved to 2030. Commercial 35% of market; a fast-growth county, so updates run hot. Confirm the exact recent reappraisal/update year with the auditor.", confidence: "medium" },
+  // North Carolina — Wake left the 8-yr default; now a short cycle (no interim sale reset).
+  "NC|wake": { assessmentCycleYears: 3, note: "Wake County (Raleigh; incl. Knightdale): reappraised 2024, NEXT revaluation 2027, then moving to a 2-yr cycle (2029…) — far shorter than NC's 8-yr default. 100% of market; interim sale-based changes barred, so the step lands at the 2027 reval.", confidence: "high" },
+  // Virginia — NoVA jurisdictions reassess ANNUALLY, not the ~4-yr county default.
+  "VA|arlington": { assessmentCycleYears: 1, note: "Arlington County (incl. Pentagon City): assesses ANNUALLY (Jan 1) at 100% of market — not Virginia's multi-year county default. A recent purchase price flows into value within a year; income-&-expense filing is requested under Code of VA §58.1-3294.", confidence: "high" },
+  "VA|fairfax": { assessmentCycleYears: 1, note: "Fairfax County: annual (Jan 1) reassessment to 100% of market — value tracks the market yearly, so a recent sale flows in quickly.", confidence: "high" },
+  // New Jersey — Morris is NOT in the annual-reassessment Demonstration Program (that's
+  // Monmouth/Gloucester); it follows standard NJ (no fixed cycle, equalization ratio).
+  "NJ|morris": { assessmentCycleYears: 0, note: "Morris County (incl. Rockaway): standard NJ — NO fixed cycle and NOT in the annual-reassessment Demonstration Program, so no automatic sale reset. Apply the municipality's equalization ratio; a reval is ordered only when the assessment/sales ratio drifts.", confidence: "high" },
 };
 
 export function getCountyOverride(state: string | null | undefined, county: string | null | undefined): CountyTaxOverride | null {
