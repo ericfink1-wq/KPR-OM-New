@@ -379,6 +379,15 @@ function AppInner() {
 
   const processingCount = 0; // UploadQueue tracks this internally now
 
+  // Derived deal lists — memoized for a STABLE reference. ownedDealIds feeds the
+  // Owned scope filter on Portfolio Analytics, whose reload effect depends on it.
+  // These are hooks, so they must run before any of the early returns below.
+  const activeDeals = useMemo(() => deals.filter(d => !d.trashedAt), [deals]);
+  const ownedDealIds = useMemo(
+    () => activeDeals.filter(d => d.status === "Owned" || d.status === "Sold").map(d => d.id),
+    [activeDeals],
+  );
+
   if (resetParams) {
     return (
       <Suspense fallback={<ViewLoading />}>
@@ -439,14 +448,6 @@ function AppInner() {
     );
   }
 
-  const activeDeals = useMemo(() => deals.filter(d => !d.trashedAt), [deals]);
-  // Stable reference (only changes when the deal set changes) — it feeds the Owned
-  // scope filter on Portfolio Analytics, whose reload effect depends on it; a fresh
-  // array each render made the Owned view reload/reset on any unrelated App re-render.
-  const ownedDealIds = useMemo(
-    () => activeDeals.filter(d => d.status === "Owned" || d.status === "Sold").map(d => d.id),
-    [activeDeals],
-  );
   const currentDeal = view.type === "detail" ? deals.find(d => d.id === view.dealId) : null;
 
   return (
