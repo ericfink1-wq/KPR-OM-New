@@ -2,13 +2,14 @@ import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
 import { estimateReassessment, resolveJurisdiction, reconcileTaxCapture, assessTaxTriggers } from "../lib/taxReassessment";
 import { forecastTaxes } from "../lib/taxForecast";
+import { benchmarkEffectiveTaxRate, effectiveTaxRatePct, crossCheckTaxRate } from "../lib/taxRateBenchmark";
 
 // Property-tax reassessment estimator. Answers "if we buy this center, do the
 // taxes reset — and by how much?" from the per-state ruleset, grounded in the
 // property's ACTUAL current bill (assessed value + taxes). All inputs are
 // editable; every figure carries a confidence tier + source.
 
-interface Props { deal: Deal; }
+interface Props { deal: Deal; allDeals?: Deal[]; }
 
 const C = {
   ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", panel: "#faf7f0", panelBd: "#e7e0d2",
@@ -46,7 +47,7 @@ function NumIn({ label, value, onChange, hint }: { label: string; value: string;
   );
 }
 
-export default function TaxReassessmentCard({ deal }: Props) {
+export default function TaxReassessmentCard({ deal, allDeals }: Props) {
   const county = deal.marketGeo?.county ?? null;
   const j = resolveJurisdiction(deal.state, county);
   // Reconcile the captured tax figures deterministically — prefer the SUM of the
@@ -111,6 +112,20 @@ export default function TaxReassessmentCard({ deal }: Props) {
     notes: deal.notes ?? null,
     holdYears,
   }), [deal.state, county, price, taxes, assessed, nav, deal.txnSeller, deal.seller, deal.sellerTaxExempt, deal.agOrGreenbeltAssessed, deal.taxAbatement, deal.specialAssessments, deal.renovationYear, deal.acqStrategy, deal.notes, holdYears]);
+
+  // Database cross-check: the subject's effective tax rate vs comparable same-state
+  // deals in the portfolio (an independent second read on the forecast's tax basis).
+  const crossCheck = useMemo(() => {
+    const subjectRatePct = effectiveTaxRatePct({
+      state: deal.state,
+      currentAnnualTaxes: parseNum(taxes),
+      currentMarketValue: deal.currentMarketValue ?? null,
+      currentAssessedValue: parseNum(assessed),
+      nonAdValoremAnnual: parseNum(nav),
+    });
+    const benchmark = benchmarkEffectiveTaxRate(allDeals ?? [], deal.state, deal.id);
+    return crossCheckTaxRate({ ratePct: subjectRatePct }, benchmark);
+  }, [allDeals, deal.id, deal.state, deal.currentMarketValue, taxes, assessed, nav]);
 
   const cm = confMeta(r.confidence);
   // Color the headline by outcome: a real step-up is red; a no-reset / protective
@@ -236,6 +251,16 @@ export default function TaxReassessmentCard({ deal }: Props) {
           <ul style={{ margin: "8px 0 0", paddingLeft: 16, color: C.sub, fontSize: 11, lineHeight: 1.5 }}>
             {fc.assumptions.map((a, i) => <li key={i}>{a}</li>)}
           </ul>
+        </div>
+      )}
+
+      {/* Database cross-check — effective rate vs comparable same-state portfolio deals */}
+      {crossCheck && (
+        <div style={{ marginTop: 10, background: crossCheck.verdict === "in_line" ? C.greenBg : crossCheck.verdict === "below" ? C.amberBg : "#fff",
+          border: `1px solid ${crossCheck.verdict === "in_line" ? C.greenBd : crossCheck.verdict === "below" ? C.amberBd : C.line}`,
+          borderRadius: 8, padding: "9px 11px" }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#958d80", marginBottom: 3 }}>DATABASE CROSS-CHECK · EFFECTIVE TAX RATE</div>
+          <div style={{ fontSize: 11.5, color: C.ink, lineHeight: 1.45 }}>{crossCheck.verdict === "in_line" ? "✓ " : "⚠ "}{crossCheck.message}</div>
         </div>
       )}
 

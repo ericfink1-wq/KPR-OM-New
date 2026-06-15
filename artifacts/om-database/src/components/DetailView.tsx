@@ -3287,7 +3287,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       })()}
 
       {showAcq && <ClosingCostsCard deal={d} />}
-      {showAcq && <TaxReassessmentCard deal={d} />}
+      {showAcq && <TaxReassessmentCard deal={d} allDeals={allDeals} />}
       {(d.status === "Owned" || d.status === "Sold") && (
         <div id="section-ownership"><OwnershipStructure deal={d} onUpdate={onUpdate} /></div>
       )}
