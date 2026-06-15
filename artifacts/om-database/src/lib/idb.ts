@@ -169,6 +169,11 @@ export interface Tenant {
   rentSchedule?: string | null;
   renewalOptions?: string | null;
   recentlyExercisedRenewal?: string | null;
+  // The rent SPREAD (% increase) achieved on this tenant's most recent
+  // renewal/extension, when the OM discloses it (e.g. "Old Navy +21%", "Michaels
+  // renewed at +22%"). A positive spread is evidence of pricing power / that the
+  // prior in-place rent was below market. Null when not disclosed.
+  recentRenewalSpreadPct?: number | null;
   salesPSF?: number | string | null;
   salesYear?: number | null;        // year the salesPSF figure is from (from OM extraction)
   // Prior-year sales (when the OM prints TWO years, e.g. 2024 and 2025), so a

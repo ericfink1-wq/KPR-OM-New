@@ -3014,6 +3014,17 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             const v = [pR != null ? `${pR}% rent` : null, pS != null ? `${pS}% GLA` : null].filter(Boolean).join(" · ");
             return v ? <Row l="INVESTMENT GRADE EXPOSURE" v={v} /> : null;
           })()}
+          {(d.tenants||[]).length > 0 && (() => {
+            // Recent-renewal momentum: average rent spread achieved on tenants that
+            // recently renewed (when the OM disclosed the increase) — evidence of
+            // pricing power / below-market in-place rents.
+            const spreads = (d.tenants||[])
+              .map(t => { const n = Number(t.recentRenewalSpreadPct); return isNaN(n) ? null : n; })
+              .filter((n): n is number => n != null && n !== 0);
+            if (spreads.length < 2) return null;
+            const avg = Math.round(spreads.reduce((s, n) => s + n, 0) / spreads.length);
+            return <Row l="RECENT RENEWAL SPREAD" v={`${avg > 0 ? "+" : ""}${avg}% avg · ${spreads.length} renewals`} c={avg > 0 ? "#0f9d63" : undefined} />;
+          })()}
           <Row l="YEAR BUILT" v={d.yearBuilt}/>
           <Row l="RENOVATION YEAR" v={d.renovationYear}/>
           <Row l="LOT SIZE" v={d.lotSizeAcres?`${d.lotSizeAcres} ac`:null}/>

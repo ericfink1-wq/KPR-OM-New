@@ -713,7 +713,22 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     );
                   })()}
                 </td>
-                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>{t.recentlyExercisedRenewal||"—"}</td>
+                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>
+                  {(() => {
+                    const spread = n(t.recentRenewalSpreadPct);
+                    return (
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}>
+                        <span>{t.recentlyExercisedRenewal || (spread != null ? "Recent renewal" : "—")}</span>
+                        {spread != null && spread !== 0 && (
+                          <span title="Rent spread achieved on the most recent renewal — evidence of pricing power / below-market prior rent."
+                            style={{ fontSize:9, fontWeight:700, color: spread > 0 ? "#0f6b46" : "#b45309", background: spread > 0 ? "#e7f8f0" : "#fbe6cf", border:`1px solid ${spread > 0 ? "#a7f3d0" : "#e0c9a8"}`, borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap" }}>
+                            {spread > 0 ? "+" : ""}{Math.round(spread)}%
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })()}
+                </td>
                 {(() => {
                   // Prefer the latest uploaded sales-report figures over OM-stated.
                   const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));

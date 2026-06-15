@@ -103,6 +103,7 @@ REQUIRED SCHEMA:
       "rentSchedule": "string — REQUIRED for every tenant. ONLY clean dated rent steps with amounts e.g. '2024-09-01: $13.50 PSF ($345,384/yr); 2029-09-01: $15.50 PSF ($396,552/yr)', or 'Flat at $XX.XX PSF through YYYY-MM-DD.' if flat. NEVER write prose, explanations, or renewal narratives here (e.g. do NOT write 'Walmart recently executed a 10-year renewal…') — any such explanation belongs in assumptionNote or recentlyExercisedRenewal. This field feeds a compact Rent-Steps column, so keep it to dates + amounts only. Never leave null.",
       "renewalOptions": "string or null",
       "recentlyExercisedRenewal": "string or null",
+      "recentRenewalSpreadPct": "number or null — the rent SPREAD (percent increase) achieved on this tenant's MOST RECENT renewal/extension when the OM discloses it (e.g. 'Old Navy recently agreed to a 10-year extension at 21% increase' → 21; 'Michaels exercised its option at a 22% increase' → 22; 'Jimmy John's extended at 17%' → 17). Positive = pricing power / prior rent was below market. Null if no recent renewal or no stated increase.",
       "percentageRentClause": "string or null — text describing the percentage rent clause (e.g. '7% of gross sales above $500/SF natural breakpoint'). Null if no clause.",
       "percentageRentRate": "number or null — the percentage-rent RATE as a percent (e.g. 6 for '6% of gross sales over breakpoint'), when disclosed.",
       "percentageRentBreakpoint": "number or null — the ANNUAL sales BREAKPOINT in dollars above which percentage rent is owed (e.g. 2016000 for 'over $2,016,000'). When the OM gives multiple period breakpoints, use the CURRENT one. Null if natural-only with no stated amount.",
@@ -353,7 +354,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
-      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, percentageRentRate, percentageRentBreakpoint, percentageRentBreakpointType, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
+      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, recentlyExercisedRenewal, recentRenewalSpreadPct, percentageRentClause, percentageRentRate, percentageRentBreakpoint, percentageRentBreakpointType, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
       const _cStart = Date.now();
@@ -400,7 +401,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         `From the Offering Memorandum text above, extract ONLY the occupied tenants NOT already in this list (largest missing first):\n` +
         haveNames.join(", ") +
         `\n\nSame inclusion rule: actual lease occupants of THIS property only. Return ONLY {"tenants":[...]} with per-tenant schema ` +
-        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isNAP, isDark, leaseStatus, remainingTermYears}. ` +
+        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, recentRenewalSpreadPct, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isNAP, isDark, leaseStatus, remainingTermYears}. ` +
         `If none remain, return {"tenants":[]}. Output must start with { and end with }.`;
       try {
         const _gStart = Date.now();
