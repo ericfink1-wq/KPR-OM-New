@@ -171,6 +171,11 @@ export interface Tenant {
   recentlyExercisedRenewal?: string | null;
   salesPSF?: number | string | null;
   salesYear?: number | null;        // year the salesPSF figure is from (from OM extraction)
+  // Prior-year sales (when the OM prints TWO years, e.g. 2024 and 2025), so a
+  // year-over-year sales TREND can be read — declining sales are a leading
+  // indicator of a tenant in trouble. priorSalesPSF is per-SF, same basis as salesPSF.
+  priorSalesPSF?: number | string | null;
+  priorSalesYear?: number | null;
   occupancyCost?: number | string | null;
   expenseReimbursements?: number | null;  // annual CAM + RE-tax + insurance recoveries (OM-stated dollars)
   percentageRent?: number | null;         // annual overage/percentage rent (OM-stated dollars)

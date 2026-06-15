@@ -110,6 +110,8 @@ REQUIRED SCHEMA:
       "creditRating": "Investment Grade | Non-Investment Grade | null — Set this ONLY when the OM explicitly states a credit rating for the tenant, OR the tenant is a national credit you are CERTAIN is investment-grade (e.g. Target, Walmart, Costco, Home Depot, Lowe's, TJX/TJ Maxx/Marshalls, Ross, CVS, Walgreens, Kroger, Publix, McDonald's, Starbucks, Chick-fil-A, Verizon, AT&T, a money-center bank). Otherwise DEFAULT TO null. Do NOT infer 'Investment Grade' for private, PE-owned, franchised, regional, or local operators, and do NOT label junk/non-rated retailers as Investment Grade (e.g. Gap/Old Navy, Burlington, Michaels, Barnes & Noble, At Home, Lane Bryant, Famous Footwear, Destination XL, most restaurants and franchises). When unsure, use null — never guess a rating.",
       "salesPSF": "number or null",
       "salesYear": "number or null — the calendar year the salesPSF figure is from (e.g. 2024). Infer from context ('2024 sales', 'trailing 12 months ending Dec-2024', etc.).",
+      "priorSalesPSF": "number or null — the tenant's PRIOR-year sales PER SQUARE FOOT, when the OM's tenant-sales table prints TWO years (e.g. columns '2024 Sales' and '2025 Sales'). Same per-SF basis as salesPSF (convert a total ÷ SF). Leave null if only one year is shown. salesPSF must remain the MOST RECENT year.",
+      "priorSalesYear": "number or null — the calendar year priorSalesPSF is from (e.g. 2024 when salesYear is 2025).",
       "salesNotes": "string or null",
       "occupancyCost": "number or null — TOTAL occupancy cost as a percentage of gross sales, defined as (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled 'Occ Cost %', 'OC%', or 'Occupancy Cost'. Use the OM's stated total occ-cost % when given. If the OM only states base rent ÷ sales (not the full health ratio), note that in salesNotes instead and leave this null.",
       "assumptionNote": "string or null — any footnote/assumption for this tenant",
@@ -348,7 +350,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
-      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
+      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
       const _cStart = Date.now();
@@ -395,7 +397,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         `From the Offering Memorandum text above, extract ONLY the occupied tenants NOT already in this list (largest missing first):\n` +
         haveNames.join(", ") +
         `\n\nSame inclusion rule: actual lease occupants of THIS property only. Return ONLY {"tenants":[...]} with per-tenant schema ` +
-        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, leaseStatus, remainingTermYears}. ` +
+        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isNAP, isDark, leaseStatus, remainingTermYears}. ` +
         `If none remain, return {"tenants":[]}. Output must start with { and end with }.`;
       try {
         const _gStart = Date.now();

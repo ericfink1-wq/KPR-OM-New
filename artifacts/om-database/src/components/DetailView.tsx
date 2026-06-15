@@ -46,6 +46,7 @@ import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
+import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
 import { useIsMobile } from "../hooks/use-mobile";
 
 // DETAIL_MAX_WIDTH (from lib/constants) caps the deal page's readable width. The
@@ -2937,8 +2938,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {(() => {
         const expenseFlag = deriveExpenseRiskFlag(dWithRecoveries);
         const unsignedFlag = deriveUnsignedLeaseFlag(d);
+        const salesTrendFlag = deriveSalesTrendFlag(d);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...watchImpact.flags, ...(d.redFlags || [])]
+        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return showAcq && (allRedFlags.length > 0 || d.analysisStale) && (
           <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">

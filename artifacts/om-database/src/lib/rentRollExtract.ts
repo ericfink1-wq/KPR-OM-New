@@ -17,7 +17,7 @@ export async function extractRentRoll(text: string): Promise<RentRollResult> {
 Return ONLY JSON: {"asOf":"YYYY-MM-DD or null","totalSF":number or null,"occupancy":number or null,"tenants":[{...}],"reviewQuestions":[{...}]}
 
 Each tenant object (omit unknown fields):
-{"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","camCapPct","camCapBasis","adminFeePct","mgmtFeeInCam","grossUpPct","recoverySF","leaseStatus","rentBumps","rentSchedule","renewalOptions","recentlyExercisedRenewal","assumptionNote","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","isAnchor","isDark","remainingTermYears"}
+{"name","suite","sf","rentPerSF","annualRent","leaseStart","leaseExpiry","leaseType","reimbursementMethod","camCapPct","camCapBasis","adminFeePct","mgmtFeeInCam","grossUpPct","recoverySF","leaseStatus","rentBumps","rentSchedule","renewalOptions","recentlyExercisedRenewal","assumptionNote","percentageRentClause","expenseReimbursements","percentageRent","otherRent","creditRating","salesPSF","priorSalesPSF","priorSalesYear","isAnchor","isDark","remainingTermYears"}
 
 Rules:
 - Brand name only (no store #).
@@ -205,8 +205,8 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
     "sf", "annualRent", "rentPerSF", "leaseStart", "leaseExpiry", "remainingTermYears",
     "leaseType", "reimbursementMethod", "camCapPct", "camCapBasis", "adminFeePct",
     "mgmtFeeInCam", "grossUpPct", "recoverySF", "leaseStatus", "rentBumps", "rentSchedule",
-    "salesPSF", "salesYear", "expenseReimbursements", "percentageRent", "otherRent",
-    "creditRating", "isAnchor", "isNAP", "isDark", "parentCompany",
+    "salesPSF", "salesYear", "priorSalesPSF", "priorSalesYear", "expenseReimbursements",
+    "percentageRent", "otherRent", "creditRating", "isAnchor", "isNAP", "isDark", "parentCompany",
   ];
   const blank = (v: unknown) => v == null || v === "";
   const nrm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();

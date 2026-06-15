@@ -704,7 +704,24 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   // Prefer the latest uploaded sales-report figures over OM-stated.
                   const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
                   const salesPSF = ls?.salesPSF ?? n(t.salesPSF);
-                  return <td title={t.salesNotes||""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:t.salesNotes?"help":"default" }}>{fmtTenantSales(salesPSF, t.sf)}</td>;
+                  // Year-over-year trend arrow when the OM disclosed a prior year too.
+                  const prior = n(t.priorSalesPSF), latest = n(t.salesPSF);
+                  let trend: { arrow: string; color: string; tip: string } | null = null;
+                  if (prior != null && latest != null && prior > 0) {
+                    const chg = ((latest - prior) / prior) * 100;
+                    if (Math.abs(chg) >= 1) {
+                      const up = chg > 0;
+                      trend = {
+                        arrow: up ? "▲" : "▼",
+                        color: up ? "#0f9d63" : (chg <= -5 ? "#dc2626" : "#c97a18"),
+                        tip: `${up ? "Up" : "Down"} ${Math.abs(Math.round(chg))}% vs ${t.priorSalesYear || "prior yr"} ($${Math.round(prior)} → $${Math.round(latest)}/SF)`,
+                      };
+                    }
+                  }
+                  return <td title={trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:(trend||t.salesNotes)?"help":"default" }}>
+                    {fmtTenantSales(salesPSF, t.sf)}
+                    {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
+                  </td>;
                 })()}
                 {(() => {
                   const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
