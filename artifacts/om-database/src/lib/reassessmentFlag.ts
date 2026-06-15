@@ -23,15 +23,25 @@ export function deriveReassessmentFlag(deal: Deal): DerivedFlag | null {
   const check = reconcileTaxCapture(deal);
   const assessed = Number(check.assessed ?? 0) || 0;
   const taxes = Number(check.taxes ?? deal.expenseBreakdown?.realEstateTax ?? 0) || 0;
-  if (!assessed || !taxes) return null; // can't size the step-up without the current bill
 
   const r = estimateReassessment({
     state: deal.state,
     county: deal.marketGeo?.county ?? null,
     acquisitionPrice: price,
-    currentAssessedValue: assessed,
-    currentAnnualTaxes: taxes,
+    currentAssessedValue: assessed || null,
+    currentAnnualTaxes: taxes || null,
   });
+
+  // No current bill to size the step-up against — but if this jurisdiction resets on
+  // sale, the risk is real and uncaptured, so nudge to go get the assessor record
+  // rather than staying silent. (Where the jurisdiction never reassesses, no nudge.)
+  if (!assessed || !taxes) {
+    if (!r.resetsOnSale) return null;
+    return {
+      severity: "low",
+      description: `Property-tax basis not captured — the OM didn't disclose the current assessed value / tax bill, and ${deal.state} reassesses on sale, so the post-close tax bill could step up materially. Pull the assessor record / OM tax page to size the reassessment risk.`,
+    };
+  }
 
   // Prefer the sale-time reset; otherwise the next scheduled cycle's step toward market.
   const saleReset = r.resetsOnSale && r.estPostSaleTaxes != null && r.stepUpPct != null;
