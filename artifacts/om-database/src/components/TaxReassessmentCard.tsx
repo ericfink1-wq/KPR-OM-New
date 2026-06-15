@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Deal } from "../lib/idb";
 import { estimateReassessment, resolveJurisdiction, reconcileTaxCapture } from "../lib/taxReassessment";
+import { forecastTaxes } from "../lib/taxForecast";
 
 // Property-tax reassessment estimator. Answers "if we buy this center, do the
 // taxes reset — and by how much?" from the per-state ruleset, grounded in the
@@ -69,6 +70,22 @@ export default function TaxReassessmentCard({ deal }: Props) {
     nonAdValoremAnnual: parseNum(nav), applyScAtiExemption: ati,
   }), [deal.state, county, price, assessed, taxes, nav, ati]);
 
+  // Multi-year forecast (informational): hold period from the deal, growth from the
+  // state's statutory cap (editable), abatement expiry noted if disclosed.
+  const [growthPct, setGrowthPct] = useState("");
+  const holdYears = Number(deal.acqHoldPeriod) || (Array.isArray(deal.cashFlowProjection) ? deal.cashFlowProjection.length : 0) || 10;
+  const abatementExpiryYears = (() => {
+    const exp = deal.taxAbatement?.expiry; if (!exp) return null;
+    const m = String(exp).match(/\b(20\d{2})\b/); if (!m) return null;
+    return Math.max(0, Number(m[1]) - new Date().getFullYear());
+  })();
+  const fc = useMemo(() => forecastTaxes({
+    state: deal.state, county, acquisitionPrice: parseNum(price),
+    currentAssessedValue: parseNum(assessed), currentAnnualTaxes: parseNum(taxes),
+    nonAdValoremAnnual: parseNum(nav), applyScAtiExemption: ati,
+    holdYears, growthPctOverride: parseNum(growthPct), abatementExpiryYears,
+  }), [deal.state, county, price, assessed, taxes, nav, ati, holdYears, growthPct, abatementExpiryYears]);
+
   const cm = confMeta(r.confidence);
   // Color the headline by outcome: a real step-up is red; a no-reset / protective
   // outcome is green; everything else neutral amber.
@@ -131,6 +148,37 @@ export default function TaxReassessmentCard({ deal }: Props) {
               <div style={{ fontSize: 15, fontWeight: 800, color: i === 2 && stepUp > 0 ? (r.resetsOnSale ? C.red : C.amber) : C.ink, lineHeight: 1.15, marginTop: 2 }}>{v}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Multi-year forecast (informational) */}
+      {fc && (
+        <div style={{ marginTop: 12, border: `1px solid ${C.line}`, borderRadius: 8, padding: "10px 12px", background: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 6 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", color: C.sub, textTransform: "uppercase" }}>Multi-year forecast · through year {fc.years.length - 1}</div>
+            <div style={{ fontSize: 9.5, color: C.sub }}>confidence: {fc.confidence}</div>
+          </div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {([
+              ["Today", fmt$(fc.startTaxes)] as [string, string],
+              fc.reassessYear != null ? ([`Year ${fc.reassessYear} (reassess)`, fmt$(fc.years[Math.min(fc.reassessYear + fc.phaseInYears - 1, fc.years.length - 1)].taxes)] as [string, string]) : null,
+              [`Year ${fc.years.length - 1}`, `${fmt$(fc.endTaxes)} · +${fc.totalIncreasePct}%`] as [string, string],
+            ].filter(Boolean) as [string, string][]).map(([l, v], i) => (
+              <div key={i} style={{ flex: "1 1 110px", background: C.panel, border: `1px solid ${C.line}`, borderRadius: 7, padding: "7px 9px", minWidth: 0 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.03em", color: C.sub, textTransform: "uppercase" }}>{l}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, marginTop: 2 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11, color: C.sub }}>Annual growth</span>
+            <input value={growthPct} onChange={e => setGrowthPct(e.target.value)} placeholder={`${fc.growth.pct}`} inputMode="decimal"
+              style={{ width: 52, padding: "3px 6px", border: `1px solid ${C.line}`, borderRadius: 5, fontSize: 12, textAlign: "right", background: C.panel, color: C.ink }} />
+            <span style={{ fontSize: 11, color: C.sub }}>%/yr · {fc.growth.basis.replace(/_/g, " ")}</span>
+          </div>
+          <ul style={{ margin: "8px 0 0", paddingLeft: 16, color: C.sub, fontSize: 11, lineHeight: 1.5 }}>
+            {fc.assumptions.map((a, i) => <li key={i}>{a}</li>)}
+          </ul>
         </div>
       )}
 
