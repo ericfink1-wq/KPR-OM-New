@@ -154,6 +154,16 @@ export interface Tenant {
   leaseExpiry?: string | null;
   remainingTermYears?: number | string | null;
   reimbursementMethod?: string | null;
+  // Structured recovery detail parsed from the OM's detailed-rent-roll "Recovery
+  // Type/Method" + "Comments/Encumbrances" columns (when disclosed). These refine
+  // the free-text reimbursementMethod and feed the expense-recovery risk flag.
+  // Null when the OM doesn't state them.
+  camCapPct?: number | null;                            // annual cap on (controllable) CAM growth, % — e.g. 5
+  camCapBasis?: "cumulative" | "non-cumulative" | null; // how the CAM cap accrues
+  adminFeePct?: number | null;                          // administrative fee as a % of CAM
+  mgmtFeeInCam?: boolean | null;                        // management fee recoverable within CAM (true=included, false=excluded)
+  grossUpPct?: number | null;                           // CAM gross-up %, e.g. 95
+  recoverySF?: number | null;                           // SF used to BILL recoveries when it differs from leased sf
   leaseType?: string | null;
   rentBumps?: string | null;
   rentSchedule?: string | null;

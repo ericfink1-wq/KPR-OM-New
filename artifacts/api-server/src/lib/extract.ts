@@ -91,7 +91,13 @@ REQUIRED SCHEMA:
       "leaseStart": "string or null",
       "leaseExpiry": "string — ISO format YYYY-MM-DD (e.g. 2029-01-31). Never return Mon-YYYY strings or slash formats.",
       "leaseType": "NNN|Gross|Modified Gross|null",
-      "reimbursementMethod": "string or null",
+      "reimbursementMethod": "string or null — the FULL recovery / expense-reimbursement structure the OM discloses, captured COMPACTLY in one line from the detailed rent roll's 'Recovery Type/Method' + 'Comments/Encumbrances' columns. Include, when stated: the recovery type (NNN/Net, Gross, Modified Gross, Base Year, or a split/Fixed structure); any CAM CAP and its basis (e.g. 'CAM cap 5% non-cumulative'); the ADMIN FEE (e.g. 'admin fee 10% of CAM'); whether the MANAGEMENT FEE is included in or excluded from CAM; any GROSS-UP %; and any FIXED-CAM amount/escalator (e.g. 'Fixed CAM $2.00/SF +2%/yr'). Example: 'NNN; CAM cap 5% non-cumulative; admin fee 10% of CAM; mgmt fee in CAM'. Do NOT collapse this to bare 'Net'/'NNN' when the OM actually discloses caps/fees — that detail drives the expense-recovery risk read.",
+      "camCapPct": "number or null — the annual cap on (controllable) CAM growth as a percent (e.g. 5 for '5% per year'), when disclosed.",
+      "camCapBasis": "cumulative|non-cumulative|null — the CAM cap basis when disclosed.",
+      "adminFeePct": "number or null — administrative fee as a percent of CAM, when disclosed (e.g. 10, 15).",
+      "mgmtFeeInCam": "true|false|null — true if the OM states the management fee is INCLUDED in CAM, false if EXCLUDED, null if not stated.",
+      "grossUpPct": "number or null — CAM gross-up percent when disclosed (e.g. 80, 95).",
+      "recoverySF": "number or null — the square footage used to BILL recoveries when the OM states it DIFFERS from the tenant's leased sf (e.g. 'occupies 2,593 SF; reimbursements calculated off 2,800 SF' → 2800). Null when recoveries are billed on the leased sf.",
       "percentOfNOI": "number or null",
       "rentBumps": "string — summarize pattern, e.g. '3%/yr'",
       "rentSchedule": "string — REQUIRED for every tenant. ONLY clean dated rent steps with amounts e.g. '2024-09-01: $13.50 PSF ($345,384/yr); 2029-09-01: $15.50 PSF ($396,552/yr)', or 'Flat at $XX.XX PSF through YYYY-MM-DD.' if flat. NEVER write prose, explanations, or renewal narratives here (e.g. do NOT write 'Walmart recently executed a 10-year renewal…') — any such explanation belongs in assumptionNote or recentlyExercisedRenewal. This field feeds a compact Rent-Steps column, so keep it to dates + amounts only. Never leave null.",
@@ -145,6 +151,8 @@ CRITICAL RENT-ROLL LESSONS (from real operator corrections — past extractions 
 8. rentSchedule = ONLY dates + amounts (or "Flat at $X PSF through YYYY-MM-DD"). NEVER put renewal narratives or commentary in rentSchedule — put those in assumptionNote / recentlyExercisedRenewal. EXECUTED RENEWAL: when the OM says a tenant has already EXECUTED/exercised a renewal extending its term (e.g. "Walmart executed a 10-year renewal through Jan 2037"), set leaseExpiry to that NEW later date (2037-01-18) and record the detail in recentlyExercisedRenewal — do NOT leave leaseExpiry at the pre-renewal date. An UNEXERCISED option, by contrast, stays in renewalOptions and does not change leaseExpiry.
 9. ATM vs BANK BRANCH: a standalone ATM (e.g. "Chase Bank ATM", "Bank of America ATM") is NOT a bank branch — it's a tiny kiosk/license, usually 0 or under ~200 SF. KEEP the word "ATM" in the name, list it as its OWN tenant row, and NEVER merge it into the bank's branch lease or vice-versa. It is not an anchor. (It belongs to the same parent company as the branch — that rollup is handled downstream.)
 10. "ANNUAL RENT INCREASE" vs "ANNUAL OPTION RENT" COLUMNS (CRITICAL — these are two DIFFERENT column groups, never conflate them). A rent roll with a "Term Comm. Date" / "Term Exp. Date" pair plus an "Annual Rent Increase" column group (Date / Amount / Incr-PSF) and a SEPARATE "Annual Option Rent" group (Date / Amount / Incr-PSF) is showing two different things, and THE LEASE EXPIRATION DATE IS THE DIVIDER. "Annual Rent Increase" = CONTRACTUAL fixed rent steps DURING the current term → rentSchedule (the tell: these dates fall BEFORE the Term Exp. Date; the "Incr/SF" column is the new $/SF, the "Amount" column the new annual base — emit each future-dated one as "YYYY-MM-DD: $<Incr/SF> PSF"). "Annual Option Rent" = renewal-OPTION period rents → renewalOptions ONLY (these dates fall AT/AFTER the Term Exp. Date). NEVER put the contractual increases in renewalOptions, and NEVER leave rentSchedule empty when an Annual Rent Increase schedule is present.
+
+11. CAPTURE THE RECOVERY COLUMN IN FULL — DON'T REDUCE IT TO "NET". The detailed rent roll's "Recovery Type/Method" + "Comments/Encumbrances" columns disclose the EXPENSE-RECOVERY STRUCTURE per tenant, and it materially affects NOI durability: a CAM cap (e.g. "5% per year non-cumulative") limits how much expense growth the landlord recovers; a FIXED CAM (e.g. Burlington "$2.00/SF +2%/yr", Kohl's "$0.83/SF +3%/yr") means the landlord — not the tenant — bears CAM growth above the escalator; an admin fee % and management-fee-in/out-of-CAM change effective recovery. Put the full structure in reimbursementMethod (compact, one line) AND populate camCapPct/camCapBasis/adminFeePct/mgmtFeeInCam/grossUpPct/recoverySF when the OM states them. A tenant whose roll says "Net — CAM cap 5% non-cumulative; admin fee 10%" must NOT be stored as just "Net". When the billing SF differs from the leased SF (e.g. "occupies 2,593 SF; reimbursements off 2,800 SF"), set recoverySF.
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
@@ -338,7 +346,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       haveNames.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
-      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, remainingTermYears}. " +
+      "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, percentageRentClause, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, isAnchor, isDark, remainingTermYears}. " +
       "If there are no more tenants, return {\"tenants\":[]}. Output must start with { and end with }.";
     try {
       const _cStart = Date.now();
@@ -385,7 +393,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         `From the Offering Memorandum text above, extract ONLY the occupied tenants NOT already in this list (largest missing first):\n` +
         haveNames.join(", ") +
         `\n\nSame inclusion rule: actual lease occupants of THIS property only. Return ONLY {"tenants":[...]} with per-tenant schema ` +
-        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, remainingTermYears}. ` +
+        `{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, creditRating, salesPSF, isAnchor, isNAP, isDark, remainingTermYears}. ` +
         `If none remain, return {"tenants":[]}. Output must start with { and end with }.`;
       try {
         const _gStart = Date.now();

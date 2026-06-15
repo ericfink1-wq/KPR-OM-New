@@ -50,11 +50,15 @@ function classifyTenant(t: Tenant): LeaseCategory {
   const combined = [t.leaseType, t.reimbursementMethod]
     .filter(Boolean)
     .join(" ");
-  if (!combined.trim()) return "unknown";
+  // A structured CAM cap from extraction is authoritative even when the free-text
+  // method is bare ("Net") or absent — a capped-CAM tenant means the landlord bears
+  // above-cap expense inflation, so surface it as capped exposure.
+  const hasStructuredCap = t.camCapPct != null && Number(t.camCapPct) > 0;
+  if (!combined.trim()) return hasStructuredCap ? "capped_cam" : "unknown";
 
   // Fixed-CAM and Capped-CAM before generic gross checks
   if (FIXED_CAM_PATTERNS.some((p) => p.test(combined))) return "fixed_cam";
-  if (CAPPED_CAM_PATTERNS.some((p) => p.test(combined))) return "capped_cam";
+  if (CAPPED_CAM_PATTERNS.some((p) => p.test(combined)) || hasStructuredCap) return "capped_cam";
   if (GROSS_PATTERNS.some((p) => p.test(combined))) return "gross";
   if (NNN_PATTERNS.some((p) => p.test(combined))) return "nnn";
   if (NN_PATTERNS.some((p) => p.test(combined))) return "nn";
