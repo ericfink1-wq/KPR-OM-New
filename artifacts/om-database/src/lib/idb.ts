@@ -903,6 +903,12 @@ export interface Deal {
   operatingExpenses?: number | null;
   nnnRecoveries?: number | null;
   weightedAvgRentPSF?: number | null;
+  // Current property-tax facts from the OM's tax-overview / parcel table — drive the
+  // tax-reassessment estimator (what taxes do on a sale). The total CURRENT assessed
+  // (or taxable) value and the total CURRENT annual RE taxes, plus the tax year.
+  currentAssessedValue?: number | null;
+  currentAnnualTaxes?: number | null;
+  assessmentYear?: number | null;
   walt?: number | null;
   // Property
   yearBuilt?: number | null;

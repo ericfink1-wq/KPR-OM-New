@@ -42,6 +42,7 @@ import { useWatchlist } from "../lib/useWatchlist";
 import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { runWithProgress, startAiTask, finishAiTask } from "../lib/aiProgress";
 import ClosingCostsCard from "./ClosingCostsCard";
+import TaxReassessmentCard from "./TaxReassessmentCard";
 import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
@@ -3272,6 +3273,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       })()}
 
       {showAcq && <ClosingCostsCard deal={d} />}
+      {showAcq && <TaxReassessmentCard deal={d} />}
       {(d.status === "Owned" || d.status === "Sold") && (
         <div id="section-ownership"><OwnershipStructure deal={d} onUpdate={onUpdate} /></div>
       )}
