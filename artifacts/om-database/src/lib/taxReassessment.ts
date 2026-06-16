@@ -734,7 +734,7 @@ interface TaxDealLike {
   expenseBreakdown?: Record<string, number | null> | null;
 }
 
-export interface TaxWarning { severity: "high" | "medium" | "info"; message: string }
+export interface TaxWarning { severity: "high" | "medium" | "info"; message: string; id?: string }
 
 export interface TaxCaptureCheck {
   parcelCount: number;
@@ -775,10 +775,10 @@ export function reconcileTaxCapture(deal: TaxDealLike): TaxCaptureCheck {
   // 1) Parcel sum vs the extractor's stated total — a gap means a parcel was likely dropped.
   const off = (a: number | null, b: number | null) => a != null && b != null && b > 0 && Math.abs(a - b) / b > 0.02;
   if (parcelSumTaxes != null && off(parcelSumTaxes, statedTaxes)) {
-    warnings.push({ severity: "high", message: `${parcels.length} parcels sum to $${Math.round(parcelSumTaxes).toLocaleString()} in taxes, but the captured total is $${Math.round(statedTaxes!).toLocaleString()} — a parcel may be missing or double-counted. Verify against the OM's tax table.` });
+    warnings.push({ id: "tax-parcel-taxes-mismatch", severity: "high", message: `${parcels.length} parcels sum to $${Math.round(parcelSumTaxes).toLocaleString()} in taxes, but the captured total is $${Math.round(statedTaxes!).toLocaleString()} — a parcel may be missing or double-counted. Verify against the OM's tax table.` });
   }
   if (parcelSumAssessed != null && off(parcelSumAssessed, statedAssessed)) {
-    warnings.push({ severity: "medium", message: `Parcel assessed values sum to $${Math.round(parcelSumAssessed).toLocaleString()} vs. the captured total $${Math.round(statedAssessed!).toLocaleString()} — confirm no parcel was dropped.` });
+    warnings.push({ id: "tax-parcel-assessed-mismatch", severity: "medium", message: `Parcel assessed values sum to $${Math.round(parcelSumAssessed).toLocaleString()} vs. the captured total $${Math.round(statedAssessed!).toLocaleString()} — confirm no parcel was dropped.` });
   }
 
   // 2) Market-vs-assessed: if the captured "assessed" looks like MARKET value (implied
@@ -787,9 +787,9 @@ export function reconcileTaxCapture(deal: TaxDealLike): TaxCaptureCheck {
   if (assessed != null && market != null && market > 0) {
     impliedRatioPct = Math.round((assessed / market) * 1000) / 10;
     if (assessed > market * 1.02) {
-      warnings.push({ severity: "high", message: `Captured assessed value ($${Math.round(assessed).toLocaleString()}) exceeds the market value ($${Math.round(market).toLocaleString()}) — these are likely swapped. Assessed/taxable should be ≤ market.` });
+      warnings.push({ id: "tax-assessed-gt-market", severity: "high", message: `Captured assessed value ($${Math.round(assessed).toLocaleString()}) exceeds the market value ($${Math.round(market).toLocaleString()}) — these are likely swapped. Assessed/taxable should be ≤ market.` });
     } else if (j?.assessmentRatioCommercialPct != null && j.assessmentRatioCommercialPct < 95 && impliedRatioPct > j.assessmentRatioCommercialPct * 1.4) {
-      warnings.push({ severity: "high", message: `The captured "assessed" value implies a ${impliedRatioPct}% ratio, but ${j.stateName} assesses commercial at ~${j.assessmentRatioCommercialPct}% — you may have captured the MARKET value instead of assessed/taxable, which would understate the post-sale step-up.` });
+      warnings.push({ id: "tax-market-as-assessed", severity: "high", message: `The captured "assessed" value implies a ${impliedRatioPct}% ratio, but ${j.stateName} assesses commercial at ~${j.assessmentRatioCommercialPct}% — you may have captured the MARKET value instead of assessed/taxable, which would understate the post-sale step-up.` });
     }
   }
 
@@ -803,21 +803,21 @@ export function reconcileTaxCapture(deal: TaxDealLike): TaxCaptureCheck {
     const rateOnAssessed = taxes / assessed;
     if (rateOnAssessed < 0.03) {
       const expectAssessed = j.assessmentRatioCommercialPct / 100;
-      warnings.push({ severity: "high", message: `The implied tax rate on this assessed value is only ${(rateOnAssessed * 100).toFixed(1)}% — far too low for ${j.stateName}, where commercial is assessed at ~${j.assessmentRatioCommercialPct}% of market (so the rate ON the assessed value normally runs several times higher). This almost always means the MARKET value was captured instead of the ASSESSED value — the assessed value should be ~${j.assessmentRatioCommercialPct}% of market (≈ ${Math.round(assessed * expectAssessed).toLocaleString()} if ${Math.round(assessed).toLocaleString()} is actually the market value). Fix the Current Assessed Value, or a real reassessment step-up will be hidden.` });
+      warnings.push({ id: "tax-low-rate-on-assessed", severity: "high", message: `The implied tax rate on this assessed value is only ${(rateOnAssessed * 100).toFixed(1)}% — far too low for ${j.stateName}, where commercial is assessed at ~${j.assessmentRatioCommercialPct}% of market (so the rate ON the assessed value normally runs several times higher). This almost always means the MARKET value was captured instead of the ASSESSED value — the assessed value should be ~${j.assessmentRatioCommercialPct}% of market (≈ ${Math.round(assessed * expectAssessed).toLocaleString()} if ${Math.round(assessed).toLocaleString()} is actually the market value). Fix the Current Assessed Value, or a real reassessment step-up will be hidden.` });
     }
   }
 
   // 3) Current bill vs the pro-forma RE-tax line (a sanity tie, not necessarily an error).
   const proformaTax = numOrNull(deal.expenseBreakdown?.realEstateTax);
   if (taxes != null && proformaTax != null && Math.abs(taxes - proformaTax) / Math.max(taxes, proformaTax) > 0.15) {
-    warnings.push({ severity: "info", message: `Current taxes ($${Math.round(taxes).toLocaleString()}) differ >15% from the underwritten RE-tax line ($${Math.round(proformaTax).toLocaleString()}) — expected if the pro forma already steps taxes up, but worth a glance.` });
+    warnings.push({ id: "tax-proforma-tie", severity: "info", message: `Current taxes ($${Math.round(taxes).toLocaleString()}) differ >15% from the underwritten RE-tax line ($${Math.round(proformaTax).toLocaleString()}) — expected if the pro forma already steps taxes up, but worth a glance.` });
   }
 
   // 4) Abatement / special assessments — real acquisition risks the engine can't model.
   if (deal.taxAbatement?.present) {
     const t = deal.taxAbatement.type ? `${deal.taxAbatement.type} ` : "";
     const exp = deal.taxAbatement.expiry ? ` (expires ${deal.taxAbatement.expiry})` : "";
-    warnings.push({ severity: "high", message: `Tax ${t}abatement in place${exp} — current taxes are artificially LOW. Confirm whether it survives the sale, and underwrite the un-abated taxes.` });
+    warnings.push({ id: "tax-abatement", severity: "high", message: `Tax ${t}abatement in place${exp} — current taxes are artificially LOW. Confirm whether it survives the sale, and underwrite the un-abated taxes.` });
   }
   // Non-ad-valorem $ to net out of the reassessing base (a flat charge mustn't scale
   // with value). Guard against a captured value that exceeds the whole bill.

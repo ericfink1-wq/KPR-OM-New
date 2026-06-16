@@ -6,6 +6,7 @@ import { isInvestmentGrade } from "./tenantCredit";
 // Used only inside buildSystemPrompt (runtime), so the utils⇄leaseRisk import cycle
 // is safe — neither module touches the other's exports at module-eval time.
 import { resolveTenantRisk, anchorsReferenced, computeExposure } from "./leaseRisk";
+import { reconcileTaxCapture } from "./taxReassessment";
 
 // Occupancy sanity: some OMs express occupancy as a FRACTION (1.0 = 100%,
 // 0.993 = 99.3%) rather than a percent. A real retail-center occupancy is never
@@ -239,6 +240,25 @@ export function buildReviewQuestions(deal: Deal): ReviewQuestion[] {
       severity: c.severity === "error" ? "high" : "medium",
       question: `${c.label} — does this look right, or was a number mis-captured?`,
       detail: c.detail,
+    });
+  }
+
+  // 2b) Tax-capture integrity — the high-stakes checks that recently caught real
+  //     errors: the market-value-captured-as-assessed swap, parcel-sum mismatch,
+  //     and abatements. Surfaced here so they POP in the Import Review at upload
+  //     time (not only on the tax card). Self-healing: fix the value → it clears.
+  for (const w of reconcileTaxCapture(deal).warnings) {
+    if (w.severity !== "high" && w.severity !== "medium") continue;
+    const assessedSwap = w.id === "tax-market-as-assessed" || w.id === "tax-low-rate-on-assessed" || w.id === "tax-assessed-gt-market";
+    add({
+      id: w.id || ("tax-" + w.message.slice(0, 40).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")),
+      source: "check",
+      severity: w.severity,
+      field: assessedSwap ? "Property tax — assessed value" : "Property tax capture",
+      question: w.message,
+      detail: null,
+      // Let the user fix the assessed value right in the review for the swap cases.
+      target: assessedSwap ? { kind: "deal", fieldKey: "currentAssessedValue", tenantName: null, valueType: "number" } : null,
     });
   }
 
