@@ -8,7 +8,7 @@ import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "..
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from "../lib/demographics";
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
-import { auditExtraction, AUDIT_ID_PREFIX } from "../lib/extractionAudit";
+import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
 
@@ -1183,13 +1183,20 @@ router.get("/deals/audit-stats", requireAuth, async (req, res) => {
   try {
     const rows = await db.select().from(dealsTable);
     let deals = 0, issues = 0, high = 0;
+    const byCheck = new Map<string, number>();
     for (const r of rows) {
       const d = r.data as Record<string, unknown>;
       if (d.trashedAt || d._processing || d._processingError) continue;
       const f = auditExtraction(d);
-      if (f.length) { deals++; issues += f.length; high += f.filter(q => q.severity === "high").length; }
+      if (f.length) {
+        deals++; issues += f.length; high += f.filter(q => q.severity === "high").length;
+        for (const q of f) { const k = auditCheckKey(q.id); byCheck.set(k, (byCheck.get(k) || 0) + 1); }
+      }
     }
-    res.json({ deals, issues, high });
+    const breakdown = [...byCheck.entries()]
+      .map(([key, count]) => ({ key, label: AUDIT_CHECK_LABELS[key] || key, count }))
+      .sort((a, b) => b.count - a.count);
+    res.json({ deals, issues, high, breakdown });
   } catch (err) {
     req.log.error({ err }, "Failed to compute audit stats");
     res.status(500).json({ error: "Failed to compute audit stats" });

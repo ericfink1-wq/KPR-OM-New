@@ -303,7 +303,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [staleCount, setStaleCount] = useState(0);
   const [refreshingStale, setRefreshingStale] = useState(false);
   const [staleMsg, setStaleMsg] = useState<string | null>(null);
-  const [auditStats, setAuditStats] = useState<{ deals: number; issues: number; high: number }>({ deals: 0, issues: 0, high: 0 });
+  const [auditStats, setAuditStats] = useState<{ deals: number; issues: number; high: number; breakdown: { key: string; label: string; count: number }[] }>({ deals: 0, issues: 0, high: 0, breakdown: [] });
   const [auditing, setAuditing] = useState(false);
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
   const [scope, setScope] = useState<"all" | "owned">("all");
@@ -369,8 +369,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
 
   const loadAuditStats = () => {
     fetch("/api/deals/audit-stats", { credentials: "include" })
-      .then(r => r.json() as Promise<{ deals?: number; issues?: number; high?: number }>)
-      .then(d => setAuditStats({ deals: d.deals ?? 0, issues: d.issues ?? 0, high: d.high ?? 0 }))
+      .then(r => r.json() as Promise<{ deals?: number; issues?: number; high?: number; breakdown?: { key: string; label: string; count: number }[] }>)
+      .then(d => setAuditStats({ deals: d.deals ?? 0, issues: d.issues ?? 0, high: d.high ?? 0, breakdown: d.breakdown ?? [] }))
       .catch(() => {});
   };
   useEffect(() => { loadAuditStats(); }, []);
@@ -498,6 +498,15 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               {auditing ? "Auditing…" : auditStats.deals > 0 ? `Audit ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues})` : "Audit data integrity"}
             </button>
             {auditMsg && <span style={{ fontSize: 10.5, color: auditMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{auditMsg}</span>}
+            {auditStats.breakdown.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end", maxWidth: 360 }}>
+                {auditStats.breakdown.slice(0, 8).map(b => (
+                  <span key={b.key} title={b.key} style={{ fontSize: 9.5, color: "#6f6a5f", background: "#f6f1e7", border: "1px solid #e7e0d2", borderRadius: 10, padding: "1px 7px", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                    {b.label} · <b style={{ color: "#383a37" }}>{b.count}</b>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           {isAdmin && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>

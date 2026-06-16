@@ -40,6 +40,31 @@ interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?
 // validators. Every id auditExtraction emits starts with this.
 export const AUDIT_ID_PREFIX = "audit-";
 
+// Collapse per-tenant / per-suite ids to a stable CHECK key, for the firing breakdown.
+export function auditCheckKey(id: string): string {
+  if (id.startsWith("audit-rent-tie-")) return "audit-rent-tie";
+  if (id.startsWith("audit-dupe-suite-")) return "audit-dupe-suite";
+  return id;
+}
+export const AUDIT_CHECK_LABELS: Record<string, string> = {
+  "audit-sf-gla-short": "Roster SF short of GLA",
+  "audit-sf-gla-over": "Roster SF over GLA",
+  "audit-occupancy-tieout": "Occupancy vs roster",
+  "audit-noi-cap-price": "NOI ÷ cap vs price",
+  "audit-avg-rent-psf": "Avg rent vs roll-up",
+  "audit-rent-tie": "Tenant rent × SF",
+  "audit-dupe-suite": "Duplicate suite #",
+  "audit-occupancy-fraction": "Occupancy as a fraction",
+  "audit-caprate-range": "Cap-rate units",
+  "audit-price-psf": "Price PSF vs price ÷ GLA",
+  "audit-noi-gt-egi": "NOI > gross income",
+  "audit-noi-egi-opex": "NOI ≠ EGI − OpEx",
+  "audit-noi-vs-cf": "NOI vs cash-flow Yr 1",
+  "audit-cf-noi-row": "Cash-flow subtotal",
+  "audit-recoveries-rollup": "Recoveries roll-up",
+  "audit-gpr-vs-rent": "GPR vs in-place rent",
+};
+
 export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] {
   const out: AuditQuestion[] = [];
   const tenants: TenantLike[] = Array.isArray(deal.tenants) ? (deal.tenants as TenantLike[]) : [];
