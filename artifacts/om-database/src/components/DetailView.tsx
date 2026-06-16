@@ -43,6 +43,7 @@ import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { runWithProgress, startAiTask, finishAiTask } from "../lib/aiProgress";
 import ClosingCostsCard from "./ClosingCostsCard";
 import TaxReassessmentCard from "./TaxReassessmentCard";
+import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
@@ -72,7 +73,7 @@ const PAGE_TABS = [
 ] as const;
 const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
-  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Also known as",id:"section-aliases"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Your notes",id:"section-notes"}],
+  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Also known as",id:"section-aliases"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
   ai: [{label:"Highlights",id:"section-highlights"},{label:"Our take",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
   tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Site agreements / REAs",id:"section-site-agreements"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Tax reassessment",id:"section-tax-reassessment"},{label:"Ownership structure",id:"section-ownership"}],
@@ -1005,6 +1006,7 @@ const SECTION_LABELS: Record<string, string> = {
   "section-comp-benchmark": "Comp Benchmark",
   "section-closing-costs": "Estimated Closing Costs",
   "section-tax-reassessment": "Tax Reassessment",
+  "section-portfolio-benchmarks": "Portfolio Benchmarks",
   "section-cashflow": "Cash Flow",
   "section-demographics": "Demographics & Site",
   "section-trade-area": "Trade Area (Census)",
@@ -3295,6 +3297,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       })()}
 
       {showAcq && <ClosingCostsCard deal={d} />}
+      <PortfolioBenchmarksCard deal={d} allDeals={allDeals} />
       {showAcq && <TaxReassessmentCard deal={d} allDeals={allDeals} />}
       {(d.status === "Owned" || d.status === "Sold") && (
         <div id="section-ownership"><OwnershipStructure deal={d} onUpdate={onUpdate} /></div>
