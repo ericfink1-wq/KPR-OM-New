@@ -221,12 +221,22 @@ function normTenantName(name: string): string {
   return name.replace(PHASE_SUFFIX, "").trim().toLowerCase();
 }
 
+// Vacant / available / spec suites must NEVER be merged together — each empty unit is a
+// distinct suite with its own SF. (They'd otherwise all normalize to "vacant" and the
+// phase-dedup below would collapse them into one row with summed SF.)
+function isVacantName(name: string): boolean {
+  const s = (name || "").trim().toLowerCase();
+  return !s || s === "-" || /^(vacant|available|avail\b|spec(ulative)?|white\s*box|tbd|to\s+be\s+leased)\b/.test(s);
+}
+
 function mergePhaseDuplicates(tenants: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
   if (!tenants || tenants.length === 0) return tenants;
   const groups = new Map<string, Array<Record<string, unknown>>>();
-  for (const t of tenants) {
+  for (let idx = 0; idx < tenants.length; idx++) {
+    const t = tenants[idx];
     const name = typeof t.name === "string" ? t.name : "";
-    const key = normTenantName(name);
+    // Vacant suites get a unique key so they're never grouped/summed with each other.
+    const key = isVacantName(name) ? `__vacant__${idx}` : normTenantName(name);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(t);
   }
