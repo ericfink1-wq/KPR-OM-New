@@ -133,10 +133,13 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <BriefList items={[
           <><B>Overview & editable address</B> — cover, site plan, key financials, and your notes. Click the address under the title to fill in street/city/state (the state drives Closing Costs). Type a date any common way — <em>3/12/26</em> — and it standardizes when you click out.</>,
           <><B>Tenants & Sales</B> — every lease (SF, rent/SF, annual rent, dates, term, rent steps, options, reimbursements) with <B>Anchor, Investment-Grade, NAP, dark-store</B> and <B>ATM</B> badges; click a tenant name for all its locations. <B>Tenant Sales</B> tracks figures by year and shows a green ▲ / red ▼ on the latest year when sales are up or down vs. the prior year.</>,
+          <><B>Lease Risk (anchor dependency)</B> — on the Tenants tab, pick one or more anchors to model "what if they go dark": the <B>co-tenancy / kickout</B> rent relief and termination exposure, read live from the disclosed clauses and any uploaded lease abstracts (an executed abstract can flip a clause to <em>verified</em> or <em>mitigated</em>).</>,
+          <><B>Site Agreements / REAs & lease abstracts</B> — record property-level recorded documents (OEAs, reciprocal easements, use restrictions, cost-share), and upload per-tenant lease abstracts via <B>⬆ Upload abstracts</B>; <B>Export abstracts</B> writes the whole set to an Excel workbook (an Issues Summary tab plus one detailed tab per tenant).</>,
+          <><B>How this deal compares to your book</B> (Overview) — a token-free benchmark putting this deal's <B>going-in cap rate, expense ratio, and in-place rent PSF</B> against comparable deals in your own database (<em>your "book" = the other deals you've loaded</em> — same center type when there are enough peers, else the whole portfolio), showing where it sits on the p25–median–p75 band. Informational — it changes no numbers.</>,
           <><B>AI Analysis</B> — narrative highlights, deal score, upside and red flags, plus <B>Our Thesis</B> (type why you like it; <B>"Save & Re-grade"</B> folds it into the grade, which stays objective).</>,
           <><B>Financing</B> — record the loan (lender, rate, term, amortization) and estimate early-payoff cost: a <B>prepayment-penalty</B> calculator (step-down / yield-maintenance / defeasance) and a <B>swap-breakage</B> estimator. Import a swap confirmation, or <B>enter/edit the swap by hand</B> — it seeds today's market rate from Today's Rates. Preferred equity has its own block.</>,
           <><B>Market & Comps</B> — the <B>Comp Benchmark</B> (median cap rate & price/SF vs. comparable trades, with ★ star / × drop / click-to-expand) and <B>1/3/5-mile</B> Census demographics.</>,
-          <><B>Transaction & Underwriting</B> — the purchase / closing-cost record, and <B>KPR's own economics plus a cash-flow projection</B>, kept separate from the OM-stated figures.</>,
+          <><B>Transaction & Underwriting</B> — the purchase / closing-cost record, a per-state <B>property-tax reassessment forecaster</B> (when a sale resets the assessment, and the likely new bill), and <B>KPR's own economics plus a cash-flow projection</B>, kept separate from the OM-stated figures.</>,
         ]} />
       </>
     ),
@@ -148,6 +151,8 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <><B>Financing calculators:</B> the prepay penalty is <em>exact</em> for step-down and an <em>indicative estimate</em> for yield-maintenance/defeasance; <B>swap breakage</B> is indicative too — it proxies the current market swap rate from the Treasury curve (replace it with your bank's quote for a tighter number). Imported swap terms are fully <B>editable</B> via "Edit terms" if the doc read anything wrong.</>,
         <><B>Comp Benchmark</B> uses medians and tiers comps by relevance (same state/type/size within 24 months first, widening if needed); below a minimum sample it withholds a verdict rather than guess.</>,
         <><B>Closing Costs</B> (under Transaction Details) estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle), each line showing its <B>effective % of price (or loan)</B> — a ballpark, confirm with title.</>,
+        <><B>Tax Reassessment forecaster</B> (under Transaction Details) projects how much the property-tax bill steps up after a sale, by state/county reset rules — grounded in the deal's real current bill. Where we don't have county-specific data it says "confirm locally" rather than guess.</>,
+        <><B>Automatic data checks:</B> every OM extraction runs deterministic arithmetic tie-outs (NOI÷cap vs price, roster SF vs GLA, occupancy, weighted-avg rent, recoveries…). Contradictions surface in the deal's <B>"📝 to confirm"</B> banner; a clean run shows <B>"Data checks passed."</B> The portfolio-wide <B>Data Audit</B> (Analytics) re-runs them across every deal.</>,
         <><B>Cover & site plan</B> fit to screen, each with a 🗑 (with confirm). <B>Summary</B>, <B>Excel</B>, and <B>Find Sale</B> buttons export or research the deal; section titles show their source (OM vs. Census).</>,
       ]} />
     ),
@@ -181,9 +186,13 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "analytics", label: "Go to Analytics" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Analytics now lives in <B>two dropdown menus</B> in the top bar — <B>Portfolio Analytics ▾</B> (Portfolio Overview, Lease Rollover) and <B>Tenant Analytics ▾</B> (Tenant Analytics, Retailer Watchlist, Tenant Name Audit, Link Tenants) — each jumping straight to its page.</p>
+        <p style={{ margin:0 }}>Analytics lives in <B>two dropdown menus</B> in the top bar — <B>Portfolio Analytics ▾</B> (Portfolio Overview, Lease Rollover, Critical Dates, Co-Tenancy Cascade, Data Audit) and <B>Tenant Analytics ▾</B> (Tenant Analytics, Mark-to-Market, Retailer Watchlist, Tenant Name Audit, Link Tenants) — each jumping straight to its page.</p>
         <BriefList items={[
           <><B>Lease rollover chart</B> — GLA & rent expiring by year; click a year to drill into which tenants roll (sortable).</>,
+          <><B>📅 Critical Dates</B> — a portfolio-wide calendar of what's coming due: lease expirations, loan maturities, and pref-equity maturities, filterable by horizon (90 days / 6 months / 1 year…). Click any row to open the deal.</>,
+          <><B>📈 Mark-to-Market</B> — flags in-place rents sitting below your portfolio's median for the same brand, with the estimated annual $ upside to market — your re-leasing upside across the whole book.</>,
+          <><B>🔗 Co-Tenancy Cascade</B> — models which anchors, if they went dark, would trip co-tenancy / kickout rent relief or termination rights across the portfolio, and the rent exposed. Built from each deal's disclosed clauses plus any uploaded lease abstracts.</>,
+          <><B>🧮 Data Audit</B> — runs the deterministic arithmetic & consistency checks (NOI÷cap vs price, roster SF vs building GLA, occupancy, tax sanity…) across every deal at once and lists the contradictions to fix; click a row to jump to the deal.</>,
           <><B>Tenant & Parent concentration</B> — top exposure by rent or store count; an eye-slash toggle excludes an outlier and stats recompute live.</>,
           <><B>Pinned search</B> (Tenant Analytics) — jump to any tenant or parent; tenant/parent pages show a description plus all locations.</>,
           <><B>🔗 Link Tenants</B> is now its <B>own page</B> (Tenant Analytics ▾ → Link Tenants): live-search the full tenant list, tick two spellings of the same brand (e.g. <em>Walmart</em> / <em>Wal-Mart</em>), pick the name to keep, and Link — they merge everywhere. Existing links are listed below with <B>Unlink</B>.</>,
@@ -231,6 +240,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and an admin approves them under <B>Members</B> (they get an email that they're cleared). Logins now persist across updates.</>,
           <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps, all stamped in <B>Eastern time (ET)</B>; these also seed the deal-page <B>prepay & swap-breakage</B> estimates.</>,
           <><B>Admin → Members</B> now includes an <B>Upload activity</B> log — every file uploaded, when, ok/failed, and who — with a <B>CSV export</B> and a red badge on the Members button when there have been recent failed uploads.</>,
+          <><B>Search (⌘K / Ctrl-K)</B> — the search box in the top bar jumps to any deal or tenant across the whole library in a couple keystrokes.</>,
           <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
           <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,
           <><B>Verified fields</B> — lock a confirmed figure against future re-extractions.</>,

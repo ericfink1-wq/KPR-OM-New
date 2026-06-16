@@ -313,6 +313,12 @@ function AppInner() {
   }, [view, resetToList]);
 
   const handleOpenDeal = useCallback((id: string) => {
+    // The deal detail view is only rendered under the Portfolio tab, so opening a
+    // deal from anywhere else (the Analyst launch page's deal tiles, Comps,
+    // Analytics, global search…) must switch to that tab — otherwise navigate()
+    // sets view="detail" while the current tab keeps showing its own content and
+    // "nothing happens."
+    setTab("portfolio");
     navigate({ type: "detail", dealId: id });
   }, [navigate]);
 
@@ -522,7 +528,7 @@ function AppInner() {
                 tenantName={view.tenantName}
                 deals={activeDeals}
                 onBack={goBack}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
+                onOpenDeal={d => handleOpenDeal(d.id)}
                 onParentClick={name => handleOpenTenant("__parent__" + name)}
               />
             ) : view.type === "parent" ? (
@@ -531,7 +537,7 @@ function AppInner() {
                 deals={activeDeals}
                 onBack={goBack}
                 onTenantClick={handleOpenTenant}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
+                onOpenDeal={d => handleOpenDeal(d.id)}
               />
             ) : view.type === "tenant-audit" ? (
               <div>
@@ -548,7 +554,7 @@ function AppInner() {
                 <TenantLink deals={activeDeals} />
               </div>
             ) : view.type === "rollover-year" ? (
-              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={id => { navigate({ type: "detail", dealId: id }); }} onTenantClick={handleOpenTenant} />
+              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={handleOpenDeal} onTenantClick={handleOpenTenant} />
             ) : (
               <>
                 {analyticsView === "portfolio" ? (
@@ -672,7 +678,7 @@ function AppInner() {
                 lenderName={view.lenderName}
                 deals={activeDeals}
                 onBack={goBack}
-                onOpenDeal={d => navigate({ type: "detail", dealId: d.id })}
+                onOpenDeal={d => handleOpenDeal(d.id)}
               />
             </div>
           )}
@@ -683,7 +689,7 @@ function AppInner() {
                 tenantName={view.tenantName}
                 deals={activeDeals}
                 onBack={goBack}
-                onOpenDeal={d => navigate({ type: "detail", dealId: d.id })}
+                onOpenDeal={d => handleOpenDeal(d.id)}
                 onParentClick={name => handleOpenTenant("__parent__" + name)}
               />
             </div>
@@ -696,7 +702,7 @@ function AppInner() {
                 deals={deals}
                 onBack={goBack}
                 onTenantClick={handleOpenTenant}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
+                onOpenDeal={d => handleOpenDeal(d.id)}
               />
             </div>
           )}
