@@ -130,30 +130,41 @@ function AppInner() {
   const [chatOpen, setChatOpen] = useState(false);
   const [viewStack, setViewStack] = useState<View[]>([{ type: "list" }]);
   const view = viewStack[viewStack.length - 1];
-  const navigate = useCallback((v: View) => setViewStack(prev => [...prev, v]), []);
-  const goBack = useCallback(() => setViewStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev), []);
-  const resetToList = useCallback(() => setViewStack([{ type: "list" }]), []);
 
-  // Make the BROWSER back button mirror the in-page Back button: when there's a
-  // view to pop, intercept the back navigation and go back in-app instead of
-  // leaving the site; at the root view, let the browser navigate away normally.
-  const canGoBackRef = useRef(false);
-  canGoBackRef.current = viewStack.length > 1;
+  // History-backed navigation. Every navigate() pushes a REAL browser-history entry
+  // carrying the full view stack, so the browser Back/Forward buttons and the in-app
+  // Back button all walk the same history and can't disagree. (Before, only a single
+  // sentinel entry existed, so the browser Back button effectively did nothing.)
+  const navigate = useCallback((v: View) => {
+    setViewStack(prev => {
+      const next = [...prev, v];
+      try { window.history.pushState({ kprStack: next }, ""); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+  // In-app Back routes THROUGH the browser history (history.back() fires popstate),
+  // so it always lands on the exact previous screen, same as the browser Back button.
+  const goBack = useCallback(() => {
+    const st = window.history.state as { kprStack?: View[] } | null;
+    if (st?.kprStack && st.kprStack.length > 1) window.history.back();
+    else setViewStack([{ type: "list" }]);
+  }, []);
+  const resetToList = useCallback(() => {
+    try { window.history.replaceState({ kprStack: [{ type: "list" }] }, ""); } catch { /* ignore */ }
+    setViewStack([{ type: "list" }]);
+  }, []);
+
   useEffect(() => {
-    // Seed one sentinel entry so the first Back press has something to consume.
-    window.history.pushState({ kpr: true }, "");
-    const onPop = () => {
-      if (canGoBackRef.current) {
-        goBack();
-        // Re-arm: keep a sentinel in place so subsequent Back presses stay caught
-        // until we're at the root view.
-        window.history.pushState({ kpr: true }, "");
-      }
-      // else: no in-app history left — allow the browser to leave the page.
+    // Seed the current (root) entry's state so a Back to it restores the list.
+    try { window.history.replaceState({ kprStack: [{ type: "list" }] }, ""); } catch { /* ignore */ }
+    const onPop = (e: PopStateEvent) => {
+      const s = e.state && Array.isArray((e.state as { kprStack?: unknown }).kprStack)
+        ? (e.state as { kprStack: View[] }).kprStack : null;
+      setViewStack(s && s.length ? s : [{ type: "list" }]);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [goBack]);
+  }, []);
 
   // Tutorial "Go to" links → jump to the relevant page. On desktop the help panel
   // stays open (it's a side panel); on mobile HelpModal closes itself after calling this.
@@ -301,7 +312,6 @@ function AppInner() {
 
   const handleOpenDeal = useCallback((id: string) => {
     navigate({ type: "detail", dealId: id });
-    setTab("portfolio");
   }, [navigate]);
 
   // Typing a question into the bottom ask bar (or "Ask about this property") opens
@@ -314,20 +324,17 @@ function AppInner() {
 
   const handleCompare = useCallback((ids: string[]) => {
     navigate({ type: "compare", dealIds: ids });
-    setTab("portfolio");
   }, [navigate]);
 
   const handleOpenTenant = useCallback((name: string) => {
     if (name.startsWith("__lender__")) {
       navigate({ type: "lender", lenderName: name.replace("__lender__", "") });
-      setTab("portfolio");
     } else if (name.startsWith("__parent__")) {
       navigate({ type: "parent", parentName: name.replace("__parent__", "") });
     } else {
       navigate({ type: "tenant", tenantName: name });
-      if (tab !== "analytics") setTab("portfolio");
     }
-  }, [navigate, tab]);
+  }, [navigate]);
 
   const handleLogout = async () => {
     await apiLogout();
@@ -513,7 +520,7 @@ function AppInner() {
                 tenantName={view.tenantName}
                 deals={activeDeals}
                 onBack={goBack}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
                 onParentClick={name => handleOpenTenant("__parent__" + name)}
               />
             ) : view.type === "parent" ? (
@@ -522,7 +529,7 @@ function AppInner() {
                 deals={activeDeals}
                 onBack={goBack}
                 onTenantClick={handleOpenTenant}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
               />
             ) : view.type === "tenant-audit" ? (
               <div>
@@ -539,7 +546,7 @@ function AppInner() {
                 <TenantLink deals={activeDeals} />
               </div>
             ) : view.type === "rollover-year" ? (
-              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={id => { navigate({ type: "detail", dealId: id }); setTab("portfolio"); }} onTenantClick={handleOpenTenant} />
+              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={id => { navigate({ type: "detail", dealId: id }); }} onTenantClick={handleOpenTenant} />
             ) : (
               <>
                 {analyticsView === "portfolio" ? (
@@ -685,7 +692,7 @@ function AppInner() {
                 deals={deals}
                 onBack={goBack}
                 onTenantClick={handleOpenTenant}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
               />
             </div>
           )}
