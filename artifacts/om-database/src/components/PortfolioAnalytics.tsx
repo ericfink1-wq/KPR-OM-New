@@ -303,6 +303,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [staleCount, setStaleCount] = useState(0);
   const [refreshingStale, setRefreshingStale] = useState(false);
   const [staleMsg, setStaleMsg] = useState<string | null>(null);
+  const [auditStats, setAuditStats] = useState<{ deals: number; issues: number; high: number }>({ deals: 0, issues: 0, high: 0 });
+  const [auditing, setAuditing] = useState(false);
+  const [auditMsg, setAuditMsg] = useState<string | null>(null);
   const [scope, setScope] = useState<"all" | "owned">("all");
 
   // Effective deal IDs: when Owned, use ownedDealIds intersected with any Deal Library filter
@@ -363,6 +366,28 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       .then(d => setStaleCount(d.count ?? 0))
       .catch(() => {});
   }, []);
+
+  const loadAuditStats = () => {
+    fetch("/api/deals/audit-stats", { credentials: "include" })
+      .then(r => r.json() as Promise<{ deals?: number; issues?: number; high?: number }>)
+      .then(d => setAuditStats({ deals: d.deals ?? 0, issues: d.issues ?? 0, high: d.high ?? 0 }))
+      .catch(() => {});
+  };
+  useEffect(() => { loadAuditStats(); }, []);
+
+  const handleReaudit = () => {
+    if (!window.confirm("Run the data-integrity audit across all deals? It's instant and token-free — it checks each deal's numbers tie out (roster SF vs GLA, occupancy, NOI ÷ cap vs price, rent roll-ups, per-tenant rent × SF, duplicate suites, cash-flow subtotals) and posts any contradictions to that deal's Import Review. Items you've already resolved are left alone.")) return;
+    setAuditing(true); setAuditMsg(null);
+    fetch("/api/deals/reaudit", { method: "POST", credentials: "include" })
+      .then(r => r.json() as Promise<{ ok: boolean; flagged?: number; added?: number; cleared?: number; error?: string }>)
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || "Audit failed");
+        setAuditMsg(`✓ ${d.flagged ?? 0} deal${(d.flagged ?? 0) === 1 ? "" : "s"} with issues · ${d.added ?? 0} new, ${d.cleared ?? 0} cleared`);
+        loadAuditStats();
+      })
+      .catch(e => setAuditMsg(`⚠ ${e.message}`))
+      .finally(() => setAuditing(false));
+  };
 
   const handleRefreshStale = () => {
     if (!window.confirm(`Refresh the written analysis for ${staleCount} deal${staleCount === 1 ? "" : "s"} that predate the latest scoring logic? This runs the cheap AI roster-analysis pass on each and may take a bit. (Your badges and score adjustments are already current — this only updates the written narrative and benchmark notes.)`)) return;
@@ -466,6 +491,14 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               {staleMsg && <span style={{ fontSize: 10.5, color: staleMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{staleMsg}</span>}
             </div>
           )}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <button onClick={handleReaudit} disabled={auditing} title="Token-free deterministic audit of EVERY deal: checks the numbers tie out — roster SF vs GLA, occupancy, NOI ÷ cap vs price, weighted-avg rent vs roll-up, per-tenant rent × SF, duplicate suites, cash-flow subtotals, recoveries roll-up. Contradictions post to each deal's Import Review; resolved items are left alone."
+              style={{ background: auditing ? "#f1eadc" : "transparent", border: `1px solid ${auditStats.deals > 0 ? "#f59e0b" : "#b8d49a"}`, color: auditing ? "#a89f8f" : (auditStats.deals > 0 ? "#92400e" : "#3f7a1f"), padding: "6px 12px", borderRadius: 7, cursor: auditing ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 12 }}>{auditStats.deals > 0 ? "⚠" : "✓"}</span>
+              {auditing ? "Auditing…" : auditStats.deals > 0 ? `Audit ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues})` : "Audit data integrity"}
+            </button>
+            {auditMsg && <span style={{ fontSize: 10.5, color: auditMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{auditMsg}</span>}
+          </div>
           {isAdmin && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
               <button onClick={handleRebuildComps} disabled={rebuildingComps} style={{ background: rebuildingComps ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuildingComps ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuildingComps ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>

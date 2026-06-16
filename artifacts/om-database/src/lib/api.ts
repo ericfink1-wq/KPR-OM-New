@@ -650,6 +650,22 @@ export async function apiStaleAnalysisCount(): Promise<{ count: number; currentV
   return resp.json() as Promise<{ count: number; currentVersion: number }>;
 }
 
+// Deterministic data-integrity audit across all existing deals (token-free).
+export async function apiAuditStats(): Promise<{ deals: number; issues: number; high: number }> {
+  const resp = await apiFetch(`/deals/audit-stats`);
+  if (!resp.ok) return { deals: 0, issues: 0, high: 0 };
+  return resp.json() as Promise<{ deals: number; issues: number; high: number }>;
+}
+
+export async function apiReauditDeals(): Promise<{ ok: boolean; scanned: number; flagged: number; added: number; cleared: number }> {
+  const resp = await apiFetch(`/deals/reaudit`, { method: "POST" });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Re-audit failed");
+  }
+  return resp.json() as Promise<{ ok: boolean; scanned: number; flagged: number; added: number; cleared: number }>;
+}
+
 export async function apiRefreshStaleAnalysis(): Promise<{ ok: boolean; refreshed: number; failed: number; total: number }> {
   const resp = await apiFetch(`/deals/refresh-stale-analysis`, { method: "POST" });
   if (!resp.ok) {

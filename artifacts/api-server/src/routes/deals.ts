@@ -8,6 +8,7 @@ import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "..
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from "../lib/demographics";
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
+import { auditExtraction, AUDIT_ID_PREFIX } from "../lib/extractionAudit";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
 
@@ -1172,6 +1173,71 @@ router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to refresh stale analysis");
     res.status(500).json({ error: "Failed to refresh stale analysis" });
+  }
+});
+
+// GET /api/deals/audit-stats — run the deterministic integrity audit over EVERY active
+// deal (no model, no tokens) and report how many have arithmetic contradictions. This
+// audits data ALREADY in the site (deals imported before the audit existed), live.
+router.get("/deals/audit-stats", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    let deals = 0, issues = 0, high = 0;
+    for (const r of rows) {
+      const d = r.data as Record<string, unknown>;
+      if (d.trashedAt || d._processing || d._processingError) continue;
+      const f = auditExtraction(d);
+      if (f.length) { deals++; issues += f.length; high += f.filter(q => q.severity === "high").length; }
+    }
+    res.json({ deals, issues, high });
+  } catch (err) {
+    req.log.error({ err }, "Failed to compute audit stats");
+    res.status(500).json({ error: "Failed to compute audit stats" });
+  }
+});
+
+// POST /api/deals/reaudit — re-run the integrity audit over every active deal and merge
+// the results into each deal's Import-Review questions. SELF-HEALING and token-free:
+//   • audit-* questions that no longer fail are removed,
+//   • audit-* questions you already resolved/dismissed are left alone (no re-nag),
+//   • AI questions and lease-risk validators are never touched,
+//   • new contradictions are added.
+router.post("/deals/reaudit", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    let scanned = 0, flagged = 0, added = 0, cleared = 0, changedDeals = 0;
+    for (const r of rows) {
+      const data = r.data as Record<string, unknown>;
+      if (data.trashedAt || data._processing || data._processingError) continue;
+      scanned++;
+      const fresh = auditExtraction(data);
+      const freshIds = new Set(fresh.map(q => q.id));
+      const existing = Array.isArray(data.reviewQuestions) ? (data.reviewQuestions as Array<Record<string, unknown>>) : [];
+      const kept = existing.filter(q => {
+        const id = String(q?.id || "");
+        if (!id.startsWith(AUDIT_ID_PREFIX)) return true;   // AI / lease-risk — keep
+        if (q?.resolvedAt) return true;                      // already resolved — keep, don't re-nag
+        return freshIds.has(id);                             // unresolved audit q: keep only if still failing
+      });
+      const keptIds = new Set(kept.map(q => String(q?.id || "")));
+      const newOnes = fresh.filter(q => !keptIds.has(q.id));
+      const next = [...kept, ...newOnes];
+      const clearedHere = existing.length - kept.length;     // unresolved audit qs that now pass
+      if (newOnes.length || clearedHere) {
+        added += newOnes.length;
+        cleared += clearedHere;
+        changedDeals++;
+        const updated = { ...data, reviewQuestions: next };
+        await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id));
+      }
+      const openAudit = next.filter(q => { const r = q as Record<string, unknown>; const id = String(r?.id || ""); return id.startsWith(AUDIT_ID_PREFIX) && !r?.resolvedAt; });
+      if (openAudit.length) flagged++;
+    }
+    req.log.info({ scanned, flagged, added, cleared, changedDeals }, "Bulk re-audit complete");
+    res.json({ ok: true, scanned, flagged, added, cleared });
+  } catch (err) {
+    req.log.error({ err }, "Failed to re-audit deals");
+    res.status(500).json({ error: "Failed to re-audit deals" });
   }
 });
 
