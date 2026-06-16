@@ -7,6 +7,10 @@ interface HelpModalProps {
   open: boolean;
   onClose: () => void;
   onNavigate?: (dest: HelpDest) => void;
+  // When true, the tutorial also shows the "Admin tools" section. Admin-only
+  // features are kept OUT of the regular sections and live only in that gated
+  // section, so a non-admin never sees actions they can't use.
+  isAdmin?: boolean;
 }
 
 function ExpandToggle({ open }: { open: boolean }) {
@@ -69,7 +73,7 @@ function TryAsking({ items }: { items: string[] }) {
   );
 }
 
-const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: React.ReactNode; goTo?: { dest: HelpDest; label: string } }[] = [
+const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: React.ReactNode; goTo?: { dest: HelpDest; label: string }; admin?: boolean }[] = [
   {
     id: 1,
     title: "Uploading OMs, rent rolls & sales reports",
@@ -92,7 +96,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     detail: (
       <DetailList items={[
         <><B>Smart sorting is automatic</B> — the four file types are detected by their content/name and merged into one deal. The rent roll's fresher rents win on shared tenants; nothing gets wiped.</>,
-        <><B>🎓 Teach the extractor</B> (admin, on a deal's <B>Actions</B> menu) — caught a mistake? Write a rule in plain English (e.g. "always capture anchor tenants even on a separate page") and the AI applies it to every future extraction. It learns from your corrections.</>,
+        <><B>Confirm import details</B> — if the AI was unsure of a value, the deal shows a <B>"📝 to confirm"</B> banner. Confirm, dismiss, or fix it (type the value, or describe the change in plain English). This corrects <em>this deal only</em> — it doesn't change how future OMs are read.</>,
         <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → Re-run extraction</B>, or fix any value with its pencil icon. A very large/complex OM is capped at ~5 min so it can't churn tokens; if it stops early it flags the roster for review.</>,
         <><B>Rent roll vs. OM:</B> a rent roll becomes your verified roster (teal "RENT ROLL" tag); a later OM re-extraction won't overwrite it. Analysis auto-refreshes after an import, so the grade/narrative reflect the final merged roster.</>,
         <><B>Sales reports stack by year</B> — upload one annually to build a sales trend.</>,
@@ -111,7 +115,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
           <><B>Cards</B> show anchor, SF, occupancy, WALT, NOI, cap rate, market, and a red-flag count.</>,
           <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches the <B>columns you see</B> (property, status, city, state, MSA, anchor, seller) plus a deal's saved <B>aliases</B>, so an alternate name still finds it.</>,
           <><B>Compare</B> — pick 2+ deals for a side-by-side: best value per metric highlighted, KPR's own economics next to the OM figures, shared tenants, an AI read, and Excel export.</>,
-          <><B>Bulk actions</B> — checkboxes (on hover) to re-status or delete several at once.</>,
+          <><B>Bulk actions</B> — checkboxes (on hover) to re-status several deals at once, find their sale records, or pull demographics.</>,
         ]} />
       </>
     ),
@@ -119,7 +123,6 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <DetailList items={[
         <><B>Red-flag badges</B> are AI-generated during extraction (rollover concentration, below-market rent, gross leases, co-tenancy risk) — click a deal for the full list.</>,
         <><B>The nav count</B> ("Portfolio (28)") is your whole library including Prospects/Passed, not just owned.</>,
-        <><B>Deleting is permanent</B> (with a confirm) — there's no Trash, though an automatic snapshot is taken before each delete for admin recovery.</>,
       ]} />
     ),
   },
@@ -237,9 +240,8 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     brief: (
       <>
         <BriefList items={[
-          <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and an admin approves them under <B>Members</B> (they get an email that they're cleared). Logins now persist across updates.</>,
+          <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and get an email once they're approved. Logins now persist across updates.</>,
           <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps, all stamped in <B>Eastern time (ET)</B>; these also seed the deal-page <B>prepay & swap-breakage</B> estimates.</>,
-          <><B>Admin → Members</B> now includes an <B>Upload activity</B> log — every file uploaded, when, ok/failed, and who — with a <B>CSV export</B> and a red badge on the Members button when there have been recent failed uploads.</>,
           <><B>Search (⌘K / Ctrl-K)</B> — the search box in the top bar jumps to any deal or tenant across the whole library in a couple keystrokes.</>,
           <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
           <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,
@@ -257,15 +259,43 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       ]} />
     ),
   },
+  {
+    id: 8,
+    admin: true,
+    title: "Admin tools",
+    brief: (
+      <>
+        <p style={{ margin:0 }}>You're seeing this because you're signed in as an <B>admin</B> (the 5-tap-logo + password gate). These cover the destructive and account-level actions — <B>regular users never see them.</B></p>
+        <BriefList items={[
+          <><B>🎓 Teach the extractor</B> (a deal's <B>Actions</B> menu) — caught a recurring mistake? Write a rule in plain English (e.g. "always capture anchor tenants even on a separate page") and the AI follows it on <B>every future OM extraction.</B> This is the only thing that changes future methodology — the everyday "Confirm import details" review just fixes the one deal.</>,
+          <><B>Delete deals</B> — deletion is admin-only and requires <B>typing DELETE</B> (single deal or bulk). It's permanent — there's no Trash — but an automatic <B>snapshot</B> is taken first, so it's recoverable from Backup → Restore a snapshot.</>,
+          <><B>Members</B> (top bar) — <B>approve or decline</B> access requests, grant/remove admin, and review the <B>Upload activity</B> log (every file, when, ok/failed, who) with a <B>CSV export</B> and a red badge when uploads recently failed.</>,
+          <><B>Backup ▾</B> (top bar) — <B>Full backup</B> (.json, includes images), <B>CSV export</B>, <B>Restore from backup</B> (merges by deal id — never deletes existing deals), <B>Restore a snapshot</B> (auto-saved before imports, deletes & restores), <B>Clean up addresses</B>, and the <B>Feedback inbox</B>.</>,
+          <><B>Rebuild index / Rebuild comps index</B> (Portfolio Analytics) — rebuild the tenant/search index or the comp database after a large change. Deterministic and token-free. ("Score unscored," "Refresh outdated analyses," and "Audit data integrity" on that page are open to everyone.)</>,
+          <><B>House View</B> — edit or rebuild the portfolio "house view" the analyst applies to grades, strengths, risks & pricing (regular users see it read-only).</>,
+        ]} />
+      </>
+    ),
+    detail: (
+      <DetailList items={[
+        <><B>Destructive actions are gated for a reason</B> — delete, restore, and the index rebuilds all sit behind admin. The auto-snapshots (before every import, delete, and restore) are the safety net; <B>Backup → Restore a snapshot</B> rolls back a bad import or an accidental delete.</>,
+        <><B>Teaching the extractor is free</B> to save and applies going forward only — it never rewrites existing deals. Rebuilding an index is also token-free; re-running an extraction (to pick up a new rule on an old deal) does cost tokens.</>,
+        <><B>Admin is per-person</B> — grant it under Members only to people who should be able to delete and restore. The gate is a convenience lock, not a security boundary.</>,
+      ]} />
+    ),
+  },
 ];
 
-function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop }: {
+function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop, isAdmin }: {
   onNavigate?: (dest: HelpDest) => void;
   isDesktop?: boolean;
+  isAdmin?: boolean;
   expanded: Set<number>;
   toggle: (id: number) => void;
   onClose: () => void;
 }) {
+  // Admin-only sections appear only when signed in as admin.
+  const sections = SECTIONS.filter(s => !s.admin || isAdmin);
   return (
     <>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
@@ -282,12 +312,12 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop }: {
       </div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-        {SECTIONS.map(section => {
+        {sections.map(section => {
           const isOpen = expanded.has(section.id);
           return (
-            <div key={section.id} style={{ border:"1px solid #e3dccd", borderRadius:10, overflow:"hidden", background:"#fff" }}>
+            <div key={section.id} style={{ border: section.admin ? "1px solid #d8c2a0" : "1px solid #e3dccd", borderRadius:10, overflow:"hidden", background:"#fff" }}>
               {/* Header row: title toggles open/close; the "Go to" action sits on the right. */}
-              <div style={{ display:"flex", alignItems:"center", gap:11, background:"#faf7f0", padding:"11px 14px", minHeight:48 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:11, background: section.admin ? "#fbf4e6" : "#faf7f0", padding:"11px 14px", minHeight:48 }}>
                 <button
                   type="button"
                   onClick={() => toggle(section.id)}
@@ -295,8 +325,11 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop }: {
                   aria-controls={`help-detail-${section.id}`}
                   style={{ display:"flex", alignItems:"center", gap:11, flex:1, minWidth:0, background:"transparent", border:"none", cursor:"pointer", padding:0, textAlign:"left", fontFamily:"'Inter',-apple-system,sans-serif" }}
                 >
-                  <Chip n={section.id} />
-                  <span style={{ flex:1, fontWeight:700, color:"#3f7a1f", fontSize:14 }}>{section.title}</span>
+                  {section.admin
+                    ? <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:26, height:26, background:"#9a6a1e", borderRadius:4, color:"#fff", fontSize:13, flexShrink:0 }}>🔒</span>
+                    : <Chip n={section.id} />}
+                  <span style={{ flex:1, fontWeight:700, color: section.admin ? "#9a6a1e" : "#3f7a1f", fontSize:14 }}>{section.title}</span>
+                  {section.admin && <span style={{ flexShrink:0, fontSize:9, fontWeight:700, letterSpacing:"0.08em", color:"#9a6a1e", background:"#fff", border:"1px solid #e0c9a8", borderRadius:4, padding:"2px 6px" }}>ADMIN ONLY</span>}
                 </button>
                 {section.goTo && onNavigate && (
                   <button
@@ -353,7 +386,7 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop }: {
   );
 }
 
-export default function HelpModal({ open, onClose, onNavigate }: HelpModalProps) {
+export default function HelpModal({ open, onClose, onNavigate, isAdmin }: HelpModalProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [panelIn, setPanelIn] = useState(false);
@@ -412,7 +445,7 @@ export default function HelpModal({ open, onClose, onNavigate }: HelpModalProps)
           transition: "transform 0.2s ease",
         }}
       >
-        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} onNavigate={onNavigate} isDesktop={true} />
+        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} onNavigate={onNavigate} isDesktop={true} isAdmin={isAdmin} />
       </div>
     );
   }
@@ -430,7 +463,7 @@ export default function HelpModal({ open, onClose, onNavigate }: HelpModalProps)
         aria-labelledby="help-modal-title"
         style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1001, width:"min(680px, calc(100vw - 32px))", maxHeight:"85vh", overflowY:"auto", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", padding:"26px 26px 22px", fontFamily:"'Inter',-apple-system,sans-serif" }}
       >
-        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} onNavigate={onNavigate} isDesktop={false} />
+        <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} onNavigate={onNavigate} isDesktop={false} isAdmin={isAdmin} />
       </div>
     </>
   );

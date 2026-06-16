@@ -487,7 +487,7 @@ function AppInner() {
         onAnalyticsNav={onAnalyticsNav}
         onOpenSearch={() => setSearchOpen(true)}
       />
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} />
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} isAdmin={isAdmin} />
       {closingCalcOpen && <ClosingCostEstimator deals={deals} onClose={() => setClosingCalcOpen(false)} />}
       {/* The deal page is crowded top (fixed action bar + title) and the toast
           would cover them at scroll-top — anchor it to the bottom there, clear of
