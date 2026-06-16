@@ -386,8 +386,8 @@ export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
   // Pennsylvania — no state cycle; each county runs a base year + Common Level Ratio.
   "PA|philadelphia": { assessmentCycleYears: 1, assessmentRatioCommercialPct: 100, confidence: "high",
     note: "Philadelphia (AVI): assessed at 100% of market, updated roughly annually by the OPA — closer to a market-value system than the rest of PA." },
-  "PA|allegheny": { assessmentCycleYears: 0, assessmentRatioCommercialPct: null, confidence: "medium",
-    note: "Allegheny County (Pittsburgh): 2012 base year; the annually-published Common Level Ratio bridges to market. A high purchase price commonly draws a school-district appeal." },
+  "PA|allegheny": { assessmentCycleYears: 0, assessmentRatioCommercialPct: 50.14, confidence: "high",
+    note: "Allegheny County (Pittsburgh): 2012 base year; CLR 50.14% (2024, eff. 7/1/2025) bridges to market. A high purchase price commonly draws a school-district appeal." },
   // PA Common Level Ratios = the 2024 CLR (effective 7/1/2025–6/30/2026); assessed ÷
   // market. PA republishes these every July, so they're dated — verify the current-year
   // CLR for a live deal. No sale reset in PA, but a high price commonly draws a
@@ -454,6 +454,42 @@ export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
   // Monmouth/Gloucester); it follows standard NJ (no fixed cycle, equalization ratio).
   "NJ|morris": { assessmentCycleYears: 0, note: "Morris County (incl. Rockaway): standard NJ — NO fixed cycle and NOT in the annual-reassessment Demonstration Program, so no automatic sale reset. Apply the municipality's equalization ratio; a reval is ordered only when the assessment/sales ratio drifts.", confidence: "high" },
 };
+
+// ── Pennsylvania — FULL 2024 Common Level Ratio table (all 67 counties) ────────
+// Source: PA State Tax Equalization Board, "RATIO-2024" (effective 7/1/2025–6/30/2026),
+// loaded from the official table. The CLR (assessed ÷ market) is a SINGLE uniform ratio
+// per county — PA's constitutional uniformity clause bars a separate commercial class —
+// so it applies to commercial as-is. PA has no sale reset; a high purchase price draws a
+// school-district appeal (the real post-purchase mechanism). CLRs republish each July —
+// treat as dated and verify the current-year figure for a live deal.
+const PA_CLR_2024: Record<string, number> = {
+  adams: 72.44, allegheny: 50.14, armstrong: 30.56, beaver: 77.13, bedford: 54.52,
+  berks: 34.37, blair: 85.80, bradford: 17.32, bucks: 5.86, butler: 6.00,
+  cambria: 12.18, cameron: 21.44, carbon: 17.91, centre: 17.10, chester: 31.84,
+  clarion: 11.23, clearfield: 17.94, clinton: 50.47, columbia: 14.27, crawford: 16.26,
+  cumberland: 67.80, dauphin: 40.42, delaware: 57.33, elk: 18.58, erie: 53.21,
+  fayette: 43.03, forest: 13.05, franklin: 7.68, fulton: 22.89, greene: 38.23,
+  huntingdon: 12.58, indiana: 75.32, jefferson: 20.02, juniata: 8.11, lackawanna: 5.68,
+  lancaster: 53.43, lawrence: 46.96, lebanon: 54.15, lehigh: 49.40, luzerne: 86.20,
+  lycoming: 46.94, mckean: 59.43, mercer: 11.11, mifflin: 20.91, monroe: 45.47,
+  montgomery: 30.76, montour: 46.23, northampton: 17.01, northumberland: 9.63, perry: 57.70,
+  philadelphia: 90.70, pike: 9.18, potter: 16.54, schuylkill: 18.86, snyder: 9.85,
+  somerset: 18.38, sullivan: 43.64, susquehanna: 17.74, tioga: 83.79, union: 46.84,
+  venango: 51.02, warren: 13.89, washington: 67.41, wayne: 72.34, westmoreland: 8.88,
+  wyoming: 11.46, york: 50.46,
+};
+// Fill any PA county not already given a richer hand-written entry above.
+for (const [cty, clr] of Object.entries(PA_CLR_2024)) {
+  const key = `PA|${cty}`;
+  if (COUNTY_TAX_OVERRIDES[key]) continue;
+  const name = cty === "mckean" ? "McKean" : cty.charAt(0).toUpperCase() + cty.slice(1);
+  COUNTY_TAX_OVERRIDES[key] = {
+    assessmentCycleYears: 0,
+    assessmentRatioCommercialPct: clr,
+    note: `${name} County, PA: 2024 Common Level Ratio ${clr}% (assessed ÷ market; STEB, eff. 7/1/2025). PA has no sale reset — a high purchase price commonly draws a school-district appeal. CLRs republish each July; verify the current-year figure.`,
+    confidence: "high",
+  };
+}
 
 export function getCountyOverride(state: string | null | undefined, county: string | null | undefined): CountyTaxOverride | null {
   if (!state || !county) return null;
