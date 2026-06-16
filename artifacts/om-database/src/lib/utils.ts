@@ -855,7 +855,7 @@ export function reimbursementFlag(text: string | null | undefined): ReimbFlag | 
     .replace(/\bgross(ed)?[- ]?up\b/gi, " ")
     .replace(/\bgross\s+(leasable|rentable|floor)\s+area\b/gi, " ");
   const grossLease = /\bgross\s+lease\b|\bfull[- ]?service\s+gross\b|\bfully\s+gross\b|\bmodified\s+gross\b|landlord\s+(pays|bears|absorbs)\s+all|no\s+pass-?through|no\s+(expense\s+)?reimbursement|no\s+recovery|(^|[^a-z])gross([^a-z]|$)/i.test(cleaned);
-  const net = /\b(triple\s*net|nnn|net\s+lease|pro-?\s?rata|\bprs\b|proportionate\s+share|operating\s+cost\s+charge|\boc\s+charge\b|base\s+year|reimburse|tenant'?s\s+(pro-?rata\s+)?share|tenant\s+(pays|shall\s+pay|bears|carries))/i.test(blob);
+  const net = /\b(triple\s*net|nnn|net(?:\s+lease)?\b|pro-?\s?rata|\bprs\b|proportionate\s+share|operating\s+cost\s+charge|\boc\s+charge\b|base\s+year|reimburse|tenant'?s\s+(pro-?rata\s+)?share|tenant\s+(pays|shall\s+pay|bears|carries))/i.test(blob);
   const fixedCam = /\bfixed[- ]?cam\b|\bflat[- ]?cam\b|\bfixed\s+expense\b/i.test(blob)
     || (/(operating\s+cost\s+charge|\boc\s+charge\b)/i.test(blob) && /\b(in\s+lieu|not\s+(a\s+|an\s+)?(variable|open|pro-?rata)|fixed)\b/i.test(blob));
   if (grossLease && !net) return { label: "GROSS", method: "Gross", warn: true, color: "#b91c1c", bg: "#fdecea", tip: "Gross lease — landlord absorbs expense growth (no recovery)." };
