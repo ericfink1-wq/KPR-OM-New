@@ -83,7 +83,7 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
   if (totalSF != null && totalSF > 0 && rosterSF > 0) {
     const gap = totalSF - rosterSF;
     const pct = Math.abs(gap) / totalSF;
-    if (gap > 0 && pct > 0.03 && gap > 3000) {
+    if (gap > 0 && pct > 0.04 && gap > 5000) {
       out.push({
         id: "audit-sf-gla-short", source: "check", severity: "high",
         field: "Tenant roster completeness",
@@ -91,7 +91,7 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
         detail: `Occupied ${sf(occupiedSF)} + vacant ${sf(vacantSF)} = ${sf(rosterSF)}, which is short of the ${sf(totalSF)} GLA. A dropped tenant, an un-captured vacancy, or merged vacant suites would cause this — check against the rent roll / stacking plan.`,
         suggestedValue: null, target: null,
       });
-    } else if (gap < 0 && pct > 0.03 && -gap > 3000) {
+    } else if (gap < 0 && pct > 0.04 && -gap > 5000) {
       out.push({
         id: "audit-sf-gla-over", source: "check", severity: "medium",
         field: "Tenant roster vs GLA",
@@ -141,7 +141,7 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
   const statedPSF = num(deal.weightedAvgRentPSF);
   if (statedPSF != null && statedPSF > 0 && sumRent > 0 && occupiedSF > 0) {
     const computed = sumRent / occupiedSF;
-    if (Math.abs(computed - statedPSF) / statedPSF > 0.12) {
+    if (Math.abs(computed - statedPSF) / statedPSF > 0.15) {
       out.push({
         id: "audit-avg-rent-psf", source: "check", severity: "medium",
         field: "Weighted-avg rent PSF",
@@ -157,8 +157,11 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
   for (const t of occupied) {
     const psf = num(t.rentPerSF); const tsf = num(t.sf); const ann = num(t.annualRent);
     if (psf != null && psf > 0 && tsf != null && tsf > 0 && ann != null && ann > 1000) {
-      const pct = Math.abs(psf * tsf - ann) / ann;
-      if (pct > 0.10) mism.push({ t, pct, psf, tsf, ann });
+      const absGap = Math.abs(psf * tsf - ann);
+      const pct = absGap / ann;
+      // Need BOTH a material % AND a material $ gap — rounding and small inline tenants
+      // shouldn't fire; real OCR / wrong-column slips show up as large dollar gaps.
+      if (pct > 0.15 && absGap > 10000) mism.push({ t, pct, psf, tsf, ann });
     }
   }
   mism.sort((a, b) => b.pct - a.pct);
@@ -270,8 +273,11 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       const egr = num(cf[k]?.egr), ox = num(cf[k]?.operatingExpenses), rn = num(cf[k]?.noi);
       if (egr != null && egr > 0 && ox != null && rn != null) {
         const imp = egr - ox;
-        const d = Math.abs(imp - rn) / Math.max(Math.abs(rn), Math.abs(imp), 1);
-        if (d > 0.05 && (!worst || d > worst.d)) worst = { k, egr, ox, rn, imp, d };
+        const gapd = Math.abs(imp - rn);
+        const d = gapd / Math.max(Math.abs(rn), Math.abs(imp), 1);
+        // A CF's NOI can legitimately differ from EGR−OpEx by small amounts (reserves,
+        // line-item mapping) — only flag a material gap in BOTH % and $.
+        if (d > 0.08 && gapd > 25000 && (!worst || d > worst.d)) worst = { k, egr, ox, rn, imp, d };
       }
     }
     if (worst) {
@@ -289,9 +295,11 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
   // partial and would falsely read low).
   const withReimb = occupied.filter(t => num(t.expenseReimbursements) != null);
   const nnn = num(deal.nnnRecoveries);
-  if (nnn != null && nnn > 0 && occupied.length >= 4 && withReimb.length >= Math.max(3, Math.ceil(occupied.length * 0.6))) {
+  if (nnn != null && nnn > 0 && occupied.length >= 5 && withReimb.length >= Math.max(4, Math.ceil(occupied.length * 0.8))) {
     const sumReimb = withReimb.reduce((s, t) => s + (num(t.expenseReimbursements) ?? 0), 0);
-    if (sumReimb > 0 && Math.abs(sumReimb - nnn) / nnn > 0.15) {
+    // Recoveries rarely roll up cleanly (vacancy, gross-up, CAM caps, admin fees), so
+    // only a LARGE divergence is worth flagging.
+    if (sumReimb > 0 && Math.abs(sumReimb - nnn) / nnn > 0.30) {
       out.push({
         id: "audit-recoveries-rollup", source: "check", severity: "low", field: "Recoveries roll-up",
         question: `The stated NNN recovery line is ${usd(nnn)}, but the tenants' reimbursements roll up to ${usd(sumReimb)} (${Math.round(Math.abs(sumReimb - nnn) / nnn * 100)}% off). Reconcile.`,

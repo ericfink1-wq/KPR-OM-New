@@ -306,6 +306,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [auditStats, setAuditStats] = useState<{ deals: number; issues: number; high: number; breakdown: { key: string; label: string; count: number }[] }>({ deals: 0, issues: 0, high: 0, breakdown: [] });
   const [auditing, setAuditing] = useState(false);
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
+  const [showAuditBreakdown, setShowAuditBreakdown] = useState(false);
   const [scope, setScope] = useState<"all" | "owned">("all");
 
   // Effective deal IDs: when Owned, use ownedDealIds intersected with any Deal Library filter
@@ -499,8 +500,13 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             </button>
             {auditMsg && <span style={{ fontSize: 10.5, color: auditMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{auditMsg}</span>}
             {auditStats.breakdown.length > 0 && (
+              <button onClick={() => setShowAuditBreakdown(s => !s)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
+                {showAuditBreakdown ? "▴ hide breakdown" : "▾ what's flagged"}
+              </button>
+            )}
+            {showAuditBreakdown && auditStats.breakdown.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end", maxWidth: 360 }}>
-                {auditStats.breakdown.slice(0, 8).map(b => (
+                {auditStats.breakdown.map(b => (
                   <span key={b.key} title={b.key} style={{ fontSize: 9.5, color: "#6f6a5f", background: "#f6f1e7", border: "1px solid #e7e0d2", borderRadius: 10, padding: "1px 7px", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
                     {b.label} · <b style={{ color: "#383a37" }}>{b.count}</b>
                   </span>
