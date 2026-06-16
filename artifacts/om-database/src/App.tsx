@@ -65,6 +65,7 @@ const TenantAnalytics = lazyWithReload(() => import("./components/TenantAnalytic
 const RetailerWatchlist = lazyWithReload(() => import("./components/RetailerWatchlist"));
 const ParentCompanyView = lazyWithReload(() => import("./components/ParentCompanyView"));
 const CompareView = lazyWithReload(() => import("./components/CompareView"));
+const DataAuditView = lazyWithReload(() => import("./components/DataAuditView"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
@@ -190,6 +191,7 @@ function AppInner() {
     else if (dest === "critical-dates") setAnalyticsView("calendar");
     else if (dest === "mark-to-market") setAnalyticsView("marktomarket");
     else if (dest === "cotenancy-cascade") setAnalyticsView("cotenancy");
+    else if (dest === "data-audit") setAnalyticsView("audit");
     else setAnalyticsView("tenant");
     if (dest === "lease-rollover") {
       setTimeout(() => document.getElementById("section-lease-rollover")?.scrollIntoView({ behavior: "smooth", block: "start" }), 140);
@@ -206,7 +208,7 @@ function AppInner() {
   const [closingCalcOpen, setClosingCalcOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy">("tenant");
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit">("tenant");
 
   // Scroll analytics content to top whenever the view changes
   useEffect(() => {
@@ -557,6 +559,8 @@ function AppInner() {
                   <MarkToMarket deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "cotenancy" ? (
                   <CoTenancyCascade deals={activeDeals} onOpenDeal={handleOpenDeal} />
+                ) : analyticsView === "audit" ? (
+                  <DataAuditView deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "watchlist" ? (
                   <div style={{ padding: "24px 18px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
                     <RetailerWatchlist deals={activeDeals} onOpenDeal={handleOpenDeal} onTenantClick={handleOpenTenant} />
