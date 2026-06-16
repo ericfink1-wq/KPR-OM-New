@@ -107,7 +107,18 @@ export default function TwoFactorModal({ onClose, mandatory }: Props) {
           </>
         )}
 
-        {step === "on" && (
+        {/* Mandatory gate but already enrolled: don't strand on the disable screen —
+            confirm they're set and let them clear the gate (re-checks auth). */}
+        {step === "on" && mandatory && (
+          <>
+            <div style={{ fontSize: 13, color: "#0f7a3d", background: "#eef7ee", border: "1px solid #cfe9c4", borderRadius: 8, padding: "9px 11px", margin: "8px 0 12px", lineHeight: 1.45 }}>
+              ✓ Two-factor authentication is already <b>enabled</b> on your account — you're all set.
+            </div>
+            <button onClick={onClose} style={primaryBtn}>Continue</button>
+          </>
+        )}
+
+        {step === "on" && !mandatory && (
           <>
             <div style={{ fontSize: 13, color: "#0f7a3d", background: "#eef7ee", border: "1px solid #cfe9c4", borderRadius: 8, padding: "9px 11px", margin: "8px 0 12px" }}>
               ✓ Two-factor authentication is <b>enabled</b>. {backupRemaining} backup code{backupRemaining === 1 ? "" : "s"} remaining.

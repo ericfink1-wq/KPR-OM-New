@@ -473,7 +473,23 @@ router.post("/auth/admin-lock", (req, res) => {
 });
 
 // GET /api/auth/me
-router.get("/auth/me", (req, res) => {
+router.get("/auth/me", async (req, res) => {
+  // Reconcile the 2FA-enabled mirror against the DB for the authenticated user. A
+  // session created before the user enrolled (or otherwise stale) can carry a false
+  // twoFactorEnabled even though 2FA is on in the database — which would wrongly force
+  // the mandatory-enrollment gate and strand them on the "disable" screen. Refresh from
+  // the source of truth so the gate reflects reality.
+  let twoFactorEnabled = !!req.session.twoFactorEnabled;
+  if (req.session.authenticated && req.session.userId) {
+    try {
+      await ensureUsersTable();
+      const u = (await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)))[0];
+      if (u) {
+        twoFactorEnabled = !!u.totpEnabled;
+        req.session.twoFactorEnabled = twoFactorEnabled;
+      }
+    } catch { /* fall back to the session mirror */ }
+  }
   res.json({
     authenticated: !!req.session.authenticated,
     isAdmin: !!req.session.isAdmin,
@@ -482,7 +498,7 @@ router.get("/auth/me", (req, res) => {
     twoFactorPending: !!req.session.pending2faUserId && !req.session.authenticated,
     // 2FA is mandatory — an authenticated user who hasn't enrolled must set it up
     // before the app will let them in (enforced server-side by the router gate).
-    needs2faSetup: !!req.session.authenticated && !req.session.twoFactorEnabled,
+    needs2faSetup: !!req.session.authenticated && !twoFactorEnabled,
     // Periodic step-up: re-enter a code when the verification window has lapsed.
     needs2faReverify: !!req.session.authenticated && needs2faReverify(req.session),
   });
