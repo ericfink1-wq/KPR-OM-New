@@ -222,6 +222,35 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
             <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", color: C.sub, textTransform: "uppercase" }}>Multi-year forecast · through year {fc.years.length - 1}</div>
             <div style={{ fontSize: 9.5, color: C.sub }}>confidence: {fc.confidence}</div>
           </div>
+
+          {(() => {
+            // VERDICT — the actionable conclusion + a prominent flag when a big
+            // increase is coming. stepUp = stabilized (go-forward) bill vs today.
+            const stepUp = fc.stabilizedTaxes - fc.startTaxes;
+            const stepPct = fc.startTaxes > 0 ? Math.round((stepUp / fc.startTaxes) * 100) : 0;
+            const stepYear = fc.reassessYear ?? fc.abatementStepYear;
+            const hasStep = stepYear != null && stepUp > 0;
+            const major = hasStep && stepPct >= 15;
+            const tone = major ? { fg: C.red, bg: C.redBg, bd: C.redBd } : hasStep ? { fg: C.amber, bg: C.amberBg, bd: C.amberBd } : { fg: C.green, bg: C.greenBg, bd: C.greenBd };
+            const whenWord = fc.reassessYear != null
+              ? (r.resetsOnSale ? "on close (the sale resets it)" : `at the ~year ${stepYear} reassessment${fc.phaseInYears > 1 ? `, phasing in over ${fc.phaseInYears} yrs` : ""}`)
+              : `when the abatement burns off ~year ${stepYear}`;
+            return (
+              <div style={{ marginTop: 8, background: tone.bg, border: `1px solid ${tone.bd}`, borderRadius: 7, padding: "8px 10px" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, lineHeight: 1.45 }}>
+                  {hasStep
+                    ? `${major ? "⚠ Major tax increase ahead" : "Tax step ahead"} — the bill jumps ~+${stepPct}% to ${fmt$(fc.stabilizedTaxes)}/yr ${whenWord}.`
+                    : `No reassessment step — you're already assessed at ~market${r.impliedCurrentMarket != null ? ` (implied ~${fmt$(r.impliedCurrentMarket)} ≈ your price)` : ""}, so no sale surprise. Just ~${fc.growthPct}%/yr levy drift.`}
+                </div>
+                <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
+                  <b style={{ color: C.ink }}>Model:</b> {hasStep
+                    ? `underwrite ${fmt$(fc.stabilizedTaxes)}/yr stabilized (today's $) — NOT the in-place ${fmt$(fc.startTaxes)} — then ~${fc.growthPct}%/yr. By year ${fc.years.length - 1}: ${fmt$(fc.endTaxes)}.`
+                    : `${fmt$(fc.startTaxes)}/yr growing ~${fc.growthPct}%/yr → ${fmt$(fc.endTaxes)} by year ${fc.years.length - 1} (+${fc.totalIncreasePct}%).`}
+                </div>
+              </div>
+            );
+          })()}
+
           {fc.validation && (
             <div style={{ marginTop: 8, background: fc.validation.kind === "match" ? C.greenBg : fc.validation.kind === "understated" ? C.redBg : C.amberBg,
               border: `1px solid ${fc.validation.kind === "match" ? C.greenBd : fc.validation.kind === "understated" ? C.redBd : C.amberBd}`,
@@ -229,19 +258,30 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
               {fc.validation.kind === "match" ? "✓ " : "⚠ "}{fc.validation.message}
             </div>
           )}
-          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {([
-              ["Today", fmt$(fc.startTaxes)] as [string, string],
-              fc.reassessYear != null ? ([`Year ${fc.reassessYear} (reassess)`, fmt$(fc.years[Math.min(fc.reassessYear + fc.phaseInYears - 1, fc.years.length - 1)].taxes)] as [string, string]) : null,
-              fc.abatementStepYear != null ? ([`Year ${fc.abatementStepYear} (un-abated)`, fmt$(fc.years[Math.min(fc.abatementStepYear, fc.years.length - 1)].taxes)] as [string, string]) : null,
-              [`Year ${fc.years.length - 1}`, `${fmt$(fc.endTaxes)} · +${fc.totalIncreasePct}%`] as [string, string],
-            ].filter(Boolean) as [string, string][]).map(([l, v], i) => (
-              <div key={i} style={{ flex: "1 1 110px", background: C.panel, border: `1px solid ${C.line}`, borderRadius: 7, padding: "7px 9px", minWidth: 0 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.03em", color: C.sub, textTransform: "uppercase" }}>{l}</div>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, marginTop: 2 }}>{v}</div>
+
+          {/* Year-by-year ramp — shows HOW the bill phases in over the hold. */}
+          {(() => {
+            const ys = fc.years;
+            const maxT = Math.max(...ys.map(y => y.taxes), 1);
+            const minT = Math.min(...ys.map(y => y.taxes));
+            const colorFor = (p: string) => p === "reassessing" || p === "unabating" ? C.amber : p === "current" ? C.ink : "#bcd3a3";
+            return (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 44 }}>
+                  {ys.map((y) => {
+                    const h = 8 + 34 * ((y.taxes - minT) / ((maxT - minT) || 1));
+                    return <div key={y.year} title={`Year ${y.year}: ${fmt$(y.taxes)}/yr${y.phase !== "grown" && y.phase !== "current" ? ` (${y.phase})` : ""}`}
+                      style={{ flex: 1, height: h, minWidth: 4, background: colorFor(y.phase), borderRadius: "2px 2px 0 0", opacity: y.phase === "grown" ? 0.85 : 1 }} />;
+                  })}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 9, color: C.faint }}>
+                  <span>Today {fmt$(fc.startTaxes)}</span>
+                  {(fc.reassessYear != null || fc.abatementStepYear != null) && <span style={{ color: C.amber, fontWeight: 700 }}>▲ step ~yr {fc.reassessYear ?? fc.abatementStepYear}</span>}
+                  <span>Yr {fc.years.length - 1} {fmt$(fc.endTaxes)}</span>
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })()}
           <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 11, color: C.sub }}>Annual growth</span>
             <input value={growthPct} onChange={e => setGrowthPct(e.target.value)} placeholder={`${fc.growth.pct}`} inputMode="decimal"

@@ -63,6 +63,7 @@ export interface TaxForecast {
   abatementStepTo: number | null;       // the un-abated bill at that step (today's-rate $)
   startTaxes: number;
   endTaxes: number;
+  stabilizedTaxes: number;              // the go-forward bill to MODEL (today's $): un-abated / reassessed / current
   totalIncreasePct: number;
   confidence: Confidence;
   validation: TaxForecastValidation | null;  // forecast vs the OM's pro-forma tax line
@@ -194,7 +195,7 @@ export function forecastTaxes(input: TaxForecastInput): TaxForecast | null {
     years, growth, growthPct: g, reassessYear, phaseInYears,
     abatementStepYear: abActive ? abExpiry : null,
     abatementStepTo: abActive ? Math.round(unabatedTotal) : null,
-    startTaxes, endTaxes, totalIncreasePct,
+    startTaxes, endTaxes, stabilizedTaxes: Math.round(stabilized), totalIncreasePct,
     confidence, validation, assumptions,
   };
 }
