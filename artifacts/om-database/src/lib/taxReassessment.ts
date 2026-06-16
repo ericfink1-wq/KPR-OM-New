@@ -428,25 +428,10 @@ export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
   "GA|gwinnett": { assessmentCycleYears: 1, note: "Gwinnett: annual valuation at 40% of market; sale price = max next-year value.", confidence: "high" },
   // ── Portfolio counties (county-driven states where the local cycle differs from the
   // state default) — verified Jun 2026 against county-assessor schedules. ──
-  // Ohio — sexennial reappraisal + 3-yr update, staggered by county; commercial 35%.
-  // nextReassessmentYear = the next value event (reappraisal OR update), the year a
-  // deferred step toward a recent purchase price actually flows in. Verified Jun 2026
-  // against county-auditor schedules / the ODT 88-county table.
-  "OH|cuyahoga": { assessmentCycleYears: 6, nextReassessmentYear: 2027, note: "Cuyahoga (Cleveland; incl. Rocky River): last full sexennial reappraisal 2024 (avg ~+32%), triennial update due 2027 — model the next step at the 2027 update. Commercial 35% of market; HB126 curbs sale-based value challenges.", confidence: "high" },
-  "OH|franklin": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Franklin (Columbus): 2023 sexennial reappraisal (residential +43%), 2026 triennial update now landing, next reappraisal 2029. Commercial 35% of market; HB126 curbs sale-based challenges.", confidence: "high" },
-  "OH|hamilton": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Hamilton (Cincinnati): 2023 reappraisal, 2026 triennial update, next reappraisal 2029. Commercial 35% of market.", confidence: "high" },
-  "OH|butler": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Butler (Hamilton/West Chester, SW Ohio): 2020 reappraisal + 2023 update; next sexennial reappraisal 2026. Commercial 35% of market.", confidence: "high" },
-  "OH|clermont": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Clermont (SE Cincinnati metro): 2020 reappraisal + 2023 update; next reappraisal 2026. Commercial 35% of market.", confidence: "high" },
-  "OH|warren": { assessmentCycleYears: 6, nextReassessmentYear: 2027, note: "Warren (Mason/Springboro, between Cincinnati & Dayton): 2024 triennial update; next sexennial reappraisal ~2027. Commercial 35% of market.", confidence: "medium" },
-  "OH|delaware": { assessmentCycleYears: 6, note: "Delaware County (Columbus suburb; incl. Powell): on Ohio's 6-yr reappraisal + 3-yr update cycle, next sexennial moved to 2030. Commercial 35% of market; a fast-growth county, so updates run hot. Confirm the exact recent reappraisal/update year with the auditor.", confidence: "medium" },
+  // Ohio's 88 counties are loaded from the full ODT reappraisal schedule below (OH_REAPPRAISAL).
   // North Carolina — Wake left the 8-yr default; now a short cycle (no interim sale reset).
   "NC|wake": { assessmentCycleYears: 3, nextReassessmentYear: 2027, note: "Wake County (Raleigh; incl. Knightdale): reappraised 2024, NEXT revaluation 2027, then moving to a 2-yr cycle (2029…) — far shorter than NC's 8-yr default. 100% of market; interim sale-based changes barred, so the step lands at the 2027 reval.", confidence: "high" },
-  // NC values commercial + residential on the SAME cycle at 100% of market (no class
-  // split); next reval years verified Jun 2026 from county schedules.
-  "NC|catawba": { assessmentCycleYears: 4, nextReassessmentYear: 2027, note: "Catawba County (Hickory): 4-yr cycle, next revaluation 2027. 100% of market; no interim sale reset.", confidence: "high" },
-  "NC|moore": { assessmentCycleYears: 4, nextReassessmentYear: 2027, note: "Moore County (Pinehurst/Southern Pines): last revaluation 2023, next 2027 (4-yr). 100% of market; no interim sale reset.", confidence: "high" },
-  "NC|alamance": { nextReassessmentYear: 2027, note: "Alamance County (Burlington): next revaluation effective 2027. 100% of market; no interim sale reset. Confirm the cycle length.", confidence: "medium" },
-  "NC|rowan": { nextReassessmentYear: 2027, note: "Rowan County (Salisbury): next revaluation effective 2027. 100% of market; no interim sale reset. Confirm the cycle length.", confidence: "medium" },
+  // Other NC counties are loaded from the full NCDOR table below (NC_REVAL).
   // Virginia — NoVA jurisdictions reassess ANNUALLY, not the ~4-yr county default.
   "VA|arlington": { assessmentCycleYears: 1, note: "Arlington County (incl. Pentagon City): assesses ANNUALLY (Jan 1) at 100% of market — not Virginia's multi-year county default. A recent purchase price flows into value within a year; income-&-expense filing is requested under Code of VA §58.1-3294.", confidence: "high" },
   "VA|fairfax": { assessmentCycleYears: 1, note: "Fairfax County: annual (Jan 1) reassessment to 100% of market — value tracks the market yearly, so a recent sale flows in quickly.", confidence: "high" },
@@ -489,6 +474,97 @@ for (const [cty, clr] of Object.entries(PA_CLR_2024)) {
     note: `${name} County, PA: 2024 Common Level Ratio ${clr}% (assessed ÷ market; STEB, eff. 7/1/2025). PA has no sale reset — a high purchase price commonly draws a school-district appeal. CLRs republish each July; verify the current-year figure.`,
     confidence: "high",
   };
+}
+
+const titleCase = (s: string) => s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+
+// ── North Carolina — FULL NCDOR revaluation schedule (all 100 counties) ────────
+// Source: NC Dept of Revenue, "2025 NC County Property Tax Rates / Revaluation
+// Schedule" (Aug 2025). [latestReval, nextScheduledReval]. NC values ALL property
+// (commercial + residential) at 100% of market on the SAME cycle (no class split),
+// and bars interim sale-based changes (G.S. 105-287) — so a deferred step toward a
+// recent purchase price lands at the next scheduled revaluation.
+const NC_REVAL: Record<string, [number, number]> = {
+  "alamance": [2023, 2027], "alexander": [2023, 2027], "alleghany": [2021, 2027], "anson": [2018, 2026],
+  "ashe": [2023, 2027], "avery": [2022, 2027], "beaufort": [2025, 2031], "bertie": [2020, 2028],
+  "bladen": [2022, 2026], "brunswick": [2023, 2027], "buncombe": [2021, 2026], "burke": [2023, 2027],
+  "cabarrus": [2024, 2028], "caldwell": [2025, 2029], "camden": [2023, 2031], "carteret": [2025, 2029],
+  "caswell": [2024, 2028], "catawba": [2023, 2027], "chatham": [2025, 2029], "cherokee": [2020, 2028],
+  "chowan": [2022, 2026], "clay": [2018, 2026], "cleveland": [2025, 2029], "columbus": [2021, 2029],
+  "craven": [2023, 2028], "cumberland": [2025, 2033], "currituck": [2021, 2029], "dare": [2025, 2030],
+  "davidson": [2021, 2026], "davie": [2025, 2029], "duplin": [2025, 2030], "durham": [2025, 2029],
+  "edgecombe": [2024, 2032], "forsyth": [2025, 2029], "franklin": [2024, 2030], "gaston": [2023, 2027],
+  "gates": [2025, 2033], "graham": [2023, 2027], "granville": [2024, 2030], "greene": [2021, 2029],
+  "guilford": [2022, 2026], "halifax": [2024, 2028], "harnett": [2022, 2026], "haywood": [2021, 2027],
+  "henderson": [2023, 2027], "hertford": [2019, 2027], "hoke": [2022, 2030], "hyde": [2024, 2030],
+  "iredell": [2023, 2027], "jackson": [2025, 2029], "johnston": [2025, 2029], "jones": [2022, 2030],
+  "lee": [2023, 2027], "lenoir": [2025, 2033], "lincoln": [2023, 2027], "macon": [2023, 2027],
+  "madison": [2024, 2032], "martin": [2025, 2033], "mcdowell": [2023, 2027], "mecklenburg": [2023, 2027],
+  "mitchell": [2022, 2027], "montgomery": [2020, 2028], "moore": [2023, 2027], "nash": [2024, 2032],
+  "new hanover": [2025, 2029], "northampton": [2023, 2031], "onslow": [2022, 2026], "orange": [2025, 2029],
+  "pamlico": [2020, 2026], "pasquotank": [2022, 2030], "pender": [2019, 2026], "perquimans": [2024, 2032],
+  "person": [2025, 2029], "pitt": [2024, 2028], "polk": [2025, 2029], "randolph": [2023, 2027],
+  "richmond": [2024, 2028], "robeson": [2024, 2030], "rockingham": [2024, 2029], "rowan": [2023, 2027],
+  "rutherford": [2023, 2027], "sampson": [2024, 2028], "scotland": [2019, 2026], "stanly": [2025, 2029],
+  "stokes": [2025, 2029], "surry": [2025, 2029], "swain": [2021, 2029], "transylvania": [2025, 2029],
+  "tyrrell": [2025, 2033], "union": [2025, 2029], "vance": [2024, 2032], "wake": [2024, 2027],
+  "warren": [2025, 2033], "washington": [2021, 2029], "watauga": [2022, 2027], "wayne": [2025, 2033],
+  "wilkes": [2025, 2029], "wilson": [2024, 2029], "yadkin": [2023, 2027], "yancey": [2024, 2032],
+};
+for (const [cty, [latest, next]] of Object.entries(NC_REVAL)) {
+  const key = `NC|${cty}`;
+  if (COUNTY_TAX_OVERRIDES[key]) continue; // Wake has a richer hand entry
+  const cycle = next - latest;
+  COUNTY_TAX_OVERRIDES[key] = {
+    assessmentCycleYears: cycle, assessmentRatioCommercialPct: 100, nextReassessmentYear: next,
+    note: `${titleCase(cty)} County, NC: revalued ${latest}, next revaluation ${next} (${cycle}-yr cycle). 100% of market (commercial = residential); interim sale-based changes barred (G.S. 105-287), so a deferred step toward your price lands at the ${next} reval.`,
+    confidence: "high",
+  };
+}
+
+// ── Ohio — FULL ODT sexennial reappraisal schedule (all 88 counties) ───────────
+// Source: Ohio Dept of Taxation, "Year of Sexennial Reappraisal and Triennial Update
+// for Ohio's 88 Counties" (the value is the county's REAPPRAISAL year). Value events
+// occur every 3 yrs: reappraisal at R, R+6, …; update at R+3, R+9, …. Commercial 35%
+// of market; a sale doesn't reset outside the cycle (HB126), so a step toward a recent
+// price lands at the next value event. nextReassessmentYear is computed live.
+const OH_REAPPRAISAL: Record<string, number> = {
+  "adams": 2022, "allen": 2021, "ashland": 2020, "ashtabula": 2020, "athens": 2020, "auglaize": 2023,
+  "belmont": 2024, "brown": 2024, "butler": 2020, "carroll": 2025, "champaign": 2025, "clark": 2025,
+  "clermont": 2020, "clinton": 2023, "columbiana": 2022, "coshocton": 2021, "crawford": 2024, "cuyahoga": 2024,
+  "darke": 2023, "defiance": 2023, "delaware": 2023, "erie": 2024, "fairfield": 2025, "fayette": 2024,
+  "franklin": 2023, "fulton": 2020, "gallia": 2023, "geauga": 2023, "greene": 2020, "guernsey": 2021,
+  "hamilton": 2023, "hancock": 2022, "hardin": 2023, "harrison": 2023, "henry": 2023, "highland": 2024,
+  "hocking": 2022, "holmes": 2022, "huron": 2024, "jackson": 2023, "jefferson": 2024, "knox": 2020,
+  "lake": 2024, "lawrence": 2022, "licking": 2023, "logan": 2025, "lorain": 2024, "lucas": 2024,
+  "madison": 2020, "mahoning": 2023, "marion": 2025, "medina": 2025, "meigs": 2022, "mercer": 2023,
+  "miami": 2025, "monroe": 2022, "montgomery": 2020, "morgan": 2024, "morrow": 2023, "muskingum": 2024,
+  "noble": 2020, "ottawa": 2024, "paulding": 2022, "perry": 2023, "pickaway": 2023, "pike": 2023,
+  "portage": 2024, "preble": 2023, "putnam": 2023, "richland": 2023, "ross": 2025, "sandusky": 2021,
+  "scioto": 2022, "seneca": 2023, "shelby": 2023, "stark": 2024, "summit": 2020, "trumbull": 2023,
+  "tuscarawas": 2022, "union": 2025, "van wert": 2023, "vinton": 2021, "warren": 2024, "washington": 2022,
+  "wayne": 2020, "williams": 2024, "wood": 2023, "wyandot": 2025,
+};
+const OH_LABEL: Record<string, string> = {
+  cuyahoga: "Cleveland; incl. Rocky River", franklin: "Columbus", hamilton: "Cincinnati", summit: "Akron",
+  montgomery: "Dayton", lucas: "Toledo", stark: "Canton", delaware: "Columbus suburbs; incl. Powell",
+  lake: "NE Cleveland suburbs", lorain: "W Cleveland suburbs", butler: "N Cincinnati suburbs",
+  warren: "Mason; Cincy–Dayton", clermont: "E Cincinnati suburbs", licking: "Newark; E Columbus",
+};
+{
+  const thisYear = new Date().getFullYear();
+  for (const [cty, R] of Object.entries(OH_REAPPRAISAL)) {
+    const key = `OH|${cty}`;
+    if (COUNTY_TAX_OVERRIDES[key]) continue;
+    let nextEvt = R; while (nextEvt < thisYear) nextEvt += 3; // value event every 3 yrs
+    const isReappraisal = (nextEvt - R) % 6 === 0;
+    const label = OH_LABEL[cty] ? ` (${OH_LABEL[cty]})` : "";
+    COUNTY_TAX_OVERRIDES[key] = {
+      assessmentCycleYears: 6, assessmentRatioCommercialPct: 35, nextReassessmentYear: nextEvt,
+      note: `${titleCase(cty)} County, OH${label}: ${R} sexennial reappraisal (6-yr cycle, 3-yr update). Next value event is the ${nextEvt} ${isReappraisal ? "reappraisal" : "triennial update"}. Commercial 35% of market; a sale doesn't reset outside the cycle (HB126), so a step toward your price lands ~${nextEvt}.`,
+      confidence: "high",
+    };
+  }
 }
 
 export function getCountyOverride(state: string | null | undefined, county: string | null | undefined): CountyTaxOverride | null {
