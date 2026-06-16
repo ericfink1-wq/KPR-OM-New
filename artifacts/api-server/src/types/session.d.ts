@@ -8,6 +8,9 @@ declare module "express-session" {
     userEmail?: string;
     userName?: string | null;
     loginAt?: number;
+    // Throttle marker for the "last seen" stamp — the last time we wrote the user's
+    // lastSeenAt to the DB, so we don't write on every single request.
+    lastSeenStampedAt?: number;
     // Whether the logged-in user has TOTP 2FA enabled (mirrored into the session at
     // login so the mandatory-2FA gate can check without a DB hit). 2FA is required
     // for all users, so a value of false means "must enroll before using the app".

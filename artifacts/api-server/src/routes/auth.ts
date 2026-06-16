@@ -90,6 +90,7 @@ export function ensureUsersTable(): Promise<void> {
           last_login_at timestamptz
         )
       `);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at timestamptz`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash text`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires timestamptz`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false`);
@@ -623,7 +624,7 @@ router.get("/auth/users", requireAdmin, async (_req, res) => {
   res.json(rows.map(u => ({
     id: u.id, email: u.email, name: u.name, status: u.status, isAdmin: u.isAdmin,
     emailVerified: u.emailVerified,
-    createdAt: u.createdAt, lastLoginAt: u.lastLoginAt,
+    createdAt: u.createdAt, lastLoginAt: u.lastLoginAt, lastSeenAt: u.lastSeenAt,
   })));
 });
 

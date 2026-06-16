@@ -14,6 +14,10 @@ export const usersTable = pgTable("users", {
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   approvedBy: text("approved_by"),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  // Most recent AUTHENTICATED access (any request), throttled — distinct from
+  // lastLoginAt, which only moves on an explicit sign-in. Powers the admin's
+  // "last seen" / most-recent-activity view.
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   resetTokenHash: text("reset_token_hash"),
   resetTokenExpires: timestamp("reset_token_expires", { withTimezone: true }),
   // Email verification — proves the registrant controls the address before an

@@ -196,7 +196,7 @@ export async function apiUploadLog(): Promise<UploadLogEntry[]> {
   return await resp.json().catch(() => []) as UploadLogEntry[];
 }
 
-export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; emailVerified?: boolean; createdAt: string; lastLoginAt: string | null }
+export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; emailVerified?: boolean; createdAt: string; lastLoginAt: string | null; lastSeenAt?: string | null }
 export async function apiListMembers(): Promise<MemberAccount[]> {
   const resp = await apiFetch("/auth/users");
   if (!resp.ok) return [];

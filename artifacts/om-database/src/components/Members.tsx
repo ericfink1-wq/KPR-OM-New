@@ -2,6 +2,22 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
 
+// Compact "time ago" for the last-seen / last-login line.
+function relTime(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (isNaN(t)) return null;
+  const secs = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (secs < 60) return "just now";
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
 // Admin-only screen to approve / decline account requests and manage members.
 export default function Members({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<MemberAccount[] | null>(null);
@@ -98,6 +114,18 @@ export default function Members({ onClose }: { onClose: () => void }) {
           {u.name || u.email}{u.isAdmin && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#5c5047", background: "#f1eadc", border: "1px solid #ddd4c2", borderRadius: 4, padding: "1px 5px" }}>ADMIN</span>}
         </div>
         {u.name && <div style={{ fontSize: 11, color: "#8b8578", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingLeft: 16 }}>{u.email}</div>}
+        {u.status === "approved" && (() => {
+          const seen = relTime(u.lastSeenAt);
+          const login = relTime(u.lastLoginAt);
+          return (
+            <div style={{ fontSize: 10.5, color: "#a89f8f", paddingLeft: 16, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+              title={`Last seen: ${u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleString() : "no recent activity"}\nLast sign-in: ${u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "never"}`}>
+              <span style={{ color: seen ? "#5c7a3f" : "#bcae97", fontWeight: 600 }}>● </span>
+              {seen ? `Last seen ${seen}` : "No recent activity"}
+              {login ? <span style={{ color: "#bcae97" }}> · signed in {login}</span> : null}
+            </div>
+          );
+        })()}
       </div>
       {statusChip(u.status)}
       <span title={u.emailVerified ? "This email address has been verified" : "This email address has NOT been verified — don't approve until it is"}
