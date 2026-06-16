@@ -388,7 +388,16 @@ export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
     note: "Philadelphia (AVI): assessed at 100% of market, updated roughly annually by the OPA — closer to a market-value system than the rest of PA." },
   "PA|allegheny": { assessmentCycleYears: 0, assessmentRatioCommercialPct: null, confidence: "medium",
     note: "Allegheny County (Pittsburgh): 2012 base year; the annually-published Common Level Ratio bridges to market. A high purchase price commonly draws a school-district appeal." },
-  "PA|montgomery": { assessmentCycleYears: 0, note: "Montgomery County: stale base year; value bridged by the annual CLR. Watch for a school-district sale-price appeal.", confidence: "medium" },
+  // PA Common Level Ratios = the 2024 CLR (effective 7/1/2025–6/30/2026); assessed ÷
+  // market. PA republishes these every July, so they're dated — verify the current-year
+  // CLR for a live deal. No sale reset in PA, but a high price commonly draws a
+  // school-district appeal (the real post-purchase mechanism). Verified Jun 2026 (STEB).
+  "PA|montgomery": { assessmentCycleYears: 0, assessmentRatioCommercialPct: 30.76, note: "Montgomery County (Philly collar; incl. Ambler/Blue Bell/Lansdale): ~1996 base year, CLR 30.76% (2024, eff. 7/1/2025). No sale reset — but watch for a school-district sale-price appeal.", confidence: "high" },
+  "PA|bucks": { assessmentCycleYears: 0, assessmentRatioCommercialPct: 5.86, note: "Bucks County (Philly collar; incl. Doylestown/Chalfont/Perkasie): 1972 base year — assessments are a tiny fraction of market, CLR just 5.86% (2024, eff. 7/1/2025). No sale reset, but a high-priced purchase is a prime school-district appeal target. Confirm the current CLR.", confidence: "high" },
+  "PA|chester": { assessmentCycleYears: 0, assessmentRatioCommercialPct: 31.84, note: "Chester County: 1998 base year, CLR 31.84% (2024, eff. 7/1/2025). No sale reset; school-district appeal risk on a high price.", confidence: "high" },
+  "PA|delaware": { assessmentCycleYears: 0, assessmentRatioCommercialPct: 57.33, note: "Delaware County, PA: court-ordered 2021 reassessment (the freshest base in the Philly collar), CLR 57.33% (2024, eff. 7/1/2025). No sale reset; appeal risk.", confidence: "high" },
+  "PA|berks": { assessmentCycleYears: 0, assessmentRatioCommercialPct: 34.37, note: "Berks County (Reading): stale base year, CLR 34.37% (2024, eff. 7/1/2025). No sale reset; school-district appeal risk.", confidence: "medium" },
+  "PA|york": { assessmentCycleYears: 0, assessmentRatioCommercialPct: 50.46, note: "York County: CLR 50.46% (eff. 7/1/2025). No sale reset; school-district appeal risk on a high price.", confidence: "medium" },
   // New Jersey — annual-reassessment (Demonstration Program) counties move toward market every year.
   "NJ|monmouth": { assessmentCycleYears: 1, note: "Monmouth County (Assessment Demonstration Program): true ANNUAL reassessment to market — a recent purchase can pull the assessment up the next year via the lawful annual reval.", confidence: "high" },
   "NJ|gloucester": { assessmentCycleYears: 1, note: "Gloucester County (Demonstration Program): annual reassessment to market.", confidence: "high" },
