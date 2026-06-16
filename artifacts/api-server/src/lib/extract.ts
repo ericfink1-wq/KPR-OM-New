@@ -7,6 +7,7 @@ import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchma
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
 import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
+import { auditExtraction } from "./extractionAudit";
 import { getHouseView, saveHouseView, incrementPendingReviews } from "./houseView";
 import { Agent, fetch as undiciFetch } from "undici";
 
@@ -751,14 +752,18 @@ export async function runBackgroundExtraction(
       lastScoredDealCount: totalCount,
       analysisVersion: ANALYSIS_VERSION,
     };
-    // Post-extraction lease-risk validators → fold into Import-Review questions
-    // (unverified OM co-tenancy/kickout + any "increase" rent step that decreases).
+    // Post-extraction validators → fold into Import-Review questions. Two families:
+    // (1) lease-risk (unverified OM co-tenancy/kickout, decreasing "increase" steps);
+    // (2) deterministic arithmetic tie-outs (roster SF vs GLA, occupancy, NOI/cap/price,
+    //     rent roll-up, per-tenant rent×SF, duplicate suites, unit sanity).
     try {
       const lrChecks = validateLeaseRiskAtExtraction(dealData);
-      if (lrChecks.length) {
+      const auditChecks = auditExtraction(dealData);
+      const allChecks = [...lrChecks, ...auditChecks];
+      if (allChecks.length) {
         const existing = Array.isArray(dealData.reviewQuestions) ? dealData.reviewQuestions as unknown[] : [];
         const seen = new Set(existing.map((q) => (q as { id?: string })?.id));
-        dealData.reviewQuestions = [...existing, ...lrChecks.filter((q) => !seen.has(q.id))];
+        dealData.reviewQuestions = [...existing, ...allChecks.filter((q) => !seen.has(q.id))];
       }
     } catch { /* validators must never break an upload */ }
     await db.update(dealsTable)
