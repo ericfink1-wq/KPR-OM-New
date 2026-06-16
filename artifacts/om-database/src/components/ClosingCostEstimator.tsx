@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import type { Deal } from "../lib/idb";
 import { CLOSING_COSTS_BY_STATE, type ResolvedJurisdiction } from "../lib/closingCosts";
 import ClosingCostsCard from "./ClosingCostsCard";
@@ -12,6 +12,31 @@ export default function ClosingCostEstimator({ deals, onClose }: { deals: Deal[]
   const [resolved, setResolved] = useState<ResolvedJurisdiction | null>(null);
   const [manualState, setManualState] = useState<string>("");
   const [err, setErr] = useState<string | null>(null);
+
+  // Live address autocomplete — same free OSM geocoder the deal-page card uses
+  // (/api/closing/suggest — no API key, no LLM tokens). Each keystroke (debounced)
+  // fetches matching addresses; picking one verifies it.
+  const [suggests, setSuggests] = useState<Array<{ label: string; address: string; state: string }>>([]);
+  const [sugOpen, setSugOpen] = useState(false);
+  const sugTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (sugTimer.current) clearTimeout(sugTimer.current); }, []);
+
+  const onAddrType = (v: string) => {
+    setQuery(v);
+    if (sugTimer.current) clearTimeout(sugTimer.current);
+    const q = v.trim();
+    if (q.length < 4) { setSuggests([]); setSugOpen(false); return; }
+    sugTimer.current = setTimeout(() => {
+      fetch(`/api/closing/suggest?q=${encodeURIComponent(q)}`, { credentials: "include" })
+        .then((r) => r.json() as Promise<{ suggestions: Array<{ label: string; address: string; state: string }> }>)
+        .then((d) => { setSuggests(d.suggestions || []); setSugOpen((d.suggestions || []).length > 0); })
+        .catch(() => { setSuggests([]); setSugOpen(false); });
+    }, 320);
+  };
+  const pickSuggest = (s: { label: string; address: string; state: string }) => {
+    setQuery(s.label); setSuggests([]); setSugOpen(false);
+    verify(s.address);
+  };
 
   // State options, alphabetized by name (skip the "—" placeholder jurisdiction).
   const stateOptions = useMemo(
@@ -80,16 +105,39 @@ export default function ClosingCostEstimator({ deals, onClose }: { deals: Deal[]
         </div>
 
         <div style={{ padding: "16px 22px 20px", maxHeight: "78vh", overflowY: "auto" }}>
-          {/* Address / property input */}
+          {/* Address / property input — with live keystroke autocomplete */}
           <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-            <input
-              autoFocus value={query} disabled={busy}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !busy) verify(query); }}
-              placeholder="Property address — e.g. 5600 W Touhy Ave, Niles, IL 60714"
-              style={inp}
-            />
-            <button onClick={() => verify(query)} disabled={busy || !query.trim()}
+            <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+              <input
+                autoFocus value={query} disabled={busy}
+                onChange={e => onAddrType(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !busy) { setSugOpen(false); verify(query); } if (e.key === "Escape") setSugOpen(false); }}
+                onBlur={() => setTimeout(() => setSugOpen(false), 150)}
+                onFocus={() => { if (suggests.length) setSugOpen(true); }}
+                autoComplete="off"
+                placeholder="Start typing an address — e.g. 5600 W Touhy Ave, Niles, IL"
+                style={{ ...inp, width: "100%" }}
+              />
+              {sugOpen && suggests.length > 0 && (
+                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1px solid #d9d2c4", borderRadius: 8, boxShadow: "0 10px 28px rgba(38,40,31,0.16)", overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
+                  {suggests.map((s, i) => (
+                    <button
+                      key={`${s.address}-${i}`}
+                      type="button"
+                      onMouseDown={e => { e.preventDefault(); pickSuggest(s); }}
+                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: i < suggests.length - 1 ? "1px solid #f1eadc" : "none", padding: "9px 12px", cursor: "pointer", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#f6f2ea")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <span style={{ flexShrink: 0, fontSize: 12 }}>📍</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>{s.label}</span>
+                      {s.state && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#8b8578" }}>{s.state}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => { setSugOpen(false); verify(query); }} disabled={busy || !query.trim()}
               style={{ background: busy ? "#9bbf7e" : "#3f7a1f", border: "none", color: "#fff", padding: "9px 16px", borderRadius: 8, cursor: busy ? "default" : "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", flexShrink: 0 }}>
               {busy ? "Verifying…" : "Verify"}
             </button>
