@@ -87,11 +87,16 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
     catch { setErr("That isn't valid JSON. Paste the abstract JSON — one tenant, or an array of tenants."); return; }
 
     let arr: unknown[];
-    const obj = data as { abstracts?: unknown };
+    // Accept a bare array, a single abstract, or a wrapper object that carries the
+    // abstracts under a known key (`abstracts` or `leaseAbstracts`). Some extract
+    // files also bundle a `deals` block alongside `leaseAbstracts` — pull just the
+    // abstracts so the whole wrapper isn't misread as one nameless abstract.
+    const obj = data as { abstracts?: unknown; leaseAbstracts?: unknown; deals?: unknown };
     if (Array.isArray(data)) arr = data;
     else if (obj && typeof obj === "object" && Array.isArray(obj.abstracts)) arr = obj.abstracts;
-    else if (data && typeof data === "object") arr = [data];
-    else { setErr("Expected an abstract object, an array, or { abstracts: [...] }."); return; }
+    else if (obj && typeof obj === "object" && Array.isArray(obj.leaseAbstracts)) arr = obj.leaseAbstracts;
+    else if (data && typeof data === "object" && !("deals" in (obj as object)) && !("leaseRisk" in (obj as object))) arr = [data];
+    else { setErr("Expected an abstract object, an array, or { abstracts: [...] } / { leaseAbstracts: [...] }. (A deal/OM JSON goes in 'Upload JSON', not here.)"); return; }
 
     const parsed: Parsed[] = [];
     let missingName = false;
