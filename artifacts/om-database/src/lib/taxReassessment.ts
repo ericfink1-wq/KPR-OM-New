@@ -370,6 +370,7 @@ export interface CountyTaxOverride {
   assessmentCycleYears?: number;
   assessmentRatioCommercialPct?: number | null;
   phaseInYears?: number;        // a reassessment increase that phases in over N yrs (NYC Class 4 = 5 yrs at 20%/yr)
+  nextReassessmentYear?: number; // the next scheduled value event (reappraisal OR update) — lets the forecaster land the deferred step on the real year, not a generic cycle
   note: string;                 // county-specific mechanic (CLR, multiplier, cycle, base year)
   confidence?: Confidence;
 }
@@ -419,7 +420,15 @@ export const COUNTY_TAX_OVERRIDES: Record<string, CountyTaxOverride> = {
   // ── Portfolio counties (county-driven states where the local cycle differs from the
   // state default) — verified Jun 2026 against county-assessor schedules. ──
   // Ohio — sexennial reappraisal + 3-yr update, staggered by county; commercial 35%.
-  "OH|cuyahoga": { assessmentCycleYears: 6, note: "Cuyahoga (Cleveland; incl. Rocky River): last full sexennial reappraisal 2024 (avg ~+32%), triennial update due 2027 — model the next step at the 2027 update. Commercial 35% of market; HB126 curbs sale-based value challenges.", confidence: "high" },
+  // nextReassessmentYear = the next value event (reappraisal OR update), the year a
+  // deferred step toward a recent purchase price actually flows in. Verified Jun 2026
+  // against county-auditor schedules / the ODT 88-county table.
+  "OH|cuyahoga": { assessmentCycleYears: 6, nextReassessmentYear: 2027, note: "Cuyahoga (Cleveland; incl. Rocky River): last full sexennial reappraisal 2024 (avg ~+32%), triennial update due 2027 — model the next step at the 2027 update. Commercial 35% of market; HB126 curbs sale-based value challenges.", confidence: "high" },
+  "OH|franklin": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Franklin (Columbus): 2023 sexennial reappraisal (residential +43%), 2026 triennial update now landing, next reappraisal 2029. Commercial 35% of market; HB126 curbs sale-based challenges.", confidence: "high" },
+  "OH|hamilton": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Hamilton (Cincinnati): 2023 reappraisal, 2026 triennial update, next reappraisal 2029. Commercial 35% of market.", confidence: "high" },
+  "OH|butler": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Butler (Hamilton/West Chester, SW Ohio): 2020 reappraisal + 2023 update; next sexennial reappraisal 2026. Commercial 35% of market.", confidence: "high" },
+  "OH|clermont": { assessmentCycleYears: 6, nextReassessmentYear: 2026, note: "Clermont (SE Cincinnati metro): 2020 reappraisal + 2023 update; next reappraisal 2026. Commercial 35% of market.", confidence: "high" },
+  "OH|warren": { assessmentCycleYears: 6, nextReassessmentYear: 2027, note: "Warren (Mason/Springboro, between Cincinnati & Dayton): 2024 triennial update; next sexennial reappraisal ~2027. Commercial 35% of market.", confidence: "medium" },
   "OH|delaware": { assessmentCycleYears: 6, note: "Delaware County (Columbus suburb; incl. Powell): on Ohio's 6-yr reappraisal + 3-yr update cycle, next sexennial moved to 2030. Commercial 35% of market; a fast-growth county, so updates run hot. Confirm the exact recent reappraisal/update year with the auditor.", confidence: "medium" },
   // North Carolina — Wake left the 8-yr default; now a short cycle (no interim sale reset).
   "NC|wake": { assessmentCycleYears: 3, note: "Wake County (Raleigh; incl. Knightdale): reappraised 2024, NEXT revaluation 2027, then moving to a 2-yr cycle (2029…) — far shorter than NC's 8-yr default. 100% of market; interim sale-based changes barred, so the step lands at the 2027 reval.", confidence: "high" },
@@ -437,18 +446,19 @@ export function getCountyOverride(state: string | null | undefined, county: stri
 }
 
 // State framework with any county override merged in (ratio/cycle/note).
-export interface ResolvedJurisdiction extends TaxJurisdiction { countyNote?: string | null; countyPhaseInYears?: number | null }
+export interface ResolvedJurisdiction extends TaxJurisdiction { countyNote?: string | null; countyPhaseInYears?: number | null; countyNextReassessYear?: number | null }
 export function resolveJurisdiction(state: string | null | undefined, county?: string | null): ResolvedJurisdiction | null {
   const base = getTaxJurisdiction(state);
   if (!base) return null;
   const co = getCountyOverride(state, county);
-  if (!co) return { ...base, countyNote: null, countyPhaseInYears: null };
+  if (!co) return { ...base, countyNote: null, countyPhaseInYears: null, countyNextReassessYear: null };
   return {
     ...base,
     assessmentCycleYears: co.assessmentCycleYears ?? base.assessmentCycleYears,
     assessmentRatioCommercialPct: co.assessmentRatioCommercialPct !== undefined ? co.assessmentRatioCommercialPct : base.assessmentRatioCommercialPct,
     countyNote: co.note,
     countyPhaseInYears: co.phaseInYears ?? null,
+    countyNextReassessYear: co.nextReassessmentYear ?? null,
   };
 }
 

@@ -89,9 +89,12 @@ export function forecastTaxes(input: TaxForecastInput): TaxForecast | null {
   const targetAdVal = postTotal != null ? postTotal - navInBill : null;
 
   const cycle = r.jurisdiction.assessmentCycleYears || 0;
-  // When a reassessment lands: sale reset ≈ next year; deferred ≈ next scheduled cycle.
+  // When a reassessment lands: sale reset ≈ next year; deferred ≈ the county's actual
+  // next scheduled value event (reappraisal/update) when we have it, else the cycle.
+  const nextEvt = r.jurisdiction.countyNextReassessYear;
+  const deferredYear = nextEvt != null ? Math.max(1, nextEvt - new Date().getFullYear()) : Math.max(1, cycle || 1);
   const reassessYear = (targetAdVal != null && targetAdVal > baseAdVal)
-    ? (r.resetsOnSale ? 1 : Math.max(1, cycle || 1))
+    ? (r.resetsOnSale ? 1 : deferredYear)
     : null;
   // Phase-in: a county transitional schedule (NYC Class 4 = 5 yrs) wins; otherwise a
   // multi-year cycle ramps the deferred step over the cycle; otherwise it's immediate.
