@@ -117,3 +117,23 @@ describe("county overrides", () => {
     expect(r.jurisdiction?.assessmentRatioCommercialPct).toBeCloseTo(33.33, 1);
   });
 });
+
+describe("market-as-assessed swap caught without a market column (the 32 East/OH case)", () => {
+  it("flags an OH 'assessed' value that is actually the market value", () => {
+    // OM table: Assessed $4,284,880, Market $12,242,500, taxes $287,986. The market
+    // value got captured as assessed → implied rate on 'assessed' is ~2.4% (too low for OH 35%).
+    const c = reconcileTaxCapture({ state: "OH", currentAssessedValue: 12_242_500, currentAnnualTaxes: 287_986 });
+    expect(c.warnings.some((w) => w.severity === "high" && /MARKET value was captured/i.test(w.message))).toBe(true);
+  });
+  it("does NOT flag the correctly-captured OH assessed value", () => {
+    const c = reconcileTaxCapture({ state: "OH", currentAssessedValue: 4_284_880, currentAnnualTaxes: 287_986 });
+    expect(c.warnings.some((w) => /MARKET value was captured/i.test(w.message))).toBe(false);
+  });
+  it("with the correct assessed value, the engine shows the big reassessment step-up", () => {
+    const r = estimateReassessment({ state: "OH", acquisitionPrice: 35_000_000, currentAssessedValue: 4_284_880, currentAnnualTaxes: 287_986 });
+    expect(r.resetsOnSale).toBe(false);          // OH doesn't reset on sale...
+    expect(r.impliedCurrentMarket).toBeCloseTo(12_242_514, -3); // ~$12.24M implied market
+    expect(r.estNextCycleStepUp).not.toBeNull();
+    expect(r.estNextCycleStepUp!).toBeGreaterThan(400_000); // ...but the next cycle is a huge jump
+  });
+});

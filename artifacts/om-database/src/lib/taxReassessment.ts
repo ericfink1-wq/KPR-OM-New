@@ -793,6 +793,20 @@ export function reconcileTaxCapture(deal: TaxDealLike): TaxCaptureCheck {
     }
   }
 
+  // 2b) Same swap, caught WITHOUT a market column: in a strongly fractional-ratio
+  // state (e.g. OH 35%) the tax rate computed on the ASSESSED value is grossed up
+  // (≈ market-rate ÷ ratio), so a LOW rate-on-assessed means the captured "assessed"
+  // is almost certainly the MARKET value (the assessor's two columns got swapped) —
+  // which silently hides a large reassessment step-up.
+  if (market == null && assessed != null && taxes != null && taxes > 0 &&
+      j?.assessmentRatioCommercialPct != null && j.assessmentRatioCommercialPct < 50) {
+    const rateOnAssessed = taxes / assessed;
+    if (rateOnAssessed < 0.03) {
+      const expectAssessed = j.assessmentRatioCommercialPct / 100;
+      warnings.push({ severity: "high", message: `The implied tax rate on this assessed value is only ${(rateOnAssessed * 100).toFixed(1)}% — far too low for ${j.stateName}, where commercial is assessed at ~${j.assessmentRatioCommercialPct}% of market (so the rate ON the assessed value normally runs several times higher). This almost always means the MARKET value was captured instead of the ASSESSED value — the assessed value should be ~${j.assessmentRatioCommercialPct}% of market (≈ ${Math.round(assessed * expectAssessed).toLocaleString()} if ${Math.round(assessed).toLocaleString()} is actually the market value). Fix the Current Assessed Value, or a real reassessment step-up will be hidden.` });
+    }
+  }
+
   // 3) Current bill vs the pro-forma RE-tax line (a sanity tie, not necessarily an error).
   const proformaTax = numOrNull(deal.expenseBreakdown?.realEstateTax);
   if (taxes != null && proformaTax != null && Math.abs(taxes - proformaTax) / Math.max(taxes, proformaTax) > 0.15) {
