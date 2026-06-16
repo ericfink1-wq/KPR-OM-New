@@ -264,6 +264,13 @@ export function openReviewCount(deal: Deal): number {
   return buildReviewQuestions(deal).filter(q => !q.resolvedAt).length;
 }
 
+// Just the deterministic ARITHMETIC contradictions (audit-* ids) that are still open —
+// the "these numbers don't tie out" subset, higher-signal than AI low-confidence flags.
+// Surfaced distinctly on the deal card + a red strip atop the deal page.
+export function openAuditCount(deal: Deal): number {
+  return buildReviewQuestions(deal).filter(q => !q.resolvedAt && (q.id || "").startsWith("audit-")).length;
+}
+
 // ── User-defined tenant merges ────────────────────────────────────────────────
 // Persisted to localStorage; checked BEFORE the hardcoded TENANT_ALIASES.
 

@@ -4,7 +4,7 @@ import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstrac
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
   apiListLeaseAbstracts } from "../lib/api";
-import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
+import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, openAuditCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch, recognizeRateIndex } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
@@ -2394,6 +2394,23 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           everything checks out. Supersedes the old standalone DataIntegrity box. */}
       {(() => {
         const openCount = openReviewCount(d);
+        const auditCount = openAuditCount(d);
+        // Arithmetic contradictions ("the math doesn't tie out") get a louder RED strip —
+        // higher signal than AI low-confidence captures.
+        if (auditCount > 0) {
+          const other = openCount - auditCount;
+          return (
+            <button onClick={() => setReviewOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fdecec", border: "1px solid #f3c0c0", borderRadius: 10, padding: "11px 15px", marginBottom: 12, cursor: "pointer" }}>
+              <span style={{ fontSize: 16 }}>⚠</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: "#b3261e" }}>{auditCount} number{auditCount === 1 ? "" : "s"} to verify — the OM's figures don't all tie out</span>
+                <span style={{ display: "block", fontSize: 11, color: "#c0564f", marginTop: 1 }}>Independent arithmetic checks found {auditCount === 1 ? "a figure that doesn't" : "figures that don't"} reconcile (SF, NOI/cap/price, rent roll-ups…){other > 0 ? ` · + ${other} other detail${other === 1 ? "" : "s"} to confirm` : ""} — tap to review or fix.</span>
+              </span>
+              <span style={{ fontSize: 12, color: "#b3261e", fontWeight: 600 }}>Review ›</span>
+            </button>
+          );
+        }
         if (openCount > 0) {
           return (
             <button onClick={() => setReviewOpen(true)}
