@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
+import type { SizeFlag } from "../lib/tenantSizeBenchmark";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -31,6 +32,9 @@ interface Props {
   abstractDiscrepancies?: Map<string, string[]>;
   onOpenAbstract?: (tenantName: string) => void;
   onAddAbstract?: (tenantName: string) => void;
+  // tenantKey -> SF outlier flag (this store's SF is way off the brand's prototype
+  // footprint across the database). Shown next to the SF cell. Optional.
+  sizeFlags?: Map<string, SizeFlag>;
 }
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
@@ -280,7 +284,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -527,7 +531,16 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   })()}
                 </td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:"#837c6e", fontFamily:"'SF Mono',ui-monospace,monospace", fontSize:11 }}>{t.suite || "—"}</td>
-                <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}</td>
+                <td style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:3, justifyContent:"flex-end" }}>
+                    {n(t.sf)!=null?n(t.sf)!.toLocaleString():"—"}
+                    {(() => {
+                      const f = sizeFlags?.get(tenantKey(t.canonicalName || t.name));
+                      if (!f) return null;
+                      return <FlagTip content={f.tip} color="#c97a18"><span style={{ fontSize:10, fontWeight:800, color:"#c97a18", lineHeight:1 }}>⚑</span></FlagTip>;
+                    })()}
+                  </span>
+                </td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}</td>
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${Math.round(n(t.annualRent)!).toLocaleString()}`:"—"}</td>
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>

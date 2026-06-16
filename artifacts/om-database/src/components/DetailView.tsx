@@ -47,6 +47,7 @@ import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
+import { buildBrandSizeIndex, buildSizeFlags } from "../lib/tenantSizeBenchmark";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
 import { deriveReassessmentFlag } from "../lib/reassessmentFlag";
@@ -1488,6 +1489,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // silent. Render-time only; the stored roster is untouched.
   const dWithRecoveries = useMemo(() => withAbstractRecoveries(d, abstractsByTenant), [d, abstractsByTenant]);
 
+  // Brand "prototype" size benchmark — flag a tenant whose SF is way off the typical
+  // footprint for that retailer across all OTHER deals in the database. Index is built
+  // once over allDeals; flags are per this deal's roster.
+  const brandSizeIndex = useMemo(() => buildBrandSizeIndex(allDeals), [allDeals]);
+  const sizeFlags = useMemo(() => buildSizeFlags(d, brandSizeIndex), [d, brandSizeIndex]);
+
   // Auto-apply lease-authoritative data to the roster: for every abstract that
   // matches a roster tenant, fill the fields the roster is MISSING (never
   // overwrites). Idempotent — once filled there are no blanks left, so it stops.
@@ -2798,6 +2805,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           omDate={d.omDate}
           estimatedRecoveries={estimateRecoveries(dWithRecoveries).byName}
           latestSales={buildLatestSales(d)}
+          sizeFlags={sizeFlags}
           abstractsByTenant={abstractsByTenant}
           abstractDiscrepancies={abstractDiscrepancies}
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
