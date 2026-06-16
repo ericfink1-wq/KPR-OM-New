@@ -10,7 +10,7 @@
 import type { Deal, Tenant } from "./idb";
 import { tenantKey, isVacant, isNAPTenant } from "./utils";
 
-const MIN_OTHER_LOCATIONS = 3;   // need ≥3 other locations of the brand for a meaningful prototype
+const MIN_OTHER_LOCATIONS = 2;   // need ≥2 OTHER locations (3 total) for a meaningful brand prototype
 const HIGH_RATIO = 1.6;          // ≥60% larger than the brand median → "way above"
 const LOW_RATIO = 0.55;          // ≤45% smaller → "way below"
 

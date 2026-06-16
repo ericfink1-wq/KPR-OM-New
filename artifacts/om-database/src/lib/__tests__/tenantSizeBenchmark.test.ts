@@ -68,3 +68,19 @@ describe("deriveSizeOutlierFlag (deal red flag)", () => {
     expect(deriveSizeOutlierFlag(subject, idx)).toBeNull();
   });
 });
+
+describe("3-location brand (the DSW case)", () => {
+  // DSW across exactly 3 properties: Belden 31,859 (subject) vs Battlefield 20,000 + Paddock 14,673
+  const deals = [
+    mk("belden", [{ name: "DSW", sf: 31859 }]),
+    mk("battlefield", [{ name: "DSW", sf: 20000 }]),
+    mk("paddock", [{ name: "DSW", sf: 14673 }]),
+  ];
+  const idx = buildBrandSizeIndex(deals);
+  it("flags Belden's oversized DSW with only 2 other locations", () => {
+    const f = flagTenantSize({ name: "DSW", sf: 31859, annualRent: 414167, leaseExpiry: "2029-01-01" } as any, "belden", idx);
+    expect(f).not.toBeNull();
+    expect(f!.direction).toBe("above");
+    expect(f!.tip).toMatch(/2 other DSW locations/i);
+  });
+});
