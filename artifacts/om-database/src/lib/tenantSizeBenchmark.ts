@@ -87,6 +87,31 @@ export function flagTenantSize(
   };
 }
 
+// Deal-level red flag for the analysis section — summarizes every tenant whose SF is
+// off its brand prototype. Mirrors the {severity, description} shape of the other
+// derived flags (expense-recovery, unsigned-lease, sales-trend).
+export interface DerivedFlag { severity: "high" | "medium" | "low"; description: string }
+
+export function deriveSizeOutlierFlag(deal: Deal, index: BrandSizeIndex): DerivedFlag | null {
+  const hits: { name: string; f: SizeFlag }[] = [];
+  for (const t of deal.tenants || []) {
+    const f = flagTenantSize(t, deal.id, index);
+    if (f) hits.push({ name: t.canonicalName || t.name || "Tenant", f });
+  }
+  if (!hits.length) return null;
+  // A wildly off footprint (≥2.2× or ≤0.4×) is more likely a SF entry error → medium;
+  // otherwise a low-severity "unusual store, verify" note.
+  const extreme = hits.some((h) => /(\+[2-9]\d\d%|\+1\d\d%)|−[5-9]\d%/.test(h.f.label));
+  const list = hits.map((h) => `${h.name} (${h.f.label})`).join(", ");
+  return {
+    severity: extreme ? "medium" : "low",
+    description:
+      `Square footage off brand prototype: ${hits.length} tenant${hits.length > 1 ? "s" : ""} ` +
+      `(${list}) ${hits.length > 1 ? "are" : "is"} materially larger/smaller than the typical footprint for ${hits.length > 1 ? "their brands" : "its brand"} across the database. ` +
+      `Verify each — an unusual store, or a possible SF entry error (which would distort rent PSF, occupancy and recovery math).`,
+  };
+}
+
 // Convenience: build a tenantKey→flag map for one deal's roster (used by the roster table).
 export function buildSizeFlags(deal: Deal, index: BrandSizeIndex): Map<string, SizeFlag> {
   const out = new Map<string, SizeFlag>();

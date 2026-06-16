@@ -537,7 +537,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     {(() => {
                       const f = sizeFlags?.get(tenantKey(t.canonicalName || t.name));
                       if (!f) return null;
-                      return <FlagTip content={f.tip} color="#c97a18"><span style={{ fontSize:10, fontWeight:800, color:"#c97a18", lineHeight:1 }}>⚑</span></FlagTip>;
+                      return <FlagTip content={f.tip} color="#dc2626"><span style={{ fontSize:10, fontWeight:800, color:"#dc2626", lineHeight:1 }}>⚑</span></FlagTip>;
                     })()}
                   </span>
                 </td>

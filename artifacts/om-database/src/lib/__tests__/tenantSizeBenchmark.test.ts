@@ -46,3 +46,25 @@ describe("tenantSizeBenchmark", () => {
     expect(f!.direction).toBe("below");
   });
 });
+
+import { deriveSizeOutlierFlag } from "../tenantSizeBenchmark";
+describe("deriveSizeOutlierFlag (deal red flag)", () => {
+  const deals = [
+    mk("d1", [{ name: "Five Below", sf: 9000 }]),
+    mk("d2", [{ name: "Five Below", sf: 9200 }]),
+    mk("d3", [{ name: "Five Below", sf: 8800 }]),
+    mk("d4", [{ name: "Five Below", sf: 9100 }]),
+  ];
+  const idx = buildBrandSizeIndex(deals);
+  it("returns a flag listing the off-prototype tenant", () => {
+    const subject = mk("subject", [{ name: "Five Below", sf: 25000 }, { name: "Solo Brand", sf: 4000 }]);
+    const f = deriveSizeOutlierFlag(subject, idx);
+    expect(f).not.toBeNull();
+    expect(f!.description).toMatch(/Five Below/);
+    expect(f!.description).not.toMatch(/Solo Brand/); // no benchmark → not listed
+  });
+  it("returns null when nothing is off-prototype", () => {
+    const subject = mk("subject", [{ name: "Five Below", sf: 9000 }]);
+    expect(deriveSizeOutlierFlag(subject, idx)).toBeNull();
+  });
+});
