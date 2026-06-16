@@ -54,6 +54,9 @@ import { deriveRolloverFlag } from "../lib/rolloverRisk";
 import { deriveConcentrationFlag } from "../lib/concentrationRisk";
 import { deriveSpecialAssessmentFlag } from "../lib/specialAssessmentRisk";
 import { deriveStateTaxNuanceFlag } from "../lib/stateTaxNuance";
+import { deriveDebtMaturityFlag } from "../lib/debtMaturityRisk";
+import { deriveAnchorGoDarkFlag } from "../lib/anchorGoDarkRisk";
+import { deriveEnvironmentalFlag, deriveFloodClimateFlag, deriveGroundLeaseFlag } from "../lib/siteRiskFlags";
 import { useIsMobile } from "../hooks/use-mobile";
 
 // DETAIL_MAX_WIDTH (from lib/constants) caps the deal page's readable width. The
@@ -2953,7 +2956,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const specialAssessFlag = deriveSpecialAssessmentFlag(d);
         const stateTaxFlag = deriveStateTaxNuanceFlag(d);
         const taxTriggerFlags = deriveTaxTriggerFlags(d);
-        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags].filter((f): f is NonNullable<typeof f> => !!f);
+        const debtMaturityFlag = deriveDebtMaturityFlag(d);
+        const anchorDarkFlag = deriveAnchorGoDarkFlag(d);
+        const envFlag = deriveEnvironmentalFlag(d);
+        const floodFlag = deriveFloodClimateFlag(d);
+        const groundLeaseFlag = deriveGroundLeaseFlag(d);
+        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
