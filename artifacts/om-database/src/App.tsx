@@ -314,6 +314,7 @@ function AppInner() {
 
   const handleOpenDeal = useCallback((id: string) => {
     navigate({ type: "detail", dealId: id });
+    setTab("portfolio");   // the deal page renders under the Portfolio tab
   }, [navigate]);
 
   // Typing a question into the bottom ask bar (or "Ask about this property") opens
@@ -326,17 +327,21 @@ function AppInner() {
 
   const handleCompare = useCallback((ids: string[]) => {
     navigate({ type: "compare", dealIds: ids });
+    setTab("portfolio");
   }, [navigate]);
 
   const handleOpenTenant = useCallback((name: string) => {
     if (name.startsWith("__lender__")) {
       navigate({ type: "lender", lenderName: name.replace("__lender__", "") });
+      setTab("portfolio");
     } else if (name.startsWith("__parent__")) {
       navigate({ type: "parent", parentName: name.replace("__parent__", "") });
+      setTab("analytics");   // the parent-company view renders under the Analytics tab
     } else {
       navigate({ type: "tenant", tenantName: name });
+      if (tab !== "analytics") setTab("portfolio");
     }
-  }, [navigate]);
+  }, [navigate, tab]);
 
   const handleLogout = async () => {
     await apiLogout();
@@ -522,7 +527,7 @@ function AppInner() {
                 tenantName={view.tenantName}
                 deals={activeDeals}
                 onBack={goBack}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
                 onParentClick={name => handleOpenTenant("__parent__" + name)}
               />
             ) : view.type === "parent" ? (
@@ -531,7 +536,7 @@ function AppInner() {
                 deals={activeDeals}
                 onBack={goBack}
                 onTenantClick={handleOpenTenant}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
               />
             ) : view.type === "tenant-audit" ? (
               <div>
@@ -548,7 +553,7 @@ function AppInner() {
                 <TenantLink deals={activeDeals} />
               </div>
             ) : view.type === "rollover-year" ? (
-              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={id => { navigate({ type: "detail", dealId: id }); }} onTenantClick={handleOpenTenant} />
+              <RolloverYearView year={view.year} initialScope={view.scope} ownedDealIds={ownedDealIds} onBack={goBack} onOpenDeal={id => { navigate({ type: "detail", dealId: id }); setTab("portfolio"); }} onTenantClick={handleOpenTenant} />
             ) : (
               <>
                 {analyticsView === "portfolio" ? (
@@ -696,7 +701,7 @@ function AppInner() {
                 deals={deals}
                 onBack={goBack}
                 onTenantClick={handleOpenTenant}
-                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); }}
+                onOpenDeal={d => { navigate({ type: "detail", dealId: d.id }); setTab("portfolio"); }}
               />
             </div>
           )}
