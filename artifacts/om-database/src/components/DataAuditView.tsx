@@ -70,6 +70,7 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
         <Stat n={arith?.totalDeals ?? 0} label="Deals with numbers to verify" tone={(arith?.totalDeals ?? 0) ? "amber" : "green"} />
         <Stat n={arith?.totalIssues ?? 0} label="Figures that don't tie out" tone={(arith?.totalIssues ?? 0) ? "amber" : "green"} />
         <Stat n={taxHigh} label="Tax-value issues (likely errors)" tone={taxHigh ? "red" : "green"} />
+        <Stat n={audit.anomalies.length} label="Outliers vs your database" tone={audit.anomalies.length ? "amber" : "green"} />
       </div>
 
       {/* PRIMARY: arithmetic contradictions — the actionable worklist */}
@@ -127,6 +128,33 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
             })}
           </div>
         )}
+      </div>
+
+      {/* Outliers vs the database — figures that look unusual next to comparable deals.
+          Sharpens as the database grows (tighter cohorts). Not necessarily errors. */}
+      <div style={{ marginTop: 22 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.05em", color: C.sub, textTransform: "uppercase", marginBottom: 8 }}>Outliers vs your database</div>
+        {audit.anomalies.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: C.green, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 8, padding: "10px 12px" }}>✓ No figures look out of line with comparable deals.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {audit.anomalies.map((a) => {
+              const s = sev(a.severity === "medium" ? "medium" : "info");
+              return (
+                <div key={a.dealId} onClick={() => onOpenDeal(a.dealId)} role="button"
+                  style={{ background: "#fff", border: `1px solid ${C.line}`, borderLeft: `3px solid ${s.fg}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer" }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink }}>{a.dealName}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
+                    {a.messages.map((m, i) => <div key={i} style={{ fontSize: 11.5, color: C.sub, lineHeight: 1.45 }}>• {m}</div>)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
+          Each figure is compared to the distribution across your comparable deals (cap rate &amp; avg rent by product type, tenant rent PSF by brand). An outlier may be a genuine feature of the deal or a mis-capture — verify. This gets sharper as you add deals.
+        </div>
       </div>
 
       {/* Reference (NOT errors): reimbursement classification inventory, collapsed. */}

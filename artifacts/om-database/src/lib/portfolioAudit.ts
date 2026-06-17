@@ -10,6 +10,7 @@
 import type { Deal } from "./idb";
 import { reimbursementFlag, isVacant, isNAPTenant } from "./utils";
 import { reconcileTaxCapture } from "./taxReassessment";
+import { detectDealAnomalies } from "./dealAnomalies";
 
 const dealName = (d: Deal) => d.propertyName || d.fileName || "Untitled deal";
 
@@ -18,11 +19,15 @@ export interface ReimbDealGroup { dealId: string; dealName: string; fixedCam: Re
 export interface TaxFinding {
   dealId: string; dealName: string; severity: "high" | "medium" | "info"; message: string;
 }
+export interface AnomalyFinding {
+  dealId: string; dealName: string; severity: "medium" | "low"; messages: string[];
+}
 export interface PortfolioAudit {
   reimbDeals: ReimbDealGroup[];   // grouped by deal (only deals with ≥1 finding); fixed-CAM deals first
   fixedCamCount: number;
   grossCount: number;
   tax: TaxFinding[];
+  anomalies: AnomalyFinding[];    // figures that are outliers vs the database (sharper as the DB grows)
   dealsScanned: number;
 }
 
@@ -63,8 +68,28 @@ export function auditTaxCapture(deals: Deal[]): TaxFinding[] {
   return out.sort((a, b) => order[a.severity] - order[b.severity] || a.dealName.localeCompare(b.dealName));
 }
 
+// Outliers vs the database — each deal's figures compared to the distribution of the
+// same figure across the other deals (cap rate / avg rent by product type, tenant
+// rent PSF by brand). Sharpens as the database grows.
+export function auditAnomalies(deals: Deal[]): AnomalyFinding[] {
+  const out: AnomalyFinding[] = [];
+  for (const d of deals || []) {
+    if (d.trashedAt) continue;
+    const a = detectDealAnomalies(d, deals);
+    if (a.length) {
+      out.push({
+        dealId: d.id, dealName: dealName(d),
+        severity: a.some((x) => x.severity === "medium") ? "medium" : "low",
+        messages: a.map((x) => x.message),
+      });
+    }
+  }
+  const order = { medium: 0, low: 1 } as const;
+  return out.sort((a, b) => order[a.severity] - order[b.severity] || a.dealName.localeCompare(b.dealName));
+}
+
 export function runPortfolioAudit(deals: Deal[]): PortfolioAudit {
   const active = (deals || []).filter((d) => !d.trashedAt);
   const reimb = auditReimbursement(active);
-  return { reimbDeals: reimb.groups, fixedCamCount: reimb.fixedCamCount, grossCount: reimb.grossCount, tax: auditTaxCapture(active), dealsScanned: active.length };
+  return { reimbDeals: reimb.groups, fixedCamCount: reimb.fixedCamCount, grossCount: reimb.grossCount, tax: auditTaxCapture(active), anomalies: auditAnomalies(active), dealsScanned: active.length };
 }
