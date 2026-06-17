@@ -29,7 +29,7 @@ function fmt$(v: number | null | undefined): string {
 
 function fmtPSF(v: number | null | undefined): string {
   if (v == null) return "—";
-  return `$${Math.round(Number(v)).toLocaleString()} PSF`;
+  return `$${Math.round(Number(v)).toLocaleString("en-US")} PSF`;
 }
 
 function fmtOcc(v: number | null | undefined): string {

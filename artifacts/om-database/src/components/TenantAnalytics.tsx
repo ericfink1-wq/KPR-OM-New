@@ -22,7 +22,7 @@ function num(v: number | string | null | undefined): number | null {
 }
 
 function fmtPSF(v: number): string {
-  return `$${Math.round(v).toLocaleString()} PSF`;
+  return `$${Math.round(v).toLocaleString("en-US")} PSF`;
 }
 
 // ---------------------------------------------------------------------------

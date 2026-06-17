@@ -1354,7 +1354,7 @@ export function fmtTenantSales(salesPSF: unknown, sf: unknown): string {
   const psf = (salesPSF == null || salesPSF === "" || isNaN(Number(salesPSF))) ? null : Number(salesPSF);
   const sqft = (sf == null || sf === "" || isNaN(Number(sf))) ? null : Number(sf);
   if (psf == null) return "—";
-  const psfStr = `$${Math.round(psf).toLocaleString()} PSF`;
+  const psfStr = `$${Math.round(psf).toLocaleString("en-US")} PSF`;
   if (sqft == null) return psfStr;
   const total = psf * sqft;
   const totalStr = total >= 1_000_000
