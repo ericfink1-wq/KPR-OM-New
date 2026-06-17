@@ -538,6 +538,14 @@ KPR THESIS (the "kprThesis" field, if present): this is the KPR acquisitions tea
 
 LEASE RISK (anchor-dependency / co-tenancy): If a "leaseRiskExposure" block is present, it lists co-tenancy / sales-kickout exposure the APP computed from the lease documents — base rent that can convert to alternate/reduced rent (or grant a termination right) if a named anchor goes dark. NARRATE those figures; never re-derive or invent them. Fold the MATERIAL exposure into the Risks list and the narrative's risk sentence — e.g. a Tier-1 figure that is significant vs. the property's rent is a real risk ("~$X of base rent (TenantA, TenantB) converts to alternate rent if Anchor goes dark"). Tier-2 (needs a second event) is a lesser watch item. Where an executed lease has VERIFIED/mitigated a clause (Tier-1 reduced, or a tenant de-linked), reflect it as resolved rather than a live risk, and do not list a mitigated tenant as at-risk. Clauses still "OM-only (unverified)" should be framed as "subject to confirming the executed leases." Keep it proportional — a small Tier-1 relative to total rent is a minor note, not a headline. If no leaseRiskExposure block is present, ignore this.
 
+NEW UNDERWRITING SIGNALS — fold these into the grade, strengths, risks AND the narrative when the data is present (do NOT ignore them just because they sit on individual tenants):
+- EXPENSE-RECOVERY DURABILITY (reimbursementMethod): a tenant on FIXED CAM (a fixed/escalating CAM dollar amount) or a GROSS lease means the LANDLORD — not the tenant — absorbs CAM growth above the escalator, eroding NOI over the hold. If a MATERIAL share of GLA/rent is fixed-CAM or gross, raise an expense-recovery risk (underwrite conservative expense growth). Pro-rata NNN with a controllable-CAM cap is normal — NOT a flag.
+- UNEXECUTED LEASES (leaseStatus = loi / proposed / signed-not-open): NOI that rests on leases not yet signed or open is NOT committed. Size it and flag it ("~$X of base rent rests on unexecuted/LOI leases — confirm execution; in-place NOI is overstated until signed").
+- SALES TREND (priorSalesPSF vs salesPSF): a tenant whose sales FELL year-over-year is an early warning of renewal/credit risk — call out material decliners (especially anchors) in Risks. Rising sales support mark-to-market upside.
+- PRICING POWER (recentRenewalSpreadPct): recent renewals at higher rents (e.g. +20%) are hard evidence of below-market in-place rents / pricing power — a strength supporting mark-to-market.
+- OTHER INCOME (otherIncome): non-rent MARGIN income (utility resale, etc.) is less durable than contractual rent — note it and do not credit it like NOI.
+- TAX REASSESSMENT: when currentAssessedValue and the purchase/asking price are both present, compare the assessed-implied market (assessedValue ÷ the state's commercial assessment ratio — e.g. Ohio ~35%, Texas ~100%) to the price. If the price is WELL ABOVE the implied current market, flag a likely property-tax reassessment INCREASE as a risk (a real go-forward NOI hit). A disclosed taxAbatement that may not survive the sale is also a risk (current taxes are artificially low).
+
 Base everything on the CURRENT roster below (note tenantsAsOf — this roster supersedes any older OM). Output must start with { and end with }.
 
 CURRENT PROPERTY DATA (JSON):
@@ -641,6 +649,11 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>, lease
     tenantsAsOf: dealData.tenantsAsOf, tenantsSource: dealData.tenantsSource,
     marketDemographics: dealData.marketDemographics ?? null,
     kprThesis: thesis || undefined,
+    // Center-level non-rent income (utility resale, EV, parking, storage) — durability
+    // of NOI; and the current tax facts so the grade can flag a reassessment step-up.
+    otherIncome: dealData.otherIncome ?? undefined,
+    currentAssessedValue: dealData.currentAssessedValue, currentMarketValue: dealData.currentMarketValue,
+    currentAnnualTaxes: dealData.currentAnnualTaxes, taxAbatement: dealData.taxAbatement ?? undefined,
     tenants: t.map((x) => ({
       name: x.name, sf: x.sf, rentPerSF: x.rentPerSF, annualRent: x.annualRent,
       leaseExpiry: x.leaseExpiry, remainingTermYears: x.remainingTermYears,
@@ -649,6 +662,13 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>, lease
       // Needed to judge whether below-market rent is REAL mark-to-market upside
       renewalOptions: x.renewalOptions, rentBumps: x.rentBumps,
       salesPSF: x.salesPSF, salesYear: x.salesYear, occupancyCost: x.occupancyCost,
+      // Recovery durability (fixed-CAM/gross = landlord bears expense growth),
+      // execution status (LOI/not-open = NOI not yet committed), sales TREND
+      // (prior vs current = a declining-sales early warning), recent-renewal pricing
+      // power, and overage rent — so the GRADE reflects these, not just the deal page.
+      reimbursementMethod: x.reimbursementMethod, leaseStatus: x.leaseStatus,
+      priorSalesPSF: x.priorSalesPSF, priorSalesYear: x.priorSalesYear,
+      recentRenewalSpreadPct: x.recentRenewalSpreadPct, percentageRent: x.percentageRent,
     })),
   };
   // Prompt caching: the static ROSTER_ANALYSIS_PROMPT is identical every refresh,
