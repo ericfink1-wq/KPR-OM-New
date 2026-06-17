@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { Deal } from "../lib/idb";
 import { runPortfolioAudit, type ReimbDealGroup } from "../lib/portfolioAudit";
+import { apiAuditList, type AuditListDeal } from "../lib/api";
 
 // Portfolio Data Audit — surfaces the deterministic checks that recently caught
 // real data errors, across every deal at once. Click any row to open the deal.
@@ -51,18 +52,57 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
   const fixedCamDeals = audit.reimbDeals.filter((g) => g.fixedCam.length > 0);
   const grossDeals = audit.reimbDeals.filter((g) => g.gross.length > 0);
   const [showGross, setShowGross] = useState(false);
+  const [showReimb, setShowReimb] = useState(false);
+  // The arithmetic-tie-out issues (the real, actionable "numbers don't reconcile" list),
+  // fetched live so it reflects current data without a re-extract.
+  const [arith, setArith] = useState<{ deals: AuditListDeal[]; totalDeals: number; totalIssues: number } | null>(null);
+  useEffect(() => { apiAuditList().then(setArith).catch(() => setArith({ deals: [], totalDeals: 0, totalIssues: 0 })); }, []);
+  const sevRank = (s: string) => s === "high" ? 0 : s === "medium" ? 1 : 2;
 
   return (
     <div style={{ padding: "20px 18px 40px", maxWidth: 1100, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, fontFamily: "Georgia, serif" }}>Portfolio Data Audit</div>
       <div style={{ fontSize: 12.5, color: C.sub, marginTop: 4, lineHeight: 1.5 }}>
-        Deterministic checks run across all {audit.dealsScanned} deals — the same checks that caught the recent fixed-CAM and tax-value issues. Click any row to open the deal and fix it.
+        Independent arithmetic checks across all {audit.dealsScanned} deals — figures that should reconcile but don't (SF vs GLA, NOI ÷ cap vs price, rent roll-ups, cash-flow subtotals…). Click any deal to open it and fix the value in Import Review.
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+        <Stat n={arith?.totalDeals ?? 0} label="Deals with numbers to verify" tone={(arith?.totalDeals ?? 0) ? "amber" : "green"} />
+        <Stat n={arith?.totalIssues ?? 0} label="Figures that don't tie out" tone={(arith?.totalIssues ?? 0) ? "amber" : "green"} />
         <Stat n={taxHigh} label="Tax-value issues (likely errors)" tone={taxHigh ? "red" : "green"} />
-        <Stat n={audit.fixedCamCount} label={`Fixed-CAM tenants · ${fixedCamDeals.length} deals (landlord bears CAM growth)`} tone={audit.fixedCamCount ? "amber" : "green"} />
-        <Stat n={audit.grossCount} label={`Gross-labeled tenants · ${grossDeals.length} deals (spot-check)`} tone={audit.grossCount ? "amber" : "green"} />
+      </div>
+
+      {/* PRIMARY: arithmetic contradictions — the actionable worklist */}
+      <div style={{ marginTop: 22 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.05em", color: C.sub, textTransform: "uppercase", marginBottom: 8 }}>Numbers that don't tie out</div>
+        {arith == null ? (
+          <div style={{ fontSize: 12, color: C.faint }}>Running checks…</div>
+        ) : arith.deals.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: C.green, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 8, padding: "10px 12px" }}>✓ Every deal's figures reconcile — nothing to verify.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {arith.deals.map((g) => (
+              <div key={g.dealId} onClick={() => onOpenDeal(g.dealId)} role="button"
+                style={{ background: "#fff", border: `1px solid ${C.line}`, borderLeft: `3px solid ${g.high ? C.red : C.amber}`, borderRadius: 8, padding: "10px 12px", cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: C.ink }}>{g.dealName}</span>
+                  <span style={{ fontSize: 11, color: C.green, fontWeight: 600, whiteSpace: "nowrap" }}>Open &amp; fix ›</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+                  {[...g.issues].sort((a, b) => sevRank(a.severity) - sevRank(b.severity)).map((q, i) => {
+                    const s = sev(q.severity === "low" ? "info" : (q.severity as "high" | "medium"));
+                    return (
+                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <span style={{ fontSize: 8.5, fontWeight: 800, color: s.fg, background: s.bg, border: `1px solid ${s.bd}`, borderRadius: 4, padding: "1px 5px", flexShrink: 0, marginTop: 1, whiteSpace: "nowrap" }}>{q.label}</span>
+                        <span style={{ fontSize: 11.5, color: C.sub, lineHeight: 1.4 }}>{q.question}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tax capture */}
@@ -89,19 +129,20 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
         )}
       </div>
 
-      {/* Fixed-CAM — the real concern (was being mislabeled NNN). Grouped by deal. */}
+      {/* Reference (NOT errors): reimbursement classification inventory, collapsed. */}
       <div style={{ marginTop: 22 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.05em", color: C.sub, textTransform: "uppercase", marginBottom: 8 }}>Fixed-CAM recovery — landlord bears CAM growth</div>
-        {fixedCamDeals.length === 0 ? (
-          <div style={{ fontSize: 12.5, color: C.green, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 8, padding: "10px 12px" }}>✓ No fixed-CAM tenants found.</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <button onClick={() => setShowReimb((s) => !s)}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11, fontWeight: 800, letterSpacing: "0.05em", color: C.sub, textTransform: "uppercase" }}>
+          {showReimb ? "▾" : "▸"} Fixed-CAM tenants — reference ({audit.fixedCamCount} · {fixedCamDeals.length} deals)
+        </button>
+        <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4, lineHeight: 1.5 }}>
+          Not errors — an inventory of tenants whose CAM is a fixed/escalating amount (landlord bears CAM growth above the escalator). Underwrite their recovery conservatively; nothing to "fix" here.
+        </div>
+        {showReimb && fixedCamDeals.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
             {fixedCamDeals.map((g) => <ReimbDealRow key={g.dealId} g={g} kind="fixedCam" onOpen={onOpenDeal} />)}
           </div>
         )}
-        <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-          These tenants' CAM is a fixed/escalating amount, so the landlord — not the tenant — absorbs CAM growth above the escalator. Underwrite their expense recovery conservatively.
-        </div>
       </div>
 
       {/* Gross — collapsed by default (often a loose extraction label; spot-check). */}

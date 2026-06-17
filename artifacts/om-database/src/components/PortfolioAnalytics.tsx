@@ -287,9 +287,10 @@ interface Props {
   onYearClick?: (year: string, scope: "all" | "owned") => void;
   onTenantAudit?: () => void;
   onTenantAnalytics?: () => void;
+  onDataAudit?: () => void;
 }
 
-export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmin, onYearClick, onTenantAudit, onTenantAnalytics }: Props) {
+export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmin, onYearClick, onTenantAudit, onTenantAnalytics, onDataAudit }: Props) {
   const isMobile = useIsMobile();
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -493,17 +494,22 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <button onClick={handleReaudit} disabled={auditing} title="Token-free deterministic audit of EVERY deal: checks the numbers tie out — roster SF vs GLA, occupancy, NOI ÷ cap vs price, weighted-avg rent vs roll-up, per-tenant rent × SF, duplicate suites, cash-flow subtotals, recoveries roll-up. Contradictions post to each deal's Import Review; resolved items are left alone."
-              style={{ background: auditing ? "#f1eadc" : "transparent", border: `1px solid ${auditStats.deals > 0 ? "#f59e0b" : "#b8d49a"}`, color: auditing ? "#a89f8f" : (auditStats.deals > 0 ? "#92400e" : "#3f7a1f"), padding: "6px 12px", borderRadius: 7, cursor: auditing ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+            <button onClick={() => onDataAudit?.()} title="Open the Data Audit worklist — the deals whose numbers don't tie out (SF vs GLA, NOI ÷ cap vs price, rent roll-ups, cash-flow subtotals…). Click any deal there to open it and fix the value."
+              style={{ background: "transparent", border: `1px solid ${auditStats.deals > 0 ? "#f59e0b" : "#b8d49a"}`, color: auditStats.deals > 0 ? "#92400e" : "#3f7a1f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
               <span style={{ fontSize: 12 }}>{auditStats.deals > 0 ? "⚠" : "✓"}</span>
-              {auditing ? "Auditing…" : auditStats.deals > 0 ? `Audit ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues})` : "Audit data integrity"}
+              {auditStats.deals > 0 ? `Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues}) ›` : "Data integrity ✓"}
             </button>
             {auditMsg && <span style={{ fontSize: 10.5, color: auditMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{auditMsg}</span>}
-            {auditStats.breakdown.length > 0 && (
-              <button onClick={() => setShowAuditBreakdown(s => !s)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
-                {showAuditBreakdown ? "▴ hide breakdown" : "▾ what's flagged"}
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              {auditStats.breakdown.length > 0 && (
+                <button onClick={() => setShowAuditBreakdown(s => !s)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
+                  {showAuditBreakdown ? "▴ hide breakdown" : "▾ what's flagged"}
+                </button>
+              )}
+              <button onClick={handleReaudit} disabled={auditing} title="Re-sync the per-deal Import-Review flags + card badges to the current data (token-free, self-healing)." style={{ background: "none", border: "none", padding: 0, cursor: auditing ? "default" : "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
+                {auditing ? "syncing…" : "↻ re-sync flags"}
               </button>
-            )}
+            </div>
             {showAuditBreakdown && auditStats.breakdown.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end", maxWidth: 360 }}>
                 {auditStats.breakdown.map(b => (

@@ -1203,6 +1203,33 @@ router.get("/deals/audit-stats", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/deals/audit-list — the ACTUAL issues, per deal, so the audit is an
+// actionable worklist (click a deal → open it → fix in Import Review). Live + token-free.
+router.get("/deals/audit-list", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    const out: Array<{ dealId: string; dealName: string; high: number; issues: Array<{ key: string; label: string; severity: string; question: string }> }> = [];
+    for (const r of rows) {
+      const d = r.data as Record<string, unknown>;
+      if (d.trashedAt || d._processing || d._processingError) continue;
+      const f = auditExtraction(d);
+      if (!f.length) continue;
+      out.push({
+        dealId: r.id,
+        dealName: String(d.propertyName || d.fileName || "Untitled"),
+        high: f.filter(q => q.severity === "high").length,
+        issues: f.map(q => ({ key: auditCheckKey(q.id), label: AUDIT_CHECK_LABELS[auditCheckKey(q.id)] || q.field, severity: q.severity, question: q.question })),
+      });
+    }
+    // Worst first: most high-severity, then most issues.
+    out.sort((a, b) => b.high - a.high || b.issues.length - a.issues.length || a.dealName.localeCompare(b.dealName));
+    res.json({ deals: out, totalDeals: out.length, totalIssues: out.reduce((s, x) => s + x.issues.length, 0) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to build audit list");
+    res.status(500).json({ error: "Failed to build audit list" });
+  }
+});
+
 // POST /api/deals/reaudit — re-run the integrity audit over every active deal and merge
 // the results into each deal's Import-Review questions. SELF-HEALING and token-free:
 //   • audit-* questions that no longer fail are removed,

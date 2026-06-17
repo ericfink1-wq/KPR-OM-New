@@ -666,6 +666,13 @@ export async function apiReauditDeals(): Promise<{ ok: boolean; scanned: number;
   return resp.json() as Promise<{ ok: boolean; scanned: number; flagged: number; added: number; cleared: number }>;
 }
 
+export interface AuditListDeal { dealId: string; dealName: string; high: number; issues: { key: string; label: string; severity: string; question: string }[] }
+export async function apiAuditList(): Promise<{ deals: AuditListDeal[]; totalDeals: number; totalIssues: number }> {
+  const resp = await apiFetch(`/deals/audit-list`);
+  if (!resp.ok) return { deals: [], totalDeals: 0, totalIssues: 0 };
+  return resp.json() as Promise<{ deals: AuditListDeal[]; totalDeals: number; totalIssues: number }>;
+}
+
 export async function apiRefreshStaleAnalysis(): Promise<{ ok: boolean; refreshed: number; failed: number; total: number }> {
   const resp = await apiFetch(`/deals/refresh-stale-analysis`, { method: "POST" });
   if (!resp.ok) {

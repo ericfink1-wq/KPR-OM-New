@@ -557,7 +557,7 @@ function AppInner() {
             ) : (
               <>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
+                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} onDataAudit={() => setAnalyticsView("audit")} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
                 ) : analyticsView === "calendar" ? (
                   <CriticalDates deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "marktomarket" ? (
