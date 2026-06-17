@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LeaseAbstract } from "../lib/idb";
 import { apiSaveLeaseAbstract } from "../lib/api";
+import { extractAnyFile, isPdf, isSpreadsheet } from "../lib/fileExtract";
+import { extractLeaseAbstracts } from "../lib/abstractExtract";
 
 // One deal-level "Upload abstracts" entry point. Accepts a single tenant's JSON
 // or a whole-property array, then AUTO-ROUTES each abstract to the matching
@@ -42,19 +44,46 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
   const [items, setItems] = useState<Parsed[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
   const [result, setResult] = useState<{ saved: number; failed: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Read the chosen file and parse it straight to the match preview. Kept separate
-  // from the textarea so a multi-hundred-KB whole-property file never has to be pasted.
+  // Read the chosen file and parse it straight to the match preview. A JSON file is
+  // parsed directly; a broker's abstract PDF or Excel/CSV is sent through the AI
+  // reader (extractLeaseAbstracts) to structure it first (scans are OCR'd upstream).
   const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = ""; // let the same file be re-picked
     if (!f) return;
-    setErr(null);
-    let raw: string;
-    try { raw = await f.text(); } catch { setErr("Couldn't read that file."); return; }
-    parse(raw);
+    setErr(null); setResult(null); setInfo(null);
+    const isJson = /\.json$/i.test(f.name) || f.type === "application/json";
+    if (isJson) {
+      let raw: string;
+      try { raw = await f.text(); } catch { setErr("Couldn't read that file."); return; }
+      parse(raw);
+      return;
+    }
+    if (!isPdf(f) && !isSpreadsheet(f)) {
+      setErr("Drop a broker abstract as PDF, Excel/CSV, or a JSON abstract file.");
+      return;
+    }
+    // Broker abstract PDF/Excel → extract text (OCR for scans) → AI-structure it.
+    setReading(true);
+    try {
+      const { text: docText } = await extractAnyFile(f);
+      if (!docText || docText.trim().length < 40) {
+        setErr("Couldn't read any text from that file. If it's a scan, give it a moment (it OCRs), or try a clearer copy.");
+        return;
+      }
+      const { abstracts, note } = await extractLeaseAbstracts(docText);
+      parse(JSON.stringify({ leaseAbstracts: abstracts }));
+      setInfo(`Read ${abstracts.length} abstract${abstracts.length === 1 ? "" : "s"} from the document${note ? ` — ${note}` : ""}. Review the matches below, then Save. (Summary-sourced — verify against the executed leases.)`);
+    } catch (ex) {
+      setErr(ex instanceof Error ? ex.message : "Couldn't read that abstract document.");
+    } finally {
+      setReading(false);
+    }
   };
 
   const normMap = useMemo(() => {
@@ -80,7 +109,7 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
   }
 
   function parse(rawArg?: string) {
-    setErr(null); setResult(null);
+    setErr(null); setResult(null); setInfo(null);
     const raw = rawArg ?? text;
     let data: unknown;
     try { data = JSON.parse(raw); }
@@ -148,7 +177,7 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>Upload lease abstracts</div>
             <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>
-              Paste one tenant's JSON or a whole-property array. Each routes to the matching tenant automatically; anything unmatched you assign below.
+              Drop a broker's lease-abstract <b>PDF or Excel</b> (the AI structures it), or paste/choose a JSON abstract. Each routes to the matching tenant automatically; anything unmatched you assign below.
             </div>
           </div>
           <button onClick={onClose} aria-label="Close"
@@ -165,19 +194,21 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
               {/* iOS-safe file picker: a real button calls the input's .click() via a ref.
                   The input must stay in the layout (NOT display:none) and have NO `accept`
                   attribute, or iOS Safari refuses to open the picker / greys out .json. */}
-              <button type="button" onClick={() => fileRef.current?.click()}
-                style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: C.green, border: "none",
-                  borderRadius: 8, padding: "9px 18px", cursor: "pointer", minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                ⬆ Choose .json file
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={reading}
+                style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: reading ? "#9bbf7e" : C.green, border: "none",
+                  borderRadius: 8, padding: "9px 18px", cursor: reading ? "default" : "pointer", minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                {reading ? "Reading abstract…" : "⬆ Choose file (PDF, Excel, or JSON)"}
               </button>
               <input ref={fileRef} type="file" onChange={onPickFile}
                 style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
-              <button onClick={() => parse()} disabled={!text.trim()} style={btn(C.blue, !!text.trim())}>Match pasted text</button>
+              <button onClick={() => parse()} disabled={!text.trim() || reading} style={btn(C.blue, !!text.trim() && !reading)}>Match pasted text</button>
             </div>
-            <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>On a phone, tap “Choose .json file” and pick the file Claude sent — no pasting needed.</div>
+            <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>Drop a <b>broker's lease abstract</b> (PDF or Excel) and the AI reads it into the abstracts + lease-risk table — scans are OCR'd automatically. Or paste/choose a JSON abstract.</div>
           </>
         )}
 
+        {reading && <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>Reading the abstract document… large or scanned files take a bit (scans are OCR'd first).</div>}
+        {info && !err && <div style={{ marginTop: 10, fontSize: 12, color: C.green }}>{info}</div>}
         {err && <div style={{ marginTop: 10, fontSize: 12, color: C.red }}>{err}</div>}
 
         {items && !result && (
