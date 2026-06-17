@@ -689,6 +689,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                               <>
                                 <td key={`${y}-psf`} style={{ padding: "7px 10px", textAlign: "right", color: psfColor, fontWeight: cur ? 600 : 400, borderLeft: "2px solid #c8ddb8" }}>
                                   {fmtPSF(cur)}
+                                  {rec?.annualized && <span title={rec.salesNote || "Annualized 12-month run-rate from a partial first year — not an actual full year"} style={{ marginLeft: 4, fontSize: 8, fontWeight: 700, letterSpacing: "0.03em", color: "#9a6a12", background: "#fff3df", border: "1px solid #f2d4a0", borderRadius: 3, padding: "0 3px", cursor: "help", verticalAlign: "middle" }}>~ANNL</span>}
                                   {pct != null && <span style={{ marginLeft: 4, fontSize: 11 }}>({pct > 0 ? "+" : "−"}{Math.abs(pct).toFixed(1)}%)</span>}
                                 </td>
                                 <td key={`${y}-tot`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
@@ -704,7 +705,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                             const rec = row.byYear[selectedYear as number];
                             return (
                               <>
-                                <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#262724" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}</td>
+                                <td style={{ padding: "7px 10px", textAlign: "right", color: rec?.salesPSF ? "#262724" : "#bbb", fontWeight: rec?.salesPSF ? 600 : 400 }}>{fmtPSF(rec?.salesPSF)}{rec?.annualized && <span title={rec.salesNote || "Annualized 12-month run-rate from a partial first year — not an actual full year"} style={{ marginLeft: 4, fontSize: 8, fontWeight: 700, letterSpacing: "0.03em", color: "#9a6a12", background: "#fff3df", border: "1px solid #f2d4a0", borderRadius: 3, padding: "0 3px", cursor: "help", verticalAlign: "middle" }}>~ANNL</span>}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtNum(rec?.sf)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>

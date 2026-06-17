@@ -22,7 +22,9 @@ Return ONLY valid JSON — no markdown fences, no explanation — with this exac
       "salesPSF": number_or_null,
       "annualSales": number_or_null,
       "sf": number_or_null,
-      "occupancyCost": number_or_null
+      "occupancyCost": number_or_null,
+      "annualized": boolean_or_null,
+      "salesNote": "string_or_null — set ONLY when annualized=true; explains it (e.g. 'Annualized run-rate from 4 months (Sep–Dec); opened ~Sep 2025')"
     }
   ],
   "reviewQuestions": [
@@ -56,6 +58,15 @@ CHOOSING THE YEAR — READ CAREFULLY (for multi-year column reports, NOT the R12
 - Use the MOST RECENT *COMPLETE* full-year column for every tenant, and set the top-level "year" to that complete year. If the latest column is clearly partial (much lower than the prior year, trailing zero months, or report dated in Jan–Mar of the next year), step back to the last complete year.
 - A tenant's annualSales and salesPSF MUST come from the SAME chosen year and be internally consistent (annualSales ÷ sf ≈ salesPSF).
 
+NEWLY-OPENED TENANT vs. an INCOMPLETE YEAR — DISTINGUISH THESE (important). A partial most-recent year has two very different causes:
+  (a) The reporting period just isn't over yet, but the tenant has FULL PRIOR YEARS → step back to the last complete year (the rule above).
+  (b) The TENANT OPENED MID-YEAR, so the partial year is its FIRST and ONLY data — earlier year rows are all blank/zero, and/or a "Sales Reporting Effective" / "Not open until" date shows a mid-year start. In this case there is NO prior year to step back to.
+For case (b), do NOT raise a "should prior-year data be used instead?" review question (there is none) and do NOT report the raw partial total (it understates the full year). Instead ANNUALIZE to a 12-month run-rate:
+  - annualSales = round( (sum of the reported months) ÷ (number of reported months) × 12 );  salesPSF = round( annualSales ÷ sf ).
+  - Set "annualized": true and "salesNote": "Annualized run-rate from <N> months (<first>–<last>); tenant opened ~<month year>. Straight-line — may not reflect seasonality."
+  - Set the top-level/captured "year" to that partial year (it IS the tenant's year), and tie annualSales ÷ sf ≈ salesPSF on the annualized figures.
+Only annualize when the partial year is the tenant's FIRST/ONLY year of data. If a prior complete year exists, keep using it (case a) and leave annualized null.
+
 SQUARE FOOTAGE — IMPORTANT. If the report's "Square Feet (GLA)" prints as 0 or blank but it DOES state a "Per Square Foot" sales figure, DERIVE sf = round(annualSales ÷ salesPSF). Never report sf as 0 when sales and PSF are both present.
 
 MONTHLY-BREAKOUT REPORTS WITH A "Projected Annual" COLUMN (common PM-export format — handle explicitly). The sheet lists, FOR EACH TENANT, a header row with the tenant name plus "Units:" (suite), "Lease Start", "Lease Expiration", followed by one row PER YEAR. Each year row begins with the tenant's SF, then the year, then twelve monthly columns (Jan–Dec), then a "YTD"/"Total" column, then "Projected Annual" "Total" and "$PSF" columns. For this format:
@@ -63,7 +74,7 @@ MONTHLY-BREAKOUT REPORTS WITH A "Projected Annual" COLUMN (common PM-export form
 - Choose the MOST RECENT year whose twelve monthly columns are fully populated. If the latest year's later months are blank/zero (still in progress), step back to the last fully-populated year.
 - name = the tenant in the header row (strip the store # and any "(tNNNN…)" id, e.g. "Aerie #3883 (t9500499)" → "Aerie"); suite = the "Units:" value; sf = the leading SF number on the chosen year row.
 
-reviewQuestions — FLAG DOUBT so the user can confirm/fix it. Add an item ONLY when you genuinely could not capture a value with confidence, e.g.: the year you chose was ambiguous (the latest column might be partial and you had to step back a year); a sales/PSF figure was blurry, split oddly, or in unclear units (thousands vs whole dollars); a tenant's salesPSF and annual sales don't tie (annualSales ÷ sf should ≈ salesPSF); or a column was unlabeled and you weren't sure it was sales vs PSF vs occupancy cost. ALWAYS set target to the exact tenant + field when the doubt is about one tenant's number. Do NOT flag values simply absent from the report (those are just null). Empty array if the report was clean. Cap at the ~4 most important.
+reviewQuestions — FLAG DOUBT so the user can confirm/fix it. Add an item ONLY when you genuinely could not capture a value with confidence, e.g.: the year you chose was ambiguous (the latest column might be partial and you had to step back a year) — but do NOT raise this for a newly-opened tenant whose partial year you ANNUALIZED per the rule above (that's handled by annualized/salesNote, not a question); only flag a partial year if you genuinely cannot tell whether the tenant newly opened vs. the period is just incomplete; a sales/PSF figure was blurry, split oddly, or in unclear units (thousands vs whole dollars); a tenant's salesPSF and annual sales don't tie (annualSales ÷ sf should ≈ salesPSF); or a column was unlabeled and you weren't sure it was sales vs PSF vs occupancy cost. ALWAYS set target to the exact tenant + field when the doubt is about one tenant's number. Do NOT flag values simply absent from the report (those are just null). Empty array if the report was clean. Cap at the ~4 most important.
 
 ${await lessonGuidanceClient("sales")}
 SALES REPORT TEXT:
@@ -174,6 +185,7 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
     if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
 
     let occupancyCost = nv(t.occupancyCost);
+    if (occupancyCost != null && occupancyCost <= 0) occupancyCost = null; // a stored 0 is "no data," not a real 0% — compute instead
     let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
     let occBreakdown: OccBreakdown | null = null;
     const base = nv(rt?.annualRent);
@@ -207,7 +219,9 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
         });
       }
     }
-    return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
+    const annualized = t.annualized === true ? true : null;
+    const salesNote = typeof t.salesNote === "string" && t.salesNote.trim() ? t.salesNote.trim() : null;
+    return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown, annualized, salesNote };
   });
 
   const newSnap: TenantSalesYear = { year, uploadedAt: new Date().toISOString(), source: "upload", tenants: tenants as TenantSalesYear["tenants"] };
