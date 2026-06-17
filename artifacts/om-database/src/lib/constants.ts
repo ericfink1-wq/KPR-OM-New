@@ -77,6 +77,10 @@ export const PDF_JS_WORKER = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PD
 // cost; runs in a web worker in the browser.
 export const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
 
+// Mammoth — loaded on demand to read Word (.docx) documents into plain text (e.g.
+// a broker's lease-summary handed out as Word). Browser build; exposes window.mammoth.
+export const MAMMOTH_CDN = "https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js";
+
 // A Prospect sitting untouched this long auto-shifts to Passed (~2 months).
 export const PROSPECT_STALE_DAYS = 61;
 

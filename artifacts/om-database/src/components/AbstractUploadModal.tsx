@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LeaseAbstract } from "../lib/idb";
 import { apiSaveLeaseAbstract } from "../lib/api";
-import { extractAnyFile, isPdf, isSpreadsheet } from "../lib/fileExtract";
+import { extractAnyFile, isPdf, isSpreadsheet, isWord, isWordLegacy } from "../lib/fileExtract";
 import { extractLeaseAbstracts } from "../lib/abstractExtract";
 
 // One deal-level "Upload abstracts" entry point. Accepts a single tenant's JSON
@@ -64,11 +64,11 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
       parse(raw);
       return;
     }
-    if (!isPdf(f) && !isSpreadsheet(f)) {
-      setErr("Drop a broker abstract as PDF, Excel/CSV, or a JSON abstract file.");
+    if (!isPdf(f) && !isSpreadsheet(f) && !isWord(f) && !isWordLegacy(f)) {
+      setErr("Drop a broker abstract as PDF, Excel/CSV, Word (.docx), or a JSON abstract file.");
       return;
     }
-    // Broker abstract PDF/Excel → extract text (OCR for scans) → AI-structure it.
+    // Broker abstract PDF / Excel / Word → extract text (OCR for scanned PDFs) → AI-structure it.
     setReading(true);
     try {
       const { text: docText } = await extractAnyFile(f);
@@ -177,7 +177,7 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>Upload lease abstracts</div>
             <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>
-              Drop a broker's lease-abstract <b>PDF or Excel</b> (the AI structures it), or paste/choose a JSON abstract. Each routes to the matching tenant automatically; anything unmatched you assign below.
+              Drop a broker's lease-abstract <b>PDF, Excel, or Word</b> (the AI structures it), or paste/choose a JSON abstract. Each routes to the matching tenant automatically; anything unmatched you assign below.
             </div>
           </div>
           <button onClick={onClose} aria-label="Close"
@@ -197,13 +197,13 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
               <button type="button" onClick={() => fileRef.current?.click()} disabled={reading}
                 style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: reading ? "#9bbf7e" : C.green, border: "none",
                   borderRadius: 8, padding: "9px 18px", cursor: reading ? "default" : "pointer", minHeight: 38, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                {reading ? "Reading abstract…" : "⬆ Choose file (PDF, Excel, or JSON)"}
+                {reading ? "Reading abstract…" : "⬆ Choose file (PDF, Excel, Word, or JSON)"}
               </button>
               <input ref={fileRef} type="file" onChange={onPickFile}
                 style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
               <button onClick={() => parse()} disabled={!text.trim() || reading} style={btn(C.blue, !!text.trim() && !reading)}>Match pasted text</button>
             </div>
-            <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>Drop a <b>broker's lease abstract</b> (PDF or Excel) and the AI reads it into the abstracts + lease-risk table — scans are OCR'd automatically. Or paste/choose a JSON abstract.</div>
+            <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>Drop a <b>broker's lease abstract</b> (PDF, Excel, or Word) and the AI reads it into the abstracts + lease-risk table — scans are OCR'd automatically. Or paste/choose a JSON abstract.</div>
           </>
         )}
 
