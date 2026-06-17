@@ -7,7 +7,7 @@ import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchma
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
 import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
-import { auditExtraction } from "./extractionAudit";
+import { auditExtraction, auditSourceText } from "./extractionAudit";
 import { getHouseView, saveHouseView, incrementPendingReviews } from "./houseView";
 import { Agent, fetch as undiciFetch } from "undici";
 
@@ -779,7 +779,10 @@ export async function runBackgroundExtraction(
     try {
       const lrChecks = validateLeaseRiskAtExtraction(dealData);
       const auditChecks = auditExtraction(dealData);
-      const allChecks = [...lrChecks, ...auditChecks];
+      // Source-level: warn up front if the OM's text layer was essentially empty
+      // (scanned / image-based), so a sparse read isn't mistaken for "no data".
+      const srcChecks = auditSourceText(text, pageCount);
+      const allChecks = [...lrChecks, ...auditChecks, ...srcChecks];
       if (allChecks.length) {
         const existing = Array.isArray(dealData.reviewQuestions) ? dealData.reviewQuestions as unknown[] : [];
         const seen = new Set(existing.map((q) => (q as { id?: string })?.id));

@@ -66,6 +66,36 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-rentroll-incomplete": "Rent roll didn't extract",
 };
 
+// SOURCE-LEVEL signal (runs on the raw PDF text BEFORE/alongside the LLM, not the
+// extracted deal): when an OM yields almost no extractable text per page, it is a
+// SCANNED / image-based document — the model (and especially the rent roll and
+// financial tables) will read poorly, producing a sparse, misleadingly-empty deal.
+// Surfaced as a high-severity review question so the user is told up front that the
+// text wasn't readable and can re-save the OM as a text PDF or upload a structured
+// rent roll / financials. Deliberately NOT in the audit-* namespace: a token-free
+// re-audit has no source text, so it must not be able to auto-drop this warning.
+export function auditSourceText(text: string, pageCount: number): AuditQuestion[] {
+  const out: AuditQuestion[] = [];
+  const len = (text ?? "").trim().length;
+  // Need a few pages to judge; a 1–2 page teaser isn't a "scanned OM".
+  if (pageCount >= 3) {
+    const perPage = len / pageCount;
+    // Text-based OMs run thousands of chars/page (even with image pages mixed in).
+    // Under ~250 chars/page across the whole document means the text layer is
+    // essentially empty — a scan or a flattened-image export.
+    if (perPage < 250) {
+      out.push({
+        id: "src-scanned-pdf", source: "check", severity: "high",
+        field: "OM is scanned / text not readable",
+        question: `This OM looks scanned or image-based — only about ${Math.round(perPage)} characters of text per page were readable across ${pageCount} pages, so much of it (often the rent roll and financials) likely didn't extract. Re-upload a text-based PDF, or upload a structured rent roll / financials.`,
+        detail: `A text-based OM yields thousands of readable characters per page; a near-empty text layer means the document is a scan or flattened image, so the AI is reading very little of it. Captured fields will be sparse — treat the blanks as "couldn't read," not "no data."`,
+        suggestedValue: null, target: null,
+      });
+    }
+  }
+  return out;
+}
+
 export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] {
   const out: AuditQuestion[] = [];
   const tenants: TenantLike[] = Array.isArray(deal.tenants) ? (deal.tenants as TenantLike[]) : [];
