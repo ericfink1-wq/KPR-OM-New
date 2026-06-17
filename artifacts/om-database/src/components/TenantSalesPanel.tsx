@@ -71,7 +71,9 @@ function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): 
       // 1. OM-stated occupancyCost (already a total %)
       // 2. Computed if base rent AND reimbursements are both present AND sales > 0
       // 3. Otherwise null — never estimate from base rent alone
-      const stated = t.occupancyCost != null && !isNaN(Number(t.occupancyCost))
+      // A stored occupancy cost of 0 (or negative) is "no data," not a real 0%
+      // health ratio — treat it as missing and compute from rent ÷ sales instead.
+      const stated = t.occupancyCost != null && !isNaN(Number(t.occupancyCost)) && Number(t.occupancyCost) > 0
         ? Number(t.occupancyCost) : null;
       const base = t.annualRent != null && !isNaN(Number(t.annualRent))
         ? Number(t.annualRent) : null;
@@ -222,6 +224,7 @@ function deriveSalesRecord(
   if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
 
   let occupancyCost = nv(t.occupancyCost);
+  if (occupancyCost != null && occupancyCost <= 0) occupancyCost = null; // stored 0 = no data, not a real 0% health ratio
   let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
   let occBreakdown: OccBreakdown | null = t.occBreakdown ?? null;
   const base = nv(rt?.annualRent);

@@ -656,7 +656,11 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       </td>
                     );
                   }
-                  const stated = n(t.occupancyCost);
+                  // A stored occupancy cost of 0 (or negative) is "no data," NOT a
+                  // real 0% health ratio — treat it as missing so it computes from
+                  // rent ÷ sales (which also keeps the roster in sync with the sales table).
+                  const statedRaw = n(t.occupancyCost);
+                  const stated = statedRaw != null && statedRaw > 0 ? statedRaw : null;
                   const base = n(t.annualRent);
                   // Recoveries: OM-disclosed value first; else the SF-allocated
                   // estimate so occ cost can still be computed on NNN tenants.
