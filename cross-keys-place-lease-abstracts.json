@@ -1,0 +1,570 @@
+{
+  "leaseAbstracts": [
+    {
+      "tenantName": "Edge Fitness Clubs",
+      "dba": "Edge Fitness Clubs",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease", "type": "lease", "description": "Original lease — referenced throughout (Sections 1G, 6.1, 6.2, 7.2, 14.22, 14.26)." },
+        { "name": "Third Amendment", "type": "amendment", "description": "Referenced (Section 5 — Gross Sales / membership reporting). Prior First and Second Amendments implied but not provided in this summary." }
+      ],
+      "options": [
+        { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Written notice no later than 270 days prior to the end of the Term; tenant not in default at notice or at extension. (Section 1G)" },
+        { "ordinal": 2, "number": "2nd", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "May not exercise the 2nd option if the 1st was not exercised; written notice no later than 270 days prior to end of the First Option Term; not in default. (Section 1G)" }
+      ],
+      "optionNotes": "Tenant has two (2) 5-year renewal options remaining.",
+      "exclusives": [
+        {
+          "description": "Exclusive right to operate a health club and/or fitness center, extending to personal training and chiropractic practice, within the Shopping Center (and adjacent property Landlord owns/controls/acquires during the Term). Does NOT cover physical therapy that is part of a legitimate medical practice. Conditioned on tenant occupying/operating at least 90% of the Premises, the Permitted Use, and no Default. Carve-outs: ancillary use using 35% or less of another tenant's sales floor; leases/occupants existing at execution; physical therapy, vitamin/nutritional sales, massages, tanning, salons, juice bars/food service, cinema/theater, child care, and sale of fitness equipment/clothing.",
+          "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.26", "page": "2" }
+        }
+      ],
+      "coTenancy": [],
+      "otherRiskClauses": {
+        "exclusiveUse": {
+          "present": true,
+          "summary": "Fitness/health-club exclusive (§14.26). On an uncured Exclusive Use Violation (90-day landlord cure after notice), tenant may pay Substitute Rent = 50% of Base Rent + Additional Rent until cure or a court ruling of unenforceability. If the violation continues one year, Landlord is deemed in default and tenant may terminate by notice within 60 days after that one-year period (terminates 60 days after notice). If the violation is caused by a tenant occupying 1,800 SF or less, Landlord is not deemed in default and tenant's remedy is limited to Substitute Rent plus the termination option.",
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)",
+          "sectionRef": "§14.26",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        },
+        "goDarkRight": {
+          "present": true,
+          "summary": "No implied continuous-operation covenant — tenant may cease operations at any time without default (§14.22). LANDLORD RECAPTURE: commencing 60 days after such closure/cessation (other than a remodel of up to 6 months with 30 days' notice), Landlord may terminate the Lease on 30 days' prior written notice. A closure also terminates the tenant's §14.26 exclusive.",
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)",
+          "sectionRef": "§14.22",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        },
+        "continuousOperationCovenant": { "present": false, "summary": "Expressly NO continuous-operation covenant (§14.22).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§14.22", "verifiedAgainstExecutedDoc": false },
+        "earlyTerminationOption": { "present": true, "summary": "Tenant may terminate on an uncured exclusive-use violation continuing one year (§14.26). See exclusiveUse.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§14.26", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "No assignment/sublet without Landlord's prior written consent (not to be unreasonably withheld). Consent NOT required for: (i) sale of tenant's business including at least 5 fitness clubs where the buyer's net worth is at least tenant's (and no less than $20M); (ii) merger/consolidation (operating at least 5 clubs and $20M net worth before and after); (iii) assignment to parent/subsidiary (at least 5 clubs, $20M net worth). 20 days' prior notice required.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§6.1–6.2", "page": "2" } },
+      "goDark": { "value": "Permitted — no continuous-operation covenant; subject to Landlord recapture 60 days after closure on 30 days' notice (§14.22).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.22", "page": "2" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Health club/fitness exclusive incl. personal training & chiropractic; excludes physical therapy (legit medical). Remedy: 50% Substitute Rent; termination after 1-year uncured violation. (§14.26)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.26" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Silent (no co-tenancy clause).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "—" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Termination right on an exclusive-use violation uncured for one year (§14.26).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.26" } },
+        { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Landlord may terminate beginning 60 days after tenant goes dark, on 30 days' notice (§14.22).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.22" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Permitted at any time, no default (§14.22). Triggers loss of exclusive and a landlord recapture window.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.22" } },
+        { "code": "OPC", "label": "Operating Covenant", "value": "None — expressly no continuous-operation covenant (§14.22).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.22" } },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Consent required (not unreasonably withheld); waived for ≥5-club sale / merger / parent-sub transfers meeting a $20M net-worth test; 20 days' notice (§6.1–6.2).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§6.1–6.2" } },
+        { "code": "RADIUS", "label": "Radius", "value": "Not addressed in the lease-clauses summary — confirm in the executed lease.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "—" } },
+        { "code": "GUARANT", "label": "Guaranty", "value": "Not addressed in the lease-clauses summary — confirm in the executed lease.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "All terms abstracted from the OM's lease-clauses appendix (CBRE), not the executed lease + amendments. Verify against the executed documents before relying on any term." },
+        { "severity": "watch", "issue": "Amendment chain incomplete", "detail": "A Third Amendment is referenced (Section 5), implying a First and Second Amendment that are not in this summary. Confirm the full chain and that the controlling economic terms are captured." },
+        { "severity": "watch", "issue": "Landlord recapture on go-dark", "detail": "No continuous-operation covenant; Landlord may recapture 60 days after closure on 30 days' notice (§14.22). Monitor as an operating-status lever." }
+      ],
+      "narrative": "Edge Fitness (anchor) holds a fitness/health-club exclusive (§14.26) with a 50%-of-rent Substitute Rent remedy and a termination right if a violation goes uncured for a year. No continuous-operation covenant — tenant can go dark at any time, but Landlord may recapture 60 days after closure. Two 5-year renewal options remain (270-day notice). Co-tenancy is silent. Assignment needs consent except for ≥5-club sale/merger/parent transfers passing a $20M net-worth test. Summary-sourced; a Third Amendment is referenced so the full amendment chain should be pulled.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE)", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Michaels",
+      "dba": "Michaels",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (original tenant A.C. Moore, Incorporated)", "type": "lease", "description": "Original lease — Sections 6, 9E, 12, 22, 47, and co-tenancy Section 4. Tenant of record originally A.C. Moore; now Michaels." },
+        { "name": "Second Amendment", "type": "amendment", "description": "Section I.C — three (3) renewal terms remaining (Second/Third/Fourth)." },
+        { "name": "Third Amendment", "type": "amendment", "description": "Section I.D — deemed Edge a 'national retailer'; tenant waived the then-existing Ongoing Co-Tenancy failure (cured by Edge); Alternative Rent ceased November 1, 2023." }
+      ],
+      "options": [
+        { "ordinal": 1, "number": "2nd (of 4)", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Written notice not less than 6 months prior to the Renewal Term. (Second Amendment §I.C)" },
+        { "ordinal": 2, "number": "3rd (of 4)", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Written notice not less than 6 months prior. (Second Amendment §I.C)" },
+        { "ordinal": 3, "number": "4th (of 4)", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Written notice not less than 6 months prior. (Second Amendment §I.C)" }
+      ],
+      "optionNotes": "Three (3) 5-year renewal options remaining (originally four). 6-month notice.",
+      "exclusives": [
+        {
+          "description": "Landlord will not lease/permit occupancy for the sale of arts and crafts merchandise, yarn, picture frames, artificial flowers or plants, or scrapbooking materials as a primary line of business. Remedy: in lieu of Fixed Annual Rent + Additional Rent, 2% of Gross Sales during the violation; if the violation continues 6 consecutive months or longer, tenant may terminate on 30 days' written notice.",
+          "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§47", "page": "4" }
+        }
+      ],
+      "coTenancy": [
+        {
+          "type": "opening",
+          "triggerLogic": { "type": "named_anchor_dark", "anchors": ["Bed Bath & Beyond", "One other national tenant ≥10,000 SF"], "note": "Opening co-tenancy: tenant not required to open / Commencement not until Bed Bath & Beyond and one other national tenant of ≥10,000 SF (the 'Anchor Tenants') are open or fixturing." },
+          "remedy": { "mechanism": "alternate_rent_pct_sales", "value": 2, "cap": "fixed_annual_rent_and_additional_rent", "additionalRentTreatment": "unknown" },
+          "cureCondition": "Anchor Tenants open for business.",
+          "currentlyInEffect": false,
+          "currentStatusNote": "Opening co-tenancy is generally spent once the tenant has opened. Bed Bath & Beyond liquidated nationally in 2023 — confirm whether the opening requirement was satisfied historically and whether it has any ongoing effect.",
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)",
+          "sectionRef": "§4",
+          "verbatimQuote": "Tenant shall not be required to open ... until Bed, Bath & Beyond and one other national tenant occupying no less than ten thousand (10,000) square feet (the 'Anchor Tenants') are open for business or ... fixturing.",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        },
+        {
+          "type": "operating",
+          "triggerLogic": { "type": "occupancy_threshold", "scope": "national retailers open in the Shopping Center (other than Tenant), measured in SF", "direction": "below", "note": "Trips when not more than 45,000 SF of national retailers (other than Tenant) are open for business." },
+          "remedy": { "mechanism": "alternate_rent_pct_sales", "value": 2, "cap": "fixed_annual_rent_and_additional_rent", "additionalRentTreatment": "unknown" },
+          "reliefPeriodMonthsBeforeTermination": 12,
+          "terminationNoticeDays": 30,
+          "cureCondition": "More than 45,000 SF of national retailers (other than Tenant) reopen. If failure continues one year, within 30 days tenant must either terminate or waive and resume full rent.",
+          "currentlyInEffect": false,
+          "currentStatusNote": "Per the Third Amendment (§I.D), the then-existing Ongoing Co-Tenancy failure was cured by Edge being deemed a national retailer; Alternative Rent ceased November 1, 2023 and full rent resumed. Confirm the center currently exceeds the 45,000 SF national-retailer floor.",
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)",
+          "sectionRef": "§4; Third Amendment §I.D",
+          "verbatimQuote": "Should not more than forty-five thousand (45,000) square feet of national retailers (other than Tenant) be open for business in the Shopping Center, then Tenant shall have the option to pay two percent (2%) of Gross Sales in lieu of Fixed Annual Rent and Additional Rent ...",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "otherRiskClauses": {
+        "exclusiveUse": { "present": true, "summary": "Arts & crafts exclusive (§47); 2%-of-sales rent in lieu during a violation; termination right after a 6-month violation.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§47", "provenance": "extracted", "verifiedAgainstExecutedDoc": false },
+        "continuousOperationCovenant": { "present": false, "summary": "Nothing requires the tenant to keep open; must only open at least one day as an A.C. Moore Arts & Crafts Store within 120 days of Delivery of Possession (§9E).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§9E", "verifiedAgainstExecutedDoc": false },
+        "earlyTerminationOption": { "present": true, "summary": "Termination on (a) exclusive violation continuing 6 months (§47), and (b) ongoing co-tenancy failure persisting one year (§4).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§47; §4", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "Tenant may assign/sublet without Landlord consent for any lawful retail use that does not violate other occupancy agreements or exclusives; tenant remains primarily liable. Free assignment without notice/consent to (i) an affiliate, (ii) a merger/consolidation successor, or (iii) an entity acquiring all/substantially all of tenant's NJ store operations. Original Tenant (A.C. Moore) retains notice-of-default rights. (§22)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§22", "page": "4" } },
+      "goDark": { "value": "Permitted — no continuous-operation covenant; only required to open one day within 120 days of Delivery of Possession (§9E). No express landlord recapture in the summary.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§9E", "page": "4" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Arts & crafts / yarn / picture frames / artificial flowers / scrapbooking exclusive (primary line). Remedy: 2% of Gross Sales in lieu of rent; terminate after 6-month violation. (§47)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§47" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Opening: BBB + one other national ≥10,000 SF. Operating: trips if not more than 45,000 SF of national retailers (other than Tenant) are open → 2% of sales in lieu of rent; termination right if uncured 1 year. Historically triggered; cured 11/1/2023 by Edge (Third Amendment §I.D). (§4)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§4" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Exclusive-violation termination (6 months, §47) and co-tenancy termination (1-year ongoing failure, §4).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§47; §4" } },
+        { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "None stated in the summary.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "—" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Permitted; only a one-day initial opening obligation (§9E). No express recapture in the summary.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§9E" } },
+        { "code": "OPC", "label": "Operating Covenant", "value": "None — no continuous-operation requirement (§9E).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§9E" } },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Permitted without consent for compliant retail use; free to affiliate/merger/NJ-portfolio successor; A.C. Moore retains default-notice rights. (§22)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§22" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "Abstracted from the OM's lease-clauses appendix (CBRE). Tenant of record is A.C. Moore (operating as Michaels) — confirm the assignment/operating entity and pull the executed lease + Second/Third Amendments." },
+        { "severity": "defect", "issue": "Co-tenancy keyed to Bed Bath & Beyond (now closed)", "detail": "The opening co-tenancy names Bed Bath & Beyond, which liquidated nationally in 2023. The ongoing co-tenancy turns on a 45,000-SF national-retailer floor (not BBB specifically). Confirm the center currently clears 45,000 SF of national retailers so the §4 trigger is not live." },
+        { "severity": "info", "issue": "Co-tenancy historically triggered, then cured", "detail": "Per Third Amendment §I.D, the prior Ongoing Co-Tenancy failure was cured by Edge; Alternative Rent ceased 11/1/2023. Verify full rent is in place today." }
+      ],
+      "narrative": "Michaels (anchor; lease originally A.C. Moore) carries an arts-and-crafts exclusive (§47, 2%-of-sales remedy, terminate after a 6-month violation) and a two-part co-tenancy (§4): an opening test keyed to Bed Bath & Beyond plus one other national ≥10,000 SF, and an ongoing test that trips when 45,000 SF or less of national retailers (other than Michaels) are open — remedy 2% of sales in lieu of rent, termination after a one-year failure. That ongoing co-tenancy was triggered historically and cured 11/1/2023 when Edge was deemed a national retailer (Third Amendment §I.D). Three 5-year options remain. No continuous-operation covenant. Summary-sourced — confirm the operating entity and the full amendment chain, and re-check the 45,000-SF national-retailer floor given Bed Bath & Beyond's closure.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE)", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Old Navy",
+      "dba": "Old Navy",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease", "type": "lease", "description": "Original lease — Sections 1.14, 1.15, 8.3, 8.4, 13.4, 14.3, 14.4, 22.1, 22.2." }
+      ],
+      "options": [],
+      "optionNotes": "No renewal options remaining.",
+      "exclusives": [],
+      "coTenancy": [
+        {
+          "type": "operating",
+          "triggerLogic": {
+            "type": "anchor_count_below",
+            "anchors": ["Home Depot", "Michaels (or A.C. Moore)", "Bed Bath & Beyond"],
+            "openRequired": 2,
+            "totalNamed": 3,
+            "note": "Operating Requirements are met only when 3 of the Key Stores are open, AND at least 2 of those 3 must be from {Home Depot, Michaels (or A.C. Moore), Bed Bath & Beyond}. The FULL 'Key Stores' list (N) is NOT enumerated in this summary — only the required subset is given. 'anchors'/'openRequired' here capture the named subset (2 of these 3 must stay open); the overall '3 of all Key Stores' test still applies and needs the full list from the lease."
+          },
+          "remedy": { "mechanism": "fixed_reduction", "value": 50, "cap": "minimum_rent", "additionalRentTreatment": "swept", "note": "Alternate Rent = 50% of Minimum Rent, in lieu of Minimum Rent, Percentage Rent and Other Charges." },
+          "reliefPeriodMonthsBeforeTermination": 0,
+          "terminationNoticeDays": 120,
+          "cureCondition": "Operating Requirements met again. Landlord may revoke the Alternate Rent right after 1 year (if ≥45% of center GLA open) or after 2 years (if <45% GLA open). Tenant also has a Closure Right (pay Minimum Rent only) and a Termination Right exercisable while the failure continues (effective 1–4 months after notice).",
+          "currentlyInEffect": null,
+          "currentStatusNote": "Current status not stated in the summary. With Bed Bath & Beyond closed, the required subset effectively rests on Home Depot + Michaels; confirm the full Key Stores list and current open status.",
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)",
+          "sectionRef": "§14.3–14.4",
+          "verbatimQuote": "The 'Operating Requirements' are satisfied only when three (3) of the Key Stores (two (2) of which must be Home Depot, Michaels (or A.C. Moore) or Bed Bath & Beyond) are open for business ...",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "percentageRent": { "value": "2% of Gross Sales over the Breakpoint; Breakpoint = Minimum Rent ÷ 2% (a natural breakpoint). Monthly sales statements; percentage rent paid within 2 months after each Lease Year. (§1.14, §1.15, §8.3, §8.4)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§1.14–1.15, §8.3–8.4", "page": "6" } },
+      "percentageRentDetail": {
+        "summary": "2% of Gross Sales above the Breakpoint.",
+        "reportingFrequency": "Monthly (sales statement within 1 month of each fiscal month) and annually",
+        "naturalBreakpoint": true,
+        "inLieuOfMinimum": false,
+        "paymentTiming": "Within 2 months after the end of each Lease Year",
+        "breakpoints": [ { "percentage": "2%", "breakpoint": "Minimum Rent ÷ 2% (natural breakpoint)" } ],
+        "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§1.14–1.15", "page": "6" }
+      },
+      "otherRiskClauses": {
+        "exclusiveUse": { "present": false, "summary": "Silent — Old Navy holds no exclusive.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "—", "verifiedAgainstExecutedDoc": false },
+        "continuousOperationCovenant": { "present": false, "summary": "Not required to open/operate except open one day within 30 days of Commencement; pays Minimum Rent + Other Charges during any closure (§13.4).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§13.4", "verifiedAgainstExecutedDoc": false },
+        "goDarkRight": { "present": true, "summary": "May stay closed; LANDLORD RECAPTURE: if after 14 months from Commencement the premises stay closed more than 3 months (other than remodel/casualty/condemnation or active assignment/sublease marketing), Landlord may terminate within 3 months of the initial closure, effective 1 month after notice, paying tenant unamortized improvement cost (15-yr) less unamortized construction allowance. (§13.4)", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§13.4", "provenance": "extracted", "verifiedAgainstExecutedDoc": false },
+        "earlyTerminationOption": { "present": true, "summary": "Co-tenancy Termination Right (§14.4) while an Operating Requirements Failure continues — effective 1–4 months after notice.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§14.4", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "No assignment without Landlord consent (not unreasonably withheld); deemed consent if Landlord does not respond within 30 days. Subletting permitted without consent (no more than 3 spaces). Permitted Transactions without consent: Related Party (affiliate or merger/acquisition successor), Multi-Store Transaction (≥3 stores), and Concessionaire (≤50% of GLA). (§22.1–22.2)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§22.1–22.2", "page": "6" } },
+      "goDark": { "value": "Permitted; landlord recapture after a 3-month closure once 14 months past Commencement, with a TI true-up (§13.4).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§13.4", "page": "6" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Silent.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "—" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Operating Requirements = 3 of the Key Stores open, 2 of which must be from {Home Depot, Michaels (or A.C. Moore), Bed Bath & Beyond}. Failure → Alternate Rent = 50% of Minimum Rent; Closure Right; Termination Right while failure continues (1–4 months' notice). Full Key Stores list NOT in summary. (§14.3–14.4)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.3–14.4" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Co-tenancy Termination Right while an Operating Requirements Failure continues, effective 1–4 months after notice (§14.4).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§14.4" } },
+        { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Landlord recapture if the premises stay closed >3 months after the first 14 months, with a TI true-up (§13.4).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§13.4" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Permitted (pays Minimum Rent + Other Charges); subject to §13.4 landlord recapture.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§13.4" } },
+        { "code": "OPC", "label": "Operating Covenant", "value": "None — one-day initial opening only (§13.4).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§13.4" } },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Consent required (deemed consent after 30 days); no consent for Related Party / ≥3-store transfer / concessionaire ≤50% GLA (§22.1–22.2).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§22.1–22.2" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "Abstracted from the OM's lease-clauses appendix (CBRE). Pull the executed lease to confirm." },
+        { "severity": "defect", "issue": "Co-tenancy Key Stores list incomplete in the summary", "detail": "The clause requires 3 of the Key Stores open (2 from {Home Depot, Michaels/A.C. Moore, Bed Bath & Beyond}), but the full 'Key Stores' list (N) is not given. Get the complete list from the lease before modeling exposure — do not treat any single named store as a solo trigger." },
+        { "severity": "defect", "issue": "Bed Bath & Beyond named in the required subset", "detail": "BBB liquidated in 2023. With BBB gone, the '2 of 3 named' subset effectively rests on Home Depot + Michaels staying open — losing either could put the Operating Requirements in jeopardy. Confirm current open status and any Like Replacement." },
+        { "severity": "watch", "issue": "No renewal options remaining", "detail": "Old Navy has no remaining options — full rollover/renewal risk at lease expiry. Confirm the current expiration date from the rent roll / lease." }
+      ],
+      "narrative": "Old Navy (anchor) has no exclusive and no renewal options remaining. Its co-tenancy (§14.3–14.4) requires 3 of the center's Key Stores open, at least 2 from {Home Depot, Michaels (or A.C. Moore), Bed Bath & Beyond}; a failure drops rent to 50% of Minimum Rent (Alternate Rent), with a Closure Right and a Termination Right while the failure persists. Percentage rent is 2% over a natural breakpoint. Landlord can recapture after a 3-month dark period once 14 months past commencement, with a TI true-up. Summary-sourced: the full Key Stores list is missing and Bed Bath & Beyond (a named store) is closed — both must be run down before relying on the co-tenancy model.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE)", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Petco",
+      "dba": "Petco",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease", "type": "lease", "description": "Original lease — Sections 10(a), 10(b), 13(a), 27(a), 37." }
+      ],
+      "options": [],
+      "optionNotes": "No renewal options remaining.",
+      "exclusives": [
+        {
+          "description": "Exclusive right to sell pet food, pet supplies, live animals, pet grooming, pet training, and veterinary services in the Shopping Center (except incidental sales). On a Landlord violation, tenant may (i) reduce Base Rent to 3% of Gross Sales for the entire violation period, or (ii) terminate on 30 days' notice and opportunity to cure. Landlord must use reasonable legal means to enforce against a violating tenant at Landlord's cost.",
+          "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§10(a)", "page": "8" }
+        }
+      ],
+      "coTenancy": [
+        {
+          "type": "operating",
+          "triggerLogic": {
+            "type": "anchor_count_below",
+            "anchors": ["A.C. Moore", "Old Navy", "Bed Bath & Beyond"],
+            "openRequired": 2,
+            "totalNamed": 3,
+            "note": "Trips when ANY two (2) of the three Named Tenants (or their Like Replacements) are not open/operating for 3 consecutive months — i.e. fewer than 2 of the 3 remain open. Losing only ONE named tenant does NOT trip it."
+          },
+          "remedy": { "mechanism": "alternate_rent_pct_sales", "value": 3, "cap": "base_rent", "additionalRentTreatment": "tenant_continues" },
+          "suitableReplacementDefinition": "National or regional retail chains in excess of 18,000 SF.",
+          "cureCondition": "Ongoing Co-Tenancy Failure ceases (a Named Tenant or Like Replacement reopens).",
+          "currentlyInEffect": null,
+          "currentStatusNote": "Not stated in the summary. Bed Bath & Beyond (one of the three Named Tenants) closed in 2023 — if it has no Like Replacement, it counts as one named tenant dark, so a single additional dark among {A.C. Moore/Michaels, Old Navy} would trip the 3%-of-sales remedy. Confirm current status.",
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)",
+          "sectionRef": "§10(b)",
+          "verbatimQuote": "If, at any time ... any two (2) Named Tenants (or ... their Like Replacements) are not open and operating for three (3) consecutive months ... Tenant shall have the right to pay three percent (3%) of Gross Sales in lieu of Base Rent ...",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "otherRiskClauses": {
+        "exclusiveUse": { "present": true, "summary": "Pet exclusive (§10(a)); remedy = Base Rent reduced to 3% of Gross Sales during the violation OR 30-day termination.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§10(a)", "provenance": "extracted", "verifiedAgainstExecutedDoc": false },
+        "goDarkRight": { "present": true, "summary": "Tenant may Go Dark (no continuous-operation covenant) with notice; LANDLORD RECAPTURE within the later of 75 days after tenant ceases or 60 days after notice, effective ≤3 months after Landlord's notice (§37).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§37", "provenance": "extracted", "verifiedAgainstExecutedDoc": false },
+        "continuousOperationCovenant": { "present": false, "summary": "Tenant determines its own methods/times of operation; may go dark (§37).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§37", "verifiedAgainstExecutedDoc": false },
+        "recaptureAssignment": { "present": true, "summary": "On an Assignment/Subletting Notice, Landlord may terminate within 30 days; Lease then ends 90 days later. Tenant may rescind within 10 days. (§27(a))", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§27(a)", "verifiedAgainstExecutedDoc": false },
+        "earlyTerminationOption": { "present": true, "summary": "Termination on an exclusive violation (§10(a), 30 days). Co-tenancy remedy is rent reduction only (no stated termination).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§10(a)", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "Absolute right to sublet/assign without consent to a Licensee/Franchisee/parent/subsidiary/merger successor/concessionaire (≤50% floor area) if tenant stays liable or guarantees. May also assign/sublet to another tenant for a different use without consent if not in default, assignee bound, use conforms, and notice given. Release if assignee net worth ≥ Petco's. BUT Landlord recapture: may terminate within 30 days of an Assignment/Subletting Notice (effective +90 days); tenant may rescind within 10 days. Premises not divisible into more than 2. (§27(a))", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§27(a)", "page": "8" } },
+      "goDark": { "value": "Permitted with notice; landlord recapture window (later of 75 days after cessation or 60 days after notice) (§37).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§37", "page": "8" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Pet food/supplies/live animals/grooming/training/veterinary exclusive (§10(a)). Remedy: Base Rent → 3% of Gross Sales during violation, or 30-day termination.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§10(a)" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Trips if ANY 2 of 3 Named Tenants {A.C. Moore, Old Navy, Bed Bath & Beyond} (or Like Replacements >18,000 SF) are dark for 3 consecutive months → 3% of Gross Sales in lieu of Base Rent until cured. (§10(b))", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§10(b)" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Exclusive-violation termination (30 days, §10(a)). Co-tenancy remedy is rent reduction only (no termination).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§10(a)" } },
+        { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Go-dark recapture (§37) and assignment recapture (§27(a)).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§37; §27(a)" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Permitted; landlord recapture (later of 75 days after cessation / 60 days after notice) (§37).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§37" } },
+        { "code": "OPC", "label": "Operating Covenant", "value": "None — tenant sets its own hours/methods (§37).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§37" } },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Broad no-consent transfers to affiliates/franchisees/merger successors/concessionaires; landlord recapture on an assignment notice (§27(a)).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§27(a)" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "Abstracted from the OM's lease-clauses appendix (CBRE). Pull the executed lease to confirm." },
+        { "severity": "defect", "issue": "Co-tenancy named tenant Bed Bath & Beyond is closed", "detail": "Named Tenants are {A.C. Moore (now Michaels), Old Navy, Bed Bath & Beyond}; the clause trips when any 2 of the 3 are dark for 3 months. BBB liquidated in 2023, so if it has no Like Replacement (national/regional chain >18,000 SF), the center is one dark away from Petco's 3%-of-sales rent reduction. Confirm BBB's space status and any replacement." },
+        { "severity": "watch", "issue": "Landlord recapture on assignment and go-dark", "detail": "Landlord may recapture both on an assignment/subletting notice (§27(a)) and after a go-dark (§37) — relevant to any re-tenanting plan." },
+        { "severity": "watch", "issue": "No renewal options remaining", "detail": "Petco has no remaining options — confirm current expiration; full renewal risk at expiry." }
+      ],
+      "narrative": "Petco (anchor) holds a broad pet exclusive (§10(a); remedy = Base Rent cut to 3% of sales or 30-day termination) and an 'any 2 of 3' co-tenancy (§10(b)) keyed to {A.C. Moore, Old Navy, Bed Bath & Beyond} (Like Replacements = national/regional chains >18,000 SF): if two are dark for 3 months, rent drops to 3% of Gross Sales until cured. With Bed Bath & Beyond closed, the center sits one dark anchor away from tripping it. No continuous-operation covenant; Landlord can recapture on a go-dark (§37) or on an assignment notice (§27(a)). No renewal options remain. Summary-sourced — verify against the executed lease and confirm BBB's replacement status.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE)", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Sky Zone",
+      "dba": "Sky Zone",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease", "type": "lease", "description": "Original lease — Sections 1.13, 5.5, 5.9, 15.1, 16.1, 17.1, 17.2, 29.22, 29.29, 29.33." }
+      ],
+      "options": [
+        { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Notice not later than 1 year prior to expiration of the then-ending term; premises open and operating at exercise and at renewal commencement; no monetary default. (§29.33)" },
+        { "ordinal": 2, "number": "2nd", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Same conditions; second term follows the first. (§29.33)" }
+      ],
+      "optionNotes": "Two (2) 5-year renewal options. 1-year notice; must be open/operating and not in monetary default.",
+      "exclusives": [
+        {
+          "description": "Landlord will not lease space for the primary purpose (5% or more of floor area) of an indoor trampoline park (trampolines, inflatables, slides). Carve-outs: pre-existing leases and their successors/replacements; day care; restaurants with incidental play areas; gymnastics/cheer training centers/schools; children's gyms. Remedy: 120 days after notice, tenant may pay Alternate Rent = 50% of Minimum Annual Rental + Additional Rent; if uncured 2 years after the Alternate Rent Commencement Date, tenant may terminate on 30 days' notice.",
+          "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§29.22", "page": "10" }
+        }
+      ],
+      "coTenancy": [],
+      "otherRiskClauses": {
+        "exclusiveUse": { "present": true, "summary": "Indoor-trampoline-park exclusive (§29.22); remedy = 50% Alternate Rent after a 120-day window; termination if uncured 2 years.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§29.22", "provenance": "extracted", "verifiedAgainstExecutedDoc": false },
+        "goDarkRight": { "present": true, "summary": "Must open within 150 days of Rent Commencement and operate at least one day; if the premises stay closed 90 days, Landlord may terminate (no default), except added time for casualty repair (§16.1).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§16.1", "provenance": "extracted", "verifiedAgainstExecutedDoc": false },
+        "earlyTerminationOption": { "present": true, "summary": "Termination on an exclusive violation uncured 2 years after the Alternate Rent Commencement Date (§29.22).", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE)", "sectionRef": "§29.22", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "No transfer (assignment, sublease, mortgage, etc.) without Landlord's prior written consent (not unreasonably withheld if criteria met): transferee net worth/working capital sufficient, comparable retail experience, acceptable reputation, and NOT an existing tenant at the center. $2,500 administrative fee; detailed Transfer Notice required. (§15.1)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§15.1", "page": "9" } },
+      "goDark": { "value": "Open within 150 days of Rent Commencement; if closed 90 days, landlord may terminate (§16.1).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§16.1", "page": "10" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Indoor trampoline park exclusive (primary use, 5%+ floor area). Remedy: 50% Alternate Rent after 120-day window; terminate if uncured 2 years. Carve-outs for day care, restaurants w/ incidental play, gymnastics/cheer, children's gyms. (§29.22)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§29.22" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Silent (no co-tenancy clause).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "—" } },
+        { "code": "RADIUS", "label": "Radius", "value": "2 miles — tenant will not operate/own a similar business within 2 miles of the Premises during the Term (§5.9, §1.13).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§5.9, §1.13" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Exclusive-violation termination (2-year uncured, §29.22).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§29.22" } },
+        { "code": "KICKLL", "label": "Kickout/Termination (LL)", "value": "Landlord may terminate if premises stay closed 90 days (§16.1).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§16.1" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Initial 1-day opening within 150 days of Rent Commencement; 90-day closure gives Landlord a termination right (§16.1).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§16.1" } },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Consent required (criteria-based; transferee not an existing tenant); $2,500 fee (§15.1).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§15.1" } },
+        { "code": "HVAC", "label": "HVAC", "value": "Tenant maintains its exclusive HVAC; tenant's repair/replacement obligation capped at $3,500 per unit per 12-month period (balance is Landlord's until replacement) (§17.1).", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE)", "section": "§17.1" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "Abstracted from the OM's lease-clauses appendix (CBRE). Pull the executed lease to confirm." },
+        { "severity": "info", "issue": "Tenant radius restriction (2 miles)", "detail": "Sky Zone is bound by a 2-mile radius restriction (§5.9/§1.13) — a tenant covenant, not a landlord risk, but note for any portfolio with nearby Sky Zone sites." }
+      ],
+      "narrative": "Sky Zone (anchor) holds an indoor-trampoline-park exclusive (§29.22) with a 50% Alternate Rent remedy and a termination right if uncured two years. Co-tenancy is silent. Two 5-year options remain (1-year notice, must be open and not in monetary default). A 90-day closure gives the landlord a termination right (§16.1), and the tenant carries a 2-mile radius restriction. Assignment is consent-based with a $2,500 fee. Summary-sourced — verify against the executed lease.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE)", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "America's Best Contacts & Eyeglasses",
+      "dba": "America's Best Contacts & Eyeglasses",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (terms summarized in the In-Line Lease Clauses Matrix)", "type": "lease", "description": "In-line matrix row — no section citations provided in the summary." }
+      ],
+      "options": [
+        { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Per matrix: one 5-year renewal option remaining (notice terms not in summary)." }
+      ],
+      "optionNotes": "One (1) 5-year renewal option remaining.",
+      "salesKickout": [
+        {
+          "salesThresholdAmount": 500000,
+          "measurementPeriod": "3rd full calendar year",
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix",
+          "verbatimQuote": "Terminate if: i) TT records <$500k in Gross Sales in 3rd full CY, ii) any major TT closes for more than 180 days, (iii) 60%+ of GLA is not open for 180+ days",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "coTenancy": [
+        {
+          "type": "operating",
+          "triggerLogic": { "type": "occupancy_threshold", "scope": "major tenants (20,000+ SF) — at least 60% of the center's floor area open", "direction": "below", "pct": 60, "note": "Per matrix: co-tenancy keyed to at least 60% of the center's floor area / major tenants (20,000+ SF). Exact structure not detailed in the summary." },
+          "remedy": { "mechanism": "unknown", "value": null, "note": "Remedy not specified in the matrix — see also the sales/occupancy termination triggers." },
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix",
+          "verbatimQuote": "Co-Ten: at least 60% of centers floor area, major tenants (20,000+ sf)",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "otherRiskClauses": {
+        "goDarkRight": { "present": true, "summary": "Tenant may go dark up to 90 days; Landlord has a recapture right on 30 days' written notice.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "verifiedAgainstExecutedDoc": false },
+        "earlyTerminationOption": { "present": true, "summary": "Tenant termination if (i) it records <$500k Gross Sales in the 3rd full calendar year, (ii) any major tenant closes >180 days, or (iii) 60%+ of GLA is not open for 180+ days.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "verifiedAgainstExecutedDoc": false }
+      },
+      "leaseNotes": [
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "At least 60% of center floor area / major tenants (20,000+ SF). (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Sales kickout (<$500k Gross Sales in 3rd full CY) + co-occupancy outs (major tenant dark >180 days; 60%+ GLA not open 180+ days). (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Up to 90 days; landlord recapture on 30 days' notice. (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Matrix summary only — thin detail", "detail": "Terms come from the OM's In-Line Lease Clauses Matrix (X-marks + notes), with no section citations or remedy mechanics for the co-tenancy. Pull the executed lease for the full triggers, remedies and notice windows." },
+        { "severity": "watch", "issue": "Sales kickout present", "detail": "Tenant may terminate if Gross Sales are below $500k in the 3rd full calendar year — confirm current sales trajectory and the exact notice window from the lease." }
+      ],
+      "narrative": "America's Best (in-line) carries a sales kickout (terminate if <$500k Gross Sales in the 3rd full calendar year), co-occupancy termination outs (a major tenant dark >180 days, or 60%+ of GLA not open for 180+ days), a 90-day go-dark with a 30-day landlord recapture, and a co-tenancy tied to roughly 60% of the center's floor area / 20,000+ SF majors. One 5-year option remains. Terms are matrix-summarized only — pull the executed lease for the precise triggers and remedies.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE), In-Line Matrix", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "AT&T",
+      "dba": "AT&T",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (terms summarized in the In-Line Lease Clauses Matrix)", "type": "lease", "description": "In-line matrix row — no section citations provided." }
+      ],
+      "options": [],
+      "optionNotes": "No renewal options indicated in the matrix — confirm against the lease.",
+      "coTenancy": [
+        {
+          "type": "operating",
+          "triggerLogic": { "type": "occupancy_threshold", "scope": "70% of the GLA of the center open", "direction": "below", "pct": 70, "note": "Per matrix: co-tenancy keyed to 70% of the center's GLA being open." },
+          "remedy": { "mechanism": "unknown", "value": null, "note": "Remedy not specified in the matrix." },
+          "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix",
+          "verbatimQuote": "Co-Ten: 70% of the GLA of center",
+          "provenance": "extracted",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "otherRiskClauses": {
+        "goDarkRight": { "present": true, "summary": "Tenant may go dark up to 30 days; Landlord has a recapture right on 30 days' written notice.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "verifiedAgainstExecutedDoc": false }
+      },
+      "leaseNotes": [
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "70% of the center's GLA open. (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Up to 30 days; landlord recapture on 30 days' notice. (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Matrix summary only — thin detail", "detail": "Terms come from the OM's In-Line Matrix. The co-tenancy remedy and notice mechanics are not given. Pull the executed lease." }
+      ],
+      "narrative": "AT&T (in-line) has a 70%-of-GLA occupancy co-tenancy and a 30-day go-dark right with a 30-day landlord recapture. Matrix-summarized only — confirm remedies, options and notice windows against the executed lease.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE), In-Line Matrix", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Corrado's Pizzeria",
+      "dba": "Corrado's Pizzeria",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (terms summarized in the In-Line Lease Clauses Matrix)", "type": "lease", "description": "In-line matrix row." }
+      ],
+      "options": [
+        { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Per matrix: one 5-year renewal option remaining." }
+      ],
+      "optionNotes": "One (1) 5-year renewal option remaining.",
+      "leaseNotes": [
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Not indicated in the matrix — confirm against the lease.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Matrix summary only — minimal detail", "detail": "Only sales-reporting (within 10 days of each calendar month) and one 5-year option were noted for Corrado's Pizzeria. Pull the executed lease for exclusives, co-tenancy, termination and go-dark terms." }
+      ],
+      "narrative": "Corrado's Pizzeria (in-line): the matrix notes monthly sales reporting (within 10 days of each calendar-month close) and one remaining 5-year option. No risk levers were flagged in the summary — confirm the full lease.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE), In-Line Matrix", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Dental Arts Group",
+      "dba": "Dental Arts Group",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (terms summarized in the In-Line Lease Clauses Matrix)", "type": "lease", "description": "In-line matrix row — minimal entries; renewal marked N/A." }
+      ],
+      "options": [],
+      "optionNotes": "Matrix marks renewal options as N/A — confirm against the lease.",
+      "leaseNotes": [
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Not indicated in the matrix.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Matrix summary only — minimal detail", "detail": "Very little was abstracted in the matrix for Dental Arts Group (renewal marked N/A). Pull the executed lease to confirm exclusives, co-tenancy, termination, go-dark and options." }
+      ],
+      "narrative": "Dental Arts Group (in-line): minimal data in the matrix; renewal options marked N/A. Confirm all lease terms against the executed document.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE), In-Line Matrix", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Edward Jones",
+      "dba": "Edward Jones",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (terms summarized in the In-Line Lease Clauses Matrix)", "type": "lease", "description": "In-line matrix row." }
+      ],
+      "options": [
+        { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Per matrix: one 5-year renewal option remaining." }
+      ],
+      "optionNotes": "One (1) 5-year renewal option remaining.",
+      "otherRiskClauses": {
+        "earlyTerminationOption": { "present": true, "summary": "Tenant termination right exercisable any time during the 40th calendar month of the initial Term through the final calendar month, on no less than 90 days' prior written notice.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "verifiedAgainstExecutedDoc": false },
+        "goDarkRight": { "present": true, "summary": "Tenant may go dark up to 60 days; Landlord has a recapture right on 180 days' written notice.", "sourceDocument": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "verifiedAgainstExecutedDoc": false }
+      },
+      "leaseNotes": [
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Ongoing termination right from the 40th calendar month of the initial Term through the end, on 90+ days' notice. (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Up to 60 days; landlord recapture on 180 days' notice. (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Tenant early-termination right (month 40+)", "detail": "Edward Jones can terminate any time from the 40th month of the initial term onward on 90 days' notice — a standing rollover/vacancy risk. Confirm the term start so you know when this window is open." },
+        { "severity": "watch", "issue": "Matrix summary only", "detail": "From the OM's In-Line Matrix; confirm the exact termination mechanics and notice against the executed lease." }
+      ],
+      "narrative": "Edward Jones (in-line) carries a tenant early-termination right exercisable from the 40th month of the initial term through expiry on 90 days' notice, plus a 60-day go-dark with a 180-day landlord recapture. One 5-year option remains. Matrix-summarized — confirm the term start and exact mechanics against the executed lease.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE), In-Line Matrix", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Elegant Nails & Spa",
+      "dba": "Elegant Nails & Spa",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (terms summarized in the In-Line Lease Clauses Matrix)", "type": "lease", "description": "In-line matrix row." }
+      ],
+      "options": [
+        { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "exerciseConditions": "Per matrix: one 5-year renewal option remaining." }
+      ],
+      "optionNotes": "One (1) 5-year renewal option remaining.",
+      "leaseNotes": [
+        { "code": "RADIUS", "label": "Radius", "value": "3 miles (tenant radius restriction). (matrix)", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "info", "issue": "Tenant radius restriction (3 miles)", "detail": "Elegant Nails & Spa carries a 3-mile radius restriction (a tenant covenant). Matrix-summarized — confirm against the lease." }
+      ],
+      "narrative": "Elegant Nails & Spa (in-line): the matrix notes a 3-mile radius restriction, annual sales reporting (within 20 days of each calendar year), and one remaining 5-year option. Confirm the full lease for any exclusives/co-tenancy/termination terms.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE), In-Line Matrix", "type": "other", "date": "2026" }
+      ]
+    },
+
+    {
+      "tenantName": "Great Clips",
+      "dba": "Great Clips",
+      "center": "Cross Keys Place",
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "documents": [
+        { "name": "Lease (terms summarized in the In-Line Lease Clauses Matrix)", "type": "lease", "description": "In-line matrix row." }
+      ],
+      "options": [],
+      "optionNotes": "No renewal options indicated in the matrix — confirm against the lease.",
+      "leaseNotes": [
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Not indicated in the matrix.", "cite": { "doc": "Cross Keys Place OM — Lease Clauses (CBRE) — In-Line Matrix", "section": "—" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Matrix summary only — minimal detail", "detail": "Only sales-reporting timing was noted (within 15 days of each calendar month and 30 days of each Lease Year). Pull the executed lease for exclusives, co-tenancy, termination, go-dark and options." }
+      ],
+      "narrative": "Great Clips (in-line): the matrix notes only sales reporting (within 15 days of each calendar month and 30 days of each Lease Year). No risk levers were flagged in the summary — confirm the full lease.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [
+        { "name": "Cross Keys Place OM — Lease Clauses appendix (CBRE), In-Line Matrix", "type": "other", "date": "2026" }
+      ]
+    }
+  ]
+}
