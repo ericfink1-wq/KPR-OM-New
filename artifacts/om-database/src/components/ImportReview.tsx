@@ -1,7 +1,24 @@
 import { useState, useMemo } from "react";
 import type { Deal, ReviewQuestion, Tenant } from "../lib/idb";
 import { buildReviewQuestions, tenantKey, robustParseJSON } from "../lib/utils";
-import { apiAiMessages } from "../lib/api";
+import { apiAiMessages, apiAddExtractionLesson } from "../lib/api";
+
+// A field/check-aware DRAFT rule, so teaching the analyst is one click. The operator
+// can edit it before saving; it's stored as a high-priority extraction lesson that
+// guides every future OM read (lib/extractionLessons → injected into the prompt).
+function draftLesson(q: ReviewQuestion): string {
+  const fk = q.target?.fieldKey || "";
+  const id = q.id || "";
+  if (fk === "totalSF" || id.startsWith("audit-sf-gla")) return "Total SF / building GLA: confirm it equals the sum of ALL suite SF (occupied + vacant) and ties to the rent-roll total — don't trust a cover-page GLA that conflicts with the roster.";
+  if (id.startsWith("audit-noi-cap-price") || fk === "noi" || fk === "capRate" || fk === "askingPrice") return "NOI, cap rate and price must tie out (price = NOI ÷ cap). If the headline cap is on PRO-FORMA NOI, capture in-place NOI separately and never let the three contradict.";
+  if (fk === "occupancy" || id.startsWith("audit-occupancy")) return "Occupancy must reconcile to the roster (occupied SF ÷ GLA) and be a percentage (e.g. 92.8, not 0.928).";
+  if (fk === "weightedAvgRentPSF" || id.startsWith("audit-avg-rent")) return "Weighted-avg rent PSF should equal total in-place base rent ÷ occupied SF from the roster.";
+  if (id.startsWith("audit-rent-tie") || fk === "annualRent" || fk === "rentPerSF") return "On rent rolls, each tenant's rent PSF × SF must reconcile to annual BASE rent. When they differ, re-check which column is base vs. gross/option rent.";
+  if (id.startsWith("audit-cf-") || id.startsWith("audit-noi-vs-cf")) return "Cash-flow page: each year's NOI must equal effective gross revenue minus operating expenses; the headline NOI should match year-1.";
+  if (fk === "capRate" && id.startsWith("audit-caprate")) return "Cap rate is a percentage (e.g. 6.50), not basis points or a fraction.";
+  // Generic: anchor on the specific field/question the operator just corrected.
+  return `When reading an OM, double-check "${q.field}" — ${q.question.replace(/\s+/g, " ").trim()}`.slice(0, 280);
+}
 
 // One structured edit to write back into the deal. Used by both the literal
 // "type the value" path and the AI-interpreted "type an instruction" path.
@@ -90,6 +107,9 @@ export default function ImportReview({ deal, onClose, onUpdate }: {
       ? { ...x, resolvedAt: new Date().toISOString(), resolution }
       : x);
     onUpdate(deal.id, { reviewQuestions: next });
+    // Confirming = "the model read this right"; dismissing a false alarm is also a
+    // teachable signal. Surface the teach box (skippable) so every action can teach.
+    if (!taught[q.id]) { setShowResolved(true); openTeach(q); }
   };
 
   const reopen = (q: ReviewQuestion) => {
@@ -105,6 +125,37 @@ export default function ImportReview({ deal, onClose, onUpdate }: {
   const [aiErr, setAiErr] = useState<string | null>(null);
   // A pending AI proposal awaiting the user's confirmation before it's written.
   const [proposal, setProposal] = useState<{ questionId: string; summary: string; edits: Edit[] } | null>(null);
+
+  // "Teach the analyst" — turn this confirm/fix into a rule that guides future OM
+  // extractions. Pre-filled with a smart draft; saved as a high-priority lesson.
+  const [teachFor, setTeachFor] = useState<string | null>(null);
+  const [teachText, setTeachText] = useState("");
+  const [teachBusy, setTeachBusy] = useState(false);
+  const [taught, setTaught] = useState<Record<string, boolean>>({});
+  const openTeach = (q: ReviewQuestion) => { setTeachFor(q.id); setTeachText(draftLesson(q)); };
+  const saveTeach = async () => {
+    const text = teachText.trim();
+    if (!text || !teachFor) return;
+    setTeachBusy(true);
+    const r = await apiAddExtractionLesson("om", text).catch(() => ({ ok: false }));
+    setTeachBusy(false);
+    if (r.ok) { const id = teachFor; setTaught(t => ({ ...t, [id]: true })); setTeachFor(null); setTeachText(""); }
+  };
+  const teachTrigger = (q: ReviewQuestion) => taught[q.id]
+    ? <span style={{ fontSize: 11, color: "#3f7a1f", fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>📚 ✓ Taught</span>
+    : <button onClick={() => (teachFor === q.id ? setTeachFor(null) : openTeach(q))} style={{ background: "none", border: "none", color: "#9a6a1e", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: 0 }}>📚 {teachFor === q.id ? "Cancel" : "Teach a rule"}</button>;
+  const teachBox = (q: ReviewQuestion) => (teachFor === q.id && !taught[q.id]) ? (
+    <div style={{ marginTop: 8, background: "#fbf7ee", border: "1px solid #e7d9bd", borderRadius: 8, padding: "9px 11px" }}>
+      <div style={{ fontSize: 10.5, color: "#9a6a1e", fontWeight: 700, marginBottom: 5 }}>📚 Teach the analyst — this rule guides EVERY future OM read</div>
+      <textarea value={teachText} onChange={e => setTeachText(e.target.value)} rows={3}
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e0d7c6", borderRadius: 6, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter',sans-serif", color: "#383a37", resize: "vertical", background: "#fff", lineHeight: 1.4 }} />
+      <div style={{ display: "flex", gap: 8, marginTop: 7, alignItems: "center", flexWrap: "wrap" }}>
+        <button onClick={saveTeach} disabled={teachBusy || !teachText.trim()} style={{ background: "#3f7a1f", border: "none", color: "#fff", padding: "5px 12px", borderRadius: 6, cursor: (teachBusy || !teachText.trim()) ? "default" : "pointer", fontSize: 11.5, fontWeight: 600, opacity: (teachBusy || !teachText.trim()) ? 0.6 : 1, fontFamily: "'Inter',sans-serif" }}>{teachBusy ? "Saving…" : "Save rule"}</button>
+        <button onClick={() => setTeachFor(null)} style={{ background: "none", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 11.5, fontFamily: "'Inter',sans-serif" }}>Skip</button>
+        <span style={{ fontSize: 10, color: "#bcae97" }}>Edit first — applied to all future extractions at top priority.</span>
+      </div>
+    </div>
+  ) : null;
 
   const startFix = (q: ReviewQuestion) => {
     setEditingId(q.id);
@@ -157,6 +208,9 @@ export default function ImportReview({ deal, onClose, onUpdate }: {
       : x);
     onUpdate(deal.id, patch);
     cancelFix();
+    // A FIX is the strongest teaching signal — the model got it wrong and we know the
+    // right answer. Pop the teach box (pre-filled) so the rule guides future OMs.
+    if (!taught[q.id]) { setShowResolved(true); openTeach(q); }
   };
 
   // Ask the AI to turn a plain-English correction into structured edit(s).
@@ -337,11 +391,15 @@ USER CORRECTION: ${instruction}`;
                   </div>
                 )
               ) : (
-                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                <>
+                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
                   <button onClick={() => resolve(q, "confirmed")} style={{ background: "#26281f", border: "none", color: "#e8e0cf", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✓ Looks right</button>
                   <button onClick={() => startFix(q)} style={{ background: "#fff", border: "1px solid #8cbf63", color: "#3f7a1f", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✎ Fix it</button>
                   <button onClick={() => resolve(q, "dismissed")} style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#7d766a", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Dismiss</button>
+                  <span style={{ marginLeft: "auto" }}>{teachTrigger(q)}</span>
                 </div>
+                {teachBox(q)}
+                </>
               )}
             </div>
           ))}
@@ -360,10 +418,14 @@ USER CORRECTION: ${instruction}`;
               {showResolved ? "▾" : "▸"} {resolved.length} resolved
             </button>
             {showResolved && resolved.map(q => (
-              <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: "1px solid #f6f1e7", fontSize: 12 }}>
-                <span style={{ color: q.resolution === "confirmed" ? "#0f9d63" : q.resolution === "fixed" ? "#3f7a1f" : "#a89f8f", flexShrink: 0 }}>{q.resolution === "confirmed" ? "✓" : q.resolution === "fixed" ? "✎" : "—"}</span>
-                <span style={{ color: "#8b8578", flex: 1, textDecoration: "line-through", textDecorationColor: "#d9d2c4" }}>{q.question}{q.resolution === "fixed" && q.suggestedValue ? ` → ${q.suggestedValue}` : ""}</span>
-                <button onClick={() => reopen(q)} style={{ background: "transparent", border: "none", color: "#bcae97", cursor: "pointer", fontSize: 11, flexShrink: 0 }}>reopen</button>
+              <div key={q.id} style={{ borderTop: "1px solid #f6f1e7" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", fontSize: 12 }}>
+                  <span style={{ color: q.resolution === "confirmed" ? "#0f9d63" : q.resolution === "fixed" ? "#3f7a1f" : "#a89f8f", flexShrink: 0 }}>{q.resolution === "confirmed" ? "✓" : q.resolution === "fixed" ? "✎" : "—"}</span>
+                  <span style={{ color: "#8b8578", flex: 1, textDecoration: "line-through", textDecorationColor: "#d9d2c4" }}>{q.question}{q.resolution === "fixed" && q.suggestedValue ? ` → ${q.suggestedValue}` : ""}</span>
+                  {teachTrigger(q)}
+                  <button onClick={() => reopen(q)} style={{ background: "transparent", border: "none", color: "#bcae97", cursor: "pointer", fontSize: 11, flexShrink: 0 }}>reopen</button>
+                </div>
+                {teachBox(q)}
               </div>
             ))}
           </div>
