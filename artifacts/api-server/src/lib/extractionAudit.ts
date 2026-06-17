@@ -33,7 +33,7 @@ const isVacantName = (name: unknown): boolean => {
 const usd = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`;
 const sf = (n: number) => `${Math.round(n).toLocaleString()} SF`;
 
-interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown }
+interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown; occupancyCost?: unknown; salesPSF?: unknown; percentageRent?: unknown; otherRent?: unknown }
 
 // Namespaces these arithmetic checks so a re-audit can self-heal only its own flags
 // (drop ones that now pass, add new ones) without touching AI questions or lease-risk
@@ -43,6 +43,7 @@ export const AUDIT_ID_PREFIX = "audit-";
 // Collapse per-tenant / per-suite ids to a stable CHECK key, for the firing breakdown.
 export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-rent-tie-")) return "audit-rent-tie";
+  if (id.startsWith("audit-occ-stated-vs-computed-")) return "audit-occ-stated-vs-computed";
   if (id.startsWith("audit-dupe-suite-")) return "audit-dupe-suite";
   return id;
 }
@@ -53,6 +54,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-noi-cap-price": "NOI ÷ cap vs price",
   "audit-avg-rent-psf": "Avg rent vs roll-up",
   "audit-rent-tie": "Tenant rent × SF",
+  "audit-occ-stated-vs-computed": "Occ cost: stated vs computed",
   "audit-dupe-suite": "Duplicate suite #",
   "audit-occupancy-fraction": "Occupancy as a fraction",
   "audit-caprate-range": "Cap-rate units",
@@ -204,6 +206,41 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       question: `${nm}: $${m.psf.toFixed(2)} PSF × ${sf(m.tsf)} = ${usd(m.psf * m.tsf)}, but the annual rent is ${usd(m.ann)} (${Math.round(m.pct * 100)}% off). One of these is wrong.`,
       detail: `Rent PSF, SF, and annual base rent must multiply out. A gap this size is usually an OCR slip or a column read from the wrong row.`,
       suggestedValue: usd(m.ann), target: { kind: "tenant", fieldKey: "annualRent", tenantName: nm, valueType: "number" },
+    });
+  }
+
+  // ── E2. Per-tenant: OM-STATED occupancy cost vs the COMPUTED one (rent ÷ sales) ─
+  // A material gap means the OM figure was mis-read, OR the OM's sales are on a
+  // different basis than the reported sales (e.g. a pharmacy's 3rd-party-plan Rx,
+  // excluded from reported sales but used in the OM's health ratio). Either way,
+  // surface it. Health ratio = (base + recoveries + % rent + other) ÷ gross sales.
+  const occMism: { nm: string; stated: number; computed: number; base: number; reimb: number; sales: number }[] = [];
+  for (const t of occupied) {
+    const stated = num(t.occupancyCost);
+    if (stated == null || stated <= 0) continue;
+    const base = num(t.annualRent);
+    const reimb = num(t.expenseReimbursements);
+    if (base == null || reimb == null) continue;
+    const pctRent = num(t.percentageRent) ?? 0;
+    const other = num(t.otherRent) ?? 0;
+    const psf = num(t.salesPSF); const tsf = num(t.sf);
+    const sales = (psf != null && psf > 0 && tsf != null && tsf > 0) ? psf * tsf : null;
+    if (sales == null || sales <= 0) continue;
+    const computed = ((base + reimb + pctRent + other) / sales) * 100;
+    if (!(computed > 0)) continue;
+    const relGap = Math.abs(stated - computed) / computed;
+    const absGap = Math.abs(stated - computed);
+    // Need a big relative AND absolute gap so occupancy-cost rounding never fires.
+    if (relGap > 0.30 && absGap > 2) occMism.push({ nm: String(t.name ?? "tenant"), stated, computed, base, reimb, sales });
+  }
+  occMism.sort((a, b) => Math.abs(b.stated - b.computed) - Math.abs(a.stated - a.computed));
+  for (const m of occMism.slice(0, 3)) {
+    out.push({
+      id: `audit-occ-stated-vs-computed-${m.nm}`.slice(0, 80), source: "check", severity: "medium",
+      field: `${m.nm} — occupancy cost`,
+      question: `${m.nm}: the OM-stated occupancy cost (${m.stated.toFixed(1)}%) differs materially from the computed ${m.computed.toFixed(1)}% (rent + recoveries ÷ sales). Which is right?`,
+      detail: `Stated ${m.stated.toFixed(1)}% vs computed ${m.computed.toFixed(1)}% (base ${usd(m.base)} + recoveries ${usd(m.reimb)} ÷ sales ${usd(m.sales)}). A gap this large usually means the OM figure was mis-read, OR the OM's sales are on a different basis than the reported sales (e.g. a pharmacy's 3rd-party-plan Rx, excluded from reported sales but used in the OM's health ratio). Confirm the occupancy cost and the sales basis.`,
+      suggestedValue: m.stated.toFixed(1), target: { kind: "tenant", fieldKey: "occupancyCost", tenantName: m.nm, valueType: "number" },
     });
   }
 
