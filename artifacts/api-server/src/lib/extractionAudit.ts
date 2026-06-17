@@ -63,6 +63,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-cf-noi-row": "Cash-flow subtotal",
   "audit-recoveries-rollup": "Recoveries roll-up",
   "audit-gpr-vs-rent": "GPR vs in-place rent",
+  "audit-rentroll-incomplete": "Rent roll didn't extract",
 };
 
 export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] {
@@ -304,6 +305,35 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
         id: "audit-recoveries-rollup", source: "check", severity: "low", field: "Recoveries roll-up",
         question: `The stated NNN recovery line is ${usd(nnn)}, but the tenants' reimbursements roll up to ${usd(sumReimb)} (${Math.round(Math.abs(sumReimb - nnn) / nnn * 100)}% off). Reconcile.`,
         detail: `When tenant-level recoveries are captured for most of the roster, their sum should approximate the center's stated recovery income (some vacancy/leakage is normal).`,
+        suggestedValue: null, target: null,
+      });
+    }
+  }
+
+  // ── N. Incomplete rent-roll capture (the image/scanned rent-roll catch) ───────
+  // Many OMs print the detailed rent roll as a SCANNED IMAGE (or a flattened vector
+  // table) that yields no extractable text, while the tenant NAMES still come through
+  // from the text site-plan / stacking diagram. The result is a believable roster
+  // with almost no base rents or lease dates — a silently thin extraction. If most
+  // OCCUPIED tenants are missing BOTH a base rent and a lease expiry, flag it so the
+  // user knows to supply a structured rent roll rather than trust the gap as "no data".
+  if (occupied.length >= 8) {
+    const hasRent = (t: TenantLike) => num(t.rentPerSF) != null || num(t.annualRent) != null;
+    const hasExpiry = (t: TenantLike) => {
+      const v = (t as { leaseExpiry?: unknown }).leaseExpiry;
+      return v != null && String(v).trim() !== "";
+    };
+    const withRent = occupied.filter(hasRent).length;
+    const withTerms = occupied.filter(t => hasRent(t) || hasExpiry(t)).length;
+    const rentPct = withRent / occupied.length;
+    const termsPct = withTerms / occupied.length;
+    // Fire only when the roster is clearly present but the economics are mostly absent.
+    if (termsPct < 0.5) {
+      out.push({
+        id: "audit-rentroll-incomplete", source: "check", severity: "high",
+        field: "Rent roll completeness",
+        question: `The roster lists ${occupied.length} occupied tenants, but only ${withRent} (${Math.round(rentPct * 100)}%) have a base rent and ${withTerms} (${Math.round(termsPct * 100)}%) have any rent or lease-expiry captured. Did the detailed rent roll extract?`,
+        detail: `OM rent rolls are frequently printed as scanned IMAGES or flattened tables that yield no extractable text, even though tenant names still come through from the site plan — producing a roster with the economics missing. Re-run extraction on the rent-roll pages, or upload a structured rent roll (Excel/CSV) or the Argus file so per-tenant base rents, dates, and recoveries are captured. Don't treat the blanks as "no rent."`,
         suggestedValue: null, target: null,
       });
     }

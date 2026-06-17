@@ -1,0 +1,596 @@
+{
+  "leaseAbstracts": [
+    {
+      "tenantName": "Publix",
+      "dba": "Publix Super Market #0428",
+      "center": "Regency Court at Woodfield",
+      "suite": "C009",
+      "currentSF": 42112,
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "commencement": "1992-12-10",
+      "expiration": "2027-12-09",
+      "term": { "value": "Original term commenced 12/10/1992; current expiration 12/9/2027. One 5-year option to 12/9/2032 (auto-exercises unless 6 months' notice).", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Publix Abstract" } },
+      "options": [
+        { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "ratePSF": 7.50, "rateDescriptor": "PSF", "expireDate": "2032-12-09", "exerciseConditions": "Automatically exercised unless Tenant gives 6 months' notice. Option-term base rent $7.50 PSF.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Renewal Option" } }
+      ],
+      "rentSchedule": [
+        { "incomeCategory": "RNT", "periodEnd": "2032-12-09", "amountPerSF": 7.50, "annualRent": 315840, "note": "Current & option term base rent $7.50 PSF (±58% below market of ~$27 PSF).", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Base Rent" } }
+      ],
+      "percentageRent": { "value": "1% of gross sales over a natural breakpoint of $31,584,000 (paid $124,433 in 2025).", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Percentage Rent" } },
+      "percentageRentDetail": { "summary": "1% of gross sales over a $31,584,000 natural breakpoint.", "reportingFrequency": "Annually", "naturalBreakpoint": true, "inLieuOfMinimum": false, "breakpoints": [ { "percentage": "1%", "breakpoint": 31584000 } ], "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Percentage Rent" } },
+      "exclusives": [
+        { "description": "No other tenant east of Woodfield Plaza Dr may operate a grocery supermarket, bakery, delicatessen, fish market, or on-premises photo-finishing facility. Does NOT restrict any chain drug store, or any combination gasoline/food convenience store where food sales do not exceed 2,000 SF. Tenant granted a waiver for Dunkin'.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Exclusive Use" } }
+      ],
+      "coTenancy": [],
+      "otherRiskClauses": {
+        "goDarkRight": { "present": true, "summary": "Continuous operation NOT required. If Publix ceases operating for 6 consecutive months, it notifies the landlord, who then has a one-time right to terminate within 60 days of that notice.", "sourceDocument": "Regency Court OM — Publix lease abstract (CBRE)", "sectionRef": "Continuous Operation", "verifiedAgainstExecutedDoc": false },
+        "continuousOperationCovenant": { "present": false, "summary": "Not required (see go-dark).", "sourceDocument": "Regency Court OM — Publix lease abstract (CBRE)", "verifiedAgainstExecutedDoc": false },
+        "exclusiveUse": { "present": true, "summary": "Grocery/supermarket/bakery/deli/fish-market/photo exclusive east of Woodfield Plaza Dr.", "sourceDocument": "Regency Court OM — Publix lease abstract (CBRE)", "verifiedAgainstExecutedDoc": false },
+        "rofrRofo": { "present": false, "summary": "None — Publix has no ROFR/ROFO.", "sourceDocument": "Regency Court OM — Publix lease abstract (CBRE)", "verifiedAgainstExecutedDoc": false }
+      },
+      "camTax": { "value": "Tenant pays its proportionate share (SF/GLA) of a LIMITED list of non-building common-area maintenance (landscaping, parking-lot lights, sweeping/cleaning/trash, utilities, lot/sidewalk maintenance & resurfacing, fire/sprinkler/security if approved) and its proportionate share of general real estate taxes. NO property-insurance reimbursement.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "CAM / Tax / Insurance" } },
+      "assignment": { "value": "Landlord's consent NOT required to sublease/assign.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Subleasing" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Grocery/supermarket/bakery/deli/fish-market/photo exclusive east of Woodfield Plaza Dr; carve-outs for chain drug store and small gas/food convenience; Dunkin' waiver.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Exclusive Use" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "None.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "—" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Permitted (no continuous-operation covenant); landlord one-time termination right if dark 6 months.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Continuous Operation" } },
+        { "code": "OPC", "label": "Operating Covenant", "value": "None — continuous operation not required.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Continuous Operation" } },
+        { "code": "PURCHSE", "label": "Purchase Option", "value": "None (no ROFR/ROFO).", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "ROFR/ROFO" } },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "Landlord consent not required.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Subleasing" } },
+        { "code": "CAM", "label": "CAM Method", "value": "Pro-rata (SF/GLA) of a limited non-building CAM list + pro-rata RE taxes; no insurance reimbursement.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "CAM" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "Abstracted from the OM's Publix lease abstract (CBRE), not the executed lease + amendments. The executed Publix lease is in the deal folder (7) Anchor Leases → Publix Super Markets Inc) — verify before relying." },
+        { "severity": "watch", "issue": "Near-term anchor expiration, deep below market", "detail": "Current expiration 12/9/2027; one 5-yr option to 12/2032 at $7.50 PSF (~58% below market). Single largest space (42,112 SF, 30% of GLA). Publix has discussed early renewal and a 47,240 SF expansion — confirm status." }
+      ],
+      "narrative": "Publix #0428 (42,112 SF, 30% of GLA) is the trophy anchor — 2025 sales $46.1M / $1,095 PSF (13% above chain average) at a ~1.9% health ratio. Pays just $7.50 PSF base + 1% percentage rent over a $31.58M natural breakpoint. Current expiration 12/9/2027 with one auto-renewing 5-yr option to 12/2032. No continuous-operation covenant (landlord recapture if dark 6 months), a grocery exclusive east of Woodfield Plaza Dr, no ROFR/ROFO, and free assignment. Deeply below market — the core mark-to-market lever. Summary-sourced from the OM; verify against the executed lease in the anchor-lease folder.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — Publix lease abstract (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Walgreens",
+      "dba": "Walgreens #2664",
+      "center": "Regency Court at Woodfield",
+      "suite": "C010",
+      "currentSF": 12422,
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "expiration": "2031-11-30",
+      "rentSchedule": [
+        { "incomeCategory": "RNT", "periodEnd": "2031-11-30", "amountPerSF": 14.50, "annualRent": 180119, "note": "$14.50 PSF + subsidized NNNs (~45% below market).", "cite": { "doc": "Regency Court OM (CBRE)", "section": "Mark-to-Market" } }
+      ],
+      "exclusives": [
+        { "description": "No other tenant may operate a drug store or prescription pharmacy department, or sell drug sundries. Off-premises alcohol limited to incidental sales within the outparcel gas station; health/beauty aids limited to incidental sales within a health-food store, nail salon or beauty salon; photographic film/finishing limited to one full-line camera store. Publix is NOT encumbered by these restrictions. Separately, no other tenant may operate a cocktail lounge/bar (primary), discotheque, bowling alley, pool hall, billiard parlor, skating/roller rink, amusement arcade, adult book/video store, adult theater, adult amusement facility, secondhand store, or auction house.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } }
+      ],
+      "coTenancy": [
+        {
+          "type": "operating",
+          "triggerLogic": { "type": "named_anchor_dark", "anchor": "Publix", "note": "If Publix ceases operating for at least 90 days, Walgreens' obligation to pay percentage rent is void until another reasonably acceptable business opens in the vacated premises." },
+          "remedy": { "mechanism": "percent_rent_waiver", "note": "Percentage-rent waiver only (limited $ impact)." },
+          "currentlyInEffect": false,
+          "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "otherRiskClauses": {
+        "goDarkRight": { "present": true, "summary": "Continuous operation NOT required; landlord has an ongoing right of recapture if Walgreens ceases to operate for 6 months.", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false },
+        "exclusiveUse": { "present": true, "summary": "Drug-store/pharmacy exclusive + prohibited-use list; Publix not encumbered.", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "Tenant may assign/sublet without consent to affiliates or successors by merger/consolidation/sale; may also sublet/license portions to unaffiliated entities for uses not violating Publix's supermarket use.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Drug-store/pharmacy exclusive; incidental carve-outs; prohibited-use list (bar/arcade/adult/etc.); Publix not encumbered.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "% rent waived if Publix dark ≥90 days until an acceptable replacement opens.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } },
+        { "code": "GO DARK", "label": "Go Dark Option", "value": "Permitted; landlord recapture if dark 6 months.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } },
+        { "code": "OPC", "label": "Operating Covenant", "value": "None — continuous operation not required.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "No consent for affiliate/merger/sale transfers; may license portions to non-Publix-violating uses.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "From the OM provisions table; the executed Walgreens lease is in (7) Anchor Leases → Walgreen Co. Verify expiration, options, rent steps and SF (site plan 12,422 vs sales-report 12,233)." },
+        { "severity": "watch", "issue": "Below-market, near-term expiration, BB- credit", "detail": "$14.50 PSF (~45% below market), fully expires 11/30/2031, no continuous-operation covenant, BB- (S&P). Reported sales soft; conversion/re-tenant optionality noted by the OM." }
+      ],
+      "narrative": "Walgreens #2664 (12,422 SF) pays $14.50 PSF + subsidized NNNs (~45% below market) and fully expires 11/30/2031. Holds a drug-store/pharmacy exclusive and a prohibited-use list (Publix exempt). No continuous-operation covenant (landlord recapture after 6 months dark); percentage rent is waived if Publix goes dark 90+ days. Broad assignment rights to affiliates/successors. BB- credit, soft reported sales — a re-tenant/conversion candidate. Summary-sourced; verify against the executed lease.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "JP Morgan Chase",
+      "dba": "Chase Bank",
+      "center": "Regency Court at Woodfield",
+      "suite": "B022-24",
+      "currentSF": 3062,
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "expiration": "2027-05-31",
+      "guaranties": [ { "guarantor": "JP Morgan Chase Bank, N.A.", "inForce": true, "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B022-24" } } ],
+      "exclusives": [ { "description": "No other tenant may operate a full-service banking institution as a primary use (Citibank and World Savings/now Wells Fargo were in place at lease execution and are grandfathered).", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B022-24" } } ],
+      "coTenancy": [
+        {
+          "type": "operating",
+          "triggerLogic": { "type": "named_anchor_dark", "anchor": "Publix", "note": "Tenant may cease operating if Publix is vacant at least 90 days." },
+          "remedy": { "mechanism": "fixed_reduction", "cap": "base_rent", "note": "If Chase closes, base rent abates until at least 75% of the Publix premises is occupied by a single retailer." },
+          "reliefPeriodMonthsBeforeTermination": 12,
+          "cureCondition": "After one year of reduced rent, Tenant must either terminate or resume paying full base rent.",
+          "currentlyInEffect": false,
+          "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)",
+          "verifiedAgainstExecutedDoc": false
+        }
+      ],
+      "otherRiskClauses": {
+        "goDarkRight": { "present": true, "summary": "May cease operating if Publix vacant 90+ days, with base-rent abatement (see co-tenancy).", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "May assign without consent to affiliates, any state/national banking association, or any savings & loan / savings bank / other financial institution; may sublet without consent for any use not violating another use restriction.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B022-24" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Full-service bank exclusive (Citibank/Wells Fargo grandfathered).", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B022-24" } },
+        { "code": "COTENCY", "label": "Co-tenancy", "value": "Publix-dependent: may go dark if Publix vacant 90+ days; base rent abates until ≥75% of Publix space re-occupied by a single retailer; after 1 yr must terminate or resume full rent.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B022-24" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Effective termination via the Publix co-tenancy after the 1-year reduced-rent period.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B022-24" } }
+      ],
+      "flags": [
+        { "severity": "watch", "issue": "Publix-dependent go-dark / rent abatement", "detail": "Chase's income is tied to Publix staying open — relevant during any Publix transition (renewal gap, expansion downtime, re-tenant). Summary-sourced; confirm exact triggers/notice in the executed lease." }
+      ],
+      "narrative": "Chase Bank (B022-24, 3,062 SF, in-line) holds a full-service-bank exclusive and a Publix-dependent co-tenancy: it may cease operating if Publix is vacant 90+ days, with base rent abating until ≥75% of the Publix box is re-occupied by a single retailer, and after a year of reduced rent must terminate or resume full rent. Broad bank/financial-institution assignment rights. M2M shows $49.21 PSF, expiring 5/31/2027 with a 5-yr renewal at $55 reportedly in progress. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Regency Veterinary Associates",
+      "center": "Regency Court at Woodfield",
+      "suite": "B005-006",
+      "currentSF": 2846,
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Morgan Tannenbaum and Ricki Tannenbaum", "inForce": true, "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B005-006" } } ],
+      "exclusives": [ { "description": "No other tenant may operate a veterinary clinic.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B005-006" } } ],
+      "otherRiskClauses": {
+        "earlyTerminationOption": { "present": true, "summary": "Tenant may terminate on the death or disability of Bruce Tannenbaum, paying 8 months' gross rent as a termination fee.", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false }
+      },
+      "assignment": { "value": "May assign/sublet to affiliated entities without consent; landlord's consent required for all other transfers.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B005-006" } },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Veterinary-clinic exclusive.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B005-006" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Terminate on death/disability of Bruce Tannenbaum; 8 months' gross rent fee.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B005-006" } },
+        { "code": "RADIUS", "label": "Radius", "value": "3 miles.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "B005-006" } }
+      ],
+      "flags": [ { "severity": "watch", "issue": "Key-person termination right", "detail": "Lease can be terminated on the death/disability of Bruce Tannenbaum (8 mo. fee) — key-person dependency. Summary-sourced." } ],
+      "narrative": "Regency Veterinary Associates (B005-006, 2,846 SF) has a veterinary exclusive, a 3-mile radius, affiliate assignment rights, and a key-person termination right (death/disability of Bruce Tannenbaum, 8 months' gross rent fee). Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Regency Dental",
+      "dba": "Regency Court Dentistry, Inc.",
+      "center": "Regency Court at Woodfield",
+      "suite": "C005",
+      "currentSF": 1623,
+      "status": "draft",
+      "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Naved Fatmi", "inForce": true, "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "C005" } } ],
+      "exclusives": [ { "description": "Landlord shall not lease to any dentist, prosthodontist, endodontist, oral surgeon, periodontist, pediatric dentist or implantology specialist. Does not restrict the anchors (Publix/Walgreens) or any orthodontist not offering teeth cleaning. Tenant may expand into adjacent premises for orthodontic use, gaining an orthodontics exclusive.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "C005" } } ],
+      "otherRiskClauses": {
+        "earlyTerminationOption": { "present": true, "summary": "Tenant may terminate on 6 months' notice in the event of the operator's disability, death or inability to work.", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false }
+      },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Dental exclusive (carve-outs for anchors and non-cleaning orthodontists); option to expand with an orthodontics exclusive.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "C005" } },
+        { "code": "KICKTN", "label": "Kickout/Termination (Tenant)", "value": "Terminate on operator disability/death/inability, 6 months' notice.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "C005" } },
+        { "code": "PURCHSE", "label": "Purchase Option / ROFR", "value": "ROFR to lease adjacent space at the lesser of market rate or the then-existing lease rate.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "C005" } }
+      ],
+      "flags": [ { "severity": "watch", "issue": "Key-person termination + adjacent-space ROFR", "detail": "Termination on operator death/disability (6 mo. notice) and a ROFR on adjacent space that could constrain re-leasing flexibility. Summary-sourced." } ],
+      "narrative": "Regency Court Dentistry (C005, 1,623 SF) has a dental exclusive (anchors and non-cleaning orthodontists carved out), a key-person termination right (operator death/disability, 6 mo. notice), and a ROFR to lease adjacent space at the lesser of market or existing rate. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Pepe's Cantina",
+      "center": "Regency Court at Woodfield", "suite": "A001", "currentSF": 3134, "status": "draft", "asOf": "2026-06-17",
+      "expiration": "2036-03-31",
+      "guaranties": [ { "guarantor": "SBG Hospitality Group LLC; Andrea Jaramillo, Javier Jaramillo, Rocio del Carmen Sandoval, Lizeth Andrea Ramos Balaguera, Pietro Marsetti", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant < 10,000 SF may derive more than 50% of gross revenues from customary Mexican food (tacos, quesadillas, Mexican burritos/bowls, nachos, elotes/esquites, birria)." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Mexican-food exclusive (<10k SF, >50% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." },
+        { "code": "OPC", "label": "Operating Covenant", "value": "Continuous operation required." }
+      ],
+      "narrative": "Pepe's Cantina (A001, 3,134 SF): Mexican-food exclusive, 5-mi radius, landlord relocation right (60 days), continuous operation required, monthly sales reporting, no TI (as-is). M2M base rent $42.17 PSF, expiry 3/31/2036. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Grain & Berry",
+      "center": "Regency Court at Woodfield", "suite": "A003", "currentSF": 1423, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Ronald Griguts and Kylie D. Griguts (limited to 1 year of rent after 5/31/27)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant < 10,000 SF may derive more than 50% of gross revenues from acai bowls." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Acai-bowl exclusive (<10k SF, >50% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Grain & Berry (A003, 1,423 SF): acai-bowl exclusive, 5-mi radius, relocation right (60 days), monthly sales reporting, $40 PSF TI. Guaranty burns down after 5/31/27. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Shoe Repair Plus",
+      "center": "Regency Court at Woodfield", "suite": "A004", "currentSF": 1423, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Aviacontrol Inc.; Guillaume Berteau", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may operate a shoe-repair-and-alterations business as a primary use (does not restrict alterations within a dry cleaner or clothing store)." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Shoe-repair/alterations exclusive (primary use)." },
+        { "code": "RADIUS", "label": "Radius", "value": "3 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Shoe Repair Plus (A004, 1,423 SF; AviaControl Inc.): shoe-repair exclusive, 3-mi radius, relocation right, monthly sales reporting. 2025 reported sales $569 PSF. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Dunkin'",
+      "center": "Regency Court at Woodfield", "suite": "A005", "currentSF": 1430, "status": "draft", "asOf": "2026-06-17",
+      "expiration": "2029-08-31",
+      "guaranties": [ { "guarantor": "Southeast Enterprise Holdings LLC", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may derive more than 30% of gross revenues from doughnuts and/or brand-identified coffee beverages (does not restrict coffee/tea within a typical restaurant, bagel shop or bakery)." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Doughnut/coffee exclusive (>30% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Dunkin' (A005, 1,430 SF): doughnut/coffee exclusive, 5-mi radius, relocation right, sales reporting only on a sale/refi request. M2M base rent $45.40 PSF, expiry 8/31/2029. (Publix granted Dunkin' a waiver of its grocery exclusive.) Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Park's Martial Arts",
+      "center": "Regency Court at Woodfield", "suite": "A006", "currentSF": 2257, "status": "draft", "asOf": "2026-06-17",
+      "expiration": "2031-02-28",
+      "guaranties": [ { "guarantor": "Park's Martial Arts of Boca LLC; Cheong Park and Sunema Orihuela (limited to 6 months' gross rent)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may operate a karate/martial-arts/tae-kwon-do/kickboxing studio as a primary use." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Martial-arts exclusive (primary use)." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Park's Martial Arts (A006, 2,257 SF): martial-arts exclusive, 5-mi radius, relocation right, annual sales reporting. M2M base rent $37.21 PSF, expiry 2/28/2031. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Sugar Hi",
+      "dba": "Sugar Hi (Eat More Cake LLC)",
+      "center": "Regency Court at Woodfield", "suite": "A007", "currentSF": 2776, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Dennis Seff and Robyn Seff", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant < 10,000 SF may derive more than 50% of gross revenues from the retail sale of custom cakes and cupcakes." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Custom cakes/cupcakes exclusive (<10k SF, >50% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "Defined box: north of Palmetto Park Rd, south of Linton Blvd, east of Lyons Rd, west of I-95." }
+      ],
+      "narrative": "Sugar Hi (A007, 2,776 SF; Eat More Cake LLC): custom-cake exclusive, a geographically-defined radius restriction, monthly sales reporting, $31 PSF TI. Recently opened. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Evelyn & Arthur",
+      "center": "Regency Court at Woodfield", "suite": "A009", "currentSF": 3549, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Evelyn & Arthur Inc.", "inForce": true } ],
+      "percentageRent": { "value": "5% percentage rent (7th Amendment), term 5/1/2020–4/30/2025; 2025 reported sales $2.82M / $796 PSF." },
+      "otherRiskClauses": {
+        "rofrRofo": { "present": true, "summary": "One-time right to relocate to any larger premises that becomes available, on the same lease terms.", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false }
+      },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "3 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 30 days' notice; Tenant has a one-time right to relocate to a larger available space on the same terms." }
+      ],
+      "narrative": "Evelyn & Arthur (A009, 3,549 SF): no exclusive, 3-mi radius, monthly sales reporting, 5% percentage rent (per 7th Amendment), and a tenant one-time right to relocate to a larger available premises on the same terms. Strong sales ($796 PSF, 7.6% health ratio). Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Vincenzo's Pizzeria",
+      "center": "Regency Court at Woodfield", "suite": "A011", "currentSF": 1063, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Lombardo's Pizzeria, LLC; Jason Lombardo and Joy Lombardo", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant ≤ 10,000 SF may derive more than 25% of gross revenues from the sale of pizza in an Italian-style restaurant format." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Italian-pizza exclusive (≤10k SF, >25% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Vincenzo's Pizzeria (A011, 1,063 SF; Lombardo's Pizzeria LLC): Italian-pizza exclusive, 5-mi radius, relocation right, monthly sales reporting, $17.94 PSF TI. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Better Me Medical Spa",
+      "center": "Regency Court at Woodfield", "suite": "A013", "currentSF": 2669, "status": "draft", "asOf": "2026-06-17",
+      "expiration": "2027-12-31",
+      "guaranties": [ { "guarantor": "Eduard Shleyger, Liliya Shleyger, Igor Tsimerman, Alla Tsimerman (limited to 1 year's rent)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may derive more than 50% of gross revenues from aesthetic medical services." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Aesthetic-medical exclusive (>50% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "3 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Better Me Medical Spa (A013, 2,669 SF): aesthetic-medical exclusive, 3-mi radius, relocation right, monthly sales reporting, $10 PSF TI. M2M base rent $44.56 PSF, expiry 12/31/2027. Opened 4/2024; high occupancy cost while ramping. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Crema Gourmet",
+      "center": "Regency Court at Woodfield", "suite": "A020", "currentSF": 2940, "status": "draft", "asOf": "2026-06-17",
+      "expiration": "2036-04-30",
+      "guaranties": [ { "guarantor": "Jacqueline Hernandez (limited to 1 year's rent after 4/30/29)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may derive more than 35% of gross revenues from breakfast items (does not restrict any bagel shop, coffee shop, crepe restaurant, bakery/café, sub shop, or full-service restaurant > 3,000 SF)." } ],
+      "assignment": { "value": "May assign/sublet without consent to affiliated entities or successors by merger/consolidation/sale; landlord may recapture in lieu of granting consent for any other transfer." },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Breakfast exclusive (>35% of revenue; carve-outs)." },
+        { "code": "RADIUS", "label": "Radius", "value": "1 mile." },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "No consent for affiliate/merger/sale; landlord recapture option on other transfers." }
+      ],
+      "narrative": "Crema Gourmet (A020, 2,940 SF): breakfast exclusive (with carve-outs), 1-mi radius, affiliate assignment with a landlord recapture option, $48 PSF TI. M2M base rent $46.00 PSF, expiry 4/30/2036. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "TooJay's Gourmet Deli",
+      "center": "Regency Court at Woodfield", "suite": "B001", "currentSF": 4585, "status": "draft", "asOf": "2026-06-17",
+      "expiration": "2035-12-31",
+      "guaranties": [ { "guarantor": "TJ Management Holdco LLC", "inForce": true } ],
+      "exclusives": [ { "description": "Excluding anchors, no other tenant may operate a Jewish-style deli as a primary use." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Jewish-style deli exclusive (anchors excluded)." },
+        { "code": "RADIUS", "label": "Radius", "value": "1.5 miles." }
+      ],
+      "narrative": "TooJay's Gourmet Deli (B001, 4,585 SF): Jewish-style-deli exclusive (anchors carved out), 1.5-mi radius, quarterly sales reporting. M2M base rent $47.00 PSF, expiry 12/31/2035. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "The Meating Place",
+      "center": "Regency Court at Woodfield", "suite": "B003", "currentSF": 1423, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Moira Enterprises Inc.; Louis Bastone and Moira Bastone (limited to 2 months' rent)", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "The Meating Place (B003, 1,423 SF): no exclusive, 5-mi radius, relocation right, annual sales reporting. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "BLO Blow Dry Bar",
+      "center": "Regency Court at Woodfield", "suite": "B004", "currentSF": 1423, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Blo It Out One LLC; Kenneth Trattner and Lisa Kornbluth Trattner (limited to 1 year's rent after 6/30/29)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may derive more than 15% of gross revenues from blow-dry services (does not restrict a beauty/nail/waxing/laser salon)." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Blow-dry exclusive (>15% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "3 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "BLO Blow Dry Bar (B004, 1,423 SF): blow-dry exclusive, 3-mi radius, relocation right, monthly sales reporting, $20 PSF TI. 2025 sales $611 PSF. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Lacrosse Unlimited",
+      "center": "Regency Court at Woodfield", "suite": "B007", "currentSF": 1606, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Lacrosse Unlimited Inc.", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Lacrosse Unlimited (B007, 1,606 SF): no exclusive, 5-mi radius, relocation right, annual sales reporting. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Vinny's Cafe",
+      "center": "Regency Court at Woodfield", "suite": "B008", "currentSF": 1606, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Vinny's Café LLC; Richard Bartlett and Kristena Bartlett", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may operate a café offering juice bar and sandwich wraps as a primary use." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Café/juice-bar/sandwich-wrap exclusive (primary use)." },
+        { "code": "RADIUS", "label": "Radius", "value": "2 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 90 days' notice." }
+      ],
+      "narrative": "Vinny's Cafe (B008, 1,606 SF): café/juice-bar exclusive, 2-mi radius, relocation right (90 days), annual sales reporting. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Orient Diner-Takeout",
+      "dba": "Orient Kitchen",
+      "center": "Regency Court at Woodfield", "suite": "B009", "currentSF": 1063, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Orient Diner LLC; Vincent Hua", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may operate a Chinese restaurant as a primary use with takeout and delivery service." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Chinese-restaurant exclusive (primary use, takeout/delivery)." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Orient Kitchen (B009, 1,063 SF; Orient Diner LLC): Chinese-restaurant exclusive, 5-mi radius, relocation right, annual sales reporting. Among the highest-sales shops per the OM. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Delfina Pilates",
+      "center": "Regency Court at Woodfield", "suite": "B010", "currentSF": 1063, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Delfina Pilates LLC; Delfina G. Resendes and Daniel Resendes", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Delfina Pilates (B010, 1,063 SF): no exclusive, 5-mi radius, relocation right, monthly sales reporting, $23.52 PSF TI. Opened mid-2025. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Frame World",
+      "center": "Regency Court at Woodfield", "suite": "B011", "currentSF": 1063, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Gallery Framemasters, Inc.; Muriel Light Egan", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "3 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Frame World (B011, 1,063 SF; Gallery Framemasters Inc.): no exclusive, 3-mi radius, relocation right. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "UPS",
+      "dba": "The UPS Store (KRS Shipping Inc.)",
+      "center": "Regency Court at Woodfield", "suite": "B012", "currentSF": 1063, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Kabrir Rai (limited to 1 year's rent)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant ≤ 7,500 SF may offer retail packing and shipping services, printing, and/or mailbox services." } ],
+      "assignment": { "value": "May assign/sublet without consent to its franchisor or qualified franchisees; released from liability if the franchisee has a net worth of at least $350k (of which $75k is liquid)." },
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Packing/shipping/printing/mailbox exclusive (≤7,500 SF)." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 210 days' notice." },
+        { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "No consent for franchisor/qualified-franchisee transfers; net-worth-based release." }
+      ],
+      "flags": [ { "severity": "info", "issue": "Former dry-cleaner suite", "detail": "Suite B012 was the former dry-cleaner plant tied to the FDEP Dry Cleaning Solvent program (No Further Action pending SRCO)." } ],
+      "narrative": "The UPS Store (B012, 1,063 SF; KRS Shipping Inc.): packing/shipping exclusive (≤7,500 SF), 210-day relocation notice, franchisor/franchisee assignment with a net-worth release, $30 PSF TI. Former dry-cleaner suite (environmental — NFA pending). Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Boca Beauty Nail Spa",
+      "center": "Regency Court at Woodfield", "suite": "B013", "currentSF": 1423, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Giang Ngoc Thi To and Luy Nguyen", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant ≤ 5,000 SF may generate more than 10% of gross revenues, or devote more than 10% of its premises, to the operation of a nail salon." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Nail-salon exclusive (≤5,000 SF, >10% revenue/area)." },
+        { "code": "RADIUS", "label": "Radius", "value": "1 mile." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Boca Beauty Nail Spa (B013, 1,423 SF): nail-salon exclusive, 1-mi radius, relocation right, monthly sales reporting. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Jildor Shoes",
+      "center": "Regency Court at Woodfield", "suite": "B014", "currentSF": 1412, "status": "draft", "asOf": "2026-06-17",
+      "expiration": "2030-05-31",
+      "guaranties": [ { "guarantor": "Jupiter Great Scott LLC; Jildor Shoes, Inc. (limited to 1 year's rent after 5/31/28)", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." }
+      ],
+      "narrative": "Jildor Shoes (B014, 1,412 SF): no exclusive, 5-mi radius, monthly sales reporting, no TI (as-is). M2M base rent $41.30 PSF, expiry 5/31/2030. Guaranty burns down after 5/31/28. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Ivan & Co. Jewelry",
+      "center": "Regency Court at Woodfield", "suite": "B016", "currentSF": 1423, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Ivan & Co. Jewelers Inc.; Jane Kurcsinka (limited to 1 year's rent) and Katherine Osipov", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Ivan & Co. Jewelry (B016, 1,423 SF): no exclusive, 5-mi radius, relocation right, monthly sales reporting. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Diesel Barbershop",
+      "center": "Regency Court at Woodfield", "suite": "B017", "currentSF": 1560, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Evax LLC; Frank and Nurit Louis (limited to 1 year's rent)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant < 12,000 SF may derive more than 50% of gross revenues from men's grooming or haircutting services." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Men's grooming/haircutting exclusive (<12,000 SF, >50% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." }
+      ],
+      "flags": [ { "severity": "info", "issue": "High occupancy cost", "detail": "2025 health ratio ~51% on $109 PSF sales — watch tenant health." } ],
+      "narrative": "Diesel Barbershop (B017, 1,560 SF; Evax LLC): men's-grooming exclusive, 5-mi radius, annual sales reporting, $22.63 PSF TI. High occupancy cost (~51%). Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Learning Express Toys",
+      "center": "Regency Court at Woodfield", "suite": "B018", "currentSF": 1423, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Boca Raton Toys Inc.; Mar and Patricia Monoroe", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may sell educational toys, developmental toys, children's toys, children's books and children's games as a primary use." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Children's toys/books/games exclusive (primary use)." },
+        { "code": "RADIUS", "label": "Radius", "value": "2 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Learning Express Toys (B018, 1,423 SF; Boca Raton Toys Inc.): children's-toys exclusive, 2-mi radius, relocation right, monthly sales reporting. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Move with Studios",
+      "center": "Regency Court at Woodfield", "suite": "B019", "currentSF": 1286, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Move with Mel, LLC", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate Tenant." }
+      ],
+      "narrative": "Move with Studios (B019, 1,286 SF; Move with Mel LLC): no exclusive, relocation right, quarterly sales reporting, $20 PSF TI. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "Mario Pucci",
+      "center": "Regency Court at Woodfield", "suite": "C001-004", "currentSF": 5620, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Heathcot LLC; Andrew J. Whyman Brown", "inForce": true } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "None." },
+        { "code": "RADIUS", "label": "Radius", "value": "5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "Mario Pucci (C001-004, 5,620 SF; Heathcot LLC): no exclusive, 5-mi radius, relocation right. Reports high sales per the OM. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    },
+
+    {
+      "tenantName": "16 Handles",
+      "center": "Regency Court at Woodfield", "suite": "C008", "currentSF": 1708, "status": "draft", "asOf": "2026-06-17",
+      "guaranties": [ { "guarantor": "Enjoy West Boca LLC; Benjamin Goldberg and Lindsay Goldberg (limited to 1 year's rent after 5/31/29)", "inForce": true } ],
+      "exclusives": [ { "description": "No other tenant may derive more than 33% of gross revenues from the retail sale of frozen yogurt, soft-serve yogurt, frozen ice cream and/or soft-serve ice cream." } ],
+      "leaseNotes": [
+        { "code": "EXCLUSI", "label": "Exclusive Use", "value": "Frozen-yogurt/ice-cream exclusive (>33% of revenue)." },
+        { "code": "RADIUS", "label": "Radius", "value": "2.5 miles." },
+        { "code": "RELOCAT", "label": "Relocation", "value": "Landlord may relocate on 60 days' notice." }
+      ],
+      "narrative": "16 Handles (C008, 1,708 SF; Enjoy West Boca LLC): frozen-yogurt/ice-cream exclusive, 2.5-mi radius, relocation right, monthly sales reporting, $44 PSF TI. Summary-sourced.",
+      "verifiedAgainstExecutedDoc": false,
+      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+    }
+  ]
+}

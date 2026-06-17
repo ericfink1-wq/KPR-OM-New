@@ -1,0 +1,239 @@
+{
+  "deals": [
+    {
+      "propertyName": "Regency Court at Woodfield",
+      "aka": ["Regency Court"],
+      "address": "3003-3013 Yamato Rd",
+      "city": "Boca Raton",
+      "state": "FL",
+      "zip": "33434",
+      "market": "South Florida (Miami–Fort Lauderdale–West Palm Beach MSA)",
+      "submarket": "Boca Raton West",
+      "assetType": "Retail",
+      "centerType": "Grocery-Anchored Community Center",
+      "omDate": "2026-06-12",
+      "broker": "CBRE National Retail Partners (Casey Rosen, Dennis Carson, Michael Etemad)",
+      "askingPrice": null,
+      "capRate": null,
+      "noi": 3651460,
+      "totalSF": 139913,
+      "occupancy": 90,
+      "operatingExpenses": 2199807,
+      "effectiveGrossIncome": null,
+      "weightedAvgRentPSF": null,
+      "yearBuilt": 1992,
+      "lotSizeAcres": 14.85,
+      "parkingRatio": 6.08,
+      "trafficCountVPD": 77500,
+      "assumableDebt": false,
+      "currentAssessedValue": 42205863,
+      "currentAnnualTaxes": 812955,
+      "nonAdValoremAnnual": 124038,
+      "assessmentYear": 2025,
+      "taxParcels": [
+        { "parcelId": "06-42-47-03-14-001-0010", "label": "Main", "assessedValue": 42205863, "annualTaxes": 812955, "year": 2025 }
+      ],
+      "population3mi": 67843,
+      "medianHHIncome3mi": null,
+      "avgHHIncome3mi": 180494,
+      "marketDemographics": {
+        "pop1mi": 7299, "pop3mi": 67843, "pop5mi": null,
+        "avgHHI1mi": 264527, "avgHHI3mi": 180494, "avgHHI5mi": null,
+        "confidence": "high", "source": "OM (CBRE) demographics page", "asOf": "2026",
+        "note": "2-mile ring: pop 30,893 / avg HH income $212,741. Average home value 1-mile $1,118,348; 3-mile $796,833. Placer.ai trade area (top 70% of visitors): pop 308,169 / avg HH income $141,071."
+      },
+      "proximityHighways": "3.3 miles W of I-95 / Yamato Rd interchange (254,000 VPD); ±700 ft frontage on Jog Rd, ±900 ft on Yamato Rd",
+      "shadowAnchors": "Three outparcels (Chevron, Wells Fargo, Citibank) sit on separately-owned parcels bound to the center by a reciprocal easement agreement; they are NOT part of the 139,913 SF GLA. Outparcels reimburse the owner via fixed annual payments that step up 15% every 5 years.",
+      "specialAssessments": "Non-ad-valorem charges of $124,038 (2025) included in the tax bill (special-district / fixed charges).",
+      "tenantsAsOf": "2026-03-31",
+      "tenantsSource": "om",
+      "tenantsManual": false,
+      "incomeBreakdown": {
+        "Base Rent Income (gross)": 3443149,
+        "Rent Concessions/Incentives": -28402,
+        "Percentage Rent (Publix)": 124433,
+        "Bad Debt Loss": -75329,
+        "Operating Expense Reimbursement": 625108,
+        "Insurance Reimbursement": 170976,
+        "Tax Reimbursement": 708197,
+        "Utility (Sewer/Water) Reimbursement": 49651,
+        "Garbage/Trash Reimbursement": 92025,
+        "Late Charges": 17155,
+        "Miscellaneous": 12374,
+        "Interest Income": 25563,
+        "Total Income (T-12)": 5164899
+      },
+      "expenseBreakdown": {
+        "Payroll": 260495,
+        "General & Administrative": 6947,
+        "Management Fees": 163073,
+        "Landscaping": 200909,
+        "Repair & Maintenance": 132539,
+        "Janitorial": 200687,
+        "Security": 173396,
+        "Utilities": 55143,
+        "Insurance": 147490,
+        "Real Estate & Other Taxes": 808460,
+        "Nonreimbursable Expenses": 50668,
+        "Total Expenses (T-12)": 2199807
+      },
+      "cashFlowProjection": [
+        { "label": "T-12 Actual (Apr 2025 – Mar 2026)", "totalBaseRent": 3443149, "reimbursements": 1645957, "egr": 5164899, "operatingExpenses": 2199807, "noi": 2965093 }
+      ],
+      "notes": "Regency Court at Woodfield is a 139,913 SF, Publix- and Walgreens-anchored community center built in 1992 on ±14.85 acres at the signalized corner of Yamato Rd & Jog Rd (±77,500 VPD) at the entrance to Woodfield Country Club in central Boca Raton (Boca Raton West submarket). The trade area is exceptionally affluent — 1-mile average HH income of $264,527 and average home value of $1,118,348 (90% / 73% above Palm Beach County). Publix (#0428, 42,112 SF) is a standout at $46.1M / $1,095 PSF in 2025 (13% above Publix's chain average) on a low $7.50 PSF base + 1% percentage rent over a $31.58M breakpoint, with a ~1.9% health ratio. Both anchors are original 1992 tenants paying well below market (Publix ~58% below, Walgreens ~45% below) and fully expire within ~6 years (Publix current 12/9/2027 plus one 5-yr option to Dec-2032; Walgreens 11/30/2031), driving the value-add thesis: mark-to-market of 81,543 SF (67% of occupied GLA, >$1.0M upside), lease-up of 13,927 SF of vacancy (10% of GLA), and anchor renewal/expansion (Publix has discussed a 47,240 SF expansion) or re-tenanting. The OM projects 94% NOI growth over a 10-year hold (6.8% CAGR) off an In-Place NOI of $3,651,460; T-12 (Apr-25–Mar-26) actual NOI was $2,965,093 on $5.16M income and $2.20M opex. Shops are high-performing and seasoned (avg shop sales $651 PSF, 9.1% health ratio, 14.5-yr tenure). Debt-free and offered unpriced by CBRE National Retail Partners; key risks are concentrated near-term anchor rollover, Walgreens' BB- credit and soft reported sales, and a Chase co-tenancy tied to Publix occupancy.",
+      "keyAssumptions": [
+        "In-Place NOI of $3,651,460 is the OM's normalized in-place figure; T-12 actual NOI (Apr-25–Mar-26) was $2,965,093 (Total Income $5,164,899 − OpEx $2,199,807). The ~$686K gap reflects vacancy gross-up, reimbursement normalization, and removal of bad debt/concessions.",
+        "No asking price or guidance cap rate stated — the asset is being offered unpriced / best-offer by CBRE NRP.",
+        "Publix current lease expiration is 12/9/2027 with ONE automatic 5-year option (auto-exercises unless Publix gives 6 months' notice) to 12/9/2032; the OM's 'fully expires Dec-2032' reflects the option period.",
+        "DETAILED RENT ROLL IS IMAGE-BASED: the OM rent-roll pages (49–58) are scanned images that yield NO extractable text, so per-tenant base rents and lease dates were taken from the OM's Mark-to-Market table and Publix abstract ONLY. Rents/expiries are populated where a tenant's SF maps UNIQUELY; same-SF tenants (several 1,606 / 1,423 / 1,063 SF shops) are left null and must be confirmed against the rent roll, Argus file, or a structured rent-roll upload.",
+        "Walgreens SF is 12,422 per the site plan / mark-to-market / rent roll; the tenant-sales report uses 12,233 SF as its PSF denominator — confirm the leased SF.",
+        "Tax bill figures (assessed $42,205,863; ad valorem $688,917 + non-ad-valorem $124,038 = $812,955) are per the 2025 Palm Beach County bill, stated net of a 4% early-payment discount."
+      ],
+      "redFlags": [
+        { "severity": "high", "description": "Concentrated near-term anchor rollover: Publix (42,112 SF, 30% of GLA) and Walgreens (12,422 SF) BOTH fully expire within ~6 years (Publix current 12/9/2027 / option to Dec-2032; Walgreens 11/30/2031). The value-add thesis depends on renewing/re-tenanting both at much higher rents — execution and downtime risk." },
+        { "severity": "medium", "description": "10% vacancy (13,927 SF across suites A014, B020-22, C006, C007) — lease-up cost/time risk; the In-Place NOI assumes this space contributes." },
+        { "severity": "medium", "description": "Walgreens credit is BB- (S&P, below investment grade) and its REPORTED sales are low/declining ($197.84 PSF in 2025 vs $218.82 in 2024); the OM adjusts to an estimated $822 PSF by adding back 3rd-party-plan Rx sales excluded from reported figures — the reported figure is the contractual basis." },
+        { "severity": "medium", "description": "Chase Bank (B022-24) co-tenancy/go-dark: Chase may cease operating if Publix is vacant 90+ days, with base rent abating until ≥75% of the Publix premises is re-occupied by a single retailer; after one year of reduced rent Chase must terminate or resume full rent — anchor-dependent income risk during any Publix transition." },
+        { "severity": "medium", "description": "Anchor income is well below market and partly percentage-rent dependent (Publix base just $7.50 PSF + 1% over a $31.58M breakpoint); in-place yield is low relative to a trophy price — returns rely on realizing the mark-to-market." },
+        { "severity": "low", "description": "Environmental: property enrolled in Florida's Dry Cleaning Solvent program (former dry cleaner, Suite B012). Aug-2025 report met No Further Action criteria and FDEP confirmed closure 12/15/2025, but the formal Site Rehabilitation Completion Order (SRCO) and site restoration were still pending as of the OM." },
+        { "severity": "low", "description": "Data completeness: detailed per-tenant rents/dates for in-line shops are not in the OM's extractable text (image-based rent roll) — confirm the full rent roll before underwriting." }
+      ],
+      "upsideItems": [
+        { "priority": "high", "item": "Mark-to-market below-market leases", "detail": "81,543 SF (67% of occupied GLA), incl. Publix and Walgreens, is ~36% below market (current avg $22.88 vs market $35.59 PSF) — >$1.0M of identified rent upside realizable over a 10-year hold." },
+        { "priority": "high", "item": "Lease up vacancy", "detail": "13,927 SF (10% of GLA) of available space in an infill, 98.4%-occupied submarket with shop asking rents of $45–$55 PSF NNN." },
+        { "priority": "high", "item": "Publix renewal / expansion", "detail": "Publix is below market at $7.50 PSF and has expressed interest in waiving its remaining option and renewing early, and in an expanded 47,240 SF prototype store — new South FL grocer rents are mid-to-upper $20s PSF." },
+        { "priority": "medium", "item": "Walgreens re-tenant / conversion", "detail": "Option to renew Walgreens at market, re-tenant the 12,422 SF box, or convert/divide it into higher-rent shop space; Walgreens has relocation rights." },
+        { "priority": "medium", "item": "Contractual rent bumps", "detail": "In-place leases carry contractual increases that contribute to the projected 94% / 6.8% CAGR 10-year NOI growth." }
+      ],
+      "leaseRisk": {
+        "coTenancyDisclosed": true,
+        "source": "OM",
+        "tenants": [
+          {
+            "tenant": "Publix",
+            "suite": "C009",
+            "baseRentAnnual": 315840,
+            "otherRiskClauses": {
+              "goDarkRight": { "present": true, "summary": "Continuous operation NOT required. If Publix ceases operating for 6 consecutive months it must notify the landlord, and the landlord then has a one-time right to terminate within 60 days of that notice.", "sourceDocument": "Regency Court OM — Publix lease abstract (CBRE)", "verifiedAgainstExecutedDoc": false },
+              "exclusiveUse": { "present": true, "summary": "Grocery/supermarket/bakery/deli/fish-market/photo-finishing exclusive east of Woodfield Plaza Dr; carve-outs for chain drug store and small gas/food convenience; Dunkin' waiver granted.", "sourceDocument": "Regency Court OM — Publix lease abstract (CBRE)", "verifiedAgainstExecutedDoc": false }
+            }
+          },
+          {
+            "tenant": "Walgreens",
+            "suite": "C010",
+            "baseRentAnnual": 180119,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": { "type": "named_anchor_dark", "anchor": "Publix", "note": "If Publix ceases operating for at least 90 days, Walgreens' obligation to pay percentage rent is void until another reasonably acceptable business opens in the vacated premises." },
+                "remedy": { "mechanism": "percent_rent_waiver", "note": "Percentage rent waived (Walgreens pays base rent only) — limited $ impact since Walgreens % rent is small." },
+                "currentlyInEffect": false,
+                "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "otherRiskClauses": {
+              "goDarkRight": { "present": true, "summary": "Continuous operation NOT required; landlord has an ongoing right of recapture if Walgreens ceases to operate for 6 months.", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false },
+              "exclusiveUse": { "present": true, "summary": "Drug-store/pharmacy exclusive plus prohibited-use list (bar, arcade, adult uses, etc.); Publix not encumbered.", "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)", "verifiedAgainstExecutedDoc": false }
+            }
+          },
+          {
+            "tenant": "JP Morgan Chase",
+            "suite": "B022-24",
+            "baseRentAnnual": 150681,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": { "type": "named_anchor_dark", "anchor": "Publix", "note": "Chase may cease operating if Publix is vacant at least 90 days." },
+                "remedy": { "mechanism": "fixed_reduction", "cap": "base_rent", "note": "If Chase closes, base rent abates until at least 75% of the Publix premises is occupied by a single retailer. After one year of reduced rent, Chase must either terminate or resume paying full base rent." },
+                "reliefPeriodMonthsBeforeTermination": 12,
+                "currentlyInEffect": false,
+                "sourceDocument": "Regency Court OM — shop lease provisions (CBRE)",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ]
+          }
+        ]
+      },
+      "tenantSalesHistory": [
+        {
+          "year": 2025,
+          "uploadedAt": "2026-06-17T00:00:00.000Z",
+          "source": "upload",
+          "tenants": [
+            { "name": "Publix", "annualSales": 46094930, "salesPSF": 1095, "sf": 42112, "occupancyCost": 1.47 },
+            { "name": "Walgreens", "annualSales": 2218505, "salesPSF": 197.84, "sf": 12233, "occupancyCost": 7.44 },
+            { "name": "Evelyn & Arthur", "annualSales": 2823816, "salesPSF": 795.67, "sf": 3549, "occupancyCost": 7.63 },
+            { "name": "Apolonia Boutique", "annualSales": 930994, "salesPSF": 654.25, "sf": 1423, "occupancyCost": 10.14 },
+            { "name": "BLO Blow Dry Bar", "annualSales": 869546, "salesPSF": 611.07, "sf": 1423, "occupancyCost": 10.15 },
+            { "name": "Shoe Repair Plus", "annualSales": 809874, "salesPSF": 569.13, "sf": 1423, "occupancyCost": 11.31 },
+            { "name": "Better Me Medical Spa", "annualSales": 700643, "salesPSF": 262.51, "sf": 2669, "occupancyCost": 22.61 },
+            { "name": "Revival Boutique", "annualSales": 534403, "salesPSF": 375.55, "sf": 1423 },
+            { "name": "Diesel Barbershop", "annualSales": 169714, "salesPSF": 108.79, "sf": 1560, "occupancyCost": 51.36 }
+          ]
+        },
+        {
+          "year": 2024,
+          "uploadedAt": "2026-06-17T00:00:00.000Z",
+          "source": "upload",
+          "tenants": [
+            { "name": "Publix", "annualSales": 46096533, "salesPSF": 1095, "sf": 42112, "occupancyCost": 1.47 },
+            { "name": "Walgreens", "annualSales": 2676840, "salesPSF": 218.82, "sf": 12233, "occupancyCost": 6.73 },
+            { "name": "Evelyn & Arthur", "annualSales": 2677292, "salesPSF": 754.38, "sf": 3549, "occupancyCost": 7.89 },
+            { "name": "Apolonia Boutique", "annualSales": 961797, "salesPSF": 675.89, "sf": 1423, "occupancyCost": 9.76 },
+            { "name": "Shoe Repair Plus", "annualSales": 754126, "salesPSF": 529.95, "sf": 1423, "occupancyCost": 12.07 },
+            { "name": "Better Me Medical Spa", "annualSales": 290808, "salesPSF": 145.28, "sf": 2669, "occupancyCost": 41.86 }
+          ]
+        }
+      ],
+      "tenants": [
+        { "name": "Pepe's Cantina", "suite": "A001", "sf": 3134, "rentPerSF": 42.17, "annualRent": 132161, "leaseExpiry": "2036-03-31", "reimbursementMethod": "NNN", "assumptionNote": "Base rent PSF and expiry from the OM Mark-to-Market table (unique 3,134 SF)." },
+        { "name": "Grain & Berry", "suite": "A003", "sf": 1423, "reimbursementMethod": "NNN", "assumptionNote": "Base rent/dates not in extractable OM text (image rent roll); 1,423 SF is shared by several shops so the M2M rows can't be mapped uniquely." },
+        { "name": "Shoe Repair Plus", "suite": "A004", "sf": 1423, "parentCompany": "AviaControl Inc.", "salesPSF": 569.13, "priorSalesPSF": 529.95, "salesYear": 2025, "priorSalesYear": 2024, "occupancyCost": 11.31, "reimbursementMethod": "NNN" },
+        { "name": "Dunkin'", "suite": "A005", "sf": 1430, "rentPerSF": 45.40, "annualRent": 64922, "leaseExpiry": "2029-08-31", "reimbursementMethod": "NNN", "assumptionNote": "Base rent/expiry from M2M (unique 1,430 SF)." },
+        { "name": "Park's Martial Arts", "suite": "A006", "sf": 2257, "rentPerSF": 37.21, "annualRent": 83983, "leaseExpiry": "2031-02-28", "reimbursementMethod": "NNN", "assumptionNote": "Base rent/expiry from M2M (unique 2,257 SF)." },
+        { "name": "Sugar Hi", "suite": "A007", "sf": 2776, "parentCompany": "Eat More Cake LLC", "reimbursementMethod": "NNN", "assumptionNote": "Recently opened (sales reporting began late 2025); base rent not in extractable text." },
+        { "name": "Evelyn & Arthur", "suite": "A009", "sf": 3549, "salesPSF": 795.67, "priorSalesPSF": 754.38, "salesYear": 2025, "priorSalesYear": 2024, "occupancyCost": 7.63, "percentageRentRate": 5, "reimbursementMethod": "NNN", "salesNotes": "5% percentage rent per 7th Amendment (5/1/2020–4/30/2025 term). 2025 sales $2.82M / $796 PSF." },
+        { "name": "Vincenzo's Pizzeria", "suite": "A011", "sf": 1063, "reimbursementMethod": "NNN", "assumptionNote": "Base rent/dates not uniquely mappable (1,063 SF shared by several shops)." },
+        { "name": "Better Me Medical Spa", "suite": "A013", "sf": 2669, "parentCompany": "Better Me Medical Spa LLC", "rentPerSF": 44.56, "annualRent": 118931, "leaseExpiry": "2027-12-31", "reimbursementMethod": "NNN", "salesPSF": 262.51, "priorSalesPSF": 145.28, "salesYear": 2025, "priorSalesYear": 2024, "occupancyCost": 22.61, "assumptionNote": "Base rent/expiry from M2M (unique 2,669 SF). Opened 4/2024; high occupancy cost while ramping." },
+        { "name": "VACANT", "suite": "A014", "sf": 2086, "isNAP": false, "assumptionNote": "Vacant (part of the 13,927 SF / 10% vacancy)." },
+        { "name": "Boca Best Cleaners", "suite": "A015", "sf": 943, "reimbursementMethod": "NNN", "assumptionNote": "Dry-cleaning drop-off / tailoring (permitted use). Base rent not in extractable text." },
+        { "name": "Apolonia Boutique", "suite": "A016", "sf": 1423, "parentCompany": "Dakota Jack Inc.", "salesPSF": 654.25, "priorSalesPSF": 675.89, "salesYear": 2025, "priorSalesYear": 2024, "occupancyCost": 10.14, "reimbursementMethod": "NNN" },
+        { "name": "Revival Boutique", "suite": "A017", "sf": 1423, "parentCompany": "E & R Generation Inc.", "salesPSF": 375.55, "salesYear": 2025, "reimbursementMethod": "NNN" },
+        { "name": "Elie's Fine Art, Jewelry & Gifts", "suite": "A018-018A", "sf": 1428, "rentPerSF": 45.00, "annualRent": 64260, "leaseExpiry": "2028-11-30", "reimbursementMethod": "NNN", "assumptionNote": "Base rent/expiry from M2M (unique 1,428 SF)." },
+        { "name": "MyEyeDr", "suite": "A019", "sf": 1661, "reimbursementMethod": "NNN", "assumptionNote": "Base rent/dates not in extractable text." },
+        { "name": "Crema Gourmet", "suite": "A020", "sf": 2940, "rentPerSF": 46.00, "annualRent": 135240, "leaseExpiry": "2036-04-30", "reimbursementMethod": "NNN", "assumptionNote": "Base rent/expiry from M2M (unique 2,940 SF)." },
+        { "name": "TooJay's Gourmet Deli", "suite": "B001", "sf": 4585, "rentPerSF": 47.00, "annualRent": 215495, "leaseExpiry": "2035-12-31", "reimbursementMethod": "NNN", "assumptionNote": "Base rent/expiry from M2M (unique 4,585 SF)." },
+        { "name": "The Meating Place", "suite": "B003", "sf": 1423, "reimbursementMethod": "NNN", "assumptionNote": "Base rent/dates not uniquely mappable (1,423 SF shared)." },
+        { "name": "BLO Blow Dry Bar", "suite": "B004", "sf": 1423, "parentCompany": "Blo It Out One LLC", "salesPSF": 611.07, "salesYear": 2025, "occupancyCost": 10.15, "reimbursementMethod": "NNN" },
+        { "name": "Regency Veterinary Associates", "suite": "B005-006", "sf": 2846, "reimbursementMethod": "NNN", "assumptionNote": "Tenant may terminate on death/disability of Bruce Tannenbaum (8 months' gross rent termination fee). Base rent not in extractable text." },
+        { "name": "Lacrosse Unlimited", "suite": "B007", "sf": 1606, "reimbursementMethod": "NNN", "assumptionNote": "Either B007 or B008 (both 1,606 SF) is the M2M 7/31/2028 @ $42.92 row — cannot map uniquely; base rent left null pending the rent roll." },
+        { "name": "Vinny's Cafe", "suite": "B008", "sf": 1606, "reimbursementMethod": "NNN", "assumptionNote": "Either B007 or B008 (both 1,606 SF) is the M2M 7/31/2028 @ $42.92 row — cannot map uniquely; base rent left null pending the rent roll." },
+        { "name": "Orient Diner-Takeout", "suite": "B009", "sf": 1063, "reimbursementMethod": "NNN", "salesNotes": "DBA Orient Kitchen; among the highest reported shop sales per OM.", "assumptionNote": "1,063 SF shared by several shops — base rent not uniquely mappable." },
+        { "name": "Delfina Pilates", "suite": "B010", "sf": 1063, "reimbursementMethod": "NNN", "assumptionNote": "Opened mid-2025; base rent not in extractable text." },
+        { "name": "Frame World", "suite": "B011", "sf": 1063, "reimbursementMethod": "NNN", "assumptionNote": "1,063 SF shared — base rent not uniquely mappable." },
+        { "name": "UPS", "suite": "B012", "sf": 1063, "reimbursementMethod": "NNN", "assumptionNote": "The UPS Store (KRS Shipping Inc.). Former dry-cleaner suite (environmental). Base rent not in extractable text." },
+        { "name": "Boca Beauty Nail Spa", "suite": "B013", "sf": 1423, "reimbursementMethod": "NNN", "assumptionNote": "1,423 SF shared — base rent not uniquely mappable." },
+        { "name": "Jildor Shoes", "suite": "B014", "sf": 1412, "rentPerSF": 41.30, "annualRent": 58316, "leaseExpiry": "2030-05-31", "reimbursementMethod": "NNN", "assumptionNote": "Base rent/expiry from M2M (unique 1,412 SF)." },
+        { "name": "Avant Gallery", "suite": "B015", "sf": 3629, "reimbursementMethod": "NNN", "assumptionNote": "Base rent/dates not in extractable text." },
+        { "name": "Ivan & Co. Jewelry", "suite": "B016", "sf": 1423, "reimbursementMethod": "NNN", "assumptionNote": "1,423 SF shared — base rent not uniquely mappable." },
+        { "name": "Diesel Barbershop", "suite": "B017", "sf": 1560, "parentCompany": "Evax LLC", "salesPSF": 108.79, "salesYear": 2025, "occupancyCost": 51.36, "reimbursementMethod": "NNN", "salesNotes": "High occupancy cost (~51%) on low sales — watch." },
+        { "name": "Learning Express Toys", "suite": "B018", "sf": 1423, "reimbursementMethod": "NNN", "assumptionNote": "1,423 SF shared — base rent not uniquely mappable." },
+        { "name": "Move with Studios", "suite": "B019", "sf": 1286, "reimbursementMethod": "NNN", "assumptionNote": "Base rent/dates not in extractable text." },
+        { "name": "VACANT", "suite": "B020-22", "sf": 6191, "isNAP": false, "assumptionNote": "Vacant (largest available block; part of the 13,927 SF / 10% vacancy)." },
+        { "name": "JP Morgan Chase", "suite": "B022-24", "sf": 3062, "rentPerSF": 49.21, "annualRent": 150681, "leaseExpiry": "2027-05-31", "reimbursementMethod": "NNN", "renewalOptions": "5-year renewal at $55 PSF reportedly in progress.", "assumptionNote": "Base rent/expiry from M2M (unique 3,062 SF). Co-tenancy/go-dark tied to Publix — see leaseRisk." },
+        { "name": "Mario Pucci", "suite": "C001-004", "sf": 5620, "parentCompany": "Heathcot LLC", "reimbursementMethod": "NNN", "assumptionNote": "Reports sales (high volume per OM); base rent not in extractable text." },
+        { "name": "Regency Dental", "suite": "C005", "sf": 1623, "reimbursementMethod": "NNN", "assumptionNote": "Regency Court Dentistry, Inc. Tenant may terminate on operator disability/death (6 months' notice); has a ROFR on adjacent space. Base rent not in extractable text." },
+        { "name": "VACANT", "suite": "C006", "sf": 3103, "isNAP": false, "assumptionNote": "Vacant (part of the 13,927 SF / 10% vacancy)." },
+        { "name": "VACANT", "suite": "C007", "sf": 2547, "isNAP": false, "assumptionNote": "Vacant (part of the 13,927 SF / 10% vacancy)." },
+        { "name": "16 Handles", "suite": "C008", "sf": 1708, "parentCompany": "Enjoy West Boca LLC", "reimbursementMethod": "NNN", "assumptionNote": "Base rent/dates not in extractable text." },
+        { "name": "Publix", "suite": "C009", "sf": 42112, "isAnchor": true, "rentPerSF": 7.50, "annualRent": 315840, "percentageRent": 124433, "percentageRentRate": 1, "percentageRentBreakpoint": 31584000, "percentageRentBreakpointType": "natural", "leaseStart": "1992-12-10", "leaseExpiry": "2027-12-09", "renewalOptions": "One 5-year option, automatically exercised unless Publix gives 6 months' notice (would extend to 12/9/2032).", "reimbursementMethod": "NNN — proportionate share of common-area maintenance (limited list) and general real estate taxes; NO property-insurance reimbursement.", "salesPSF": 1095, "priorSalesPSF": 1095, "salesYear": 2025, "priorSalesYear": 2024, "occupancyCost": 1.47, "creditRating": "Publix Super Markets (employee-owned; Fortune #71)", "salesNotes": "Publix #0428. 2025 sales $46,094,930 / $1,095 PSF (13% above chain avg of $926). 2021 $46.6M, 2019 $34.8M. Pays 1% percentage rent over a $31.58M natural breakpoint ($124,433 in 2025)." },
+        { "name": "Walgreens", "suite": "C010", "sf": 12422, "isAnchor": true, "rentPerSF": 14.50, "annualRent": 180119, "leaseExpiry": "2031-11-30", "reimbursementMethod": "NNN (subsidized)", "salesPSF": 197.84, "priorSalesPSF": 218.82, "salesYear": 2025, "priorSalesYear": 2024, "occupancyCost": 7.44, "creditRating": "BB- (S&P)", "salesNotes": "Walgreens #2664. REPORTED 2025 sales $2.22M / $197.84 PSF (excludes 3rd-party-plan Rx, which the OM estimates would push actual sales to ~$10.1M / $822 PSF). Site plan SF 12,422 vs sales-report denominator 12,233 — confirm leased SF. Continuous operation not required; landlord recapture if dark 6 months." }
+      ],
+      "roofData": {
+        "summary": "Publix roof replaced 2019 (warranty to 2039). Shop roofs being replaced mid-2026 (~$985,000 estimated; warranty to 2046).",
+        "concern": "Shop roof replacement (~$985K) was an estimated, near-term capital item at the time of the OM."
+      }
+    }
+  ]
+}
