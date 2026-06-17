@@ -10,7 +10,24 @@
       "asOf": "2026-06-17",
       "commencement": "1992-12-10",
       "expiration": "2027-12-09",
-      "term": { "value": "Original term commenced 12/10/1992; current expiration 12/9/2027. One 5-year option to 12/9/2032 (auto-exercises unless 6 months' notice).", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Publix Abstract" } },
+      "documents": [
+        { "name": "Lease Agreement", "date": "1990-10-16", "type": "lease", "description": "Original Publix lease (George E. Straub, Trustee, as Landlord; Publix Super Markets, Inc., as Tenant) — Woodfield Plaza, Boca Raton (Publix #0428)." },
+        { "name": "Memorandum of Lease", "date": "1990-10-16", "type": "memorandum" },
+        { "name": "1st Amendment to Lease", "date": "1991-03-01", "type": "amendment" },
+        { "name": "2nd Amendment to Lease", "date": "1991-06-11", "type": "amendment" },
+        { "name": "3rd Addendum to Lease", "date": "1992-01-29", "type": "amendment" },
+        { "name": "4th Addendum to Lease", "date": "1995-06-12", "type": "amendment" },
+        { "name": "5th Addendum to Lease", "date": "1997-07-01", "type": "amendment" },
+        { "name": "6th Amendment to Lease", "date": "2007-06-04", "type": "amendment", "description": "Most recent substantive amendment — confirm current base rent / percentage-rent terms here." },
+        { "name": "Renewal Letter", "date": "2012-03-08", "type": "letter" },
+        { "name": "Automatic Extension Letter", "date": "2017-03-15", "type": "letter" },
+        { "name": "Automatic Extension Letter", "date": "2022-04-06", "type": "letter", "description": "Most recent — confirms the term automatically extended 12/10/2022–12/9/2027 with ONE remaining 5-year option." }
+      ],
+      "landlordChain": [
+        { "entity": "George E. Straub, Trustee", "role": "landlord", "effectiveDate": "1990-10-16", "instrument": "Original Lease" },
+        { "entity": "Woodfield Regency, Inc. (c/o Trammell Crow Center, Dallas, TX)", "role": "landlord", "instrument": "Successor in interest (per the 2022 automatic-extension letter)" }
+      ],
+      "term": { "value": "Original lease dated 10/16/1990; rent commenced 12/10/1992. Term automatically extended 12/10/2022–12/9/2027 per the 4/6/2022 letter, with ONE remaining 5-year option to 12/9/2032 (auto-exercises unless 6 months' notice). VERIFIED against the executed extension letter.", "cite": { "doc": "Publix Automatic Extension Letter 04.06.2022 (executed)", "section": "Para. 3 of the Lease" } },
       "options": [
         { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available", "optionType": "REN", "ratePSF": 7.50, "rateDescriptor": "PSF", "expireDate": "2032-12-09", "exerciseConditions": "Automatically exercised unless Tenant gives 6 months' notice. Option-term base rent $7.50 PSF.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "Renewal Option" } }
       ],
@@ -41,12 +58,16 @@
         { "code": "CAM", "label": "CAM Method", "value": "Pro-rata (SF/GLA) of a limited non-building CAM list + pro-rata RE taxes; no insurance reimbursement.", "cite": { "doc": "Regency Court OM — Publix lease abstract (CBRE)", "section": "CAM" } }
       ],
       "flags": [
-        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "Abstracted from the OM's Publix lease abstract (CBRE), not the executed lease + amendments. The executed Publix lease is in the deal folder (7) Anchor Leases → Publix Super Markets Inc) — verify before relying." },
+        { "severity": "info", "issue": "Term & options VERIFIED against executed documents", "detail": "The 4/6/2022 automatic-extension letter confirms the current term 12/10/2022–12/9/2027 and ONE remaining 5-year option (→12/9/2032). Base rent ($7.50 PSF) and percentage rent (1% over a $31,584,000 natural breakpoint) are from the OM's Publix abstract and should be confirmed in the lease body / 6th Amendment (2007), both of which are in the anchor-lease folder." },
         { "severity": "watch", "issue": "Near-term anchor expiration, deep below market", "detail": "Current expiration 12/9/2027; one 5-yr option to 12/2032 at $7.50 PSF (~58% below market). Single largest space (42,112 SF, 30% of GLA). Publix has discussed early renewal and a 47,240 SF expansion — confirm status." }
       ],
-      "narrative": "Publix #0428 (42,112 SF, 30% of GLA) is the trophy anchor — 2025 sales $46.1M / $1,095 PSF (13% above chain average) at a ~1.9% health ratio. Pays just $7.50 PSF base + 1% percentage rent over a $31.58M natural breakpoint. Current expiration 12/9/2027 with one auto-renewing 5-yr option to 12/2032. No continuous-operation covenant (landlord recapture if dark 6 months), a grocery exclusive east of Woodfield Plaza Dr, no ROFR/ROFO, and free assignment. Deeply below market — the core mark-to-market lever. Summary-sourced from the OM; verify against the executed lease in the anchor-lease folder.",
-      "verifiedAgainstExecutedDoc": false,
-      "sourceDocuments": [ { "name": "Regency Court OM — Publix lease abstract (CBRE)", "type": "other", "date": "2026" } ]
+      "narrative": "Publix #0428 (42,112 SF, 30% of GLA) is the trophy anchor — 2025 sales $46.1M / $1,095 PSF (13% above chain average) at a ~1.9% health ratio. Pays just $7.50 PSF base + 1% percentage rent over a $31.58M natural breakpoint. The executed automatic-extension letter (4/6/2022) confirms the term runs through 12/9/2027 with ONE remaining 5-yr option to 12/2032. No continuous-operation covenant (landlord recapture if dark 6 months), a grocery exclusive east of Woodfield Plaza Dr (Walgreens' recorded memorandum corroborates Publix as the protected grocer), no ROFR/ROFO, and free assignment. Deeply below market — the core mark-to-market lever. Term/options verified against the executed documents; base/percentage rent per the OM abstract (confirm in the lease body / 6th Amendment).",
+      "verifiedAgainstExecutedDoc": true,
+      "sourceDocuments": [
+        { "name": "Publix Lease Agreement 10.16.1990 (+ 1st–6th Amendments/Addenda through 2007)", "type": "lease", "date": "1990-10-16" },
+        { "name": "Publix Automatic Extension Letter 04.06.2022 (executed)", "type": "letter", "date": "2022-04-06" },
+        { "name": "Regency Court OM — Publix lease abstract (CBRE)", "type": "other", "date": "2026" }
+      ]
     },
 
     {
@@ -57,9 +78,16 @@
       "currentSF": 12422,
       "status": "draft",
       "asOf": "2026-06-17",
+      "commencement": "1991-12-01",
       "expiration": "2031-11-30",
+      "documents": [
+        { "name": "Walgreen Co. Lease", "date": "1990-12-28", "type": "lease", "description": "Original Walgreens lease (George E. Straub, Trustee). 40-year term." },
+        { "name": "Assignment and Assumption of Lease", "date": "1991-12-20", "type": "assignment", "description": "Lease assigned to Woodfield Plaza, Ltd." },
+        { "name": "Memorandum and Ratification of Lease", "date": "1992-01-10", "type": "memorandum", "description": "Recorded; confirms term 12/1/1991–11/30/2031, 12,422 SF, and the drug/pharmacy exclusive (Publix exempt)." }
+      ],
+      "term": { "value": "Lease dated 12/28/1990; term commenced 12/1/1991 and runs to and including 11/30/2031 (40 years). VERIFIED against the recorded Memorandum & Ratification (1992).", "cite": { "doc": "Walgreen Co. Memorandum and Ratification of Lease 01.10.1992 (recorded)", "section": "Recitals" } },
       "rentSchedule": [
-        { "incomeCategory": "RNT", "periodEnd": "2031-11-30", "amountPerSF": 14.50, "annualRent": 180119, "note": "$14.50 PSF + subsidized NNNs (~45% below market).", "cite": { "doc": "Regency Court OM (CBRE)", "section": "Mark-to-Market" } }
+        { "incomeCategory": "RNT", "periodEnd": "2031-11-30", "amountPerSF": 14.50, "annualRent": 180119, "note": "$14.50 PSF + subsidized NNNs (~45% below market). Base rent PSF per the OM mark-to-market table — confirm rent steps in the executed lease body.", "cite": { "doc": "Regency Court OM (CBRE)", "section": "Mark-to-Market" } }
       ],
       "exclusives": [
         { "description": "No other tenant may operate a drug store or prescription pharmacy department, or sell drug sundries. Off-premises alcohol limited to incidental sales within the outparcel gas station; health/beauty aids limited to incidental sales within a health-food store, nail salon or beauty salon; photographic film/finishing limited to one full-line camera store. Publix is NOT encumbered by these restrictions. Separately, no other tenant may operate a cocktail lounge/bar (primary), discotheque, bowling alley, pool hall, billiard parlor, skating/roller rink, amusement arcade, adult book/video store, adult theater, adult amusement facility, secondhand store, or auction house.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } }
@@ -87,12 +115,15 @@
         { "code": "ASSNSUB", "label": "Assignment & Sublet", "value": "No consent for affiliate/merger/sale transfers; may license portions to non-Publix-violating uses.", "cite": { "doc": "Regency Court OM — shop lease provisions (CBRE)", "section": "Walgreens" } }
       ],
       "flags": [
-        { "severity": "watch", "issue": "Summary source — not the executed lease", "detail": "From the OM provisions table; the executed Walgreens lease is in (7) Anchor Leases → Walgreen Co. Verify expiration, options, rent steps and SF (site plan 12,422 vs sales-report 12,233)." },
+        { "severity": "info", "issue": "Term, SF & exclusive VERIFIED against the recorded lease", "detail": "The recorded Memorandum & Ratification (1992) confirms term 12/1/1991–11/30/2031, 12,422 SF, and the drug/pharmacy + alcohol/photo exclusive (Publix exempt). Base rent ($14.50 PSF) is from the OM mark-to-market table — confirm rent steps/options in the executed lease body (in the anchor-lease folder)." },
         { "severity": "watch", "issue": "Below-market, near-term expiration, BB- credit", "detail": "$14.50 PSF (~45% below market), fully expires 11/30/2031, no continuous-operation covenant, BB- (S&P). Reported sales soft; conversion/re-tenant optionality noted by the OM." }
       ],
-      "narrative": "Walgreens #2664 (12,422 SF) pays $14.50 PSF + subsidized NNNs (~45% below market) and fully expires 11/30/2031. Holds a drug-store/pharmacy exclusive and a prohibited-use list (Publix exempt). No continuous-operation covenant (landlord recapture after 6 months dark); percentage rent is waived if Publix goes dark 90+ days. Broad assignment rights to affiliates/successors. BB- credit, soft reported sales — a re-tenant/conversion candidate. Summary-sourced; verify against the executed lease.",
-      "verifiedAgainstExecutedDoc": false,
-      "sourceDocuments": [ { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" } ]
+      "narrative": "Walgreens #2664 (12,422 SF — verified by the recorded memorandum) pays $14.50 PSF + subsidized NNNs (~45% below market) and fully expires 11/30/2031 (40-year term from 12/1/1991). Holds a drug-store/pharmacy exclusive plus an alcohol/photofinishing and prohibited-use list (Publix exempt). No continuous-operation covenant (landlord recapture after 6 months dark); percentage rent is waived if Publix goes dark 90+ days. Broad assignment rights to affiliates/successors. BB- credit, soft reported sales — a re-tenant/conversion candidate. Term/SF/exclusive verified against the recorded lease; base rent per the OM (confirm steps/options in the lease body).",
+      "verifiedAgainstExecutedDoc": true,
+      "sourceDocuments": [
+        { "name": "Walgreen Co. Lease 12.28.1990 (+ Assignment 1991, recorded Memorandum & Ratification 1992)", "type": "lease", "date": "1990-12-28" },
+        { "name": "Regency Court OM — shop lease provisions (CBRE)", "type": "other", "date": "2026" }
+      ]
     },
 
     {
