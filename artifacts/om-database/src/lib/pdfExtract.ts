@@ -1,7 +1,55 @@
 // PDF.js extraction utilities — loaded dynamically from CDN
-import { PDF_JS_CDN, PDF_JS_WORKER } from "./constants";
+import { PDF_JS_CDN, PDF_JS_WORKER, TESSERACT_CDN } from "./constants";
 
 let pdfJsLib: unknown = null;
+let tesseractLib: any = null;
+
+// Load Tesseract.js (OCR) from CDN on demand — only when a PDF turns out to be
+// scanned/image-based. No account / API key / per-page cost; runs in a web worker.
+async function loadTesseract(): Promise<any> {
+  if (tesseractLib) return tesseractLib;
+  await new Promise<void>((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = TESSERACT_CDN;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Failed to load Tesseract.js"));
+    document.head.appendChild(s);
+  });
+  tesseractLib = (window as any).Tesseract;
+  if (!tesseractLib) throw new Error("Tesseract.js did not load");
+  return tesseractLib;
+}
+
+// OCR a scanned PDF's pages and return the recovered text. Renders each page to a
+// JPEG (reusing the existing page renderer) and runs it through one reused Tesseract
+// worker. Bounded for time/memory — OCR is ~1–3s/page, so a hard page cap keeps a
+// huge scanned OM from running for many minutes. Best-effort: a page that fails is
+// skipped, never throwing.
+async function ocrPdfPages(
+  pdf: any,
+  pageCount: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<string> {
+  const T = await loadTesseract();
+  const maxPages = Math.min(pageCount, 60);
+  const worker = await T.createWorker("eng");
+  let out = "";
+  try {
+    for (let i = 1; i <= maxPages; i++) {
+      let img: string;
+      try { img = await _renderPdfPage(pdf, i, 1700, 0.9); } catch { continue; }
+      try {
+        const { data } = await worker.recognize(img);
+        const txt = (data?.text || "").trim();
+        if (txt) out += `\n--- Page ${i} (OCR) ---\n${txt}`;
+      } catch { /* skip this page */ }
+      onProgress?.(i, maxPages);
+    }
+  } finally {
+    try { await worker.terminate(); } catch { /* ignore */ }
+  }
+  return out;
+}
 
 export async function loadPdfJs(): Promise<any> {
   if (pdfJsLib) return pdfJsLib;
@@ -298,7 +346,7 @@ export async function _captureSitePlan(pdf: any, pageNum: number, lib: any): Pro
 }
 
 // Extract all text from a PDF file (ArrayBuffer), using position-aware line assembly.
-export async function extractPdfText(buffer: ArrayBuffer): Promise<{ text: string; pages: number }> {
+export async function extractPdfText(buffer: ArrayBuffer): Promise<{ text: string; pages: number; ocrUsed?: boolean }> {
   const lib = await loadPdfJs();
   const pdf = await lib.getDocument({ data: buffer }).promise;
   const totalPages = pdf.numPages;
@@ -340,11 +388,29 @@ export async function extractPdfText(buffer: ArrayBuffer): Promise<{ text: strin
     allText += `\n--- Page ${i} ---\n${lineTexts.join("\n")}`;
   }
 
+  // AUTOMATIC OCR FALLBACK. If the native text layer is essentially empty, the PDF
+  // is scanned / image-based (its rent roll, financials, etc. won't read). Render the
+  // pages and OCR them to recover the text. Measures content excluding the per-page
+  // markers; a text PDF runs thousands of chars/page, a scan ~0. Best-effort — if OCR
+  // fails or yields less than the native text, we keep the native text.
+  let ocrUsed = false;
+  const contentLen = allText.replace(/\n--- Page \d+ ---\n?/g, "").trim().length;
+  const perPage = pagesToExtract > 0 ? contentLen / pagesToExtract : contentLen;
+  if (pagesToExtract >= 1 && perPage < 200) {
+    try {
+      const ocrText = await ocrPdfPages(pdf, pagesToExtract);
+      if (ocrText.replace(/\n--- Page \d+ \(OCR\) ---\n?/g, "").trim().length > contentLen) {
+        allText = ocrText;
+        ocrUsed = true;
+      }
+    } catch { /* OCR is best-effort; fall back to the native text layer */ }
+  }
+
   if (allText.length > 180000) {
     allText = allText.slice(0, 120000) + "\n...[middle truncated]...\n" + allText.slice(-40000);
   }
 
-  return { text: allText, pages: totalPages };
+  return { text: allText, pages: totalPages, ocrUsed };
 }
 
 // Auto-detect cover + site plan pages from the PDF.

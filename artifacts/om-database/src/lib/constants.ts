@@ -72,6 +72,11 @@ export const PDF_JS_VERSION = "3.11.174";
 export const PDF_JS_CDN = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.min.js`;
 export const PDF_JS_WORKER = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.worker.min.js`;
 
+// Tesseract.js — loaded on demand (only when a PDF turns out to be scanned/
+// image-based) to OCR the pages and recover text. No account / API key / per-page
+// cost; runs in a web worker in the browser.
+export const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+
 // A Prospect sitting untouched this long auto-shifts to Passed (~2 months).
 export const PROSPECT_STALE_DAYS = 61;
 
