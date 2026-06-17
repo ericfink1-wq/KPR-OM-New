@@ -1,0 +1,96 @@
+// Phase B of the self-improving loop: DATABASE-DISTRIBUTION ANOMALY DETECTION.
+// Every figure a new OM produces is compared to the DISTRIBUTION of the same figure
+// across the existing deals — cap rate by product type, weighted-avg rent by product
+// type, and each tenant's rent PSF vs the same brand elsewhere. An outlier is flagged
+// for a human to verify. This gets SHARPER with every deal added (tighter cohorts),
+// so more data → better self-checking. Deterministic (median-based), no model.
+
+import type { Deal } from "./idb";
+import { tenantKey, isVacant, isNAPTenant } from "./utils";
+
+export interface DerivedFlag { severity: "high" | "medium" | "low"; description: string }
+
+const num = (v: unknown): number | null => {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+function median(values: number[]): number {
+  const s = [...values].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+interface Anomaly { severity: "medium" | "low"; message: string }
+
+const MIN_DEAL_PEERS = 5;     // need ≥5 comparable deals for a deal-level cohort
+const MIN_BRAND_PEERS = 3;    // need ≥3 other locations for a brand cohort
+
+export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
+  const out: Anomaly[] = [];
+  const others = (allDeals || []).filter((d) => d.id !== deal.id && !d.trashedAt);
+
+  // ── Deal-level: cap rate & weighted-avg rent vs the SAME product type (centerType) ──
+  const ct = deal.centerType;
+  const sameType = (d: Deal) => !ct || !d.centerType || d.centerType === ct;
+  const cohort = others.filter(sameType);
+
+  const cap = num(deal.capRate);
+  const caps = cohort.map((d) => num(d.capRate)).filter((v): v is number => v != null && v >= 3 && v <= 12);
+  if (cap != null && caps.length >= MIN_DEAL_PEERS) {
+    const med = median(caps);
+    if (med > 0 && (cap < med * 0.6 || cap > med * 1.7)) {
+      out.push({ severity: "medium", message: `Cap rate ${cap}% is unusual vs the ${med.toFixed(1)}% median across ${caps.length} comparable ${ct || ""} deals — verify it wasn't mis-captured.` });
+    }
+  }
+
+  const war = num(deal.weightedAvgRentPSF);
+  const wars = cohort.map((d) => num(d.weightedAvgRentPSF)).filter((v): v is number => v != null);
+  if (war != null && wars.length >= MIN_DEAL_PEERS) {
+    const med = median(wars);
+    if (med > 0 && (war < med * 0.5 || war > med * 2.0)) {
+      out.push({ severity: "low", message: `Avg rent $${war.toFixed(2)}/SF is unusual vs the $${med.toFixed(2)} median across ${wars.length} comparable ${ct || ""} deals — verify.` });
+    }
+  }
+
+  // ── Tenant-level: rent PSF vs the SAME brand across OTHER deals ──
+  const brandRents = new Map<string, number[]>();
+  for (const d of others) {
+    for (const t of d.tenants || []) {
+      if (isVacant(t.name) || isNAPTenant(t)) continue;
+      const k = tenantKey(t.canonicalName || t.name);
+      const r = num(t.rentPerSF);
+      if (k && r != null) (brandRents.get(k) ?? brandRents.set(k, []).get(k)!).push(r);
+    }
+  }
+  const rentOutliers: string[] = [];
+  for (const t of deal.tenants || []) {
+    if (isVacant(t.name) || isNAPTenant(t)) continue;
+    const r = num(t.rentPerSF);
+    const k = tenantKey(t.canonicalName || t.name);
+    if (r == null || !k) continue;
+    const peers = brandRents.get(k);
+    if (!peers || peers.length < MIN_BRAND_PEERS) continue;
+    const med = median(peers);
+    if (med <= 0) continue;
+    const ratio = r / med;
+    if (ratio >= 1.7 || ratio <= 0.55) {
+      rentOutliers.push(`${t.name} $${r.toFixed(2)} vs ~$${med.toFixed(2)} (${peers.length} other locations)`);
+    }
+  }
+  if (rentOutliers.length) {
+    out.push({ severity: "low", message: `Tenant rent PSF off the brand norm: ${rentOutliers.slice(0, 6).join("; ")}${rentOutliers.length > 6 ? `; +${rentOutliers.length - 6} more` : ""} — verify (or a likely rent/SF mis-capture).` });
+  }
+
+  return out;
+}
+
+// Aggregate the anomalies into a single deal red flag (shown on the deal page at upload).
+export function deriveAnomalyFlag(deal: Deal, allDeals: Deal[]): DerivedFlag | null {
+  const a = detectDealAnomalies(deal, allDeals);
+  if (!a.length) return null;
+  return {
+    severity: a.some((x) => x.severity === "medium") ? "medium" : "low",
+    description: `Figures that look unusual vs your database (data-quality check): ${a.map((x) => x.message).join("  ")}`,
+  };
+}

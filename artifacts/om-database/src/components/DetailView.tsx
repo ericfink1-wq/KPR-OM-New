@@ -48,6 +48,7 @@ import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
+import { deriveAnomalyFlag } from "../lib/dealAnomalies";
 import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
@@ -2993,7 +2994,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const floodFlag = deriveFloodClimateFlag(d);
         const groundLeaseFlag = deriveGroundLeaseFlag(d);
         const sizeOutlierFlag = deriveSizeOutlierFlag(d, brandSizeIndex);
-        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag].filter((f): f is NonNullable<typeof f> => !!f);
+        const anomalyFlag = deriveAnomalyFlag(d, allDeals);
+        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
