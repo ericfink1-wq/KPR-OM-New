@@ -31,10 +31,10 @@ Return ONLY valid JSON — no markdown fences, no prose — with this exact shap
       "currentSF": number_or_null,
       "commencement": "YYYY-MM-DD or null",
       "expiration": "YYYY-MM-DD or null — the CURRENT lease expiration (not including unexercised options)",
-      "guaranties": [ { "guarantor": "string", "scope": "string or null", "cap": "string or null", "inForce": true } ],
-      "options": [ { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available|exercised|expired", "optionType": "REN", "ratePSF": number_or_null, "rateDescriptor": "PSF|FMV|null", "expireDate": "YYYY-MM-DD or null", "exerciseConditions": "notice window / conditions" } ],
+      "guaranties": [ { "guarantor": "string", "scope": "string or null", "cap": "string or null", "inForce": true, "cite": { "doc": "string or null", "section": "string or null" } } ],
+      "options": [ { "ordinal": 1, "number": "1st", "length": "5 years", "status": "available|exercised|expired", "optionType": "REN", "ratePSF": number_or_null, "rateDescriptor": "PSF|FMV|null", "expireDate": "YYYY-MM-DD or null", "exerciseConditions": "notice window / conditions", "cite": { "doc": "string or null", "section": "string or null" } } ],
       "percentageRent": { "value": "short description, e.g. '1% of gross sales over a $31.58M natural breakpoint'" },
-      "exclusives": [ { "description": "the exclusive-use / landlord covenant, verbatim or close" } ],
+      "exclusives": [ { "description": "the exclusive-use / landlord covenant, verbatim or close", "cite": { "doc": "string or null", "section": "string or null" } } ],
       "coTenancy": [ {
         "type": "opening|operating",
         "triggerLogic": {
@@ -63,7 +63,7 @@ Return ONLY valid JSON — no markdown fences, no prose — with this exact shap
         "earlyTerminationOption": { "present": boolean, "summary": "string — e.g. kickout/termination right, with trigger, remedy, notice" }
       },
       "assignment": { "value": "assignment/subletting terms" },
-      "leaseNotes": [ { "code": "RADIUS|EXCLUSI|COTENCY|KICKTN|KICKLL|RELOCAT|GUARANT|ASSNSUB|OPC|GO DARK|SECDEP|USE", "label": "human label", "value": "the clause text, or an explicit 'None'" } ],
+      "leaseNotes": [ { "code": "RADIUS|EXCLUSI|COTENCY|KICKTN|KICKLL|RELOCAT|GUARANT|ASSNSUB|OPC|GO DARK|SECDEP|USE", "label": "human label", "value": "the clause text, or an explicit 'None'", "cite": { "doc": "string or null", "section": "string or null" } } ],
       "narrative": "2-4 sentence plain-English summary of this tenant's key lease levers",
       "flags": [ { "severity": "info|watch|defect", "issue": "short", "detail": "what to confirm" } ],
       "verifiedAgainstExecutedDoc": false
@@ -83,7 +83,13 @@ RULES — follow exactly:
    Always carry the precise remedy (alternate/substitute rent = X% of gross sales, or X% of minimum rent), the relief period before a termination right opens, and the notice window. Put the EXACT trigger in triggerLogic.note and a verbatimQuote when present.
 5. SURFACE EVERY MID-TERM TENANT LEVER as a clause/flag: co-tenancy outs, sales/kickout terminations, go-dark / cease-operations rights & landlord recapture, exclusive-violation remedies, early-termination options, ROFR/ROFO, relocation rights, radius restrictions, and guaranty scope/caps. KICKTN = TENANT termination/kickout; KICKLL = LANDLORD termination/recapture (keep them separate).
 6. DATES in ISO YYYY-MM-DD. Money as plain numbers. For options, "expiration" is the CURRENT lease expiration (exclude unexercised option periods); options go in the options array.
-7. If the document is a cross-tenant MATRIX (one row per tenant, columns for exclusive/co-tenancy/termination/etc.), read each row into one abstract. If it is a series of per-tenant pages, read each page.
+7. CITATIONS: capture the source doc + section/page for each value into its "cite" ({doc, section}) — on options, exclusives, guaranties, and each leaseNotes entry — whenever the document provides one.
+8. MATRIX / "Summary of Key Lease Provisions" (SKLP) format — very common from brokers (Newmark/NMRK, CBRE, JLL): a grid with ONE ROW PER TENANT where most provision columns are immediately FOLLOWED BY a "Doc/Sec" column giving the source document + section/page (e.g. "Renewal | Doc/Sec | Expansion | Doc/Sec | Contraction | Doc/Sec | Termination | Doc/Sec | Relocation | Doc/Sec | Go Dark | Doc/Sec | Co-Tenancy | Doc/Sec | Radius | Doc/Sec | Exclusivity | Doc/Sec | Other | Doc/Sec"). Read each row into ONE abstract and:
+   - Use each provision's ADJACENT "Doc/Sec" cell as that field's cite (cite.doc / cite.section). Carry it through.
+   - Map columns: Renewal Option(s)->options; Termination->KICKTN / otherRiskClauses.earlyTerminationOption; Relocation->RELOCAT leaseNote + otherRiskClauses; Go Dark->otherRiskClauses.goDarkRight (AND any LANDLORD recapture / unamortized-TI buyout described inside it -> KICKLL); Co-Tenancy->coTenancy (exact trigger per rule 4); Radius Restriction->RADIUS; Exclusivity->exclusives + EXCLUSI; Expansion / Contraction->a leaseNotes entry each (code "USE" or a clear label) — don't drop them.
+   - MINE THE "Other" COLUMN: it routinely buries the GUARANTOR ("Guarantor: <name>" -> guaranties[]), and items like parking, signage/pylon, utilities, alterations, patio/roof rights — capture the guaranty and any genuine risk lever; briefly summarize the rest in a leaseNotes "USE"/"Other" entry.
+   - Record "None." / "Intentionally Deleted" FAITHFULLY as stated (an explicit None with its cite) — never omit a provided value and never invent one.
+   If instead the document is a series of per-tenant PAGES, read each page into one abstract.
 
 DOCUMENT TEXT:
 `;
