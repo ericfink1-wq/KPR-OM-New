@@ -612,7 +612,7 @@ export function buildKickoutByTenant(deal: Deal, abstracts: LeaseAbstract[] = []
     if (r.salesKickout && r.salesKickout.length) {
       const k = r.salesKickout[0];
       const thr = k.salesThresholdAmount != null ? `$${Math.round(Number(k.salesThresholdAmount)).toLocaleString()}`
-        : k.salesThresholdPSF != null ? `$${k.salesThresholdPSF}/SF` : "a sales threshold";
+        : k.salesThresholdPSF != null ? `$${Number(k.salesThresholdPSF).toLocaleString()}/SF` : "a sales threshold";
       label = "Sales kickout";
       parts.push(`Sales kickout — tenant may terminate if sales fall below ${thr}${k.measurementPeriod ? ` (${k.measurementPeriod})` : ""}${k.noticeWindowDays != null ? `, ${k.noticeWindowDays}-day notice` : ""}.`);
     }
