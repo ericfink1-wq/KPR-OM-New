@@ -35,6 +35,9 @@ interface Props {
   // tenantKey -> SF outlier flag (this store's SF is way off the brand's prototype
   // footprint across the database). Shown next to the SF cell. Optional.
   sizeFlags?: Map<string, SizeFlag>;
+  // tenantKey -> kickout / early-termination summary (sales kickout, co-tenancy out,
+  // early-termination option). Shown in the Kickout column. Optional.
+  kickoutByTenant?: Map<string, { label: string; tip: string }>;
 }
 
 function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
@@ -284,7 +287,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, kickoutByTenant }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -357,8 +360,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const cols: [string, string, boolean][] = [
     ["name","Tenant",false],["abstract","Abstract",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
     ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
-    ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["recentlyExercisedRenewal","Recent Renewal",false],
-    ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],["creditRating","Credit",false],
+    ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],
+    ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["kickout","Kickout",false],
+    ["recentlyExercisedRenewal","Recent Renewal",false],["creditRating","Credit",false],
   ];
 
   const isVacantRow = (t: Tenant) => isVacant(t.name);
@@ -424,7 +428,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} onClick={k === "abstract" ? undefined : () => setSort(k)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: k === "abstract" ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{k === "abstract" ? null : arrow(k)}</th>
+                <th key={k} onClick={(k === "abstract" || k === "kickout") ? undefined : () => setSort(k)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: (k === "abstract" || k === "kickout") ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{(k === "abstract" || k === "kickout") ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
@@ -547,7 +551,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{fmtLeaseDate(t.leaseExpiry)}</td>
                 <td
                   onClick={() => setExpandedReimb(expandedReimb === i ? null : i)}
-                  style={{ padding:"8px 10px", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedReimb === i ? 400 : 300, minWidth:120, overflow:"hidden" }}
+                  style={{ padding:"8px 10px", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedReimb === i ? 300 : 190, minWidth:100, overflow:"hidden" }}
                 >
                   {(() => {
                     // The "Reimb." column shows the reimbursement / lease structure
@@ -616,6 +620,97 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     );
                   })()}
                 </td>
+                {(() => {
+                  // Prefer the latest uploaded sales-report figures over OM-stated.
+                  const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
+                  const salesPSF = ls?.salesPSF ?? n(t.salesPSF);
+                  // Year-over-year trend arrow when the OM disclosed a prior year too.
+                  const prior = n(t.priorSalesPSF), latest = n(t.salesPSF);
+                  let trend: { arrow: string; color: string; tip: string } | null = null;
+                  if (prior != null && latest != null && prior > 0) {
+                    const chg = ((latest - prior) / prior) * 100;
+                    if (Math.abs(chg) >= 1) {
+                      const up = chg > 0;
+                      trend = {
+                        arrow: up ? "▲" : "▼",
+                        color: up ? "#0f9d63" : (chg <= -5 ? "#dc2626" : "#c97a18"),
+                        tip: `${up ? "Up" : "Down"} ${Math.abs(Math.round(chg))}% vs ${t.priorSalesYear || "prior yr"} ($${Math.round(prior)} → $${Math.round(latest)}/SF)`,
+                      };
+                    }
+                  }
+                  return <td title={trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:(trend||t.salesNotes)?"help":"default" }}>
+                    {fmtTenantSales(salesPSF, t.sf)}
+                    {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
+                  </td>;
+                })()}
+                {(() => {
+                  const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
+                  // If the sales panel already resolved occ cost (computed or stated)
+                  // for this tenant, mirror it so roster + sales table always agree.
+                  if (ls && ls.occupancyCost != null && ls.occSource) {
+                    const occ = ls.occupancyCost;
+                    const color = occ > 15 ? "#dc2626" : "#0f9d63";
+                    return (
+                      <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
+                        <OccTip val={occ} source={ls.occSource} breakdown={ls.occBreakdown ?? null} />
+                      </td>
+                    );
+                  }
+                  const stated = n(t.occupancyCost);
+                  const base = n(t.annualRent);
+                  // Recoveries: OM-disclosed value first; else the SF-allocated
+                  // estimate so occ cost can still be computed on NNN tenants.
+                  const disclosedReimb = n(t.expenseReimbursements);
+                  const est = estimatedRecoveries?.get(tenantKey(t.canonicalName || t.name));
+                  const reimb = disclosedReimb ?? (est ? est.value : null);
+                  const reimbEstimated = disclosedReimb == null && !!est?.estimated;
+                  const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
+                  const other = n(t.otherRent) ?? 0;
+                  const sp = n(t.salesPSF);
+                  const sfn = n(t.sf);
+                  const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
+
+                  let occ: number | null = null;
+                  let occSource: "stated" | "computed" | null = null;
+                  let occBreakdown: OccBreakdown | null = null;
+
+                  if (stated != null) {
+                    occ = stated; occSource = "stated";
+                  } else if (base != null && reimb != null && sales != null && sales > 0) {
+                    const total = base + reimb + pctRent + other;
+                    occ = (total / sales) * 100;
+                    occSource = "computed";
+                    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales, reimbEstimated };
+                  }
+
+                  const color = occ != null ? (occ > 15 ? "#dc2626" : "#0f9d63") : "#a69e91";
+                  const canEdit = !!onUpdateTenant && !isVacant(t) && !isNAPTenant(t);
+                  return (
+                    <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {occ != null && occSource
+                          ? <OccTip val={occ} source={occSource} breakdown={occBreakdown} />
+                          : <span>{occ != null ? `${occ.toFixed(1)}%` : "—"}</span>}
+                        {canEdit && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              const idx = tenants.indexOf(t);
+                              setEditVals({
+                                reimb: t.expenseReimbursements != null ? String(t.expenseReimbursements) : "",
+                                pctRent: (t.percentageRent != null && typeof t.percentageRent === "number") ? String(t.percentageRent) : "",
+                                other: t.otherRent != null ? String(t.otherRent) : "",
+                              });
+                              setEditingOcc(editingOcc === idx ? null : idx);
+                            }}
+                            style={{ background: "transparent", border: "none", cursor: "pointer", color: "#c4bbaa", fontSize: 10, padding: "1px 2px", lineHeight: 1, flexShrink: 0 }}
+                            title="Edit occupancy cost components"
+                          >✏</button>
+                        )}
+                      </span>
+                    </td>
+                  );
+                })()}
                 <td
                   onClick={() => setExpandedRentStep(expandedRentStep === i ? null : i)}
                   style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedRentStep === i ? 340 : 220, minWidth: 120 }}
@@ -726,6 +821,13 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     );
                   })()}
                 </td>
+                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", verticalAlign:"top", maxWidth:200, minWidth:90 }}>
+                  {(() => {
+                    const k = kickoutByTenant?.get(tenantKey(t.canonicalName || t.name));
+                    if (!k) return <span style={{ color:"#c4bbaa" }}>—</span>;
+                    return <FlagTip content={k.tip} color="#b45309"><span style={{ fontSize:9.5, fontWeight:700, color:"#9a3412", background:"#fdecdc", border:"1px solid #f0c08a", borderRadius:4, padding:"1px 6px", whiteSpace:"nowrap" }}>{k.label}</span></FlagTip>;
+                  })()}
+                </td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>
                   {(() => {
                     const spread = n(t.recentRenewalSpreadPct);
@@ -742,97 +844,6 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     );
                   })()}
                 </td>
-                {(() => {
-                  // Prefer the latest uploaded sales-report figures over OM-stated.
-                  const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
-                  const salesPSF = ls?.salesPSF ?? n(t.salesPSF);
-                  // Year-over-year trend arrow when the OM disclosed a prior year too.
-                  const prior = n(t.priorSalesPSF), latest = n(t.salesPSF);
-                  let trend: { arrow: string; color: string; tip: string } | null = null;
-                  if (prior != null && latest != null && prior > 0) {
-                    const chg = ((latest - prior) / prior) * 100;
-                    if (Math.abs(chg) >= 1) {
-                      const up = chg > 0;
-                      trend = {
-                        arrow: up ? "▲" : "▼",
-                        color: up ? "#0f9d63" : (chg <= -5 ? "#dc2626" : "#c97a18"),
-                        tip: `${up ? "Up" : "Down"} ${Math.abs(Math.round(chg))}% vs ${t.priorSalesYear || "prior yr"} ($${Math.round(prior)} → $${Math.round(latest)}/SF)`,
-                      };
-                    }
-                  }
-                  return <td title={trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:(trend||t.salesNotes)?"help":"default" }}>
-                    {fmtTenantSales(salesPSF, t.sf)}
-                    {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
-                  </td>;
-                })()}
-                {(() => {
-                  const ls = latestSales?.get(tenantKey(t.canonicalName || t.name));
-                  // If the sales panel already resolved occ cost (computed or stated)
-                  // for this tenant, mirror it so roster + sales table always agree.
-                  if (ls && ls.occupancyCost != null && ls.occSource) {
-                    const occ = ls.occupancyCost;
-                    const color = occ > 15 ? "#dc2626" : "#0f9d63";
-                    return (
-                      <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
-                        <OccTip val={occ} source={ls.occSource} breakdown={ls.occBreakdown ?? null} />
-                      </td>
-                    );
-                  }
-                  const stated = n(t.occupancyCost);
-                  const base = n(t.annualRent);
-                  // Recoveries: OM-disclosed value first; else the SF-allocated
-                  // estimate so occ cost can still be computed on NNN tenants.
-                  const disclosedReimb = n(t.expenseReimbursements);
-                  const est = estimatedRecoveries?.get(tenantKey(t.canonicalName || t.name));
-                  const reimb = disclosedReimb ?? (est ? est.value : null);
-                  const reimbEstimated = disclosedReimb == null && !!est?.estimated;
-                  const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
-                  const other = n(t.otherRent) ?? 0;
-                  const sp = n(t.salesPSF);
-                  const sfn = n(t.sf);
-                  const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
-
-                  let occ: number | null = null;
-                  let occSource: "stated" | "computed" | null = null;
-                  let occBreakdown: OccBreakdown | null = null;
-
-                  if (stated != null) {
-                    occ = stated; occSource = "stated";
-                  } else if (base != null && reimb != null && sales != null && sales > 0) {
-                    const total = base + reimb + pctRent + other;
-                    occ = (total / sales) * 100;
-                    occSource = "computed";
-                    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales, reimbEstimated };
-                  }
-
-                  const color = occ != null ? (occ > 15 ? "#dc2626" : "#0f9d63") : "#a69e91";
-                  const canEdit = !!onUpdateTenant && !isVacant(t) && !isNAPTenant(t);
-                  return (
-                    <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        {occ != null && occSource
-                          ? <OccTip val={occ} source={occSource} breakdown={occBreakdown} />
-                          : <span>{occ != null ? `${occ.toFixed(1)}%` : "—"}</span>}
-                        {canEdit && (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation();
-                              const idx = tenants.indexOf(t);
-                              setEditVals({
-                                reimb: t.expenseReimbursements != null ? String(t.expenseReimbursements) : "",
-                                pctRent: (t.percentageRent != null && typeof t.percentageRent === "number") ? String(t.percentageRent) : "",
-                                other: t.otherRent != null ? String(t.otherRent) : "",
-                              });
-                              setEditingOcc(editingOcc === idx ? null : idx);
-                            }}
-                            style={{ background: "transparent", border: "none", cursor: "pointer", color: "#c4bbaa", fontSize: 10, padding: "1px 2px", lineHeight: 1, flexShrink: 0 }}
-                            title="Edit occupancy cost components"
-                          >✏</button>
-                        )}
-                      </span>
-                    </td>
-                  );
-                })()}
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.creditRating==="Investment Grade"?"#0f9d63":"#837c6e" }}>{t.creditRating||"—"}</td>
               </tr>
             ))}

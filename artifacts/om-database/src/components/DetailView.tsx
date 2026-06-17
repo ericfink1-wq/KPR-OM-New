@@ -48,6 +48,7 @@ import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
+import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
 import { deriveReassessmentFlag } from "../lib/reassessmentFlag";
@@ -1494,6 +1495,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // once over allDeals; flags are per this deal's roster.
   const brandSizeIndex = useMemo(() => buildBrandSizeIndex(allDeals), [allDeals]);
   const sizeFlags = useMemo(() => buildSizeFlags(d, brandSizeIndex), [d, brandSizeIndex]);
+  // Per-tenant kickout / early-termination levers for the roster's Kickout column.
+  const kickoutByTenant = useMemo(() => buildKickoutByTenant(d, abstracts), [d, abstracts]);
 
   // Auto-apply lease-authoritative data to the roster: for every abstract that
   // matches a roster tenant, fill the fields the roster is MISSING (never
@@ -2823,6 +2826,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           estimatedRecoveries={estimateRecoveries(dWithRecoveries).byName}
           latestSales={buildLatestSales(d)}
           sizeFlags={sizeFlags}
+          kickoutByTenant={kickoutByTenant}
           abstractsByTenant={abstractsByTenant}
           abstractDiscrepancies={abstractDiscrepancies}
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}

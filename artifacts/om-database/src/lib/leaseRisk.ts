@@ -600,3 +600,33 @@ export function buildDiligenceList(deal: Deal, abstracts: LeaseAbstract[] = []):
   return items;
 }
 
+
+// Per-tenant kickout / early-termination summary for the roster's Kickout column —
+// the tenant's mid-term EXIT levers (sales kickout, co-tenancy termination right,
+// early-termination option), resolved from the OM lease-risk + any executed abstract.
+export function buildKickoutByTenant(deal: Deal, abstracts: LeaseAbstract[] = []): Map<string, { label: string; tip: string }> {
+  const out = new Map<string, { label: string; tip: string }>();
+  for (const r of resolveTenantRisk(deal, abstracts)) {
+    const parts: string[] = [];
+    let label = "";
+    if (r.salesKickout && r.salesKickout.length) {
+      const k = r.salesKickout[0];
+      const thr = k.salesThresholdAmount != null ? `$${Math.round(Number(k.salesThresholdAmount)).toLocaleString()}`
+        : k.salesThresholdPSF != null ? `$${k.salesThresholdPSF}/SF` : "a sales threshold";
+      label = "Sales kickout";
+      parts.push(`Sales kickout — tenant may terminate if sales fall below ${thr}${k.measurementPeriod ? ` (${k.measurementPeriod})` : ""}${k.noticeWindowDays != null ? `, ${k.noticeWindowDays}-day notice` : ""}.`);
+    }
+    const coTerm = (r.coTenancy || []).find(c => c.reliefPeriodMonthsBeforeTermination != null || c.terminationNoticeDays != null);
+    if (coTerm) {
+      if (!label) label = "Co-tenancy out";
+      parts.push(`Co-tenancy termination right${coTerm.reliefPeriodMonthsBeforeTermination != null ? ` after ~${coTerm.reliefPeriodMonthsBeforeTermination} mo of the failure` : ""}.`);
+    }
+    const et = r.otherRiskClauses?.earlyTerminationOption;
+    if (et?.present) {
+      if (!label) label = "Early term.";
+      parts.push(`Early-termination option${et.summary ? ` — ${et.summary}` : ""}.`);
+    }
+    if (label) out.set(r.key, { label, tip: parts.join(" ") + (r.hasUnverified ? " (OM-disclosed — verify against the executed lease.)" : "") });
+  }
+  return out;
+}
