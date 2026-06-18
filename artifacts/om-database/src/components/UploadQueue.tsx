@@ -906,12 +906,18 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       } else {
         await apiSaveDeal(base);
         onDealsAdded([base]);
-        if (routedType === "sales") await applySalesToDeal(itemId, base, pendingExtracted as unknown as SalesExtractResult);
-        else if (routedType === "swap") await applySwapToDeal(itemId, base, pendingExtracted as unknown as InterestRateSwap);
-        else if (routedType === "loan") await applyLoanToDeal(itemId, base, pendingExtracted as unknown as LoanResult);
-        else if (routedType === "amort") await applyAmortToDeal(itemId, base, (pendingExtracted as unknown as { rows: AmortRow[] }).rows);
-        else await applyOptionsToDeal(itemId, base, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
-        await registerCreatedDeal(base);
+        // Register the ENRICHED deal each applyX returns — NOT the empty `base` stub.
+        // Otherwise a later same-drop OM that merges into this stub re-bases on a
+        // snapshot missing the sales/swap/loan we just applied and overwrites it
+        // (the "sales vanished after importing the sales report together with the OM"
+        // bug). The rent-roll/flyer branches above already register their enriched copy.
+        let upd: Deal = base;
+        if (routedType === "sales") upd = await applySalesToDeal(itemId, base, pendingExtracted as unknown as SalesExtractResult);
+        else if (routedType === "swap") upd = await applySwapToDeal(itemId, base, pendingExtracted as unknown as InterestRateSwap);
+        else if (routedType === "loan") upd = await applyLoanToDeal(itemId, base, pendingExtracted as unknown as LoanResult);
+        else if (routedType === "amort") upd = await applyAmortToDeal(itemId, base, (pendingExtracted as unknown as { rows: AmortRow[] }).rows);
+        else upd = await applyOptionsToDeal(itemId, base, pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
+        await registerCreatedDeal(upd);
       }
       // Mark as a freshly-created property so Undo deletes it (overrides the
       // applyX stamp, which assumes it enriched an existing deal).
@@ -1205,7 +1211,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         // only its blanks from this upload, and flags any genuine conflicts for
         // review — so a batch never stops and duplicates consolidate on their own.
         await apiDeleteDeal(dealId).catch(() => {});   // drop the temp deal we were creating
-        const refreshed = reconcileRefresh(dup, { ...extracted, imageMeta, fileName, pdfPages: pages });
+        // Re-base on the LATEST version of the matched deal: it may have just had a
+        // sales report / roster / swap applied earlier in this SAME drop (which the
+        // slow OM extraction outran). Merging onto a stale snapshot here would
+        // overwrite that data. Mirrors commitPatch's getLatestDeal re-base.
+        const freshDup = getLatestDeal?.(dup.id) ?? dup;
+        const refreshed = reconcileRefresh(freshDup, { ...extracted, imageMeta, fileName, pdfPages: pages });
         refreshed.lastUploadAt = new Date().toISOString();
         await apiSaveDeal(refreshed).catch(() => {});
         await apiSaveSource(refreshed.id, text).catch(() => {});
@@ -1241,7 +1252,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     const item = queue.find(x => x.id === itemId);
     if (!item?.dupCandidate || !item.pendingExtracted) return;
     if (item.tempDealId) await apiDeleteDeal(item.tempDealId).catch(() => {});
-    const refreshed = reconcileRefresh(item.dupCandidate, item.pendingExtracted);
+    // Re-base on the latest copy of the target (same-drop sales/roster may have
+    // landed since the dup was flagged) so the merge doesn't overwrite it.
+    const freshDup = getLatestDeal?.(item.dupCandidate.id) ?? item.dupCandidate;
+    const refreshed = reconcileRefresh(freshDup, item.pendingExtracted);
     await apiSaveDeal(refreshed).catch(() => {});
     if (item.pendingText) await apiSaveSource(refreshed.id, item.pendingText).catch(() => {});
     if (item.pendingImages) await saveImagesNoting(refreshed.id, item.pendingImages, itemId);
