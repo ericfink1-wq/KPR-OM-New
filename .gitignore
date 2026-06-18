@@ -65,3 +65,7 @@ portfolio-validation-*.md
 # Worklist exports (contain deal data)
 kpr-worklist-*.md
 kpr-worklist-*.docx
+
+# Checklist exports (contain deal data)
+kpr-checklist-*.md
+kpr-checklist-*.docx
