@@ -44,6 +44,7 @@ export const AUDIT_ID_PREFIX = "audit-";
 export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-rent-tie-")) return "audit-rent-tie";
   if (id.startsWith("audit-occ-stated-vs-computed-")) return "audit-occ-stated-vs-computed";
+  if (id.startsWith("audit-occcost-fraction-")) return "audit-occcost-fraction";
   if (id.startsWith("audit-dupe-suite-")) return "audit-dupe-suite";
   return id;
 }
@@ -55,6 +56,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-avg-rent-psf": "Avg rent vs roll-up",
   "audit-rent-tie": "Tenant rent × SF",
   "audit-occ-stated-vs-computed": "Occ cost: stated vs computed",
+  "audit-occcost-fraction": "Occ cost stored as fraction",
   "audit-dupe-suite": "Duplicate suite #",
   "audit-occupancy-fraction": "Occupancy as a fraction",
   "audit-caprate-range": "Cap-rate units",
@@ -241,6 +243,30 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       question: `${m.nm}: the OM-stated occupancy cost (${m.stated.toFixed(1)}%) differs materially from the computed ${m.computed.toFixed(1)}% (rent + recoveries ÷ sales). Which is right?`,
       detail: `Stated ${m.stated.toFixed(1)}% vs computed ${m.computed.toFixed(1)}% (base ${usd(m.base)} + recoveries ${usd(m.reimb)} ÷ sales ${usd(m.sales)}). A gap this large usually means the OM figure was mis-read, OR the OM's sales are on a different basis than the reported sales (e.g. a pharmacy's 3rd-party-plan Rx, excluded from reported sales but used in the OM's health ratio). Confirm the occupancy cost and the sales basis.`,
       suggestedValue: m.stated.toFixed(1), target: { kind: "tenant", fieldKey: "occupancyCost", tenantName: m.nm, valueType: "number" },
+    });
+  }
+
+  // ── E3. occupancyCost stored as a FRACTION instead of a percent (unit slip) ────
+  // The field is a PERCENT (e.g. 11.8 = 11.8%). A value below 1 is almost certainly a
+  // 0.NN fraction that lost its ×100 on import (e.g. 0.225 → 22.5%), which then renders
+  // as "0.2%". Retail occupancy cost under ~1% is effectively impossible, so flag it
+  // with the ×100 value as the suggested fix. (Surfaced across the portfolio by the
+  // validation harness — a clean 100× slip where the corrected value matches the
+  // computed health ratio.)
+  let occUnitFlags = 0;
+  for (const t of occupied) {
+    if (occUnitFlags >= 6) break;
+    const oc = num(t.occupancyCost);
+    if (oc == null || oc <= 0 || oc >= 1) continue;
+    const nm = String(t.name ?? "tenant");
+    const fixed = oc * 100;
+    occUnitFlags++;
+    out.push({
+      id: `audit-occcost-fraction-${nm}`.slice(0, 80), source: "check", severity: "medium",
+      field: `${nm} — occupancy cost units`,
+      question: `${nm}: occupancy cost is stored as ${oc}, which displays as ${oc}% but is almost certainly ${fixed.toFixed(1)}% stored as a 0.NN fraction. Should it be ${fixed.toFixed(1)}%?`,
+      detail: `Occupancy cost is a PERCENT field (11.8 = 11.8%). A value below 1 means the ×100 was dropped on import, so it renders as "${oc}%" instead of "${fixed.toFixed(1)}%". Retail occupancy cost under 1% is effectively impossible — the corrected value typically matches the computed (rent + recoveries ÷ sales) health ratio.`,
+      suggestedValue: fixed.toFixed(1), target: { kind: "tenant", fieldKey: "occupancyCost", tenantName: nm, valueType: "number" },
     });
   }
 
