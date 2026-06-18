@@ -206,8 +206,10 @@ export async function _capturePagePhoto(
         }
       }
     }
+    const minW = half === "full" ? 560 : 360;
+    const minH = half === "full" ? 360 : 240;
     let best: { img: any; w: number; h: number } | null = null;
-    let bestArea = 0;
+    let bestScore = -Infinity;
     for (const it of found) {
       if (half === "left" && it.cx > halfBound) continue;
       if (half === "right" && it.cx < halfBound) continue;
@@ -216,11 +218,14 @@ export async function _capturePagePhoto(
       if (!img) continue;
       const w = img.width || (img.bitmap && img.bitmap.width) || 0;
       const h = img.height || (img.bitmap && img.bitmap.height) || 0;
-      if (w * h > bestArea) { bestArea = w * h; best = { img, w, h }; }
+      if (w < minW || h < minH) continue;
+      // Rank by PHOTOGRAPHIC quality, not raw size: a tenant-logo collage is often
+      // the BIGGEST image on the page yet mostly white, while the real building photo
+      // sits next to it slightly smaller. Photo score dominates; area breaks ties.
+      const score = _imagePhotoScore(img) * 1e6 + w * h;
+      if (score > bestScore) { bestScore = score; best = { img, w, h }; }
     }
-    const minW = half === "full" ? 560 : 360;
-    const minH = half === "full" ? 360 : 240;
-    if (best && best.w >= minW && best.h >= minH) {
+    if (best) {
       const ic = document.createElement("canvas");
       ic.width = best.w; ic.height = best.h;
       const ictx = ic.getContext("2d")!;
@@ -465,13 +470,25 @@ function _photoMetrics(cnv: HTMLCanvasElement): { whiteFrac: number; variety: nu
   return { whiteFrac: white / n, variety: buckets.size / n };
 }
 
-// Choose the best COVER page from the first few pages. OMs frequently open with a
-// title page or a tenant-LOGO collage before the building/aerial hero photo, so
-// blindly taking page 1 grabs the wrong image (Eric: "flyers pull the wrong cover").
-// We pick the page whose largest embedded image is genuinely photographic (low
-// white-fraction, high tonal variety), reasonably large and landscape-ish, and we
-// penalize montage pages (many comparably-sized images). Falls back to page 1 when
-// nothing on the first pages reads as a real photo (preserves the old behavior).
+// Photographic-quality score for ONE embedded image: high for a real photo/aerial,
+// 0 for a logo/brand collage or line-art (mostly white, or very few flat colors).
+// This is the discriminator that keeps the cover from landing on a tenant-logo grid.
+function _imagePhotoScore(im: any): number {
+  const cnv = _imageObjToCanvas(im);
+  if (!cnv) return -1; // undecodable — treat as "unknown", below any real photo
+  const { whiteFrac, variety } = _photoMetrics(cnv);
+  cnv.width = cnv.height = 0;
+  if (whiteFrac > 0.7 || variety < 0.02) return 0; // logo collage / flat art
+  return (1 - whiteFrac) * 120 + variety * 240;
+}
+
+// Choose the best COVER page from the first few pages. OMs and flyers frequently put
+// the building/aerial hero photo on the SAME page as a tenant-LOGO collage (and the
+// collage is often the bigger image), or behind a title page — so blindly taking
+// page 1's largest image grabs the wrong thing (Eric: "flyers pull the wrong cover").
+// We score every sizable image on each page by photographic quality and pick the page
+// holding the single best real photo. Falls back to page 1 when nothing on the first
+// pages reads as a photo (preserves the old behavior).
 async function _pickCoverPage(pdf: any, lib: any): Promise<number> {
   const OPS = lib.OPS;
   const maxScan = Math.min(pdf.numPages, 6);
@@ -498,33 +515,24 @@ async function _pickCoverPage(pdf: any, lib: any): Promise<number> {
           if (typeof a === "string") names.push(a);
         }
       }
-      let best: { img: any; w: number; h: number } | null = null, bestArea = 0, sizable = 0;
+      // Best PHOTOGRAPHIC image on the page (not the largest) — mirrors the selection
+      // _capturePagePhoto uses, so the page we pick is the page it will capture from.
+      let pagePhoto = 0, pageAspect = 0;
       for (const nm of names) {
         let img: any = null;
         try { img = page.objs.get(nm); } catch { img = null; }
         if (!img) continue;
         const w = img.width || (img.bitmap && img.bitmap.width) || 0;
         const h = img.height || (img.bitmap && img.bitmap.height) || 0;
-        const area = w * h;
-        if (area >= 200 * 200) sizable++;
-        if (area > bestArea) { bestArea = area; best = { img, w, h }; }
+        if (w < 560 || h < 360) continue; // same min as a full-page cover capture
+        const ps = _imagePhotoScore(img);
+        if (ps > pagePhoto) { pagePhoto = ps; pageAspect = w / h; }
       }
-      if (!best || best.w < 400 || best.h < 300) continue;
-      const aspect = best.w / best.h;
-      const cnv = _imageObjToCanvas(best.img);
-      let photoScore = -1000, isPhoto = false;
-      if (cnv) {
-        const { whiteFrac, variety } = _photoMetrics(cnv);
-        cnv.width = cnv.height = 0;
-        isPhoto = whiteFrac < 0.55 && variety > 0.06;
-        photoScore = isPhoto ? (1 - whiteFrac) * 120 + variety * 240 : -1000;
-      }
-      if (isPhoto) anyPhoto = true;
-      const aspectBonus = aspect >= 1.1 && aspect <= 2.4 ? 30 : (aspect < 0.8 || aspect > 3 ? -60 : 0);
-      const collagePenalty = sizable >= 4 ? -250 : 0; // many comparable images = logo montage
-      const areaBonus = Math.min(40, bestArea / 120000);
+      if (pagePhoto <= 0) continue; // no real photo on this page
+      anyPhoto = true;
+      const aspectBonus = pageAspect >= 1.1 && pageAspect <= 2.4 ? 20 : (pageAspect < 0.8 || pageAspect > 3 ? -40 : 0);
       const frontBonus = pageNum <= 2 ? (3 - pageNum) * 4 : 0; // tiebreak toward the front
-      const score = photoScore + aspectBonus + collagePenalty + areaBonus + frontBonus;
+      const score = pagePhoto + aspectBonus + frontBonus;
       if (score > bestScore) { bestScore = score; bestPage = pageNum; }
     } catch {}
   }
