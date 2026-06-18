@@ -666,7 +666,10 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   // real 0% health ratio — treat it as missing so it computes from
                   // rent ÷ sales (which also keeps the roster in sync with the sales table).
                   const statedRaw = n(t.occupancyCost);
-                  const stated = statedRaw != null && statedRaw > 0 ? statedRaw : null;
+                  // 0/negative = "no data" (compute from rent ÷ sales). A value in
+                  // (0,1) is a fraction that lost its ×100 on import (0.225 = 22.5%) —
+                  // normalize it; retail occupancy cost under 1% is effectively impossible.
+                  const stated = statedRaw == null || statedRaw <= 0 ? null : (statedRaw < 1 ? statedRaw * 100 : statedRaw);
                   const base = n(t.annualRent);
                   // Recoveries: OM-disclosed value first; else the SF-allocated
                   // estimate so occ cost can still be computed on NNN tenants.

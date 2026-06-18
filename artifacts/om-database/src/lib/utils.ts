@@ -1163,6 +1163,9 @@ export function buildLatestSales(deal: {
     if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
 
     let occupancyCost = _num(r.occupancyCost);
+    // A stated occupancy cost in (0,1) is a fraction that lost its ×100 on import
+    // (0.225 = 22.5%); normalize so it doesn't render as "0.2%". Under 1% is impossible.
+    if (occupancyCost != null && occupancyCost > 0 && occupancyCost < 1) occupancyCost = occupancyCost * 100;
     let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
     let occBreakdown: import("./idb").OccBreakdown | null = null;
     const base = _num(rt?.annualRent);
