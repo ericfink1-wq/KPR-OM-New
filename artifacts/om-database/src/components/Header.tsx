@@ -504,16 +504,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       background: "rgba(252,250,245,0.92)",
       backdropFilter: "blur(12px)",
       WebkitBackdropFilter: "blur(12px)",
-      paddingLeft: 28,
       display: "flex",
-      alignItems: "center",
-      height: 72,
+      flexDirection: "column",
       flexShrink: 0,
       position: "sticky",
       top: 0,
       zIndex: 100,
       boxShadow: "0 8px 28px -22px rgba(56,58,55,0.55)",
     }}>
+      {/* Main row: logo + nav tabs + action buttons */}
+      <div style={{ display: "flex", alignItems: "center", height: 72, paddingLeft: 28, width: "100%", boxSizing: "border-box", minWidth: 0 }}>
       {/* Logo + wordmark — anchored, never scrolls */}
       <div style={{ display: "flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
         <img
@@ -604,18 +604,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
 
-        {/* Global search (also Cmd/Ctrl+K) — styled like a real search field so it
-            reads as a search bar, not just another action button. */}
-        {onOpenSearch && (
-          <button onClick={onOpenSearch} title="Search deals & tenants (⌘K)"
-            style={{ display: "flex", alignItems: "center", gap: 8, background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#8a8170", padding: "8px 12px", borderRadius: 999, cursor: "text", fontSize: 12.5, fontWeight: 500, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap", minWidth: 0, boxShadow: "inset 0 1px 2px rgba(56,58,55,0.04)" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#6dba43"; e.currentTarget.style.background = "#fff"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#cdbf9f"; e.currentTarget.style.background = "#fbf9f4"; }}>
-            <span style={{ fontSize: 14, color: "#6dba43", fontWeight: 700, lineHeight: 1 }}>⌕</span>
-            <span style={{ flex: 1, textAlign: "left" }}>Search deals &amp; tenants…</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#a89f8f", background: "#efe9dc", borderRadius: 4, padding: "2px 5px", letterSpacing: "0.02em" }}>⌘K</span>
-          </button>
-        )}
+        {/* Global search moved to its own row below the nav (see search row). */}
 
         {/* Today's Rates */}
         <button onClick={() => setRatesOpen(true)} title="Today's benchmark interest rates"
@@ -789,6 +778,21 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         </span>
         </div>
       </div>
+      </div>
+      {/* Search row — its own line under the nav. The primary feature, made prominent
+          without crowding the menu; full-width on phones, capped on wide screens. */}
+      {onOpenSearch && (
+        <div style={{ padding: "0 28px 11px", width: "100%", boxSizing: "border-box" }}>
+          <button onClick={onOpenSearch} title="Search deals & tenants (⌘K)"
+            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", maxWidth: 620, background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#8a8170", padding: "9px 15px", borderRadius: 999, cursor: "text", fontSize: 13, fontWeight: 500, fontFamily: "'Inter',sans-serif", boxShadow: "inset 0 1px 2px rgba(56,58,55,0.04)" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#6dba43"; e.currentTarget.style.background = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#cdbf9f"; e.currentTarget.style.background = "#fbf9f4"; }}>
+            <span style={{ fontSize: 15, color: "#6dba43", fontWeight: 700, lineHeight: 1 }}>⌕</span>
+            <span style={{ flex: 1, textAlign: "left" }}>Search deals &amp; tenants…</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#a89f8f", background: "#efe9dc", borderRadius: 4, padding: "2px 5px", letterSpacing: "0.02em" }}>⌘K</span>
+          </button>
+        </div>
+      )}
     </div>
 
     {importPlan && (
