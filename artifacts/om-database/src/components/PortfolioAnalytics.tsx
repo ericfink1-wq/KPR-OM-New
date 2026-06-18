@@ -469,7 +469,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
           <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", columnGap: 12, rowGap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {/* All / Owned scope toggle */}
           <div style={{ display:"flex", background:"#ede8df", borderRadius:7, padding:2, flexShrink:0 }}>
             {(["all", "owned"] as const).map(opt => (
@@ -505,7 +505,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
               <button onClick={handleRefreshStale} disabled={refreshingStale} title="These deals' written analysis was produced under older scoring logic. Refreshing re-runs the cheap AI roster pass to bring the narrative + benchmark notes up to date." style={{ background: refreshingStale ? "#fff7e6" : "transparent", border: "1px solid #f59e0b", color: refreshingStale ? "#a89f8f" : "#92400e", padding: "6px 12px", borderRadius: 7, cursor: refreshingStale ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
                 <span style={{ fontSize: 12 }}>⚠</span>
-                {refreshingStale ? "Refreshing…" : `Refresh ${staleCount} outdated analysis${staleCount === 1 ? "" : "es"}`}
+                {refreshingStale ? "Refreshing…" : `Refresh ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`}
               </button>
               {staleMsg && <span style={{ fontSize: 10.5, color: staleMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{staleMsg}</span>}
             </div>
@@ -517,7 +517,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               {auditStats.deals > 0 ? `Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues}) ›` : "Data integrity ✓"}
             </button>
             {auditMsg && <span style={{ fontSize: 10.5, color: auditMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{auditMsg}</span>}
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               {auditStats.breakdown.length > 0 && (
                 <button onClick={() => setShowAuditBreakdown(s => !s)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
                   {showAuditBreakdown ? "▴ hide breakdown" : "▾ what's flagged"}
@@ -543,19 +543,17 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
           </div>
           {isAdmin && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <button onClick={handleRebuildComps} disabled={rebuildingComps} style={{ background: rebuildingComps ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuildingComps ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuildingComps ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 12 }}>↺</span>
-                {rebuildingComps ? "Rebuilding…" : "Rebuild comps index"}
-              </button>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={handleRebuildComps} disabled={rebuildingComps} style={{ background: rebuildingComps ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuildingComps ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuildingComps ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 12 }}>↺</span>
+                  {rebuildingComps ? "Rebuilding…" : "Rebuild comps"}
+                </button>
+                <button onClick={handleRebuild} disabled={rebuilding} style={{ background: rebuilding ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuilding ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuilding ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 12 }}>↺</span>
+                  {rebuilding ? "Rebuilding…" : "Rebuild index"}
+                </button>
+              </div>
               {rebuildCompsMsg && <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildCompsMsg}</span>}
-            </div>
-          )}
-          {isAdmin && (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <button onClick={handleRebuild} disabled={rebuilding} style={{ background: rebuilding ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuilding ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuilding ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 12 }}>↺</span>
-                {rebuilding ? "Rebuilding…" : "Rebuild index"}
-              </button>
               {rebuildMsg && <span style={{ fontSize: 10.5, color: rebuildMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildMsg}</span>}
             </div>
           )}
