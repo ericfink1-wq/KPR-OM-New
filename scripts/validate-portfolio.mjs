@@ -107,10 +107,14 @@ function recomputeRosterMetrics(tenants, asOf, deal) {
 }
 
 // ── load + normalize the backup into a flat [{id, deal}] list ────────────────────
+// Skips soft-deleted (trashedAt) deals — they're hidden on the site, so validating
+// them would report issues on records the user already deleted.
 function loadDeals(path) {
   const raw = JSON.parse(readFileSync(path, "utf8"));
   const arr = Array.isArray(raw) ? raw : (raw.deals || raw.data || []);
-  return arr.map(r => (r && r.data ? { id: r.id, deal: r.data } : { id: r?.id, deal: r }));
+  return arr
+    .map(r => (r && r.data ? { id: r.id, deal: r.data } : { id: r?.id, deal: r }))
+    .filter(({ deal }) => deal && !deal.trashedAt);
 }
 
 // ── checks ───────────────────────────────────────────────────────────────────────
