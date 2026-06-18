@@ -413,8 +413,124 @@ export async function extractPdfText(buffer: ArrayBuffer): Promise<{ text: strin
   return { text: allText, pages: totalPages, ocrUsed };
 }
 
+// Decode a pdf.js image object to a canvas (handles RGBA bitmaps and the kind 2/3
+// raw-buffer cases). Used only to SAMPLE a candidate cover image's pixels; returns
+// null when the image can't be decoded cheaply.
+function _imageObjToCanvas(im: any): HTMLCanvasElement | null {
+  const w = im?.width || (im?.bitmap && im.bitmap.width) || 0;
+  const h = im?.height || (im?.bitmap && im.bitmap.height) || 0;
+  if (!w || !h) return null;
+  const ic = document.createElement("canvas");
+  ic.width = w; ic.height = h;
+  const ictx = ic.getContext("2d");
+  if (!ictx) return null;
+  try {
+    if (im.bitmap) { ictx.drawImage(im.bitmap, 0, 0); return ic; }
+    if (im.data && (im.kind === 2 || im.kind === 3)) {
+      const out = new Uint8ClampedArray(w * h * 4);
+      const d = im.data;
+      if (im.kind === 3) { out.set(d.subarray(0, out.length)); }
+      else { for (let p = 0, q = 0; q < out.length; p += 3, q += 4) { out[q]=d[p]; out[q+1]=d[p+1]; out[q+2]=d[p+2]; out[q+3]=255; } }
+      ictx.putImageData(new ImageData(out, w, h), 0, 0);
+      return ic;
+    }
+  } catch {}
+  return null;
+}
+
+// Tell a photographic hero shot apart from a logo/brand collage or title page.
+// Samples a grid of pixels: a property photo has a LOW near-white fraction and HIGH
+// tonal variety; a logo montage sits on white with only a handful of flat colors.
+function _photoMetrics(cnv: HTMLCanvasElement): { whiteFrac: number; variety: number } {
+  const w = cnv.width, h = cnv.height;
+  const ctx = cnv.getContext("2d");
+  if (!ctx || !w || !h) return { whiteFrac: 1, variety: 0 };
+  let data: Uint8ClampedArray;
+  try { data = ctx.getImageData(0, 0, w, h).data; } catch { return { whiteFrac: 1, variety: 0 }; }
+  const buckets = new Set<number>();
+  let white = 0, n = 0;
+  const step = Math.max(1, Math.floor(Math.sqrt((w * h) / 2500)));
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const i = (y * w + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+      n++;
+      if (a < 16 || (r > 244 && g > 244 && b > 244)) { white++; continue; }
+      buckets.add(((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)); // 12-bit color bucket
+    }
+  }
+  if (!n) return { whiteFrac: 1, variety: 0 };
+  return { whiteFrac: white / n, variety: buckets.size / n };
+}
+
+// Choose the best COVER page from the first few pages. OMs frequently open with a
+// title page or a tenant-LOGO collage before the building/aerial hero photo, so
+// blindly taking page 1 grabs the wrong image (Eric: "flyers pull the wrong cover").
+// We pick the page whose largest embedded image is genuinely photographic (low
+// white-fraction, high tonal variety), reasonably large and landscape-ish, and we
+// penalize montage pages (many comparably-sized images). Falls back to page 1 when
+// nothing on the first pages reads as a real photo (preserves the old behavior).
+async function _pickCoverPage(pdf: any, lib: any): Promise<number> {
+  const OPS = lib.OPS;
+  const maxScan = Math.min(pdf.numPages, 6);
+  let bestPage = 1, bestScore = -Infinity, anyPhoto = false;
+  for (let pageNum = 1; pageNum <= maxScan; pageNum++) {
+    try {
+      const page = await pdf.getPage(pageNum);
+      // A small render forces pdf.js to decode/resolve the page's image objects so
+      // page.objs.get(name) returns real bitmaps below.
+      const vp = page.getViewport({ scale: 0.4 });
+      const tc = document.createElement("canvas");
+      tc.width = Math.max(1, Math.round(vp.width));
+      tc.height = Math.max(1, Math.round(vp.height));
+      const tctx = tc.getContext("2d");
+      if (tctx) { tctx.fillStyle = "#ffffff"; tctx.fillRect(0, 0, tc.width, tc.height); await page.render({ canvasContext: tctx, viewport: vp }).promise; }
+      tc.width = tc.height = 0;
+
+      const opList = await page.getOperatorList();
+      const names: string[] = [];
+      for (let i = 0; i < opList.fnArray.length; i++) {
+        const fn = opList.fnArray[i];
+        if (fn === OPS.paintImageXObject || fn === OPS.paintJpegXObject) {
+          const a = opList.argsArray[i][0];
+          if (typeof a === "string") names.push(a);
+        }
+      }
+      let best: { img: any; w: number; h: number } | null = null, bestArea = 0, sizable = 0;
+      for (const nm of names) {
+        let img: any = null;
+        try { img = page.objs.get(nm); } catch { img = null; }
+        if (!img) continue;
+        const w = img.width || (img.bitmap && img.bitmap.width) || 0;
+        const h = img.height || (img.bitmap && img.bitmap.height) || 0;
+        const area = w * h;
+        if (area >= 200 * 200) sizable++;
+        if (area > bestArea) { bestArea = area; best = { img, w, h }; }
+      }
+      if (!best || best.w < 400 || best.h < 300) continue;
+      const aspect = best.w / best.h;
+      const cnv = _imageObjToCanvas(best.img);
+      let photoScore = -1000, isPhoto = false;
+      if (cnv) {
+        const { whiteFrac, variety } = _photoMetrics(cnv);
+        cnv.width = cnv.height = 0;
+        isPhoto = whiteFrac < 0.55 && variety > 0.06;
+        photoScore = isPhoto ? (1 - whiteFrac) * 120 + variety * 240 : -1000;
+      }
+      if (isPhoto) anyPhoto = true;
+      const aspectBonus = aspect >= 1.1 && aspect <= 2.4 ? 30 : (aspect < 0.8 || aspect > 3 ? -60 : 0);
+      const collagePenalty = sizable >= 4 ? -250 : 0; // many comparable images = logo montage
+      const areaBonus = Math.min(40, bestArea / 120000);
+      const frontBonus = pageNum <= 2 ? (3 - pageNum) * 4 : 0; // tiebreak toward the front
+      const score = photoScore + aspectBonus + collagePenalty + areaBonus + frontBonus;
+      if (score > bestScore) { bestScore = score; bestPage = pageNum; }
+    } catch {}
+  }
+  return anyPhoto ? bestPage : 1;
+}
+
 // Auto-detect cover + site plan pages from the PDF.
-// Cover: extracted from largest embedded image on page 1.
+// Cover: best photographic page among the first few (see _pickCoverPage).
 // Site plan: auto-detected by keyword scan; falls back to page picker.
 export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
   cover: string | null;
@@ -442,7 +558,8 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
   // one on demand via the deal page's "Site plan → Choose PDF & set / Upload image"
   // (which renders just the one chosen page). Keeps OM uploads fast and predictable.
   try {
-    const c = await _capturePagePhoto(pdf, 1, lib);
+    const coverPage = await _pickCoverPage(pdf, lib);
+    const c = await _capturePagePhoto(pdf, coverPage, lib);
     result.cover = c.cover;
     result.coverThumb = c.thumb;
   } catch {}
