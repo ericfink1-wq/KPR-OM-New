@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
 import type { SizeFlag } from "../lib/tenantSizeBenchmark";
+import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -35,6 +36,9 @@ interface Props {
   // tenantKey -> SF outlier flag (this store's SF is way off the brand's prototype
   // footprint across the database). Shown next to the SF cell. Optional.
   sizeFlags?: Map<string, SizeFlag>;
+  // tenantKey -> SALES outlier flag (this store's sales PSF is way off the brand's
+  // typical productivity across the database; below = underperformer). Next to Sales. Optional.
+  salesFlags?: Map<string, SalesFlag>;
   // tenantKey -> kickout / early-termination summary (sales kickout, co-tenancy out,
   // early-termination option). Shown in the Kickout column. Optional.
   kickoutByTenant?: Map<string, { label: string; tip: string }>;
@@ -287,7 +291,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, kickoutByTenant }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, kickoutByTenant }: Props) {
   const watchMap = useWatchlist();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
@@ -638,9 +642,11 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       };
                     }
                   }
+                  const sFlag = salesFlags?.get(tenantKey(t.canonicalName || t.name));
                   return <td title={trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:(trend||t.salesNotes)?"help":"default" }}>
                     {fmtTenantSales(salesPSF, t.sf)}
                     {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
+                    {sFlag && <FlagTip content={sFlag.tip} color={sFlag.direction==="below"?"#dc2626":"#0f9d63"}><span style={{ marginLeft:4, fontSize:10, fontWeight:800, color:sFlag.direction==="below"?"#dc2626":"#0f9d63", lineHeight:1 }}>⚑</span></FlagTip>}
                   </td>;
                 })()}
                 {(() => {

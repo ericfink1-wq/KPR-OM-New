@@ -48,6 +48,7 @@ import TenantSalesPanel from "./TenantSalesPanel";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
+import { buildBrandSalesIndex, buildSalesFlags, deriveSalesOutlierFlag } from "../lib/tenantSalesBenchmark";
 import { deriveAnomalyFlag } from "../lib/dealAnomalies";
 import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
@@ -1496,6 +1497,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // once over allDeals; flags are per this deal's roster.
   const brandSizeIndex = useMemo(() => buildBrandSizeIndex(allDeals), [allDeals]);
   const sizeFlags = useMemo(() => buildSizeFlags(d, brandSizeIndex), [d, brandSizeIndex]);
+  // Brand "prototype" SALES benchmark — flag a tenant whose sales PSF is way off the
+  // typical productivity for that retailer across all OTHER deals (low = underperformer).
+  const brandSalesIndex = useMemo(() => buildBrandSalesIndex(allDeals), [allDeals]);
+  const salesFlags = useMemo(() => buildSalesFlags(d, brandSalesIndex), [d, brandSalesIndex]);
   // Per-tenant kickout / early-termination levers for the roster's Kickout column.
   const kickoutByTenant = useMemo(() => buildKickoutByTenant(d, abstracts), [d, abstracts]);
 
@@ -2827,6 +2832,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           estimatedRecoveries={estimateRecoveries(dWithRecoveries).byName}
           latestSales={buildLatestSales(d)}
           sizeFlags={sizeFlags}
+          salesFlags={salesFlags}
           kickoutByTenant={kickoutByTenant}
           abstractsByTenant={abstractsByTenant}
           abstractDiscrepancies={abstractDiscrepancies}
@@ -2994,8 +3000,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const floodFlag = deriveFloodClimateFlag(d);
         const groundLeaseFlag = deriveGroundLeaseFlag(d);
         const sizeOutlierFlag = deriveSizeOutlierFlag(d, brandSizeIndex);
+        const salesOutlierFlag = deriveSalesOutlierFlag(d, brandSalesIndex);
         const anomalyFlag = deriveAnomalyFlag(d, allDeals);
-        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
+        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
