@@ -50,6 +50,11 @@ Thumbs.db
 
 # Lease-abstract / deal deliverable JSONs — these are transport files uploaded
 # THROUGH the app (stored in the DB), not source. Keep them out of the repo so
-# the stop-hook stops flagging each new one.
+# the stop-hook stops flagging each new one. Patterns cover both hyphen- and
+# underscore-named deliverables at the repo root (the curated samples/ folder is
+# intentionally tracked and unaffected).
+/*-deal.json
+/*-lease-abstracts.json
+/*-abstracts*.json
 *_lease_abstracts.json
 *_deal_abstracts.json
