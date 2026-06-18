@@ -58,3 +58,6 @@ Thumbs.db
 /*-abstracts*.json
 *_lease_abstracts.json
 *_deal_abstracts.json
+
+# Portfolio validation reports — analysis deliverables (contain deal data), not source
+portfolio-validation-*.md
