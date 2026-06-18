@@ -61,3 +61,6 @@ Thumbs.db
 
 # Portfolio validation reports — analysis deliverables (contain deal data), not source
 portfolio-validation-*.md
+
+# Worklist exports (contain deal data)
+kpr-worklist-*.md
