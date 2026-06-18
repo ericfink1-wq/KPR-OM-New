@@ -397,10 +397,10 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     if (!window.confirm("Auto-fix the data issues that have a single right answer (no judgement needed)? Token-free and deterministic: occupancy cost stored as a 0.NN fraction → ×100, a rentPerSF that doesn't reconcile to a reliable annual rent → recomputed from the annual, and stale occupancy / WALT / avg-rent → recomputed from the roster. It SNAPSHOTS first (fully reversible via Backup → Restore a snapshot) and LEAVES anything ambiguous for you to review. Run it?")) return;
     setAutofixing(true); setAutofixMsg(null);
     fetch("/api/deals/autofix", { method: "POST", credentials: "include" })
-      .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; rentFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>)
+      .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; rentFixed?: number; dupeFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>)
       .then(d => {
         if (!d.ok) throw new Error(d.error || "Auto-fix failed");
-        setAutofixMsg(`✓ Fixed ${d.changedDeals ?? 0} deal${(d.changedDeals ?? 0) === 1 ? "" : "s"} · ${d.occCostFixed ?? 0} occ-cost, ${d.rentFixed ?? 0} rent, ${d.metricFixes ?? 0} metrics · ${d.cleared ?? 0} flags cleared — reloading…`);
+        setAutofixMsg(`✓ Fixed ${d.changedDeals ?? 0} deal${(d.changedDeals ?? 0) === 1 ? "" : "s"} · ${d.occCostFixed ?? 0} occ-cost, ${d.rentFixed ?? 0} rent, ${d.dupeFixed ?? 0} dup rows, ${d.metricFixes ?? 0} metrics · ${d.cleared ?? 0} flags cleared — reloading…`);
         loadAuditStats();
         setTimeout(() => window.location.reload(), 1600);
       })

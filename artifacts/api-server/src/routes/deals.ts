@@ -1335,7 +1335,7 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
   try {
     const snap = await createSnapshot("before-autofix");
     const rows = await db.select().from(dealsTable);
-    let scanned = 0, occCostFixed = 0, rentFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
+    let scanned = 0, occCostFixed = 0, rentFixed = 0, dupeFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
     for (const r of rows) {
       const data = r.data as Record<string, unknown>;
       if (data.trashedAt || data._processing || data._processingError) continue;
@@ -1349,17 +1349,38 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
         const sf = nA(t.sf), psf = nA(t.rentPerSF), ann = nA(t.annualRent);
         if (sf && psf && ann && ann > 1000 && !isVacA(t.name) && !isNAPA(t)) {
           const implied = psf * sf, rel = Math.abs(implied - ann) / ann, realPSF = ann / sf;
-          // Only when the annual is RELIABLE (implies a sane $2–$80/SF) and the stored
-          // per-SF is clearly off — leave absurd-annual cases (e.g. $780/SF) for judgement.
-          if (rel > 0.15 && Math.abs(implied - ann) > 10000 && realPSF >= 2 && realPSF <= 80 && Math.abs(psf - realPSF) / realPSF > 0.3) {
+          // Operator rule (Eric): the ANNUAL base rent is the reliable figure; a
+          // rentPerSF that doesn't reconcile is usually CAM-inflated (a gross rate) or
+          // mis-keyed, so recompute it from the annual whenever the annual implies a
+          // sane $2–$80/SF. Absurd-annual cases (e.g. Mezeh's $780/SF) fail the guard
+          // and are left for human judgement.
+          if (rel > 0.15 && Math.abs(implied - ann) > 10000 && realPSF >= 2 && realPSF <= 80) {
             t.rentPerSF = Math.round(realPSF * 100) / 100; rentFixed++; changed = true;
           }
         }
         return t;
       });
-      const updated: Record<string, unknown> = { ...data, tenants };
+      // Dedupe true duplicate rows: the SAME tenant in the SAME suite listed twice (a
+      // roster artifact that double-counts SF — e.g. Consumer Square's Planet Fitness /
+      // Kroger). Operator rule (Eric): keep the row with the LATER lease expiry, drop the
+      // stale duplicate. Only same-name + same-suite occupied rows — never vacants (whose
+      // identical-suite case doesn't arise) or a tenant with two different suites.
+      const dedup: Record<string, unknown>[] = [];
+      const seen = new Map<string, number>();
+      for (const t of tenants) {
+        const suite = String(t.suite ?? "").trim().toLowerCase();
+        if (!suite || isVacA(t.name)) { dedup.push(t); continue; }
+        const key = `${String(t.name ?? "").trim().toLowerCase()}|${suite}`;
+        const at = seen.get(key);
+        if (at != null) {
+          const prevExp = parseD(dedup[at].leaseExpiry), curExp = parseD(t.leaseExpiry);
+          if (curExp && (!prevExp || curExp > prevExp)) dedup[at] = t; // keep the later lease
+          dupeFixed++; changed = true;
+        } else { seen.set(key, dedup.length); dedup.push(t); }
+      }
+      const updated: Record<string, unknown> = { ...data, tenants: dedup };
       // 2. Recompute roster-derived metrics (honors verified locks)
-      const m = recompute(tenants, updated.tenantsAsOf, updated);
+      const m = recompute(dedup, updated.tenantsAsOf, updated);
       for (const k of ["occupancy", "walt", "weightedAvgRentPSF"] as const) {
         if (m[k] != null && nA(updated[k]) !== m[k]) { updated[k] = m[k]; metricFixes++; changed = true; }
       }
@@ -1374,8 +1395,8 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
       if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
       if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
     }
-    req.log.info({ scanned, occCostFixed, rentFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
-    res.json({ ok: true, scanned, occCostFixed, rentFixed, metricFixes, changedDeals, cleared, snapshot: snap });
+    req.log.info({ scanned, occCostFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
+    res.json({ ok: true, scanned, occCostFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared, snapshot: snap });
   } catch (err) {
     req.log.error({ err }, "Auto-fix failed");
     res.status(500).json({ error: "Auto-fix failed" });
