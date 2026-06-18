@@ -1492,6 +1492,21 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // silent. Render-time only; the stored roster is untouched.
   const dWithRecoveries = useMemo(() => withAbstractRecoveries(d, abstractsByTenant), [d, abstractsByTenant]);
 
+  // Derived roster metrics recomputed live for DISPLAY, so a stale STORED value never
+  // shows a wrong number — e.g. an old bulk-imported WALT, or a 0 that never got
+  // computed (the deal page reads stored d.walt, which is only refreshed on a roster
+  // edit). recomputeRosterMetrics respects `verified` locks and only returns a value
+  // when the roster supports it, so we fall back to stored otherwise — same contract
+  // as re-analyze (unlocked derived metrics are computed; lock a figure to pin it).
+  // Render-time only; nothing is written.
+  const liveMetrics = useMemo(
+    () => recomputeRosterMetrics((d.tenants || []) as Array<Record<string, unknown>>, d.tenantsAsOf, d),
+    [d],
+  );
+  const liveWalt = liveMetrics.walt ?? d.walt;
+  const liveOccupancy = liveMetrics.occupancy ?? d.occupancy;
+  const liveWtdRent = liveMetrics.weightedAvgRentPSF ?? d.weightedAvgRentPSF;
+
   // Brand "prototype" size benchmark — flag a tenant whose SF is way off the typical
   // footprint for that retailer across all OTHER deals in the database. Index is built
   // once over allDeals; flags are per this deal's roster.
@@ -3053,7 +3068,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <Row l="NOI" v={d.noi?fmtUSD(d.noi):null} c="#0f9d63" field="noi"/>
           <Row l="PRICE / SF" v={d.pricePerSF?`$${d.pricePerSF}`:null} field="pricePerSF"/>
           <Row l="TOTAL SF" v={d.totalSF?`${Number(d.totalSF).toLocaleString()} SF`:null} field="totalSF"/>
-          <Row l="OCCUPANCY" v={d.occupancy?`${d.occupancy}%`:null} c="#383a37" field="occupancy" warn={reconWarns.occupancy}/>
+          <Row l="OCCUPANCY" v={liveOccupancy?`${liveOccupancy}%`:null} c="#383a37" field="occupancy" warn={reconWarns.occupancy}/>
           <PriceCapEditor deal={d} onUpdate={onUpdate}/>
         </Card>
         <Card title="INCOME & EXPENSES">
@@ -3078,10 +3093,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             const c = ratio >= 75 ? "#0f9d63" : ratio >= 50 ? "#c97a18" : "#dc2626";
             return <Row l="EXPENSE RECOVERY" v={`${ratio}% of opex`} c={c} />;
           })()}
-          <Row l="WTAVG RENT/SF" v={d.weightedAvgRentPSF?`$${Number(d.weightedAvgRentPSF).toFixed(2)}/SF`:null} warn={reconWarns.weightedAvgRentPSF}/>
+          <Row l="WTAVG RENT/SF" v={liveWtdRent?`$${Number(liveWtdRent).toFixed(2)}/SF`:null} warn={reconWarns.weightedAvgRentPSF}/>
         </Card>
         <Card title="LEASE METRICS">
-          <Row l="WALT" v={d.walt?`${d.walt} yrs`:null} c={d.walt && Number(d.walt)<3?"#dc2626":Number(d.walt)<6?"#383a37":"#0f9d63"} field="walt"/>
+          <Row l="WALT" v={liveWalt?`${liveWalt} yrs`:null} c={liveWalt && Number(liveWalt)<3?"#dc2626":Number(liveWalt)<6?"#383a37":"#0f9d63"} field="walt"/>
           {(d.tenants||[]).length > 0 && (() => {
             const toN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
             const occ = (d.tenants||[]).filter(t => t.name && !/^vacant$/i.test(String(t.name).trim()));
