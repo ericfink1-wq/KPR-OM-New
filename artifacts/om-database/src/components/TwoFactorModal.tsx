@@ -29,6 +29,16 @@ export default function TwoFactorModal({ onClose, mandatory }: Props) {
     api2faStatus().then(s => { setStep(s.enabled ? "on" : "off"); setBackupRemaining(s.backupCodesRemaining); });
   }, []);
 
+  // Escape always closes the modal (except the mandatory enrollment gate), so a
+  // mis-click on "Security" is never a trap — even on a short screen where the
+  // card scrolls and the top-right × is pushed out of view.
+  useEffect(() => {
+    if (mandatory) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mandatory, onClose]);
+
   const startSetup = async () => {
     setBusy(true); setError(null);
     const r = await api2faSetup();
@@ -128,6 +138,9 @@ export default function TwoFactorModal({ onClose, mandatory }: Props) {
             <input type="password" value={disablePw} onChange={e => setDisablePw(e.target.value)} placeholder="…or account password" style={{ ...input, marginBottom: 12 }} />
             {error && <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 10 }}>{error}</div>}
             <button onClick={disable} disabled={busy || (!code.trim() && !disablePw)} style={{ ...primaryBtn, background: "#b91c1c", opacity: (busy || (!code.trim() && !disablePw)) ? 0.6 : 1 }}>{busy ? "Disabling…" : "Disable two-factor"}</button>
+            {/* Always-visible exit so a mis-click on "Security" can be backed out of
+                without hunting for the top-right × (which can scroll off a short screen). */}
+            <button onClick={onClose} style={{ ...primaryBtn, background: "transparent", color: "#7d766a", border: "1px solid #e7e0d2", marginTop: 8 }}>Cancel</button>
           </>
         )}
       </div>
