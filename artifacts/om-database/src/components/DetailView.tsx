@@ -4637,13 +4637,58 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
   // Give the assistant the FULL deal record (minus UI-only noise) plus the lease
   // abstracts on file, so it can never be "missing" data that lives on the property
   // — roof, debt, cash flow, income/expense breakdown, demographics, market sale,
-  // KPR thesis/review/score, co-tenancy lease risk, tenant sales history, etc. Passing
-  // the whole record (rather than a hand-picked subset) keeps it complete as new
-  // fields are added.
-  const buildContext = () => {
-    const rest: Record<string, unknown> = { ...deal };
-    for (const k of ["imageMeta", "reviewQuestions", "_processing", "_processingError"]) delete rest[k];
-    return { ...rest, leaseAbstracts: abstracts.length ? abstracts : undefined };
+  // KPR thesis/review/score, co-tenancy lease risk, tenant sales history, etc.
+  //
+  // CONTEXT-SIZE GUARD: the whole record + every abstract is serialized into the
+  // system prompt, and on an abstract-heavy property (a big center with a full
+  // lease-abstract set) that JSON can exceed the model's 200K-token context — the
+  // request then 400s with "prompt is too long". So we measure the ACTUAL serialized
+  // size and, if over budget, shed the least-useful detail in stages until it fits.
+  // Because the budget is checked against real size, it can't be silently overflowed
+  // as deals/abstracts/fields grow — it degrades gracefully instead. Full detail for
+  // anything trimmed still lives on this property's page.
+  const buildContext = (): { ctx: Record<string, unknown>; trims: string[] } => {
+    const ctx: Record<string, unknown> = { ...deal };
+    for (const k of ["imageMeta", "reviewQuestions", "_processing", "_processingError"]) delete ctx[k];
+    let abs: unknown[] | undefined = abstracts.length ? abstracts : undefined;
+    const trims: string[] = [];
+    // ~280K chars ≈ 140–155K tokens for this dense JSON — comfortably under the 200K
+    // hard cap with room for the static scaffold, chat history and the reply.
+    const MAX = 280_000;
+    const size = () => JSON.stringify({ ...ctx, leaseAbstracts: abs }).length;
+
+    if (size() > MAX) {
+      // 1) Heavy deal-level fields, rarely needed for a property/lease question.
+      for (const k of ["cashFlowProjection", "incomeBreakdown", "expenseBreakdown", "customAmortSchedule", "prefSchedule", "tenantSalesHistory", "roofData", "marketDemographics", "editHistory"]) delete ctx[k];
+      trims.push("heavy deal fields (cash flow, income/expense breakdowns, sales history) omitted");
+    }
+    if (size() > MAX && abs) {
+      // 2) Lighten abstracts: drop explicit "None" lease-notes and boilerplate prose,
+      //    keep the substantive structured clauses (co-tenancy, options, rent steps,
+      //    exclusives, go-dark, restrictions, guaranties, etc.).
+      abs = abstracts.map(a => {
+        const { narrative: _n, sourceDocuments: _s, documents: _d, ...keep } = a as Record<string, unknown>;
+        const notes = (a as { leaseNotes?: { value?: string | null }[] }).leaseNotes;
+        if (Array.isArray(notes)) {
+          (keep as Record<string, unknown>).leaseNotes = notes.filter(n => n && n.value && !/^none\b/i.test(String(n.value).trim()));
+        }
+        return keep;
+      });
+      trims.push('lease-abstract boilerplate trimmed (explicit "None" notes, narratives and document lists dropped)');
+    }
+    if (size() > MAX && abs) {
+      // 3) Still too big — condense abstracts to a per-tenant index; bodies stay on page.
+      abs = abstracts.map(a => ({ tenantName: a.tenantName, suite: a.suite, expiration: a.expiration, currentSF: a.currentSF,
+        _note: "full lease abstract is on this property's page — body omitted to fit the context window" }));
+      trims.push("lease abstracts condensed to an index (bodies omitted)");
+    }
+    if (size() > MAX && Array.isArray(ctx.tenants)) {
+      // 4) Last resort — roster to anchors + larger tenants.
+      ctx.tenants = (ctx.tenants as NonNullable<Deal["tenants"]>).filter(t => t.isAnchor || (t.sf != null && Number(t.sf) >= 5000));
+      trims.push("roster trimmed to anchors + larger tenants");
+    }
+    if (trims.length) console.warn(`[PropertyChat] context trimmed to fit model budget: ${trims.join("; ")}`);
+    return { ctx: { ...ctx, leaseAbstracts: abs }, trims };
   };
 
   const ask = async (text: string) => {
@@ -4651,7 +4696,11 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
     const next = [...msgs, { role: "user" as const, content: text }];
     setMsgs(next); setInput(""); setThinking(true);
     try {
-      const system = `You are a commercial real estate analyst answering questions about ONE specific property. Use ONLY the property data below. If something isn't in the data, say it isn't available rather than guessing. Be concise and specific — cite tenant names, dollar figures, dates, and PSF where relevant.\n\nProperty data (JSON):\n${JSON.stringify(buildContext())}`;
+      const { ctx, trims } = buildContext();
+      const trimNote = trims.length
+        ? `\n\nNOTE: this property's data is large, so to fit the model's context window the following were reduced: ${trims.join("; ")}. The full detail is on this property's page — if a lease-level answer would need an omitted abstract body, say the full abstract is on file there rather than guessing.`
+        : "";
+      const system = `You are a commercial real estate analyst answering questions about ONE specific property. Use ONLY the property data below. If something isn't in the data, say it isn't available rather than guessing. Be concise and specific — cite tenant names, dollar figures, dates, and PSF where relevant.${trimNote}\n\nProperty data (JSON):\n${JSON.stringify(ctx)}`;
       const resp = await sendMessage({
         data: {
           system,
