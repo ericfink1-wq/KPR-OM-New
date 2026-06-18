@@ -119,13 +119,32 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
     const gap = totalSF - rosterSF;
     const pct = Math.abs(gap) / totalSF;
     if (gap > 0 && pct > 0.04 && gap > 5000) {
-      out.push({
-        id: "audit-sf-gla-short", source: "check", severity: "high",
-        field: "Tenant roster completeness",
-        question: `The roster's suites sum to ${sf(rosterSF)} but the property GLA is ${sf(totalSF)} — about ${sf(gap)} (${Math.round(pct * 100)}%) is unaccounted for. Are suites missing from the roster?`,
-        detail: `Occupied ${sf(occupiedSF)} + vacant ${sf(vacantSF)} = ${sf(rosterSF)}, which is short of the ${sf(totalSF)} GLA. A dropped tenant, an un-captured vacancy, or merged vacant suites would cause this — check against the rent roll / stacking plan.`,
-        suggestedValue: null, target: null,
-      });
+      // Is the shortfall just UNLISTED VACANCY rather than a dropped OCCUPIED suite?
+      // If the roster carries no vacant rows but its occupied SF already matches the
+      // GLA × stated-occupancy, the missing space is the (un-itemized) vacant portion —
+      // the figures tie out; the roster is only missing explicit vacant suites. The
+      // high-severity "suites missing" case is when occupied SF falls materially BELOW
+      // what the stated occupancy implies (a real occupied tenant was dropped).
+      const statedOcc = num(deal.occupancy);
+      const impliedOccSF = statedOcc != null && statedOcc > 0 && statedOcc <= 100 ? totalSF * (statedOcc / 100) : null;
+      const gapIsUnlistedVacancy = vacantSF === 0 && impliedOccSF != null && occupiedSF >= impliedOccSF * 0.97;
+      if (gapIsUnlistedVacancy) {
+        out.push({
+          id: "audit-sf-gla-short", source: "check", severity: "low",
+          field: "Tenant roster completeness",
+          question: `The roster has no vacant suites, so ~${sf(gap)} (${Math.round(pct * 100)}%) of GLA isn't itemized — but that matches the vacancy implied by the stated ${statedOcc}% occupancy, so the figures tie out. Add the vacant suites for a complete roster when convenient.`,
+          detail: `Occupied ${sf(occupiedSF)} ≈ the ${sf(impliedOccSF!)} implied by ${statedOcc}% occupancy, so the shortfall is un-itemized vacant space — not a dropped occupied tenant. No financial impact; this is roster completeness only.`,
+          suggestedValue: null, target: null,
+        });
+      } else {
+        out.push({
+          id: "audit-sf-gla-short", source: "check", severity: "high",
+          field: "Tenant roster completeness",
+          question: `The roster's suites sum to ${sf(rosterSF)} but the property GLA is ${sf(totalSF)} — about ${sf(gap)} (${Math.round(pct * 100)}%) is unaccounted for, and that's MORE than the stated occupancy explains. Are occupied suites missing from the roster?`,
+          detail: `Occupied ${sf(occupiedSF)} + vacant ${sf(vacantSF)} = ${sf(rosterSF)}, short of the ${sf(totalSF)} GLA${impliedOccSF != null ? ` and below the ${sf(impliedOccSF)} implied by ${num(deal.occupancy)}% occupancy` : ""}. A dropped occupied tenant or merged vacant suites would cause this — check against the rent roll / stacking plan.`,
+          suggestedValue: null, target: null,
+        });
+      }
     } else if (gap < 0 && pct > 0.04 && -gap > 5000) {
       out.push({
         id: "audit-sf-gla-over", source: "check", severity: "medium",
