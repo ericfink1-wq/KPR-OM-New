@@ -271,7 +271,9 @@ export async function extractFlyerImages(buffer: ArrayBuffer): Promise<{ cover: 
   const lib = await loadPdfJs();
   const pdf = await lib.getDocument({ data: buffer }).promise;
   let cover: string | null = null, coverThumb: string | null = null;
-  try { const c = await _capturePagePhoto(pdf, 1, lib); cover = c.cover; coverThumb = c.thumb; } catch {}
+  // Even on a marketing flyer the hero photo isn't always page 1's largest image —
+  // some lead with a tenant-LOGO collage. Pick the genuinely photographic page.
+  try { const cp = await _pickCoverPage(pdf, lib); const c = await _capturePagePhoto(pdf, cp, lib); cover = c.cover; coverThumb = c.thumb; } catch {}
   const sitePlan: string[] = [];
   if (pdf.numPages >= 2) {
     try { const sp = await _captureSitePlan(pdf, 2, lib); if (sp) sitePlan.push(sp); } catch {}
