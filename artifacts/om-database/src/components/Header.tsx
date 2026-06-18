@@ -9,6 +9,7 @@ import TwoFactorModal from "./TwoFactorModal";
 import ChangePassword from "./ChangePassword";
 import HouseViewModal from "./HouseViewModal";
 import { dedupeStoredAddress } from "../lib/utils";
+import { BUILD_ID, BUILD_TIME } from "../lib/constants";
 import { computeImportPlan, type ImportPlan } from "../lib/importDiff";
 import ImportDiffModal from "./ImportDiffModal";
 
@@ -781,6 +782,11 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             Sign out
           </button>
         )}
+        <span
+          title={BUILD_TIME ? `This is the code currently running. Built ${new Date(BUILD_TIME).toLocaleString()}. Tell Claude this id to confirm a fix is live.` : "development build"}
+          style={{ fontSize: 9, color: "#c3bbac", fontFamily: "'Inter',sans-serif", letterSpacing: "0.03em", alignSelf: "center", whiteSpace: "nowrap", cursor: "default" }}>
+          build {BUILD_ID}
+        </span>
         </div>
       </div>
     </div>

@@ -2,7 +2,25 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { execSync } from "child_process";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+
+// Build stamp injected at BUILD time so the running app can show exactly which commit
+// is live (kills "is the fix deployed or am I looking at stale code?" guesswork). Like
+// the PORT note below, this MUST NOT throw — a failed build means Replit keeps serving
+// stale code. Short git SHA when .git is present (Replit clones it); else a timestamp.
+function buildId(): string {
+  try {
+    const sha = execSync("git rev-parse --short HEAD", {
+      cwd: import.meta.dirname,
+      stdio: ["ignore", "pipe", "ignore"],
+    }).toString().trim();
+    if (sha) return sha;
+  } catch { /* no git at build time — fall back to the timestamp below */ }
+  return "nogit";
+}
+const BUILD_ID = buildId();
+const BUILD_TIME = new Date().toISOString();
 
 // PORT / BASE_PATH are RUNTIME values (dev/preview server). They are frequently
 // absent during a production BUILD — and throwing here made `vite build` (and thus
@@ -21,6 +39,10 @@ const basePath = process.env.BASE_PATH || "/";
 
 export default defineConfig({
   base: basePath,
+  define: {
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+  },
   plugins: [
     react(),
     tailwindcss(),

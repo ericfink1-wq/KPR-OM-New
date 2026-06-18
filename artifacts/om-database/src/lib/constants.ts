@@ -3,6 +3,13 @@
 // older scoring logic — the deal page shows an "outdated" refresh badge. Keep in sync.
 export const ANALYSIS_VERSION = 3;
 
+// On-screen build stamp — injected by Vite's `define` at build time (see
+// vite.config.ts and build-info.d.ts). Surfaced in the header so we can tell at a
+// glance WHICH commit is actually live, separating "the deploy is stale" from "the
+// fix is wrong." Falls back gracefully when not built through Vite (dev/tests).
+export const BUILD_ID = typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "dev";
+export const BUILD_TIME = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : "";
+
 export const ASSET_TYPES = [
   "Neighborhood Center","Community Center","Power Center","Lifestyle Center",
   "Regional Mall","Super Regional Mall","Strip Center","Mixed-Use",
