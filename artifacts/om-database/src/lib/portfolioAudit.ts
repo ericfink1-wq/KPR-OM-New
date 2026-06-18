@@ -22,12 +22,16 @@ export interface TaxFinding {
 export interface AnomalyFinding {
   dealId: string; dealName: string; severity: "medium" | "low"; messages: string[];
 }
+export interface DuplicateFinding {
+  severity: "high" | "low"; dealName: string; ids: string[]; addresses: string[]; message: string;
+}
 export interface PortfolioAudit {
   reimbDeals: ReimbDealGroup[];   // grouped by deal (only deals with ≥1 finding); fixed-CAM deals first
   fixedCamCount: number;
   grossCount: number;
   tax: TaxFinding[];
   anomalies: AnomalyFinding[];    // figures that are outliers vs the database (sharper as the DB grows)
+  duplicates: DuplicateFinding[]; // same property entered twice (re-import) — a safety net
   dealsScanned: number;
 }
 
@@ -88,8 +92,55 @@ export function auditAnomalies(deals: Deal[]): AnomalyFinding[] {
   return out.sort((a, b) => order[a.severity] - order[b.severity] || a.dealName.localeCompare(b.dealName));
 }
 
+// Duplicate safety net — the same property entered twice (usually a re-import).
+// Same name + same NORMALIZED address = a real duplicate (high); same name +
+// different address = a "confirm these are distinct" nudge (low), because two centers
+// can legitimately share a name (e.g. two "University Hills" in different cities).
+// Trashed deals are excluded, so a duplicate you've already resolved never re-surfaces.
+function normAddrForDup(a: unknown): string | null {
+  if (typeof a !== "string") return null;
+  return a.trim().toLowerCase().replace(/[.,]/g, "")
+    .replace(/\broad\b/g, "rd").replace(/\bstreet\b/g, "st")
+    .replace(/\bavenue\b/g, "ave").replace(/\bboulevard\b/g, "blvd")
+    .replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln")
+    .replace(/\bparkway\b/g, "pkwy").replace(/\s+/g, " ").trim() || null;
+}
+export function auditDuplicates(deals: Deal[]): DuplicateFinding[] {
+  const byName = new Map<string, Deal[]>();
+  for (const d of deals || []) {
+    if (d.trashedAt) continue;
+    const n = (d.propertyName || "").trim().toLowerCase();
+    if (!n) continue;
+    const arr = byName.get(n) ?? [];
+    arr.push(d);
+    byName.set(n, arr);
+  }
+  const out: DuplicateFinding[] = [];
+  for (const group of byName.values()) {
+    if (group.length < 2) continue;
+    const byAddr = new Map<string, Deal[]>();
+    for (const d of group) {
+      const a = normAddrForDup(d.address) ?? "(none)";
+      const arr = byAddr.get(a) ?? [];
+      arr.push(d);
+      byAddr.set(a, arr);
+    }
+    const realDupe = [...byAddr.values()].find((recs) => recs.length > 1);
+    if (realDupe) {
+      out.push({ severity: "high", dealName: dealName(realDupe[0]), ids: realDupe.map((d) => d.id),
+        addresses: [realDupe[0].address || "—"],
+        message: `${realDupe.length} live copies at the same address — likely a re-import duplicate. Keep the better record and delete the other.` });
+    } else {
+      out.push({ severity: "low", dealName: dealName(group[0]), ids: group.map((d) => d.id),
+        addresses: group.map((d) => d.address || "—"),
+        message: `${group.length} deals share this name at different addresses — confirm they're genuinely different properties, not a duplicate with a mistyped address.` });
+    }
+  }
+  return out.sort((a, b) => (a.severity === "high" ? 0 : 1) - (b.severity === "high" ? 0 : 1) || a.dealName.localeCompare(b.dealName));
+}
+
 export function runPortfolioAudit(deals: Deal[]): PortfolioAudit {
   const active = (deals || []).filter((d) => !d.trashedAt);
   const reimb = auditReimbursement(active);
-  return { reimbDeals: reimb.groups, fixedCamCount: reimb.fixedCamCount, grossCount: reimb.grossCount, tax: auditTaxCapture(active), anomalies: auditAnomalies(active), dealsScanned: active.length };
+  return { reimbDeals: reimb.groups, fixedCamCount: reimb.fixedCamCount, grossCount: reimb.grossCount, tax: auditTaxCapture(active), anomalies: auditAnomalies(active), duplicates: auditDuplicates(active), dealsScanned: active.length };
 }

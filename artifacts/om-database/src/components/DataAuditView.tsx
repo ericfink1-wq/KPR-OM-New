@@ -71,6 +71,7 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
         <Stat n={arith?.totalIssues ?? 0} label="Figures that don't tie out" tone={(arith?.totalIssues ?? 0) ? "amber" : "green"} />
         <Stat n={taxHigh} label="Tax-value issues (likely errors)" tone={taxHigh ? "red" : "green"} />
         <Stat n={audit.anomalies.length} label="Outliers vs your database" tone={audit.anomalies.length ? "amber" : "green"} />
+        <Stat n={audit.duplicates.filter((x) => x.severity === "high").length} label="Possible duplicate deals" tone={audit.duplicates.some((x) => x.severity === "high") ? "red" : "green"} />
       </div>
 
       {/* PRIMARY: arithmetic contradictions — the actionable worklist */}
@@ -156,6 +157,30 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
           Each figure is compared to the distribution across your comparable deals (cap rate &amp; avg rent by product type, tenant rent PSF by brand). An outlier may be a genuine feature of the deal or a mis-capture — verify. This gets sharper as you add deals.
         </div>
       </div>
+
+      {/* Possible duplicates — same property entered twice (re-import). Only shows
+          when there's something to review; trashed deals are already excluded. */}
+      {audit.duplicates.length > 0 && (
+        <div style={{ marginTop: 22 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.05em", color: C.sub, textTransform: "uppercase", marginBottom: 8 }}>Possible duplicate deals</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {audit.duplicates.map((dup) => {
+              const s = sev(dup.severity === "high" ? "high" : "info");
+              return (
+                <div key={dup.dealName + dup.ids.join()} onClick={() => onOpenDeal(dup.ids[0])} role="button"
+                  style={{ background: "#fff", border: `1px solid ${C.line}`, borderLeft: `3px solid ${s.fg}`, borderRadius: 8, padding: "9px 11px", cursor: "pointer" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: C.ink }}>{dup.dealName}</span>
+                    <span style={{ fontSize: 8.5, fontWeight: 800, color: s.fg, background: s.bg, border: `1px solid ${s.bd}`, borderRadius: 4, padding: "1px 5px", flexShrink: 0, whiteSpace: "nowrap" }}>{dup.severity === "high" ? "DUPLICATE" : "CONFIRM"}</span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: C.sub, lineHeight: 1.45, marginTop: 4 }}>{dup.message}</div>
+                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 3 }}>{dup.addresses.join("  ·  ")}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Reference (NOT errors): reimbursement classification inventory, collapsed. */}
       <div style={{ marginTop: 22 }}>
