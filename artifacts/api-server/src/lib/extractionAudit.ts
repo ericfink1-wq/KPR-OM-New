@@ -32,8 +32,15 @@ const isVacantName = (name: unknown): boolean => {
 };
 const usd = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`;
 const sf = (n: number) => `${Math.round(n).toLocaleString()} SF`;
+// Parse an ISO-ish date (YYYY-MM-DD…) to epoch ms; null when it isn't a real date.
+const parseISO = (v: unknown): number | null => {
+  const s = String(v ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return null;
+  const t = Date.parse(s.slice(0, 10));
+  return Number.isFinite(t) ? t : null;
+};
 
-interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown; occupancyCost?: unknown; salesPSF?: unknown; percentageRent?: unknown; otherRent?: unknown }
+interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown; occupancyCost?: unknown; salesPSF?: unknown; percentageRent?: unknown; otherRent?: unknown; leaseStart?: unknown; leaseExpiry?: unknown }
 
 // Namespaces these arithmetic checks so a re-audit can self-heal only its own flags
 // (drop ones that now pass, add new ones) without touching AI questions or lease-risk
@@ -46,6 +53,9 @@ export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-occ-stated-vs-computed-")) return "audit-occ-stated-vs-computed";
   if (id.startsWith("audit-occcost-fraction-")) return "audit-occcost-fraction";
   if (id.startsWith("audit-dupe-suite-")) return "audit-dupe-suite";
+  if (id.startsWith("audit-lease-dates-")) return "audit-lease-dates";
+  if (id.startsWith("audit-sales-below-rent-")) return "audit-sales-below-rent";
+  if (id.startsWith("audit-dupe-tenant-")) return "audit-dupe-tenant";
   return id;
 }
 export const AUDIT_CHECK_LABELS: Record<string, string> = {
@@ -68,6 +78,13 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-recoveries-rollup": "Recoveries roll-up",
   "audit-gpr-vs-rent": "GPR vs in-place rent",
   "audit-rentroll-incomplete": "Rent roll didn't extract",
+  "audit-lease-dates": "Lease expiry before start",
+  "audit-occupancy-over-100": "Occupancy over 100%",
+  "audit-sales-below-rent": "Sales PSF below rent PSF",
+  "audit-reno-before-built": "Renovated before built",
+  "audit-anchor-missing": "Grocery anchor missing",
+  "audit-walt-recompute": "WALT vs roster expiries",
+  "audit-dupe-tenant": "Duplicate tenant row",
 };
 
 // SOURCE-LEVEL signal (runs on the raw PDF text BEFORE/alongside the LLM, not the
@@ -461,6 +478,129 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       id: "audit-gpr-vs-rent", source: "check", severity: "low", field: "Gross potential rent",
       question: `Gross potential rent (${usd(gpr)}) is below the in-place base rent roll-up (${usd(sumRent)}). GPR should include vacant space at market, so it shouldn't be lower.`,
       detail: `GPR = all space at market (incl. vacant). If it's below in-place contractual rent, GPR or a tenant rent is mis-captured.`,
+      suggestedValue: null, target: null,
+    });
+  }
+
+  // ── O. Per-tenant lease-date chronology: expiry must be AFTER commencement ─────
+  // Swapped start/expiry columns or a mis-keyed year reads as an expiry on or before
+  // the commencement — impossible, and it silently corrupts WALT and rollover.
+  let dateFlags = 0;
+  for (const t of occupied) {
+    if (dateFlags >= 4) break;
+    const start = parseISO(t.leaseStart), end = parseISO(t.leaseExpiry);
+    if (start == null || end == null || end > start) continue;
+    const nm = String(t.name ?? "tenant");
+    dateFlags++;
+    out.push({
+      id: `audit-lease-dates-${nm}`.slice(0, 80), source: "check", severity: "medium",
+      field: `${nm} — lease dates`,
+      question: `${nm}: the lease expiry (${String(t.leaseExpiry).slice(0, 10)}) is on or before the commencement (${String(t.leaseStart).slice(0, 10)}). The dates are likely swapped or a year is mis-read.`,
+      detail: `A lease must expire after it commences. Usually the start and expiry were read from the wrong columns, or one year is off — check the rent roll.`,
+      suggestedValue: null, target: { kind: "tenant", fieldKey: "leaseExpiry", tenantName: nm, valueType: "text" },
+    });
+  }
+
+  // ── P. Occupancy over 100% (impossible) ───────────────────────────────────────
+  if (occ != null && occ > 100) {
+    out.push({
+      id: "audit-occupancy-over-100", source: "check", severity: "medium", field: "Occupancy",
+      question: `Occupancy is ${occ}% — over 100% isn't possible. Re-check the occupied SF or the GLA.`,
+      detail: `Occupancy can't exceed 100%; usually the occupied SF is overstated or the GLA is understated.`,
+      suggestedValue: null, target: { kind: "deal", fieldKey: "occupancy", valueType: "number" },
+    });
+  }
+
+  // ── Q. Per-tenant sales PSF below rent PSF (occupancy cost > 100%, implausible) ─
+  let salesRentFlags = 0;
+  for (const t of occupied) {
+    if (salesRentFlags >= 3) break;
+    const spsf = num(t.salesPSF), rpsf = num(t.rentPerSF);
+    if (spsf == null || spsf <= 0 || rpsf == null || rpsf <= 0 || spsf >= rpsf) continue;
+    const nm = String(t.name ?? "tenant");
+    salesRentFlags++;
+    out.push({
+      id: `audit-sales-below-rent-${nm}`.slice(0, 80), source: "check", severity: "medium",
+      field: `${nm} — sales vs rent`,
+      question: `${nm}: reported sales of $${spsf.toFixed(0)} PSF are LOWER than the rent of $${rpsf.toFixed(2)} PSF — that implies an occupancy cost over 100%, which is implausible. One figure is mis-read.`,
+      detail: `Sales PSF should comfortably exceed rent PSF (occupancy cost is typically 2–15%). Sales below rent usually means a units slip — e.g. sales captured in $000s, or a monthly/total figure read as an annual PSF.`,
+      suggestedValue: null, target: { kind: "tenant", fieldKey: "salesPSF", tenantName: nm, valueType: "number" },
+    });
+  }
+
+  // ── R. Renovation year before year built (impossible) ─────────────────────────
+  const built = num(deal.yearBuilt), reno = num(deal.renovationYear);
+  if (built != null && reno != null && built > 1800 && reno > 1800 && reno < built) {
+    out.push({
+      id: "audit-reno-before-built", source: "check", severity: "low", field: "Year renovated",
+      question: `Renovation year (${reno}) is before the year built (${built}). One of the dates is wrong.`,
+      detail: `A property can't be renovated before it was built — check which year was mis-captured.`,
+      suggestedValue: null, target: { kind: "deal", fieldKey: "renovationYear", valueType: "number" },
+    });
+  }
+
+  // ── S. Grocery-anchored center with NO anchor in the roster (dropped-anchor catch) ─
+  // The grocer is the defining tenant; if it's missing AND there's no anchor-sized box
+  // at all, the anchor row likely didn't extract (large boxes are often printed as an
+  // image). Gated by "no big box present" so a regional grocer we don't name can't
+  // false-fire.
+  const centerType = String(deal.centerType ?? "").toLowerCase();
+  const assetType = String(deal.assetType ?? "").toLowerCase();
+  if ((/grocery/.test(centerType) || /grocery/.test(assetType)) && occupied.length >= 3) {
+    const GROCER = /\b(kroger|safeway|albertsons|publix|cub foods|cub|jewel|giant eagle|giant|stop\s*&?\s*shop|shoprite|wegmans|whole foods|trader joe|aldi|food lion|harris teeter|ralphs|vons|sprouts|h-?e-?b|heb|winn-?dixie|hy-?vee|king soopers|fred meyer|smith'?s|meijer|food 4 less|grocery outlet|save\s*-?\s*a\s*-?\s*lot|piggly wiggly|ingles|weis|acme|tops|price chopper|market basket|raley'?s|stater bros|fareway|schnucks|dierbergs|brookshire|shaw'?s|star market|lidl|wic|sprouts farmers)\b/i;
+    const hasGrocer = occupied.some(t => GROCER.test(String(t.name ?? "")));
+    const hasAnchor = owned.some(t => t.isAnchor === true);
+    const hasBigBox = owned.some(t => (num(t.sf) ?? 0) >= 25000);
+    if (!hasGrocer && !hasAnchor && !hasBigBox) {
+      out.push({
+        id: "audit-anchor-missing", source: "check", severity: "medium", field: "Grocery anchor",
+        question: `This is a grocery-anchored center, but no grocery anchor appears in the roster — no tenant is flagged as an anchor, none matches a known grocer, and there's no anchor-sized box (≥25,000 SF). Did the anchor drop out of the rent roll?`,
+        detail: `A grocery-anchored center's defining tenant is the grocer. If it's missing, the anchor row likely didn't extract (a large box printed as an image) — add it from the rent roll / site plan, or correct the center type.`,
+        suggestedValue: null, target: null,
+      });
+    }
+  }
+
+  // ── T. WALT recomputed from roster expiries vs the stated WALT ─────────────────
+  // SF-weighted remaining term as of the roll/OM date. Generous thresholds + low
+  // severity: a by-rent WALT or options counted into the stated figure can differ.
+  const statedWalt = num(deal.walt);
+  if (statedWalt != null && statedWalt > 0 && occupied.length >= 5) {
+    const refRaw = (typeof deal.tenantsAsOf === "string" && deal.tenantsAsOf) || (typeof deal.omDate === "string" && deal.omDate) || null;
+    const refMs = parseISO(refRaw) ?? Date.now();
+    const withExp = occupied.filter(t => parseISO(t.leaseExpiry) != null && (num(t.sf) ?? 0) > 0);
+    const expSF = sumSF(withExp);
+    if (withExp.length >= Math.ceil(occupied.length * 0.7) && expSF > 0) {
+      const yrMs = 365.25 * 24 * 3600 * 1000;
+      const wsum = withExp.reduce((s, t) => s + (num(t.sf) ?? 0) * Math.max(0, (parseISO(t.leaseExpiry)! - refMs) / yrMs), 0);
+      const computedWalt = wsum / expSF;
+      if (computedWalt > 0 && Math.abs(computedWalt - statedWalt) > 1.5 && Math.abs(computedWalt - statedWalt) / statedWalt > 0.25) {
+        out.push({
+          id: "audit-walt-recompute", source: "check", severity: "low", field: "WALT",
+          question: `Stated WALT is ${statedWalt.toFixed(1)} yrs, but the roster's lease expiries (SF-weighted) roll up to ${computedWalt.toFixed(1)} yrs. Reconcile.`,
+          detail: `WALT recomputed from each occupied tenant's lease expiry, SF-weighted, as of ${refRaw || "the roll date"}. A gap may mean a wrong expiry, renewal options folded into the stated WALT, or a different basis (by rent vs by SF).`,
+          suggestedValue: computedWalt.toFixed(1), target: { kind: "deal", fieldKey: "walt", valueType: "number" },
+        });
+      }
+    }
+  }
+
+  // ── U. Same tenant NAME on more than one occupied row (possible duplicate row) ─
+  const byName = new Map<string, number>();
+  for (const t of occupied) {
+    const nm = String(t.name ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (nm) byName.set(nm, (byName.get(nm) ?? 0) + 1);
+  }
+  let dupNameFlags = 0;
+  for (const [nm, count] of byName) {
+    if (dupNameFlags >= 3) break;
+    if (count < 2) continue;
+    dupNameFlags++;
+    const disp = nm.replace(/\b\w/g, c => c.toUpperCase());
+    out.push({
+      id: `audit-dupe-tenant-${nm}`.slice(0, 80), source: "check", severity: "low", field: `${disp} — appears ${count}×`,
+      question: `"${disp}" appears ${count} times in the roster. Confirm these are separate suites/locations, not a duplicated row.`,
+      detail: `The same tenant on multiple occupied rows is sometimes legit (a tenant with two suites), but is often a duplicated line that double-counts its SF and rent.`,
       suggestedValue: null, target: null,
     });
   }
