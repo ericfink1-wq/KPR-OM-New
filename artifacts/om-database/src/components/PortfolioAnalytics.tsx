@@ -307,6 +307,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [auditStats, setAuditStats] = useState<{ deals: number; issues: number; high: number; breakdown: { key: string; label: string; count: number }[] }>({ deals: 0, issues: 0, high: 0, breakdown: [] });
   const [auditing, setAuditing] = useState(false);
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
+  const [autofixing, setAutofixing] = useState(false);
+  const [autofixMsg, setAutofixMsg] = useState<string | null>(null);
   const [showAuditBreakdown, setShowAuditBreakdown] = useState(false);
   const [scope, setScope] = useState<"all" | "owned">("all");
 
@@ -389,6 +391,21 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       })
       .catch(e => setAuditMsg(`⚠ ${e.message}`))
       .finally(() => setAuditing(false));
+  };
+
+  const handleAutofix = () => {
+    if (!window.confirm("Auto-fix the data issues that have a single right answer (no judgement needed)? Token-free and deterministic: occupancy cost stored as a 0.NN fraction → ×100, a rentPerSF that doesn't reconcile to a reliable annual rent → recomputed from the annual, and stale occupancy / WALT / avg-rent → recomputed from the roster. It SNAPSHOTS first (fully reversible via Backup → Restore a snapshot) and LEAVES anything ambiguous for you to review. Run it?")) return;
+    setAutofixing(true); setAutofixMsg(null);
+    fetch("/api/deals/autofix", { method: "POST", credentials: "include" })
+      .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; rentFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>)
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || "Auto-fix failed");
+        setAutofixMsg(`✓ Fixed ${d.changedDeals ?? 0} deal${(d.changedDeals ?? 0) === 1 ? "" : "s"} · ${d.occCostFixed ?? 0} occ-cost, ${d.rentFixed ?? 0} rent, ${d.metricFixes ?? 0} metrics · ${d.cleared ?? 0} flags cleared — reloading…`);
+        loadAuditStats();
+        setTimeout(() => window.location.reload(), 1600);
+      })
+      .catch(e => setAutofixMsg(`⚠ ${e.message}`))
+      .finally(() => setAutofixing(false));
   };
 
   const handleRefreshStale = () => {
@@ -509,7 +526,11 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               <button onClick={handleReaudit} disabled={auditing} title="Re-sync the per-deal Import-Review flags + card badges to the current data (token-free, self-healing)." style={{ background: "none", border: "none", padding: 0, cursor: auditing ? "default" : "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
                 {auditing ? "syncing…" : "↻ re-sync flags"}
               </button>
+              <button onClick={handleAutofix} disabled={autofixing} title="Auto-fix the data issues with a single right answer (occ-cost ×100, rentPerSF from a reliable annual, stale occupancy/WALT/avg-rent). Token-free, snapshots first, reversible. Leaves judgement calls alone." style={{ background: "none", border: "none", padding: 0, cursor: autofixing ? "default" : "pointer", fontSize: 9.5, color: "#3f7a1f", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+                {autofixing ? "fixing…" : "✨ auto-fix safe issues"}
+              </button>
             </div>
+            {autofixMsg && <span style={{ fontSize: 10.5, color: autofixMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{autofixMsg}</span>}
             {showAuditBreakdown && auditStats.breakdown.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end", maxWidth: 360 }}>
                 {auditStats.breakdown.map(b => (

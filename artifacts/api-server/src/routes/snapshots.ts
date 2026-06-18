@@ -7,7 +7,7 @@ import { requireAuth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
-async function createSnapshot(
+export async function createSnapshot(
   reason: string,
 ): Promise<{ id: number; createdAt: Date } | { skipped: true }> {
   if (reason === "auto") {

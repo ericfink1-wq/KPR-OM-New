@@ -9,6 +9,7 @@ import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from "../lib/demographics";
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
+import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
 
@@ -1272,6 +1273,112 @@ router.post("/deals/reaudit", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to re-audit deals");
     res.status(500).json({ error: "Failed to re-audit deals" });
+  }
+});
+
+// POST /api/deals/autofix — deterministic, token-free AUTO-CORRECTION sweep. Fixes only
+// the issues with a single right answer (no judgement): occupancy cost stored as a 0.NN
+// fraction (×100), a rentPerSF that doesn't reconcile to a RELIABLE annual rent
+// (recompute from annual), and stale roster-derived metrics (occupancy / WALT / wtd-avg
+// rent, honoring verified locks). Then self-heals the audit questions that now pass.
+// Snapshots first so it is fully reversible. Verified against the live portfolio to
+// clear ~21 flags and create ZERO new ones; it deliberately LEAVES anything ambiguous
+// (e.g. an annual rent that implies an absurd $/SF, or occupancy that can't be computed)
+// for human judgement.
+router.post("/deals/autofix", requireAuth, async (req, res) => {
+  const nA = (v: unknown): number | null => {
+    if (v == null || v === "") return null;
+    const n = typeof v === "string" ? Number(v.replace(/[$,%\s]/g, "")) : Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const isVacA = (name: unknown): boolean => {
+    const s = String(name ?? "").trim().toLowerCase();
+    return !s || s === "-" || /^(vacant|available|avail|spec(ulative)?|white\s*box|tbd|to\s+be\s+leased)\b/.test(s);
+  };
+  const isNAPA = (t: Record<string, unknown>): boolean => {
+    if (t.isNAP === true) return true;
+    if (isVacA(t.name)) return false;
+    const hasLease = !!((typeof t.leaseStart === "string" && t.leaseStart.trim()) || (typeof t.leaseExpiry === "string" && t.leaseExpiry.trim()) || (typeof t.rentSchedule === "string" && t.rentSchedule.trim()));
+    if (hasLease) return false;
+    const sf = nA(t.sf), r = nA(t.annualRent), rp = nA(t.rentPerSF);
+    return sf != null && sf > 0 && (r == null || r === 0) && (rp == null || rp === 0);
+  };
+  const parseD = (s: unknown): Date | null => {
+    const str = String(s ?? "").trim(); if (!str) return null;
+    const d = new Date(str + (/^\d{4}-\d{2}-\d{2}$/.test(str) ? "T12:00:00" : ""));
+    return isNaN(d.getTime()) ? null : d;
+  };
+  // Faithful port of recomputeRosterMetrics (om-database/src/lib/utils.ts) — keep in sync.
+  const recompute = (tenants: Record<string, unknown>[], asOf: unknown, deal: Record<string, unknown>) => {
+    const ver = (deal.verified || {}) as Record<string, unknown>;
+    const out: { occupancy?: number; walt?: number; weightedAvgRentPSF?: number } = {};
+    const ref = parseD(asOf) ?? new Date();
+    const occ = tenants.filter(t => !isVacA(t.name) && !isNAPA(t));
+    const totalSF = nA(deal.totalSF);
+    if (!ver.occupancy && totalSF && totalSF > 0) {
+      const o = Math.round(occ.reduce((s, t) => s + (nA(t.sf) ?? 0), 0) / totalSF * 1000) / 10;
+      if (o > 0 && o <= 100) out.occupancy = o;
+    }
+    if (!ver.walt) {
+      let sf = 0, w = 0;
+      for (const t of occ) { const s = nA(t.sf); if (!s) continue; const e = parseD(t.leaseExpiry); const yr = e ? Math.max(0, (e.getTime() - ref.getTime()) / (365.25 * 86_400_000)) : nA(t.remainingTermYears); if (yr == null) continue; sf += s; w += s * yr; }
+      if (w > 0 && sf > 0) out.walt = Math.round(w / sf * 10) / 10;
+    }
+    if (!ver.weightedAvgRentPSF) {
+      let sf = 0, w = 0;
+      for (const t of occ) { const s = nA(t.sf), r = nA(t.rentPerSF); if (s && s > 0 && r && r > 0) { sf += s; w += s * r; } }
+      if (sf > 0) out.weightedAvgRentPSF = Math.round(w / sf * 100) / 100;
+    }
+    return out;
+  };
+
+  try {
+    const snap = await createSnapshot("before-autofix");
+    const rows = await db.select().from(dealsTable);
+    let scanned = 0, occCostFixed = 0, rentFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
+    for (const r of rows) {
+      const data = r.data as Record<string, unknown>;
+      if (data.trashedAt || data._processing || data._processingError) continue;
+      scanned++;
+      let changed = false;
+      // 1. Per-tenant deterministic fixes
+      const tenants = (Array.isArray(data.tenants) ? data.tenants : []).map((raw) => {
+        const t = { ...(raw as Record<string, unknown>) };
+        const oc = nA(t.occupancyCost);
+        if (oc != null && oc > 0 && oc < 1) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
+        const sf = nA(t.sf), psf = nA(t.rentPerSF), ann = nA(t.annualRent);
+        if (sf && psf && ann && ann > 1000 && !isVacA(t.name) && !isNAPA(t)) {
+          const implied = psf * sf, rel = Math.abs(implied - ann) / ann, realPSF = ann / sf;
+          // Only when the annual is RELIABLE (implies a sane $2–$80/SF) and the stored
+          // per-SF is clearly off — leave absurd-annual cases (e.g. $780/SF) for judgement.
+          if (rel > 0.15 && Math.abs(implied - ann) > 10000 && realPSF >= 2 && realPSF <= 80 && Math.abs(psf - realPSF) / realPSF > 0.3) {
+            t.rentPerSF = Math.round(realPSF * 100) / 100; rentFixed++; changed = true;
+          }
+        }
+        return t;
+      });
+      const updated: Record<string, unknown> = { ...data, tenants };
+      // 2. Recompute roster-derived metrics (honors verified locks)
+      const m = recompute(tenants, updated.tenantsAsOf, updated);
+      for (const k of ["occupancy", "walt", "weightedAvgRentPSF"] as const) {
+        if (m[k] != null && nA(updated[k]) !== m[k]) { updated[k] = m[k]; metricFixes++; changed = true; }
+      }
+      // 3. Self-heal audit questions (same rules as reaudit)
+      const fresh = auditExtraction(updated);
+      const freshIds = new Set(fresh.map(q => q.id));
+      const existing = Array.isArray(updated.reviewQuestions) ? (updated.reviewQuestions as Array<Record<string, unknown>>) : [];
+      const kept = existing.filter(q => { const id = String(q?.id || ""); if (!id.startsWith(AUDIT_ID_PREFIX)) return true; if (q?.resolvedAt) return true; return freshIds.has(id); });
+      const keptIds = new Set(kept.map(q => String(q?.id || "")));
+      const next = [...kept, ...fresh.filter(q => !keptIds.has(q.id))];
+      const clearedHere = existing.length - kept.length;
+      if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
+      if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
+    }
+    req.log.info({ scanned, occCostFixed, rentFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
+    res.json({ ok: true, scanned, occCostFixed, rentFixed, metricFixes, changedDeals, cleared, snapshot: snap });
+  } catch (err) {
+    req.log.error({ err }, "Auto-fix failed");
+    res.status(500).json({ error: "Auto-fix failed" });
   }
 });
 

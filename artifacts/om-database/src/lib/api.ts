@@ -666,6 +666,15 @@ export async function apiReauditDeals(): Promise<{ ok: boolean; scanned: number;
   return resp.json() as Promise<{ ok: boolean; scanned: number; flagged: number; added: number; cleared: number }>;
 }
 
+export async function apiAutofixDeals(): Promise<{ ok: boolean; scanned: number; occCostFixed: number; rentFixed: number; metricFixes: number; changedDeals: number; cleared: number }> {
+  const resp = await apiFetch(`/deals/autofix`, { method: "POST" });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Auto-fix failed");
+  }
+  return resp.json() as Promise<{ ok: boolean; scanned: number; occCostFixed: number; rentFixed: number; metricFixes: number; changedDeals: number; cleared: number }>;
+}
+
 export interface AuditListDeal { dealId: string; dealName: string; high: number; issues: { key: string; label: string; severity: string; question: string }[] }
 export async function apiAuditList(): Promise<{ deals: AuditListDeal[]; totalDeals: number; totalIssues: number }> {
   const resp = await apiFetch(`/deals/audit-list`);
