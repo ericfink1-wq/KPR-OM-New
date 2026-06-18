@@ -546,6 +546,13 @@ NEW UNDERWRITING SIGNALS — fold these into the grade, strengths, risks AND the
 - OTHER INCOME (otherIncome): non-rent MARGIN income (utility resale, etc.) is less durable than contractual rent — note it and do not credit it like NOI.
 - TAX REASSESSMENT: when currentAssessedValue and the purchase/asking price are both present, compare the assessed-implied market (assessedValue ÷ the state's commercial assessment ratio — e.g. Ohio ~35%, Texas ~100%) to the price. If the price is WELL ABOVE the implied current market, flag a likely property-tax reassessment INCREASE as a risk (a real go-forward NOI hit). A disclosed taxAbatement that may not survive the sale is also a risk (current taxes are artificially low).
 
+FINAL SELF-CHECK BEFORE YOU RETURN — re-read your own JSON and FIX any of these before outputting. These are the exact tie-outs verified downstream; catching them now keeps a wrong figure from landing:
+- UNITS: occupancy is a PERCENT 0–100 (never a 0–1 fraction, never >100). capRate is a percent ~3–12 (not basis points like 650, not a fraction like 0.065). Per-tenant occupancyCost is a percent (e.g. 11.8, not 0.118).
+- PER TENANT: rentPerSF × sf must ≈ annualRent (annualRent is BASE only — no recoveries/percentage/other folded in). salesPSF should EXCEED rentPerSF (sales below rent implies occupancy cost over 100% — almost always a units slip, e.g. sales in $000s or a total read as an annual PSF). leaseExpiry must be AFTER leaseStart (don't read the start/expiry from swapped columns). All dates ISO YYYY-MM-DD. Do not list the same tenant twice (it double-counts SF and rent), and do not merge two suites into one row.
+- ROSTER vs BUILDING: occupied + vacant suite SF should reconcile to totalSF, and stated occupancy should ≈ occupied SF ÷ totalSF. If a grocery/anchor box appears on the site plan or stacking diagram but its rent-roll economics didn't come through, still include the tenant row (don't silently drop the anchor).
+- FINANCIAL THREE-WAY: NOI ÷ capRate ≈ price; NOI = EGI − OpEx and NOI ≤ EGI; pricePerSF ≈ price ÷ totalSF; grossPotentialRent ≥ the in-place base-rent roll-up. yearRenovated ≥ yearBuilt.
+- When two source figures genuinely conflict, capture the rent-roll / most-recent value and NOTE the conflict in keyAssumptions rather than silently picking one. NEVER invent a precise number to force a tie-out — leave a field null if the OM doesn't disclose it.
+
 Base everything on the CURRENT roster below (note tenantsAsOf — this roster supersedes any older OM). Output must start with { and end with }.
 
 CURRENT PROPERTY DATA (JSON):
