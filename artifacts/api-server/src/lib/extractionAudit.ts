@@ -383,8 +383,11 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
     }
     let worst: { k: number; egr: number; ox: number; rn: number; imp: number; d: number } | null = null;
     for (let k = 0; k < cf.length; k++) {
-      const egr = num(cf[k]?.egr), ox = num(cf[k]?.operatingExpenses), rn = num(cf[k]?.noi);
-      if (egr != null && egr > 0 && ox != null && rn != null) {
+      const egr = num(cf[k]?.egr), oxRaw = num(cf[k]?.operatingExpenses), rn = num(cf[k]?.noi);
+      if (egr != null && egr > 0 && oxRaw != null && rn != null) {
+        // OpEx in a cash-flow row is often stored NEGATIVE (expense sign convention),
+        // so NOI = EGR − |OpEx| — using the raw value double-negated and false-flagged.
+        const ox = Math.abs(oxRaw);
         const imp = egr - ox;
         const gapd = Math.abs(imp - rn);
         const d = gapd / Math.max(Math.abs(rn), Math.abs(imp), 1);
