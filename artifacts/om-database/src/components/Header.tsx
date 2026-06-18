@@ -362,6 +362,30 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     }
   };
 
+  // Deals-only backup: the full deal records WITHOUT sources or images. The full
+  // backup is ~100MB because it bundles every cover/site-plan image; this is a few MB
+  // — small enough to hand off (Drive/email/chat) for analysis or validation. Same
+  // {deals:[...]} shape, so "Restore from backup" and the validation harness both read
+  // it. NOT a substitute for the full backup (no images/sources) — it's for data work.
+  const handleDealsOnlyBackup = () => {
+    setBackupMenu(false);
+    try {
+      const payload = {
+        app: "KPR Deal Intelligence",
+        schema: 2,
+        exportedAt: new Date().toISOString(),
+        dealCount: deals.length,
+        deals,
+      };
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+      a.download = `kpr-deals-data-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    } catch (err) {
+      alert("Deals-only backup failed: " + (err instanceof Error ? err.message : "error"));
+    }
+  };
+
   // One-time maintenance: strip the city/state/zip that some older deals have
   // duplicated onto the end of their street field (e.g. "…Kokomo, IN 46902 46902").
   // Only touches deals where the trailing piece matches the separate city/state/zip
@@ -714,6 +738,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 260, overflow: "hidden"
             }}>
               {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
+              {menuBtn(handleDealsOnlyBackup, "Deals only (.json, no images)", `Deal data only — a few MB, easy to share · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
               {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
               {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals")}
               {menuBtn(openSnapshotModal, "Restore a snapshot…", "Auto-saved before imports, deletes & restores")}
