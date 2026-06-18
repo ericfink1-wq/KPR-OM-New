@@ -84,6 +84,21 @@ const looksLikeInstruction = (draft: string, valueType: "number" | "text") => {
   return v.split(/\s+/).length >= 4;
 };
 
+// Which NUMERIC tenant field a correction is about: prefer the question's own
+// target field; otherwise infer it from the question wording (SF, PSF, rent,
+// sales). Returns null when it isn't a numeric tenant field — then we don't try
+// the deterministic multi-tenant parse below.
+const inferTenantNumberField = (q: ReviewQuestion): string | null => {
+  const tk = q.target?.fieldKey;
+  if (q.target?.kind === "tenant" && tk && TENANT_FIELDS[tk] === "number") return tk;
+  const hay = `${q.field || ""} ${q.question || ""}`.toLowerCase();
+  if (/\bsf\b|square f|\bgla\b|\bsize\b/.test(hay)) return "sf";
+  if (/psf|per square|\$\s*\/\s*sf|rent\s*\/\s*sf/.test(hay)) return "rentPerSF";
+  if (/annual (base )?rent|\bbase rent\b/.test(hay)) return "annualRent";
+  if (/\bsales\b/.test(hay)) return "salesPSF";
+  return null;
+};
+
 // Non-blocking post-import data-integrity review. Opened from the "N to confirm"
 // badge on the deal page. Each question is either an AI low-confidence capture or
 // a deterministic arithmetic/missing-field check. Confirming or dismissing stamps
@@ -278,6 +293,54 @@ USER CORRECTION: ${instruction}`;
     return out;
   };
 
+  // Deterministic, AI-FREE parse of the most common correction Eric types: one or
+  // more "<Tenant> <number>" pairs in a single answer (e.g. "McDonalds 3962,
+  // Raising Canes 5800" when the site plan mislabeled two suites with the same SF).
+  // It matches each named tenant against the roster (loose spelling — apostrophes,
+  // spacing, plurals), reads the number that follows the name, and writes the
+  // numeric field the question is about (its target field, or one inferred from the
+  // wording: SF / PSF / rent / sales). Returns [] when it can't confidently parse,
+  // so we fall through to the AI. This makes the common multi-tenant case instant
+  // and reliable — no model call, and a working fallback when the AI is busy.
+  const localInterpret = (instruction: string, q: ReviewQuestion): Edit[] => {
+    const tenants = (deal.tenants || []) as Tenant[];
+    if (!tenants.length) return [];
+    const field = inferTenantNumberField(q);
+    if (!field) return [];
+    const hay = instruction.toLowerCase();
+    // Find where each roster tenant is mentioned (full normalized name, its
+    // space-collapsed form, or a distinctive ≥4-char token for one-word brands).
+    const seen = new Set<string>();
+    const found: { tenant: Tenant; pos: number }[] = [];
+    for (const tn of tenants) {
+      const name = (tn.canonicalName || tn.name || "").trim();
+      if (!name) continue;
+      const key = tenantKey(name);
+      if (!key || seen.has(key)) continue;
+      let pos = -1;
+      const consider = (v: string) => { if (v && hay.includes(v)) { const p = hay.indexOf(v); if (pos < 0 || p < pos) pos = p; } };
+      consider(name.toLowerCase()); consider(key); consider(key.replace(/ /g, ""));
+      if (pos < 0) for (const tok of key.split(" ")) if (tok.length >= 4) consider(tok);
+      if (pos >= 0) { found.push({ tenant: tn, pos }); seen.add(key); }
+    }
+    if (!found.length) return [];
+    found.sort((a, b) => a.pos - b.pos);
+    // Each tenant claims the first number appearing from its name up to the next
+    // tenant's name (commas inside numbers like "5,800" stay intact).
+    const numRe = /\$?\s*\d[\d,]*(?:\.\d+)?/;
+    const out: Edit[] = [];
+    for (let i = 0; i < found.length; i++) {
+      const slice = instruction.slice(found[i].pos, i + 1 < found.length ? found[i + 1].pos : instruction.length);
+      const m = slice.match(numRe);
+      if (!m) continue;
+      const value = Number(m[0].replace(/[$,\s]/g, ""));
+      if (isNaN(value)) continue;
+      const nm = found[i].tenant.canonicalName || found[i].tenant.name;
+      out.push({ kind: "tenant", fieldKey: field, tenantName: nm, value, label: `${nm} · ${field} → ${value.toLocaleString()}` });
+    }
+    return out;
+  };
+
   // Save handler for the inline editor: literal value → write directly; an
   // instruction → interpret via AI and show a confirmation proposal.
   const onSave = async (q: ReviewQuestion) => {
@@ -292,13 +355,21 @@ USER CORRECTION: ${instruction}`;
       commitEdits(q, [{ kind: t.kind, fieldKey: t.fieldKey, tenantName: t.tenantName, value, label: `${t.fieldKey} → ${value ?? "—"}` }], value == null ? "(cleared)" : String(value));
       return;
     }
+    // Deterministic parse first — "<Tenant> <number>" pairs need no AI and handle
+    // multi-tenant answers instantly. Only call the model when that can't read it.
+    const local = localInterpret(draft, q);
+    if (local.length) { setProposal({ questionId: q.id, summary: local.map(e => e.label).join("; "), edits: local }); return; }
     setAiBusy(true); setAiErr(null);
     try {
       const edits = await interpret(draft, q);
       if (edits.length === 0) setAiErr("I couldn't tell which field to change. Try rephrasing, or just type the value itself.");
       else setProposal({ questionId: q.id, summary: edits.map(e => e.label).join("; "), edits });
     } catch (e) {
-      setAiErr(e instanceof Error ? e.message : "The AI couldn't interpret that.");
+      // AI was busy/unreachable — try the deterministic parser as a last resort so a
+      // multi-tenant correction still goes through without the model.
+      const fallback = localInterpret(draft, q);
+      if (fallback.length) setProposal({ questionId: q.id, summary: fallback.map(e => e.label).join("; "), edits: fallback });
+      else setAiErr(e instanceof Error ? e.message : "The AI couldn't interpret that.");
     } finally {
       setAiBusy(false);
     }
