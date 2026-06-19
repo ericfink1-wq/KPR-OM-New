@@ -94,6 +94,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-walt-recompute": "WALT vs roster expiries",
   "audit-dupe-tenant": "Duplicate tenant row",
   "audit-remterm-expiry": "Remaining term vs expiry",
+  "audit-pop-gradient": "Population vs radius",
 };
 
 // SOURCE-LEVEL signal (runs on the raw PDF text BEFORE/alongside the LLM, not the
@@ -701,6 +702,33 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
         detail: `Remaining term should equal the lease expiry minus the rent-roll date. A gap this size usually means the expiry year or the term was mis-read — and it skews WALT and rollover, which use whichever value is present. (Option periods folded into one figure can cause a small legitimate gap.)`,
         suggestedValue: fromDate.toFixed(1), target: { kind: "tenant", fieldKey: "remainingTermYears", tenantName: nm, valueType: "number" },
       });
+    }
+  }
+
+  // ── S. Demographic population gradient — must rise with the radius ─────────────
+  // Trade-area population is cumulative: the 3-mi ring contains the 1-mi ring, etc.,
+  // so 1mi ≤ 3mi ≤ 5mi ≤ 10mi ALWAYS. A larger ring with a smaller population means
+  // two radii were transposed or one was mis-scaled (e.g. a 5-mi figure dropped into
+  // the 10-mi slot) — a clear contradiction, and demographics drive the market read.
+  {
+    const demo = (deal.marketDemographics ?? {}) as Record<string, unknown>;
+    const popAt = (dealKey: string, demoKey: string) => num((deal as Record<string, unknown>)[dealKey]) ?? num(demo[demoKey]);
+    const rings: [number, number | null][] = [
+      [1, popAt("population1mi", "pop1mi")], [3, popAt("population3mi", "pop3mi")],
+      [5, popAt("population5mi", "pop5mi")], [10, popAt("population10mi", "pop10mi")],
+    ];
+    const present = rings.filter(([, v]) => v != null && (v as number) > 0) as [number, number][];
+    for (let i = 1; i < present.length; i++) {
+      const [rPrev, vPrev] = present[i - 1], [rCur, vCur] = present[i];
+      if (vCur < vPrev * 0.98) {   // allow a hair of rounding; a real drop is the flag
+        out.push({
+          id: "audit-pop-gradient", source: "check", severity: "medium", field: "Demographics",
+          question: `Population doesn't rise with the radius: the ${rCur}-mi ring (${Math.round(vCur).toLocaleString()}) is smaller than the ${rPrev}-mi ring (${Math.round(vPrev).toLocaleString()}). A larger ring always contains the smaller one — two radii are likely transposed or one is mis-scaled.`,
+          detail: `Trade-area population is cumulative, so it can only grow as the radius grows. Re-check which figure belongs to which ring.`,
+          suggestedValue: null, target: { kind: "deal", fieldKey: `population${rCur}mi`, valueType: "number" },
+        });
+        break;
+      }
     }
   }
 
