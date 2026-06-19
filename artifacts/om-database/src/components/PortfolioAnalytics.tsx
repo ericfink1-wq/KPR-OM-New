@@ -304,6 +304,13 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [staleCount, setStaleCount] = useState(0);
   const [refreshingStale, setRefreshingStale] = useState(false);
   const [staleMsg, setStaleMsg] = useState<string | null>(null);
+  // Batch (½-cost) stale-analysis refresh. The pending batch id is persisted to
+  // localStorage so the page can keep polling/apply across reloads until it's done.
+  const [batchInfo, setBatchInfo] = useState<{ id: string; count: number } | null>(() => {
+    try { const s = localStorage.getItem("kpr_analysis_batch"); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchMsg, setBatchMsg] = useState<string | null>(null);
   const [auditStats, setAuditStats] = useState<{ deals: number; issues: number; high: number; breakdown: { key: string; label: string; count: number }[] }>({ deals: 0, issues: 0, high: 0, breakdown: [] });
   const [maintaining, setMaintaining] = useState(false);
   const [maintainMsg, setMaintainMsg] = useState<string | null>(null);
@@ -425,6 +432,53 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       .finally(() => setRefreshingStale(false));
   };
 
+  const saveBatch = (info: { id: string; count: number } | null) => {
+    setBatchInfo(info);
+    try { if (info) localStorage.setItem("kpr_analysis_batch", JSON.stringify(info)); else localStorage.removeItem("kpr_analysis_batch"); } catch { /* ignore */ }
+  };
+
+  // Submit ALL stale deals as one Anthropic Message Batch (~½ the token cost). It runs
+  // in the background and applies automatically when ready (the effect below polls).
+  const handleBatchRefresh = () => {
+    if (!window.confirm(`Submit ${staleCount} deal${staleCount === 1 ? "" : "s"} as ONE background batch at about HALF the AI cost? It processes asynchronously (usually minutes, occasionally up to ~1 hour) and applies automatically when ready — you can leave this page. The regular "Refresh" button is faster but full price.`)) return;
+    setBatchBusy(true); setBatchMsg("Submitting…");
+    fetch("/api/deals/refresh-stale-analysis-batch", { method: "POST", credentials: "include" })
+      .then(r => r.json() as Promise<{ ok: boolean; batchId?: string | null; count?: number; error?: string }>)
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || "Batch submit failed");
+        if (!d.batchId || !d.count) { setBatchMsg("Nothing to refresh."); return; }
+        saveBatch({ id: d.batchId, count: d.count });
+        setBatchMsg(`✓ Submitted ${d.count} deal${d.count === 1 ? "" : "s"} at ~½ cost — processing in the background. Applies automatically; safe to leave this page.`);
+      })
+      .catch(e => setBatchMsg(`⚠ ${e.message}`))
+      .finally(() => setBatchBusy(false));
+  };
+
+  // While a batch is pending, poll apply (on mount + every 60s). When ENDED, it applies
+  // the results, clears the stored batch, and reloads. Re-runs whenever batchInfo changes.
+  useEffect(() => {
+    if (!batchInfo) return;
+    let cancelled = false;
+    const poll = () => {
+      fetch("/api/deals/apply-analysis-batch", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batchId: batchInfo.id }) })
+        .then(r => r.json() as Promise<{ ok: boolean; status?: string; applied?: number; failed?: number; error?: string }>)
+        .then(d => {
+          if (cancelled) return;
+          if (!d.ok) return;
+          if (d.status !== "ended") { setBatchMsg(`⏳ Batch processing (${batchInfo.count} deal${batchInfo.count === 1 ? "" : "s"}) — applies automatically when ready.`); return; }
+          const n = d.applied ?? 0;
+          saveBatch(null);
+          setBatchMsg(`✓ Applied ${n} refreshed analys${n === 1 ? "is" : "es"}${d.failed ? `, ${d.failed} failed` : ""} — reloading…`);
+          setStaleCount(0);
+          setTimeout(() => window.location.reload(), 1400);
+        })
+        .catch(() => { /* transient; next tick retries */ });
+    };
+    poll();
+    const iv = setInterval(poll, 60000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [batchInfo]);
+
   const handleScoreUnscored = () => {
     if (!window.confirm("Score every deal that doesn't have a grade yet? This runs the AI roster analysis on each ungraded deal and may take up to a minute.")) return;
     setScoring(true);
@@ -499,13 +553,21 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             </button>
             {scoreMsg && <span style={{ fontSize: 10.5, color: scoreMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{scoreMsg}</span>}
           </div>
-          {staleCount > 0 && (
+          {(staleCount > 0 || batchInfo) && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <button onClick={handleRefreshStale} disabled={refreshingStale} title="These deals' written analysis was produced under older scoring logic. Refreshing re-runs the cheap AI roster pass to bring the narrative + benchmark notes up to date." style={{ background: refreshingStale ? "#fff7e6" : "transparent", border: "1px solid #f59e0b", color: refreshingStale ? "#a89f8f" : "#92400e", padding: "6px 12px", borderRadius: 7, cursor: refreshingStale ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 12 }}>⚠</span>
-                {refreshingStale ? "Refreshing…" : `Refresh ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`}
-              </button>
+              {staleCount > 0 && (
+                <button onClick={handleRefreshStale} disabled={refreshingStale || !!batchInfo} title="These deals' written analysis was produced under older scoring logic. Refreshing re-runs the cheap AI roster pass to bring the narrative + benchmark notes up to date." style={{ background: refreshingStale ? "#fff7e6" : "transparent", border: "1px solid #f59e0b", color: (refreshingStale || batchInfo) ? "#a89f8f" : "#92400e", padding: "6px 12px", borderRadius: 7, cursor: (refreshingStale || batchInfo) ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 12 }}>⚠</span>
+                  {refreshingStale ? "Refreshing…" : `Refresh ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`}
+                </button>
+              )}
+              {staleCount > 0 && !batchInfo && (
+                <button onClick={handleBatchRefresh} disabled={batchBusy} title="Submit all outdated deals as one Anthropic Message Batch — about HALF the AI cost. It runs in the background (minutes, occasionally up to ~1 hour) and applies automatically when ready; you can leave this page. Best for a big batch when you're not in a hurry." style={{ background: "none", border: "none", padding: 0, cursor: batchBusy ? "default" : "pointer", fontSize: 9.5, color: "#3f7a1f", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+                  {batchBusy ? "submitting…" : "💸 or batch all at ~½ cost"}
+                </button>
+              )}
               {staleMsg && <span style={{ fontSize: 10.5, color: staleMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{staleMsg}</span>}
+              {batchMsg && <span style={{ fontSize: 10.5, color: batchMsg.startsWith("✓") ? "#0f9d63" : batchMsg.startsWith("⚠") ? "#dc2626" : "#a89f8f", fontFamily: "'Inter',sans-serif", maxWidth: 280, textAlign: "right" }}>{batchMsg}</span>}
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>

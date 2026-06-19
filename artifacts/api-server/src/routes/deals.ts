@@ -2,7 +2,9 @@ import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable, leaseAbstractsTable } from "@workspace/db";
 import { eq, isNotNull, sql } from "drizzle-orm";
-import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHouseViewOnReview } from "../lib/extract";
+import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHouseViewOnReview,
+  buildRosterAnalysisSnapshot, rosterAnalysisParams, parseRosterAnalysisMessage } from "../lib/extract";
+import { createMessageBatch, retrieveMessageBatch, fetchBatchResults, isValidBatchCustomId, type BatchRequest } from "../lib/analysisBatch";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
 import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
@@ -1143,35 +1145,45 @@ router.get("/deals/stale-analysis-count", requireAuth, async (req, res) => {
 // active, scored deal whose analysisVersion is behind the current logic. Idempotent:
 // deals already at the current version are skipped, so re-running spends tokens only
 // on what's actually stale. Uses the cheap roster-analysis (Haiku) pass per deal.
+// A deal that needs its AI narrative/grade refreshed: active, scored, has a roster, and
+// stamped BELOW the current analysis logic version. Shared by the sequential + batch paths.
+function isStaleAnalysisTarget(d: Record<string, unknown>): boolean {
+  if (d.trashedAt || d._processing || d._processingError) return false;
+  if (!d.dealScore) return false;
+  const tenantCount = Array.isArray(d.tenants) ? (d.tenants as unknown[]).length : 0;
+  if (tenantCount === 0) return false; // nothing to analyze from
+  const v = typeof d.analysisVersion === "number" ? d.analysisVersion : 0;
+  return v < ANALYSIS_VERSION;
+}
+
+// Apply a roster-analysis result to one deal: merge the narrative/score, run the
+// (deterministic + Haiku) benchmark rescore, stamp the version, and write. Shared by the
+// sequential refresh and the Batch-results apply so both behave identically.
+async function applyAnalysisToDeal(id: string, data: Record<string, unknown>, analysis: Record<string, unknown>, log: Logger): Promise<void> {
+  const updated: Record<string, unknown> = { ...data, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
+  try {
+    const patch = await rescoreDeal(id, updated, log);
+    if (patch.dealScore !== undefined) updated.dealScore = patch.dealScore;
+    if (patch.redFlags !== undefined) updated.redFlags = patch.redFlags;
+    updated.lastScoredAt = patch.lastScoredAt;
+    updated.lastScoredDealCount = patch.lastScoredDealCount;
+  } catch { /* benchmark layer non-fatal */ }
+  const clean = JSON.parse(JSON.stringify(updated)) as Record<string, unknown>;
+  await db.update(dealsTable).set({ data: clean, updatedAt: new Date() }).where(eq(dealsTable.id, id));
+  rebuildTenantIndex(id, clean).catch(() => {});
+}
+
 router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
   try {
     const rows = await db.select().from(dealsTable);
-    const targets = rows.filter((r) => {
-      const d = r.data as Record<string, unknown>;
-      if (d.trashedAt || d._processing || d._processingError) return false;
-      if (!d.dealScore) return false;
-      const tenantCount = Array.isArray(d.tenants) ? (d.tenants as unknown[]).length : 0;
-      if (tenantCount === 0) return false; // nothing to analyze from
-      const v = typeof d.analysisVersion === "number" ? d.analysisVersion : 0;
-      return v < ANALYSIS_VERSION;
-    });
+    const targets = rows.filter((r) => isStaleAnalysisTarget(r.data as Record<string, unknown>));
 
     let refreshed = 0, failed = 0;
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
       try {
         const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data));
-        const updated: Record<string, unknown> = { ...data, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
-        try {
-          const patch = await rescoreDeal(r.id, updated, req.log);
-          if (patch.dealScore !== undefined) updated.dealScore = patch.dealScore;
-          if (patch.redFlags !== undefined) updated.redFlags = patch.redFlags;
-          updated.lastScoredAt = patch.lastScoredAt;
-          updated.lastScoredDealCount = patch.lastScoredDealCount;
-        } catch { /* benchmark layer non-fatal */ }
-        const clean = JSON.parse(JSON.stringify(updated)) as Record<string, unknown>;
-        await db.update(dealsTable).set({ data: clean, updatedAt: new Date() }).where(eq(dealsTable.id, r.id));
-        rebuildTenantIndex(r.id, clean).catch(() => {});
+        await applyAnalysisToDeal(r.id, data, analysis, req.log);
         refreshed++;
       } catch (err) {
         req.log.error({ err, id: r.id }, "refresh-stale-analysis: failed for deal");
@@ -1183,6 +1195,67 @@ router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to refresh stale analysis");
     res.status(500).json({ error: "Failed to refresh stale analysis" });
+  }
+});
+
+// POST /api/deals/refresh-stale-analysis-batch — submit ALL stale deals as ONE Anthropic
+// Message Batch (processed async at ~50% of the per-token cost). Returns a batchId; the
+// client polls /apply-analysis-batch to apply the results when the batch finishes. The
+// per-deal request is built from the SAME helpers as the live path (rosterAnalysisParams),
+// so the two can't drift. custom_id is the deal id, so results map straight back.
+router.post("/deals/refresh-stale-analysis-batch", requireAuth, async (req, res) => {
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
+    const rows = await db.select().from(dealsTable);
+    const targets = rows.filter((r) => isStaleAnalysisTarget(r.data as Record<string, unknown>) && isValidBatchCustomId(r.id));
+    if (!targets.length) { res.json({ ok: true, batchId: null, count: 0 }); return; }
+    const requests: BatchRequest[] = [];
+    for (const r of targets) {
+      const data = r.data as Record<string, unknown>;
+      const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data));
+      requests.push({ custom_id: r.id, params: rosterAnalysisParams(snapshot) });
+    }
+    const batch = await createMessageBatch(requests);
+    req.log.info({ batchId: batch.id, count: requests.length }, "Submitted stale-analysis batch");
+    res.json({ ok: true, batchId: batch.id ?? null, count: requests.length, status: batch.processing_status ?? null });
+  } catch (err) {
+    req.log.error({ err }, "Failed to submit stale-analysis batch");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to submit batch" });
+  }
+});
+
+// POST /api/deals/apply-analysis-batch  { batchId } — when the batch has ENDED, fetch its
+// results and apply each deal's analysis (idempotent). While still processing, returns the
+// status + counts so the client can keep polling. Never throws a deal's failure to the top.
+router.post("/deals/apply-analysis-batch", requireAuth, async (req, res) => {
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
+    const batchId = String((req.body as Record<string, unknown> | undefined)?.batchId ?? "");
+    if (!batchId) { res.status(400).json({ error: "batchId required" }); return; }
+    const batch = await retrieveMessageBatch(batchId);
+    const status = String(batch.processing_status ?? "");
+    if (status !== "ended") { res.json({ ok: true, status, applied: 0, counts: batch.request_counts ?? null }); return; }
+    const resultsUrl = batch.results_url;
+    if (typeof resultsUrl !== "string" || !resultsUrl) { res.json({ ok: true, status, applied: 0, note: "no results_url" }); return; }
+    const results = await fetchBatchResults(resultsUrl);
+    let applied = 0, failed = 0, skipped = 0;
+    for (const { custom_id, result } of results) {
+      if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; continue; }
+      let analysis: Record<string, unknown>;
+      try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
+      catch { failed++; continue; }
+      const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, custom_id));
+      if (!rows.length) { skipped++; continue; }
+      const data = rows[0].data as Record<string, unknown>;
+      if (data.trashedAt) { skipped++; continue; }
+      try { await applyAnalysisToDeal(custom_id, data, analysis, req.log); applied++; }
+      catch (err) { req.log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; }
+    }
+    req.log.info({ batchId, applied, failed, skipped }, "Applied stale-analysis batch");
+    res.json({ ok: true, status, applied, failed, skipped });
+  } catch (err) {
+    req.log.error({ err }, "Failed to apply analysis batch");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to apply batch" });
   }
 });
 

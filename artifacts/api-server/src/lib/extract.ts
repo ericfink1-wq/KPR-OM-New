@@ -212,6 +212,7 @@ export async function callAnthropicOnce(body: object, retryCount = 0): Promise<R
   return resp;
 }
 
+
 export { robustParseJSON } from "./jsonRepair";
 import { robustParseJSON } from "./jsonRepair";
 
@@ -737,7 +738,10 @@ export async function autoUpdateHouseViewOnReview(updatedBy: string | null): Pro
   }
 }
 
-export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {
+// Build the curated snapshot the grade reads (tenant + deal subset + House View +
+// lease-risk + KPR thesis/review). Async because it pulls the shared House View text.
+// Exported so the Batch API path builds an IDENTICAL request to the live path.
+export async function buildRosterAnalysisSnapshot(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {
   const houseView = await loadHouseViewText();
   const t = Array.isArray(dealData.tenants) ? (dealData.tenants as Array<Record<string, unknown>>) : [];
   const thesis = typeof dealData.dealThesis === "string" ? dealData.dealThesis.trim() : "";
@@ -776,27 +780,30 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>, lease
       recentRenewalSpreadPct: x.recentRenewalSpreadPct, percentageRent: x.percentageRent,
     })),
   };
-  // Prompt caching: the static ROSTER_ANALYSIS_PROMPT is identical every refresh,
-  // so cache it; only the per-deal snapshot JSON varies. Helps now that analysis
-  // auto-refreshes on every upload.
-  const upstream = await callAnthropicOnce({
+  return snapshot;
+}
+
+// The EXACT Anthropic request params for one roster-analysis pass. Shared by the live
+// call (runRosterAnalysis) and the Batch API path so the two can never drift. Prompt
+// caching: the static ROSTER_ANALYSIS_PROMPT is identical every refresh, so cache it;
+// only the per-deal snapshot JSON varies.
+export function rosterAnalysisParams(snapshot: Record<string, unknown>): Record<string, unknown> {
+  return {
     model: "claude-haiku-4-5-20251001",
     max_tokens: 4000,
     messages: [{ role: "user", content: [
       { type: "text", text: ROSTER_ANALYSIS_PROMPT, cache_control: { type: "ephemeral" } },
       { type: "text", text: JSON.stringify(snapshot, null, 1) },
     ] }],
-  });
-  const data = await upstream.json() as Record<string, unknown>;
-  if (!upstream.ok) {
-    const errMsg = typeof data.error === "object" && data.error !== null
-      ? (data.error as Record<string, unknown>).message ?? JSON.stringify(data.error)
-      : String(data.error ?? "Unknown error");
-    throw new Error(String(errMsg));
-  }
-  const blocks = data.content as Array<{ type: string; text?: string }>;
+  };
+}
+
+// Parse a roster-analysis MESSAGE (the Anthropic message object, { content, stop_reason })
+// into the deal fields it writes. Shared by the live and Batch paths.
+export function parseRosterAnalysisMessage(message: Record<string, unknown>): Record<string, unknown> {
+  const blocks = message.content as Array<{ type: string; text?: string }>;
   const raw = blocks?.find((b) => b.type === "text")?.text ?? "";
-  if (!raw) throw new Error(`AI returned empty content. stop_reason=${data.stop_reason}`);
+  if (!raw) throw new Error(`AI returned empty content. stop_reason=${message.stop_reason}`);
   const parsed = robustParseJSON(raw) as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   if (parsed.notes != null) out.notes = parsed.notes;
@@ -804,6 +811,19 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>, lease
   if (parsed.upsideItems != null) out.upsideItems = parsed.upsideItems;
   if (parsed.redFlags != null) out.redFlags = parsed.redFlags;
   return out;
+}
+
+export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {
+  const snapshot = await buildRosterAnalysisSnapshot(dealData, leaseRiskSummary);
+  const upstream = await callAnthropicOnce(rosterAnalysisParams(snapshot));
+  const data = await upstream.json() as Record<string, unknown>;
+  if (!upstream.ok) {
+    const errMsg = typeof data.error === "object" && data.error !== null
+      ? (data.error as Record<string, unknown>).message ?? JSON.stringify(data.error)
+      : String(data.error ?? "Unknown error");
+    throw new Error(String(errMsg));
+  }
+  return parseRosterAnalysisMessage(data);
 }
 
 // Deterministic SF-weighted WALT from the extracted roster — mirrors the
