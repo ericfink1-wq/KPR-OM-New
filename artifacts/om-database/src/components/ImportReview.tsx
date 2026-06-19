@@ -23,13 +23,18 @@ function draftLesson(q: ReviewQuestion): string {
   return `When reading an OM, double-check "${q.field}" — ${q.question.replace(/\s+/g, " ").trim()}`.slice(0, 280);
 }
 
-// One structured edit to write back into the deal. Used by both the literal
-// "type the value" path and the AI-interpreted "type an instruction" path.
+// One structured edit to write back into the deal. Used by the literal "type the
+// value" path and the AI-interpreted "describe the change" path. Beyond editing a
+// deal/tenant FIELD, the AI path can also ADD a vacant suite or REMOVE a tenant row
+// (duplicate / phantom / departed), so roster mistakes — not just single values —
+// are fixable in plain English.
 type Edit = {
-  kind: "deal" | "tenant";
-  fieldKey: string;
+  kind: "deal" | "tenant" | "addVacant" | "removeTenant";
+  fieldKey?: string;
   tenantName?: string | null;
-  value: string | number | boolean | null;
+  suite?: string | null;   // addVacant
+  sf?: number | null;      // addVacant
+  value?: string | number | boolean | null;
   label: string;   // human-readable, for the confirm panel + resolved log
 };
 
@@ -85,6 +90,13 @@ const looksLikeInstruction = (draft: string, valueType: "number" | "text") => {
   }
   // Text field: a short value (a rating, a name, a date) is literal; a sentence is an instruction.
   return v.split(/\s+/).length >= 4;
+};
+
+// A roster row that represents empty space rather than an occupant (excluded from
+// occupied-SF / WALT math).
+const isVacantName = (name: unknown): boolean => {
+  const s = String(name ?? "").trim().toLowerCase();
+  return !s || s === "-" || /^(vacant|available|avail|spec(ulative)?|white\s*box|tbd|to\s+be\s+leased)\b/.test(s);
 };
 
 // Which NUMERIC tenant field a correction is about: prefer the question's own
@@ -187,34 +199,45 @@ export default function ImportReview({ deal, onClose, onUpdate, extraChecks }: {
   const cancelFix = () => { setEditingId(null); setAiErr(null); setProposal(null); };
 
   // Turn a list of structured edits into a deal patch, applying tenant edits by
-  // name and recomputing occupancy/WALT when SF or term changed (honoring locks).
+  // name, adding/removing roster rows, and recomputing occupancy/WALT over the
+  // OCCUPIED roster (vacant + NAP excluded) when SF/term/roster changed.
   const buildPatch = (edits: Edit[]): Partial<Deal> => {
     const patch: Partial<Deal> = {};
     let tenants = (deal.tenants || []) as Tenant[];
     let tenantsTouched = false, sfOrTermTouched = false;
     for (const e of edits) {
       if (e.kind === "deal") {
-        (patch as Record<string, unknown>)[e.fieldKey] = e.value;
+        (patch as Record<string, unknown>)[e.fieldKey!] = e.value;
+      } else if (e.kind === "addVacant") {
+        const sf = e.sf != null && !isNaN(Number(e.sf)) ? Number(e.sf) : null;
+        tenants = [...tenants, { name: "Vacant", suite: e.suite ?? null, sf, isNAP: false } as Tenant];
+        tenantsTouched = true; sfOrTermTouched = true;
+      } else if (e.kind === "removeTenant") {
+        const wantKey = tenantKey(e.tenantName || "");
+        const before = tenants.length;
+        tenants = tenants.filter(tn => !(tenantKey(tn.canonicalName || tn.name) === wantKey || tn.name === e.tenantName));
+        if (tenants.length !== before) { tenantsTouched = true; sfOrTermTouched = true; }
       } else {
         const wantKey = tenantKey(e.tenantName || "");
         const idx = tenants.findIndex(tn => tenantKey(tn.canonicalName || tn.name) === wantKey || tn.name === e.tenantName);
         if (idx < 0) continue;
-        tenants = tenants.map((tn, i) => i === idx ? { ...tn, [e.fieldKey]: e.value } : tn);
+        tenants = tenants.map((tn, i) => i === idx ? { ...tn, [e.fieldKey!]: e.value } : tn);
         tenantsTouched = true;
-        if (e.fieldKey === "sf" || e.fieldKey === "remainingTermYears") sfOrTermTouched = true;
+        if (e.fieldKey === "sf" || e.fieldKey === "remainingTermYears" || e.fieldKey === "name") sfOrTermTouched = true;
       }
     }
     if (tenantsTouched) {
       patch.tenants = tenants;
       const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
+      const occupiedRows = tenants.filter(tn => !isVacantName(tn.name) && !tn.isNAP);
       if (sfOrTermTouched && !deal.verified?.occupancy && deal.totalSF) {
-        const occSF = tenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
+        const occSF = occupiedRows.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
         const occ = Math.round(occSF / Number(deal.totalSF) * 1000) / 10;
         if (occ > 0 && occ <= 100) patch.occupancy = occ;
       }
       if (sfOrTermTouched && !deal.verified?.walt) {
-        const sfT = tenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
-        const wT = tenants.reduce((s, tn) => s + (nv(tn.sf) ?? 0) * (nv(tn.remainingTermYears) ?? 0), 0);
+        const sfT = occupiedRows.reduce((s, tn) => s + (nv(tn.sf) ?? 0), 0);
+        const wT = occupiedRows.reduce((s, tn) => s + (nv(tn.sf) ?? 0) * (nv(tn.remainingTermYears) ?? 0), 0);
         if (sfT > 0) patch.walt = Math.round(wT / sfT * 10) / 10;
       }
     }
@@ -236,24 +259,40 @@ export default function ImportReview({ deal, onClose, onUpdate, extraChecks }: {
 
   // Ask the AI to turn a plain-English correction into structured edit(s).
   const interpret = async (instruction: string, q: ReviewQuestion): Promise<Edit[]> => {
-    const tenantList = (deal.tenants || []).map(t => t.canonicalName || t.name).filter(Boolean).slice(0, 120);
-    const prompt = `You convert a user's plain-English correction about a commercial real-estate deal into structured field edits.
-Return ONLY JSON (no markdown, no prose): {"edits":[{"kind":"deal"|"tenant","tenantName":string_or_null,"fieldKey":"string","value": <number|string|boolean|null>}]}
+    const roster = (deal.tenants || []).slice(0, 160).map(t => {
+      const nm = t.canonicalName || t.name || "?";
+      const bits = [t.suite ? `[${t.suite}]` : "", t.sf ? `${t.sf} SF` : "", isVacantName(nm) ? "(VACANT)" : "", t.isNAP ? "(NAP)" : ""].filter(Boolean).join(" ");
+      return bits ? `${nm} ${bits}` : nm;
+    });
+    const prompt = `You convert a user's plain-English correction into structured edits to a commercial-real-estate deal's data. The user is fixing what an AI mis-read from an Offering Memorandum — UNDERSTAND full sentences and directions, not just "field = value".
 
-You may ONLY use these field keys.
-DEAL fields (kind:"deal", tenantName null): ${Object.keys(DEAL_FIELDS).join(", ")}
-TENANT fields (kind:"tenant", set tenantName to the matching tenant from the list): ${Object.keys(TENANT_FIELDS).join(", ")}
+Return ONLY JSON (no markdown, no prose): {"edits":[ ...edit objects... ]}. Each edit is exactly ONE of:
+- Change a DEAL field:   {"kind":"deal","fieldKey":"<deal field>","value":<v>}
+- Change a TENANT field: {"kind":"tenant","tenantName":"<EXACT name from the roster>","fieldKey":"<tenant field>","value":<v>}
+- ADD a vacant suite:    {"kind":"addVacant","suite":"<suite id or null>","sf":<number>}   — when the user says a space is vacant/available that is NOT already a roster row (e.g. "there are two more empty units, M5 ~30,000 sf and M7 ~22,000 sf").
+- REMOVE a roster row:   {"kind":"removeTenant","tenantName":"<EXACT name>"}   — for a duplicate row, a phantom, or a tenant that has LEFT / was never there.
+- To MARK an EXISTING tenant vacant, output TWO edits: set its name to "Vacant" and clear its rent — {"kind":"tenant","tenantName":"X","fieldKey":"name","value":"Vacant"} then {"kind":"tenant","tenantName":"X","fieldKey":"annualRent","value":null}.
+
+Allowed DEAL fieldKeys: ${Object.keys(DEAL_FIELDS).join(", ")}
+Allowed TENANT fieldKeys: ${Object.keys(TENANT_FIELDS).join(", ")}
 
 Value rules:
-- Money/counts → plain number (e.g. "1.2 million" → 1200000, "$95k" → 95000). Percentages (capRate, occupancy, loanRate, occupancyCost) → the number only (e.g. "7.5%" → 7.5).
-- Dates → "YYYY-MM-DD".
-- Booleans (isAnchor, isNAP, isDark) → true/false. "went dark"/"closed but still paying" → isDark true.
-- Text → the corrected string.
-- To clear a field, use null.
-- Only output edits you are confident about. If the instruction doesn't clearly map to an allowed field, return {"edits":[]}.
+- Money/counts → plain number ("1.2 million" → 1200000, "$95k" → 95000). Percentages (capRate, occupancy, occupancyCost, loanRate) → the number only ("7.5%" → 7.5).
+- Dates → "YYYY-MM-DD". Booleans (isAnchor, isNAP, isDark) → true/false ("went dark"/"closed but still paying" → isDark true). To clear a field → null.
+- Resolve tenant references against the roster below (by name, suite, or description). If a referenced tenant isn't on the roster and the user is describing empty space, use addVacant.
 
-DEAL: ${deal.propertyName || "(unnamed)"} — ${[deal.city, deal.state].filter(Boolean).join(", ")}
-TENANTS: ${tenantList.join(" | ") || "(none)"}
+EXAMPLES:
+- "Old Navy is actually vacant" → [{"kind":"tenant","tenantName":"Old Navy","fieldKey":"name","value":"Vacant"},{"kind":"tenant","tenantName":"Old Navy","fieldKey":"annualRent","value":null}]
+- "there are two more vacant suites, M5 is 30,000 sf and M7 is 22,000" → [{"kind":"addVacant","suite":"M5","sf":30000},{"kind":"addVacant","suite":"M7","sf":22000}]
+- "Burlington's square footage should be 46,000" → [{"kind":"tenant","tenantName":"Burlington","fieldKey":"sf","value":46000}]
+- "delete the duplicate DSW row" → [{"kind":"removeTenant","tenantName":"DSW"}]
+- "total GLA is 887,130 and occupancy is 91.9%" → [{"kind":"deal","fieldKey":"totalSF","value":887130},{"kind":"deal","fieldKey":"occupancy","value":91.9}]
+
+If you truly cannot map the instruction to any edit, return {"edits":[]}.
+
+DEAL: ${deal.propertyName || "(unnamed)"} — ${[deal.city, deal.state].filter(Boolean).join(", ")}${deal.totalSF ? ` · GLA ${deal.totalSF} SF` : ""}
+ROSTER (name [suite] SF, with VACANT/NAP marked):
+${roster.join("\n") || "(none)"}
 This correction concerns: ${q.question}${q.suggestedValue ? ` (currently captured as: ${q.suggestedValue})` : ""}
 USER CORRECTION: ${instruction}`;
 
@@ -281,6 +320,21 @@ USER CORRECTION: ${instruction}`;
       type === "boolean" ? (v ? "Yes" : "No") : v == null ? "—" : typeof v === "number" ? v.toLocaleString() : String(v);
     const out: Edit[] = [];
     for (const e of rawEdits) {
+      // Structural roster edits: add a vacant suite, or remove a row.
+      if (e.kind === "addVacant") {
+        const sf = e.sf != null && !isNaN(Number(e.sf)) ? Number(e.sf) : null;
+        const suite = e.suite != null && String(e.suite).trim() ? String(e.suite).trim() : null;
+        if (sf == null && !suite) continue;
+        out.push({ kind: "addVacant", suite, sf, label: `+ Vacant${suite ? ` [${suite}]` : ""}${sf != null ? ` · ${sf.toLocaleString()} SF` : ""}` });
+        continue;
+      }
+      if (e.kind === "removeTenant") {
+        const wantKey = tenantKey(String(e.tenantName || ""));
+        const match = (deal.tenants || []).find(tn => tenantKey(tn.canonicalName || tn.name) === wantKey || tn.name === e.tenantName);
+        if (!match) continue;
+        out.push({ kind: "removeTenant", tenantName: match.canonicalName || match.name, label: `− remove ${match.canonicalName || match.name}${match.suite ? ` [${match.suite}]` : ""}` });
+        continue;
+      }
       const kind = e.kind === "tenant" ? "tenant" : "deal";
       const fieldKey = String(e.fieldKey || "");
       const catalog = kind === "deal" ? DEAL_FIELDS : TENANT_FIELDS;
@@ -361,19 +415,25 @@ USER CORRECTION: ${instruction}`;
       commitEdits(q, [{ kind: t.kind, fieldKey: t.fieldKey, tenantName: t.tenantName, value, label: `${t.fieldKey} → ${value ?? "—"}` }], value == null ? "(cleared)" : String(value));
       return;
     }
-    // Deterministic parse first — "<Tenant> <number>" pairs need no AI and handle
-    // multi-tenant answers instantly. Only call the model when that can't read it.
-    const local = localInterpret(draft, q);
-    if (local.length) { setProposal({ questionId: q.id, summary: local.map(e => e.label).join("; "), edits: local }); return; }
+    // Deterministic parse first — terse "<Tenant> <number>" pairs need no AI and
+    // handle multi-tenant answers instantly. But a real SENTENCE/DIRECTION (vacant,
+    // remove, add, "is/should/actually", etc.) must go to the AI, which understands
+    // it — otherwise the terse parser could grab an incidental number and misfire.
+    const prose = /\b(is|are|was|were|should|actually|vacant|available|empty|remove|delete|drop|add|new|left|gone|closed|dark|nap|outparcel|not|rename|change|mark|duplicate|phantom|missing|wrong)\b/i.test(draft);
+    if (!prose) {
+      const local = localInterpret(draft, q);
+      if (local.length) { setProposal({ questionId: q.id, summary: local.map(e => e.label).join("; "), edits: local }); return; }
+    }
     setAiBusy(true); setAiErr(null);
     try {
       const edits = await interpret(draft, q);
-      if (edits.length === 0) setAiErr("I couldn't tell which field to change. Try rephrasing, or just type the value itself.");
+      if (edits.length === 0) setAiErr("I couldn't turn that into a change. Try naming the tenant or value directly (e.g. \"Burlington SF 46000\", \"Old Navy is vacant\", \"add vacant suite M5 30000 sf\", \"remove the duplicate DSW\"). For a big roster rebuild, use \"Paste roster from Claude\" on the deal page.");
       else setProposal({ questionId: q.id, summary: edits.map(e => e.label).join("; "), edits });
     } catch (e) {
       // AI was busy/unreachable — try the deterministic parser as a last resort so a
-      // multi-tenant correction still goes through without the model.
-      const fallback = localInterpret(draft, q);
+      // multi-tenant correction still goes through without the model (but not on prose,
+      // where it could grab an incidental number and misfire).
+      const fallback = prose ? [] : localInterpret(draft, q);
       if (fallback.length) setProposal({ questionId: q.id, summary: fallback.map(e => e.label).join("; "), edits: fallback });
       else setAiErr(e instanceof Error ? e.message : "The AI couldn't interpret that.");
     } finally {
