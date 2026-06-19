@@ -304,6 +304,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [scoreMsg, setScoreMsg] = useState<string | null>(null);
   const [staleCount, setStaleCount] = useState(0);
   const [refreshingStale, setRefreshingStale] = useState(false);
+  const [maintMenuOpen, setMaintMenuOpen] = useState(false);
   const [staleMsg, setStaleMsg] = useState<string | null>(null);
   // Batch (½-cost) stale-analysis refresh. The pending batch id is persisted to
   // localStorage so the page can keep polling/apply across reloads until it's done.
@@ -608,14 +609,34 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                   {showAuditBreakdown ? "▴ hide breakdown" : "▾ what's flagged"}
                 </button>
               )}
-              <button onClick={handleCleanAndReaudit} disabled={maintaining} title="One pass over every deal: auto-fix the issues with a single right answer (occ-cost/cap/price-PSF units, rentPerSF from a reliable annual, duplicate rows, stale occupancy/WALT/avg-rent), then re-check all the numbers and post any contradictions to each deal's Import Review. Token-free, snapshots first (reversible), leaves judgement calls alone. New imports/edits self-maintain, so this is the one-click catch-up for existing deals." style={{ background: "none", border: "none", padding: 0, cursor: maintaining ? "default" : "pointer", fontSize: 9.5, color: "#3f7a1f", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-                {maintaining ? (maintainMsg ?? "working…") : "🧹 Clean & re-audit all"}
-              </button>
-              {isAdmin && (
-                <button onClick={handlePurgeTrashed} disabled={maintaining} title="Permanently remove deleted (trashed) deals whose data still sits in the database. Snapshots first, so it's reversible from Backup. Admin only." style={{ background: "none", border: "none", padding: 0, cursor: maintaining ? "default" : "pointer", fontSize: 9.5, color: "#b06a4e", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-                  🗑 remove deleted deals
+              {/* Maintenance menu — the power/admin data-hygiene actions, grouped so the
+                  analytics screen leads with insight, not a row of buttons. */}
+              <div style={{ position: "relative" }}>
+                <button onClick={() => setMaintMenuOpen(o => !o)} disabled={maintaining || rebuilding || rebuildingComps}
+                  style={{ background: "transparent", border: "1px solid #d9d2c4", color: "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  ⚙ Maintenance <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
                 </button>
-              )}
+                {maintMenuOpen && (
+                  <>
+                    <div onClick={() => setMaintMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
+                    <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 9001, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden", padding: "4px 0", fontFamily: "'Inter',sans-serif" }}>
+                      {([
+                        ["🧹 Clean & re-audit all", () => { setMaintMenuOpen(false); handleCleanAndReaudit(); }, "#383a37", maintaining, "Auto-fix the unambiguous issues across every deal, then re-check all the numbers. Token-free, snapshots first (reversible)."],
+                        ["↺ Rebuild comps index", () => { setMaintMenuOpen(false); handleRebuildComps(); }, "#383a37", rebuildingComps, "Rebuild the comparable-sales index from every deal's owned/manual/OM comps."],
+                        ["↺ Rebuild tenant index", () => { setMaintMenuOpen(false); handleRebuild(); }, "#383a37", rebuilding, "Rebuild the tenant search index across all deals."],
+                        ...(isAdmin ? [["🗑 Remove deleted deals", () => { setMaintMenuOpen(false); handlePurgeTrashed(); }, "#b06a4e", maintaining, "Permanently remove trashed deals whose data still sits in the DB. Snapshots first."] as const] : []),
+                      ] as [string, () => void, string, boolean, string][]).map(([label, fn, color, busy, tip]) => (
+                        <button key={label} onClick={fn} disabled={busy} title={tip}
+                          style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "9px 14px", cursor: busy ? "default" : "pointer", fontSize: 12.5, fontWeight: 600, color, whiteSpace: "nowrap", opacity: busy ? 0.5 : 1 }}
+                          onMouseEnter={e => { if (!busy) e.currentTarget.style.background = "#f9f6f0"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             {maintainMsg && <span style={{ fontSize: 10.5, color: maintainMsg.startsWith("✓") ? "#0f9d63" : maintainMsg.startsWith("⚠") ? "#dc2626" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>{maintainMsg}</span>}
             {showAuditBreakdown && auditStats.breakdown.length > 0 && (
@@ -631,18 +652,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               </div>
             )}
           </div>
-          {isAdmin && (
+          {(rebuildCompsMsg || rebuildMsg) && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={handleRebuildComps} disabled={rebuildingComps} style={{ background: rebuildingComps ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuildingComps ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuildingComps ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                  <span style={{ fontSize: 12 }}>↺</span>
-                  {rebuildingComps ? "Rebuilding…" : "Rebuild comps"}
-                </button>
-                <button onClick={handleRebuild} disabled={rebuilding} style={{ background: rebuilding ? "#f1eadc" : "transparent", border: "1px solid #c9c2b8", color: rebuilding ? "#a89f8f" : "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: rebuilding ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                  <span style={{ fontSize: 12 }}>↺</span>
-                  {rebuilding ? "Rebuilding…" : "Rebuild index"}
-                </button>
-              </div>
               {rebuildCompsMsg && <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildCompsMsg}</span>}
               {rebuildMsg && <span style={{ fontSize: 10.5, color: rebuildMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildMsg}</span>}
             </div>

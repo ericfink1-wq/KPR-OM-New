@@ -1048,12 +1048,16 @@ const SECTION_LABELS: Record<string, string> = {
 // sections (thesis, AI score, upside, red flags, key assumptions, closing costs,
 // cash flow), leaving the operational data an asset manager cares about.
 function ViewToggle({ mode, onChange }: { mode: "all" | "am"; onChange: (m: "all" | "am") => void }) {
+  const meta: Record<"all" | "am", { label: string; tip: string }> = {
+    all: { label: "Acquisition", tip: "Acquisition review — shows the full underwriting: AI score, red flags, upside, key assumptions, cash flow and closing costs." },
+    am: { label: "Asset Mgmt", tip: "Asset-management view — the operational data for an owned property; hides the acquisition underwriting sections." },
+  };
   return (
     <div style={{ display:"flex", border:"1px solid #ddd4c2", borderRadius:6, overflow:"hidden", flexShrink:0, fontFamily:"'Inter',sans-serif" }}>
-      {([["all","All"],["am","Asset Mgmt"]] as const).map(([v,label]) => (
-        <button key={v} onClick={() => onChange(v)}
+      {(["all","am"] as const).map((v) => (
+        <button key={v} onClick={() => onChange(v)} title={meta[v].tip}
           style={{ background: mode===v ? "#383a37" : "#fff", color: mode===v ? "#f6f2ea" : "#52554e", border:"none", padding:"5px 11px", fontSize:11, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}>
-          {label}
+          {meta[v].label}
         </button>
       ))}
     </div>
