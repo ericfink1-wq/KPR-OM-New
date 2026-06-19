@@ -2444,6 +2444,41 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         })()}
       </div>
 
+      {/* ── Executive summary band ──────────────────────────────────────────────
+          The deal's headline numbers as scannable stat tiles, always visible above
+          the tabs, so the team grasps it at a glance instead of reading paragraphs.
+          Purely a surfacing of existing live-computed metrics — the detailed cards
+          stay below (progressive disclosure), so nothing is removed or restated. */}
+      {(() => {
+        const compactUSD = (n: number | null | undefined) => {
+          const v = Number(n); if (!Number.isFinite(v) || v <= 0) return null;
+          return v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${Math.round(v / 1e3)}K` : `$${Math.round(v)}`;
+        };
+        const sfNum = Number(d.totalSF);
+        const occN = liveOccupancy != null ? Number(liveOccupancy) : null;
+        const waltN = liveWalt != null ? Number(liveWalt) : null;
+        const tiles: { l: string; v: string; c?: string }[] = [];
+        const noi = compactUSD(d.noi); if (noi) tiles.push({ l: "NOI", v: noi, c: "#0f9d63" });
+        if (d.capRate) tiles.push({ l: "Cap Rate", v: `${d.capRate}%`, c: "#0f9d63" });
+        const price = compactUSD(d.askingPrice ?? ((d as unknown as Record<string, unknown>).txnPurchasePrice as number)); if (price) tiles.push({ l: "Price", v: price, c: "#6dba43" });
+        if (Number.isFinite(sfNum) && sfNum > 0) tiles.push({ l: "GLA", v: sfNum >= 1000 ? `${Math.round(sfNum / 1000)}K SF` : `${sfNum} SF` });
+        if (occN != null && occN > 0) tiles.push({ l: "Occupancy", v: `${occN}%`, c: occN < 85 ? "#dc2626" : occN < 92 ? "#c97a18" : "#26281f" });
+        if (waltN != null && waltN > 0) tiles.push({ l: "WALT", v: `${waltN} yrs`, c: waltN < 3 ? "#dc2626" : waltN < 6 ? "#26281f" : "#0f9d63" });
+        if (liveWtdRent) tiles.push({ l: "Avg Rent", v: `$${Number(liveWtdRent).toFixed(2)}` });
+        if (d.pricePerSF) tiles.push({ l: "Price / SF", v: `$${d.pricePerSF}` });
+        if (tiles.length < 3) return null;   // too thin to be a useful summary
+        return (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(94px, 1fr))", gap:1, background:"#ece5d7", border:"1px solid #ece5d7", borderRadius:12, overflow:"hidden", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            {tiles.map((t, i) => (
+              <div key={i} style={{ background:"#fff", padding:"11px 14px" }}>
+                <div style={{ fontSize:16.5, fontWeight:600, color:t.c || "#26281f", fontFamily:"'Fraunces',serif", lineHeight:1.05, whiteSpace:"nowrap" }}>{t.v}</div>
+                <div style={{ fontSize:8.5, letterSpacing:"0.09em", textTransform:"uppercase", color:"#a69e91", fontWeight:700, marginTop:4 }}>{t.l}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Thin/partial-extraction banner with the "Fill in the blanks" CTA — kept at
           the very top, next to the import-review box, so missing core data is obvious. */}
       <ExtractionQuality deal={d} onUpdate={onUpdate}/>
