@@ -2,6 +2,24 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## NEW SYSTEMS (added 2026-06-19 — institutional/self-learning push). NEXT-SESSION PICKUP HERE.
+All on `main`, typecheck-clean, tested (118 web + 48 API). Built this session — keep it:
+- **Self-maintaining data integrity:** `artifacts/api-server/src/lib/dealMaintenance.ts` (`autoMaintainDealData`) runs on EVERY write (import, PUT, create) — applies safe fixes (`importFixes.ts`) + self-heals the audit. Eric wants data to clean itself as the library grows.
+- **Per-deal audit surfacing:** `buildReviewQuestions` (om-database/src/lib/utils.ts) now passes through stored server `audit-*`/`src-*` checks (deduping the overlapping client `calc-*` via `CALC_SUPERSEDED_BY_AUDIT`) so the full arithmetic audit shows on the deal page, not just the portfolio audit.
+- **Cross-portfolio anomalies in Import Review:** `anomalyReviewQuestions` (dealAnomalies.ts) → threaded into ImportReview with the teach-a-rule loop.
+- **New audit check:** `audit-remterm-expiry` (extractionAudit.ts) — remaining term must tie to lease-expiry.
+- **Batch API re-grading (~½ cost):** `artifacts/api-server/src/lib/analysisBatch.ts` + `rosterAnalysisParams`/`parseRosterAnalysisMessage` (extract.ts) + `POST /deals/refresh-stale-analysis-batch` & `/deals/apply-analysis-batch`. UI: PortfolioAnalytics "💸 batch all at ~½ cost" (localStorage batchId + auto-poll). **NOT yet live-tested against the real Anthropic Batch API — verify end-to-end once possible; sequential refresh is the fallback.**
+- **Retail tenancy intelligence:** `om-database/src/lib/retailCategory.ts` (`classifyTenant` + `analyzeCenterMix` → category mix + 0–100 e-commerce resilience). Brand dictionary + keyword heuristics; extend as DB grows.
+- **IC memo:** `om-database/src/lib/icMemo.ts` (`buildICMemo` markdown + `buildICMemoModel`) + `components/ICMemoPDF.tsx` (branded 1-page PDF, KPR olive/sage palette + logo). Exports: green "📄 IC Memo" button + ".md" in Actions (DetailView). Eric wants it to look pro-designer; **visual layout still needs his eyes / a screenshot.**
+- **Feedback & Trends console:** `api-server/src/lib/portfolioIssues.ts` (`summarizePortfolioIssues`) + `GET /deals/issues-summary` + `om-database/src/components/FeedbackConsole.tsx` (button in PortfolioAnalytics). Portfolio-wide open issues grouped by type (trends); plain-English answer → extraction-lesson guardrail. A "needs hard check" checkbox flags issues that warrant a NEW deterministic audit check — **watch the extraction_lessons for these `[REQUESTED: a deterministic check...]` tags and implement code-level guardrails.**
+- **Merged maintenance button:** PortfolioAnalytics "🧹 Clean & re-audit all" (autofix + reaudit in one).
+
+### Eric's product direction (stated this session)
+- Vision: an **institutional-quality, automated, self-learning CRE analyst focused on shopping centers.** Less interested in full DCF underwriting (Argus handles recovery-heavy modeling); MORE interested in **smart data analysis, retail intelligence, and exportable IC memos.**
+- **Site feels too busy** — wants the deal page CONSOLIDATED (executive-summary band + group ~15 cards into ~5 collapsible sections; nothing removed, progressive disclosure). THIS IS THE NEXT BIG BUILD ("do it all"). Recommended accordion-style; do desktop+mobile.
+- **Access:** Eric is flipping the environment **network policy to full access** then starting a NEW session so Claude can run the app locally + screenshot the UI itself (harness: `scripts/ui-screenshots.mjs` → `npx playwright install chromium` once allowed). He's tired of sending screenshots. NEVER take prod DB creds — local seeded copy only. On the new session: confirm browser access works (`npx playwright install chromium`), run the screenshot harness, THEN build the deal-page consolidation verifying visually as you go.
+
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.
