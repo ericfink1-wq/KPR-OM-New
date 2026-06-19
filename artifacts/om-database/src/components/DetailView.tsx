@@ -72,10 +72,14 @@ import { useIsMobile } from "../hooks/use-mobile";
 // constant drives the tenant/parent/lender/compare pages for one consistent width.
 
 // Sub-page tabs and the jump-list shown when a tab is clicked.
+// Ordered the way the team actually uses the page — analysis & comparison first
+// (Summary, AI, Tenants/Sales, Market), with the deep acquisition-underwriting tabs
+// (transaction/financing/underwriting) last. Keys are unchanged so all the section
+// logic keeps working; only the label ("Overview"→"Summary") and order changed.
 const PAGE_TABS = [
-  ["overview","Overview"],["ai","AI Analysis"],["tenants","Tenants & Sales"],
-  ["transaction","Transaction Details"],["financing","Financing"],
-  ["market","Market & Comps"],["underwriting","Underwriting"],
+  ["overview","Summary"],["ai","AI Analysis"],["tenants","Tenants & Sales"],
+  ["market","Market & Comps"],
+  ["transaction","Transaction Details"],["financing","Financing"],["underwriting","Underwriting"],
 ] as const;
 const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
