@@ -1051,20 +1051,15 @@ const SECTION_LABELS: Record<string, string> = {
 // All / Asset Management view toggle — AM mode hides the acquisition-underwriting
 // sections (thesis, AI score, upside, red flags, key assumptions, closing costs,
 // cash flow), leaving the operational data an asset manager cares about.
-function ViewToggle({ mode, onChange }: { mode: "all" | "am"; onChange: (m: "all" | "am") => void }) {
-  const meta: Record<"all" | "am", { label: string; tip: string }> = {
-    all: { label: "Acquisition", tip: "Acquisition review — shows the full underwriting: AI score, red flags, upside, key assumptions, cash flow and closing costs." },
-    am: { label: "Asset Mgmt", tip: "Asset-management view — the operational data for an owned property; hides the acquisition underwriting sections." },
-  };
+// The page defaults to the analysis view; this reveals the deep acquisition-underwriting
+// tabs (Transaction, Financing, Underwriting) and their sections when wanted.
+function UnderwritingToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div style={{ display:"flex", border:"1px solid #ddd4c2", borderRadius:6, overflow:"hidden", flexShrink:0, fontFamily:"'Inter',sans-serif" }}>
-      {(["all","am"] as const).map((v) => (
-        <button key={v} onClick={() => onChange(v)} title={meta[v].tip}
-          style={{ background: mode===v ? "#383a37" : "#fff", color: mode===v ? "#f6f2ea" : "#52554e", border:"none", padding:"5px 11px", fontSize:11, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}>
-          {meta[v].label}
-        </button>
-      ))}
-    </div>
+    <button onClick={() => onChange(!on)}
+      title={on ? "Hide the acquisition-underwriting tabs (Transaction, Financing, Underwriting) and sections." : "Show the acquisition-underwriting tabs (Transaction, Financing, Underwriting) — cash flow, closing costs, tax, debt. Hidden by default."}
+      style={{ display:"flex", alignItems:"center", gap:5, background: on ? "#383a37" : "#fff", color: on ? "#f6f2ea" : "#6f6a5f", border:"1px solid #ddd4c2", borderRadius:6, padding:"5px 11px", fontSize:11, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Inter',sans-serif" }}>
+      {on ? "✓ Underwriting" : "Show underwriting"}
+    </button>
   );
 }
 
@@ -1415,8 +1410,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // View mode — "all" shows everything; "am" (Asset Management) hides the
   // acquisition-underwriting sections (thesis, AI score, upside, red flags, key
   // assumptions, closing costs, cash flow).
-  const [viewMode, setViewMode] = useState<"all" | "am">("all");
-  const showAcq = viewMode === "all"; // acquisition/underwriting sections visible?
+  // The page defaults to the ANALYSIS view (what the team uses): full AI analysis +
+  // tenants + market, with the deep acquisition-UNDERWRITING tabs/sections (transaction,
+  // financing, cash flow, closing costs, tax) hidden behind a "Show underwriting" switch.
+  const [showUnderwriting, setShowUnderwriting] = useState(false);
+  const UW_TABS = new Set(["transaction", "financing", "underwriting"]);
   // Which image a delete-confirmation is open for ("cover" | "site" | null).
   const [confirmDelImg, setConfirmDelImg] = useState<null | "cover" | "site">(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -1434,6 +1432,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [tab, setTab] = useState<"overview" | "ai" | "tenants" | "transaction" | "financing" | "market" | "underwriting">("overview");
+  // If the underwriting tabs are hidden while one of them is open, fall back to Summary.
+  useEffect(() => { if (!showUnderwriting && UW_TABS.has(tab)) setTab("overview"); }, [showUnderwriting, tab]);
   const [navMenu, setNavMenu] = useState<string | null>(null);  // open jump-dropdown (a tab key, or "toc" on mobile)
   const isMobileNav = useIsMobile();
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
@@ -2142,6 +2142,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // in-flow bar both show the same menu, stacked on top of each other.
   const renderSubNav = (floating: boolean) => {
    const showMenu = floating ? titleScrolled : !titleScrolled;
+   const tabs = PAGE_TABS.filter(([k]) => showUnderwriting || !UW_TABS.has(k));
    return (
     isMobileNav ? (
       <div style={{ position:"relative" }}>
@@ -2151,7 +2152,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         </button>
         {navMenu && showMenu && (
           <div style={{ position:"absolute", left:0, right:0, top:"calc(100% + 4px)", background:"#fff", border:"1px solid #e3dccd", borderRadius:10, boxShadow:"0 14px 34px rgba(0,0,0,0.2)", zIndex:70, maxHeight:"68vh", overflowY:"auto", padding:6 }}>
-            {PAGE_TABS.map(([k,label]) => (
+            {tabs.map(([k,label]) => (
               <div key={k} style={{ marginBottom:2 }}>
                 <button onClick={() => { setTab(k); setNavMenu(null); }}
                   style={{ width:"100%", textAlign:"left", background: tab===k ? "#eef5e8" : "transparent", border:"none", padding:"8px 10px", fontSize:12.5, fontWeight:700, color: tab===k ? "#2d5a0e" : "#383a37", cursor:"pointer", borderRadius:6 }}>
@@ -2170,7 +2171,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       </div>
     ) : (
       <div style={{ display:"flex", gap:2, borderBottom:"1.5px solid #e7e0d2", flexWrap:"wrap" }}>
-        {PAGE_TABS.map(([k,label]) => (
+        {tabs.map(([k,label]) => (
           <div key={k} style={{ position:"relative" }}>
             <button onClick={() => { setTab(k); setNavMenu(m => m === k ? null : k); }}
               style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3f7a1f" : "2px solid transparent", color: tab===k ? "#26281f" : "#8b8578", padding:"8px 11px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Inter',sans-serif" }}>
@@ -2249,7 +2250,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             )}
           </div>
           <div style={{ display:"flex", gap:8, flexShrink: 0 }}>
-            <ViewToggle mode={viewMode} onChange={setViewMode} />
+            <UnderwritingToggle on={showUnderwriting} onChange={setShowUnderwriting} />
           </div>
         </div>
         {/* Tabs live inside the floating header so they stay pinned all the way down */}
@@ -2387,7 +2388,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             )}
           </div>
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <ViewToggle mode={viewMode} onChange={setViewMode} />
+            <UnderwritingToggle on={showUnderwriting} onChange={setShowUnderwriting} />
           </div>
         </div>
       </div>
@@ -2732,9 +2733,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       </>)}
       {tab === "ai" && (<>
-      {/* KPR thesis / assumptions — folded into the AI grade on re-grade. Placed
-          above the site plan. Hidden in Asset Management view. */}
-      {showAcq && (
+      {/* KPR thesis / assumptions — folded into the AI grade on re-grade. Part of the
+          always-visible AI analysis. */}
+      {(
       <div id="section-review" data-jump="Our Take">
         <DealReviewBox deal={d} onUpdate={onUpdate} onRegrade={handleRefreshAnalysis} regrading={reanalyzeBusy} onOpenHouseView={() => setHouseViewOpen(true)}/>
       </div>
@@ -3034,7 +3035,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       </>)}
       {tab === "ai" && (<>
       {/* Deal score */}
-      {showAcq && (d.dealScore || d.analysisStale) && (
+      {(d.dealScore || d.analysisStale) && (
         <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
           {(expanded) => { const fs = 1; void expanded; return (
           <div id="section-dealscore" data-jump="AI Deal Score" style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
@@ -3076,7 +3077,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
 
       {/* Upside items */}
-      {showAcq && Array.isArray(d.upsideItems) && d.upsideItems.length > 0 && (() => {
+      {Array.isArray(d.upsideItems) && d.upsideItems.length > 0 && (() => {
         const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const sorted = [...d.upsideItems!].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
         return (
@@ -3125,7 +3126,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
-        return showAcq && (allRedFlags.length > 0 || d.analysisStale) && (
+        return (allRedFlags.length > 0 || d.analysisStale) && (
           <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
             {(expanded) => { const fs = 1; void expanded; return (
             <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px" }}>
@@ -3264,7 +3265,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       </>)}
       {tab === "ai" && (<>
       {/* Key assumptions — above My Underwriting. Hidden in Asset Management view. */}
-      {showAcq && <div id="section-assumptions"><KeyAssumptions deal={d} /></div>}
+      {<div id="section-assumptions"><KeyAssumptions deal={d} /></div>}
 
       </>)}
       {tab === "underwriting" && (<>
@@ -3279,7 +3280,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       </>)}
       {tab === "underwriting" && (<>
       {/* Cash flow */}
-      {showAcq && Array.isArray(d.cashFlowProjection) && d.cashFlowProjection.length > 0 && (
+      {showUnderwriting && Array.isArray(d.cashFlowProjection) && d.cashFlowProjection.length > 0 && (
         <div id="section-cashflow" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
           <div style={{ overflowX:"auto" }}>
@@ -3454,9 +3455,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         );
       })()}
 
-      {showAcq && <ClosingCostsCard deal={d} />}
+      {showUnderwriting && <ClosingCostsCard deal={d} />}
       <PortfolioBenchmarksCard deal={d} allDeals={allDeals} />
-      {showAcq && <TaxReassessmentCard deal={d} allDeals={allDeals} />}
+      {showUnderwriting && <TaxReassessmentCard deal={d} allDeals={allDeals} />}
       {(d.status === "Owned" || d.status === "Sold") && (
         <div id="section-ownership"><OwnershipStructure deal={d} onUpdate={onUpdate} /></div>
       )}
