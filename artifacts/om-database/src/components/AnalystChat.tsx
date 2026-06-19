@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
-import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant } from "../lib/utils";
+import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount } from "../lib/utils";
+import { scoreDealConfidence } from "../lib/dealConfidence";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
 import { apiLoadImages, apiListAllLeaseAbstracts, apiLoadComps, apiLoadTenantBenchmarks, type AnalystTenantBenchmark } from "../lib/api";
@@ -84,6 +85,19 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   }, [showSuggestions]);
   const { mutateAsync: sendMessage } = useCreateAiMessage();
   const active = deals.filter(d => !d.trashedAt);
+
+  // "Needs your attention" — the deals a first-pass analyst would flag: open arithmetic
+  // contradictions, low/partial data confidence, or a stale analysis. Sorted worst-first
+  // so the team starts the day on the records that actually need a human.
+  const attention = useMemo(() => {
+    return active
+      .filter(d => d.status !== "Passed")
+      .map(d => ({ d, conf: scoreDealConfidence(d), audits: openAuditCount(d) }))
+      .filter(x => x.audits > 0 || x.conf.score < 80)
+      .map(x => ({ ...x, priority: x.audits * 12 + (100 - x.conf.score) }))
+      .sort((a, b) => b.priority - a.priority)
+      .slice(0, 6);
+  }, [active]);
 
   // Lease abstracts on file, folded into the system prompt so the chat can answer
   // lease-level questions (options, go-dark, exclusives, guaranties) with citations.
@@ -288,6 +302,33 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                   </div>
                 )}
               </>
+            )}
+
+            {/* ── Needs your attention ─────────────────────────────────────── */}
+            {attention.length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <div style={panelLabel}>Needs your attention — {attention.length} deal{attention.length === 1 ? "" : "s"} a first pass would flag</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
+                  {attention.map(({ d, conf, audits }) => {
+                    const reasons: string[] = [];
+                    if (audits > 0) reasons.push(audits === 1 ? "1 number to verify" : `${audits} numbers to verify`);
+                    for (const g of conf.gaps) { if (reasons.length >= 3) break; if (!/don't tie out|doesn't tie out/.test(g)) reasons.push(g); }
+                    return (
+                      <button key={d.id} onClick={() => onOpenDeal(d.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fff", border: "1px solid #ece5d7", borderLeft: `3px solid ${conf.color}`, borderRadius: 10, padding: "9px 13px", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "#faf7f0"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: conf.color, background: `${conf.color}14`, border: `1px solid ${conf.color}40`, borderRadius: 3, padding: "2px 6px", whiteSpace: "nowrap" }}>{conf.score}</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f" }}>{d.propertyName || d.fileName || "Untitled deal"}</span>
+                          <span style={{ display: "block", fontSize: 11, color: "#9a917f", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reasons.join(" · ") || "Review the data"}</span>
+                        </span>
+                        <span style={{ fontSize: 11, color: conf.color, fontWeight: 600, whiteSpace: "nowrap" }}>Review ›</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Deal tiles */}
