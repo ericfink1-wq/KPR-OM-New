@@ -1,7 +1,9 @@
-// Branded ONE-PAGE Investment Committee memo (PDF). Designed to look professionally
-// laid out: KPR logo + olive/sage brand palette, a metric strip, a two-column body with
-// tenancy + retail-resilience, demographics, financials, risks and upside. Consumes the
-// structured ICMemoModel so the content stays in one tested place (lib/icMemo).
+// Branded ONE-PAGE Investment Committee teaser (PDF) — institutional style (think a
+// Blackstone deal teaser): a tight, scannable single page that teaches an exec the
+// deal in 30 seconds — punchy thesis, headline metric band, tenancy + rollover visual,
+// and Value-Add vs. Risks side by side as one-line bullets. Long narrative/bullets are
+// COMPRESSED here (first sentence, capped counts) so it never spills to a second page.
+// Consumes the structured ICMemoModel so content stays in one tested place (lib/icMemo).
 
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import type { Deal } from "../lib/idb";
@@ -10,76 +12,100 @@ import { buildICMemoModel } from "../lib/icMemo";
 const C = {
   ink: "#26281f", body: "#383a37", muted: "#6f6a5f", faint: "#a69e91",
   olive: "#3f7a1f", oliveDk: "#2f5d16", sage: "#eef3e6", border: "#c3dba8",
-  cream: "#f6f2ea", rule: "#d8d2c1", gold: "#9a6a1e", red: "#b23b3b",
+  cream: "#f6f2ea", rule: "#d8d2c1", gold: "#9a6a1e", red: "#b23b3b", redBg: "#fbeeee",
 };
 
 const s = StyleSheet.create({
-  page: { fontFamily: "Helvetica", fontSize: 8.5, color: C.body, paddingTop: 26, paddingHorizontal: 34, paddingBottom: 34 },
-  // Header
-  hdrRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
+  page: { fontFamily: "Helvetica", fontSize: 8.3, color: C.body, paddingTop: 24, paddingHorizontal: 32, paddingBottom: 26 },
+  hdrRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 5 },
   logoZone: { flexDirection: "row", alignItems: "center" },
-  kicker: { fontSize: 8, fontFamily: "Helvetica-Bold", color: C.olive, letterSpacing: 1.4 },
+  kicker: { fontSize: 8, fontFamily: "Helvetica-Bold", color: C.olive, letterSpacing: 1.5 },
   hdrRight: { fontSize: 7, color: C.muted, textAlign: "right" },
-  rule: { height: 1.4, backgroundColor: C.olive, marginBottom: 10 },
-  // Title
+  rule: { height: 1.6, backgroundColor: C.olive, marginBottom: 9 },
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 9 },
-  propName: { fontSize: 19, fontFamily: "Helvetica-Bold", color: C.ink, maxWidth: 400 },
+  propName: { fontSize: 21, fontFamily: "Helvetica-Bold", color: C.ink },
   sub: { fontSize: 8.5, color: C.muted, marginTop: 3 },
-  gradeBox: { backgroundColor: C.olive, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, alignItems: "center", minWidth: 74 },
-  gradeVal: { fontSize: 20, fontFamily: "Helvetica-Bold", color: "#fff", lineHeight: 1 },
+  typeTxt: { fontSize: 8.5, color: C.olive, fontFamily: "Helvetica-Bold", marginTop: 2 },
+  gradeBox: { backgroundColor: C.olive, borderRadius: 6, paddingHorizontal: 13, paddingVertical: 7, alignItems: "center", minWidth: 76 },
+  gradeVal: { fontSize: 21, fontFamily: "Helvetica-Bold", color: "#fff", lineHeight: 1 },
   gradeLbl: { fontSize: 6.5, color: "#e8f0dd", letterSpacing: 0.6, marginTop: 3 },
-  // Recommendation banner
-  recBox: { backgroundColor: C.sage, borderWidth: 0.6, borderColor: C.border, borderStyle: "solid", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 10 },
-  recTxt: { fontSize: 9, color: C.oliveDk, lineHeight: 1.35 },
-  // Metric strip
+  thesisWrap: { marginBottom: 10 },
+  thesisTxt: { fontSize: 9.5, color: C.ink, lineHeight: 1.45 },
   mStrip: { flexDirection: "row", marginBottom: 11 },
-  mBox: { flex: 1, backgroundColor: C.cream, borderWidth: 0.6, borderColor: C.rule, borderStyle: "solid", borderRadius: 3, paddingVertical: 6, paddingHorizontal: 3, alignItems: "center", marginRight: 4 },
-  mVal: { fontSize: 11, fontFamily: "Helvetica-Bold", color: C.ink, marginBottom: 2 },
-  mLbl: { fontSize: 5.8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.3 },
-  // Body columns
-  body: { flexDirection: "row" },
-  colL: { width: "57%", paddingRight: 12 },
-  colR: { width: "43%" },
-  secH: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: C.olive, letterSpacing: 0.8, paddingBottom: 2.5, marginBottom: 5, marginTop: 2, borderBottomWidth: 0.6, borderBottomColor: C.olive, borderBottomStyle: "solid", textTransform: "uppercase" },
-  line: { fontSize: 8.5, color: C.body, marginBottom: 3, lineHeight: 1.3 },
+  mBox: { flex: 1, backgroundColor: C.cream, borderWidth: 0.6, borderColor: C.rule, borderStyle: "solid", borderRadius: 4, paddingVertical: 7, paddingHorizontal: 3, alignItems: "center", marginRight: 5 },
+  mVal: { fontSize: 13, fontFamily: "Helvetica-Bold", color: C.ink, marginBottom: 2 },
+  mLbl: { fontSize: 5.8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 },
+  secH: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: C.olive, letterSpacing: 0.9, paddingBottom: 2.5, marginBottom: 5, borderBottomWidth: 0.6, borderBottomColor: C.olive, borderBottomStyle: "solid", textTransform: "uppercase" },
+  line: { fontSize: 8.3, color: C.body, marginBottom: 3, lineHeight: 1.3 },
   lblIn: { fontFamily: "Helvetica-Bold", color: C.ink },
-  // retail bars
-  barRow: { flexDirection: "row", alignItems: "center", marginBottom: 2.5 },
-  barCat: { width: "38%", fontSize: 7.5, color: C.body },
-  barTrack: { flex: 1, height: 7, backgroundColor: C.cream, borderRadius: 2, marginRight: 5 },
-  barFill: { height: 7, borderRadius: 2, backgroundColor: C.olive },
-  barPct: { width: 26, fontSize: 7, color: C.muted, textAlign: "right" },
-  chip: { alignSelf: "flex-start", backgroundColor: C.olive, borderRadius: 3, paddingHorizontal: 6, paddingVertical: 2.5, marginBottom: 5 },
-  chipTxt: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: "#fff" },
-  // table rows (right column)
-  tRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 2.5 },
+  body: { flexDirection: "row", marginBottom: 4 },
+  colL: { width: "54%", paddingRight: 14 },
+  colR: { width: "46%" },
+  barRow: { flexDirection: "row", alignItems: "center", marginBottom: 2.3 },
+  barCat: { width: 56, fontSize: 7.3, color: C.body },
+  barTrack: { flex: 1, height: 6.5, backgroundColor: C.cream, borderRadius: 2, marginRight: 5 },
+  barFill: { height: 6.5, borderRadius: 2, backgroundColor: C.olive },
+  barPct: { width: 24, fontSize: 7, color: C.muted, textAlign: "right" },
+  chip: { alignSelf: "flex-start", backgroundColor: C.sage, borderWidth: 0.6, borderColor: C.border, borderStyle: "solid", borderRadius: 3, paddingHorizontal: 6, paddingVertical: 2.5, marginBottom: 5 },
+  chipTxt: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: C.oliveDk },
+  tRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 2.4 },
   tLbl: { fontSize: 8, color: C.muted },
   tVal: { fontSize: 8, fontFamily: "Helvetica-Bold", color: C.ink },
-  bullet: { flexDirection: "row", marginBottom: 2.5 },
-  bDot: { width: 7, fontSize: 8, color: C.olive },
+  splitRow: { flexDirection: "row", marginTop: 2 },
+  splitCol: { flex: 1 },
+  bullet: { flexDirection: "row", marginBottom: 3 },
+  bDot: { width: 9, fontSize: 8, color: C.olive, fontFamily: "Helvetica-Bold" },
+  bDotR: { width: 9, fontSize: 8, color: C.red, fontFamily: "Helvetica-Bold" },
   bTxt: { flex: 1, fontSize: 8, color: C.body, lineHeight: 1.3 },
-  bDotR: { width: 7, fontSize: 8, color: C.red },
-  footer: { position: "absolute", bottom: 18, left: 34, right: 34, flexDirection: "row", justifyContent: "space-between", borderTopWidth: 0.6, borderTopColor: C.rule, borderTopStyle: "solid", paddingTop: 5 },
+  footer: { position: "absolute", bottom: 16, left: 32, right: 32, flexDirection: "row", justifyContent: "space-between", borderTopWidth: 0.6, borderTopColor: C.rule, borderTopStyle: "solid", paddingTop: 5 },
   footTxt: { fontSize: 6.5, color: C.faint },
 });
 
-// Short sections stay whole (wrap=false). Long bullet lists (Risks / Upside) may
-// flow across the page break so they fill page 1's column instead of jumping wholesale
-// to page 2 and leaving a half-empty first page.
-function Sec({ title, children, wrap = false }: { title: string; children: React.ReactNode; wrap?: boolean }) {
-  return (<View wrap={wrap}><Text style={s.secH}>{title}</Text>{children}</View>);
-}
+// Split prose into sentences WITHOUT breaking decimals ($5.86M, "2.5 years"): a
+// terminator is only a boundary when it follows a non-digit and precedes a space +
+// capital / open-paren / quote. Uses a lookahead (portable) + marker, no lookbehind.
+const MARK = "␟";
+const sentencesOf = (t: string): string[] => {
+  const clean = (t || "").replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  const marked = clean.replace(/([^0-9\s][.!?])\s+(?=[A-Z("'$])/g, "$1" + MARK);
+  return marked.split(MARK).map((x) => x.trim()).filter(Boolean);
+};
+// The thesis: the first 2–3 sentences, capped — a punchy teaser open, not the full essay.
+const thesisOf = (t: string | null | undefined, maxChars = 340, maxSent = 3): string => {
+  let out = "", n = 0;
+  for (const p of sentencesOf(t || "")) {
+    if (n >= maxSent) break;
+    const next = out ? `${out} ${p}` : p;
+    if (out && next.length > maxChars) break;
+    out = next; n++;
+  }
+  return out;
+};
+// A bullet: its first sentence, or a clean word-boundary truncation — one scannable line.
+const tighten = (t: string, max = 135): string => {
+  const clean = (t || "").replace(/\s+/g, " ").trim();
+  const first = sentencesOf(clean)[0] || clean;
+  let out = first.length >= 30 ? first : clean;
+  if (out.length > max) {
+    out = out.slice(0, max);
+    const sp = out.lastIndexOf(" ");
+    out = (sp > 40 ? out.slice(0, sp) : out).replace(/[,;:.\s]+$/, "") + "…";
+  }
+  return out.replace(/\.$/, "");
+};
 
 export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: string }) {
   const m = buildICMemoModel(deal);
-  const mix = m.mix;
-  // top category bars (cap to keep one page)
-  const bars = mix ? mix.slices.filter(x => x.rentPct > 0).slice(0, 6) : [];
-  const maxPct = bars.length ? Math.max(...bars.map(b => b.rentPct)) : 1;
+  const thesis = thesisOf(m.grade?.rationale || m.narrative);
+  const upside = m.upside.slice(0, 4).map((u) => tighten(u));
+  const risks = m.risks.slice(0, 4).map((r) => tighten(r));
+  const rollRows = m.rolloverByYear.filter((r) => r.count > 0);
+  const rollMax = rollRows.length ? Math.max(...m.rolloverByYear.map((r) => r.pct), 1) : 1;
 
   return (
     <Document title={`IC Memo — ${m.name}`}>
-      <Page size="LETTER" style={s.page}>
+      <Page size="LETTER" style={s.page} wrap={false}>
         {/* Header */}
         <View style={s.hdrRow}>
           <View style={s.logoZone}>
@@ -95,7 +121,7 @@ export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: stri
           <View style={{ flex: 1, paddingRight: 12 }}>
             <Text style={s.propName}>{m.name}</Text>
             {m.addressLine ? <Text style={s.sub}>{m.addressLine}</Text> : null}
-            {m.typeLine ? <Text style={[s.sub, { color: C.olive, fontFamily: "Helvetica-Bold" }]}>{m.typeLine}</Text> : null}
+            {m.typeLine ? <Text style={s.typeTxt}>{m.typeLine}</Text> : null}
           </View>
           {m.grade ? (
             <View style={s.gradeBox}>
@@ -105,16 +131,19 @@ export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: stri
           ) : null}
         </View>
 
-        {/* Recommendation */}
-        {m.grade?.rationale ? (
-          <View style={s.recBox}><Text style={s.recTxt}>{m.grade.rationale}</Text></View>
+        {/* Investment thesis (compressed) */}
+        {thesis ? (
+          <View style={s.thesisWrap}>
+            <Text style={s.secH}>Investment Thesis</Text>
+            <Text style={s.thesisTxt}>{thesis}</Text>
+          </View>
         ) : null}
 
         {/* Metric strip */}
         {m.metrics.length ? (
           <View style={s.mStrip}>
             {m.metrics.slice(0, 7).map((x, i, arr) => (
-              <View key={i} style={[s.mBox, i === arr.slice(0, 7).length - 1 ? { marginRight: 0 } : {}]}>
+              <View key={i} style={[s.mBox, i === arr.length - 1 ? { marginRight: 0 } : {}]}>
                 <Text style={s.mVal}>{x.value}</Text>
                 <Text style={s.mLbl}>{x.label}</Text>
               </View>
@@ -122,91 +151,71 @@ export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: stri
           </View>
         ) : null}
 
-        {/* Body */}
+        {/* Body: tenancy + rollover (left) · demographics + financials (right) */}
         <View style={s.body}>
-          {/* Left column */}
           <View style={s.colL}>
             {(m.anchors.length || m.topTenants.length) ? (
-              <Sec title="Tenancy">
-                {m.anchors.length ? <Text style={s.line}><Text style={s.lblIn}>Anchors: </Text>{m.anchors.join(", ")}</Text> : null}
-                {m.topTenants.length ? <Text style={s.line}><Text style={s.lblIn}>Top by rent: </Text>{m.topTenants.map(t => `${t.name} (${t.pct}%)`).join(", ")}</Text> : null}
-                {m.concentration ? <Text style={s.line}><Text style={s.lblIn}>Concentration: </Text>top tenant {m.concentration.top1}% of base rent; top 3 {m.concentration.top3}%.</Text> : null}
-              </Sec>
-            ) : null}
-
-            {mix ? (
-              <Sec title="Retail Mix & Resilience">
-                <View style={s.chip}><Text style={s.chipTxt}>Resilience {mix.resilienceScore}/100 · {mix.necessityRentPct}% necessity/service</Text></View>
-                <Text style={[s.line, { marginBottom: 5 }]}>{mix.characterization}</Text>
-                {bars.map((b, i) => (
-                  <View key={i} style={s.barRow}>
-                    <Text style={s.barCat}>{b.category}</Text>
-                    <View style={s.barTrack}>
-                      <View style={[s.barFill, { width: `${Math.max(4, (b.rentPct / maxPct) * 100)}%`, backgroundColor: b.resistance >= 80 ? C.olive : b.resistance >= 55 ? "#7aa653" : C.gold }]} />
-                    </View>
-                    <Text style={s.barPct}>{b.rentPct}%</Text>
-                  </View>
-                ))}
-              </Sec>
+              <View>
+                <Text style={s.secH}>Tenancy</Text>
+                {m.mix ? <View style={s.chip}><Text style={s.chipTxt}>Resilience {m.mix.resilienceScore}/100 · {m.mix.necessityRentPct}% necessity/service</Text></View> : null}
+                {m.anchors.length ? <Text style={s.line}><Text style={s.lblIn}>Anchors: </Text>{m.anchors.slice(0, 6).join(", ")}</Text> : null}
+                {m.topTenants.length ? <Text style={s.line}><Text style={s.lblIn}>Top by rent: </Text>{m.topTenants.slice(0, 5).map((t) => `${t.name} (${t.pct}%)`).join(", ")}</Text> : null}
+                {m.concentration ? <Text style={s.line}><Text style={s.lblIn}>Concentration: </Text>top tenant {m.concentration.top1}%; top 3 {m.concentration.top3}% of base rent.</Text> : null}
+              </View>
             ) : null}
 
             {m.rollover ? (
-              <Sec title="Lease Rollover">
-                <Text style={s.line}><Text style={s.lblIn}>{m.rollover.count} lease{m.rollover.count === 1 ? "" : "s"}{m.rollover.pct != null ? ` (${m.rollover.pct}% of base rent)` : ""}</Text> expire through {m.rollover.throughYear}.</Text>
-                {(() => {
-                  // Per-year expiration schedule as a bar chart (% of base rent rolling
-                  // each year) — turns the one-liner into a scannable rollover picture.
-                  const rows = m.rolloverByYear.filter((r) => r.count > 0);
-                  if (rows.length < 2) return null;
-                  const max = Math.max(...rows.map((r) => r.pct), 1);
-                  return (
-                    <View style={{ marginTop: 5 }}>
-                      {m.rolloverByYear.map((r, i) => (
-                        <View key={i} style={s.barRow}>
-                          <Text style={s.barCat}>{r.year}{r.count > 0 ? `  (${r.count})` : ""}</Text>
-                          <View style={s.barTrack}><View style={[s.barFill, { width: `${Math.round((r.pct / max) * 100)}%` }]} /></View>
-                          <Text style={s.barPct}>{r.pct > 0 ? `${r.pct}%` : "—"}</Text>
-                        </View>
-                      ))}
-                      <Text style={[s.footTxt, { marginTop: 2 }]}>Share of base rent expiring each year · (n) = leases</Text>
-                    </View>
-                  );
-                })()}
-              </Sec>
+              <View style={{ marginTop: 6 }}>
+                <Text style={s.secH}>Lease Rollover</Text>
+                <Text style={[s.line, { marginBottom: 4 }]}><Text style={s.lblIn}>{m.rollover.count} lease{m.rollover.count === 1 ? "" : "s"}{m.rollover.pct != null ? ` (${m.rollover.pct}% of rent)` : ""}</Text> expire through {m.rollover.throughYear}.</Text>
+                {rollRows.length >= 2 ? m.rolloverByYear.map((r, i) => (
+                  <View key={i} style={s.barRow}>
+                    <Text style={s.barCat}>{r.year}{r.count > 0 ? ` (${r.count})` : ""}</Text>
+                    <View style={s.barTrack}><View style={[s.barFill, { width: `${Math.round((r.pct / rollMax) * 100)}%` }]} /></View>
+                    <Text style={s.barPct}>{r.pct > 0 ? `${r.pct}%` : "—"}</Text>
+                  </View>
+                )) : null}
+              </View>
             ) : null}
           </View>
 
-          {/* Right column */}
           <View style={s.colR}>
             {m.demographics.length ? (
-              <Sec title="Location & Demographics">
+              <View>
+                <Text style={s.secH}>Location & Demographics</Text>
                 {m.demographics.map((d, i) => (
                   <View key={i} style={s.tRow}><Text style={s.tLbl}>{d.label}</Text><Text style={s.tVal}>{d.value}</Text></View>
                 ))}
-              </Sec>
+              </View>
             ) : null}
-
             {m.financials.length ? (
-              <Sec title="Financial Summary">
+              <View style={{ marginTop: 6 }}>
+                <Text style={s.secH}>Financial Summary</Text>
                 {m.financials.map((f, i) => (
                   <View key={i} style={s.tRow}><Text style={s.tLbl}>{f.label}</Text><Text style={s.tVal}>{f.value}</Text></View>
                 ))}
-              </Sec>
-            ) : null}
-
-            {m.risks.length ? (
-              <Sec title="Risks" wrap>
-                {m.risks.map((r, i) => (<View key={i} style={s.bullet} wrap={false}><Text style={s.bDotR}>•</Text><Text style={s.bTxt}>{r}</Text></View>))}
-              </Sec>
-            ) : null}
-
-            {m.upside.length ? (
-              <Sec title="Upside / Value-Add" wrap>
-                {m.upside.map((u, i) => (<View key={i} style={s.bullet} wrap={false}><Text style={s.bDot}>•</Text><Text style={s.bTxt}>{u}</Text></View>))}
-              </Sec>
+              </View>
             ) : null}
           </View>
         </View>
+
+        {/* Value-Add vs. Risks — side by side, one-line bullets */}
+        {(upside.length || risks.length) ? (
+          <View style={s.splitRow}>
+            <View style={[s.splitCol, { paddingRight: 14 }]}>
+              <Text style={s.secH}>Value-Add / Upside</Text>
+              {upside.length ? upside.map((u, i) => (
+                <View key={i} style={s.bullet}><Text style={s.bDot}>•</Text><Text style={s.bTxt}>{u}</Text></View>
+              )) : <Text style={s.line}>—</Text>}
+            </View>
+            <View style={s.splitCol}>
+              <Text style={s.secH}>Key Risks</Text>
+              {risks.length ? risks.map((r, i) => (
+                <View key={i} style={s.bullet}><Text style={s.bDotR}>•</Text><Text style={s.bTxt}>{r}</Text></View>
+              )) : <Text style={s.line}>—</Text>}
+            </View>
+          </View>
+        ) : null}
 
         {/* Footer */}
         <View style={s.footer} fixed>
