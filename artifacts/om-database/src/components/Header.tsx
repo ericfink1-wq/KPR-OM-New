@@ -19,6 +19,13 @@ import ImportDiffModal from "./ImportDiffModal";
 const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "");
 const SEARCH_SHORTCUT_LABEL = IS_MAC ? "⌘K" : "Ctrl+K";
 
+// The two analytics menus, split back out into separate top-nav dropdowns
+// (Portfolio Analytics ▾ / Tenant Analytics ▾).
+const ANALYTICS_GROUPS: Record<"portfolio" | "tenant", [string, string][]> = {
+  portfolio: [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"], ["Critical Dates", "critical-dates"], ["Co-Tenancy Cascade", "cotenancy-cascade"], ["Data Audit", "data-audit"], ["Learning", "learning"]],
+  tenant: [["Tenant Analytics", "tenant-list"], ["Mark-to-Market", "mark-to-market"], ["Retailer Watchlist", "watchlist"], ["Tenant Name Audit", "tenant-audit"], ["Link Tenants", "link-tenants"]],
+};
+
 interface Props {
   tab: string;
   onHelpOpen?: () => void;
@@ -72,9 +79,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     }).catch(() => { /* non-fatal */ });
   }, [isAdmin]);
   // Analytics nav dropdowns (Portfolio Analytics ▾ / Tenant Analytics ▾)
-  const [analyticsMenu, setAnalyticsMenu] = useState<null | "open">(null);
+  const [analyticsMenu, setAnalyticsMenu] = useState<null | "portfolio" | "tenant">(null);
   const [analyticsRect, setAnalyticsRect] = useState<DOMRect | null>(null);
   const pAnalyticsRef = useRef<HTMLDivElement>(null);
+  const tAnalyticsRef = useRef<HTMLDivElement>(null);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number; done?: number; failed?: number; mergedNames?: string[]; undo?: () => void; undone?: boolean } | null>(null);
   const [importPlan, setImportPlan] = useState<{ plan: ImportPlan; deals: Deal[] } | null>(null);
   const [snapshotModal, setSnapshotModal] = useState(false);
@@ -560,39 +568,37 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             Portfolio{active.length > 0 ? ` (${active.length})` : ""}
           </button>
           <div ref={pAnalyticsRef} style={{ position: "relative", display: "inline-flex" }}>
-            <button style={T(tab === "analytics")} onClick={() => {
+            <button style={T(tab === "analytics" && analyticsMenu === "portfolio")} onClick={() => {
               if (pAnalyticsRef.current) setAnalyticsRect(pAnalyticsRef.current.getBoundingClientRect());
-              setAnalyticsMenu(m => m ? null : "open");
-            }}>Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
+              setAnalyticsMenu(m => m === "portfolio" ? null : "portfolio");
+            }}>Portfolio Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
+          </div>
+          <div ref={tAnalyticsRef} style={{ position: "relative", display: "inline-flex" }}>
+            <button style={T(tab === "analytics" && analyticsMenu === "tenant")} onClick={() => {
+              if (tAnalyticsRef.current) setAnalyticsRect(tAnalyticsRef.current.getBoundingClientRect());
+              setAnalyticsMenu(m => m === "tenant" ? null : "tenant");
+            }}>Tenant Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
           </div>
           <button style={T(tab === "comps")} onClick={() => onTab("comps")}>Comps</button>
           {onClosingCalc && <button style={T(false)} onClick={onClosingCalc}>Closing Costs</button>}
         </div>
 
-        {/* Analytics nav dropdown menu (shared portal for both triggers) */}
+        {/* Analytics nav dropdown — one list per trigger (Portfolio / Tenant) */}
         {analyticsMenu && analyticsRect && createPortal(
           <>
             <div onClick={() => setAnalyticsMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
             <div style={{
               position: "fixed", top: analyticsRect.bottom + 6, left: analyticsRect.left, zIndex: 9001,
               background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
-              boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden", paddingBottom: 4,
+              boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden", padding: "4px 0",
             }}>
-              {([
-                ["Portfolio", [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"], ["Critical Dates", "critical-dates"], ["Co-Tenancy Cascade", "cotenancy-cascade"], ["Data Audit", "data-audit"], ["Learning", "learning"]]],
-                ["Tenants", [["Tenant Analytics", "tenant-list"], ["Mark-to-Market", "mark-to-market"], ["Retailer Watchlist", "watchlist"], ["Tenant Name Audit", "tenant-audit"], ["Link Tenants", "link-tenants"]]],
-              ] as [string, [string, string][]][]).map(([group, items]) => (
-                <div key={group}>
-                  <div style={{ padding: "9px 14px 4px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>{group}</div>
-                  {items.map(([label, dest]) => (
-                    <button key={dest} onClick={() => { setAnalyticsMenu(null); onAnalyticsNav?.(dest); }}
-                      style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "8px 14px 8px 18px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#383a37", fontWeight: 600, whiteSpace: "nowrap" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
+              {ANALYTICS_GROUPS[analyticsMenu].map(([label, dest]) => (
+                <button key={dest} onClick={() => { setAnalyticsMenu(null); onAnalyticsNav?.(dest); }}
+                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "8px 16px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#383a37", fontWeight: 600, whiteSpace: "nowrap" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  {label}
+                </button>
               ))}
             </div>
           </>,
