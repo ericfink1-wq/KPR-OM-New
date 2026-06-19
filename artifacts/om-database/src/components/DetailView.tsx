@@ -2427,13 +2427,17 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           )}
         </div>
         {(() => {
-          const parts = [
+          const rawParts = [
             d.assetType && d.assetType !== "unknown" ? d.assetType : null,
             d.centerType || null,
             loc.urbanicity || null,
             loc.density?.tier || null,
             loc.income?.tier || null,
           ].filter(Boolean) as string[];
+          // urbanicity and the density tier often coincide (both "Suburban") — collapse
+          // identical chips so the line never reads "… · Suburban · Suburban · …".
+          const seen = new Set<string>();
+          const parts = rawParts.filter((p) => { const k = p.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
           return parts.length > 0 ? (
             <div style={{ fontSize:13, color:"#a69e91" }}>{parts.join(" · ")}</div>
           ) : null;
