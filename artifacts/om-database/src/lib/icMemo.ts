@@ -5,8 +5,38 @@
 // leads with the defensive/discretionary read an IC cares about.
 
 import type { Deal, Tenant } from "./idb";
-import { isVacant, isNAPTenant } from "./utils";
+import { isVacant, isNAPTenant, tenantKey } from "./utils";
 import { analyzeCenterMix } from "./retailCategory";
+
+// Median sales/rent PSF per brand across OTHER deals in the database — so an anchor's
+// rent and sales can be shown relative to that chain's own norm (a Best Buy vs other
+// Best Buys), not a meaningless cross-brand average. One observation per (deal, brand).
+const MIN_OTHER = 2;
+function medianOf(a: number[]): number { const s = [...a].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+function buildBrandMedians(allDeals: Deal[], field: "salesPSF" | "rentPerSF"): Map<string, { dealId: string; v: number }[]> {
+  const idx = new Map<string, { dealId: string; v: number }[]>();
+  for (const d of allDeals || []) {
+    if (!d || d.trashedAt) continue;
+    const perBrand = new Map<string, number>();
+    for (const t of d.tenants || []) {
+      if (!t || isVacant(t.name) || isNAPTenant(t)) continue;
+      const key = tenantKey(t.canonicalName || t.name);
+      const v = n((t as Record<string, unknown>)[field]);
+      if (!key || v == null || v <= 0) continue;
+      perBrand.set(key, Math.max(perBrand.get(key) ?? 0, v));   // dedupe multi-suite chains within one center
+    }
+    for (const [key, v] of perBrand) { if (!idx.has(key)) idx.set(key, []); idx.get(key)!.push({ dealId: d.id, v }); }
+  }
+  return idx;
+}
+// % difference of a value vs the brand median across OTHER centers (null when too few).
+function vsChain(idx: Map<string, { dealId: string; v: number }[]>, brandKey: string, dealId: string, val: number | null): number | null {
+  if (val == null || val <= 0 || !brandKey) return null;
+  const others = (idx.get(brandKey) ?? []).filter((o) => o.dealId !== dealId).map((o) => o.v);
+  if (others.length < MIN_OTHER) return null;
+  const med = medianOf(others);
+  return med > 0 ? Math.round((val / med - 1) * 100) : null;
+}
 
 const n = (v: unknown): number | null => {
   if (v == null || v === "") return null;
@@ -32,6 +62,15 @@ function refDate(deal: Deal): Date {
 }
 
 export interface MemoMetric { label: string; value: string }
+export interface AnchorRow {
+  name: string;
+  sf: number | null;
+  rentPSF: number | null;
+  termYears: number | null;        // remaining lease term
+  salesPSF: number | null;
+  rentVsChain: number | null;      // % vs this brand's median rent PSF across the DB
+  salesVsChain: number | null;     // % vs this brand's median sales PSF across the DB
+}
 export interface ICMemoModel {
   name: string;
   addressLine: string | null;
@@ -42,6 +81,7 @@ export interface ICMemoModel {
   metrics: MemoMetric[];          // headline boxes (price, cap, NOI, GLA, occ, WALT, rent)
   demographics: MemoMetric[];     // pop, income, traffic
   anchors: string[];
+  anchorDetail: AnchorRow[];        // per-anchor rent / term / sales vs chain (needs allDeals)
   topTenants: { name: string; pct: number }[];
   concentration: { top1: number; top3: number } | null;
   mix: ReturnType<typeof analyzeCenterMix>;
@@ -81,8 +121,26 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
   if (inc3 != null) demographics.push({ label: "Avg HH Income (3-mi)", value: money(inc3) ?? "—" });
   if (traffic != null) demographics.push({ label: "Traffic", value: `${Math.round(traffic).toLocaleString()} VPD` });
 
-  const anchors = occ.filter((t) => t.isAnchor === true || (n(t.sf) ?? 0) >= 20000)
-    .slice(0, 6).map((t) => `${t.name}${sfFmt(t.sf) ? ` (${sfFmt(t.sf)})` : ""}`);
+  const anchorTenants = occ.filter((t) => t.isAnchor === true || (n(t.sf) ?? 0) >= 20000).slice(0, 6);
+  const anchors = anchorTenants.map((t) => `${t.name}${sfFmt(t.sf) ? ` (${sfFmt(t.sf)})` : ""}`);
+  // Per-anchor detail with rent/sales relative to each chain's own DB median.
+  const rentIdx = buildBrandMedians(opts.allDeals ?? [], "rentPerSF");
+  const salesIdx = buildBrandMedians(opts.allDeals ?? [], "salesPSF");
+  const refYearMs = refDate(deal).getTime();
+  const anchorDetail: AnchorRow[] = anchorTenants.map((t) => {
+    const key = tenantKey(t.canonicalName || t.name);
+    const rentPSF = n(t.rentPerSF) ?? (n(t.annualRent) != null && n(t.sf) ? n(t.annualRent)! / n(t.sf)! : null);
+    const salesPSF = n(t.salesPSF);
+    // Remaining term: prefer an explicit field, else derive from the lease expiry.
+    let termYears = n(t.remainingTermYears);
+    if (termYears == null) { const e = /^\d{4}-\d{2}-\d{2}/.test(String(t.leaseExpiry ?? "")) ? new Date(String(t.leaseExpiry).slice(0, 10)).getTime() : NaN; if (Number.isFinite(e)) termYears = Math.max(0, Math.round((e - refYearMs) / (365.25 * 86_400_000) * 10) / 10); }
+    return {
+      name: String(t.canonicalName || t.name || "Anchor"),
+      sf: n(t.sf), rentPSF: rentPSF != null ? Math.round(rentPSF * 100) / 100 : null, termYears, salesPSF,
+      rentVsChain: vsChain(rentIdx, key, deal.id, rentPSF),
+      salesVsChain: vsChain(salesIdx, key, deal.id, salesPSF),
+    };
+  });
   const ranked = occ.map((t) => ({ t, rent: rentOf(t) })).filter((x) => x.rent > 0).sort((a, b) => b.rent - a.rent);
   const totalRent = ranked.reduce((s, x) => s + x.rent, 0);
   const topTenants = totalRent > 0 ? ranked.slice(0, 5).map((x) => ({ name: String(x.t.name ?? ""), pct: Math.round((x.rent / totalRent) * 100) })) : [];
@@ -136,7 +194,7 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
     generatedOn: today.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     asOf: deal.tenantsAsOf ?? null,
     grade: score && (score.grade || score.score != null) ? { grade: score.grade ?? "—", score: score.score ?? null, rationale: score.rationale?.trim() || null } : null,
-    metrics, demographics, anchors, topTenants, concentration,
+    metrics, demographics, anchors, anchorDetail, topTenants, concentration,
     mix: analyzeCenterMix(deal), rollover, rolloverByYear, financials,
     risks: dedupeLines(risks).slice(0, 5),
     upside: dedupeLines(upside).slice(0, 5),
@@ -144,7 +202,7 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
   };
 }
 
-export interface ICMemoOptions { generatedOn?: Date }
+export interface ICMemoOptions { generatedOn?: Date; allDeals?: Deal[] }
 
 export function buildICMemo(deal: Deal, opts: ICMemoOptions = {}): string {
   const L: string[] = [];

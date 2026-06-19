@@ -51,6 +51,13 @@ const s = StyleSheet.create({
   tRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 2.4 },
   tLbl: { fontSize: 8, color: C.muted },
   tVal: { fontSize: 8, fontFamily: "Helvetica-Bold", color: C.ink },
+  // Anchor table
+  anchHead: { flexDirection: "row", borderBottomWidth: 0.6, borderBottomColor: C.rule, borderBottomStyle: "solid", paddingBottom: 2, marginBottom: 2 },
+  anchRow: { flexDirection: "row", paddingVertical: 1.6, alignItems: "center" },
+  ahCell: { fontSize: 6.4, color: C.muted, textTransform: "uppercase", letterSpacing: 0.2, fontFamily: "Helvetica-Bold" },
+  acName: { fontSize: 8, color: C.ink, fontFamily: "Helvetica-Bold" },
+  acVal: { fontSize: 7.8, color: C.body },
+  acNum: { fontSize: 7.8, color: C.body },
   splitRow: { flexDirection: "row", marginTop: 2 },
   splitCol: { flex: 1 },
   bullet: { flexDirection: "row", marginBottom: 3 },
@@ -95,8 +102,12 @@ const tighten = (t: string, max = 135): string => {
   return out.replace(/\.$/, "");
 };
 
-export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: string }) {
-  const m = buildICMemoModel(deal);
+// Column layout for the anchor table (fractions sum to 1).
+const AW = { name: "27%", sf: "11%", rent: "12%", rentv: "13%", term: "10%", sales: "13%", salesv: "14%" } as const;
+const signed = (p: number | null) => p == null ? "—" : `${p > 0 ? "+" : ""}${p}%`;
+
+export default function ICMemoPDF({ deal, logoUrl, allDeals }: { deal: Deal; logoUrl: string; allDeals?: Deal[] }) {
+  const m = buildICMemoModel(deal, { allDeals });
   const thesis = thesisOf(m.grade?.rationale || m.narrative);
   const upside = m.upside.slice(0, 4).map((u) => tighten(u));
   const risks = m.risks.slice(0, 4).map((r) => tighten(r));
@@ -151,14 +162,41 @@ export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: stri
           </View>
         ) : null}
 
+        {/* Anchor summary — rent, term, sales, each vs the chain's own DB median */}
+        {m.anchorDetail.length ? (
+          <View style={{ marginBottom: 8 }}>
+            <Text style={s.secH}>Anchor Summary — rent · term · sales vs chain average</Text>
+            <View style={s.anchHead}>
+              <Text style={[s.ahCell, { width: AW.name }]}>Anchor</Text>
+              <Text style={[s.ahCell, { width: AW.sf, textAlign: "right" }]}>GLA</Text>
+              <Text style={[s.ahCell, { width: AW.rent, textAlign: "right" }]}>Rent/SF</Text>
+              <Text style={[s.ahCell, { width: AW.rentv, textAlign: "right" }]}>vs chain</Text>
+              <Text style={[s.ahCell, { width: AW.term, textAlign: "right" }]}>Term</Text>
+              <Text style={[s.ahCell, { width: AW.sales, textAlign: "right" }]}>Sales/SF</Text>
+              <Text style={[s.ahCell, { width: AW.salesv, textAlign: "right" }]}>vs chain</Text>
+            </View>
+            {m.anchorDetail.map((a, i) => (
+              <View key={i} style={[s.anchRow, i % 2 ? { backgroundColor: "#fbfaf6" } : {}]}>
+                <Text style={[s.acName, { width: AW.name }]}>{a.name}</Text>
+                <Text style={[s.acNum, { width: AW.sf, textAlign: "right" }]}>{a.sf != null ? `${Math.round(a.sf / 1000)}k` : "—"}</Text>
+                <Text style={[s.acNum, { width: AW.rent, textAlign: "right" }]}>{a.rentPSF != null ? `$${a.rentPSF.toFixed(2)}` : "—"}</Text>
+                <Text style={[s.acNum, { width: AW.rentv, textAlign: "right", color: a.rentVsChain == null ? C.faint : a.rentVsChain > 0 ? C.oliveDk : C.gold }]}>{signed(a.rentVsChain)}</Text>
+                <Text style={[s.acNum, { width: AW.term, textAlign: "right" }]}>{a.termYears != null ? `${a.termYears.toFixed(1)}y` : "—"}</Text>
+                <Text style={[s.acNum, { width: AW.sales, textAlign: "right" }]}>{a.salesPSF != null ? `$${Math.round(a.salesPSF)}` : "—"}</Text>
+                <Text style={[s.acNum, { width: AW.salesv, textAlign: "right", color: a.salesVsChain == null ? C.faint : a.salesVsChain >= 0 ? C.oliveDk : C.red }]}>{signed(a.salesVsChain)}</Text>
+              </View>
+            ))}
+            <Text style={[s.footTxt, { marginTop: 2 }]}>vs chain = this store vs the median of other same-brand locations in your database (— = too few to compare); sales shown where disclosed.</Text>
+          </View>
+        ) : null}
+
         {/* Body: tenancy + rollover (left) · demographics + financials (right) */}
         <View style={s.body}>
           <View style={s.colL}>
-            {(m.anchors.length || m.topTenants.length) ? (
+            {(m.topTenants.length || m.mix) ? (
               <View>
                 <Text style={s.secH}>Tenancy</Text>
                 {m.mix ? <View style={s.chip}><Text style={s.chipTxt}>Resilience {m.mix.resilienceScore}/100 · {m.mix.necessityRentPct}% necessity/service</Text></View> : null}
-                {m.anchors.length ? <Text style={s.line}><Text style={s.lblIn}>Anchors: </Text>{m.anchors.slice(0, 6).join(", ")}</Text> : null}
                 {m.topTenants.length ? <Text style={s.line}><Text style={s.lblIn}>Top by rent: </Text>{m.topTenants.slice(0, 5).map((t) => `${t.name} (${t.pct}%)`).join(", ")}</Text> : null}
                 {m.concentration ? <Text style={s.line}><Text style={s.lblIn}>Concentration: </Text>top tenant {m.concentration.top1}%; top 3 {m.concentration.top3}% of base rent.</Text> : null}
               </View>

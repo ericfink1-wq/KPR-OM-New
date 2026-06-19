@@ -2425,7 +2425,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         />
         <PdfDownloadButton
           fileName={`IC-Memo-${(d.propertyName||d.fileName||"deal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}.pdf`}
-          makeDoc={async () => { const { default: ICMemoPDF } = await import("./ICMemoPDF"); return <ICMemoPDF deal={d} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />; }}
+          makeDoc={async () => { const { default: ICMemoPDF } = await import("./ICMemoPDF"); return <ICMemoPDF deal={d} allDeals={allDeals} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />; }}
           render={(busy) => (
             <button title="One-page, branded Investment Committee memo (PDF)" style={{ background:"#3f7a1f", border:"1px solid #3f7a1f", color: busy ? "#cfe3b8" : "#fff", padding:"8px 16px", borderRadius:6, cursor: busy ? "default" : "pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5, opacity: busy ? 0.8 : 1 }}>
               <span style={{ fontSize:13 }}>📄</span>{busy ? "Memo…" : "IC Memo"}
