@@ -24,6 +24,14 @@ function pct(part: number, total: number): number {
 function parseDealIds(raw: unknown): string[] | null {
   if (Array.isArray(raw)) return (raw as string[]).filter(Boolean);
   if (typeof raw === "string" && raw) return [raw];
+  // The "extended" (qs) query parser converts MORE THAN 20 repeated params (its
+  // arrayLimit) from an array into an object { "0": id, "1": id, … }. Without this,
+  // a portfolio with >20 owned deals sent every id but parsed to null → the Owned
+  // filter silently fell back to ALL deals. Pull the values out of that object.
+  if (raw && typeof raw === "object") {
+    const vals = Object.values(raw as Record<string, unknown>).filter((v): v is string => typeof v === "string" && v.length > 0);
+    return vals.length > 0 ? vals : null;
+  }
   return null;
 }
 
