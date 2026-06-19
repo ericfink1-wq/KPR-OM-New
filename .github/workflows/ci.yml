@@ -1,0 +1,39 @@
+name: CI
+
+# Runs on every push and pull request so a regression is caught the moment it lands —
+# before it can be republished. Typechecks the clean packages and runs the full test
+# suite (the regression tests that lock in each data-integrity fix).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (shared libs + web app)
+        run: |
+          npx tsc -b lib/api-zod lib/api-client-react lib/db
+          pnpm -C artifacts/om-database run typecheck
+
+      - name: Tests — web app
+        run: pnpm -C artifacts/om-database test
+
+      - name: Tests — API server
+        run: pnpm -C artifacts/api-server test
