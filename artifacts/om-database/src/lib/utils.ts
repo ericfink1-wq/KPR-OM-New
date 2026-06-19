@@ -187,6 +187,17 @@ export function parseAiReviewQuestions(raw: unknown, idPrefix: string): ReviewQu
     .filter(q => q.question);
 }
 
+// The client's reconcileDeal (calc-*) checks are a SUBSET of the server's richer
+// extraction audit (audit-*). When the audit version of the same contradiction is
+// surfaced, suppress the calc-* twin so one issue isn't shown twice. (calc id =
+// "calc-" + slugified label; audit id is the stable id from extractionAudit.)
+const CALC_SUPERSEDED_BY_AUDIT: Record<string, string> = {
+  "calc-cap-rate-price-mismatch": "audit-noi-cap-price",
+  "calc-price-sf-mismatch": "audit-price-psf",
+  "calc-noi-exceeds-egi": "audit-noi-gt-egi",
+  "calc-income-statement-doesn-t-balance": "audit-noi-egi-opex",
+};
+
 // `extraChecks` are review questions computed OUTSIDE this deal (they need the whole
 // portfolio cohort) — e.g. the cross-database distribution anomalies. They're merged
 // like any other check, so prior confirm/dismiss/fix resolutions carry forward and a
@@ -204,11 +215,40 @@ export function buildReviewQuestions(deal: Deal, extraChecks: ReviewQuestion[] =
     out.push(wasResolved ? { ...q, resolvedAt: wasResolved.resolvedAt, resolution: wasResolved.resolution } : q);
   };
 
+  // The server-computed audit checks we pass through below, so the client can suppress
+  // the redundant calc-* checks (block 2) that the richer audit-* versions supersede.
+  const surfacedAuditIds = new Set<string>();
+
   // 1) AI-flagged low-confidence captures carried on the deal. These may be raw
   //    from the model (OM extraction stores them as-is, without id/source), so
   //    normalize: anything not produced by a deterministic check is treated as AI.
   prior.forEach((raw, i) => {
-    if (raw.source === "check") return; // deterministic checks are regenerated below
+    if (raw.source === "check") {
+      // Server-computed checks with NO client regenerator — the arithmetic extraction
+      // audit (audit-*) and the scanned-PDF source check (src-*) — are passed through so
+      // they surface on the DEAL PAGE, not only the portfolio-level audit. The locally
+      // regenerated/managed checks (calc-/tax-/missing-/refresh-/merge-/anomaly-) are
+      // rebuilt fresh elsewhere, so their stored copies are skipped to avoid stale dupes.
+      const sid = String(raw.id || "");
+      if (!(sid.startsWith("audit-") || sid.startsWith("src-")) || !raw.question) return;
+      const ts = raw.target as Record<string, unknown> | null | undefined;
+      add({
+        id: sid,
+        source: "check",
+        severity: (["high", "medium", "low"].includes(raw.severity as string) ? raw.severity : "medium") as ReviewQuestion["severity"],
+        field: typeof raw.field === "string" ? raw.field : null,
+        question: String(raw.question),
+        detail: typeof raw.detail === "string" ? raw.detail : null,
+        suggestedValue: raw.suggestedValue != null ? String(raw.suggestedValue) : null,
+        target: ts && (ts.kind === "deal" || ts.kind === "tenant") && typeof ts.fieldKey === "string"
+          ? { kind: ts.kind as "deal" | "tenant", fieldKey: ts.fieldKey as string, tenantName: typeof ts.tenantName === "string" ? ts.tenantName : null, valueType: (ts.valueType === "text" ? "text" : "number") as "number" | "text" }
+          : null,
+        resolvedAt: raw.resolvedAt ?? null,
+        resolution: raw.resolution ?? null,
+      });
+      if (sid.startsWith("audit-")) surfacedAuditIds.add(sid);
+      return;
+    }
     const r = raw as Partial<ReviewQuestion> & Record<string, unknown>;
     if (!r.question) return;
     const id = r.id || `ai-${i}-${String(r.field ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}`;
@@ -235,11 +275,16 @@ export function buildReviewQuestions(deal: Deal, extraChecks: ReviewQuestion[] =
     });
   });
 
-  // 2) Deterministic arithmetic integrity checks.
+  // 2) Deterministic arithmetic integrity checks. When the richer server audit-* version
+  //    of the same contradiction is already surfaced (block 1), skip the calc-* twin so
+  //    the user isn't double-nagged about one issue.
   const { checks } = reconcileDeal(deal);
   for (const c of checks) {
+    const id = "calc-" + c.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const auditTwin = CALC_SUPERSEDED_BY_AUDIT[id];
+    if (auditTwin && surfacedAuditIds.has(auditTwin)) continue;
     add({
-      id: "calc-" + c.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      id,
       source: "check",
       severity: c.severity === "error" ? "high" : "medium",
       question: `${c.label} — does this look right, or was a number mis-captured?`,
