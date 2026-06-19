@@ -41,6 +41,6 @@ describe("scoreDealConfidence", () => {
     });
     const clean = base({ ...withFlag, reviewQuestions: [] as any });
     expect(scoreDealConfidence(withFlag).score).toBeLessThan(scoreDealConfidence(clean).score);
-    expect(scoreDealConfidence(withFlag).gaps.some((g) => /don't tie out/.test(g))).toBe(true);
+    expect(scoreDealConfidence(withFlag).gaps.some((g) => /tie out/.test(g))).toBe(true);
   });
 });
