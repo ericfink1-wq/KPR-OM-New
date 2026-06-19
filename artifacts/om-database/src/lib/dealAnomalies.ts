@@ -5,7 +5,7 @@
 // for a human to verify. This gets SHARPER with every deal added (tighter cohorts),
 // so more data → better self-checking. Deterministic (median-based), no model.
 
-import type { Deal } from "./idb";
+import type { Deal, ReviewQuestion } from "./idb";
 import { tenantKey, isVacant, isNAPTenant } from "./utils";
 
 export interface DerivedFlag { severity: "high" | "medium" | "low"; description: string }
@@ -21,7 +21,7 @@ function median(values: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-interface Anomaly { severity: "medium" | "low"; message: string }
+interface Anomaly { id: string; severity: "medium" | "low"; message: string }
 
 const MIN_DEAL_PEERS = 5;     // need ≥5 comparable deals for a deal-level cohort
 const MIN_BRAND_PEERS = 3;    // need ≥3 other locations for a brand cohort
@@ -40,7 +40,7 @@ export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
   if (cap != null && caps.length >= MIN_DEAL_PEERS) {
     const med = median(caps);
     if (med > 0 && (cap < med * 0.6 || cap > med * 1.7)) {
-      out.push({ severity: "medium", message: `Cap rate ${cap}% is unusual vs the ${med.toFixed(1)}% median across ${caps.length} comparable ${ct || ""} deals — verify it wasn't mis-captured.` });
+      out.push({ id: "anomaly-caprate", severity: "medium", message: `Cap rate ${cap}% is unusual vs the ${med.toFixed(1)}% median across ${caps.length} comparable ${ct || ""} deals — verify it wasn't mis-captured.` });
     }
   }
 
@@ -49,7 +49,7 @@ export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
   if (war != null && wars.length >= MIN_DEAL_PEERS) {
     const med = median(wars);
     if (med > 0 && (war < med * 0.5 || war > med * 2.0)) {
-      out.push({ severity: "low", message: `Avg rent $${war.toFixed(2)}/SF is unusual vs the $${med.toFixed(2)} median across ${wars.length} comparable ${ct || ""} deals — verify.` });
+      out.push({ id: "anomaly-avgrent", severity: "low", message: `Avg rent $${war.toFixed(2)}/SF is unusual vs the $${med.toFixed(2)} median across ${wars.length} comparable ${ct || ""} deals — verify.` });
     }
   }
 
@@ -79,7 +79,7 @@ export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
     }
   }
   if (rentOutliers.length) {
-    out.push({ severity: "low", message: `Tenant rent PSF off the brand norm: ${rentOutliers.slice(0, 6).join("; ")}${rentOutliers.length > 6 ? `; +${rentOutliers.length - 6} more` : ""} — verify (or a likely rent/SF mis-capture).` });
+    out.push({ id: "anomaly-rent-brand", severity: "low", message: `Tenant rent PSF off the brand norm: ${rentOutliers.slice(0, 6).join("; ")}${rentOutliers.length > 6 ? `; +${rentOutliers.length - 6} more` : ""} — verify (or a likely rent/SF mis-capture).` });
   }
 
   // ── Tenant-level: total SF vs the SAME brand across OTHER deals — an SF-typo catch.
@@ -120,10 +120,30 @@ export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
     }
   }
   if (sizeOutliers.length) {
-    out.push({ severity: "low", message: `Tenant SF off the brand norm: ${sizeOutliers.slice(0, 6).join("; ")}${sizeOutliers.length > 6 ? `; +${sizeOutliers.length - 6} more` : ""} — likely an SF typo (a top cause of GLA mismatches).` });
+    out.push({ id: "anomaly-sf-brand", severity: "low", message: `Tenant SF off the brand norm: ${sizeOutliers.slice(0, 6).join("; ")}${sizeOutliers.length > 6 ? `; +${sizeOutliers.length - 6} more` : ""} — likely an SF typo (a top cause of GLA mismatches).` });
   }
 
   return out;
+}
+
+// Turn the cross-portfolio anomalies into review questions so they flow into the
+// "Confirm import details" overlay — where each can be confirmed, fixed, OR turned
+// into a teach-the-analyst rule. This is the learning loop: the database checks every
+// new import against itself, and a real outlier becomes a correction + a future rule.
+// Stable ids let a confirm/dismiss stick (and a healed anomaly silently drops out).
+export function anomalyReviewQuestions(deal: Deal, allDeals: Deal[]): ReviewQuestion[] {
+  return detectDealAnomalies(deal, allDeals).map((a): ReviewQuestion => ({
+    id: a.id,
+    source: "check",
+    severity: a.severity,
+    field: "vs. your database",
+    question: a.message,
+    detail: "Compared against the distribution across your existing deals — a real outlier is usually a mis-capture. Confirm, fix it, or dismiss.",
+    suggestedValue: null,
+    target: null,
+    resolvedAt: null,
+    resolution: null,
+  }));
 }
 
 // Aggregate the anomalies into a single deal red flag (shown on the deal page at upload).

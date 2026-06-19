@@ -187,7 +187,11 @@ export function parseAiReviewQuestions(raw: unknown, idPrefix: string): ReviewQu
     .filter(q => q.question);
 }
 
-export function buildReviewQuestions(deal: Deal): ReviewQuestion[] {
+// `extraChecks` are review questions computed OUTSIDE this deal (they need the whole
+// portfolio cohort) — e.g. the cross-database distribution anomalies. They're merged
+// like any other check, so prior confirm/dismiss/fix resolutions carry forward and a
+// healed anomaly silently drops out. Passed in (not imported here) to avoid a cycle.
+export function buildReviewQuestions(deal: Deal, extraChecks: ReviewQuestion[] = []): ReviewQuestion[] {
   const prior = Array.isArray(deal.reviewQuestions) ? deal.reviewQuestions : [];
   const resolvedById = new Map(prior.filter(q => q.resolvedAt).map(q => [q.id, q]));
   const out: ReviewQuestion[] = [];
@@ -276,12 +280,15 @@ export function buildReviewQuestions(deal: Deal): ReviewQuestion[] {
     });
   }
 
+  // 4) Cross-portfolio checks computed by the caller (need the whole cohort).
+  for (const q of extraChecks) add(q);
+
   return out.sort((a, b) => (SEV_RANK[a.severity] ?? 1) - (SEV_RANK[b.severity] ?? 1));
 }
 
 // Count of OPEN (unresolved) review questions — for badges.
-export function openReviewCount(deal: Deal): number {
-  return buildReviewQuestions(deal).filter(q => !q.resolvedAt).length;
+export function openReviewCount(deal: Deal, extraChecks: ReviewQuestion[] = []): number {
+  return buildReviewQuestions(deal, extraChecks).filter(q => !q.resolvedAt).length;
 }
 
 // Just the deterministic ARITHMETIC contradictions (audit-* ids) that are still open —

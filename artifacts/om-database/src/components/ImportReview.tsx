@@ -9,6 +9,9 @@ import { apiAiMessages, apiAddExtractionLesson } from "../lib/api";
 function draftLesson(q: ReviewQuestion): string {
   const fk = q.target?.fieldKey || "";
   const id = q.id || "";
+  if (id.startsWith("anomaly-sf")) return "Tenant SF must match the brand's typical footprint — an SF far off the norm across the portfolio is almost always a digit/units typo. Re-read the rent-roll SF column for that tenant.";
+  if (id.startsWith("anomaly-rent")) return "A tenant's rent PSF far off what the same brand pays elsewhere usually means base vs gross rent got mixed up, or SF/rent was mis-keyed — re-check which rent-roll column is base rent and the SF.";
+  if (id.startsWith("anomaly-caprate") || id.startsWith("anomaly-avgrent")) return "Sanity-check headline cap rate / average rent against typical values for this product type before trusting the capture — an outlier vs the portfolio is usually a mis-read or a pro-forma figure mistaken for in-place.";
   if (fk === "totalSF" || id.startsWith("audit-sf-gla")) return "Total SF / building GLA: confirm it equals the sum of ALL suite SF (occupied + vacant) and ties to the rent-roll total — don't trust a cover-page GLA that conflicts with the roster.";
   if (id.startsWith("audit-noi-cap-price") || fk === "noi" || fk === "capRate" || fk === "askingPrice") return "NOI, cap rate and price must tie out (price = NOI ÷ cap). If the headline cap is on PRO-FORMA NOI, capture in-place NOI separately and never let the three contradict.";
   if (fk === "occupancy" || id.startsWith("audit-occupancy")) return "Occupancy must reconcile to the roster (occupied SF ÷ GLA) and be a percentage (e.g. 92.8, not 0.928).";
@@ -103,13 +106,16 @@ const inferTenantNumberField = (q: ReviewQuestion): string | null => {
 // badge on the deal page. Each question is either an AI low-confidence capture or
 // a deterministic arithmetic/missing-field check. Confirming or dismissing stamps
 // resolvedAt so it never re-asks; the deal's reviewQuestions are updated via onUpdate.
-export default function ImportReview({ deal, onClose, onUpdate }: {
+export default function ImportReview({ deal, onClose, onUpdate, extraChecks }: {
   deal: Deal;
   onClose: () => void;
   onUpdate: (id: string, patch: Partial<Deal>) => void;
+  // Cross-portfolio anomaly checks (need the whole cohort, computed by the caller).
+  extraChecks?: ReviewQuestion[];
 }) {
-  // Compute the live merged list (AI + checks), preserving prior resolutions.
-  const all = useMemo(() => buildReviewQuestions(deal), [deal]);
+  // Compute the live merged list (AI + checks + cross-portfolio anomalies), preserving
+  // prior resolutions.
+  const all = useMemo(() => buildReviewQuestions(deal, extraChecks || []), [deal, extraChecks]);
   const [showResolved, setShowResolved] = useState(false);
   const open = all.filter(q => !q.resolvedAt);
   const resolved = all.filter(q => q.resolvedAt);

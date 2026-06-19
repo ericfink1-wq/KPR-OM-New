@@ -49,7 +49,7 @@ import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
 import { buildBrandSalesIndex, buildSalesFlags, deriveSalesOutlierFlag } from "../lib/tenantSalesBenchmark";
-import { deriveAnomalyFlag } from "../lib/dealAnomalies";
+import { deriveAnomalyFlag, anomalyReviewQuestions } from "../lib/dealAnomalies";
 import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
@@ -1516,6 +1516,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // typical productivity for that retailer across all OTHER deals (low = underperformer).
   const brandSalesIndex = useMemo(() => buildBrandSalesIndex(allDeals), [allDeals]);
   const salesFlags = useMemo(() => buildSalesFlags(d, brandSalesIndex), [d, brandSalesIndex]);
+  // Cross-portfolio distribution anomalies as review questions — folded into the
+  // "Confirm import details" overlay so each outlier can be confirmed/fixed/taught.
+  const anomalyChecks = useMemo(() => anomalyReviewQuestions(d, allDeals), [d, allDeals]);
   // Per-tenant kickout / early-termination levers for the roster's Kickout column.
   const kickoutByTenant = useMemo(() => buildKickoutByTenant(d, abstracts), [d, abstracts]);
 
@@ -2417,7 +2420,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           there are open items to confirm (opens the review overlay), green when
           everything checks out. Supersedes the old standalone DataIntegrity box. */}
       {(() => {
-        const openCount = openReviewCount(d);
+        const openCount = openReviewCount(d, anomalyChecks);
         const auditCount = openAuditCount(d);
         // Arithmetic contradictions ("the math doesn't tie out") get a louder RED strip —
         // higher signal than AI low-confidence captures.
@@ -2459,7 +2462,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           </div>
         );
       })()}
-      {reviewOpen && <ImportReview deal={d} onClose={() => setReviewOpen(false)} onUpdate={onUpdate} />}
+      {reviewOpen && <ImportReview deal={d} extraChecks={anomalyChecks} onClose={() => setReviewOpen(false)} onUpdate={onUpdate} />}
 
       {/* ── Sub-page nav — sticky under the property name. Desktop: a row of tabs,
           each opening a jump-menu of its sections. Mobile: one compact dropdown. ── */}

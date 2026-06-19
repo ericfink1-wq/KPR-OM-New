@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { detectDealAnomalies, deriveAnomalyFlag } from "../dealAnomalies";
+import { detectDealAnomalies, deriveAnomalyFlag, anomalyReviewQuestions } from "../dealAnomalies";
+import { buildReviewQuestions, openReviewCount } from "../utils";
 import type { Deal } from "../idb";
 
 const mk = (id: string, over: Partial<Deal>): Deal => ({ id, propertyName: id, centerType: "Power Center", ...over } as Deal);
@@ -45,5 +46,30 @@ describe("dealAnomalies", () => {
       tenants: [{ name: "Five Below", sf: 12000, annualRent: 162000, rentPerSF: 18, leaseExpiry: "2032-01-01" } as any] });
     const a = detectDealAnomalies(subject, [...cohort, subject]);
     expect(a.some((x) => /SF off the brand norm/i.test(x.message))).toBe(false);
+  });
+
+  it("every anomaly carries a stable id (so a confirm/dismiss can stick)", () => {
+    const subject = mk("subject", { capRate: 3.2, weightedAvgRentPSF: 18 });
+    const a = detectDealAnomalies(subject, [...cohort, subject]);
+    expect(a.length).toBeGreaterThan(0);
+    for (const x of a) expect(x.id).toMatch(/^anomaly-/);
+  });
+
+  it("anomalyReviewQuestions wraps anomalies as confirmable check questions", () => {
+    const subject = mk("subject", { capRate: 3.2, weightedAvgRentPSF: 18 });
+    const qs = anomalyReviewQuestions(subject, [...cohort, subject]);
+    expect(qs.length).toBeGreaterThan(0);
+    expect(qs.every((q) => q.source === "check" && q.id.startsWith("anomaly-"))).toBe(true);
+  });
+
+  it("folds anomalies into buildReviewQuestions and carries a prior dismissal (self-heal loop)", () => {
+    const subject = mk("subject", { capRate: 3.2, weightedAvgRentPSF: 18 });
+    const extra = anomalyReviewQuestions(subject, [...cohort, subject]);
+    // Appears as an open item when no prior resolution.
+    expect(openReviewCount(subject, extra)).toBeGreaterThan(0);
+    // Once dismissed (persisted onto the deal), it stays quiet on the next build.
+    const dismissed: Deal = { ...subject, reviewQuestions: extra.map((q) => ({ ...q, resolvedAt: "2026-06-19T00:00:00Z", resolution: "dismissed" as const })) };
+    const merged = buildReviewQuestions(dismissed, extra);
+    expect(merged.filter((q) => q.id.startsWith("anomaly-") && !q.resolvedAt).length).toBe(0);
   });
 });
