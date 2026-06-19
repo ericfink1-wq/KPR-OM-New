@@ -14,6 +14,7 @@ import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } f
 import { autoMaintainDealData } from "../lib/dealMaintenance";
 import { normalizeDate, deriveRents } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
+import { ensureAuditHistoryTable, runDailySelfClean } from "../lib/selfImprove";
 import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
@@ -1574,6 +1575,36 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Auto-fix failed");
     res.status(500).json({ error: "Auto-fix failed" });
+  }
+});
+
+// GET /api/deals/audit-history — the daily metrics snapshots the self-improvement
+// loop records, newest first, so the UI can chart "are we getting better?" (fewer
+// deals-with-issues / total-issues over time). Token-free.
+router.get("/deals/audit-history", requireAuth, async (req, res) => {
+  try {
+    await ensureAuditHistoryTable();
+    const r = await db.execute(sql`
+      SELECT day, deals_with_issues, total_issues, deals_scanned, breakdown
+      FROM audit_history ORDER BY day DESC LIMIT 90
+    `);
+    res.json({ history: r.rows ?? [] });
+  } catch (err) {
+    req.log.error({ err }, "Failed to load audit history");
+    res.status(500).json({ error: "Failed to load audit history" });
+  }
+});
+
+// POST /api/deals/self-clean — run the daily self-improvement sweep on demand
+// (re-audit + metrics snapshot + auto-lessons). Token-free and non-destructive; the
+// scheduler also runs it automatically once a day.
+router.post("/deals/self-clean", requireAdmin, async (req, res) => {
+  try {
+    const result = await runDailySelfClean("manual");
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    req.log.error({ err }, "Manual self-clean failed");
+    res.status(500).json({ error: "Self-clean failed" });
   }
 });
 

@@ -10,6 +10,7 @@ import { ensureLeaseAbstractsTable } from "./routes/leaseAbstracts";
 import { ensureSiteAgreementsTable } from "./routes/siteAgreements";
 import { ensureTraceTables } from "./lib/traceTables";
 import { ensureHouseViewTable } from "./lib/houseView";
+import { startSelfImproveScheduler } from "./lib/selfImprove";
 
 const rawPort = process.env["PORT"];
 
@@ -28,6 +29,11 @@ const server = app.listen(port, (err) => {
     process.exit(1);
   }
   logger.info({ port }, "Server listening");
+  // Continuous self-improvement: a daily, token-free, non-destructive sweep that
+  // re-audits every deal (self-healing the flags), records a metrics snapshot for
+  // the accuracy-over-time trend, and auto-mints a standing extraction lesson when a
+  // mistake recurs across many deals. Best-effort; never blocks startup.
+  startSelfImproveScheduler();
 });
 
 // Restore/provision the accounts tables on startup: recreates `users` and
