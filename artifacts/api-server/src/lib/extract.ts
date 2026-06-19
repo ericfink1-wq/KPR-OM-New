@@ -8,6 +8,7 @@ import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
 import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
 import { auditExtraction, auditSourceText } from "./extractionAudit";
+import { applyImportFixes } from "./importFixes";
 import { getHouseView, saveHouseView, incrementPendingReviews } from "./houseView";
 import { Agent, fetch as undiciFetch } from "undici";
 
@@ -880,6 +881,17 @@ export async function runBackgroundExtraction(
     // (1) lease-risk (unverified OM co-tenancy/kickout, decreasing "increase" steps);
     // (2) deterministic arithmetic tie-outs (roster SF vs GLA, occupancy, NOI/cap/price,
     //     rent roll-up, per-tenant rent×SF, duplicate suites, unit sanity).
+    // AUTO-CLEAN at import: apply the deterministic, UNAMBIGUOUS fixes (occupancy-cost
+    // units, duplicate rows, derived metrics) BEFORE the audit, so the deal lands clean
+    // and those classes never reach the user as flags. Rent/deal-level ambiguity is left
+    // for the audit below. Must never break an upload.
+    try {
+      const fix = applyImportFixes(dealData);
+      if (fix.changed) {
+        Object.assign(dealData, fix.deal);
+        log.info({ id, occCostFixed: fix.occCostFixed, dupeFixed: fix.dupeFixed, metricFixes: fix.metricFixes }, "Import auto-clean applied");
+      }
+    } catch { /* auto-clean must never break an upload */ }
     try {
       const lrChecks = validateLeaseRiskAtExtraction(dealData);
       const auditChecks = auditExtraction(dealData);
