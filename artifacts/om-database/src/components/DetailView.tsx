@@ -50,6 +50,7 @@ import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
 import { buildBrandSalesIndex, buildSalesFlags, deriveSalesOutlierFlag } from "../lib/tenantSalesBenchmark";
 import { deriveAnomalyFlag, anomalyReviewQuestions } from "../lib/dealAnomalies";
+import { buildICMemo } from "../lib/icMemo";
 import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
@@ -2296,6 +2297,24 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                   style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
                   onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   🔍 Find Sale Record
+                </button>
+                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Export</div>
+                <button onClick={() => {
+                    setActionsOpen(false);
+                    const md = buildICMemo(d);
+                    const blob = new Blob([md], { type: "text/markdown" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `IC-Memo-${(d.propertyName || d.fileName || "deal").replace(/[^a-z0-9]+/gi, "-").slice(0, 40)}-${new Date().toISOString().slice(0, 10)}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  title="Generate a one-click Investment Committee memo (overview, demographics, tenancy + retail resilience, lease rollover, financials, risks, upside) as a Markdown file you can paste straight into Word."
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif", fontWeight:600 }}
+                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  📄 Generate IC Memo (.md)
                 </button>
                 {isAdmin && (<>
                   <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
