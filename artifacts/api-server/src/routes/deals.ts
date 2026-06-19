@@ -1361,23 +1361,36 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
         }
         return t;
       });
-      // Dedupe true duplicate rows: the SAME tenant in the SAME suite listed twice (a
-      // roster artifact that double-counts SF — e.g. Consumer Square's Planet Fitness /
-      // Kroger). Operator rule (Eric): keep the row with the LATER lease expiry, drop the
-      // stale duplicate. Only same-name + same-suite occupied rows — never vacants (whose
-      // identical-suite case doesn't arise) or a tenant with two different suites.
+      // Dedupe true duplicate rows that double-count SF (operator rule: keep the LATER
+      // lease expiry). A duplicate is the same tenant in the same SUITE (e.g. Consumer
+      // Square's Planet Fitness/Kroger), OR — when neither row has a suite — the same
+      // tenant with the same lease EXPIRY and a SIMILAR SF (e.g. "Create Me Pottery"
+      // entered twice at 1,195 / 1,200 SF). The SF-similarity guard ensures two
+      // genuinely different spaces of one chain (or a 1,000 vs 18,000 SF data error) are
+      // NEVER merged — those stay separate for human review (the dupe-tenant flag).
       const dedup: Record<string, unknown>[] = [];
       const seen = new Map<string, number>();
       for (const t of tenants) {
+        if (isVacA(t.name)) { dedup.push(t); continue; }
+        const name = String(t.name ?? "").trim().toLowerCase();
         const suite = String(t.suite ?? "").trim().toLowerCase();
-        if (!suite || isVacA(t.name)) { dedup.push(t); continue; }
-        const key = `${String(t.name ?? "").trim().toLowerCase()}|${suite}`;
-        const at = seen.get(key);
-        if (at != null) {
-          const prevExp = parseD(dedup[at].leaseExpiry), curExp = parseD(t.leaseExpiry);
-          if (curExp && (!prevExp || curExp > prevExp)) dedup[at] = t; // keep the later lease
-          dupeFixed++; changed = true;
-        } else { seen.set(key, dedup.length); dedup.push(t); }
+        const exp = String(t.leaseExpiry ?? "").trim();
+        const key = suite ? `${name}|s:${suite}` : (exp ? `${name}|e:${exp}` : null);
+        const at = key != null ? seen.get(key) : undefined;
+        if (key != null && at != null) {
+          const prev = dedup[at];
+          const sfPrev = nA(prev.sf), sfCur = nA(t.sf);
+          const sfOk = !!suite || sfPrev == null || sfCur == null || sfPrev === 0 ||
+            Math.abs(sfPrev - sfCur) / Math.max(sfPrev, sfCur) <= 0.25;
+          if (sfOk) {
+            const prevExp = parseD(prev.leaseExpiry), curExp = parseD(t.leaseExpiry);
+            if (curExp && (!prevExp || curExp > prevExp)) dedup[at] = t; // keep the later lease
+            dupeFixed++; changed = true;
+            continue;
+          }
+        }
+        if (key != null) seen.set(key, dedup.length);
+        dedup.push(t);
       }
       const updated: Record<string, unknown> = { ...data, tenants: dedup };
       // 1b. Deal-level UNAMBIGUOUS unit fixes (single right answer; anything fuzzy is
