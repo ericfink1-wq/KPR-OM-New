@@ -97,7 +97,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <DetailList items={[
         <><B>Smart sorting is automatic</B> — the four file types are detected by their content/name and merged into one deal. The rent roll's fresher rents win on shared tenants; nothing gets wiped.</>,
         <><B>Confirm import details</B> — if the AI was unsure of a value, the deal shows a <B>"📝 to confirm"</B> banner. Confirm, dismiss, or fix it (type the value, or describe the change in plain English). This corrects <em>this deal only</em> — it doesn't change how future OMs are read.</>,
-        <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → Re-run extraction</B>, or fix any value with its pencil icon. A very large/complex OM is capped at ~5 min so it can't churn tokens; if it stops early it flags the roster for review.</>,
+        <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → ↺ Rebuild from OM</B> (or the small <em>Re-run from PDF</em> link under it if the saved OM text came out garbled), or fix any value with its pencil icon. A very large/complex OM is capped at ~5 min so it can't churn tokens; if it stops early it flags the roster for review.</>,
         <><B>Rent roll vs. OM:</B> a rent roll becomes your verified roster (teal "RENT ROLL" tag); a later OM re-extraction won't overwrite it. Analysis auto-refreshes after an import, so the grade/narrative reflect the final merged roster.</>,
         <><B>Sales reports stack by year</B> — upload one annually to build a sales trend.</>,
         <><B>Advanced:</B> the ▾ by Upload also offers <em>Import a folder</em> and <em>Upload .json</em> (both merge by address; JSON deals auto-score).</>,
@@ -112,7 +112,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <>
         <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library, organized by status (Prospect → Under Contract → Owned → Sold, or Passed) — active deals surface first.</p>
         <BriefList items={[
-          <><B>Cards</B> show anchor, SF, occupancy, WALT, NOI, cap rate, market, and a red-flag count.</>,
+          <><B>Two views</B> (⊞/☰ toggle): a <B>sortable table</B> by default (property, status, city/state, market, anchor, SF, occupancy, cap rate, price, seller) or <B>visual cards</B> showing the cover, status, AI score, location, and the headline <B>NOI · cap rate · WALT</B>.</>,
           <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches the <B>columns you see</B> (property, status, city, state, MSA, anchor, seller) plus a deal's saved <B>aliases</B>, so an alternate name still finds it.</>,
           <><B>Compare</B> — pick 2+ deals for a side-by-side: best value per metric highlighted, KPR's own economics next to the OM figures, shared tenants, an AI read, and Excel export.</>,
           <><B>Bulk actions</B> — checkboxes (on hover) to re-status several deals at once, find their sale records, or pull demographics.</>,
@@ -150,7 +150,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     detail: (
       <DetailList items={[
         <><B>Edit any field</B> via its pencil icon (auto-saved, logged); lock verified figures so a re-extraction won't overwrite them.</>,
-        <><B>Re-run extraction</B> re-reads the OM PDF; <B>Refresh Analysis</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste); <B>Refresh Score</B> re-benchmarks against your portfolio. Each asks a quick <B>"this uses tokens — continue?"</B> first.</>,
+        <>In a deal's <B>Analyze</B> menu, <B>↺ Rebuild from OM</B> re-reads the saved OM and regenerates everything (it won't wipe a manual roster without confirming); <B>✨ Refresh Analysis (current roster)</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste). Each asks a quick <B>"this uses tokens — continue?"</B> first. The deal's <B>score re-benchmarks against your portfolio automatically</B> as you add more deals — no button to press.</>,
         <><B>Re-uploading for an existing property never overwrites your data.</B> It recognizes the deal (even if the file is renamed), <B>fills only blank fields</B>, and <B>flags conflicting numbers</B> (price, cap, NOI, SF, occupancy…) as a review item — keep yours or apply the OM's in one click.</>,
         <><B>Financing calculators:</B> the prepay penalty is <em>exact</em> for step-down and an <em>indicative estimate</em> for yield-maintenance/defeasance; <B>swap breakage</B> is indicative too — it proxies the current market swap rate from the Treasury curve (replace it with your bank's quote for a tighter number). Imported swap terms are fully <B>editable</B> via "Edit terms" if the doc read anything wrong.</>,
         <><B>Comp Benchmark</B> uses medians and tiers comps by relevance (same state/type/size within 24 months first, widening if needed); below a minimum sample it withholds a verdict rather than guess.</>,
@@ -245,7 +245,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <>
         <BriefList items={[
           <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and get an email once they're approved. Logins now persist across updates.</>,
-          <><B>Today's Rates</B> (top bar) — live Treasury yields, 1-month Term SOFR, and 3/5/10-year SOFR swaps, all stamped in <B>Eastern time (ET)</B>; these also seed the deal-page <B>prepay & swap-breakage</B> estimates.</>,
+          <><B>Today's Rates</B> (top bar) — Treasury yields (1–10yr), 1-month Term SOFR, and 5- & 10-year SOFR swaps live from the market board (the 3-year swap is <em>estimated</em>), all stamped in <B>Eastern time (ET)</B>; these also seed the deal-page <B>prepay & swap-breakage</B> estimates.</>,
           <><B>Search (⌘K / Ctrl-K)</B> — the search box in the top bar jumps to any deal or tenant across the whole library in a couple keystrokes.</>,
           <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
           <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,
@@ -256,7 +256,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     ),
     detail: (
       <DetailList items={[
-        <><B>What costs AI tokens:</B> uploading OMs / rent rolls / sales files, importing comps from Excel or PDF, re-running extraction, and asking the Analyst (incl. Refresh Analysis, Find Comps, Find Sale). <B>Free:</B> browsing, editing, sorting/searching, all Analytics & Comp Benchmark, Closing Costs, demographics Re-Pull (Census, not AI), Refresh Score, and JSON/Excel exports. Bottom line: uploading documents and talking to the Analyst are where the cost is.</>,
+        <><B>What costs AI tokens:</B> uploading OMs / rent rolls / sales files, importing comps from Excel or PDF, rebuilding from the OM, and asking the Analyst (incl. Refresh Analysis, Find Comps, Find Sale). <B>Free:</B> browsing, editing, sorting/searching, all Analytics & Comp Benchmark, Closing Costs, demographics Re-Pull (Census, not AI), and JSON/Excel exports. Bottom line: uploading documents and talking to the Analyst are where the cost is.</>,
         <><B>Occupancy cost (health ratio)</B> is always the TOTAL: (base rent + reimbursements + percentage rent + other rent) ÷ gross sales — never base rent alone. Uses the stated total when given, else computes from disclosed components.</>,
         <><B>Upload on the live site, not the Replit preview</B> — they have separate databases.</>,
         <><B>If the site feels slow</B> right after a big import, give it ~30 seconds for background indexing to catch up.</>,
