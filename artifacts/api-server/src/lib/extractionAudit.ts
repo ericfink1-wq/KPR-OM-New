@@ -40,7 +40,7 @@ const parseISO = (v: unknown): number | null => {
   return Number.isFinite(t) ? t : null;
 };
 
-interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown; occupancyCost?: unknown; salesPSF?: unknown; percentageRent?: unknown; otherRent?: unknown; leaseStart?: unknown; leaseExpiry?: unknown }
+interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown; occupancyCost?: unknown; salesPSF?: unknown; percentageRent?: unknown; otherRent?: unknown; leaseStart?: unknown; leaseExpiry?: unknown; remainingTermYears?: unknown }
 
 // Namespaces these arithmetic checks so a re-audit can self-heal only its own flags
 // (drop ones that now pass, add new ones) without touching AI questions or lease-risk
@@ -58,6 +58,7 @@ export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-lease-dates-")) return "audit-lease-dates";
   if (id.startsWith("audit-sales-below-rent-")) return "audit-sales-below-rent";
   if (id.startsWith("audit-dupe-tenant-")) return "audit-dupe-tenant";
+  if (id.startsWith("audit-remterm-expiry-")) return "audit-remterm-expiry";
   return id;
 }
 export const AUDIT_CHECK_LABELS: Record<string, string> = {
@@ -89,6 +90,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-anchor-missing": "Grocery anchor missing",
   "audit-walt-recompute": "WALT vs roster expiries",
   "audit-dupe-tenant": "Duplicate tenant row",
+  "audit-remterm-expiry": "Remaining term vs expiry",
 };
 
 // SOURCE-LEVEL signal (runs on the raw PDF text BEFORE/alongside the LLM, not the
@@ -637,6 +639,36 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       detail: `The same tenant on multiple occupied rows is sometimes legit (a tenant with two suites), but is often a duplicated line that double-counts its SF and rent.`,
       suggestedValue: null, target: null,
     });
+  }
+
+  // ── V. Per-tenant: remaining term vs the lease-expiry date ────────────────────
+  // When a tenant carries BOTH an explicit remaining-term and a lease-expiry date, they
+  // are mathematically linked: term ≈ (expiry − roll date). A large gap means a mis-keyed
+  // expiry year or term — and it silently corrupts WALT and rollover, which use whichever
+  // value is present. Generous threshold + low severity, since option periods can be
+  // folded into one figure but not the other (a legitimate source of small gaps).
+  const refRawV = (typeof deal.tenantsAsOf === "string" && deal.tenantsAsOf) || (typeof deal.omDate === "string" && deal.omDate) || null;
+  const refMsV = parseISO(refRawV) ?? Date.now();
+  const yrMsV = 365.25 * 24 * 3600 * 1000;
+  let remTermFlags = 0;
+  for (const t of occupied) {
+    if (remTermFlags >= 3) break;
+    const rt = num(t.remainingTermYears);
+    const end = parseISO(t.leaseExpiry);
+    if (rt == null || rt < 0 || end == null) continue;
+    const fromDate = Math.max(0, (end - refMsV) / yrMsV);
+    const gap = Math.abs(rt - fromDate);
+    if (gap > 2 && gap / Math.max(rt, fromDate, 1) > 0.4) {
+      const nm = String(t.name ?? "tenant");
+      remTermFlags++;
+      out.push({
+        id: `audit-remterm-expiry-${nm}`.slice(0, 80), source: "check", severity: "low",
+        field: `${nm} — remaining term vs expiry`,
+        question: `${nm}: the remaining term is ${rt.toFixed(1)} yrs, but the lease expiry (${String(t.leaseExpiry).slice(0, 10)}) is ${fromDate.toFixed(1)} yrs out from ${refRawV || "the roll date"}. One was mis-keyed.`,
+        detail: `Remaining term should equal the lease expiry minus the rent-roll date. A gap this size usually means the expiry year or the term was mis-read — and it skews WALT and rollover, which use whichever value is present. (Option periods folded into one figure can cause a small legitimate gap.)`,
+        suggestedValue: fromDate.toFixed(1), target: { kind: "tenant", fieldKey: "remainingTermYears", tenantName: nm, valueType: "number" },
+      });
+    }
   }
 
   return out;

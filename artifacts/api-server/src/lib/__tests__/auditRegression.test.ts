@@ -68,3 +68,17 @@ describe("audit — real-world rent plausibility", () => {
     expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-rent-impossible") || q.id.startsWith("audit-anchor-rent"))).toBe(false);
   });
 });
+
+describe("audit — remaining term vs lease expiry (mis-keyed date/term skews WALT)", () => {
+  it("flags a remaining term that contradicts the lease-expiry date", () => {
+    // Roll date 2026-01-01; expiry 2031-01-01 = 5.0 yrs out, but term says 1.0 → mis-key.
+    const deal = { tenantsAsOf: "2026-01-01", tenants: [{ name: "Five Below", sf: 9000, remainingTermYears: 1, leaseExpiry: "2031-01-01" }] };
+    const f = auditExtraction(deal).find((q) => q.id.startsWith("audit-remterm-expiry"));
+    expect(f).toBeDefined();
+    expect(f!.suggestedValue).toBe("5.0");
+  });
+  it("does NOT flag when remaining term agrees with the expiry date", () => {
+    const deal = { tenantsAsOf: "2026-01-01", tenants: [{ name: "Five Below", sf: 9000, remainingTermYears: 5, leaseExpiry: "2031-01-01" }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-remterm-expiry"))).toBe(false);
+  });
+});
