@@ -33,6 +33,51 @@ const parseD = (s: unknown): Date | null => {
   const d = new Date(str + (/^\d{4}-\d{2}-\d{2}$/.test(str) ? "T12:00:00" : ""));
   return isNaN(d.getTime()) ? null : d;
 };
+
+// CLAUDE.md HARD RULE: every lease date must be ISO YYYY-MM-DD, never a "Mon-YYYY"
+// string. normalizeDate converts the common OM/rent-roll formats to ISO, but ONLY when
+// the parse is UNAMBIGUOUS — anything it isn't sure about is returned unchanged (null)
+// so a weird value surfaces in the audit instead of being silently corrupted. A
+// month-year value (the usual OM grain, e.g. "Nov-2022") normalizes to the 1st of that
+// month, which is exactly how the app's date math already interprets it — so this is
+// math-neutral, it just makes the STORED string conform to the rule and sort correctly.
+const MONTHS: Record<string, string> = {
+  jan: "01", january: "01", feb: "02", february: "02", mar: "03", march: "03",
+  apr: "04", april: "04", may: "05", jun: "06", june: "06", jul: "07", july: "07",
+  aug: "08", august: "08", sep: "09", sept: "09", september: "09", oct: "10", october: "10",
+  nov: "11", november: "11", dec: "12", december: "12",
+};
+const clampDay = (mm: string, dd: number): string => {
+  const maxByMonth: Record<string, number> = { "01": 31, "02": 29, "03": 31, "04": 30, "05": 31, "06": 30, "07": 31, "08": 31, "09": 30, "10": 31, "11": 30, "12": 31 };
+  const d = Math.min(Math.max(dd, 1), maxByMonth[mm] ?? 31);
+  return String(d).padStart(2, "0");
+};
+export function normalizeDate(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s || /^\d{4}-\d{2}-\d{2}$/.test(s)) return null;        // empty or already ISO → no change
+  let m: RegExpMatchArray | null;
+  // "Nov-2022" / "August 2031" / "Sep, 2031" — month name + 4-digit year (no day → 1st)
+  if ((m = s.match(/^([A-Za-z]{3,9})[\s,.\-/]+(\d{4})$/))) {
+    const mm = MONTHS[m[1].toLowerCase()]; if (mm) return `${m[2]}-${mm}-01`;
+  }
+  // "Nov-15-2022" / "August 15, 2031" — month name + day + year
+  if ((m = s.match(/^([A-Za-z]{3,9})[\s,.\-/]+(\d{1,2})[\s,.\-/]+(\d{4})$/))) {
+    const mm = MONTHS[m[1].toLowerCase()]; if (mm) return `${m[3]}-${mm}-${clampDay(mm, Number(m[2]))}`;
+  }
+  // "11/01/2022" / "1/1/2022" / "11-01-2022" — US numeric M/D/Y
+  if ((m = s.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$/))) {
+    const mo = Number(m[1]), day = Number(m[2]);
+    if (mo >= 1 && mo <= 12 && day >= 1 && day <= 31) { const mm = String(mo).padStart(2, "0"); return `${m[3]}-${mm}-${clampDay(mm, day)}`; }
+  }
+  // "2022/11/01" — ISO-ish with slashes
+  if ((m = s.match(/^(\d{4})[/.](\d{1,2})[/.](\d{1,2})$/))) {
+    const mo = Number(m[2]), day = Number(m[3]);
+    if (mo >= 1 && mo <= 12 && day >= 1 && day <= 31) { const mm = String(mo).padStart(2, "0"); return `${m[1]}-${mm}-${clampDay(mm, day)}`; }
+  }
+  return null;                                                  // unrecognized → leave it for the audit
+}
+const TENANT_DATE_FIELDS = ["leaseStart", "leaseExpiry", "originalLeaseDate", "rentCommencement", "rentStart"] as const;
 // Faithful port of recomputeRosterMetrics (om-database/src/lib/utils.ts) — keep in sync.
 function recompute(tenants: Record<string, unknown>[], asOf: unknown, deal: Record<string, unknown>) {
   const ver = (deal.verified || {}) as Record<string, unknown>;
@@ -63,17 +108,22 @@ export interface ImportFixResult {
   occCostFixed: number;
   dupeFixed: number;
   metricFixes: number;
+  dateFixed: number;
 }
 
 export function applyImportFixes(input: Record<string, unknown>): ImportFixResult {
-  let changed = false, occCostFixed = 0, dupeFixed = 0, metricFixes = 0;
+  let changed = false, occCostFixed = 0, dupeFixed = 0, metricFixes = 0, dateFixed = 0;
   const raw = Array.isArray(input.tenants) ? (input.tenants as Record<string, unknown>[]) : [];
 
-  // 1. occupancyCost fraction → ×100
+  // 1. occupancyCost fraction → ×100, and normalize any non-ISO lease dates to ISO.
   const fixed = raw.map((src) => {
     const t = { ...src };
     const oc = nA(t.occupancyCost);
     if (oc != null && oc > 0 && oc < 1) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
+    for (const f of TENANT_DATE_FIELDS) {
+      const iso = normalizeDate(t[f]);
+      if (iso) { t[f] = iso; dateFixed++; changed = true; }
+    }
     return t;
   });
 
@@ -111,5 +161,5 @@ export function applyImportFixes(input: Record<string, unknown>): ImportFixResul
     if (m[k] != null && nA(deal[k]) !== m[k]) { deal[k] = m[k]; metricFixes++; changed = true; }
   }
 
-  return { deal, changed, occCostFixed, dupeFixed, metricFixes };
+  return { deal, changed, occCostFixed, dupeFixed, metricFixes, dateFixed };
 }

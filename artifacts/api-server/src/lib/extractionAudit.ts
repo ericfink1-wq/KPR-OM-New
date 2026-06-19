@@ -10,6 +10,8 @@
 //   • Unit-of-measure sanity (occupancy as a fraction, cap rate as basis points).
 // Only fires on genuine CONTRADICTIONS — never on values that are simply absent.
 
+import { normalizeDate } from "./importFixes";
+
 export interface AuditQuestion {
   id: string;
   source: "check";
@@ -56,6 +58,7 @@ export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-occcost-fraction-")) return "audit-occcost-fraction";
   if (id.startsWith("audit-dupe-suite-")) return "audit-dupe-suite";
   if (id.startsWith("audit-lease-dates-")) return "audit-lease-dates";
+  if (id.startsWith("audit-date-format-")) return "audit-date-format";
   if (id.startsWith("audit-sales-below-rent-")) return "audit-sales-below-rent";
   if (id.startsWith("audit-dupe-tenant-")) return "audit-dupe-tenant";
   if (id.startsWith("audit-remterm-expiry-")) return "audit-remterm-expiry";
@@ -535,6 +538,34 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       detail: `A lease must expire after it commences. Usually the start and expiry were read from the wrong columns, or one year is off — check the rent roll.`,
       suggestedValue: null, target: { kind: "tenant", fieldKey: "leaseExpiry", tenantName: nm, valueType: "text" },
     });
+  }
+
+  // ── O2. Non-ISO / unparseable lease dates ─────────────────────────────────────
+  // CLAUDE.md HARD RULE: dates are ISO YYYY-MM-DD, never "Mon-YYYY". The auto-clean
+  // pass normalizes the common formats on write; this catches the residue it COULDN'T
+  // safely parse (e.g. "2031" year-only, "Q3 2028", OCR garble) — those are invisible
+  // to parseISO, so WALT and rollover silently drop the tenant. Sentinels (flat/MTM/
+  // current) are legitimate non-dates and never flagged.
+  const DATE_SENTINEL = /^(flat|m-?t-?m|month[\s-]*to[\s-]*month|cur(rent)?|various|holdover|at[\s-]*will|tbd|n\/?a|none|—|-)$/i;
+  let isoDateFlags = 0;
+  for (const t of occupied) {
+    if (isoDateFlags >= 4) break;
+    for (const f of ["leaseStart", "leaseExpiry"] as const) {
+      const raw = (t as Record<string, unknown>)[f];
+      const s = String(raw ?? "").trim();
+      if (!s || /^\d{4}-\d{2}-\d{2}/.test(s) || DATE_SENTINEL.test(s)) continue;
+      if (normalizeDate(s)) continue;                 // auto-clean will fix it — don't nag
+      const nm = String(t.name ?? "tenant");
+      isoDateFlags++;
+      out.push({
+        id: `audit-date-format-${nm}-${f}`.slice(0, 80), source: "check", severity: "low",
+        field: `${nm} — ${f}`,
+        question: `${nm}: ${f} is "${s}", which isn't a usable date. WALT and lease rollover ignore tenants whose dates can't be parsed, so this one silently drops out of those metrics.`,
+        detail: `Lease dates must be ISO (YYYY-MM-DD). The auto-clean handles "Nov-2022" / "11/01/2022" formats; this value it couldn't — re-key it from the rent roll.`,
+        suggestedValue: null, target: { kind: "tenant", fieldKey: f, tenantName: nm, valueType: "text" },
+      });
+      break;
+    }
   }
 
   // ── P. Occupancy over 100% (impossible) ───────────────────────────────────────

@@ -86,6 +86,12 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // Local-only: when VITE_DEV_PROXY is set (e.g. http://localhost:3001) the dev
+    // server proxies /api to a separately-run API server so the frontend can talk
+    // to it on a single origin. No effect in production / when the var is unset.
+    ...(process.env.VITE_DEV_PROXY
+      ? { proxy: { "/api": { target: process.env.VITE_DEV_PROXY, changeOrigin: true } } }
+      : {}),
   },
   preview: {
     port,
