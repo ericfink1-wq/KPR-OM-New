@@ -84,9 +84,28 @@ export default function LearningView({ deals, isAdmin, onOpenDeal }: { deals: De
   useEffect(() => { apiGetExtractionLessons("all").then(setLessons).catch(() => setLessons([])); }, []);
   const activeCount = lessons.length;
 
+  // Download every active learning rule as JSON — including the "[REQUESTED: a
+  // deterministic check…]" notes — so they can be handed off (the same way the deal
+  // data is) to implement the requested code-level checks.
+  const exportRules = () => {
+    const payload = { app: "KPR Deal Intelligence", type: "extraction-lessons", exportedAt: new Date().toISOString(), count: lessons.length, lessons };
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    a.download = `kpr-learning-rules-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+  };
+
   return (
     <div style={{ padding: "20px 18px 40px", maxWidth: 1000, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, fontFamily: "Georgia, serif" }}>Learning · corrections the system keeps making</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, fontFamily: "Georgia, serif" }}>Learning · corrections the system keeps making</div>
+        {activeCount > 0 && (
+          <button onClick={exportRules} title="Download all active learning rules (incl. requested hard-check notes) as JSON"
+            style={{ background: "#fff", border: `1px solid ${C.greenBd}`, color: C.green, padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+            ⬇ Export rules
+          </button>
+        )}
+      </div>
       <div style={{ fontSize: 12.5, color: C.sub, marginTop: 4, lineHeight: 1.5 }}>
         Mined from every deal's resolved data-review questions across all {deals.filter((d) => !d.trashedAt).length} deals. When the same correction recurs, approve a lesson and it flows into future extractions — so the extractor stops making it. {activeCount > 0 && <span>({activeCount} lesson{activeCount !== 1 ? "s" : ""} already active.)</span>}
       </div>
