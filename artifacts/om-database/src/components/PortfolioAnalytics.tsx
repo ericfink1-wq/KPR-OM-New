@@ -287,7 +287,7 @@ interface Props {
   onYearClick?: (year: string, scope: "all" | "owned") => void;
   onTenantAudit?: () => void;
   onTenantAnalytics?: () => void;
-  onDataAudit?: () => void;
+  onDataAudit?: (checkKey?: string) => void;
 }
 
 export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmin, onYearClick, onTenantAudit, onTenantAnalytics, onDataAudit }: Props) {
@@ -538,9 +538,12 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             {showAuditBreakdown && auditStats.breakdown.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end", maxWidth: 360 }}>
                 {auditStats.breakdown.map(b => (
-                  <span key={b.key} title={b.key} style={{ fontSize: 9.5, color: "#6f6a5f", background: "#f6f1e7", border: "1px solid #e7e0d2", borderRadius: 10, padding: "1px 7px", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-                    {b.label} · <b style={{ color: "#383a37" }}>{b.count}</b>
-                  </span>
+                  <button key={b.key} onClick={() => onDataAudit?.(b.key)} title={`Show the deals flagged for: ${b.label}`}
+                    style={{ fontSize: 9.5, color: "#6f6a5f", background: "#f6f1e7", border: "1px solid #e7e0d2", borderRadius: 10, padding: "2px 8px", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#efe7d6"; e.currentTarget.style.borderColor = "#d8cdb4"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "#f6f1e7"; e.currentTarget.style.borderColor = "#e7e0d2"; }}>
+                    {b.label} · <b style={{ color: "#383a37" }}>{b.count}</b> ›
+                  </button>
                 ))}
               </div>
             )}

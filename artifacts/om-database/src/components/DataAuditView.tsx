@@ -65,7 +65,7 @@ function ReimbDealRow({ g, kind, onOpen }: { g: ReimbDealGroup; kind: "fixedCam"
   );
 }
 
-export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; onOpenDeal: (id: string) => void }) {
+export default function DataAuditView({ deals, onOpenDeal, initialFilterKey = null }: { deals: Deal[]; onOpenDeal: (id: string) => void; initialFilterKey?: string | null }) {
   const audit = useMemo(() => runPortfolioAudit(deals), [deals]);
   const taxHigh = audit.tax.filter((t) => t.severity === "high").length;
   const fixedCamDeals = audit.reimbDeals.filter((g) => g.fixedCam.length > 0);
@@ -95,6 +95,23 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
   const sevRank = (s: string) => s === "high" ? 0 : s === "medium" ? 1 : 2;
   const hasDups = audit.duplicates.length > 0;
 
+  // Optional single-check filter (set when opened from a breakdown chip): show only
+  // the deals — and only the issues — that match that check key. Expand + scroll the
+  // arithmetic section to it on arrival.
+  const [filterKey, setFilterKey] = useState<string | null>(initialFilterKey);
+  useEffect(() => { setFilterKey(initialFilterKey); }, [initialFilterKey]);
+  useEffect(() => {
+    if (filterKey) { setOpenArith(true); requestAnimationFrame(() => arithRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })); }
+  }, [filterKey]);
+  const filterLabel = filterKey
+    ? (arith?.deals.flatMap(g => g.issues).find(q => q.key === filterKey)?.label ?? filterKey)
+    : null;
+  // Deals (with their issues narrowed to the selected check) when a filter is active.
+  const arithDeals = !arith ? [] : !filterKey ? arith.deals
+    : arith.deals
+        .map(g => ({ ...g, issues: g.issues.filter(q => q.key === filterKey) }))
+        .filter(g => g.issues.length > 0);
+
   return (
     <div style={{ padding: "20px 18px 40px", maxWidth: 1100, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, fontFamily: "Georgia, serif" }}>Portfolio Data Audit</div>
@@ -112,14 +129,20 @@ export default function DataAuditView({ deals, onOpenDeal }: { deals: Deal[]; on
 
       {/* PRIMARY: arithmetic contradictions — the actionable worklist */}
       <div ref={arithRef} style={{ marginTop: 22, scrollMarginTop: 72 }}>
-        <SectionHead open={openArith} onToggle={() => setOpenArith((s) => !s)} title="Numbers that don't tie out" count={arith?.totalIssues} />
+        <SectionHead open={openArith} onToggle={() => setOpenArith((s) => !s)} title="Numbers that don't tie out" count={filterKey ? arithDeals.length : arith?.totalIssues} />
+        {filterKey && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 12, color: C.sub }}>
+            <span>Filtered to <b style={{ color: C.ink }}>{filterLabel}</b> · {arithDeals.length} deal{arithDeals.length === 1 ? "" : "s"}</span>
+            <button onClick={() => setFilterKey(null)} style={{ background: "#fff", border: `1px solid ${C.line}`, borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontSize: 11, color: C.green, fontWeight: 600 }}>✕ show all</button>
+          </div>
+        )}
         {openArith && (arith == null ? (
           <div style={{ fontSize: 12, color: C.faint }}>Running checks…</div>
-        ) : arith.deals.length === 0 ? (
-          <div style={{ fontSize: 12.5, color: C.green, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 8, padding: "10px 12px" }}>✓ Every deal's figures reconcile — nothing to verify.</div>
+        ) : arithDeals.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: C.green, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 8, padding: "10px 12px" }}>{filterKey ? "✓ No deals match this check anymore." : "✓ Every deal's figures reconcile — nothing to verify."}</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {arith.deals.map((g) => (
+            {arithDeals.map((g) => (
               <div key={g.dealId} onClick={() => onOpenDeal(g.dealId)} role="button"
                 style={{ background: "#fff", border: `1px solid ${C.line}`, borderLeft: `3px solid ${g.high ? C.red : C.amber}`, borderRadius: 8, padding: "10px 12px", cursor: "pointer" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>

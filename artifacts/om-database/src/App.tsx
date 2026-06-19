@@ -192,7 +192,7 @@ function AppInner() {
     else if (dest === "critical-dates") setAnalyticsView("calendar");
     else if (dest === "mark-to-market") setAnalyticsView("marktomarket");
     else if (dest === "cotenancy-cascade") setAnalyticsView("cotenancy");
-    else if (dest === "data-audit") setAnalyticsView("audit");
+    else if (dest === "data-audit") { setAuditFilterKey(null); setAnalyticsView("audit"); }
     else if (dest === "learning") setAnalyticsView("learning");
     else setAnalyticsView("tenant");
     if (dest === "lease-rollover") {
@@ -211,6 +211,8 @@ function AppInner() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "learning">("tenant");
+  // When the Data Audit view is opened from a breakdown chip, pre-filter it to that check.
+  const [auditFilterKey, setAuditFilterKey] = useState<string | null>(null);
 
   // Scroll analytics content to top whenever the view changes
   useEffect(() => {
@@ -559,7 +561,7 @@ function AppInner() {
             ) : (
               <>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} onDataAudit={() => setAnalyticsView("audit")} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
+                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} onDataAudit={(key) => { setAuditFilterKey(key ?? null); setAnalyticsView("audit"); }} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
                 ) : analyticsView === "calendar" ? (
                   <CriticalDates deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "marktomarket" ? (
@@ -567,7 +569,7 @@ function AppInner() {
                 ) : analyticsView === "cotenancy" ? (
                   <CoTenancyCascade deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "audit" ? (
-                  <DataAuditView deals={activeDeals} onOpenDeal={handleOpenDeal} />
+                  <DataAuditView deals={activeDeals} onOpenDeal={handleOpenDeal} initialFilterKey={auditFilterKey} />
                 ) : analyticsView === "learning" ? (
                   <LearningView deals={activeDeals} isAdmin={isAdmin} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "watchlist" ? (
