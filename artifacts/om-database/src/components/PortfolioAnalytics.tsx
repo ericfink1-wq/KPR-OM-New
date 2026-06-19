@@ -394,13 +394,17 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   };
 
   const handleAutofix = () => {
-    if (!window.confirm("Auto-fix the data issues that have a single right answer (no judgement needed)? Token-free and deterministic: occupancy cost stored as a 0.NN fraction → ×100, a rentPerSF that doesn't reconcile to a reliable annual rent → recomputed from the annual, and stale occupancy / WALT / avg-rent → recomputed from the roster. It SNAPSHOTS first (fully reversible via Backup → Restore a snapshot) and LEAVES anything ambiguous for you to review. Run it?")) return;
+    if (!window.confirm("Auto-fix the data issues that have a single right answer (no judgement needed)? Token-free and deterministic: occupancy cost stored as a 0.NN fraction → ×100, occupancy stored as a 0–1 fraction → ×100, a cap rate in basis points or as a fraction → normalized to a percent, a price-PSF that disagrees with price ÷ GLA → recomputed, a rentPerSF that doesn't reconcile to a reliable annual rent → recomputed from the annual, duplicate roster rows → de-duped, and stale occupancy / WALT / avg-rent → recomputed from the roster. It SNAPSHOTS first (fully reversible via Backup → Restore a snapshot) and LEAVES anything ambiguous for you to review. Run it?")) return;
     setAutofixing(true); setAutofixMsg(null);
     fetch("/api/deals/autofix", { method: "POST", credentials: "include" })
-      .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; rentFixed?: number; dupeFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>)
+      .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; occUnitFixed?: number; capUnitFixed?: number; ppsfFixed?: number; rentFixed?: number; dupeFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>)
       .then(d => {
         if (!d.ok) throw new Error(d.error || "Auto-fix failed");
-        setAutofixMsg(`✓ Fixed ${d.changedDeals ?? 0} deal${(d.changedDeals ?? 0) === 1 ? "" : "s"} · ${d.occCostFixed ?? 0} occ-cost, ${d.rentFixed ?? 0} rent, ${d.dupeFixed ?? 0} dup rows, ${d.metricFixes ?? 0} metrics · ${d.cleared ?? 0} flags cleared — reloading…`);
+        const parts = ([
+          [d.occCostFixed, "occ-cost"], [d.occUnitFixed, "occupancy units"], [d.capUnitFixed, "cap-rate units"],
+          [d.ppsfFixed, "price-PSF"], [d.rentFixed, "rent"], [d.dupeFixed, "dup rows"], [d.metricFixes, "metrics"],
+        ] as [number | undefined, string][]).filter(([n]) => (n ?? 0) > 0).map(([n, label]) => `${n} ${label}`);
+        setAutofixMsg(`✓ Fixed ${d.changedDeals ?? 0} deal${(d.changedDeals ?? 0) === 1 ? "" : "s"}${parts.length ? ` · ${parts.join(", ")}` : ""} · ${d.cleared ?? 0} flags cleared — reloading…`);
         loadAuditStats();
         setTimeout(() => window.location.reload(), 1600);
       })

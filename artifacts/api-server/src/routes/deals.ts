@@ -1336,6 +1336,7 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
     const snap = await createSnapshot("before-autofix");
     const rows = await db.select().from(dealsTable);
     let scanned = 0, occCostFixed = 0, rentFixed = 0, dupeFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
+    let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0;
     for (const r of rows) {
       const data = r.data as Record<string, unknown>;
       if (data.trashedAt || data._processing || data._processingError) continue;
@@ -1379,6 +1380,30 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
         } else { seen.set(key, dedup.length); dedup.push(t); }
       }
       const updated: Record<string, unknown> = { ...data, tenants: dedup };
+      // 1b. Deal-level UNAMBIGUOUS unit fixes (single right answer; anything fuzzy is
+      //     left for human review, same as the per-tenant rules above).
+      // Occupancy stored as a 0–1 fraction (lost its ×100) — a <1% occupancy is
+      // impossible for a leased center; ×100 is the only sensible reading. The roster
+      // recompute below still overrides this when it can (totalSF + roster present).
+      {
+        const oc = nA(updated.occupancy);
+        if (oc != null && oc > 0 && oc <= 1.0) { updated.occupancy = Math.round(oc * 100 * 10) / 10; occUnitFixed++; changed = true; }
+        // Cap rate clearly in BASIS POINTS (≥100, e.g. 650 → 6.50%) or a FRACTION
+        // (0<cap<1, e.g. 0.065 → 6.5%). The ambiguous 20–100 band is left for review.
+        const cap = nA(updated.capRate);
+        if (cap != null && cap >= 100) { updated.capRate = Math.round(cap) / 100; capUnitFixed++; changed = true; }
+        else if (cap != null && cap > 0 && cap < 1) { updated.capRate = Math.round(cap * 100 * 100) / 100; capUnitFixed++; changed = true; }
+        // pricePerSF must equal price ÷ GLA — when both primary inputs exist and the
+        // stored PSF disagrees, recompute it from them (don't fill a blank, only fix a
+        // contradiction).
+        const price = nA(updated.askingPrice) ?? nA(updated.txnPurchasePrice);
+        const tsf = nA(updated.totalSF);
+        const ppsf = nA(updated.pricePerSF);
+        if (ppsf != null && ppsf > 0 && price != null && price > 0 && tsf != null && tsf > 0) {
+          const real = Math.round(price / tsf);
+          if (real > 0 && Math.abs(real - ppsf) / ppsf > 0.05) { updated.pricePerSF = real; ppsfFixed++; changed = true; }
+        }
+      }
       // 2. Recompute roster-derived metrics (honors verified locks)
       const m = recompute(dedup, updated.tenantsAsOf, updated);
       for (const k of ["occupancy", "walt", "weightedAvgRentPSF"] as const) {
@@ -1395,8 +1420,8 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
       if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
       if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
     }
-    req.log.info({ scanned, occCostFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
-    res.json({ ok: true, scanned, occCostFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared, snapshot: snap });
+    req.log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
+    res.json({ ok: true, scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared, snapshot: snap });
   } catch (err) {
     req.log.error({ err }, "Auto-fix failed");
     res.status(500).json({ error: "Auto-fix failed" });
