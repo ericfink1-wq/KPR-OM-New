@@ -377,12 +377,18 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const handleDealsOnlyBackup = () => {
     setBackupMenu(false);
     try {
+      // EXCLUDE trashed (soft-deleted) deals. This is the file used for data work /
+      // analysis, and a deleted deal's data lingering in the DB (kept for restore)
+      // would otherwise leak in and pollute the sample — inflating counts and
+      // surfacing as phantom "duplicates" of the live record. The FULL backup still
+      // carries trashed deals so a restore stays faithful; this data export does not.
+      const liveDeals = deals.filter((d) => !d.trashedAt);
       const payload = {
         app: "KPR Deal Intelligence",
         schema: 2,
         exportedAt: new Date().toISOString(),
-        dealCount: deals.length,
-        deals,
+        dealCount: liveDeals.length,
+        deals: liveDeals,
       };
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));

@@ -105,6 +105,20 @@ function normAddrForDup(a: unknown): string | null {
     .replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln")
     .replace(/\bparkway\b/g, "pkwy").replace(/\s+/g, " ").trim() || null;
 }
+// Two same-name deals are the SAME property when they share a normalized address OR
+// they share an identical building GLA in the same state. The GLA+state rule catches
+// re-imports whose address STRING drifted ("921 Wolcott St" vs "921-983 Wolcott
+// Street") — two centers with the same name AND the exact same SF in one state is a
+// re-import, not a coincidence. This is the common KPR pattern: a Prospect OM is
+// re-uploaded and marked Owned after closing, leaving a stale Prospect twin.
+function sameProperty(a: Deal, b: Deal): boolean {
+  const na = normAddrForDup(a.address), nb = normAddrForDup(b.address);
+  if (na && nb && na === nb) return true;
+  const sa = Number(a.totalSF), sb = Number(b.totalSF);
+  const st = (x: unknown) => String(x ?? "").trim().toLowerCase();
+  if (Number.isFinite(sa) && sa > 0 && sa === sb && st(a.state) && st(a.state) === st(b.state)) return true;
+  return false;
+}
 export function auditDuplicates(deals: Deal[]): DuplicateFinding[] {
   const byName = new Map<string, Deal[]>();
   for (const d of deals || []) {
@@ -118,18 +132,17 @@ export function auditDuplicates(deals: Deal[]): DuplicateFinding[] {
   const out: DuplicateFinding[] = [];
   for (const group of byName.values()) {
     if (group.length < 2) continue;
-    const byAddr = new Map<string, Deal[]>();
+    // Transitively cluster deals that are the same property (addr or GLA+state).
+    const clusters: Deal[][] = [];
     for (const d of group) {
-      const a = normAddrForDup(d.address) ?? "(none)";
-      const arr = byAddr.get(a) ?? [];
-      arr.push(d);
-      byAddr.set(a, arr);
+      const hit = clusters.find((c) => c.some((x) => sameProperty(x, d)));
+      if (hit) hit.push(d); else clusters.push([d]);
     }
-    const realDupe = [...byAddr.values()].find((recs) => recs.length > 1);
+    const realDupe = clusters.find((c) => c.length > 1);
     if (realDupe) {
       out.push({ severity: "high", dealName: dealName(realDupe[0]), ids: realDupe.map((d) => d.id),
-        addresses: [realDupe[0].address || "—"],
-        message: `${realDupe.length} live copies at the same address — likely a re-import duplicate. Keep the better record and delete the other.` });
+        addresses: [...new Set(realDupe.map((d) => d.address || "—"))],
+        message: `${realDupe.length} live copies of the same property (same address or identical GLA in one state) — likely a re-import duplicate. Keep the better record and delete the other.` });
     } else {
       out.push({ severity: "low", dealName: dealName(group[0]), ids: group.map((d) => d.id),
         addresses: group.map((d) => d.address || "—"),
