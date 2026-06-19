@@ -83,7 +83,7 @@ const PAGE_TABS = [
 ] as const;
 const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
-  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Anchor comparison",id:"section-anchors"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
+  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Risks & upside",id:"section-signals"},{label:"Anchor comparison",id:"section-anchors"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
   ai: [{label:"Highlights",id:"section-highlights"},{label:"Our take",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
   tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Site agreements / REAs",id:"section-site-agreements"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Tax reassessment",id:"section-tax-reassessment"},{label:"Ownership structure",id:"section-ownership"}],
@@ -289,6 +289,38 @@ function AnchorSnapshot({ deal, allDeals }: { deal: Deal; allDeals: Deal[] }) {
         </table>
       </div>
       <div style={{ fontSize: 9.5, color: "#a89f8f", marginTop: 7 }}>vs chain = this store vs the median of other same-brand locations in your library (— = too few to compare; sales where disclosed).</div>
+    </div>
+  );
+}
+
+// Compact Risks vs. Upside strip for the Summary tab — the same one-line signals the
+// Deal Memo shows (so the two never disagree), side by side, top few each.
+function SummarySignals({ deal, allDeals }: { deal: Deal; allDeals: Deal[] }) {
+  const m = useMemo(() => buildICMemoModel(deal, { allDeals }), [deal, allDeals]);
+  const firstLine = (t: string, max = 135): string => {
+    const c = (t || "").replace(/\s+/g, " ").trim();
+    const sent = c.match(/^.*?[^0-9\s][.!?](?=\s|$)/);   // first sentence, not split on a decimal
+    let s = sent && sent[0].length >= 30 ? sent[0] : c;
+    if (s.length > max) { s = s.slice(0, max); const sp = s.lastIndexOf(" "); s = (sp > 40 ? s.slice(0, sp) : s).replace(/[,;:.\s]+$/, "") + "…"; }
+    return s.replace(/\.$/, "");
+  };
+  const risks = m.risks.slice(0, 4).map(r => firstLine(r));
+  const upside = m.upside.slice(0, 4).map(u => firstLine(u));
+  if (!risks.length && !upside.length) return null;
+  const card = (accent: string): React.CSSProperties => ({ background: "#fff", border: "1px solid #efe8da", borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" });
+  const hdr = (color: string): React.CSSProperties => ({ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color, marginBottom: 9 });
+  const Bullet = ({ items, dot }: { items: string[]; dot: string }) => (
+    <>{items.length ? items.map((t, i) => (
+      <div key={i} style={{ display: "flex", gap: 7, marginBottom: 6 }}>
+        <span style={{ color: dot, fontWeight: 700, fontSize: 12 }}>•</span>
+        <span style={{ flex: 1, fontSize: 12, lineHeight: 1.4, color: "#3f3d37", fontFamily: "'Inter',sans-serif" }}>{t}</span>
+      </div>
+    )) : <div style={{ fontSize: 12, color: "#a89f8f" }}>—</div>}</>
+  );
+  return (
+    <div id="section-signals" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 12 }}>
+      <div style={card("#3f7a1f")}><div style={hdr("#2d7a0e")}>✦ Upside / Value-Add</div><Bullet items={upside} dot="#3f7a1f" /></div>
+      <div style={card("#dc2626")}><div style={hdr("#b3261e")}>⚠ Key Risks</div><Bullet items={risks} dot="#dc2626" /></div>
     </div>
   );
 }
@@ -3203,6 +3235,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           {d.notes && <ExpandableNarrative text={d.notes} />}
         </div>
       )}
+
+      {/* Top risks & upside — mirrored compactly from the AI Analysis tab so the
+          two signals execs care about most sit right on the Summary. */}
+      <SummarySignals deal={d} allDeals={allDeals} />
 
       {/* Anchor comparison — the size/rent/term/sales vs-chain read, on the Summary. */}
       <AnchorSnapshot deal={d} allDeals={allDeals} />
