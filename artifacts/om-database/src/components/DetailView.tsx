@@ -50,7 +50,7 @@ import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
 import { buildBrandSalesIndex, buildSalesFlags, deriveSalesOutlierFlag } from "../lib/tenantSalesBenchmark";
 import { deriveAnomalyFlag, anomalyReviewQuestions } from "../lib/dealAnomalies";
-import { buildICMemo } from "../lib/icMemo";
+import { buildICMemo, buildICMemoModel } from "../lib/icMemo";
 import { scoreDealConfidence } from "../lib/dealConfidence";
 import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
@@ -83,7 +83,7 @@ const PAGE_TABS = [
 ] as const;
 const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
-  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Also known as",id:"section-aliases"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
+  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Anchor comparison",id:"section-anchors"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
   ai: [{label:"Highlights",id:"section-highlights"},{label:"Our take",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
   tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Site agreements / REAs",id:"section-site-agreements"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Tax reassessment",id:"section-tax-reassessment"},{label:"Ownership structure",id:"section-ownership"}],
@@ -248,6 +248,47 @@ function ExpandableNarrative({ text, color = "#5b574d" }: { text: string; color?
           {expanded ? "Show less ▴" : "Show more ▾"}
         </button>
       )}
+    </div>
+  );
+}
+
+// Anchor comparison snapshot for the Summary tab — each anchor's size / rent / term /
+// sales, with rent and sales shown vs the MEDIAN of other same-brand locations in the
+// library (the "is this above/below the chain?" read Eric uses). Reuses the IC-memo
+// model so the on-screen view and the exported memo never disagree.
+function AnchorSnapshot({ deal, allDeals }: { deal: Deal; allDeals: Deal[] }) {
+  const anchors = useMemo(() => buildICMemoModel(deal, { allDeals }).anchorDetail, [deal, allDeals]);
+  if (!anchors.length) return null;
+  const signed = (p: number | null) => p == null ? "—" : `${p > 0 ? "+" : ""}${p}%`;
+  const th: React.CSSProperties = { padding: "0 8px 6px", textAlign: "right", fontWeight: 700 };
+  const td: React.CSSProperties = { padding: "6px 8px", textAlign: "right", color: "#5c5850", whiteSpace: "nowrap" };
+  return (
+    <div id="section-anchors" style={{ background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "16px 18px", marginBottom: 12, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#3f6b24", marginBottom: 10 }}>Anchor Comparison — rent · term · sales vs chain</div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 520, fontFamily: "'Inter',sans-serif" }}>
+          <thead>
+            <tr style={{ color: "#a89f8f", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <th style={{ padding: "0 8px 6px 0", textAlign: "left", fontWeight: 700 }}>Anchor</th>
+              <th style={th}>GLA</th><th style={th}>Rent/SF</th><th style={th}>vs chain</th><th style={th}>Term</th><th style={th}>Sales/SF</th><th style={{ ...th, padding: "0 0 6px 8px" }}>vs chain</th>
+            </tr>
+          </thead>
+          <tbody>
+            {anchors.map((a, i) => (
+              <tr key={i} style={{ borderTop: "1px solid #f3eee2" }}>
+                <td style={{ padding: "6px 8px 6px 0", textAlign: "left", fontWeight: 600, color: "#26281f", whiteSpace: "nowrap" }}>{a.name}</td>
+                <td style={td}>{a.sf != null ? `${Math.round(a.sf / 1000)}k` : "—"}</td>
+                <td style={td}>{a.rentPSF != null ? `$${a.rentPSF.toFixed(2)}` : "—"}</td>
+                <td style={{ ...td, fontWeight: 600, color: a.rentVsChain == null ? "#a89f8f" : a.rentVsChain > 0 ? "#2f5d16" : "#c97a18" }}>{signed(a.rentVsChain)}</td>
+                <td style={td}>{a.termYears != null ? `${a.termYears.toFixed(1)}y` : "—"}</td>
+                <td style={td}>{a.salesPSF != null ? `$${Math.round(a.salesPSF)}` : "—"}</td>
+                <td style={{ ...td, padding: "6px 0 6px 8px", fontWeight: 600, color: a.salesVsChain == null ? "#a89f8f" : a.salesVsChain >= 0 ? "#0f9d63" : "#dc2626" }}>{signed(a.salesVsChain)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ fontSize: 9.5, color: "#a89f8f", marginTop: 7 }}>vs chain = this store vs the median of other same-brand locations in your library (— = too few to compare; sales where disclosed).</div>
     </div>
   );
 }
@@ -3162,6 +3203,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           {d.notes && <ExpandableNarrative text={d.notes} />}
         </div>
       )}
+
+      {/* Anchor comparison — the size/rent/term/sales vs-chain read, on the Summary. */}
+      <AnchorSnapshot deal={d} allDeals={allDeals} />
 
       <div id="section-metriceditor"><MetricsEditor deal={d} onUpdate={onUpdate}/></div>
 
