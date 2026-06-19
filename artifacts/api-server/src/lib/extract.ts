@@ -291,6 +291,21 @@ export function formatHints(text: string): string {
   if (/\bJLL\b|Jones Lang LaSalle/i.test(ends)) {
     hints.push("JLL book: if it's a multi-property portfolio, extract only the property in scope; pull per-tenant base rents and lease dates from the rent-roll/financial section.");
   }
+  if (/\bNewmark\b|Newmark Knight Frank|\bNKF\b/i.test(ends)) {
+    hints.push("Newmark book: institutional, frequently a multi-property PORTFOLIO — extract ONLY the property in scope and note the portfolio context in keyAssumptions. Headline returns are usually PRO-FORMA / stabilized off a 10-year cash flow; capture in-place NOI, occupancy and rents from the rent-roll/financial pages, and don't treat the stabilized/marketing cap as in-place.");
+  }
+  if (/Eastdil\s*Secured|\bEastdil\b/i.test(ends)) {
+    hints.push("Eastdil Secured book: top-of-market institutional, typically marketed UNPRICED ('guidance' / 'call for offers') — leave askingPrice and capRate null unless an explicit number is printed; never infer them from the pro-forma. The underwriting shows forward/stabilized returns with market mark-to-market upside, so capture in-place NOI, occupancy and rents from the rent roll separately from that upside.");
+  }
+  if (/Cushman\s*&?\s*Wakefield|\bCushman\b/i.test(ends)) {
+    hints.push("Cushman & Wakefield book: institutional; if it's a multi-property portfolio, extract only the property in scope. Pull per-tenant base rents and lease dates from the rent-roll/financial section (not the marketing highlights), and separate in-place NOI from any pro-forma / stabilized figure.");
+  }
+  if (/\bColliers\b/i.test(ends)) {
+    hints.push("Colliers book: if it's a multi-property portfolio, extract only the property in scope; pull per-tenant economics from the rent roll, and distinguish in-place NOI from any pro-forma / stabilized figure.");
+  }
+  if (/SRS Real Estate|\bSRS\b/i.test(ends)) {
+    hints.push("SRS Real Estate Partners book: retail specialist — often a single net-lease asset or a small retail portfolio. If multiple properties, extract only the property in scope. The headline is frequently a PRO-FORMA cap on stabilized rent; capture in-place NOI/occupancy and per-tenant base rents from the rent roll, and flag any signed-not-open or proposed tenants the OM models in place.");
+  }
   if (!hints.length) return "";
   return "\n\nDOCUMENT-FORMAT HINTS (auto-detected from the source — apply where relevant):\n- " + hints.join("\n- ") + "\n";
 }
