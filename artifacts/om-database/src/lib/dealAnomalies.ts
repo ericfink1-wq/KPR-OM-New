@@ -82,6 +82,47 @@ export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
     out.push({ severity: "low", message: `Tenant rent PSF off the brand norm: ${rentOutliers.slice(0, 6).join("; ")}${rentOutliers.length > 6 ? `; +${rentOutliers.length - 6} more` : ""} — verify (or a likely rent/SF mis-capture).` });
   }
 
+  // ── Tenant-level: total SF vs the SAME brand across OTHER deals — an SF-typo catch.
+  // SF errors are a top cause of GLA mismatches: a Five Below at 30,000 SF when every
+  // other Five Below is ~8,000 is almost certainly a mis-read. One observation per
+  // (deal, brand) so a chain with two suites in one center doesn't skew its own norm.
+  const brandSizes = new Map<string, number[]>();
+  for (const d of others) {
+    const perBrand = new Map<string, number>();
+    for (const t of d.tenants || []) {
+      if (isVacant(t.name) || isNAPTenant(t)) continue;
+      const k = tenantKey(t.canonicalName || t.name);
+      const s = num(t.sf);
+      if (k && s != null) perBrand.set(k, (perBrand.get(k) ?? 0) + s);
+    }
+    for (const [k, s] of perBrand) (brandSizes.get(k) ?? brandSizes.set(k, []).get(k)!).push(s);
+  }
+  const ownBrandSF = new Map<string, number>();
+  for (const t of deal.tenants || []) {
+    if (isVacant(t.name) || isNAPTenant(t)) continue;
+    const k = tenantKey(t.canonicalName || t.name);
+    const s = num(t.sf);
+    if (k && s != null) ownBrandSF.set(k, (ownBrandSF.get(k) ?? 0) + s);
+  }
+  const sizeOutliers: string[] = [];
+  for (const [k, s] of ownBrandSF) {
+    const peers = brandSizes.get(k);
+    if (!peers || peers.length < MIN_BRAND_PEERS) continue;
+    const med = median(peers);
+    if (med <= 0) continue;
+    const ratio = s / med;
+    // Store FORMATS vary a lot (small-format Targets, big vs small ALDIs), so this
+    // needs a MUCH higher bar than the rent check (1.7×) — only an EGREGIOUS 3×/0.33×
+    // deviation is likely a real SF typo rather than a different footprint.
+    if (ratio >= 3 || ratio <= 0.33) {
+      const nm = (deal.tenants || []).find((t) => tenantKey(t.canonicalName || t.name) === k)?.name || k;
+      sizeOutliers.push(`${nm} ${Math.round(s).toLocaleString()} SF vs ~${Math.round(med).toLocaleString()} (${peers.length} other locations)`);
+    }
+  }
+  if (sizeOutliers.length) {
+    out.push({ severity: "low", message: `Tenant SF off the brand norm: ${sizeOutliers.slice(0, 6).join("; ")}${sizeOutliers.length > 6 ? `; +${sizeOutliers.length - 6} more` : ""} — likely an SF typo (a top cause of GLA mismatches).` });
+  }
+
   return out;
 }
 

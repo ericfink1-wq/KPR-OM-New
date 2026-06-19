@@ -30,4 +30,20 @@ describe("dealAnomalies", () => {
     const subject = mk("subject", { capRate: 7, weightedAvgRentPSF: 18 });
     expect(deriveAnomalyFlag(subject, [...cohort, subject])).toBeNull();
   });
+
+  it("flags an EGREGIOUS tenant-SF outlier vs the brand norm (a likely SF typo)", () => {
+    // cohort Five Belows are 9,000 SF; a 30,000 SF one (3.3×) is almost certainly a typo.
+    const subject = mk("subject", { capRate: 7, weightedAvgRentPSF: 18,
+      tenants: [{ name: "Five Below", sf: 30000, annualRent: 162000, rentPerSF: 18, leaseExpiry: "2032-01-01" } as any] });
+    const a = detectDealAnomalies(subject, [...cohort, subject]);
+    expect(a.some((x) => /SF off the brand norm/i.test(x.message))).toBe(true);
+  });
+
+  it("does NOT flag a tenant whose SF is merely a different format (within 3×)", () => {
+    // 12,000 SF Five Below vs 9,000 norm = 1.3× — normal format variation, not a typo.
+    const subject = mk("subject", { capRate: 7, weightedAvgRentPSF: 18,
+      tenants: [{ name: "Five Below", sf: 12000, annualRent: 162000, rentPerSF: 18, leaseExpiry: "2032-01-01" } as any] });
+    const a = detectDealAnomalies(subject, [...cohort, subject]);
+    expect(a.some((x) => /SF off the brand norm/i.test(x.message))).toBe(false);
+  });
 });
