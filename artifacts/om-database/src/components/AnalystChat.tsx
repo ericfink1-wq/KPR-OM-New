@@ -304,6 +304,14 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               </>
             )}
 
+            {/* Deal tiles */}
+            {active.length > 0 && (
+              <>
+                <div style={{ marginTop: 12, marginBottom: 8, fontSize: 9, letterSpacing: "0.16em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" }}>Pipeline</div>
+                <DealTiles deals={active} onOpen={onOpenDeal} />
+              </>
+            )}
+
             {/* ── Needs your attention ─────────────────────────────────────── */}
             {attention.length > 0 && (
               <div style={{ marginTop: 4 }}>
@@ -329,14 +337,6 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                   })}
                 </div>
               </div>
-            )}
-
-            {/* Deal tiles */}
-            {active.length > 0 && (
-              <>
-                <div style={{ marginTop: 12, marginBottom: 8, fontSize: 9, letterSpacing: "0.16em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" }}>Pipeline</div>
-                <DealTiles deals={active} onOpen={onOpenDeal} />
-              </>
             )}
 
             {/* Suggested prompts */}
