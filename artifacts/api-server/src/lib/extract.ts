@@ -271,6 +271,103 @@ function mergePhaseDuplicates(tenants: Array<Record<string, unknown>>): Array<Re
   return merged;
 }
 
+// Lightweight broker/system FORMAT detection → a short, high-confidence hint string
+// appended to the extraction prompt. Token-free (a sentence or two), additive, and
+// only fires on clear signatures — a nudge on known format quirks, never a hard rule.
+export function formatHints(text: string): string {
+  const ends = (text || "").slice(0, 24000) + "\n" + (text || "").slice(-8000); // broker/system marks live in headers/footers
+  const hints: string[] = [];
+  if (/\bMRI\b|Run Date:[\s\S]{0,80}Rent Roll|Gross Annual\s*\n?\s*Rent/i.test(text)) {
+    hints.push('MRI-STYLE RENT ROLL: base rent is the "Annual Rent" column — do NOT use "Gross Annual Rent" (that bakes in CAM/Tax/Insurance recoveries). Set annualRent = BASE only, and capture CAM+Tax+Insurance as expenseReimbursements separately.');
+  }
+  if (/\bCBRE\b/.test(ends)) {
+    hints.push("CBRE book: if it covers a PORTFOLIO of more than one property, extract ONLY the single property in scope — never merge a second center's tenants or financials — and note in keyAssumptions that it's part of a portfolio offering. Pull per-tenant economics from the rent-roll/financial section, not the marketing highlights.");
+  }
+  if (/Marcus\s*&\s*Millichap|\bMMRE\b/i.test(ends)) {
+    hints.push("Marcus & Millichap OM: the headline cap rate is frequently PRO-FORMA, not in-place. Capture in-place NOI and occupancy separately, and don't treat the marketing cap as in-place.");
+  }
+  if (/\bJLL\b|Jones Lang LaSalle/i.test(ends)) {
+    hints.push("JLL book: if it's a multi-property portfolio, extract only the property in scope; pull per-tenant base rents and lease dates from the rent-roll/financial section.");
+  }
+  if (!hints.length) return "";
+  return "\n\nDOCUMENT-FORMAT HINTS (auto-detected from the source — apply where relevant):\n- " + hints.join("\n- ") + "\n";
+}
+
+// SECOND-READER verification (best-effort, Haiku). Re-reads the OM and cross-checks
+// the handful of HIGH-VALUE headline numbers the extractor produced, flagging ONLY
+// clear, quote-grounded disagreements into Import Review. Cheap (one Haiku pass) and
+// fully contained — every failure path returns [] so it can never affect an upload.
+// Deal-level numbers only (no per-tenant) to hold cost and false-positive noise down.
+type VerifyQuestion = { id: string; source: "ai"; severity: "medium"; field: string; question: string; detail: string | null; suggestedValue: string | null; target: { kind: "deal"; fieldKey: string; valueType: "number" } | null };
+const VERIFY_FIELDS: Array<[string, string]> = [
+  ["noi", "in-place net operating income ($)"],
+  ["capRate", "cap rate (%)"],
+  ["askingPrice", "asking / guidance price ($)"],
+  ["totalSF", "total building GLA (SF)"],
+  ["occupancy", "occupancy (%)"],
+  ["grossPotentialRent", "gross potential / in-place base rent ($)"],
+];
+const parseMoneyish = (s: string): number | null => {
+  const m = s.replace(/,/g, "").match(/-?\$?\s*([\d.]+)\s*([mMkK])?/);
+  if (!m) return null;
+  let n = Number(m[1]); if (!Number.isFinite(n)) return null;
+  if (m[2] && /[mM]/.test(m[2])) n *= 1_000_000; else if (m[2] && /[kK]/.test(m[2])) n *= 1_000;
+  return n;
+};
+export async function verifyExtraction(text: string, deal: Record<string, unknown>, log?: Logger): Promise<VerifyQuestion[]> {
+  try {
+    const present = VERIFY_FIELDS.filter(([k]) => deal[k] != null && deal[k] !== "");
+    if (present.length < 2 || !text) return [];
+    const truncated = text.length > 160000 ? text.slice(0, 110000) + "\n...[middle truncated]...\n" + text.slice(-40000) : text;
+    const valueList = present.map(([k, label]) => `- ${k} (${label}): ${JSON.stringify(deal[k])}`).join("\n");
+    const prompt = `You are a meticulous CRE analyst doing a SECOND-READER check. Below are headline figures another analyst extracted from this Offering Memorandum, plus the OM text. For EACH figure, find where the OM states it and decide whether the extracted value is correct.
+
+Return ONLY JSON: {"disagreements":[{"field":"<one of the field keys>","omValue":"<the value the OM actually states, with units>","quote":"<short verbatim snippet from the OM showing it>"}]}
+
+RULES:
+- Include a field ONLY when the OM CLEARLY states a DIFFERENT value than extracted (a real contradiction). Ignore rounding and ignore a value simply quoted on a different basis you can't pin down.
+- If a figure is in-place vs pro-forma and the extracted value matches EITHER, that is NOT a disagreement.
+- You MUST include a verbatim "quote" from the OM for every disagreement. If you cannot quote it, do not report it.
+- If everything looks right, or you cannot find a figure in the OM, return {"disagreements":[]}.
+
+EXTRACTED FIGURES:
+${valueList}
+
+OM TEXT:
+${truncated}`;
+    const upstream = await callAnthropicOnce({ model: "claude-haiku-4-5-20251001", max_tokens: 1200, messages: [{ role: "user", content: prompt }] });
+    const data = await upstream.json() as Record<string, unknown>;
+    if (!upstream.ok) return [];
+    const raw = (data.content as Array<{ type: string; text?: string }>)?.find(b => b.type === "text")?.text ?? "";
+    if (!raw) return [];
+    const parsed = robustParseJSON(raw) as { disagreements?: Array<Record<string, unknown>> };
+    const rows = Array.isArray(parsed?.disagreements) ? parsed.disagreements : [];
+    const allowed = new Set(present.map(([k]) => k));
+    const out: VerifyQuestion[] = [];
+    const seen = new Set<string>();
+    for (const r of rows) {
+      const field = String(r.field || "");
+      if (!allowed.has(field) || seen.has(field)) continue;
+      const omValue = r.omValue == null ? "" : String(r.omValue).trim();
+      const quote = r.quote == null ? "" : String(r.quote).trim();
+      if (!omValue || !quote) continue;                       // must be grounded in a quote
+      seen.add(field);
+      const suggested = parseMoneyish(omValue);
+      out.push({
+        id: `ai-verify-${field}`,
+        source: "ai", severity: "medium",
+        field: `${field} — second-reader`,
+        question: `Second read of the OM suggests ${field} may be ${omValue}, not the extracted ${JSON.stringify(deal[field])}. Confirm which is right.`,
+        detail: `From the OM: "${quote.slice(0, 240)}". A verification pass flagged this as a possible mis-read — check the source before relying on it.`,
+        suggestedValue: suggested != null ? String(suggested) : null,
+        target: suggested != null ? { kind: "deal", fieldKey: field, valueType: "number" } : null,
+      });
+    }
+    if (out.length) log?.info?.({ count: out.length, fields: out.map(o => o.field) }, "Second-reader flagged figures");
+    return out;
+  } catch (err) { log?.warn?.({ err }, "verifyExtraction failed (non-fatal)"); return []; }
+}
+
 // Full OM extraction — retries truncated tenant lists automatically
 export async function runOmExtraction(text: string, extraGuidance = ""): Promise<{ data: Record<string, unknown>; tenantsComplete: boolean; timings: { totalMs: number; firstPassMs: number; continuationRounds: number; continuationMs: number; gapFillRounds: number; gapFillMs: number; leaseRiskMs: number; tenantCount: number; budgetHit: boolean } }> {
   const truncatedText = text.length > 180000
@@ -323,7 +420,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   // the whole thing each round — the main cause of slow multi-pass extractions.
   const cachedBlocks: Block[] = [
     { type: "text", text: EXTRACTION_PROMPT, cache_control: { type: "ephemeral" } },
-    { type: "text", text: taughtRules + houseBlock + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText, cache_control: { type: "ephemeral" } },
+    { type: "text", text: taughtRules + houseBlock + formatHints(text) + (extraGuidance || "") + "\n\nOM TEXT:\n" + truncatedText, cache_control: { type: "ephemeral" } },
   ];
   // Per-phase timing (measurement only — does not change extraction behavior).
   const _extractStart = Date.now();
@@ -789,7 +886,10 @@ export async function runBackgroundExtraction(
       // Source-level: warn up front if the OM's text layer was essentially empty
       // (scanned / image-based), so a sparse read isn't mistaken for "no data".
       const srcChecks = auditSourceText(text, pageCount);
-      const allChecks = [...lrChecks, ...auditChecks, ...srcChecks];
+      // Second-reader: a cheap Haiku pass re-checks the headline numbers against the
+      // OM and flags quote-grounded disagreements. Best-effort — returns [] on any error.
+      const verifyChecks = await verifyExtraction(text, dealData, log);
+      const allChecks = [...lrChecks, ...auditChecks, ...srcChecks, ...verifyChecks];
       if (allChecks.length) {
         const existing = Array.isArray(dealData.reviewQuestions) ? dealData.reviewQuestions as unknown[] : [];
         const seen = new Set(existing.map((q) => (q as { id?: string })?.id));
