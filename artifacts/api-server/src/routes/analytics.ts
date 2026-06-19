@@ -5,6 +5,7 @@ import { inArray } from "drizzle-orm";
 import type { TenantIndexRow } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
 import { ensureTenantIndexColumns } from "../lib/tenantIndex";
+import { parseDealIds } from "../lib/queryParams";
 
 const router = Router();
 
@@ -20,20 +21,7 @@ function pct(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 1000) / 10 : 0;
 }
 
-/** Parse dealId or dealId[] query param into a string array, or null if absent. */
-function parseDealIds(raw: unknown): string[] | null {
-  if (Array.isArray(raw)) return (raw as string[]).filter(Boolean);
-  if (typeof raw === "string" && raw) return [raw];
-  // The "extended" (qs) query parser converts MORE THAN 20 repeated params (its
-  // arrayLimit) from an array into an object { "0": id, "1": id, … }. Without this,
-  // a portfolio with >20 owned deals sent every id but parsed to null → the Owned
-  // filter silently fell back to ALL deals. Pull the values out of that object.
-  if (raw && typeof raw === "object") {
-    const vals = Object.values(raw as Record<string, unknown>).filter((v): v is string => typeof v === "string" && v.length > 0);
-    return vals.length > 0 ? vals : null;
-  }
-  return null;
-}
+// parseDealIds lives in lib/queryParams (pure, no DB import) so it's unit-testable.
 
 function computeAnalytics(rows: TenantIndexRow[]) {
   // Exclude vacant and rows with no name
