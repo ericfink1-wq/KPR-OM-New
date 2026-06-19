@@ -12,7 +12,7 @@ import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from 
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { autoMaintainDealData } from "../lib/dealMaintenance";
-import { normalizeDate } from "../lib/importFixes";
+import { normalizeDate, deriveRents } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
 import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
@@ -1462,7 +1462,7 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
     const snap = await createSnapshot("before-autofix");
     const rows = await db.select().from(dealsTable);
     let scanned = 0, occCostFixed = 0, rentFixed = 0, dupeFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
-    let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0, dateFixed = 0;
+    let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0, dateFixed = 0, rentFilled = 0;
     for (const r of rows) {
       const data = r.data as Record<string, unknown>;
       if (data.trashedAt || data._processing || data._processingError) continue;
@@ -1524,7 +1524,11 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
         if (key != null) seen.set(key, dedup.length);
         dedup.push(t);
       }
-      const updated: Record<string, unknown> = { ...data, tenants: dedup };
+      // Fill blank base-rent figures implied by the others (gated — only on a deal
+      // whose rates are proven base; see deriveRents). Mirrors the per-write path.
+      const { tenants: withRents, filled: rf } = deriveRents(dedup);
+      if (rf > 0) { rentFilled += rf; changed = true; }
+      const updated: Record<string, unknown> = { ...data, tenants: withRents };
       // 1b. Deal-level UNAMBIGUOUS unit fixes (single right answer; anything fuzzy is
       //     left for human review, same as the per-tenant rules above).
       // Occupancy stored as a 0–1 fraction (lost its ×100) — a <1% occupancy is
@@ -1550,7 +1554,7 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
         }
       }
       // 2. Recompute roster-derived metrics (honors verified locks)
-      const m = recompute(dedup, updated.tenantsAsOf, updated);
+      const m = recompute(withRents, updated.tenantsAsOf, updated);
       for (const k of ["occupancy", "walt", "weightedAvgRentPSF"] as const) {
         if (m[k] != null && nA(updated[k]) !== m[k]) { updated[k] = m[k]; metricFixes++; changed = true; }
       }
@@ -1565,8 +1569,8 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
       if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
       if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
     }
-    req.log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, dateFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
-    res.json({ ok: true, scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, dateFixed, metricFixes, changedDeals, cleared, snapshot: snap });
+    req.log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
+    res.json({ ok: true, scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, changedDeals, cleared, snapshot: snap });
   } catch (err) {
     req.log.error({ err }, "Auto-fix failed");
     res.status(500).json({ error: "Auto-fix failed" });

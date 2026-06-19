@@ -394,7 +394,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     setMaintaining(true); setMaintainMsg("Cleaning…");
     try {
       const a = await fetch("/api/deals/autofix", { method: "POST", credentials: "include" })
-        .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; occUnitFixed?: number; capUnitFixed?: number; ppsfFixed?: number; rentFixed?: number; dupeFixed?: number; dateFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>);
+        .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; occUnitFixed?: number; capUnitFixed?: number; ppsfFixed?: number; rentFixed?: number; rentFilled?: number; dupeFixed?: number; dateFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>);
       if (!a.ok) throw new Error(a.error || "Auto-fix failed");
       setMaintainMsg("Re-auditing…");
       const b = await fetch("/api/deals/reaudit", { method: "POST", credentials: "include" })
@@ -402,7 +402,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       if (!b.ok) throw new Error(b.error || "Audit failed");
       const parts = ([
         [a.occCostFixed, "occ-cost"], [a.occUnitFixed, "occupancy units"], [a.capUnitFixed, "cap-rate units"],
-        [a.ppsfFixed, "price-PSF"], [a.rentFixed, "rent"], [a.dupeFixed, "dup rows"], [a.dateFixed, "dates→ISO"], [a.metricFixes, "metrics"],
+        [a.ppsfFixed, "price-PSF"], [a.rentFixed, "rent"], [a.rentFilled, "rent filled"], [a.dupeFixed, "dup rows"], [a.dateFixed, "dates→ISO"], [a.metricFixes, "metrics"],
       ] as [number | undefined, string][]).filter(([n]) => (n ?? 0) > 0).map(([n, label]) => `${n} ${label}`);
       setMaintainMsg(`✓ Cleaned ${a.changedDeals ?? 0} deal${(a.changedDeals ?? 0) === 1 ? "" : "s"}${parts.length ? ` · ${parts.join(", ")}` : ""} · audit ${b.added ?? 0} new / ${(a.cleared ?? 0) + (b.cleared ?? 0)} cleared — reloading…`);
       loadAuditStats();

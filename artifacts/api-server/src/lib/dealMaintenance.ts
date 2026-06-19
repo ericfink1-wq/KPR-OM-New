@@ -22,6 +22,7 @@ export interface MaintainResult {
   dupeFixed: number;
   metricFixes: number;
   dateFixed: number;
+  rentFilled: number;
   auditAdded: number;
   auditCleared: number;
 }
@@ -62,6 +63,7 @@ export function autoMaintainDealData(input: Record<string, unknown>): MaintainRe
     dupeFixed: fix.dupeFixed,
     metricFixes: fix.metricFixes,
     dateFixed: fix.dateFixed,
+    rentFilled: fix.rentFilled,
     auditAdded: added,
     auditCleared: cleared,
   };

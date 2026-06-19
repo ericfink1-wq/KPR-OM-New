@@ -933,7 +933,7 @@ export async function runBackgroundExtraction(
       const fix = applyImportFixes(dealData);
       if (fix.changed) {
         Object.assign(dealData, fix.deal);
-        log.info({ id, occCostFixed: fix.occCostFixed, dupeFixed: fix.dupeFixed, metricFixes: fix.metricFixes, dateFixed: fix.dateFixed }, "Import auto-clean applied");
+        log.info({ id, occCostFixed: fix.occCostFixed, dupeFixed: fix.dupeFixed, metricFixes: fix.metricFixes, dateFixed: fix.dateFixed, rentFilled: fix.rentFilled }, "Import auto-clean applied");
       }
     } catch { /* auto-clean must never break an upload */ }
     try {

@@ -114,6 +114,44 @@ export interface ImportFixResult {
   dupeFixed: number;
   metricFixes: number;
   dateFixed: number;
+  rentFilled: number;
+}
+
+// Fill a blank BASE-RENT figure that's mathematically implied by the other two on the
+// SAME tenant (annualRent = rentPerSF × SF). This is GATED, never a blanket assumption:
+// it only runs on a deal whose rates are PROVEN to be clean base figures — i.e. enough
+// tenants carry BOTH annual rent and PSF and a strong majority reconcile exactly. If
+// that can't be confirmed (too few samples, or the figures don't tie out), it fills
+// NOTHING and the blanks stay blank. That guard means a gross / CAM-inflated PSF is
+// never multiplied into a fabricated base rent, and a bad roll can't be "completed"
+// into wrong numbers. Per-value sanity bounds catch a mis-keyed rate on top of that.
+export function deriveRents(tenants: Record<string, unknown>[]): { tenants: Record<string, unknown>[]; filled: number } {
+  const occ = tenants.filter((t) => !isVacA(t.name) && !isNAPA(t));
+  let both = 0, recon = 0;
+  for (const t of occ) {
+    const sf = nA(t.sf), ann = nA(t.annualRent), psf = nA(t.rentPerSF);
+    if (sf && sf > 0 && ann && ann > 0 && psf && psf > 0) {
+      both++;
+      if (Math.abs(psf * sf - ann) / ann <= 0.02) recon++;
+    }
+  }
+  // Need a real sample AND a strong consensus that PSF is the base rate before deriving.
+  if (both < 3 || recon / both < 0.85) return { tenants, filled: 0 };
+  let filled = 0;
+  const out = tenants.map((src) => {
+    if (isVacA(src.name) || isNAPA(src)) return src;
+    const t = { ...src };
+    const sf = nA(t.sf), ann = nA(t.annualRent), psf = nA(t.rentPerSF);
+    if (!sf || sf <= 0) return t;
+    if ((ann == null || ann === 0) && psf != null && psf >= 1 && psf <= 200) {
+      t.annualRent = Math.round(psf * sf); filled++;                       // annual from a confirmed base PSF
+    } else if ((psf == null || psf === 0) && ann != null && ann > 0) {
+      const d = Math.round((ann / sf) * 100) / 100;
+      if (d >= 0.5 && d <= 200) { t.rentPerSF = d; filled++; }             // PSF from base annual (sane band)
+    }
+    return t;
+  });
+  return { tenants: out, filled };
 }
 
 export function applyImportFixes(input: Record<string, unknown>): ImportFixResult {
@@ -158,13 +196,19 @@ export function applyImportFixes(input: Record<string, unknown>): ImportFixResul
     dedup.push(t);
   }
 
-  const deal: Record<string, unknown> = { ...input, tenants: dedup };
+  // 3. Fill blank base-rent figures that are mathematically implied (gated — see
+  //    deriveRents). Runs before the metric recompute so a filled rentPerSF feeds the
+  //    weighted-average rent.
+  const { tenants: withRents, filled: rentFilled } = deriveRents(dedup);
+  if (rentFilled > 0) changed = true;
 
-  // 3. recompute roster-derived metrics (honors verified locks)
-  const m = recompute(dedup, deal.tenantsAsOf, deal);
+  const deal: Record<string, unknown> = { ...input, tenants: withRents };
+
+  // 4. recompute roster-derived metrics (honors verified locks)
+  const m = recompute(withRents, deal.tenantsAsOf, deal);
   for (const k of ["occupancy", "walt", "weightedAvgRentPSF"] as const) {
     if (m[k] != null && nA(deal[k]) !== m[k]) { deal[k] = m[k]; metricFixes++; changed = true; }
   }
 
-  return { deal, changed, occCostFixed, dupeFixed, metricFixes, dateFixed };
+  return { deal, changed, occCostFixed, dupeFixed, metricFixes, dateFixed, rentFilled };
 }
