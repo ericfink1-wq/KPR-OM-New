@@ -524,6 +524,35 @@ router.delete("/deals/:id", requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/deals/purge-trashed — PERMANENTLY remove every soft-deleted (trashedAt)
+// deal and its references. Soft delete keeps a deal's data in the DB for undo/restore;
+// over time those ghosts accumulate and leak into analytics/exports. This is the
+// one-click catch-up. Admin-only, and it snapshots the whole library first so a
+// mistaken purge is fully reversible from Backup → Restore.
+router.post("/deals/purge-trashed", requireAdmin, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    const trashedIds = rows
+      .filter((r) => (r.data as Record<string, unknown>)?.trashedAt)
+      .map((r) => r.id);
+    if (trashedIds.length === 0) { res.json({ ok: true, purged: 0 }); return; }
+    const snap = await createSnapshot("before-purge-trashed");
+    for (const id of trashedIds) {
+      await db.delete(dealImagesTable).where(eq(dealImagesTable.id, id));
+      await db.delete(dealSourcesTable).where(eq(dealSourcesTable.id, id));
+      await db.delete(tenantIndexTable).where(eq(tenantIndexTable.dealId, id));
+      await db.delete(compsIndexTable).where(eq(compsIndexTable.sourceDealId, id));
+      await db.delete(leaseAbstractsTable).where(eq(leaseAbstractsTable.dealId, id));
+      await db.delete(dealsTable).where(eq(dealsTable.id, id));
+    }
+    req.log.info({ purged: trashedIds.length }, "Purged trashed deals");
+    res.json({ ok: true, purged: trashedIds.length, snapshot: snap });
+  } catch (err) {
+    req.log.error({ err }, "Failed to purge trashed deals");
+    res.status(500).json({ error: "Failed to purge trashed deals" });
+  }
+});
+
 // GET /api/deals/:id/cover-thumb — the cover as a cacheable BINARY image, so the
 // Deal Library can lazy-load covers via <img> (browser-cached, only visible rows)
 // instead of fetching the full image bundle per tile. Prefers the small thumb.

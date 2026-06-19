@@ -414,6 +414,25 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     }
   };
 
+  // Admin: permanently remove soft-deleted (trashed) deals whose data lingers in the
+  // DB. Snapshots first on the server, so a mistaken purge is restorable from Backup.
+  const handlePurgeTrashed = async () => {
+    if (!window.confirm("Permanently remove all DELETED deals?\n\nThese are deals you sent to the trash — their data still lives in the database (which is why deleted deals can reappear in exports/analytics). This removes them for good. It snapshots the whole library first, so it's reversible from Backup → Restore if needed.")) return;
+    setMaintaining(true);
+    setMaintainMsg("Removing deleted deals…");
+    try {
+      const r = await fetch("/api/deals/purge-trashed", { method: "POST", credentials: "include" })
+        .then(r => r.json() as Promise<{ ok: boolean; purged?: number; error?: string }>);
+      if (!r.ok) throw new Error(r.error || "Purge failed");
+      setMaintainMsg(`✓ Removed ${r.purged ?? 0} deleted deal${(r.purged ?? 0) === 1 ? "" : "s"} — reloading…`);
+      setTimeout(() => window.location.reload(), 1600);
+    } catch (e) {
+      setMaintainMsg(`⚠ ${e instanceof Error ? e.message : "failed"}`);
+    } finally {
+      setMaintaining(false);
+    }
+  };
+
   const handleRefreshStale = () => {
     if (!window.confirm(`Refresh the written analysis for ${staleCount} deal${staleCount === 1 ? "" : "s"} that predate the latest scoring logic? This runs the cheap AI roster-analysis pass on each and may take a bit. (Your badges and score adjustments are already current — this only updates the written narrative and benchmark notes.)`)) return;
     setRefreshingStale(true);
@@ -592,6 +611,11 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               <button onClick={handleCleanAndReaudit} disabled={maintaining} title="One pass over every deal: auto-fix the issues with a single right answer (occ-cost/cap/price-PSF units, rentPerSF from a reliable annual, duplicate rows, stale occupancy/WALT/avg-rent), then re-check all the numbers and post any contradictions to each deal's Import Review. Token-free, snapshots first (reversible), leaves judgement calls alone. New imports/edits self-maintain, so this is the one-click catch-up for existing deals." style={{ background: "none", border: "none", padding: 0, cursor: maintaining ? "default" : "pointer", fontSize: 9.5, color: "#3f7a1f", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
                 {maintaining ? (maintainMsg ?? "working…") : "🧹 Clean & re-audit all"}
               </button>
+              {isAdmin && (
+                <button onClick={handlePurgeTrashed} disabled={maintaining} title="Permanently remove deleted (trashed) deals whose data still sits in the database. Snapshots first, so it's reversible from Backup. Admin only." style={{ background: "none", border: "none", padding: 0, cursor: maintaining ? "default" : "pointer", fontSize: 9.5, color: "#b06a4e", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+                  🗑 remove deleted deals
+                </button>
+              )}
             </div>
             {maintainMsg && <span style={{ fontSize: 10.5, color: maintainMsg.startsWith("✓") ? "#0f9d63" : maintainMsg.startsWith("⚠") ? "#dc2626" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>{maintainMsg}</span>}
             {showAuditBreakdown && auditStats.breakdown.length > 0 && (
