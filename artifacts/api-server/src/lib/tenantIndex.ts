@@ -138,6 +138,13 @@ export async function rebuildTenantIndex(
     const aliasMap: Record<string, string> = {};
     for (const r of aliasRows) aliasMap[r.rawName] = r.canonicalName;
 
+    // Soft-deleted (trashed) deals are removed from the index ENTIRELY — their rows were
+    // just deleted above, and returning here means we don't re-add them. Without this,
+    // trashing a deal (a PUT that sets trashedAt → rebuildTenantIndex) re-indexed it, so
+    // Portfolio Analytics counted trashed deals (175 vs the 158 live) and the Owned
+    // filter saw stale data. Processing/errored deals are likewise excluded.
+    if (data.trashedAt || data._processing || data._processingError) return;
+
     const tenants = data.tenants as Array<Record<string, unknown>> | undefined;
     if (!Array.isArray(tenants) || tenants.length === 0) return;
 
