@@ -2,6 +2,49 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## SESSION 2026-06-19 (extraction-quality + self-improvement push). NEXT-SESSION PICKUP.
+All on `main`, typecheck-clean, 64 api-server tests green. Built this session:
+- **Continuous self-improvement loop** (`artifacts/api-server/src/lib/selfImprove.ts`,
+  scheduler started in `index.ts`): a daily, TOKEN-FREE, NON-destructive sweep that
+  (1) re-audits every deal + self-heals flags, (2) records a daily metrics snapshot to
+  the `audit_history` table (trend via `GET /deals/audit-history`), and (3) auto-mints a
+  standing extraction lesson when a deterministic check recurs across ≥5 deals
+  (`AUTO_LESSON_BY_CHECK`). Runs at most once/day (DB-backed day key). Manual trigger:
+  `POST /deals/self-clean` (admin). **The data-MUTATING auto-fix stays human-triggered**
+  (Portfolio Analytics → "auto-fix safe issues", snapshot-protected) — the loop only
+  heals flags, measures, and teaches. Verify post-deploy by watching the log line
+  "Self-improvement daily self-clean complete".
+- **7 new deterministic audit checks** (`extractionAudit.ts`): lease-date chronology,
+  occupancy>100, sales-PSF<rent-PSF, reno-before-built, grocery-anchor-missing (gated by
+  no-big-box so a regional grocer can't false-fire), WALT-recompute, duplicate-tenant-row.
+  Regression-tested in `__tests__/auditNewChecks.test.ts`. KEEP EXTENDING this suite.
+- **Self-check in the extraction prompt** (`EXTRACTION_PROMPT`): the model re-reads its
+  own JSON and fixes the tie-outs (units, swapped dates, sales<rent, roster/GLA, NOI/cap)
+  BEFORE returning. Cached, so no per-OM token cost.
+- **VACANCY RECONCILIATION BACKSTOP** (`runOmExtraction`, after the occupied gap-fill):
+  the old backstop only re-prompted when OCCUPIED SF was short, so when the roster was
+  built from the SITE PLAN and the rent-roll's VACANT suites were dropped, it declared
+  "complete" and under-rostered the building (the Pacific Commons miss — occupied tied
+  out, ~68K SF of vacancy gone). Now: if roster vacant-SF is materially below what the
+  stated occupancy implies, re-prompt SPECIFICALLY for the missing vacant suites,
+  cross-referencing the OM's several vacancy disclosures. Lesson: **reconcile the roster
+  to the OM's OWN stated occupancy/vacant-SF/GLA, which appear in multiple places.**
+- **Format/broker hints** (`formatHints`) + **best-effort second-reader** (`verifyExtraction`,
+  Haiku, quote-grounded, never blocks an upload — watch for noise on real uploads & tighten).
+- **Import-Review "Fix it" understands roster DIRECTIONS now** (`ImportReview.tsx`): the AI
+  gets full roster context and can ADD a vacant suite, REMOVE a duplicate/phantom row, and
+  mark a tenant vacant — not just edit a single field. Prose ("…is vacant", "remove…")
+  routes to the AI; terse "<Tenant> <number>" pairs stay on the deterministic parser.
+- **Same-drop import race FIXED** (`UploadQueue.tsx`): a sales report + its OM dropped
+  together no longer lets the slow OM overwrite the just-applied sales — both merge paths
+  re-base on `getLatestDeal`, and the create-new path registers the ENRICHED deal.
+- UI: top scrollbar on wide tables (`useTopScrollbar`); deal tabs reordered (Tenants&Sales
+  2nd, AI 3rd) + underwriting tabs always visible (hide/show toggle removed); Analytics
+  split back into Portfolio + Tenant dropdowns; home page shows Pipeline above "Needs
+  your attention". Extended `/deals/autofix` with occupancy/cap/price unit fixes.
+- CI (`.github/workflows/ci.yml`) already typechecks + runs the full test suite on every
+  push to main — regression tests are the safety net; ADD one for each fix.
+
 ## NIGHT SESSION (2026-06-19, overnight — full-access browser). NEXT-SESSION PICKUP HERE.
 Browser access CONFIRMED working: ran the app locally (seeded 158 live deals from Eric's
 export), logged in, screenshotted real deal pages desktop+mobile. **Recipe is now in
