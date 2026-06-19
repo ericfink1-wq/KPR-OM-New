@@ -12,6 +12,7 @@ import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from 
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { autoMaintainDealData } from "../lib/dealMaintenance";
+import { summarizePortfolioIssues } from "../lib/portfolioIssues";
 import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
@@ -1310,6 +1311,19 @@ router.get("/deals/audit-list", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to build audit list");
     res.status(500).json({ error: "Failed to build audit list" });
+  }
+});
+
+// GET /api/deals/issues-summary — the feedback console's data: every OPEN issue across
+// the portfolio (fresh audit + stored AI/arithmetic captures) GROUPED by type, so a
+// recurring extraction problem reads as a trend. Live + token-free.
+router.get("/deals/issues-summary", requireAuth, async (req, res) => {
+  try {
+    const rows = await db.select().from(dealsTable);
+    res.json(summarizePortfolioIssues(rows.map((r) => ({ id: r.id, data: r.data as Record<string, unknown> }))));
+  } catch (err) {
+    req.log.error({ err }, "Failed to build issues summary");
+    res.status(500).json({ error: "Failed to build issues summary" });
   }
 });
 
