@@ -63,8 +63,11 @@ const s = StyleSheet.create({
   footTxt: { fontSize: 6.5, color: C.faint },
 });
 
-function Sec({ title, children }: { title: string; children: React.ReactNode }) {
-  return (<View wrap={false}><Text style={s.secH}>{title}</Text>{children}</View>);
+// Short sections stay whole (wrap=false). Long bullet lists (Risks / Upside) may
+// flow across the page break so they fill page 1's column instead of jumping wholesale
+// to page 2 and leaving a half-empty first page.
+function Sec({ title, children, wrap = false }: { title: string; children: React.ReactNode; wrap?: boolean }) {
+  return (<View wrap={wrap}><Text style={s.secH}>{title}</Text>{children}</View>);
 }
 
 export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: string }) {
@@ -150,6 +153,25 @@ export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: stri
             {m.rollover ? (
               <Sec title="Lease Rollover">
                 <Text style={s.line}><Text style={s.lblIn}>{m.rollover.count} lease{m.rollover.count === 1 ? "" : "s"}{m.rollover.pct != null ? ` (${m.rollover.pct}% of base rent)` : ""}</Text> expire through {m.rollover.throughYear}.</Text>
+                {(() => {
+                  // Per-year expiration schedule as a bar chart (% of base rent rolling
+                  // each year) — turns the one-liner into a scannable rollover picture.
+                  const rows = m.rolloverByYear.filter((r) => r.count > 0);
+                  if (rows.length < 2) return null;
+                  const max = Math.max(...rows.map((r) => r.pct), 1);
+                  return (
+                    <View style={{ marginTop: 5 }}>
+                      {m.rolloverByYear.map((r, i) => (
+                        <View key={i} style={s.barRow}>
+                          <Text style={s.barCat}>{r.year}{r.count > 0 ? `  (${r.count})` : ""}</Text>
+                          <View style={s.barTrack}><View style={[s.barFill, { width: `${Math.round((r.pct / max) * 100)}%` }]} /></View>
+                          <Text style={s.barPct}>{r.pct > 0 ? `${r.pct}%` : "—"}</Text>
+                        </View>
+                      ))}
+                      <Text style={[s.footTxt, { marginTop: 2 }]}>Share of base rent expiring each year · (n) = leases</Text>
+                    </View>
+                  );
+                })()}
               </Sec>
             ) : null}
           </View>
@@ -173,14 +195,14 @@ export default function ICMemoPDF({ deal, logoUrl }: { deal: Deal; logoUrl: stri
             ) : null}
 
             {m.risks.length ? (
-              <Sec title="Risks">
-                {m.risks.map((r, i) => (<View key={i} style={s.bullet}><Text style={s.bDotR}>•</Text><Text style={s.bTxt}>{r}</Text></View>))}
+              <Sec title="Risks" wrap>
+                {m.risks.map((r, i) => (<View key={i} style={s.bullet} wrap={false}><Text style={s.bDotR}>•</Text><Text style={s.bTxt}>{r}</Text></View>))}
               </Sec>
             ) : null}
 
             {m.upside.length ? (
-              <Sec title="Upside / Value-Add">
-                {m.upside.map((u, i) => (<View key={i} style={s.bullet}><Text style={s.bDot}>•</Text><Text style={s.bTxt}>{u}</Text></View>))}
+              <Sec title="Upside / Value-Add" wrap>
+                {m.upside.map((u, i) => (<View key={i} style={s.bullet} wrap={false}><Text style={s.bDot}>•</Text><Text style={s.bTxt}>{u}</Text></View>))}
               </Sec>
             ) : null}
           </View>

@@ -46,6 +46,7 @@ export interface ICMemoModel {
   concentration: { top1: number; top3: number } | null;
   mix: ReturnType<typeof analyzeCenterMix>;
   rollover: { count: number; pct: number | null; throughYear: number } | null;
+  rolloverByYear: { year: number; count: number; pct: number }[];   // next ~6 yrs, for the bar chart
   financials: MemoMetric[];
   risks: string[];
   upside: string[];
@@ -90,6 +91,7 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
     : null;
 
   let rollover: ICMemoModel["rollover"] = null;
+  const rolloverByYear: ICMemoModel["rolloverByYear"] = [];
   if (occ.length) {
     const horizon = refDate(deal).getFullYear() + 3;
     const expiring = occ.filter((t) => { const y = yr(t.leaseExpiry); return y != null && y <= horizon; });
@@ -97,6 +99,16 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
       const rollRent = expiring.reduce((s, t) => s + (n(t.annualRent) ?? 0), 0);
       const tot = occ.reduce((s, t) => s + (n(t.annualRent) ?? 0), 0);
       rollover = { count: expiring.length, pct: tot > 0 ? Math.round((rollRent / tot) * 100) : null, throughYear: horizon };
+    }
+    // Per-year expiration schedule for the bar chart — this year through +5 yrs.
+    const baseYear = refDate(deal).getFullYear();
+    const totRent = occ.reduce((s, t) => s + rentOf(t), 0);
+    for (let i = 0; i < 6; i++) {
+      const y = baseYear + i;
+      const inYear = occ.filter((t) => yr(t.leaseExpiry) === y);
+      if (inYear.length === 0) { rolloverByYear.push({ year: y, count: 0, pct: 0 }); continue; }
+      const yrRent = inYear.reduce((s, t) => s + rentOf(t), 0);
+      rolloverByYear.push({ year: y, count: inYear.length, pct: totRent > 0 ? Math.round((yrRent / totRent) * 100) : 0 });
     }
   }
 
@@ -125,7 +137,7 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
     asOf: deal.tenantsAsOf ?? null,
     grade: score && (score.grade || score.score != null) ? { grade: score.grade ?? "—", score: score.score ?? null, rationale: score.rationale?.trim() || null } : null,
     metrics, demographics, anchors, topTenants, concentration,
-    mix: analyzeCenterMix(deal), rollover, financials,
+    mix: analyzeCenterMix(deal), rollover, rolloverByYear, financials,
     risks: dedupeLines(risks).slice(0, 5),
     upside: dedupeLines(upside).slice(0, 5),
     narrative: typeof deal.notes === "string" && deal.notes.trim() ? deal.notes.trim() : null,
