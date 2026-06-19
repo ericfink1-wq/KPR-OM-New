@@ -288,9 +288,10 @@ interface Props {
   onTenantAudit?: () => void;
   onTenantAnalytics?: () => void;
   onDataAudit?: (checkKey?: string) => void;
+  onFeedback?: () => void;
 }
 
-export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmin, onYearClick, onTenantAudit, onTenantAnalytics, onDataAudit }: Props) {
+export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmin, onYearClick, onTenantAudit, onTenantAnalytics, onDataAudit, onFeedback }: Props) {
   const isMobile = useIsMobile();
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -576,6 +577,12 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               <span style={{ fontSize: 12 }}>{auditStats.deals > 0 ? "⚠" : "✓"}</span>
               {auditStats.deals > 0 ? `Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues}) ›` : "Data integrity ✓"}
             </button>
+            {onFeedback && (
+              <button onClick={() => onFeedback()} title="Feedback & Trends — every open data issue across the portfolio, grouped by type, where you answer in plain English to create guardrails that improve every future extraction."
+                style={{ background: "transparent", border: "1px solid #c3a3d8", color: "#6b3f8f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 12 }}>🧠</span> Feedback &amp; Trends ›
+              </button>
+            )}
             <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               {auditStats.breakdown.length > 0 && (
                 <button onClick={() => setShowAuditBreakdown(s => !s)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>

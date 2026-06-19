@@ -682,6 +682,17 @@ export async function apiAuditList(): Promise<{ deals: AuditListDeal[]; totalDea
   return resp.json() as Promise<{ deals: AuditListDeal[]; totalDeals: number; totalIssues: number }>;
 }
 
+export interface IssueGroup {
+  key: string; label: string; severity: "high" | "medium" | "low";
+  kind: "audit" | "ai" | "arithmetic" | "other";
+  count: number; dealCount: number; deals: { id: string; name: string }[]; sample: string;
+}
+export async function apiIssuesSummary(): Promise<{ groups: IssueGroup[]; totalOpen: number; dealsWithIssues: number; scanned: number }> {
+  const resp = await apiFetch(`/deals/issues-summary`);
+  if (!resp.ok) return { groups: [], totalOpen: 0, dealsWithIssues: 0, scanned: 0 };
+  return resp.json() as Promise<{ groups: IssueGroup[]; totalOpen: number; dealsWithIssues: number; scanned: number }>;
+}
+
 export async function apiRefreshStaleAnalysis(): Promise<{ ok: boolean; refreshed: number; failed: number; total: number }> {
   const resp = await apiFetch(`/deals/refresh-stale-analysis`, { method: "POST" });
   if (!resp.ok) {

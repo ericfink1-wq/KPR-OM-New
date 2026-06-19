@@ -66,6 +66,7 @@ const RetailerWatchlist = lazyWithReload(() => import("./components/RetailerWatc
 const ParentCompanyView = lazyWithReload(() => import("./components/ParentCompanyView"));
 const CompareView = lazyWithReload(() => import("./components/CompareView"));
 const DataAuditView = lazyWithReload(() => import("./components/DataAuditView"));
+const FeedbackConsole = lazyWithReload(() => import("./components/FeedbackConsole"));
 const LearningView = lazyWithReload(() => import("./components/LearningView"));
 
 const queryClient = new QueryClient({
@@ -210,7 +211,7 @@ function AppInner() {
   const [closingCalcOpen, setClosingCalcOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "learning">("tenant");
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning">("tenant");
   // When the Data Audit view is opened from a breakdown chip, pre-filter it to that check.
   const [auditFilterKey, setAuditFilterKey] = useState<string | null>(null);
 
@@ -561,7 +562,7 @@ function AppInner() {
             ) : (
               <>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} onDataAudit={(key) => { setAuditFilterKey(key ?? null); setAnalyticsView("audit"); }} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
+                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} onDataAudit={(key) => { setAuditFilterKey(key ?? null); setAnalyticsView("audit"); }} onFeedback={() => setAnalyticsView("feedback")} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
                 ) : analyticsView === "calendar" ? (
                   <CriticalDates deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "marktomarket" ? (
@@ -570,6 +571,8 @@ function AppInner() {
                   <CoTenancyCascade deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "audit" ? (
                   <DataAuditView deals={activeDeals} onOpenDeal={handleOpenDeal} initialFilterKey={auditFilterKey} />
+                ) : analyticsView === "feedback" ? (
+                  <FeedbackConsole onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "learning" ? (
                   <LearningView deals={activeDeals} isAdmin={isAdmin} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "watchlist" ? (
