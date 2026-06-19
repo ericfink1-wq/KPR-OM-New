@@ -222,6 +222,31 @@ function CollapsibleBox({ collapsedHeight = 300, fadeColor = "#faf7f0", children
   );
 }
 
+// A long narrative block clamped to ~5 lines with a Show more/less toggle, so dense
+// prose (investment highlights, "our take") is scannable by default and the full text
+// is one tap away — progressive disclosure, nothing removed. Short text shows in full.
+function ExpandableNarrative({ text, color = "#5b574d" }: { text: string; color?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = (text || "").length > 420;
+  // maxHeight clamp (≈5 lines at fontSize 13 / lineHeight 1.75) — robust across engines,
+  // unlike -webkit-line-clamp which React inline styles don't reliably emit.
+  const collapsed = long && !expanded;
+  return (
+    <div>
+      <div style={{ position:"relative", maxHeight: collapsed ? 116 : undefined, overflow:"hidden" }}>
+        <p style={{ color, fontSize:13, lineHeight:1.75, margin:0 }}><BoldText text={text}/></p>
+        {collapsed && <div style={{ position:"absolute", left:0, right:0, bottom:0, height:34, background:"linear-gradient(to bottom, rgba(252,251,246,0), #fcfbf6)" }} />}
+      </div>
+      {long && (
+        <button onClick={() => setExpanded(e => !e)}
+          style={{ marginTop:7, background:"none", border:"none", padding:0, cursor:"pointer", fontSize:11, fontWeight:700, color:"#3f7a1f", fontFamily:"'Inter',sans-serif" }}>
+          {expanded ? "Show less ▴" : "Show more ▾"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Compact inline-editable text row (label left, value right) for free-text deal
 // fields like Seller. Module-level so its edit state survives parent re-renders.
 function EditableTextRow({ label, value, placeholder, onSave }: {
@@ -2664,7 +2689,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
             {d.analysisStale && <StaleBadge />}
           </div>
-          {d.notes && <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}><BoldText text={d.notes}/></p>}
+          {d.notes && <ExpandableNarrative text={d.notes} />}
         </div>
       )}
 
@@ -3124,7 +3149,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
             {d.analysisStale && <StaleBadge />}
           </div>
-          <p style={{ color:"#5b574d", fontSize:13, lineHeight:1.75, margin:0 }}><BoldText text={d.notes}/></p>
+          {d.notes && <ExpandableNarrative text={d.notes} />}
         </div>
       )}
 
