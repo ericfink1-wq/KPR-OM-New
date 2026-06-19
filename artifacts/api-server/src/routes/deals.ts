@@ -9,6 +9,7 @@ import { rebuildCompsIndex, syncOwnTransactionComps } from "../lib/compsIndex";
 import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from "../lib/demographics";
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
+import { autoMaintainDealData } from "../lib/dealMaintenance";
 import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
@@ -347,6 +348,8 @@ router.post("/deals/import", requireAuth, async (req, res) => {
       const id = existingRow.id;
       const clean = sanitize(merged);
       normalizeDealAddress(clean);   // street-only address + backfill blank city/state/zip
+      const mClean = autoMaintainDealData(clean).data;   // self-clean + refresh audit on import
+      Object.assign(clean, mClean);
       req.log.info({ id, fieldCount: Object.keys(clean).length }, "import merge: updating existing deal");
       try {
         await db.update(dealsTable)
@@ -372,6 +375,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
         : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
       const clean = sanitize(uploadedData);
       normalizeDealAddress(clean);   // street-only address + backfill blank city/state/zip
+      Object.assign(clean, autoMaintainDealData(clean).data);   // self-clean + refresh audit on import
       req.log.info({ id, fieldCount: Object.keys(clean).length }, "import new: inserting deal");
       try {
         await db.insert(dealsTable).values({ id, data: clean });
@@ -425,6 +429,7 @@ router.post("/deals", requireAuth, async (req, res) => {
     }
     const rest = coerceDealArrays(rest0);
     normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
+    Object.assign(rest, autoMaintainDealData(rest).data);   // self-clean + refresh audit on create
     await db.insert(dealsTable).values({ id, data: rest });
     res.status(201).json({ ok: true, id });
     setImmediate(() => { syncOwnTransactionComps(id, rest).catch(() => {}); });
@@ -441,6 +446,10 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     const { id: _bodyId, ...rest0 } = req.body as Record<string, unknown>;
     const rest = coerceDealArrays(rest0);
     normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
+    // Self-clean + refresh the integrity audit on every save (edits, roster pastes), so
+    // the data stays clean and the audit stays current without any manual sweep. Pure +
+    // fast; honors `verified` locks and leaves ambiguous figures flagged, not changed.
+    Object.assign(rest, autoMaintainDealData(rest).data);
     // Capture the prior "Our Take" so we only re-learn the House View when it changes.
     const prevRows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
     const prevReview = typeof (prevRows[0]?.data as Record<string, unknown> | undefined)?.dealReview === "string"
