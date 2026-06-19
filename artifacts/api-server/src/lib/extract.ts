@@ -306,6 +306,15 @@ export function formatHints(text: string): string {
   if (/SRS Real Estate|\bSRS\b/i.test(ends)) {
     hints.push("SRS Real Estate Partners book: retail specialist — often a single net-lease asset or a small retail portfolio. If multiple properties, extract only the property in scope. The headline is frequently a PRO-FORMA cap on stabilized rent; capture in-place NOI/occupancy and per-tenant base rents from the rent roll, and flag any signed-not-open or proposed tenants the OM models in place.");
   }
+  if (/\bNorthMarq\b|\bNorthmarq\b/i.test(ends)) {
+    hints.push("NorthMarq book: primarily a debt/capital-markets shop, so a sales OM often leans on a financing narrative — keep KPR's own debt assumptions out of the OM-stated fields. Extract in-place NOI/occupancy/rents from the rent-roll/financial section and treat any quoted return as pro-forma unless it's explicitly in-place.");
+  }
+  if (/\bBerkadia\b/i.test(ends)) {
+    hints.push("Berkadia book: capital-markets/debt heritage; for a retail sales OM, pull per-tenant economics from the rent roll (not the marketing pages) and separate in-place NOI from any stabilized/pro-forma figure. If multi-property, extract only the property in scope.");
+  }
+  if (/\bTen-?X\b|\bRCM\b|Real Capital Markets|\bCREXi\b|\bLightBox\b|\bAuction\.com\b/i.test(ends)) {
+    hints.push("AUCTION / online-marketplace listing (Ten-X / RCM / CREXi / LightBox / Auction.com): the price field is a STARTING BID or RESERVE, not an asking price — capture it only if explicit and note in keyAssumptions that pricing is auction/bid-based (leave askingPrice null if only a starting bid is shown). These are often value-add/distressed or short-fuse marketed deals, so in-place occupancy/NOI may be soft — capture them straight from the rent roll and flag vacancy/rollover.");
+  }
   if (!hints.length) return "";
   return "\n\nDOCUMENT-FORMAT HINTS (auto-detected from the source — apply where relevant):\n- " + hints.join("\n- ") + "\n";
 }
