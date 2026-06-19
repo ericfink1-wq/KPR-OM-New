@@ -51,6 +51,7 @@ import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../l
 import { buildBrandSalesIndex, buildSalesFlags, deriveSalesOutlierFlag } from "../lib/tenantSalesBenchmark";
 import { deriveAnomalyFlag, anomalyReviewQuestions } from "../lib/dealAnomalies";
 import { buildICMemo } from "../lib/icMemo";
+import { scoreDealConfidence } from "../lib/dealConfidence";
 import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
@@ -2442,6 +2443,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
             <ScoreBadge score={adjustedScore} size={12}/>
             <RecencyBadge deal={d}/>
+            {(() => {
+              const c = scoreDealConfidence(d);
+              const tip = c.gaps.length ? `Data confidence ${c.score}/100 (${c.label}). To improve: ${c.gaps.join("; ")}.` : `Data confidence ${c.score}/100 — all key data present, internally consistent, and current.`;
+              return (
+                <span title={tip} style={{ fontSize:9, fontWeight:700, color:c.color, background:`${c.color}14`, border:`1px solid ${c.color}40`, padding:"2px 7px", borderRadius:3, letterSpacing:"0.02em", cursor:"help" }}>
+                  ◆ DATA {c.score} · {c.label.toUpperCase()}
+                </span>
+              );
+            })()}
             {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
             {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
           </div>
