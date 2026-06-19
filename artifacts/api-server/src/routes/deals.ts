@@ -12,6 +12,7 @@ import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from 
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { autoMaintainDealData } from "../lib/dealMaintenance";
+import { normalizeDate } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
 import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
@@ -1432,7 +1433,7 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
     const snap = await createSnapshot("before-autofix");
     const rows = await db.select().from(dealsTable);
     let scanned = 0, occCostFixed = 0, rentFixed = 0, dupeFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
-    let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0;
+    let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0, dateFixed = 0;
     for (const r of rows) {
       const data = r.data as Record<string, unknown>;
       if (data.trashedAt || data._processing || data._processingError) continue;
@@ -1443,6 +1444,12 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
         const t = { ...(raw as Record<string, unknown>) };
         const oc = nA(t.occupancyCost);
         if (oc != null && oc > 0 && oc < 1) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
+        // Normalize non-ISO lease dates ("Nov-2022" → "2022-11-01") so the legacy
+        // library self-heals on a sweep, same as the per-write applyImportFixes path.
+        for (const f of ["leaseStart", "leaseExpiry", "originalLeaseDate", "rentCommencement", "rentStart"] as const) {
+          const iso = normalizeDate(t[f]);
+          if (iso) { t[f] = iso; dateFixed++; changed = true; }
+        }
         const sf = nA(t.sf), psf = nA(t.rentPerSF), ann = nA(t.annualRent);
         if (sf && psf && ann && ann > 1000 && !isVacA(t.name) && !isNAPA(t)) {
           const implied = psf * sf, rel = Math.abs(implied - ann) / ann, realPSF = ann / sf;
@@ -1529,8 +1536,8 @@ router.post("/deals/autofix", requireAuth, async (req, res) => {
       if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
       if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
     }
-    req.log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
-    res.json({ ok: true, scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, metricFixes, changedDeals, cleared, snapshot: snap });
+    req.log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, dateFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
+    res.json({ ok: true, scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, dupeFixed, dateFixed, metricFixes, changedDeals, cleared, snapshot: snap });
   } catch (err) {
     req.log.error({ err }, "Auto-fix failed");
     res.status(500).json({ error: "Auto-fix failed" });

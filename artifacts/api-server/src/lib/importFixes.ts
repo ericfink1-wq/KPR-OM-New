@@ -75,6 +75,11 @@ export function normalizeDate(v: unknown): string | null {
     const mo = Number(m[2]), day = Number(m[3]);
     if (mo >= 1 && mo <= 12 && day >= 1 && day <= 31) { const mm = String(mo).padStart(2, "0"); return `${m[1]}-${mm}-${clampDay(mm, day)}`; }
   }
+  // "2020-12" / "2020/12" — year-month with no day (unambiguous → 1st of month)
+  if ((m = s.match(/^(\d{4})[-/](\d{1,2})$/))) {
+    const mo = Number(m[2]);
+    if (mo >= 1 && mo <= 12) return `${m[1]}-${String(mo).padStart(2, "0")}-01`;
+  }
   return null;                                                  // unrecognized → leave it for the audit
 }
 const TENANT_DATE_FIELDS = ["leaseStart", "leaseExpiry", "originalLeaseDate", "rentCommencement", "rentStart"] as const;

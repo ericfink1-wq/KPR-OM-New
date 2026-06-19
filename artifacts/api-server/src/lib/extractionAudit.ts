@@ -546,7 +546,9 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
   // safely parse (e.g. "2031" year-only, "Q3 2028", OCR garble) — those are invisible
   // to parseISO, so WALT and rollover silently drop the tenant. Sentinels (flat/MTM/
   // current) are legitimate non-dates and never flagged.
-  const DATE_SENTINEL = /^(flat|m-?t-?m|month[\s-]*to[\s-]*month|cur(rent)?|various|holdover|at[\s-]*will|tbd|n\/?a|none|—|-)$/i;
+  // A lease date field legitimately carries non-date STATES (holdover, MTM, at-will,
+  // vacant, NAP) — those aren't OCR garble, so match them as substrings and don't nag.
+  const DATE_SENTINEL = /(m-?t-?m|month[\s-]*to[\s-]*month|holdover|at[\s-]*will|tenancy[\s-]*at|vacant|n\.?a\.?p|not[\s-]*a[\s-]*part|flat|various|^cur(rent)?$|^tbd$|^n\/?a$|^none$|^—$|^-$)/i;
   let isoDateFlags = 0;
   for (const t of occupied) {
     if (isoDateFlags >= 4) break;

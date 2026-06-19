@@ -390,11 +390,11 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   // existing deals (and a manual "clean everything now"). Token-free; snapshots first
   // (reversible via Backup → Restore a snapshot); leaves judgement calls flagged, not changed.
   const handleCleanAndReaudit = async () => {
-    if (!window.confirm("Clean & re-audit ALL deals now? Token-free and reversible (it snapshots first). It auto-fixes the issues with a single right answer — occupancy-cost units, cap-rate units, price-PSF, a rentPerSF that doesn't reconcile to a reliable annual, duplicate roster rows, and stale occupancy / WALT / avg-rent — then re-checks every deal's numbers and posts any contradictions to that deal's Import Review. Ambiguous figures are LEFT for you to review; anything you've already resolved is untouched.")) return;
+    if (!window.confirm("Clean & re-audit ALL deals now? Token-free and reversible (it snapshots first). It auto-fixes the issues with a single right answer — occupancy-cost units, cap-rate units, price-PSF, a rentPerSF that doesn't reconcile to a reliable annual, duplicate roster rows, non-ISO lease dates, and stale occupancy / WALT / avg-rent — then re-checks every deal's numbers and posts any contradictions to that deal's Import Review. Ambiguous figures are LEFT for you to review; anything you've already resolved is untouched.")) return;
     setMaintaining(true); setMaintainMsg("Cleaning…");
     try {
       const a = await fetch("/api/deals/autofix", { method: "POST", credentials: "include" })
-        .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; occUnitFixed?: number; capUnitFixed?: number; ppsfFixed?: number; rentFixed?: number; dupeFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>);
+        .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; occUnitFixed?: number; capUnitFixed?: number; ppsfFixed?: number; rentFixed?: number; dupeFixed?: number; dateFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>);
       if (!a.ok) throw new Error(a.error || "Auto-fix failed");
       setMaintainMsg("Re-auditing…");
       const b = await fetch("/api/deals/reaudit", { method: "POST", credentials: "include" })
@@ -402,7 +402,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       if (!b.ok) throw new Error(b.error || "Audit failed");
       const parts = ([
         [a.occCostFixed, "occ-cost"], [a.occUnitFixed, "occupancy units"], [a.capUnitFixed, "cap-rate units"],
-        [a.ppsfFixed, "price-PSF"], [a.rentFixed, "rent"], [a.dupeFixed, "dup rows"], [a.metricFixes, "metrics"],
+        [a.ppsfFixed, "price-PSF"], [a.rentFixed, "rent"], [a.dupeFixed, "dup rows"], [a.dateFixed, "dates→ISO"], [a.metricFixes, "metrics"],
       ] as [number | undefined, string][]).filter(([n]) => (n ?? 0) > 0).map(([n, label]) => `${n} ${label}`);
       setMaintainMsg(`✓ Cleaned ${a.changedDeals ?? 0} deal${(a.changedDeals ?? 0) === 1 ? "" : "s"}${parts.length ? ` · ${parts.join(", ")}` : ""} · audit ${b.added ?? 0} new / ${(a.cleared ?? 0) + (b.cleared ?? 0)} cleared — reloading…`);
       loadAuditStats();
