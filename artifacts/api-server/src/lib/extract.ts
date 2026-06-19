@@ -564,6 +564,58 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
     gapRoundsTotal = gapRounds;
   }
 
+  // VACANCY backstop — the occupied side can reconcile perfectly while the VACANT
+  // suites were dropped (the roster was built from the site-plan tenant names, never
+  // the rent roll's empty rows). The OM states its vacancy in several places (the
+  // exec-summary occupancy/vacant-SF block, the leasing/availability table, the
+  // rent-roll subtotals, an absorption schedule), so cross-reference them: if the
+  // roster carries materially LESS vacant SF than the stated occupancy implies,
+  // re-prompt specifically for the missing VACANT suites until it reconciles to the
+  // GLA. (This is the Pacific Commons miss — occupied tied out, ~68K SF of vacancy
+  // was silently dropped because the occupied-only backstop above was satisfied.)
+  {
+    const totalSF = Number(extracted.totalSF);
+    let occPct = Number(extracted.occupancy);
+    if (occPct > 0 && occPct <= 1.5) occPct *= 100;
+    const isVac = (n: unknown) => /vacant|available|avail\b|spec|white\s*box|tbd/i.test(String(n || ""));
+    let vacRounds = 0;
+    while (vacRounds < 3 && totalSF > 0 && occPct > 0 && occPct < 100) {
+      if (overBudget()) { budgetHit = true; break; }
+      const tenants = extracted.tenants as Array<{ name?: string; sf?: unknown; suite?: unknown; isNAP?: boolean }>;
+      const capturedVacSF = tenants.reduce((s, t) => { const sf = Number(t?.sf); return s + (t && !t.isNAP && isVac(t.name) && !isNaN(sf) && sf > 0 ? sf : 0); }, 0);
+      const impliedVacSF = totalSF * (100 - occPct) / 100;
+      // Only chase a MATERIAL shortfall so a fully-leased / rounding case never fires.
+      if (impliedVacSF <= 0 || capturedVacSF >= impliedVacSF * 0.85 || (impliedVacSF - capturedVacSF) < 5000) break;
+      vacRounds++;
+      const haveVac = tenants.filter(t => isVac(t.name)).map(t => `${t.name}${t.suite ? ` [${t.suite}]` : ""} ${Number(t.sf) || "?"} SF`);
+      const vacInstruction =
+        `RECONCILIATION CHECK — VACANCY. The OM states ${occPct}% occupancy on ${totalSF.toLocaleString()} SF, which implies about ` +
+        `${Math.round(impliedVacSF).toLocaleString()} SF of VACANT/AVAILABLE leasable space — but the roster so far carries only ` +
+        `${Math.round(capturedVacSF).toLocaleString()} SF of vacancy, so VACANT SUITES ARE MISSING. The OM discloses its vacancy in ` +
+        `several places: the executive-summary occupancy / vacant-SF block, the site-plan or leasing/availability table, the rent-roll ` +
+        `subtotals, and any "vacant space" / lease-up / absorption schedule. Cross-reference those and extract EACH currently ` +
+        `vacant/available leasable suite NOT already listed below. Do NOT include NAP/unowned parcels or future-delivery anchor space ` +
+        `(e.g. a not-yet-built grocery box) — only CURRENT vacant in-line/anchor suites that count toward this building's GLA.\n` +
+        `Already-listed vacant rows: ${haveVac.join("; ") || "(none)"}.\n` +
+        `Return ONLY {"tenants":[...]} where each row is a vacant suite: {"name":"Vacant","suite":<id or null>,"sf":<number>, and all rent/lease fields null}. ` +
+        `If no vacant suites remain to add, return {"tenants":[]}. Output must start with { and end with }.`;
+      try {
+        const _gStart = Date.now();
+        const cont = await callExtract([...cachedBlocks, { type: "text", text: vacInstruction }], FAST_MODEL);
+        gapFillMs += Date.now() - _gStart;
+        const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
+        const existingSuites = new Set(tenants.map(t => String(t.suite ?? "").trim().toLowerCase()).filter(Boolean));
+        const newOnes = ((contParsed.tenants as Array<{ name?: string; suite?: unknown; sf?: unknown }>) || [])
+          .filter(t => t?.name && isVac(t.name) && Number(t.sf) > 0)
+          .filter(t => { const s = String(t.suite ?? "").trim().toLowerCase(); return !s || !existingSuites.has(s); });
+        if (newOnes.length === 0) break;
+        extracted.tenants = (extracted.tenants as unknown[]).concat(newOnes);
+        lastProgressAt = Date.now();
+      } catch { break; }
+    }
+    gapRoundsTotal += vacRounds;
+  }
+
   extracted.tenants = mergePhaseDuplicates(extracted.tenants as Array<Record<string, unknown>>);
 
   // Occupancy sanity: OMs sometimes express occupancy as a fraction (1.0 = 100%,
