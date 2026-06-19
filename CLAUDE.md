@@ -2,8 +2,33 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
-## NEW SYSTEMS (added 2026-06-19 — institutional/self-learning push). NEXT-SESSION PICKUP HERE.
-All on `main`, typecheck-clean, tested (118 web + 48 API). Built this session — keep it:
+## NIGHT SESSION (2026-06-19, overnight — full-access browser). NEXT-SESSION PICKUP HERE.
+Browser access CONFIRMED working: ran the app locally (seeded 158 live deals from Eric's
+export), logged in, screenshotted real deal pages desktop+mobile. **Recipe is now in
+`scripts/local-dev.md` under "VERIFIED END-TO-END RECIPE" — use it, it works.** The
+deal-page consolidation Eric wanted is ALREADY built (tabs: Overview/AI/Tenants/Transaction/
+Financing/Market/Underwriting + mobile "sections ▾"); the stale note below was wrong.
+Shipped tonight (all on `main`, typecheck-clean, 118 web + 48 API tests green):
+- **ISO date self-heal:** `importFixes.normalizeDate` converts non-ISO lease dates
+  ("Nov-2022", "11/01/2022", "2020-12") → ISO on every write AND in the `/deals/autofix`
+  sweep; `audit-date-format` flags the genuinely-ambiguous residue (2-digit years,
+  holdover text). Eric's 171-deal sample had ~170 non-ISO dates; sweep fixed 154 live.
+- **Exec-summary stat band** at the top of the deal page (DetailView ~line 2447) — NOI/
+  cap/price/GLA/occupancy/WALT/avg-rent as scannable tiles, always visible above tabs,
+  reflows 3-up on mobile. Eric's ask: "lots of text will get lost with my team —
+  consolidate visually." Verified on screenshots.
+- **Duplicate-deal fix:** the deals-only DATA export (Header.handleDealsOnlyBackup) was
+  leaking 13 soft-deleted (trashedAt) deals into the sample — that's the "deleted deals'
+  data stays" Eric flagged. Now excludes trashed (full backup still keeps them).
+  `auditDuplicates` also tightened (same name + same GLA + same state = high-confidence).
+- **Chip dedupe:** deal-page metadata line no longer renders "Suburban · Suburban".
+- DATA AUDIT of the 171-deal sample: library is otherwise CLEAN (no fractional occupancy,
+  no basis-point caps, no negative SF/rent, pop gradients monotonic, NOI margins p50=68%).
+  Cap rate/price absent in ~96% — that's EXPECTED (retail OMs marketed unpriced), not a
+  bug. Note: EGI>GPR is NORMAL in retail (recoveries) — do NOT add that as a check.
+
+## EARLIER 2026-06-19 SESSION (institutional/self-learning push).
+All on `main`, typecheck-clean, tested (118 web + 48 API). Keep it:
 - **Self-maintaining data integrity:** `artifacts/api-server/src/lib/dealMaintenance.ts` (`autoMaintainDealData`) runs on EVERY write (import, PUT, create) — applies safe fixes (`importFixes.ts`) + self-heals the audit. Eric wants data to clean itself as the library grows.
 - **Per-deal audit surfacing:** `buildReviewQuestions` (om-database/src/lib/utils.ts) now passes through stored server `audit-*`/`src-*` checks (deduping the overlapping client `calc-*` via `CALC_SUPERSEDED_BY_AUDIT`) so the full arithmetic audit shows on the deal page, not just the portfolio audit.
 - **Cross-portfolio anomalies in Import Review:** `anomalyReviewQuestions` (dealAnomalies.ts) → threaded into ImportReview with the teach-a-rule loop.
@@ -16,7 +41,7 @@ All on `main`, typecheck-clean, tested (118 web + 48 API). Built this session �
 
 ### Eric's product direction (stated this session)
 - Vision: an **institutional-quality, automated, self-learning CRE analyst focused on shopping centers.** Less interested in full DCF underwriting (Argus handles recovery-heavy modeling); MORE interested in **smart data analysis, retail intelligence, and exportable IC memos.**
-- **Site feels too busy** — wants the deal page CONSOLIDATED (executive-summary band + group ~15 cards into ~5 collapsible sections; nothing removed, progressive disclosure). THIS IS THE NEXT BIG BUILD ("do it all"). Recommended accordion-style; do desktop+mobile.
+- **Site feels too busy** — wants the deal page CONSOLIDATED (executive-summary band + group ~15 cards into ~5 collapsible sections; nothing removed, progressive disclosure). **DONE: the tab consolidation shipped earlier, and the executive-summary band shipped 6/19 night.** Ongoing theme (Eric, 6/19): "lots of text will get lost with my team — consolidate where possible without sacrificing data quality." Keep turning dense text into scannable visuals (the long narrative / red-flags / our-take blocks are the next candidates).
 - **Access:** Eric is flipping the environment **network policy to full access** then starting a NEW session so Claude can run the app locally + screenshot the UI itself (harness: `scripts/ui-screenshots.mjs` → `npx playwright install chromium` once allowed). He's tired of sending screenshots. NEVER take prod DB creds — local seeded copy only. On the new session: confirm browser access works (`npx playwright install chromium`), run the screenshot harness, THEN build the deal-page consolidation verifying visually as you go.
 
 
