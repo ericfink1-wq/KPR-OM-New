@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { useTopScrollbar } from "../lib/useTopScrollbar";
 import { EyeOff } from "lucide-react";
 import { exportCompsToExcel } from "../lib/exportExcel";
 import { extractAnyFile, isPdf, isSpreadsheet } from "../lib/fileExtract";
@@ -517,6 +518,7 @@ function AddCompModal({
 // Main component
 // ---------------------------------------------------------------------------
 export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) => void }) {
+  const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [rows, setRows] = useState<CompRow[]>([]);
@@ -1079,7 +1081,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       {/* Table — swipeable on all screen sizes */}
       {!error && (
         <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <div ref={scrollRef} style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f1eadc" }}>

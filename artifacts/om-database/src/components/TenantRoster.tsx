@@ -8,6 +8,7 @@ import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, 
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import { stickyFirstCol } from "../lib/stickyCol";
+import { useTopScrollbar } from "../lib/useTopScrollbar";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
@@ -293,6 +294,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
 
 export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, kickoutByTenant }: Props) {
   const watchMap = useWatchlist();
+  const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
   const [sortKey, setSortKey] = useState("sf");
@@ -427,7 +429,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           </span>
         </div>
       )}
-      <div style={{ overflowX:"auto" }}>
+      <div ref={scrollRef} style={{ overflowX:"auto" }}>
         <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:1180, width:"100%" }}>
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>

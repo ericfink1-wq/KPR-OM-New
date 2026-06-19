@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { EyeOff, Unlink } from "lucide-react";
+import { useTopScrollbar } from "../lib/useTopScrollbar";
 import type { Deal } from "../lib/idb";
 import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, fmtUSD, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName, buildSalesByDeal, resolveSalesPSF } from "../lib/utils";
@@ -26,6 +27,7 @@ function rowId(r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }): stri
 }
 
 export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onParentClick }: Props) {
+  const scrollRef = useTopScrollbar<HTMLDivElement>();
   const norm = (s: unknown) => (String(s || "")).trim().toLowerCase();
   const target = tenantKey(tenantName);
   const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
@@ -291,7 +293,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
               )}
             </div>
 
-            <div style={{ overflowX:"auto" }}>
+            <div ref={scrollRef} style={{ overflowX:"auto" }}>
               <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>

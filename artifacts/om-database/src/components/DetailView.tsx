@@ -77,7 +77,7 @@ import { useIsMobile } from "../hooks/use-mobile";
 // (transaction/financing/underwriting) last. Keys are unchanged so all the section
 // logic keeps working; only the label ("Overview"→"Summary") and order changed.
 const PAGE_TABS = [
-  ["overview","Summary"],["ai","AI Analysis"],["tenants","Tenants & Sales"],
+  ["overview","Summary"],["tenants","Tenants & Sales"],["ai","AI Analysis"],
   ["market","Market & Comps"],
   ["transaction","Transaction Details"],["financing","Financing"],["underwriting","Underwriting"],
 ] as const;
@@ -1121,21 +1121,6 @@ const SECTION_LABELS: Record<string, string> = {
   "section-notes": "Your Notes",
 };
 
-// All / Asset Management view toggle — AM mode hides the acquisition-underwriting
-// sections (thesis, AI score, upside, red flags, key assumptions, closing costs,
-// cash flow), leaving the operational data an asset manager cares about.
-// The page defaults to the analysis view; this reveals the deep acquisition-underwriting
-// tabs (Transaction, Financing, Underwriting) and their sections when wanted.
-function UnderwritingToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button onClick={() => onChange(!on)}
-      title={on ? "Hide the acquisition-underwriting tabs (Transaction, Financing, Underwriting) and sections." : "Show the acquisition-underwriting tabs (Transaction, Financing, Underwriting) — cash flow, closing costs, tax, debt. Hidden by default."}
-      style={{ display:"flex", alignItems:"center", gap:5, background: on ? "#383a37" : "#fff", color: on ? "#f6f2ea" : "#6f6a5f", border:"1px solid #ddd4c2", borderRadius:6, padding:"5px 11px", fontSize:11, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Inter',sans-serif" }}>
-      {on ? "✓ Underwriting" : "Show underwriting"}
-    </button>
-  );
-}
-
 function SectionJump({ deal, scrollRef, viewMode }: { deal: Deal; scrollRef: React.RefObject<HTMLDivElement | null>; viewMode?: string }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<{ id: string; label: string }[]>([]);
@@ -1486,7 +1471,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // The page defaults to the ANALYSIS view (what the team uses): full AI analysis +
   // tenants + market, with the deep acquisition-UNDERWRITING tabs/sections (transaction,
   // financing, cash flow, closing costs, tax) hidden behind a "Show underwriting" switch.
-  const [showUnderwriting, setShowUnderwriting] = useState(false);
+  // Underwriting tabs/sections are ALWAYS visible (the hide/show toggle was removed).
+  const showUnderwriting = true;
   const UW_TABS = new Set(["transaction", "financing", "underwriting"]);
   // Which image a delete-confirmation is open for ("cover" | "site" | null).
   const [confirmDelImg, setConfirmDelImg] = useState<null | "cover" | "site">(null);
@@ -2322,9 +2308,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               </div>
             )}
           </div>
-          <div style={{ display:"flex", gap:8, flexShrink: 0 }}>
-            <UnderwritingToggle on={showUnderwriting} onChange={setShowUnderwriting} />
-          </div>
         </div>
         {/* Tabs live inside the floating header so they stay pinned all the way down */}
         <div onClick={e => e.stopPropagation()} style={{ marginTop:8 }}>
@@ -2459,9 +2442,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 </>)}
               </div>
             )}
-          </div>
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <UnderwritingToggle on={showUnderwriting} onChange={setShowUnderwriting} />
           </div>
         </div>
       </div>
