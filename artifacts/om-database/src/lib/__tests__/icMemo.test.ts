@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildICMemo } from "../icMemo";
+import { buildICMemo, buildICMemoModel } from "../icMemo";
 import type { Deal, Tenant } from "../idb";
 
 const t = (o: Partial<Tenant>): Tenant => o as Tenant;
@@ -59,5 +59,32 @@ describe("buildICMemo", () => {
     expect(bare).toContain("# Investment Committee Memo — Empty Pad");
     expect(bare).not.toContain("## Financial Summary");
     expect(bare).not.toContain("## Tenancy");
+  });
+});
+
+describe("buildICMemoModel (data behind the branded PDF)", () => {
+  const model = buildICMemoModel(deal, { generatedOn: new Date("2026-06-19") });
+
+  it("produces the headline metrics, grade, demographics, and retail mix", () => {
+    expect(model.name).toBe("Maple Grove Crossing");
+    expect(model.grade?.grade).toBe("B+");
+    expect(model.metrics.some(m => m.label === "Cap Rate" && m.value === "7.10%")).toBe(true);
+    expect(model.demographics.some(d => /Population/.test(d.label))).toBe(true);
+    expect(model.mix?.resilienceScore).toBeGreaterThan(0);
+    expect(model.anchors[0]).toMatch(/Kroger/);
+    expect(model.concentration?.top1).toBeGreaterThan(0);
+  });
+
+  it("caps risks/upside lists and computes rollover", () => {
+    expect(model.risks.length).toBeLessThanOrEqual(5);
+    expect(model.upside.length).toBeLessThanOrEqual(5);
+    expect(model.rollover?.throughYear).toBe(2029);
+  });
+
+  it("degrades gracefully on a bare deal", () => {
+    const bare = buildICMemoModel({ id: "y", propertyName: "Empty Pad" } as Deal);
+    expect(bare.metrics).toEqual([]);
+    expect(bare.mix).toBeNull();
+    expect(bare.anchors).toEqual([]);
   });
 });

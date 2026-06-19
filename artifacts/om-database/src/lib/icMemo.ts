@@ -31,6 +31,107 @@ function refDate(deal: Deal): Date {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
+export interface MemoMetric { label: string; value: string }
+export interface ICMemoModel {
+  name: string;
+  addressLine: string | null;
+  typeLine: string | null;
+  generatedOn: string;
+  asOf: string | null;
+  grade: { grade: string; score: number | null; rationale: string | null } | null;
+  metrics: MemoMetric[];          // headline boxes (price, cap, NOI, GLA, occ, WALT, rent)
+  demographics: MemoMetric[];     // pop, income, traffic
+  anchors: string[];
+  topTenants: { name: string; pct: number }[];
+  concentration: { top1: number; top3: number } | null;
+  mix: ReturnType<typeof analyzeCenterMix>;
+  rollover: { count: number; pct: number | null; throughYear: number } | null;
+  financials: MemoMetric[];
+  risks: string[];
+  upside: string[];
+  narrative: string | null;
+}
+
+// Structured model behind the memo — consumed by the branded one-page PDF (and available
+// for any other rendering). Same data the Markdown export assembles, in typed form.
+export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoModel {
+  const today = opts.generatedOn ?? new Date();
+  const tenants = (deal.tenants || []) as Tenant[];
+  const occ = tenants.filter((t) => !isVacant(t.name) && !isNAPTenant(t));
+  const rentOf = (t: Tenant) => n(t.annualRent) ?? (n(t.rentPerSF) != null && n(t.sf) != null ? n(t.rentPerSF)! * n(t.sf)! : 0);
+
+  const metrics: MemoMetric[] = [];
+  const pushM = (label: string, value: string | null) => { if (value) metrics.push({ label, value }); };
+  pushM("Asking Price", money(deal.askingPrice));
+  pushM("Price / SF", money(deal.pricePerSF) ? `${money(deal.pricePerSF)}` : null);
+  pushM("Cap Rate", pctFmt(deal.capRate, 2));
+  pushM("NOI", money(deal.noi));
+  pushM("GLA", sfFmt(deal.totalSF));
+  pushM("Occupancy", pctFmt(deal.occupancy));
+  pushM("WALT", n(deal.walt) != null ? `${n(deal.walt)!.toFixed(1)} yrs` : null);
+  pushM("Avg Rent", n(deal.weightedAvgRentPSF) != null ? `$${n(deal.weightedAvgRentPSF)!.toFixed(2)}` : null);
+
+  const demographics: MemoMetric[] = [];
+  const demo = deal.marketDemographics;
+  const pop3 = n(demo?.pop3mi) ?? n(deal.population3mi);
+  const inc3 = n(demo?.avgHHI3mi) ?? n(deal.avgHHIncome3mi) ?? n(deal.medianHHIncome3mi);
+  const traffic = n(deal.trafficCountVPD);
+  if (pop3 != null) demographics.push({ label: "Population (3-mi)", value: Math.round(pop3).toLocaleString() });
+  if (inc3 != null) demographics.push({ label: "Avg HH Income (3-mi)", value: money(inc3) ?? "—" });
+  if (traffic != null) demographics.push({ label: "Traffic", value: `${Math.round(traffic).toLocaleString()} VPD` });
+
+  const anchors = occ.filter((t) => t.isAnchor === true || (n(t.sf) ?? 0) >= 20000)
+    .slice(0, 6).map((t) => `${t.name}${sfFmt(t.sf) ? ` (${sfFmt(t.sf)})` : ""}`);
+  const ranked = occ.map((t) => ({ t, rent: rentOf(t) })).filter((x) => x.rent > 0).sort((a, b) => b.rent - a.rent);
+  const totalRent = ranked.reduce((s, x) => s + x.rent, 0);
+  const topTenants = totalRent > 0 ? ranked.slice(0, 5).map((x) => ({ name: String(x.t.name ?? ""), pct: Math.round((x.rent / totalRent) * 100) })) : [];
+  const concentration = totalRent > 0 && ranked.length
+    ? { top1: Math.round((ranked[0].rent / totalRent) * 100), top3: Math.round(ranked.slice(0, 3).reduce((s, x) => s + x.rent, 0) / totalRent * 100) }
+    : null;
+
+  let rollover: ICMemoModel["rollover"] = null;
+  if (occ.length) {
+    const horizon = refDate(deal).getFullYear() + 3;
+    const expiring = occ.filter((t) => { const y = yr(t.leaseExpiry); return y != null && y <= horizon; });
+    if (expiring.length) {
+      const rollRent = expiring.reduce((s, t) => s + (n(t.annualRent) ?? 0), 0);
+      const tot = occ.reduce((s, t) => s + (n(t.annualRent) ?? 0), 0);
+      rollover = { count: expiring.length, pct: tot > 0 ? Math.round((rollRent / tot) * 100) : null, throughYear: horizon };
+    }
+  }
+
+  const financials: MemoMetric[] = [];
+  const pushF = (label: string, v: unknown) => { const m = money(v); if (m) financials.push({ label, value: m }); };
+  pushF("Gross Potential Rent", deal.grossPotentialRent);
+  pushF("Effective Gross Income", deal.effectiveGrossIncome);
+  pushF("Operating Expenses", deal.operatingExpenses);
+  pushF("NNN Recoveries", deal.nnnRecoveries);
+  pushF("Net Operating Income", deal.noi);
+  pushF("Real Estate Taxes", deal.currentAnnualTaxes);
+
+  const risks: string[] = [];
+  for (const f of (deal.redFlags || [])) if (f?.description) risks.push(f.description.trim());
+  for (const r of (deal.dealScore?.risks || [])) if (r) risks.push(r.trim());
+  const upside: string[] = [];
+  for (const u of (deal.upsideItems || [])) if (u?.item) upside.push(`${u.item}${u.detail ? ` — ${u.detail}` : ""}`.trim());
+  for (const s of (deal.dealScore?.strengths || [])) if (s) upside.push(s.trim());
+
+  const score = deal.dealScore;
+  return {
+    name: (deal.propertyName || "Untitled Deal").trim(),
+    addressLine: [deal.address, [deal.city, deal.state].filter(Boolean).join(", "), deal.zip].filter(Boolean).join(" · ") || null,
+    typeLine: [deal.centerType, deal.assetType].filter(Boolean).join(" / ") || null,
+    generatedOn: today.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    asOf: deal.tenantsAsOf ?? null,
+    grade: score && (score.grade || score.score != null) ? { grade: score.grade ?? "—", score: score.score ?? null, rationale: score.rationale?.trim() || null } : null,
+    metrics, demographics, anchors, topTenants, concentration,
+    mix: analyzeCenterMix(deal), rollover, financials,
+    risks: dedupeLines(risks).slice(0, 5),
+    upside: dedupeLines(upside).slice(0, 5),
+    narrative: typeof deal.notes === "string" && deal.notes.trim() ? deal.notes.trim() : null,
+  };
+}
+
 export interface ICMemoOptions { generatedOn?: Date }
 
 export function buildICMemo(deal: Deal, opts: ICMemoOptions = {}): string {
