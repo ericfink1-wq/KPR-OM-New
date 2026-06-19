@@ -7,6 +7,7 @@
 import type { Deal, Tenant } from "./idb";
 import { isVacant, isNAPTenant, tenantKey } from "./utils";
 import { analyzeCenterMix } from "./retailCategory";
+import { isInvestmentGrade } from "./tenantCredit";
 
 // Median sales/rent PSF per brand across OTHER deals in the database — so an anchor's
 // rent and sales can be shown relative to that chain's own norm (a Best Buy vs other
@@ -82,6 +83,7 @@ export interface ICMemoModel {
   demographics: MemoMetric[];     // pop, income, traffic
   anchors: string[];
   anchorDetail: AnchorRow[];        // per-anchor rent / term / sales vs chain (needs allDeals)
+  highlights: string[];             // data-driven positives (occupancy, WALT, IG, demos…)
   topTenants: { name: string; pct: number }[];
   concentration: { top1: number; top3: number } | null;
   mix: ReturnType<typeof analyzeCenterMix>;
@@ -186,6 +188,23 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
   for (const u of (deal.upsideItems || [])) if (u?.item) upside.push(`${u.item}${u.detail ? ` — ${u.detail}` : ""}`.trim());
   for (const s of (deal.dealScore?.strengths || [])) if (s) upside.push(s.trim());
 
+  // Data-driven HIGHLIGHTS — punchy, scannable positives pulled straight from the
+  // numbers (never invented). These give the teaser its "why this deal" at a glance.
+  const mixData = analyzeCenterMix(deal);
+  let igSF = 0, occSFt = 0;
+  for (const t of occ) { const sf = n(t.sf) ?? 0; occSFt += sf; if (isInvestmentGrade(t.canonicalName || t.name || "", t.creditRating)) igSF += sf; }
+  const igGLApct = occSFt > 0 ? Math.round((igSF / occSFt) * 100) : null;
+  const occN = n(deal.occupancy), waltN = n(deal.walt);
+  const highlights: string[] = [];
+  if (occN != null && occN >= 96) highlights.push(`${occN >= 99.5 ? "Fully leased (100%)" : `${occN.toFixed(0)}% leased`} — minimal vacancy exposure`);
+  if (waltN != null && waltN >= 5.5) highlights.push(`${waltN.toFixed(1)}-yr WALT — durable, long-dated income`);
+  if (igGLApct != null && igGLApct >= 25) highlights.push(`Investment-grade anchors — ${igGLApct}% of occupied GLA`);
+  if (mixData && mixData.resilienceScore >= 58) highlights.push(`${mixData.resilienceScore}/100 e-commerce resilience · ${mixData.necessityRentPct}% necessity/service`);
+  if (inc3 != null && inc3 >= 90000) highlights.push(`Affluent trade area — $${Math.round(inc3 / 1000)}k avg HH income (3-mi)`);
+  else if (pop3 != null && pop3 >= 100000) highlights.push(`Dense trade area — ${Math.round(pop3 / 1000)}k population (3-mi)`);
+  const strongAnchors = anchorDetail.filter((a) => a.salesVsChain != null && a.salesVsChain >= 15).slice(0, 2);
+  if (strongAnchors.length) highlights.push(`Anchors outproducing chain: ${strongAnchors.map((a) => `${a.name} +${a.salesVsChain}%`).join(", ")}`);
+
   const score = deal.dealScore;
   return {
     name: (deal.propertyName || "Untitled Deal").trim(),
@@ -194,8 +213,8 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
     generatedOn: today.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     asOf: deal.tenantsAsOf ?? null,
     grade: score && (score.grade || score.score != null) ? { grade: score.grade ?? "—", score: score.score ?? null, rationale: score.rationale?.trim() || null } : null,
-    metrics, demographics, anchors, anchorDetail, topTenants, concentration,
-    mix: analyzeCenterMix(deal), rollover, rolloverByYear, financials,
+    metrics, demographics, anchors, anchorDetail, highlights, topTenants, concentration,
+    mix: mixData, rollover, rolloverByYear, financials,
     risks: dedupeLines(risks).slice(0, 5),
     upside: dedupeLines(upside).slice(0, 5),
     narrative: typeof deal.notes === "string" && deal.notes.trim() ? deal.notes.trim() : null,

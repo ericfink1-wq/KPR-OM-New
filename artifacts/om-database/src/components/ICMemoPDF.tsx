@@ -25,17 +25,22 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 9 },
   propName: { fontSize: 21, fontFamily: "Helvetica-Bold", color: C.ink },
   sub: { fontSize: 8.5, color: C.muted, marginTop: 3 },
-  typeTxt: { fontSize: 8.5, color: C.olive, fontFamily: "Helvetica-Bold", marginTop: 2 },
-  gradeBox: { backgroundColor: C.olive, borderRadius: 6, paddingHorizontal: 13, paddingVertical: 7, alignItems: "center", minWidth: 76 },
-  gradeVal: { fontSize: 21, fontFamily: "Helvetica-Bold", color: "#fff", lineHeight: 1 },
+  typePill: { alignSelf: "flex-start", backgroundColor: C.sage, borderWidth: 0.6, borderColor: C.border, borderStyle: "solid", borderRadius: 9, paddingHorizontal: 8, paddingVertical: 2.5, marginTop: 4 },
+  typePillTxt: { fontSize: 7.5, color: C.oliveDk, fontFamily: "Helvetica-Bold", letterSpacing: 0.3 },
+  gradeBox: { backgroundColor: C.olive, borderRadius: 7, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center", minWidth: 78 },
+  gradeVal: { fontSize: 22, fontFamily: "Helvetica-Bold", color: "#fff", lineHeight: 1 },
   gradeLbl: { fontSize: 6.5, color: "#e8f0dd", letterSpacing: 0.6, marginTop: 3 },
   thesisWrap: { marginBottom: 10 },
   thesisTxt: { fontSize: 9.5, color: C.ink, lineHeight: 1.45 },
-  mStrip: { flexDirection: "row", marginBottom: 11 },
-  mBox: { flex: 1, backgroundColor: C.cream, borderWidth: 0.6, borderColor: C.rule, borderStyle: "solid", borderRadius: 4, paddingVertical: 7, paddingHorizontal: 3, alignItems: "center", marginRight: 5 },
-  mVal: { fontSize: 13, fontFamily: "Helvetica-Bold", color: C.ink, marginBottom: 2 },
-  mLbl: { fontSize: 5.8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 },
+  // Olive hero metric band — white numbers reversed out on dark olive (the "wow" strip).
+  mStrip: { flexDirection: "row", backgroundColor: C.oliveDk, borderRadius: 7, marginBottom: 11, overflow: "hidden" },
+  mBox: { flex: 1, paddingVertical: 9, paddingHorizontal: 3, alignItems: "center", borderRightWidth: 0.7, borderRightColor: "#386f1b", borderRightStyle: "solid" },
+  mVal: { fontSize: 13.5, fontFamily: "Helvetica-Bold", color: "#ffffff", marginBottom: 2 },
+  mLbl: { fontSize: 5.7, color: "#cbe0b4", textTransform: "uppercase", letterSpacing: 0.5 },
   secH: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: C.olive, letterSpacing: 0.9, paddingBottom: 2.5, marginBottom: 5, borderBottomWidth: 0.6, borderBottomColor: C.olive, borderBottomStyle: "solid", textTransform: "uppercase" },
+  hlBullet: { flexDirection: "row", marginBottom: 3.2 },
+  hlDot: { width: 9, fontSize: 8, color: C.olive, fontFamily: "Helvetica-Bold" },
+  hlTxt: { flex: 1, fontSize: 8.2, color: C.ink, lineHeight: 1.3 },
   line: { fontSize: 8.3, color: C.body, marginBottom: 3, lineHeight: 1.3 },
   lblIn: { fontFamily: "Helvetica-Bold", color: C.ink },
   body: { flexDirection: "row", marginBottom: 4 },
@@ -132,7 +137,7 @@ export default function ICMemoPDF({ deal, logoUrl, allDeals }: { deal: Deal; log
           <View style={{ flex: 1, paddingRight: 12 }}>
             <Text style={s.propName}>{m.name}</Text>
             {m.addressLine ? <Text style={s.sub}>{m.addressLine}</Text> : null}
-            {m.typeLine ? <Text style={s.typeTxt}>{m.typeLine}</Text> : null}
+            {m.typeLine ? <View style={s.typePill}><Text style={s.typePillTxt}>{m.typeLine.toUpperCase()}</Text></View> : null}
           </View>
           {m.grade ? (
             <View style={s.gradeBox}>
@@ -154,7 +159,7 @@ export default function ICMemoPDF({ deal, logoUrl, allDeals }: { deal: Deal; log
         {m.metrics.length ? (
           <View style={s.mStrip}>
             {m.metrics.slice(0, 7).map((x, i, arr) => (
-              <View key={i} style={[s.mBox, i === arr.length - 1 ? { marginRight: 0 } : {}]}>
+              <View key={i} style={[s.mBox, i === arr.length - 1 ? { borderRightWidth: 0 } : {}]}>
                 <Text style={s.mVal}>{x.value}</Text>
                 <Text style={s.mLbl}>{x.label}</Text>
               </View>
@@ -193,12 +198,13 @@ export default function ICMemoPDF({ deal, logoUrl, allDeals }: { deal: Deal; log
         {/* Body: tenancy + rollover (left) · demographics + financials (right) */}
         <View style={s.body}>
           <View style={s.colL}>
-            {(m.topTenants.length || m.mix) ? (
+            {m.highlights.length ? (
               <View>
-                <Text style={s.secH}>Tenancy</Text>
-                {m.mix ? <View style={s.chip}><Text style={s.chipTxt}>Resilience {m.mix.resilienceScore}/100 · {m.mix.necessityRentPct}% necessity/service</Text></View> : null}
-                {m.topTenants.length ? <Text style={s.line}><Text style={s.lblIn}>Top by rent: </Text>{m.topTenants.slice(0, 5).map((t) => `${t.name} (${t.pct}%)`).join(", ")}</Text> : null}
-                {m.concentration ? <Text style={s.line}><Text style={s.lblIn}>Concentration: </Text>top tenant {m.concentration.top1}%; top 3 {m.concentration.top3}% of base rent.</Text> : null}
+                <Text style={s.secH}>Investment Highlights</Text>
+                {m.highlights.slice(0, 6).map((h, i) => (
+                  <View key={i} style={s.hlBullet}><Text style={s.hlDot}>•</Text><Text style={s.hlTxt}>{h}</Text></View>
+                ))}
+                {m.concentration ? <Text style={[s.line, { color: C.muted, marginTop: 2 }]}>Tenant concentration: top {m.concentration.top1}% · top 3 {m.concentration.top3}% of base rent.</Text> : null}
               </View>
             ) : null}
 
