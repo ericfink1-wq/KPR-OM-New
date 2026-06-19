@@ -50,6 +50,8 @@ export const AUDIT_ID_PREFIX = "audit-";
 // Collapse per-tenant / per-suite ids to a stable CHECK key, for the firing breakdown.
 export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-rent-tie-")) return "audit-rent-tie";
+  if (id.startsWith("audit-rent-impossible-")) return "audit-rent-impossible";
+  if (id.startsWith("audit-anchor-rent-")) return "audit-anchor-rent";
   if (id.startsWith("audit-occ-stated-vs-computed-")) return "audit-occ-stated-vs-computed";
   if (id.startsWith("audit-occcost-fraction-")) return "audit-occcost-fraction";
   if (id.startsWith("audit-dupe-suite-")) return "audit-dupe-suite";
@@ -65,6 +67,8 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-noi-cap-price": "NOI ÷ cap vs price",
   "audit-avg-rent-psf": "Avg rent vs roll-up",
   "audit-rent-tie": "Tenant rent × SF",
+  "audit-rent-impossible": "Impossible retail rent",
+  "audit-anchor-rent": "Anchor rent — verify",
   "audit-occ-stated-vs-computed": "Occ cost: stated vs computed",
   "audit-occcost-fraction": "Occ cost stored as fraction",
   "audit-dupe-suite": "Duplicate suite #",
@@ -245,6 +249,36 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       detail: `Rent PSF, SF, and annual base rent must multiply out. A gap this size is usually an OCR slip or a column read from the wrong row.`,
       suggestedValue: usd(m.ann), target: { kind: "tenant", fieldKey: "annualRent", tenantName: nm, valueType: "number" },
     });
+  }
+
+  // ── E1b. REAL-WORLD rent plausibility — does it make sense for an actual center? ──
+  // In a live shopping center, ANCHORS (large-SF grocers/big boxes) pay LOW base rent
+  // (~$3–$15/SF; junior anchors up to ~$25), so a 20,000+ SF tenant above ~$30/SF
+  // almost always means CAM/recoveries were folded into the per-SF rent or a column was
+  // misread — surface it to verify. And NO normal-sized retail space (>2,000 SF) pays
+  // $175+/SF base; that's physically impossible in the real world, i.e. an extraction
+  // error (a sales-PSF, a gross/total rate, or a decimal slip). Tiny ATM/kiosk pads
+  // legitimately show huge per-SF rents and are excluded by the SF floors.
+  for (const t of occupied) {
+    const psf = num(t.rentPerSF), tsf = num(t.sf), nm = String(t.name ?? "tenant");
+    if (psf == null || psf <= 0 || tsf == null || tsf <= 0) continue;
+    if (tsf >= 2000 && psf > 175) {
+      out.push({
+        id: `audit-rent-impossible-${nm}`.slice(0, 80), source: "check", severity: "high",
+        field: `${nm} — rent PSF`,
+        question: `${nm}: $${psf.toFixed(2)}/SF on ${sf(tsf)} = ${usd(psf * tsf)}/yr. No real retail space that size pays $175+/SF base — almost certainly a misread (a sales-PSF, a gross/total rate, or a decimal slip). Verify the base rent.`,
+        detail: `Real-world rents on a normal retail unit top out well under $100/SF; $175+ on a 2,000+ SF space is not physically plausible.`,
+        suggestedValue: null, target: { kind: "tenant", fieldKey: "rentPerSF", tenantName: nm, valueType: "number" },
+      });
+    } else if (tsf >= 20000 && psf > 30) {
+      out.push({
+        id: `audit-anchor-rent-${nm}`.slice(0, 80), source: "check", severity: "low",
+        field: `${nm} — anchor rent`,
+        question: `${nm} is a ${sf(tsf)} anchor at $${psf.toFixed(2)}/SF — high for an anchor (grocers/big boxes pay ~$3–$15, junior anchors up to ~$25). Confirm this is BASE rent, not a gross/CAM-inclusive rate or a misread.`,
+        detail: `Anchors hold a center on cheap rent; a high per-SF anchor rent usually means recoveries were folded into rentPerSF.`,
+        suggestedValue: null, target: { kind: "tenant", fieldKey: "rentPerSF", tenantName: nm, valueType: "number" },
+      });
+    }
   }
 
   // ── E2. Per-tenant: OM-STATED occupancy cost vs the COMPUTED one (rent ÷ sales) ─
