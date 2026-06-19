@@ -53,7 +53,31 @@ const quantile = (sorted: number[], q: number): number => {
   return sorted[base + 1] !== undefined ? sorted[base] + rest * (sorted[base + 1] - sorted[base]) : sorted[base];
 };
 
-const normType = (s: string | null | undefined): string => (s || "").toLowerCase().replace(/[^a-z]/g, "");
+// Collapse the free-text centerType into a controlled bucket so peer-grouping isn't
+// fragmented by wording — the library has ~19 spellings of ~7 real formats (e.g.
+// "Community Center (Kohl's ground-lease anchored; dark Winn-Dixie)", "Multi-Anchor
+// Power Center", "Grocery-Anchored Neighborhood Center"). Grocery-anchoring is the
+// dominant retail distinction (necessity vs discretionary), so any grocery mention
+// buckets there; otherwise the primary format keyword wins. This is for GROUPING
+// only — the stored centerType and what the deal page displays are untouched.
+export function canonicalCenterType(s: string | null | undefined): string | null {
+  const t = (s || "").toLowerCase();
+  if (!t.trim()) return null;
+  if (t.includes("grocery")) return "Grocery-Anchored";
+  if (t.includes("outlet")) return "Outlet Center";
+  if (t.includes("lifestyle")) return "Lifestyle Center";
+  if (t.includes("mall")) return "Regional Mall";
+  if (t.includes("power")) return "Power Center";
+  if (t.includes("community")) return "Community Center";
+  if (t.includes("neighborhood") || t.includes("neighbourhood")) return "Neighborhood Center";
+  if (t.includes("strip") || t.includes("unanchored")) return "Strip Center";
+  if (t.includes("single") && t.includes("tenant")) return "Single-Tenant / Net Lease";
+  return null;   // unrecognized → no bucket; benchmarks fall back to the whole book
+}
+const normType = (s: string | null | undefined): string => {
+  const c = canonicalCenterType(s);
+  return c ? c.toLowerCase().replace(/[^a-z]/g, "") : "";
+};
 
 interface MetricSpec { metric: Metric; label: string; fn: (d: Deal) => number | null; minPeers: number; geoCaveat?: boolean; }
 const SPECS: MetricSpec[] = [
@@ -100,7 +124,7 @@ export function buildPortfolioBenchmarks(deal: Deal, allDeals: Deal[]): MetricBe
       const sameVals = sameType.map(spec.fn).filter((v): v is number => v != null);
       if (sameVals.length >= spec.minPeers) {
         peerDeals = sameType;
-        peerGroup = `${deal.centerType!.toLowerCase()} deals`;
+        peerGroup = `${(canonicalCenterType(deal.centerType) || deal.centerType!).toLowerCase()} deals`;
       }
     }
     const vals = peerDeals.map(spec.fn).filter((v): v is number => v != null).sort((a, b) => a - b);
