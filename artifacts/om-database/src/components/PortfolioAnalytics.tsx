@@ -305,10 +305,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [refreshingStale, setRefreshingStale] = useState(false);
   const [staleMsg, setStaleMsg] = useState<string | null>(null);
   const [auditStats, setAuditStats] = useState<{ deals: number; issues: number; high: number; breakdown: { key: string; label: string; count: number }[] }>({ deals: 0, issues: 0, high: 0, breakdown: [] });
-  const [auditing, setAuditing] = useState(false);
-  const [auditMsg, setAuditMsg] = useState<string | null>(null);
-  const [autofixing, setAutofixing] = useState(false);
-  const [autofixMsg, setAutofixMsg] = useState<string | null>(null);
+  const [maintaining, setMaintaining] = useState(false);
+  const [maintainMsg, setMaintainMsg] = useState<string | null>(null);
   const [showAuditBreakdown, setShowAuditBreakdown] = useState(false);
   const [scope, setScope] = useState<"all" | "owned">("all");
 
@@ -379,37 +377,33 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   };
   useEffect(() => { loadAuditStats(); }, []);
 
-  const handleReaudit = () => {
-    if (!window.confirm("Run the data-integrity audit across all deals? It's instant and token-free — it checks each deal's numbers tie out (roster SF vs GLA, occupancy, NOI ÷ cap vs price, rent roll-ups, per-tenant rent × SF, duplicate suites, cash-flow subtotals) and posts any contradictions to that deal's Import Review. Items you've already resolved are left alone.")) return;
-    setAuditing(true); setAuditMsg(null);
-    fetch("/api/deals/reaudit", { method: "POST", credentials: "include" })
-      .then(r => r.json() as Promise<{ ok: boolean; flagged?: number; added?: number; cleared?: number; error?: string }>)
-      .then(d => {
-        if (!d.ok) throw new Error(d.error || "Audit failed");
-        setAuditMsg(`✓ ${d.flagged ?? 0} deal${(d.flagged ?? 0) === 1 ? "" : "s"} with issues · ${d.added ?? 0} new, ${d.cleared ?? 0} cleared`);
-        loadAuditStats();
-      })
-      .catch(e => setAuditMsg(`⚠ ${e.message}`))
-      .finally(() => setAuditing(false));
-  };
-
-  const handleAutofix = () => {
-    if (!window.confirm("Auto-fix the data issues that have a single right answer (no judgement needed)? Token-free and deterministic: occupancy cost stored as a 0.NN fraction → ×100, occupancy stored as a 0–1 fraction → ×100, a cap rate in basis points or as a fraction → normalized to a percent, a price-PSF that disagrees with price ÷ GLA → recomputed, a rentPerSF that doesn't reconcile to a reliable annual rent → recomputed from the annual, duplicate roster rows → de-duped, and stale occupancy / WALT / avg-rent → recomputed from the roster. It SNAPSHOTS first (fully reversible via Backup → Restore a snapshot) and LEAVES anything ambiguous for you to review. Run it?")) return;
-    setAutofixing(true); setAutofixMsg(null);
-    fetch("/api/deals/autofix", { method: "POST", credentials: "include" })
-      .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; occUnitFixed?: number; capUnitFixed?: number; ppsfFixed?: number; rentFixed?: number; dupeFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>)
-      .then(d => {
-        if (!d.ok) throw new Error(d.error || "Auto-fix failed");
-        const parts = ([
-          [d.occCostFixed, "occ-cost"], [d.occUnitFixed, "occupancy units"], [d.capUnitFixed, "cap-rate units"],
-          [d.ppsfFixed, "price-PSF"], [d.rentFixed, "rent"], [d.dupeFixed, "dup rows"], [d.metricFixes, "metrics"],
-        ] as [number | undefined, string][]).filter(([n]) => (n ?? 0) > 0).map(([n, label]) => `${n} ${label}`);
-        setAutofixMsg(`✓ Fixed ${d.changedDeals ?? 0} deal${(d.changedDeals ?? 0) === 1 ? "" : "s"}${parts.length ? ` · ${parts.join(", ")}` : ""} · ${d.cleared ?? 0} flags cleared — reloading…`);
-        loadAuditStats();
-        setTimeout(() => window.location.reload(), 1600);
-      })
-      .catch(e => setAutofixMsg(`⚠ ${e.message}`))
-      .finally(() => setAutofixing(false));
+  // One sweep over the whole library: auto-fix the safe issues, THEN re-audit every
+  // deal. Going forward each write self-maintains, so this is the one-click catch-up for
+  // existing deals (and a manual "clean everything now"). Token-free; snapshots first
+  // (reversible via Backup → Restore a snapshot); leaves judgement calls flagged, not changed.
+  const handleCleanAndReaudit = async () => {
+    if (!window.confirm("Clean & re-audit ALL deals now? Token-free and reversible (it snapshots first). It auto-fixes the issues with a single right answer — occupancy-cost units, cap-rate units, price-PSF, a rentPerSF that doesn't reconcile to a reliable annual, duplicate roster rows, and stale occupancy / WALT / avg-rent — then re-checks every deal's numbers and posts any contradictions to that deal's Import Review. Ambiguous figures are LEFT for you to review; anything you've already resolved is untouched.")) return;
+    setMaintaining(true); setMaintainMsg("Cleaning…");
+    try {
+      const a = await fetch("/api/deals/autofix", { method: "POST", credentials: "include" })
+        .then(r => r.json() as Promise<{ ok: boolean; occCostFixed?: number; occUnitFixed?: number; capUnitFixed?: number; ppsfFixed?: number; rentFixed?: number; dupeFixed?: number; metricFixes?: number; changedDeals?: number; cleared?: number; error?: string }>);
+      if (!a.ok) throw new Error(a.error || "Auto-fix failed");
+      setMaintainMsg("Re-auditing…");
+      const b = await fetch("/api/deals/reaudit", { method: "POST", credentials: "include" })
+        .then(r => r.json() as Promise<{ ok: boolean; flagged?: number; added?: number; cleared?: number; error?: string }>);
+      if (!b.ok) throw new Error(b.error || "Audit failed");
+      const parts = ([
+        [a.occCostFixed, "occ-cost"], [a.occUnitFixed, "occupancy units"], [a.capUnitFixed, "cap-rate units"],
+        [a.ppsfFixed, "price-PSF"], [a.rentFixed, "rent"], [a.dupeFixed, "dup rows"], [a.metricFixes, "metrics"],
+      ] as [number | undefined, string][]).filter(([n]) => (n ?? 0) > 0).map(([n, label]) => `${n} ${label}`);
+      setMaintainMsg(`✓ Cleaned ${a.changedDeals ?? 0} deal${(a.changedDeals ?? 0) === 1 ? "" : "s"}${parts.length ? ` · ${parts.join(", ")}` : ""} · audit ${b.added ?? 0} new / ${(a.cleared ?? 0) + (b.cleared ?? 0)} cleared — reloading…`);
+      loadAuditStats();
+      setTimeout(() => window.location.reload(), 1800);
+    } catch (e) {
+      setMaintainMsg(`⚠ ${e instanceof Error ? e.message : "failed"}`);
+    } finally {
+      setMaintaining(false);
+    }
   };
 
   const handleRefreshStale = () => {
@@ -520,21 +514,17 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               <span style={{ fontSize: 12 }}>{auditStats.deals > 0 ? "⚠" : "✓"}</span>
               {auditStats.deals > 0 ? `Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues}) ›` : "Data integrity ✓"}
             </button>
-            {auditMsg && <span style={{ fontSize: 10.5, color: auditMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{auditMsg}</span>}
             <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               {auditStats.breakdown.length > 0 && (
                 <button onClick={() => setShowAuditBreakdown(s => !s)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
                   {showAuditBreakdown ? "▴ hide breakdown" : "▾ what's flagged"}
                 </button>
               )}
-              <button onClick={handleReaudit} disabled={auditing} title="Re-sync the per-deal Import-Review flags + card badges to the current data (token-free, self-healing)." style={{ background: "none", border: "none", padding: 0, cursor: auditing ? "default" : "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
-                {auditing ? "syncing…" : "↻ re-sync flags"}
-              </button>
-              <button onClick={handleAutofix} disabled={autofixing} title="Auto-fix the data issues with a single right answer (occ-cost ×100, rentPerSF from a reliable annual, stale occupancy/WALT/avg-rent). Token-free, snapshots first, reversible. Leaves judgement calls alone." style={{ background: "none", border: "none", padding: 0, cursor: autofixing ? "default" : "pointer", fontSize: 9.5, color: "#3f7a1f", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-                {autofixing ? "fixing…" : "✨ auto-fix safe issues"}
+              <button onClick={handleCleanAndReaudit} disabled={maintaining} title="One pass over every deal: auto-fix the issues with a single right answer (occ-cost/cap/price-PSF units, rentPerSF from a reliable annual, duplicate rows, stale occupancy/WALT/avg-rent), then re-check all the numbers and post any contradictions to each deal's Import Review. Token-free, snapshots first (reversible), leaves judgement calls alone. New imports/edits self-maintain, so this is the one-click catch-up for existing deals." style={{ background: "none", border: "none", padding: 0, cursor: maintaining ? "default" : "pointer", fontSize: 9.5, color: "#3f7a1f", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+                {maintaining ? (maintainMsg ?? "working…") : "🧹 Clean & re-audit all"}
               </button>
             </div>
-            {autofixMsg && <span style={{ fontSize: 10.5, color: autofixMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{autofixMsg}</span>}
+            {maintainMsg && <span style={{ fontSize: 10.5, color: maintainMsg.startsWith("✓") ? "#0f9d63" : maintainMsg.startsWith("⚠") ? "#dc2626" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>{maintainMsg}</span>}
             {showAuditBreakdown && auditStats.breakdown.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end", maxWidth: 360 }}>
                 {auditStats.breakdown.map(b => (
