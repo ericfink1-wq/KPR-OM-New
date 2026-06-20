@@ -19,6 +19,7 @@ import { db, dealsTable } from "@workspace/db";
 import { sql, eq } from "drizzle-orm";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "./extractionAudit";
 import { ensureExtractionLessonsTable } from "./extractionLessons";
+import { runAutofixSweep } from "./autofixSweep";
 import { logger } from "./logger";
 
 let historyReady: Promise<void> | null = null;
@@ -32,6 +33,14 @@ export function ensureAuditHistoryTable(): Promise<void> {
           total_issues integer NOT NULL DEFAULT 0,
           deals_scanned integer NOT NULL DEFAULT 0,
           breakdown jsonb,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      // Tracks the last run of cadenced (non-daily) jobs, e.g. the weekly auto-fix.
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS self_improve_runs (
+          kind text PRIMARY KEY,
+          last_run date NOT NULL DEFAULT now(),
           created_at timestamptz NOT NULL DEFAULT now()
         )
       `);
@@ -145,6 +154,19 @@ export function startSelfImproveScheduler(): void {
       const today = new Date().toISOString().slice(0, 10);
       const ran = await db.execute(sql`SELECT 1 FROM audit_history WHERE day = ${today} LIMIT 1`);
       if ((ran.rows?.length ?? 0) === 0) await runDailySelfClean("scheduled");
+
+      // WEEKLY: the snapshot-protected auto-fix (this one DOES mutate data) runs at
+      // most once every 7 days. Reversible via Backup → Restore the "before-autofix"
+      // snapshot it takes each run.
+      const last = await db.execute(sql`SELECT last_run FROM self_improve_runs WHERE kind = 'autofix' LIMIT 1`);
+      const lastRun = (last.rows?.[0] as { last_run?: string } | undefined)?.last_run;
+      const due = !lastRun || (Date.now() - new Date(String(lastRun)).getTime()) >= 7 * 24 * 60 * 60 * 1000;
+      if (due) {
+        const r = await runAutofixSweep();
+        await db.execute(sql`INSERT INTO self_improve_runs (kind, last_run) VALUES ('autofix', CURRENT_DATE)
+          ON CONFLICT (kind) DO UPDATE SET last_run = CURRENT_DATE`);
+        logger.info({ changedDeals: r.changedDeals, cleared: r.cleared }, "Self-improvement weekly auto-fix complete");
+      }
     } catch (err) {
       logger.error({ err }, "Self-improvement tick failed (non-fatal)");
     }

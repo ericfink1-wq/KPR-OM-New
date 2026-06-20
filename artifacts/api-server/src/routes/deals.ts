@@ -12,9 +12,9 @@ import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from 
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { autoMaintainDealData } from "../lib/dealMaintenance";
-import { normalizeDate, deriveRents } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
 import { ensureAuditHistoryTable, runDailySelfClean } from "../lib/selfImprove";
+import { runAutofixSweep } from "../lib/autofixSweep";
 import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
@@ -1413,165 +1413,9 @@ router.post("/deals/reaudit", requireAuth, async (req, res) => {
 // (e.g. an annual rent that implies an absurd $/SF, or occupancy that can't be computed)
 // for human judgement.
 router.post("/deals/autofix", requireAuth, async (req, res) => {
-  const nA = (v: unknown): number | null => {
-    if (v == null || v === "") return null;
-    const n = typeof v === "string" ? Number(v.replace(/[$,%\s]/g, "")) : Number(v);
-    return Number.isFinite(n) ? n : null;
-  };
-  const isVacA = (name: unknown): boolean => {
-    const s = String(name ?? "").trim().toLowerCase();
-    return !s || s === "-" || /^(vacant|available|avail|spec(ulative)?|white\s*box|tbd|to\s+be\s+leased)\b/.test(s);
-  };
-  const isNAPA = (t: Record<string, unknown>): boolean => {
-    if (t.isNAP === true) return true;
-    if (isVacA(t.name)) return false;
-    const hasLease = !!((typeof t.leaseStart === "string" && t.leaseStart.trim()) || (typeof t.leaseExpiry === "string" && t.leaseExpiry.trim()) || (typeof t.rentSchedule === "string" && t.rentSchedule.trim()));
-    if (hasLease) return false;
-    const sf = nA(t.sf), r = nA(t.annualRent), rp = nA(t.rentPerSF);
-    return sf != null && sf > 0 && (r == null || r === 0) && (rp == null || rp === 0);
-  };
-  const parseD = (s: unknown): Date | null => {
-    const str = String(s ?? "").trim(); if (!str) return null;
-    const d = new Date(str + (/^\d{4}-\d{2}-\d{2}$/.test(str) ? "T12:00:00" : ""));
-    return isNaN(d.getTime()) ? null : d;
-  };
-  // Faithful port of recomputeRosterMetrics (om-database/src/lib/utils.ts) — keep in sync.
-  const recompute = (tenants: Record<string, unknown>[], asOf: unknown, deal: Record<string, unknown>) => {
-    const ver = (deal.verified || {}) as Record<string, unknown>;
-    const out: { occupancy?: number; walt?: number; weightedAvgRentPSF?: number } = {};
-    const ref = parseD(asOf) ?? new Date();
-    const occ = tenants.filter(t => !isVacA(t.name) && !isNAPA(t));
-    const totalSF = nA(deal.totalSF);
-    if (!ver.occupancy && totalSF && totalSF > 0) {
-      const o = Math.round(occ.reduce((s, t) => s + (nA(t.sf) ?? 0), 0) / totalSF * 1000) / 10;
-      if (o > 0 && o <= 100) out.occupancy = o;
-    }
-    if (!ver.walt) {
-      let sf = 0, w = 0;
-      for (const t of occ) { const s = nA(t.sf); if (!s) continue; const e = parseD(t.leaseExpiry); const yr = e ? Math.max(0, (e.getTime() - ref.getTime()) / (365.25 * 86_400_000)) : nA(t.remainingTermYears); if (yr == null) continue; sf += s; w += s * yr; }
-      if (w > 0 && sf > 0) out.walt = Math.round(w / sf * 10) / 10;
-    }
-    if (!ver.weightedAvgRentPSF) {
-      let sf = 0, w = 0;
-      for (const t of occ) { const s = nA(t.sf), r = nA(t.rentPerSF); if (s && s > 0 && r && r > 0) { sf += s; w += s * r; } }
-      if (sf > 0) out.weightedAvgRentPSF = Math.round(w / sf * 100) / 100;
-    }
-    return out;
-  };
-
   try {
-    const snap = await createSnapshot("before-autofix");
-    const rows = await db.select().from(dealsTable);
-    let scanned = 0, occCostFixed = 0, rentFixed = 0, dupeFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
-    let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0, dateFixed = 0, rentFilled = 0;
-    for (const r of rows) {
-      const data = r.data as Record<string, unknown>;
-      if (data.trashedAt || data._processing || data._processingError) continue;
-      scanned++;
-      let changed = false;
-      // 1. Per-tenant deterministic fixes
-      const tenants = (Array.isArray(data.tenants) ? data.tenants : []).map((raw) => {
-        const t = { ...(raw as Record<string, unknown>) };
-        const oc = nA(t.occupancyCost);
-        if (oc != null && oc > 0 && oc < 1) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
-        // Normalize non-ISO lease dates ("Nov-2022" → "2022-11-01") so the legacy
-        // library self-heals on a sweep, same as the per-write applyImportFixes path.
-        for (const f of ["leaseStart", "leaseExpiry", "originalLeaseDate", "rentCommencement", "rentStart"] as const) {
-          const iso = normalizeDate(t[f]);
-          if (iso) { t[f] = iso; dateFixed++; changed = true; }
-        }
-        const sf = nA(t.sf), psf = nA(t.rentPerSF), ann = nA(t.annualRent);
-        if (sf && psf && ann && ann > 1000 && !isVacA(t.name) && !isNAPA(t)) {
-          const implied = psf * sf, rel = Math.abs(implied - ann) / ann, realPSF = ann / sf;
-          // Operator rule (Eric): the ANNUAL base rent is the reliable figure; a
-          // rentPerSF that doesn't reconcile is usually CAM-inflated (a gross rate) or
-          // mis-keyed, so recompute it from the annual whenever the annual implies a
-          // sane $2–$80/SF. Absurd-annual cases (e.g. Mezeh's $780/SF) fail the guard
-          // and are left for human judgement.
-          if (rel > 0.15 && Math.abs(implied - ann) > 10000 && realPSF >= 2 && realPSF <= 80) {
-            t.rentPerSF = Math.round(realPSF * 100) / 100; rentFixed++; changed = true;
-          }
-        }
-        return t;
-      });
-      // Dedupe true duplicate rows that double-count SF (operator rule: keep the LATER
-      // lease expiry). A duplicate is the same tenant in the same SUITE (e.g. Consumer
-      // Square's Planet Fitness/Kroger), OR — when neither row has a suite — the same
-      // tenant with the same lease EXPIRY and a SIMILAR SF (e.g. "Create Me Pottery"
-      // entered twice at 1,195 / 1,200 SF). The SF-similarity guard ensures two
-      // genuinely different spaces of one chain (or a 1,000 vs 18,000 SF data error) are
-      // NEVER merged — those stay separate for human review (the dupe-tenant flag).
-      const dedup: Record<string, unknown>[] = [];
-      const seen = new Map<string, number>();
-      for (const t of tenants) {
-        if (isVacA(t.name)) { dedup.push(t); continue; }
-        const name = String(t.name ?? "").trim().toLowerCase();
-        const suite = String(t.suite ?? "").trim().toLowerCase();
-        const exp = String(t.leaseExpiry ?? "").trim();
-        const key = suite ? `${name}|s:${suite}` : (exp ? `${name}|e:${exp}` : null);
-        const at = key != null ? seen.get(key) : undefined;
-        if (key != null && at != null) {
-          const prev = dedup[at];
-          const sfPrev = nA(prev.sf), sfCur = nA(t.sf);
-          const sfOk = !!suite || sfPrev == null || sfCur == null || sfPrev === 0 ||
-            Math.abs(sfPrev - sfCur) / Math.max(sfPrev, sfCur) <= 0.25;
-          if (sfOk) {
-            const prevExp = parseD(prev.leaseExpiry), curExp = parseD(t.leaseExpiry);
-            if (curExp && (!prevExp || curExp > prevExp)) dedup[at] = t; // keep the later lease
-            dupeFixed++; changed = true;
-            continue;
-          }
-        }
-        if (key != null) seen.set(key, dedup.length);
-        dedup.push(t);
-      }
-      // Fill blank base-rent figures implied by the others (gated — only on a deal
-      // whose rates are proven base; see deriveRents). Mirrors the per-write path.
-      const { tenants: withRents, filled: rf } = deriveRents(dedup);
-      if (rf > 0) { rentFilled += rf; changed = true; }
-      const updated: Record<string, unknown> = { ...data, tenants: withRents };
-      // 1b. Deal-level UNAMBIGUOUS unit fixes (single right answer; anything fuzzy is
-      //     left for human review, same as the per-tenant rules above).
-      // Occupancy stored as a 0–1 fraction (lost its ×100) — a <1% occupancy is
-      // impossible for a leased center; ×100 is the only sensible reading. The roster
-      // recompute below still overrides this when it can (totalSF + roster present).
-      {
-        const oc = nA(updated.occupancy);
-        if (oc != null && oc > 0 && oc <= 1.0) { updated.occupancy = Math.round(oc * 100 * 10) / 10; occUnitFixed++; changed = true; }
-        // Cap rate clearly in BASIS POINTS (≥100, e.g. 650 → 6.50%) or a FRACTION
-        // (0<cap<1, e.g. 0.065 → 6.5%). The ambiguous 20–100 band is left for review.
-        const cap = nA(updated.capRate);
-        if (cap != null && cap >= 100) { updated.capRate = Math.round(cap) / 100; capUnitFixed++; changed = true; }
-        else if (cap != null && cap > 0 && cap < 1) { updated.capRate = Math.round(cap * 100 * 100) / 100; capUnitFixed++; changed = true; }
-        // pricePerSF must equal price ÷ GLA — when both primary inputs exist and the
-        // stored PSF disagrees, recompute it from them (don't fill a blank, only fix a
-        // contradiction).
-        const price = nA(updated.askingPrice) ?? nA(updated.txnPurchasePrice);
-        const tsf = nA(updated.totalSF);
-        const ppsf = nA(updated.pricePerSF);
-        if (ppsf != null && ppsf > 0 && price != null && price > 0 && tsf != null && tsf > 0) {
-          const real = Math.round(price / tsf);
-          if (real > 0 && Math.abs(real - ppsf) / ppsf > 0.05) { updated.pricePerSF = real; ppsfFixed++; changed = true; }
-        }
-      }
-      // 2. Recompute roster-derived metrics (honors verified locks)
-      const m = recompute(withRents, updated.tenantsAsOf, updated);
-      for (const k of ["occupancy", "walt", "weightedAvgRentPSF"] as const) {
-        if (m[k] != null && nA(updated[k]) !== m[k]) { updated[k] = m[k]; metricFixes++; changed = true; }
-      }
-      // 3. Self-heal audit questions (same rules as reaudit)
-      const fresh = auditExtraction(updated);
-      const freshIds = new Set(fresh.map(q => q.id));
-      const existing = Array.isArray(updated.reviewQuestions) ? (updated.reviewQuestions as Array<Record<string, unknown>>) : [];
-      const kept = existing.filter(q => { const id = String(q?.id || ""); if (!id.startsWith(AUDIT_ID_PREFIX)) return true; if (q?.resolvedAt) return true; return freshIds.has(id); });
-      const keptIds = new Set(kept.map(q => String(q?.id || "")));
-      const next = [...kept, ...fresh.filter(q => !keptIds.has(q.id))];
-      const clearedHere = existing.length - kept.length;
-      if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
-      if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
-    }
-    req.log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
-    res.json({ ok: true, scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, changedDeals, cleared, snapshot: snap });
+    const result = await runAutofixSweep(req.log);
+    res.json({ ok: true, ...result });
   } catch (err) {
     req.log.error({ err }, "Auto-fix failed");
     res.status(500).json({ error: "Auto-fix failed" });
