@@ -1128,6 +1128,7 @@ router.post("/deals/:id/refresh-analysis", requireAuth, async (req, res) => {
 router.post("/deals/score-unscored", requireAuth, async (req, res) => {
   try {
     const rows = await db.select().from(dealsTable);
+    const library = rows.map((r) => r.data as Record<string, unknown>);
     const targets = rows.filter((r) => {
       const d = r.data as Record<string, unknown>;
       return !d.trashedAt && !d._processing && !d.dealScore;
@@ -1136,7 +1137,7 @@ router.post("/deals/score-unscored", requireAuth, async (req, res) => {
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
       try {
-        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data));
+        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data), library);
         await db.update(dealsTable)
           .set({ data: { ...data, ...analysis, analysisVersion: ANALYSIS_VERSION }, updatedAt: new Date() })
           .where(eq(dealsTable.id, r.id));
@@ -1208,13 +1209,14 @@ async function applyAnalysisToDeal(id: string, data: Record<string, unknown>, an
 router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
   try {
     const rows = await db.select().from(dealsTable);
+    const library = rows.map((r) => r.data as Record<string, unknown>);
     const targets = rows.filter((r) => isStaleAnalysisTarget(r.data as Record<string, unknown>));
 
     let refreshed = 0, failed = 0;
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
       try {
-        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data));
+        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data), library);
         await applyAnalysisToDeal(r.id, data, analysis, req.log);
         refreshed++;
       } catch (err) {
@@ -1239,12 +1241,13 @@ router.post("/deals/refresh-stale-analysis-batch", requireAuth, async (req, res)
   try {
     if (!process.env.ANTHROPIC_API_KEY) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
     const rows = await db.select().from(dealsTable);
+    const library = rows.map((r) => r.data as Record<string, unknown>);
     const targets = rows.filter((r) => isStaleAnalysisTarget(r.data as Record<string, unknown>) && isValidBatchCustomId(r.id));
     if (!targets.length) { res.json({ ok: true, batchId: null, count: 0 }); return; }
     const requests: BatchRequest[] = [];
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
-      const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data));
+      const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data), library);
       requests.push({ custom_id: r.id, params: rosterAnalysisParams(snapshot) });
     }
     const batch = await createMessageBatch(requests);

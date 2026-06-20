@@ -10,6 +10,8 @@ import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtrac
 import { auditExtraction, auditSourceText } from "./extractionAudit";
 import { applyImportFixes } from "./importFixes";
 import { getHouseView, saveHouseView, incrementPendingReviews } from "./houseView";
+import { findComparableDeals } from "./comparables";
+import { computePortfolioCalibration } from "./calibration";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -711,6 +713,10 @@ KPR REVIEW (the "kprReview" field, if present): this is the KPR team's OVERALL H
 
 KPR THESIS (the "kprThesis" field, if present): this is the KPR acquisitions team's own stated thesis / assumptions for the deal — why they like it, what they're underwriting to, risks they're discounting. Treat it as INFORMED INTERNAL CONTEXT and weave it into the narrative, strengths, and risks — but stay OBJECTIVE and ADVISORY: you may agree, add nuance, or PUSH BACK where the roster/financials don't support a claim. If a thesis point is contradicted by the data, say so plainly (e.g. as a risk or caveat) rather than parroting it. Do NOT let an optimistic thesis inflate the grade beyond what the numbers justify. If kprThesis is absent, ignore this.
 
+COMPARABLE DEALS IN THE DATABASE (the "comparableDeals" field, if present): these are the MOST SIMILAR past deals KPR has already analyzed — matched by center type, shared anchor tenants, geography, and size — each with its location, key metrics (cap rate, occupancy, WALT, avg rent PSF), the grade it received, whether KPR actually OWNS it ("owned":true), the anchors it shares with THIS deal ("sharedAnchors"), and KPR's own take ("kprTake"). Use them as a RELATIVE-VALUE and CONSISTENCY anchor: position THIS deal against its closest precedents — e.g. "the in-place rent IS X% below the $Y avg across two comparable grocery-anchored centers in the database," or "priced ~50 bps tighter than [Owned Comp], which KPR bought at Z%." OWNED comps are the strongest precedents (a realized KPR trade), so weight them most. Keep the grade CONSISTENT with how similar past deals graded unless this deal's data justifies a difference — call out the difference if so. Do NOT invent comp numbers beyond what's provided, and do not treat a comp as a hard rule; it is context, not a substitute for THIS deal's data. If comparableDeals is absent, ignore this.
+
+GROUND-TRUTH CALIBRATION (the "groundTruthCalibration" field, if present): this is a learned reality check — how OM-stated figures (NOI, cap rate, occupancy, price) have HISTORICALLY differed from what KPR ACTUALLY realized at close across the deals it owns. When the OM's headline NOI/cap/occupancy is in the direction the calibration says brokers run optimistic, treat the OM figure with appropriate skepticism in the grade and risks (e.g. "the OM's 6.5% cap likely overstates the true going-in yield; KPR's owned deals have closed ~X% wider"). Do NOT mechanically restate the figure for every deal — apply it as judgment where THIS deal's OM numbers look aggressive. If groundTruthCalibration is absent, ignore this.
+
 LEASE RISK (anchor-dependency / co-tenancy): If a "leaseRiskExposure" block is present, it lists co-tenancy / sales-kickout exposure the APP computed from the lease documents — base rent that can convert to alternate/reduced rent (or grant a termination right) if a named anchor goes dark. NARRATE those figures; never re-derive or invent them. Fold the MATERIAL exposure into the Risks list and the narrative's risk sentence — e.g. a Tier-1 figure that is significant vs. the property's rent is a real risk ("~$X of base rent (TenantA, TenantB) converts to alternate rent if Anchor goes dark"). Tier-2 (needs a second event) is a lesser watch item. Where an executed lease has VERIFIED/mitigated a clause (Tier-1 reduced, or a tenant de-linked), reflect it as resolved rather than a live risk, and do not list a mitigated tenant as at-risk. Clauses still "OM-only (unverified)" should be framed as "subject to confirming the executed leases." Keep it proportional — a small Tier-1 relative to total rent is a minor note, not a headline. If no leaseRiskExposure block is present, ignore this.
 
 NEW UNDERWRITING SIGNALS — fold these into the grade, strengths, risks AND the narrative when the data is present (do NOT ignore them just because they sit on individual tenants):
@@ -815,11 +821,47 @@ export async function autoUpdateHouseViewOnReview(updatedBy: string | null): Pro
   }
 }
 
+// Load the full library once (or use the caller's already-loaded rows) so the snapshot
+// can both RETRIEVE comparables and compute the GROUND-TRUTH calibration from it.
+async function loadLibrary(library?: Array<Record<string, unknown>>): Promise<Array<Record<string, unknown>>> {
+  if (library) return library;
+  const rows = await db.select().from(dealsTable);
+  return rows.map((r) => r.data as Record<string, unknown>);
+}
+
+// Find the most-similar past deals in the library for retrieval-grounded analysis.
+// Token-free; returns a compact comparables block the prompt narrates.
+function buildComparablesBlock(dealData: Record<string, unknown>, all: Array<Record<string, unknown>>): Array<Record<string, unknown>> | undefined {
+  const comps = findComparableDeals(dealData, all, 3);
+  if (!comps.length) return undefined;
+  // Trim to what the grade should reason from (drop the internal similarity score).
+  return comps.map((c) => ({
+    property: c.propertyName, location: c.location, centerType: c.centerType || undefined,
+    totalSF: c.totalSF ?? undefined, occupancy: c.occupancy ?? undefined, walt: c.walt ?? undefined,
+    capRate: c.capRate ?? undefined, noi: c.noi ?? undefined, avgRentPSF: c.weightedAvgRentPSF ?? undefined,
+    grade: c.grade ?? undefined, owned: c.isOwned || undefined,
+    sharedAnchors: c.sharedAnchors.length ? c.sharedAnchors : undefined,
+    kprTake: c.kprTake || undefined,
+  }));
+}
+
 // Build the curated snapshot the grade reads (tenant + deal subset + House View +
-// lease-risk + KPR thesis/review). Async because it pulls the shared House View text.
-// Exported so the Batch API path builds an IDENTICAL request to the live path.
-export async function buildRosterAnalysisSnapshot(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {
+// lease-risk + KPR thesis/review + comparable past deals). Async because it pulls the
+// shared House View text and the library. Exported so the Batch API path builds an
+// IDENTICAL request to the live path. Pass `library` (already-loaded deal data rows) on
+// bulk paths so we don't re-query the table per deal.
+export async function buildRosterAnalysisSnapshot(dealData: Record<string, unknown>, leaseRiskSummary = "", library?: Array<Record<string, unknown>>): Promise<Record<string, unknown>> {
   const houseView = await loadHouseViewText();
+  // Retrieval (#2) + ground-truth calibration (#1): both ground the grade in KPR's own
+  // data. Best-effort — never let library work break an analysis.
+  let comparableDeals: Array<Record<string, unknown>> | undefined;
+  let groundTruthCalibration: string | undefined;
+  try {
+    const all = await loadLibrary(library);
+    comparableDeals = buildComparablesBlock(dealData, all);
+    const cal = computePortfolioCalibration(all);
+    groundTruthCalibration = cal.guidance || undefined;
+  } catch { /* analysis proceeds without library grounding */ }
   const t = Array.isArray(dealData.tenants) ? (dealData.tenants as Array<Record<string, unknown>>) : [];
   const thesis = typeof dealData.dealThesis === "string" ? dealData.dealThesis.trim() : "";
   const review = typeof dealData.dealReview === "string" ? dealData.dealReview.trim() : "";
@@ -827,6 +869,8 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
     houseView: houseView || undefined,
     leaseRiskExposure: leaseRiskSummary || undefined,
     kprReview: review || undefined,
+    comparableDeals: comparableDeals && comparableDeals.length ? comparableDeals : undefined,
+    groundTruthCalibration,
     propertyName: dealData.propertyName, address: dealData.address, city: dealData.city, state: dealData.state,
     assetType: dealData.assetType, centerType: dealData.centerType,
     totalSF: dealData.totalSF, occupancy: dealData.occupancy, walt: dealData.walt,
@@ -890,8 +934,8 @@ export function parseRosterAnalysisMessage(message: Record<string, unknown>): Re
   return out;
 }
 
-export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = ""): Promise<Record<string, unknown>> {
-  const snapshot = await buildRosterAnalysisSnapshot(dealData, leaseRiskSummary);
+export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = "", library?: Array<Record<string, unknown>>): Promise<Record<string, unknown>> {
+  const snapshot = await buildRosterAnalysisSnapshot(dealData, leaseRiskSummary, library);
   const upstream = await callAnthropicOnce(rosterAnalysisParams(snapshot));
   const data = await upstream.json() as Record<string, unknown>;
   if (!upstream.ok) {
