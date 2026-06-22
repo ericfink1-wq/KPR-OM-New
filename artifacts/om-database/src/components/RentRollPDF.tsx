@@ -72,17 +72,18 @@ const s = StyleSheet.create({
 // Column layout (sums to 100). Lease type/tags ride under the tenant name so the
 // grid stays uncrowded while still adding the sales + occ-cost columns.
 const COL = {
-  suite:  { width: "6%" },
-  tenant: { width: "21%" },
-  sf:     { width: "8%",  textAlign: "right" as const },
-  gla:    { width: "6%",  textAlign: "right" as const },
-  rentSf: { width: "8%",  textAlign: "right" as const },
-  rent:   { width: "11%", textAlign: "right" as const },
-  pctRent:{ width: "6%",  textAlign: "right" as const, paddingRight: 7 },
-  start:  { width: "9%" },
+  suite:  { width: "5.5%" },
+  tenant: { width: "18.5%" },
+  sf:     { width: "7.5%",  textAlign: "right" as const },
+  gla:    { width: "5.5%",  textAlign: "right" as const },
+  rentSf: { width: "7.5%",  textAlign: "right" as const },
+  rent:   { width: "10%",   textAlign: "right" as const },
+  pctRent:{ width: "5.5%",  textAlign: "right" as const, paddingRight: 6 },
+  start:  { width: "8%" },
   expiry: { width: "9%" },
-  sales:  { width: "9%",  textAlign: "right" as const },
-  occ:    { width: "7%",  textAlign: "right" as const },
+  options:{ width: "8.5%" },
+  sales:  { width: "8%",    textAlign: "right" as const },
+  occ:    { width: "6.5%",  textAlign: "right" as const },
 };
 
 function Header() {
@@ -141,6 +142,28 @@ export default function RentRollPDF({ deal: d }: { deal: Deal }) {
     return { sf: 0 };
   };
 
+  // ── Remaining term (yrs) relative to the roll's as-of date, and a compact
+  // renewal-option summary ("2×5yr") from the free-text renewalOptions. ───────
+  const asOf = d.tenantsAsOf ? new Date(d.tenantsAsOf) : new Date();
+  const remYearsOf = (t: Tenant): number | null => {
+    if (t.leaseExpiry) { const e = new Date(t.leaseExpiry); if (!isNaN(+e)) return (+e - +asOf) / (365.25 * 24 * 3600 * 1000); }
+    if (t.remainingTermYears != null && t.remainingTermYears !== "") return toN(t.remainingTermYears);
+    return null;
+  };
+  const optShort = (raw: unknown): string => {
+    const txt = String(raw ?? "").replace(/\s+/g, " ").trim();
+    const head = txt.split(/[(;]/)[0].trim();                                // text before any "(notice…)"
+    if (!txt || /\bnone\b|\bn\/?a\b|\bnot stated\b/i.test(head) || /^[-—\s]*$/.test(txt)) return "None";
+    let m = txt.match(/(\d+)\s*[x×]\s*(\d+)\s*-?\s*(?:yr|year)/i);           // "2 x 5-yr"
+    if (m) return `${m[1]}×${m[2]}yr`;
+    m = txt.match(/(\d+)\s+(?:[x×]\s*)?(?:renewal\s+)?(?:option|opt)s?\b[^0-9]{0,12}(\d+)\s*-?\s*(?:yr|year)/i); // "2 options of 5 yr"
+    if (m) return `${m[1]}×${m[2]}yr`;
+    const len = txt.match(/\b(\d+)\s*-?\s*(?:yr|year)\b/i);                  // a length only — count unstated
+    if (len) { const many = /\boptions\b|\bmultiple\b|\bseveral\b/i.test(txt); return `${len[1]}yr opt${many ? "s" : ""}`; }
+    return head.length > 12 ? head.slice(0, 12) + "…" : head;
+  };
+  const remColor = (r: number | null): string => r == null ? C.faint : r < 0 ? C.faint : r < 2 ? "#b3261e" : r < 3 ? "#9a6a1e" : C.muted;
+
   // ── Partition + sort: anchors (SF desc) → other occupied (SF desc) → vacant. ──
   const occTenants = tenants.filter(t => !isVacant(t.name));
   const vacTenants = tenants.filter(t => isVacant(t.name));
@@ -171,6 +194,7 @@ export default function RentRollPDF({ deal: d }: { deal: Deal }) {
     const sub = [t.leaseType ? String(t.leaseType).replace(/\s*\(.*$/, "").trim() : null,
       t.isAnchor ? "Anchor" : null, t.isDark ? "Dark" : null, nap ? "NAP" : null].filter(Boolean).join(" · ");
     const sl = salesOf(t);
+    const rem = remYearsOf(t);
     return (
       <View style={[s.tr, i % 2 === 1 ? { backgroundColor: C.zebra } : {}]} wrap={false}>
         <Text style={[s.tdFaint, COL.suite]}>{t.suite || "—"}</Text>
@@ -184,7 +208,11 @@ export default function RentRollPDF({ deal: d }: { deal: Deal }) {
         <Text style={[s.td, COL.rent]}>{money0(rent)}</Text>
         <Text style={[s.tdFaint, COL.pctRent]}>{occRent && rent ? pct((rent / occRent) * 100) : "—"}</Text>
         <Text style={[s.td, COL.start]}>{t.leaseStart ? fmtLeaseDate(t.leaseStart) : "—"}</Text>
-        <Text style={[s.td, COL.expiry]}>{t.leaseExpiry ? fmtLeaseDate(t.leaseExpiry) : "—"}</Text>
+        <View style={COL.expiry}>
+          <Text style={s.td}>{t.leaseExpiry ? fmtLeaseDate(t.leaseExpiry) : "—"}</Text>
+          {!vacant && rem != null ? <Text style={{ fontSize: 6, marginTop: 0.5, color: remColor(rem) }}>{rem < 0 ? "expired" : `${rem.toFixed(1)} yr left`}</Text> : null}
+        </View>
+        <Text style={[vacant || optShort(t.renewalOptions) === "None" ? s.tdFaint : s.td, COL.options]}>{vacant ? "—" : optShort(t.renewalOptions)}</Text>
         <Text style={[sl.sf ? s.td : s.tdFaint, COL.sales]}>{sl.sf ? `${money0(sl.sf)}${sl.year ? ` '${String(sl.year).slice(2)}` : ""}` : "—"}</Text>
         <Text style={[sl.occ ? s.td : s.tdFaint, COL.occ]}>{sl.occ ? pct(sl.occ) : "—"}</Text>
       </View>
@@ -205,6 +233,7 @@ export default function RentRollPDF({ deal: d }: { deal: Deal }) {
         <Text style={[s.subTxt, COL.pctRent]}> </Text>
         <Text style={[s.subTxt, COL.start]}> </Text>
         <Text style={[s.subTxt, COL.expiry]}> </Text>
+        <Text style={[s.subTxt, COL.options]}> </Text>
         <Text style={[s.subTxt, COL.sales]}> </Text>
         <Text style={[s.subTxt, COL.occ]}> </Text>
       </View>
@@ -248,7 +277,8 @@ export default function RentRollPDF({ deal: d }: { deal: Deal }) {
           <Text style={[s.thTxt, COL.rent]}>Annual Rent</Text>
           <Text style={[s.thTxt, COL.pctRent]}>% Rent</Text>
           <Text style={[s.thTxt, COL.start]}>Commence</Text>
-          <Text style={[s.thTxt, COL.expiry]}>Expiry</Text>
+          <Text style={[s.thTxt, COL.expiry]}>Expiry / Rem.</Text>
+          <Text style={[s.thTxt, COL.options]}>Options</Text>
           <Text style={[s.thTxt, COL.sales]}>Sales/SF</Text>
           <Text style={[s.thTxt, COL.occ]}>Occ Cost</Text>
         </View>
@@ -274,13 +304,15 @@ export default function RentRollPDF({ deal: d }: { deal: Deal }) {
           <Text style={[s.totalTxt, COL.rent]}>{money0(occRent)}</Text>
           <Text style={[s.totalTxt, COL.pctRent]}> </Text>
           <Text style={[s.totalTxt, COL.start]}> </Text>
-          <Text style={[s.totalTxt, COL.expiry]}> </Text>
+          <Text style={[s.totalTxt, COL.expiry]}>WALT {walt ? `${walt.toFixed(1)}y` : "—"}</Text>
+          <Text style={[s.totalTxt, COL.options]}> </Text>
           <Text style={[s.totalTxt, COL.sales]}> </Text>
           <Text style={[s.totalTxt, COL.occ]}> </Text>
         </View>
 
         <Text style={s.note}>
           Rent/SF and Annual Rent are in-place BASE rent (excludes recoveries, percentage & other rent). % GLA is of {num0(gla)} SF total.
+          {" "}Remaining term (under Expiry) is to base-term expiry as of {d.tenantsAsOf ? fmtLeaseDate(d.tenantsAsOf) : "today"} — red &lt;2 yrs, amber 2–3 yrs; Options shows renewal options (count × length), excluding remaining term.
           {reporting.length ? ` Sales/SF and Occ Cost shown for ${num0(reporting.length)} reporting tenant${reporting.length === 1 ? "" : "s"} (latest reported FY).` : ""}
           {" "}Subtotals exclude NAP square footage where applicable.
         </Text>
