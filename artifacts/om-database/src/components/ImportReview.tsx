@@ -92,6 +92,33 @@ const looksLikeInstruction = (draft: string, valueType: "number" | "text") => {
   return v.split(/\s+/).length >= 4;
 };
 
+// The user is AGREEING with the captured value (answering a "confirm this is X?" check),
+// not changing it — e.g. "$35.20 is base rent", "yes that's correct", "leave it". Many
+// audit flags ASK for confirmation, so a fix-box answer that affirms should resolve the
+// question as confirmed instead of erroring out demanding an edit. Gated tightly: any
+// correction marker, or a NEW number that differs from the captured value, means it's a
+// real change → fall through to the editor's normal interpret path.
+const CORRECTION_MARKERS = /\b(should|actually|instead|rather|wrong|incorrect|isn'?t|aren'?t|change|update|fix|replace|remove|delete|add|vacant|->|→)\b/i;
+const firstNumber = (s: string): number | null => {
+  const m = String(s).match(/-?\d[\d,]*(?:\.\d+)?/);
+  return m ? Number(m[0].replace(/,/g, "")) : null;
+};
+const looksLikeConfirmation = (draft: string, currentVal?: string | null): boolean => {
+  const v = draft.trim();
+  if (!v || CORRECTION_MARKERS.test(v)) return false;
+  const low = v.toLowerCase();
+  const affirms =
+    /^(yes|yep|yeah|correct|confirmed?|right|ok(ay)?|leave|keep|fine|good|no change|that'?s|looks?)\b/.test(low) ||
+    /\bis (the )?(base|correct|right|accurate|fine)\b/.test(low) ||
+    /\b(is|are|it'?s)\s+(correct|right|accurate|fine|good|base rent)\b/.test(low) ||
+    /\bconfirmed?\b|\bleave (it|as)\b|\bkeep (it|as)\b|\bno change\b/.test(low);
+  if (!affirms) return false;
+  // If the user typed a number that DIFFERS from the captured value, it's a correction.
+  const dn = firstNumber(v), cn = currentVal ? firstNumber(currentVal) : null;
+  if (dn != null && cn != null && Math.abs(dn - cn) > Math.max(0.01, Math.abs(cn) * 0.001)) return false;
+  return true;
+};
+
 // A roster row that represents empty space rather than an occupant (excluded from
 // occupied-SF / WALT math).
 const isVacantName = (name: unknown): boolean => {
@@ -444,6 +471,9 @@ USER CORRECTION: ${instruction}`;
   // instruction → interpret via AI and show a confirmation proposal.
   const onSave = async (q: ReviewQuestion) => {
     if (!draft.trim()) { setAiErr("Type the correction first."); return; }
+    // The user is AFFIRMING the value (answering a "confirm this is X?" check) rather
+    // than changing it — resolve as confirmed, no edit, no failed-interpret error.
+    if (looksLikeConfirmation(draft, q.suggestedValue)) { resolve(q, "confirmed"); cancelFix(); return; }
     const t = q.target;
     // A question tied to one editable field: a plain value writes directly; a
     // sentence goes to the AI. A question with no single field (e.g. a totals
@@ -466,7 +496,7 @@ USER CORRECTION: ${instruction}`;
     setAiBusy(true); setAiErr(null);
     try {
       const edits = await interpret(draft, q);
-      if (edits.length === 0) setAiErr("I couldn't turn that into a change. Try naming the tenant or value directly (e.g. \"Burlington SF 46000\", \"Old Navy is vacant\", \"add vacant suite M5 30000 sf\", \"remove the duplicate DSW\"). For a big roster rebuild, use \"Paste roster from Claude\" on the deal page.");
+      if (edits.length === 0) setAiErr("I couldn't turn that into a change. If the value is already right, just hit Cancel and \"✓ Looks right\" to confirm it. To change it, name the tenant or value directly (e.g. \"Burlington SF 46000\", \"Old Navy is vacant\", \"add vacant suite M5 30000 sf\", \"remove the duplicate DSW\"). For a big roster rebuild, use \"Paste roster from Claude\" on the deal page.");
       else setProposal({ questionId: q.id, summary: edits.map(e => e.label).join("; "), edits });
     } catch (e) {
       // AI was busy/unreachable — try the deterministic parser as a last resort so a
