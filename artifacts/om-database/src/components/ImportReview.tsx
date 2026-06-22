@@ -114,6 +114,29 @@ const inferTenantNumberField = (q: ReviewQuestion): string | null => {
   return null;
 };
 
+// Which roster tenant a question concerns — from its explicit target, else by matching
+// roster names against the question's field/wording. AI flags put the tenant name in
+// q.field (e.g. "Innovative Urgent Care — rent step 2031-11-01"), so a fix can target
+// the right row even when there's no structured target.
+const focusTenantFor = (q: ReviewQuestion, tenants: Tenant[]): Tenant | null => {
+  const tgt = q.target?.tenantName;
+  if (q.target?.kind === "tenant" && tgt) {
+    const wantKey = tenantKey(tgt);
+    const m = tenants.find(tn => tenantKey(tn.canonicalName || tn.name) === wantKey || tn.name === tgt);
+    if (m) return m;
+  }
+  const hay = `${q.field || ""} ${q.question || ""}`.toLowerCase();
+  let best: Tenant | null = null, bestLen = 0;
+  for (const tn of tenants) {
+    const name = (tn.canonicalName || tn.name || "").trim();
+    if (!name || isVacantName(name)) continue;
+    const key = tenantKey(name);
+    if (key && hay.includes(key) && key.length > bestLen) { best = tn; bestLen = key.length; }
+    else if (name.length > bestLen && hay.includes(name.toLowerCase())) { best = tn; bestLen = name.length; }
+  }
+  return best;
+};
+
 // Non-blocking post-import data-integrity review. Opened from the "N to confirm"
 // badge on the deal page. Each question is either an AI low-confidence capture or
 // a deterministic arithmetic/missing-field check. Confirming or dismissing stamps
@@ -264,6 +287,20 @@ export default function ImportReview({ deal, onClose, onUpdate, extraChecks }: {
       const bits = [t.suite ? `[${t.suite}]` : "", t.sf ? `${t.sf} SF` : "", isVacantName(nm) ? "(VACANT)" : "", t.isNAP ? "(NAP)" : ""].filter(Boolean).join(" ");
       return bits ? `${nm} ${bits}` : nm;
     });
+    // The specific tenant this correction is about, with its CURRENT stored values —
+    // so the model can edit a sub-part of a text field (e.g. correct ONE step inside
+    // the rentSchedule string) instead of guessing the whole field from scratch.
+    const focus = focusTenantFor(q, (deal.tenants || []) as Tenant[]);
+    const focusBlock = focus ? `
+FOCUS TENANT (the row this correction is about — its CURRENT stored values; use these as the BASE when editing a field, especially when only PART of a field like rentSchedule changes):
+${JSON.stringify({
+      name: focus.canonicalName || focus.name, suite: focus.suite ?? null, sf: focus.sf ?? null,
+      rentPerSF: focus.rentPerSF ?? null, annualRent: focus.annualRent ?? null,
+      leaseStart: focus.leaseStart ?? null, leaseExpiry: focus.leaseExpiry ?? null,
+      rentSchedule: focus.rentSchedule ?? null, renewalOptions: focus.renewalOptions ?? null,
+      salesPSF: focus.salesPSF ?? null, salesYear: focus.salesYear ?? null, occupancyCost: focus.occupancyCost ?? null,
+    }, null, 0)}
+` : "";
     const prompt = `You convert a user's plain-English correction into structured edits to a commercial-real-estate deal's data. The user is fixing what an AI mis-read from an Offering Memorandum — UNDERSTAND full sentences and directions, not just "field = value".
 
 Return ONLY JSON (no markdown, no prose): {"edits":[ ...edit objects... ]}. Each edit is exactly ONE of:
@@ -272,6 +309,7 @@ Return ONLY JSON (no markdown, no prose): {"edits":[ ...edit objects... ]}. Each
 - ADD a vacant suite:    {"kind":"addVacant","suite":"<suite id or null>","sf":<number>}   — when the user says a space is vacant/available that is NOT already a roster row (e.g. "there are two more empty units, M5 ~30,000 sf and M7 ~22,000 sf").
 - REMOVE a roster row:   {"kind":"removeTenant","tenantName":"<EXACT name>"}   — for a duplicate row, a phantom, or a tenant that has LEFT / was never there.
 - To MARK an EXISTING tenant vacant, output TWO edits: set its name to "Vacant" and clear its rent — {"kind":"tenant","tenantName":"X","fieldKey":"name","value":"Vacant"} then {"kind":"tenant","tenantName":"X","fieldKey":"annualRent","value":null}.
+- To CORRECT ONE rent step inside a tenant's rentSchedule (a dated "$/SF" step in the FOCUS TENANT's rentSchedule string): output a single tenant rentSchedule edit whose value is that tenant's CURRENT rentSchedule string with ONLY the named step's amount changed — keep every other step, every date, and the exact formatting identical. The question text tells you WHICH step (e.g. "the 11/1/2031 step"); the user tells you the corrected amount.
 
 Allowed DEAL fieldKeys: ${Object.keys(DEAL_FIELDS).join(", ")}
 Allowed TENANT fieldKeys: ${Object.keys(TENANT_FIELDS).join(", ")}
@@ -287,13 +325,14 @@ EXAMPLES:
 - "Burlington's square footage should be 46,000" → [{"kind":"tenant","tenantName":"Burlington","fieldKey":"sf","value":46000}]
 - "delete the duplicate DSW row" → [{"kind":"removeTenant","tenantName":"DSW"}]
 - "total GLA is 887,130 and occupancy is 91.9%" → [{"kind":"deal","fieldKey":"totalSF","value":887130},{"kind":"deal","fieldKey":"occupancy","value":91.9}]
+- (question: "Is the 11/1/2031 rent step $38.91 PSF correct?"; FOCUS TENANT rentSchedule "2029-11-01: $34.79 PSF; 2031-11-01: $38.91 PSF; 2033-11-01: $36.55 PSF") "Typo, it should be $35.66 PSF" → [{"kind":"tenant","tenantName":"Innovative Urgent Care","fieldKey":"rentSchedule","value":"2029-11-01: $34.79 PSF; 2031-11-01: $35.66 PSF; 2033-11-01: $36.55 PSF"}]
 
 If you truly cannot map the instruction to any edit, return {"edits":[]}.
 
 DEAL: ${deal.propertyName || "(unnamed)"} — ${[deal.city, deal.state].filter(Boolean).join(", ")}${deal.totalSF ? ` · GLA ${deal.totalSF} SF` : ""}
 ROSTER (name [suite] SF, with VACANT/NAP marked):
 ${roster.join("\n") || "(none)"}
-This correction concerns: ${q.question}${q.suggestedValue ? ` (currently captured as: ${q.suggestedValue})` : ""}
+${focusBlock}This correction concerns: ${q.question}${q.suggestedValue ? ` (currently captured as: ${q.suggestedValue})` : ""}
 USER CORRECTION: ${instruction}`;
 
     // The AI proxy can briefly fail when the model is overloaded — retry once before giving up.
