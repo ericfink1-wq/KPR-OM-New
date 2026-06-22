@@ -183,6 +183,137 @@ function ReconBadge({ msg }: { msg: string }) {
   );
 }
 
+// Full-screen image viewer with ZOOM + PAN — wheel/trackpad to zoom, pinch on
+// touch, drag to pan, +/−/reset buttons, double-click/tap to toggle zoom. Used for
+// the cover and (especially) the site plan, where reading suite labels needs real
+// magnification. Works with mouse AND touch via pointer events.
+function ZoomableLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  const MIN = 1, MAX = 8;
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Active pointers (for pan + pinch) and gesture bookkeeping.
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchDist = useRef<number | null>(null);
+  const moved = useRef(false); // suppress background-close after a drag/zoom gesture
+
+  const reset = useCallback(() => { setScale(1); setTx(0); setTy(0); }, []);
+
+  // Center of the container, used to keep a screen point fixed while zooming
+  // (transformOrigin is the image center).
+  const centerOf = () => {
+    const r = containerRef.current?.getBoundingClientRect();
+    return r ? { cx: r.left + r.width / 2, cy: r.top + r.height / 2 } : { cx: 0, cy: 0 };
+  };
+
+  // Zoom toward a screen point (sx,sy) by `factor`, clamped. Keeps that point fixed.
+  const zoomTo = useCallback((factor: number, sx: number, sy: number) => {
+    setScale((s) => {
+      const next = Math.min(MAX, Math.max(MIN, s * factor));
+      const f = next / s;
+      const { cx, cy } = centerOf();
+      const px = sx - cx, py = sy - cy;
+      if (next === 1) { setTx(0); setTy(0); } // snap back to centered at fit
+      else { setTx((x) => px - (px - x) * f); setTy((y) => py - (py - y) * f); }
+      return next;
+    });
+  }, []);
+
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    zoomTo(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX, e.clientY);
+  }, [zoomTo]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved.current = false;
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      pinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const prev = pointers.current.get(e.pointerId);
+    if (!prev) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2 && pinchDist.current != null) {
+      // Pinch zoom toward the midpoint of the two fingers.
+      const [a, b] = [...pointers.current.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      if (pinchDist.current > 0) zoomTo(dist / pinchDist.current, mx, my);
+      pinchDist.current = dist;
+      moved.current = true;
+    } else if (pointers.current.size === 1 && scale > 1) {
+      // Single-pointer drag = pan (only meaningful when zoomed in).
+      setTx((x) => x + (e.clientX - prev.x));
+      setTy((y) => y + (e.clientY - prev.y));
+      moved.current = true;
+    }
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinchDist.current = null;
+  };
+
+  // Double-click / double-tap toggles between fit and a useful zoom at that point.
+  const onDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (scale > 1) reset();
+    else zoomTo(3, e.clientX, e.clientY);
+  };
+
+  // Esc to close; lock body scroll while open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prevOverflow; };
+  }, [onClose]);
+
+  const btn: React.CSSProperties = {
+    background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.32)", color: "#fff",
+    width: 44, height: 44, borderRadius: 10, cursor: "pointer", fontSize: 20, fontWeight: 600,
+    display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, userSelect: "none",
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={() => { if (!moved.current && scale === 1) onClose(); }}
+      onWheel={onWheel}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onDoubleClick={onDoubleClick}
+      style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(26,28,22,0.92)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", touchAction: "none", cursor: scale > 1 ? "grab" : "zoom-out" }}
+    >
+      <img
+        src={src}
+        alt="Enlarged"
+        draggable={false}
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "94%", maxHeight: "92%", objectFit: "contain", borderRadius: 8, boxShadow: "0 30px 80px rgba(0,0,0,0.5)", transform: `translate(${tx}px, ${ty}px) scale(${scale})`, transformOrigin: "center center", transition: pointers.current.size ? "none" : "transform 0.08s ease-out", willChange: "transform" }}
+      />
+      {/* Zoom toolbar — finger-friendly, works on desktop + mobile */}
+      <div onClick={(e) => e.stopPropagation()} style={{ position: "fixed", bottom: 22, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 10, background: "rgba(26,28,22,0.55)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 14, padding: "8px 12px", backdropFilter: "blur(4px)" }}>
+        <button title="Zoom out" onClick={() => { const { cx, cy } = centerOf(); zoomTo(1 / 1.4, cx, cy); }} style={btn}>−</button>
+        <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, minWidth: 52, textAlign: "center", fontFamily: "'Inter',sans-serif" }}>{Math.round(scale * 100)}%</span>
+        <button title="Zoom in" onClick={() => { const { cx, cy } = centerOf(); zoomTo(1.4, cx, cy); }} style={btn}>+</button>
+        <button title="Reset" onClick={reset} style={{ ...btn, fontSize: 18 }}>⟲</button>
+      </div>
+      <button title="Close" onClick={onClose} style={{ position: "fixed", top: 20, right: 24, ...btn, borderRadius: "50%" }}>✕</button>
+      <div style={{ position: "fixed", top: 22, left: 24, color: "rgba(255,255,255,0.7)", fontSize: 11.5, fontFamily: "'Inter',sans-serif", pointerEvents: "none", userSelect: "none", maxWidth: "60vw" }}>
+        Scroll or pinch to zoom · drag to pan · double-click to toggle
+      </div>
+    </div>
+  );
+}
+
 // Box that starts collapsed to about a normal card's height with a "click to
 // enlarge" hover hint; on click it expands to show everything, and the child
 // renders at a larger text size (it receives `expanded`).
@@ -2700,13 +2831,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       </>)}
 
-      {/* Lightbox */}
-      {lightbox && (
-        <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, zIndex:600, background:"rgba(26,28,22,0.88)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, cursor:"zoom-out" }}>
-          <img src={lightbox} alt="Enlarged" style={{ maxWidth:"94%", maxHeight:"92%", objectFit:"contain", borderRadius:8, boxShadow:"0 30px 80px rgba(0,0,0,0.5)" }}/>
-          <button onClick={() => setLightbox(null)} style={{ position:"fixed", top:20, right:24, background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:18 }}>✕</button>
-        </div>
-      )}
+      {/* Lightbox — zoomable/pannable (wheel/pinch zoom, drag pan, +/− buttons) */}
+      {lightbox && <ZoomableLightbox src={lightbox} onClose={() => setLightbox(null)} />}
 
       {/* Cover / site-plan delete confirmation */}
       {confirmDelImg && (
