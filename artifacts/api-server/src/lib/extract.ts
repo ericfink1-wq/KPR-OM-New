@@ -726,6 +726,7 @@ NEW UNDERWRITING SIGNALS — fold these into the grade, strengths, risks AND the
 - PRICING POWER (recentRenewalSpreadPct): recent renewals at higher rents (e.g. +20%) are hard evidence of below-market in-place rents / pricing power — a strength supporting mark-to-market.
 - OTHER INCOME (otherIncome): non-rent MARGIN income (utility resale, etc.) is less durable than contractual rent — note it and do not credit it like NOI.
 - TAX REASSESSMENT: when currentAssessedValue and the purchase/asking price are both present, compare the assessed-implied market (assessedValue ÷ the state's commercial assessment ratio — e.g. Ohio ~35%, Texas ~100%) to the price. If the price is WELL ABOVE the implied current market, flag a likely property-tax reassessment INCREASE as a risk (a real go-forward NOI hit). A disclosed taxAbatement that may not survive the sale is also a risk (current taxes are artificially low).
+- LOCATION QUALITY (demographics: population3mi, avgHHIncome3mi/medianHHIncome3mi, trafficCountVPD): higher household income AND higher population — ESPECIALLY when BOTH are high together — generally support HIGHER rents and TIGHTER (lower) cap rates, and signal a dense INFILL / URBAN trade area where supply is constrained (a strength: durable demand, pricing power, stronger residual value). Use this as an interpretive lens: a high-density, high-income location helps justify above-average in-place rent or a tighter going-in cap, and supports mark-to-market upside; a thin or low-income trade area is the opposite (more cap-rate cushion warranted, weaker rent growth). Conversely, a deal whose rent/cap looks aggressive for a WEAK trade area is a pricing risk. Weave it into the location sentence of the narrative and the strengths/risks. Compare to comparableDeals' demographics where present rather than asserting absolute thresholds.
 
 FINAL SELF-CHECK BEFORE YOU RETURN — re-read your own JSON and FIX any of these before outputting. These are the exact tie-outs verified downstream; catching them now keeps a wrong figure from landing:
 - UNITS: occupancy is a PERCENT 0–100 (never a 0–1 fraction, never >100). capRate is a percent ~3–12 (not basis points like 650, not a fraction like 0.065). Per-tenant occupancyCost is a percent (e.g. 11.8, not 0.118).
@@ -878,6 +879,13 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
     weightedAvgRentPSF: dealData.weightedAvgRentPSF, grossPotentialRent: dealData.grossPotentialRent,
     tenantsAsOf: dealData.tenantsAsOf, tenantsSource: dealData.tenantsSource,
     marketDemographics: dealData.marketDemographics ?? null,
+    // Flat demographic fields (the rent/cap ↔ income+population relationship): high
+    // income AND population together signal an infill/urban location that supports
+    // higher rents and tighter cap rates — see the LOCATION QUALITY signal in the prompt.
+    population3mi: dealData.population3mi ?? undefined,
+    medianHHIncome3mi: dealData.medianHHIncome3mi ?? undefined,
+    avgHHIncome3mi: dealData.avgHHIncome3mi ?? undefined,
+    trafficCountVPD: dealData.trafficCountVPD ?? undefined,
     kprThesis: thesis || undefined,
     // Center-level non-rent income (utility resale, EV, parking, storage) — durability
     // of NOI; and the current tax facts so the grade can flag a reassessment step-up.
