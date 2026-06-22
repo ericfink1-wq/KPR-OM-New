@@ -48,7 +48,7 @@ export function auditReimbursement(deals: Deal[]): { groups: ReimbDealGroup[]; f
       if (!text) continue;
       const f = reimbursementFlag(text);
       if (f?.label === "FIXED CAM") { fixedCam.push({ tenant: t.name || "(unnamed)", text }); fixedCamCount++; }
-      else if (f?.label === "GROSS") { gross.push({ tenant: t.name || "(unnamed)", text }); grossCount++; }
+      else if (f?.label === "GROSS" || f?.label === "MOD GROSS") { gross.push({ tenant: t.name || "(unnamed)", text }); grossCount++; }
     }
     if (fixedCam.length || gross.length) groups.push({ dealId: d.id, dealName: dealName(d), fixedCam, gross });
   }

@@ -906,7 +906,7 @@ export function reimbursementFromAbstract(a: LeaseAbstract | null | undefined): 
 }
 
 export interface ReimbFlag {
-  label: string;   // badge text shown in the roster: "NNN" | "FIXED CAM" | "GROSS"
+  label: string;   // badge text shown in the roster: "NNN" | "FIXED CAM" | "MOD GROSS" | "GROSS"
   method: string;  // canonical short method for backfilling reimbursementMethod
   warn: boolean;   // true = landlord-expense-risk (amber/red); false = clean net (green)
   color: string;
@@ -933,8 +933,26 @@ export function reimbursementFlag(text: string | null | undefined): ReimbFlag | 
     .replace(/\b(adjusted\s+)?gross\s+(sales|receipts)\b/gi, " ")
     .replace(/\bgross(ed)?[- ]?up\b/gi, " ")
     .replace(/\bgross\s+(leasable|rentable|floor)\s+area\b/gi, " ");
-  const grossLease = /\bgross\s+lease\b|\bfull[- ]?service\s+gross\b|\bfully\s+gross\b|\bmodified\s+gross\b|landlord\s+(pays|bears|absorbs)\s+all|no\s+pass-?through|no\s+(expense\s+)?reimbursement|no\s+recovery|(^|[^a-z])gross([^a-z]|$)/i.test(cleaned);
-  const net = /\b(triple\s*net|nnn|net(?:\s+lease)?\b|pro-?\s?rata|\bprs\b|proportionate\s+share|operating\s+cost\s+charge|\boc\s+charge\b|base\s+year|reimburse|tenant'?s\s+(pro-?rata\s+)?share|tenant\s+(pays|shall\s+pay|bears|carries))/i.test(blob);
+  const grossLeaseRaw = /\bgross\s+lease\b|\bfull[- ]?service\s+gross\b|\bfully\s+gross\b|\bmodified\s+gross\b|landlord\s+(pays|bears|absorbs)\s+all|no\s+pass-?through|no\s+(expense\s+)?reimbursement|no\s+recovery|(^|[^a-z])gross([^a-z]|$)/i.test(cleaned);
+  // Landlord truly absorbs everything → full GROSS (this wins even when the text
+  // also says "modified gross", e.g. "modified gross — landlord pays all expenses").
+  const landlordAll = /landlord\s+(pays|bears|absorbs)\s+all|no\s+pass-?through|no\s+(expense\s+)?reimbursement|no\s+recovery/i.test(cleaned);
+  // Pro-rata signal — a tenant that pays its proportionate share is NNN even if a
+  // base year is mentioned (the base year is just the controllable-CAM cap reference).
+  const proRata = /\bpro-?\s?rata\b|\bproportionate\s+share\b|\bprs\b|tenant'?s\s+(pro-?rata\s+)?share/i.test(blob);
+  const explicitModGross = /\bmodified\s+gross\b|\bmod\.?\s+gross\b/i.test(blob);
+  // Base-year / expense stop: tenant pays only the INCREASE above a base-year
+  // amount (landlord bears the base-year level), often capped — a modified-gross
+  // structure, NOT pro-rata NNN. Requires a base-year/stop token AND increase-over
+  // language (so a bare "base year" cap reference doesn't trip it).
+  const baseYearStop = /\bbase\s*year\b|\bexpense\s+stop\b|\btax\s+stop\b|\bbase[- ]?year\s+stop\b/i.test(blob)
+    && /\b(stop|increases?|excess|over|above|only)\b/i.test(blob);
+  const modGross = !landlordAll && (explicitModGross || (baseYearStop && !proRata));
+  // Genuine full gross — a gross lease / bare "gross", but NOT "modified gross".
+  const grossLease = grossLeaseRaw && !(modGross && !landlordAll);
+  // "base year" is intentionally NOT a net trigger — it signals a modified-gross
+  // base-year stop (handled above), not a triple-net structure.
+  const net = /\b(triple\s*net|nnn|net(?:\s+lease)?\b|pro-?\s?rata|\bprs\b|proportionate\s+share|operating\s+cost\s+charge|\boc\s+charge\b|reimburse|tenant'?s\s+(pro-?rata\s+)?share|tenant\s+(pays|shall\s+pay|bears|carries))/i.test(blob);
   const fixedCam = /\bfixed[- ]?cam\b|\bflat[- ]?cam\b|\bfixed\s+expense\b/i.test(blob)
     // ALSO catch the reverse word order the OMs actually use — "CAM: Fixed",
     // "CAM Fixed", "CAM is fixed", "CAM charge fixed". "Fixed" must follow CAM
@@ -942,6 +960,7 @@ export function reimbursementFlag(text: string | null | undefined): ReimbFlag | 
     // Fixed" (pro-rata CAM) do NOT trip it.
     || /\bcam\b\s*[:\-–(]?\s*(?:charge|amount|component|is|of|=|at|are)?\s*fixed\b/i.test(blob)
     || (/(operating\s+cost\s+charge|\boc\s+charge\b)/i.test(blob) && /\b(in\s+lieu|not\s+(a\s+|an\s+)?(variable|open|pro-?rata)|fixed)\b/i.test(blob));
+  if (modGross) return { label: "MOD GROSS", method: "Modified Gross", warn: true, color: "#9a6a1e", bg: "#f6ecd6", tip: "Modified gross / base-year stop — tenant pays only expense INCREASES above a base-year amount (often capped); the landlord bears the base-year level and the capped growth. Not pro-rata NNN, and not a full gross lease." };
   if (grossLease && !net) return { label: "GROSS", method: "Gross", warn: true, color: "#b91c1c", bg: "#fdecea", tip: "Gross lease — landlord absorbs expense growth (no recovery)." };
   if (fixedCam) return { label: "FIXED CAM", method: "Fixed CAM", warn: true, color: "#b45309", bg: "#fbe6cf", tip: "Net lease, but CAM is a FIXED / escalating amount (not pro-rata) — the landlord bears CAM growth above the escalator. Taxes & insurance still pass through; not a gross lease and not the same as pro-rata NNN." };
   if (net) return { label: "NNN", method: "NNN", warn: false, color: "#3f7a1f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata. A cap on controllable CAM does not make it gross or fixed." };
