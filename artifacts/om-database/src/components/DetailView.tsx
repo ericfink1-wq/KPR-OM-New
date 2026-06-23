@@ -434,39 +434,35 @@ function signalFirstLine(t: string, max = 135): string {
   return s.replace(/\.$/, "");
 }
 
-// Risk/upside bullet list with per-item expand — click a clipped "…" bullet to read its
-// full text, and "+N more" to reveal the rest. Fixes the Summary tab's truncated bullets
-// that previously had no way to expand (the full detail also lives on the AI Analysis tab).
+// Risk/upside bullet list with ONE Show more/less control that expands everything at
+// once — the clipped "…" previews become full text AND any items beyond the first four
+// are revealed. (Fixes the Summary tab bullets that couldn't be expanded; the full
+// detail also lives on the AI Analysis tab.)
 function SignalList({ items, dot }: { items: string[]; dot: string }) {
-  const [open, setOpen] = useState<Record<number, boolean>>({});
-  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   if (!items.length) return <div style={{ fontSize: 12, color: "#a89f8f" }}>—</div>;
-  const visible = showAll ? items : items.slice(0, 4);
+  const isClipped = (t: string) => {
+    const full = (t || "").replace(/\s+/g, " ").trim();
+    const short = signalFirstLine(t);
+    return short.endsWith("…") || short.replace(/[.\s]+$/, "") !== full.replace(/[.\s]+$/, "");
+  };
+  // Show the toggle whenever the collapsed view hides anything: extra items OR a clipped preview.
+  const hasMore = items.length > 4 || items.slice(0, 4).some(isClipped);
+  const visible = expanded ? items : items.slice(0, 4);
   return (
     <>
-      {visible.map((t, i) => {
-        const full = (t || "").replace(/\s+/g, " ").trim();
-        const short = signalFirstLine(t);
-        const clipped = short.endsWith("…") || short.replace(/[.\s]+$/, "") !== full.replace(/[.\s]+$/, "");
-        const isOpen = !!open[i];
-        return (
-          <div key={i} style={{ display: "flex", gap: 7, marginBottom: 6 }}>
-            <span style={{ color: dot, fontWeight: 700, fontSize: 12 }}>•</span>
-            <span
-              onClick={clipped ? () => setOpen(o => ({ ...o, [i]: !o[i] })) : undefined}
-              title={clipped ? (isOpen ? "Show less" : "Show full") : undefined}
-              style={{ flex: 1, fontSize: 12, lineHeight: 1.4, color: "#3f3d37", fontFamily: "'Inter',sans-serif", cursor: clipped ? "pointer" : "default" }}
-            >
-              {isOpen ? full : short}
-              {clipped && <span style={{ color: dot, fontWeight: 700, marginLeft: 4, fontSize: 10 }}>{isOpen ? "▴" : "▾"}</span>}
-            </span>
-          </div>
-        );
-      })}
-      {items.length > 4 && (
-        <button onClick={() => setShowAll(s => !s)}
+      {visible.map((t, i) => (
+        <div key={i} style={{ display: "flex", gap: 7, marginBottom: 6 }}>
+          <span style={{ color: dot, fontWeight: 700, fontSize: 12 }}>•</span>
+          <span style={{ flex: 1, fontSize: 12, lineHeight: 1.4, color: "#3f3d37", fontFamily: "'Inter',sans-serif" }}>
+            {expanded ? (t || "").replace(/\s+/g, " ").trim() : signalFirstLine(t)}
+          </span>
+        </div>
+      ))}
+      {hasMore && (
+        <button onClick={() => setExpanded(e => !e)}
           style={{ background: "none", border: "none", padding: "2px 0 0", cursor: "pointer", color: dot, fontWeight: 600, fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
-          {showAll ? "Show fewer ▴" : `+${items.length - 4} more ▾`}
+          {expanded ? "Show less ▴" : "Show more ▾"}
         </button>
       )}
     </>
