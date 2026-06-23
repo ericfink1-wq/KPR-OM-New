@@ -657,6 +657,34 @@ export async function apiAuditStats(): Promise<{ deals: number; issues: number; 
   return resp.json() as Promise<{ deals: number; issues: number; high: number }>;
 }
 
+export interface TxnImportRow {
+  propertyName: string;
+  address?: string;
+  txnPurchasePrice?: number | null;
+  txnCloseDate?: string | null;
+  txnSeller?: string | null;
+  acqNOIAtClose?: number | null;
+  acqCapRate?: number | null;
+}
+export interface TxnImportResult {
+  ok: boolean;
+  dryRun: boolean;
+  matchedCount: number;
+  unmatchedCount: number;
+  matched: { propertyName: string; id: string; fieldsSet: string[] }[];
+  unmatched: string[];
+}
+// Bulk-set transaction/acquisition fields on existing deals (matched by name/address),
+// patching ONLY those fields and never wiping the rest. dryRun reports without writing.
+export async function apiImportTransactions(rows: TxnImportRow[], dryRun = false): Promise<TxnImportResult> {
+  const resp = await apiFetch(`/deals/import-transactions`, { method: "POST", body: JSON.stringify({ rows, dryRun }) });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Transaction import failed");
+  }
+  return resp.json() as Promise<TxnImportResult>;
+}
+
 export async function apiReauditDeals(): Promise<{ ok: boolean; scanned: number; flagged: number; added: number; cleared: number }> {
   const resp = await apiFetch(`/deals/reaudit`, { method: "POST" });
   if (!resp.ok) {

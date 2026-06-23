@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useIsMobile } from "../hooks/use-mobile";
 import { startAiTask, finishAiTask } from "../lib/aiProgress";
 
@@ -415,6 +415,35 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     }
   };
 
+  // Bulk-load purchase price/date, seller, NOI-at-close and going-in cap onto existing
+  // deals from a JSON file ({ "rows": [{ propertyName, txnPurchasePrice, txnCloseDate,
+  // txnSeller, acqNOIAtClose, acqCapRate }, ...] }). Matched by property name (+address);
+  // ONLY those fields are set — roster, financials and notes are untouched.
+  const txnFileRef = useRef<HTMLInputElement>(null);
+  const handleImportTransactions = async (file: File) => {
+    setMaintaining(true); setMaintainMsg("Importing transactions…");
+    try {
+      const text = await file.text();
+      let parsed: unknown;
+      try { parsed = JSON.parse(text); } catch { throw new Error("That file isn't valid JSON"); }
+      const rows = Array.isArray(parsed) ? parsed : (parsed as { rows?: unknown })?.rows;
+      if (!Array.isArray(rows)) throw new Error('Expected { "rows": [ ... ] } or a JSON array');
+      const r = await fetch("/api/deals/import-transactions", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows }),
+      }).then(x => x.json() as Promise<{ ok: boolean; matchedCount?: number; unmatchedCount?: number; unmatched?: string[]; error?: string }>);
+      if (!r.ok) throw new Error(r.error || "Import failed");
+      const um = (r.unmatched && r.unmatched.length) ? ` · unmatched: ${r.unmatched.join(", ")}` : "";
+      setMaintainMsg(`✓ Set transactions on ${r.matchedCount ?? 0} deal${(r.matchedCount ?? 0) === 1 ? "" : "s"}${r.unmatchedCount ? ` · ${r.unmatchedCount} unmatched` : ""}${um} — reloading…`);
+      setTimeout(() => window.location.reload(), 2400);
+    } catch (e) {
+      setMaintainMsg(`⚠ ${e instanceof Error ? e.message : "failed"}`);
+    } finally {
+      setMaintaining(false);
+    }
+  };
+
   // Admin: permanently remove soft-deleted (trashed) deals whose data lingers in the
   // DB. Snapshots first on the server, so a mistaken purge is restorable from Backup.
   const handlePurgeTrashed = async () => {
@@ -624,6 +653,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                         ["🧹 Clean & re-audit all", () => { setMaintMenuOpen(false); handleCleanAndReaudit(); }, "#383a37", maintaining, "Auto-fix the unambiguous issues across every deal, then re-check all the numbers. Token-free, snapshots first (reversible)."],
                         ["↺ Rebuild comps index", () => { setMaintMenuOpen(false); handleRebuildComps(); }, "#383a37", rebuildingComps, "Rebuild the comparable-sales index from every deal's owned/manual/OM comps."],
                         ["↺ Rebuild tenant index", () => { setMaintMenuOpen(false); handleRebuild(); }, "#383a37", rebuilding, "Rebuild the tenant search index across all deals."],
+                        ...(isAdmin ? [["💲 Import transactions (JSON)", () => { setMaintMenuOpen(false); txnFileRef.current?.click(); }, "#383a37", maintaining, "Bulk-set purchase price/date, seller, NOI-at-close and going-in cap on existing deals from a JSON file (matched by property name). ONLY those fields change — roster, financials and notes are untouched."] as const] : []),
                         ...(isAdmin ? [["🗑 Remove deleted deals", () => { setMaintMenuOpen(false); handlePurgeTrashed(); }, "#b06a4e", maintaining, "Permanently remove trashed deals whose data still sits in the DB. Snapshots first."] as const] : []),
                       ] as [string, () => void, string, boolean, string][]).map(([label, fn, color, busy, tip]) => (
                         <button key={label} onClick={fn} disabled={busy} title={tip}
@@ -636,6 +666,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                     </div>
                   </>
                 )}
+                <input ref={txnFileRef} type="file" accept=".json,application/json" style={{ display: "none" }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleImportTransactions(f); e.currentTarget.value = ""; }} />
               </div>
             </div>
             {maintainMsg && <span style={{ fontSize: 10.5, color: maintainMsg.startsWith("✓") ? "#0f9d63" : maintainMsg.startsWith("⚠") ? "#dc2626" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>{maintainMsg}</span>}

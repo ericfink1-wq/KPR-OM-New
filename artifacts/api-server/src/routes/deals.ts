@@ -12,6 +12,7 @@ import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from 
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { autoMaintainDealData } from "../lib/dealMaintenance";
+import { normalizeDate } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
 import { ensureAuditHistoryTable, runDailySelfClean } from "../lib/selfImprove";
 import { runAutofixSweep } from "../lib/autofixSweep";
@@ -420,6 +421,82 @@ router.post("/deals/import", requireAuth, async (req, res) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[import] top-level error:", err);
     req.log.error({ err }, "Failed to import deal");
+    res.status(500).json({ error: msg });
+  }
+});
+
+// POST /api/deals/import-transactions — bulk-set ONLY transaction/acquisition fields
+// (purchase price/date, seller, NOI-at-close, going-in cap) on EXISTING deals, matched
+// by propertyName (+ address). Unlike /deals/import this NEVER overwrites or wipes any
+// other field: it overlays a strict whitelist of txn*/acq* keys onto each matched deal
+// and leaves the rest of the record exactly as-is. Built for loading a portfolio-wide
+// transaction-history spreadsheet without touching roster/financials. Returns a
+// matched/unmatched report; dryRun:true reports the matches without writing.
+const TXN_IMPORT_KEYS = new Set([
+  "txnPurchasePrice", "txnCloseDate", "txnLoiDate", "txnSeller", "txnBroker", "txnBuyer",
+  "txnSalePrice", "txnSaleDate", "acqCapRate", "acqNOIAtClose", "acqEntity", "acqBroker", "acqContractDate",
+]);
+const TXN_DATE_KEYS = new Set(["txnCloseDate", "txnLoiDate", "txnSaleDate", "acqContractDate"]);
+router.post("/deals/import-transactions", requireAuth, async (req, res) => {
+  try {
+    const body = req.body as { rows?: unknown; dryRun?: boolean };
+    const rows = Array.isArray(body.rows) ? body.rows : null;
+    if (!rows) { res.status(400).json({ error: "Body must be { rows: [...] }" }); return; }
+    const dryRun = body.dryRun === true;
+
+    const normName = (v: unknown) => (typeof v === "string" ? v.trim().toLowerCase() : null);
+    const normAddr = (a: unknown): string | null => {
+      if (typeof a !== "string") return null;
+      return a.trim().toLowerCase().replace(/[.,]/g, "")
+        .replace(/\broad\b/g, "rd").replace(/\bstreet\b/g, "st").replace(/\bavenue\b/g, "ave")
+        .replace(/\bboulevard\b/g, "blvd").replace(/\bdrive\b/g, "dr").replace(/\blane\b/g, "ln")
+        .replace(/\bparkway\b/g, "pkwy").replace(/\bsuite\b.*$/g, "").replace(/\s+/g, " ").trim() || null;
+    };
+
+    const allRows = await db.select().from(dealsTable);
+    const matched: { propertyName: string; id: string; fieldsSet: string[] }[] = [];
+    const unmatched: string[] = [];
+
+    for (const raw of rows) {
+      if (!raw || typeof raw !== "object") continue;
+      const row = raw as Record<string, unknown>;
+      const wantName = normName(row.propertyName);
+      if (!wantName) { unmatched.push(String(row.propertyName ?? "(no name)")); continue; }
+      const wantAddr = normAddr(row.address);
+
+      // Match on propertyName (required) + address (only when BOTH sides have one)
+      const hit = allRows.find(r => {
+        const d = r.data as Record<string, unknown>;
+        if (normName(d.propertyName) !== wantName) return false;
+        const eAddr = normAddr(d.address);
+        if (wantAddr && eAddr && wantAddr !== eAddr) return false;
+        return true;
+      });
+      if (!hit) { unmatched.push(String(row.propertyName)); continue; }
+
+      // Build the strict txn/acq patch — only whitelisted keys with a real value.
+      const patch: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(row)) {
+        if (!TXN_IMPORT_KEYS.has(k)) continue;
+        if (v === null || v === undefined || v === "") continue;
+        patch[k] = TXN_DATE_KEYS.has(k) ? (normalizeDate(v) ?? v) : v;
+      }
+      const fieldsSet = Object.keys(patch);
+      if (!fieldsSet.length) { unmatched.push(`${String(row.propertyName)} (no txn fields)`); continue; }
+      matched.push({ propertyName: String(hit.data && (hit.data as Record<string, unknown>).propertyName), id: hit.id, fieldsSet });
+
+      if (!dryRun) {
+        const merged = { ...(hit.data as Record<string, unknown>), ...patch };
+        await db.update(dealsTable).set({ data: merged, updatedAt: new Date() }).where(eq(dealsTable.id, hit.id));
+        // Owned-transaction comps key off txnPurchasePrice/txnCloseDate — refresh the index.
+        setImmediate(() => { void rebuildCompsIndex(hit.id, merged).catch(() => {}); });
+      }
+    }
+
+    res.json({ ok: true, dryRun, matchedCount: matched.length, unmatchedCount: unmatched.length, matched, unmatched });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    req.log.error({ err }, "Failed to import transactions");
     res.status(500).json({ error: msg });
   }
 });
