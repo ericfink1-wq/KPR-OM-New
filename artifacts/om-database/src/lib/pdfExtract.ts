@@ -539,9 +539,73 @@ async function _pickCoverPage(pdf: any, lib: any): Promise<number> {
   return anyPhoto ? bestPage : 1;
 }
 
+// Choose the SITE-PLAN page(s) from the front-section page texts. OM site plans sit on
+// ONE page ~95% of the time, yet the old logic captured the top THREE scoring pages —
+// so the real plan came back bundled with whatever else was nearby and SF-label-heavy:
+// the rent roll, the lease-expiration schedule, the tenant summary, an aerial. This
+// returns the SINGLE best page (and at most a genuine adjacent strong-titled spread),
+// and it rejects the look-alikes:
+//   • the table of contents (matches "site plan" but is a list, not the plan);
+//   • rent rolls / lease-expiration / financial TABLES (full of "<n> SF" tokens but
+//     hundreds of text items — a table, not a diagram);
+//   • narrative pages that merely mention the site plan.
+// Each candidate carries its text AND its text-ITEM count — a diagram has a handful of
+// labels, a rent-roll table has hundreds — so a graphic plan outranks an SF-heavy table.
+export function pickSitePlanPages(
+  pages: { page: number; text: string; itemCount: number }[],
+): number[] {
+  const strong = /site\s*plan|site\s*map|leasing\s*plan|leasing\s*map|site\s*layout|plot\s*plan|lease\s*plan|overall\s*plan|parcel\s*map|tax\s*parcel|key\s*plan/i;
+  const weak = /aerial|site\s*aerial|asset\s*overview/i;
+  const toc = /table\s+of\s+contents/i;
+  // Pages full of "SF" labels that are really TABLES/financials, not a plan.
+  const tableLike = /rent\s*roll|lease\s*expiration|expiration\s*report|rent\s*schedule|cash\s*flow|operating\s*statement|income\s*statement|tenant\s*sales|debt\s*service|argus|amortization/i;
+  const sfLabel = /\b\d{1,3}(?:,\d{3})?\s*SF\b/gi;
+
+  const scoreOf = (text: string, itemCount: number): { s: number; strongHit: boolean } => {
+    if (toc.test(text)) return { s: 0, strongHit: false };
+    const strongHit = strong.test(text);
+    // A rent roll / lease-expiration / financial table is never a site plan, even when
+    // it's full of "SF" labels — unless the page is explicitly titled a site/leasing plan.
+    if (tableLike.test(text) && !strongHit) return { s: 0, strongHit: false };
+    const sfCount = (text.match(sfLabel) || []).length;
+    let s = 0;
+    if (strongHit) {
+      // A real plan is graphic (few text items) or carries suite SF labels; a prose page
+      // that just references the plan is dense text with few SF tokens — score it lower.
+      s = (itemCount <= 300 || sfCount >= 3) ? 100 : 40;
+    } else if (sfCount >= 6 && itemCount <= 220) {
+      s = 50; // SF-dense GRAPHIC page (suite labels on a diagram), not a big table
+    } else if (weak.test(text)) {
+      s = 20; // bare "aerial" — weak signal
+    }
+    if (s <= 0) return { s: 0, strongHit };
+    // Among comparable pages prefer the most graphic one: fewer text items = more
+    // diagram-like, so the actual plan beats a narrative that merely mentions it.
+    s -= Math.min(itemCount, 600) * 0.05;
+    return { s, strongHit };
+  };
+
+  const scored = pages
+    .map(p => ({ page: p.page, ...scoreOf(p.text, p.itemCount) }))
+    .filter(p => p.s > 0)
+    .sort((a, b) => b.s - a.s || a.page - b.page);
+  if (!scored.length) return [];
+  const best = scored[0];
+  const chosen = [best.page];
+  // Allow a genuine TWO-PAGE spread: an ADJACENT page that is ALSO strong-titled and
+  // scores close to the winner (a deliberate "Site Plan" spread). Otherwise one page.
+  if (best.strongHit) {
+    const neighbor = scored.find(
+      p => p.strongHit && Math.abs(p.page - best.page) === 1 && p.s >= best.s - 15,
+    );
+    if (neighbor) chosen.push(neighbor.page);
+  }
+  return chosen.sort((a, b) => a - b);
+}
+
 // Auto-detect cover + site plan pages from the PDF.
 // Cover: best photographic page among the first few (see _pickCoverPage).
-// Site plan: auto-detected by keyword scan; falls back to page picker.
+// Site plan: single best page by keyword/graphic scan (see pickSitePlanPages).
 export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
   cover: string | null;
   coverThumb: string | null;
@@ -574,18 +638,14 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
     result.coverThumb = c.thumb;
   } catch {}
 
-  // AUTO SITE-PLAN DETECTION (re-enabled per Eric). Bounded for speed: scan only the
-  // FRONT ~40 pages (OM site plans always live in the first section) and DON'T render
-  // the slow 24-page picker fallback — if nothing is detected we just leave it empty
-  // for the user to set manually. The heavy part that caused old slowdowns is gone.
+  // AUTO SITE-PLAN DETECTION. Scan only the FRONT ~40 pages (OM site plans always live
+  // in the first section) for speed. Pick the SINGLE best site-plan page via the pure
+  // pickSitePlanPages (below) — this fixed the old "captures the plan plus a couple of
+  // neighboring pages" behavior, which took the top THREE scoring pages and so bundled
+  // the rent roll / lease-expiration schedule / aerial that sit near the real plan.
   try {
     const scanPages = Math.min(pdf.numPages, 40);
-    const strong = /site\s*plan|site\s*map|leasing\s*plan|leasing\s*map|site\s*layout|plot\s*plan|lease\s*plan|overall\s*plan|parcel\s*map|tax\s*parcel|key\s*plan/i;
-    const weak = /aerial|site\s*aerial|asset\s*overview/i;
-    const toc = /table\s+of\s+contents/i;
-    const sfLabel = /\b\d{1,3}(?:,\d{3})?\s*SF\b/gi;
-
-    const pageTexts: Record<number, string> = {};
+    const pages: { page: number; text: string; itemCount: number }[] = [];
     const textPages = Array.from({ length: Math.max(0, scanPages - 1) }, (_, i) => i + 2);
     const TEXT_CONC = 6;
     for (let i = 0; i < textPages.length; i += TEXT_CONC) {
@@ -593,25 +653,11 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
         try {
           const page = await pdf.getPage(p);
           const content = await page.getTextContent();
-          pageTexts[p] = content.items.map((it: any) => it.str).join(" ");
+          pages.push({ page: p, text: content.items.map((it: any) => it.str).join(" "), itemCount: content.items.length });
         } catch {}
       }));
     }
-    // Score each page: the real plan is dense with "<n> SF" tenant labels even when the
-    // "Site Plan" title is baked into artwork; the TOC matches the keyword but isn't one.
-    const score = (p: number) => {
-      const t = pageTexts[p] || "";
-      if (toc.test(t)) return 0;
-      if (strong.test(t)) return 3;
-      if ((t.match(sfLabel) || []).length >= 5) return 2;
-      if (weak.test(t)) return 1;
-      return 0;
-    };
-    const matches: number[] = [];
-    for (let p = 2; p <= scanPages; p++) if (score(p) > 0) matches.push(p);
-    matches.sort((a, b) => score(b) - score(a) || a - b);
-    const chosen = matches.slice(0, 3).sort((a, b) => a - b);
-    for (const p of chosen) {
+    for (const p of pickSitePlanPages(pages)) {
       try {
         const img = await _captureSitePlan(pdf, p, lib);
         if (img) result.sitePlan.push(img);
