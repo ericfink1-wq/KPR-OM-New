@@ -284,7 +284,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                 ) : (
                   <div className="grid grid-cols-2 lg:flex lg:flex-wrap" style={{ gap: 10, marginBottom: 4, width: "100%" }}>
                     <StatBox label="Properties" value={portfolio.count} accent="#6dba43" />
-                    {portfolio.value > 0 && <StatBox label="Portfolio Value" value={fmtM(portfolio.value)} accent="#6dba43" />}
+                    {portfolio.value > 0 && <StatBox label="Total Cost Basis" value={fmtM(portfolio.value)} accent="#6dba43" />}
                     {portfolio.sf > 0 && <StatBox label="Square Footage" value={fmtSF(portfolio.sf)} />}
                     {portfolio.igRentPct != null && <StatBox label="Investment Grade Tenant Rent" value={`${portfolio.igRentPct}%`} accent="#3f7a1f" />}
                     {portfolio.anchors.length > 0 && (
