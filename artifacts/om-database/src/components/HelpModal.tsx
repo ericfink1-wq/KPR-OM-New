@@ -80,26 +80,17 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Drop in a document — <B>PDF or Excel/CSV</B> — and the AI reads it. It <B>auto-detects the type</B> (OM, rent roll, lease options, or sales report) and routes each one to the right deal (asking only if unsure).</p>
-        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#eef7ee", border:"1px solid #cfe9c4", borderRadius:7, color:"#2f5d2a", fontSize:12.5 }}>✨ <B>Drop the whole set at once.</B> For one property you can drop the <B>OM + rent roll + lease-options + sales report together</B> — the app sorts each file, groups them to the same property, builds one deal, and <B>auto-refreshes the analysis</B> when it's done. No need to do them one at a time.</p>
-        <BriefList items={[
-          <><B>OM</B> — the foundation: tenants, financials, lease terms, demographics, narrative, grade, cover. ~1–3 min each (the OM pass runs on a stronger model for accuracy).</>,
-          <><B>Rent roll</B> — your authoritative current roster (SF, current rent, dates, rent steps). It <B>only adds to and fills in</B> the roster — it can never delete a tenant.</>,
-          <><B>Lease options</B> — enriches each tenant's <B>renewal-option ladder</B>; it never adds or removes tenants.</>,
-          <><B>Sales report</B> — tenant sales by year; matched suite-aware to the roster and stacked by vintage.</>,
-          <><B>Financing docs</B> — a <B>term sheet / loan doc</B>, <B>swap confirmation</B>, or <B>amortization schedule</B> are recognized too and fill in the deal's Financing tab (loan terms, swap, schedule).</>,
-        ]} />
-        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}><B>Confirm import details:</B> if the AI was unsure about a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner — confirm, dismiss, or fix it right there.</p>
-        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>AI reads cost money.</B> Each PDF/Excel read uses paid tokens (a full OM is the biggest). Avoid re-uploading the same file; browsing, editing, and exporting are free.</p>
+        <p style={{ margin:0 }}>Drop in a document — <B>PDF or Excel/CSV</B> — and the AI reads it, <B>auto-detects the type</B>, and routes it to the right deal.</p>
+        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#eef7ee", border:"1px solid #cfe9c4", borderRadius:7, color:"#2f5d2a", fontSize:12.5 }}>✨ <B>Drop the whole set at once.</B> The OM + rent roll + lease-options + sales report for one property can go in together — the app sorts each file, builds one deal, and auto-refreshes the analysis.</p>
+        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#fdf6e8", border:"1px solid #ecd9a8", borderRadius:7, color:"#6f5b2a", fontSize:12.5 }}>💲 <B>AI reads cost money.</B> Each PDF/Excel read uses paid tokens (a full OM is the biggest); browsing, editing, and exporting are free.</p>
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Smart sorting is automatic</B> — the four file types are detected by their content/name and merged into one deal. The rent roll's fresher rents win on shared tenants; nothing gets wiped.</>,
-        <><B>Confirm import details</B> — if the AI was unsure of a value, the deal shows a <B>"📝 to confirm"</B> banner. Confirm, dismiss, or fix it (type the value, or describe the change in plain English). This corrects <em>this deal only</em> — it doesn't change how future OMs are read.</>,
-        <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → ↺ Rebuild from OM</B> (or the small <em>Re-run from PDF</em> link under it if the saved OM text came out garbled), or fix any value with its pencil icon. A very large/complex OM is capped at ~5 min so it can't churn tokens; if it stops early it flags the roster for review.</>,
-        <><B>Rent roll vs. OM:</B> a rent roll becomes your verified roster (teal "RENT ROLL" tag); a later OM re-extraction won't overwrite it. Analysis auto-refreshes after an import, so the grade/narrative reflect the final merged roster.</>,
-        <><B>Sales reports stack by year</B> — upload one annually to build a sales trend.</>,
+        <><B>The file types it handles:</B> <B>OM</B> — the foundation (tenants, financials, lease terms, demographics, grade, cover; ~1–3 min on a stronger model). <B>Rent roll</B> — your authoritative roster (only adds/fills, never deletes a tenant; gets a teal "RENT ROLL" tag a later OM won't overwrite). <B>Lease options</B> — renewal-option ladders. <B>Sales report</B> — tenant sales by year, suite-matched and stacked by vintage. <B>Financing docs</B> (term sheet/loan, swap confirmation, amortization schedule) fill the Financing tab.</>,
+        <><B>Confirm import details</B> — if the AI was unsure of a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner. Confirm, dismiss, or fix it (type the value, or describe the change in plain English). This corrects <em>this deal only</em> — it doesn't change how future OMs are read.</>,
+        <><B>Smart sorting is automatic</B> — types are detected by content/name and merged into one deal; the rent roll's fresher rents win on shared tenants, nothing gets wiped. Analysis auto-refreshes after import.</>,
+        <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → ↺ Rebuild from OM</B> (or the <em>Re-run from PDF</em> link if the saved text came out garbled), or fix any value with its pencil icon. A very large OM is capped at ~5 min so it can't churn tokens; if it stops early it flags the roster for review.</>,
         <><B>Advanced:</B> the ▾ by Upload also offers <em>Import a folder</em> and <em>Upload .json</em> (both merge by address; JSON deals auto-score).</>,
       ]} />
     ),
@@ -110,17 +101,17 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio" },
     brief: (
       <>
-        <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library, organized by status (Prospect → Under Contract → Owned → Sold, or Passed) — active deals surface first.</p>
+        <p style={{ margin:0 }}>The <B>Portfolio</B> tab is your deal library, organized by status (Prospect → Under Contract → Owned → Sold, or Passed) — active deals first.</p>
         <BriefList items={[
-          <><B>Two views</B> (⊞/☰ toggle): a <B>sortable table</B> by default (property, status, city/state, market, anchor, SF, occupancy, cap rate, price, seller) or <B>visual cards</B> showing the cover, status, AI score, location, and the headline <B>NOI · cap rate · WALT</B>.</>,
-          <><B>Filters & search</B> — multi-select state/type/status, and a search box that matches the <B>columns you see</B> (property, status, city, state, MSA, anchor, seller) plus a deal's saved <B>aliases</B>, so an alternate name still finds it.</>,
-          <><B>Compare</B> — pick 2+ deals for a side-by-side: best value per metric highlighted, KPR's own economics next to the OM figures, shared tenants, an AI read, and Excel export.</>,
-          <><B>Bulk actions</B> — checkboxes (on hover) to re-status several deals at once, find their sale records, or pull demographics.</>,
+          <><B>Two views</B> (⊞/☰): a sortable <B>table</B> or visual <B>cards</B> with the cover, status, AI score, and headline NOI · cap rate · WALT.</>,
+          <><B>Filters & search</B> — multi-select state/type/status, and a search box matching the columns you see plus a deal's saved aliases.</>,
+          <><B>Compare</B> — pick 2+ deals for a side-by-side: best value per metric, KPR vs. OM economics, shared tenants, an AI read, and Excel export.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
+        <><B>Bulk actions</B> — checkboxes (on hover) re-status several deals at once, find their sale records, or pull demographics.</>,
         <><B>Red-flag badges</B> are AI-generated during extraction (rollover concentration, below-market rent, gross leases, co-tenancy risk) — click a deal for the full list.</>,
         <><B>The nav count</B> ("Portfolio (28)") is your whole library including Prospects/Passed, not just owned.</>,
       ]} />
@@ -132,32 +123,25 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "portfolio", label: "Go to Portfolio — open any deal" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Click any card to open its detail page, organized into tabs across the top. By default you see the four everyday tabs — <B>Summary, AI Analysis, Tenants & Sales,</B> and <B>Market & Comps</B>. The deeper underwriting tabs (<B>Transaction Details, Financing, Underwriting</B>) are tucked behind a <B>"Show underwriting"</B> toggle in the top bar — flick it on when you need them, off to keep the page clean. Each tab's <B>▾</B> jumps straight to a section within it.</p>
-        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#eef7ee", border:"1px solid #cfe9c4", borderRadius:7, color:"#2f5d2a", fontSize:12.5 }}>✦ <B>The Summary tab is the at-a-glance read.</B> A stat band of the headline metrics, the AI highlights, a side-by-side <B>Upside / Key Risks</B> strip, an <B>anchor comparison</B> (each anchor's rent, term & sales vs. the chain's average across your book), then key financials and your notes. A <B>◆ DATA</B> confidence badge near the title scores how complete/consistent this deal's data is and lists what's missing.</p>
-        <BriefList items={[
-          <><B>Summary & editable address</B> — stat band, cover, site plan, key financials, and your notes. Click the address under the title to fill in street/city/state (the state drives Closing Costs). Type a date any common way — <em>3/12/26</em> — and it standardizes when you click out.</>,
-          <><B>Tenants & Sales</B> — every lease (SF, rent/SF, annual rent, dates, term, rent steps, options, reimbursements) with <B>Anchor, Investment-Grade, NAP, dark-store</B> and <B>ATM</B> badges; click a tenant name for all its locations. <B>Tenant Sales</B> tracks figures by year and shows a green ▲ / red ▼ on the latest year when sales are up or down vs. the prior year. A roster action bar lets you <B>⬆ Refresh from rent roll</B> (upload a current PDF/Excel), <B>⌘ Paste roster</B> (drop in a roster from Claude — token-free, no AI call), and export the roster as a clean <B>Excel</B> or a polished one-page institutional <B>Rent roll — PDF</B> (KPI band, grouped anchors/in-line/vacant, options & tenant sales).</>,
-          <><B>Lease Risk (anchor dependency)</B> — on the Tenants tab, pick one or more anchors to model "what if they go dark": the <B>co-tenancy / kickout</B> rent relief and termination exposure, read live from the disclosed clauses and any uploaded lease abstracts (an executed abstract can flip a clause to <em>verified</em> or <em>mitigated</em>).</>,
-          <><B>Site Agreements / REAs & lease abstracts</B> — record property-level recorded documents (OEAs, reciprocal easements, use restrictions, cost-share), and upload per-tenant lease abstracts via <B>⬆ Upload abstracts</B>; <B>Export abstracts</B> writes the whole set to an Excel workbook (an Issues Summary tab plus one detailed tab per tenant).</>,
-          <><B>How this deal compares to your book</B> (Summary) — a token-free benchmark putting this deal's <B>going-in cap rate, expense ratio, and in-place rent PSF</B> against comparable deals in your own database (<em>your "book" = the other deals you've loaded</em> — same center type when there are enough peers, else the whole portfolio), showing where it sits on the p25–median–p75 band. Informational — it changes no numbers.</>,
-          <><B>AI Analysis</B> — narrative highlights, deal score, upside and red flags, plus <B>Our Thesis</B> (type why you like it; <B>"Save & Re-grade"</B> folds it into the grade, which stays objective). The grade also reads the <B>trade-area demographics</B> as a location-quality lens — a dense, high-income/high-population area supports higher rents and a tighter cap (and flags rent/cap that looks aggressive for a weaker trade area).</>,
-          <><B>Financing</B> — record the loan (lender, rate, term, amortization) and estimate early-payoff cost: a <B>prepayment-penalty</B> calculator (step-down / yield-maintenance / defeasance) and a <B>swap-breakage</B> estimator. Import a swap confirmation, or <B>enter/edit the swap by hand</B> — it seeds today's market rate from Today's Rates. Preferred equity has its own block.</>,
-          <><B>Market & Comps</B> — the <B>Comp Benchmark</B> (median cap rate & price/SF vs. comparable trades, with ★ star / × drop / click-to-expand) and <B>1/3/5-mile</B> Census demographics.</>,
-          <><B>Transaction & Underwriting</B> — the purchase / closing-cost record, a per-state <B>property-tax reassessment forecaster</B> (when a sale resets the assessment, and the likely new bill), and <B>KPR's own economics plus a cash-flow projection</B>, kept separate from the OM-stated figures.</>,
-        ]} />
+        <p style={{ margin:0 }}>Click any card to open its detail page, organized into tabs. By default you see four everyday tabs — <B>Summary, AI Analysis, Tenants & Sales,</B> and <B>Market & Comps</B>; a <B>"Show underwriting"</B> toggle reveals the deeper tabs (Transaction, Financing, Underwriting) when you need them.</p>
+        <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#eef7ee", border:"1px solid #cfe9c4", borderRadius:7, color:"#2f5d2a", fontSize:12.5 }}>✦ <B>Start on the Summary tab</B> — a stat band of the headline metrics, AI highlights, a side-by-side <B>Upside / Key Risks</B> strip, an <B>anchor comparison</B> (rent, term & sales vs. the chain's average across your book), then key financials and your notes. A <B>◆ DATA</B> badge scores how complete this deal's data is.</p>
+        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}>Expand below for what lives on each tab and how editing, re-analysis and the calculators work.</p>
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Edit any field</B> via its pencil icon (auto-saved, logged); lock verified figures so a re-extraction won't overwrite them.</>,
-        <>In a deal's <B>Analyze</B> menu, <B>↺ Rebuild from OM</B> re-reads the saved OM and regenerates everything (it won't wipe a manual roster without confirming); <B>✨ Refresh Analysis (current roster)</B> regenerates the grade/narrative from the <em>current</em> roster (safe after a rent-roll paste). Each asks a quick <B>"this uses tokens — continue?"</B> first. The deal's <B>score re-benchmarks against your portfolio automatically</B> as you add more deals — no button to press.</>,
-        <><B>Re-uploading for an existing property never overwrites your data.</B> It recognizes the deal (even if the file is renamed), <B>fills only blank fields</B>, and <B>flags conflicting numbers</B> (price, cap, NOI, SF, occupancy…) as a review item — keep yours or apply the OM's in one click.</>,
-        <><B>Financing calculators:</B> the prepay penalty is <em>exact</em> for step-down and an <em>indicative estimate</em> for yield-maintenance/defeasance; <B>swap breakage</B> is indicative too — it proxies the current market swap rate from the Treasury curve (replace it with your bank's quote for a tighter number). Imported swap terms are fully <B>editable</B> via "Edit terms" if the doc read anything wrong.</>,
-        <><B>Comp Benchmark</B> uses medians and tiers comps by relevance (same state/type/size within 24 months first, widening if needed); below a minimum sample it withholds a verdict rather than guess.</>,
-        <><B>Closing Costs</B> (under Transaction Details) estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle), each line showing its <B>effective % of price (or loan)</B> — a ballpark, confirm with title.</>,
-        <><B>Tax Reassessment forecaster</B> (under Transaction Details) projects how much the property-tax bill steps up after a sale, by state/county reset rules — grounded in the deal's real current bill. Where we don't have county-specific data it says "confirm locally" rather than guess.</>,
-        <><B>Automatic data checks:</B> every OM extraction runs deterministic arithmetic tie-outs (NOI÷cap vs price, roster SF vs GLA, occupancy, weighted-avg rent, recoveries…). Contradictions surface in the deal's <B>"📝 to confirm"</B> banner; a clean run shows <B>"Data checks passed."</B> The portfolio-wide <B>Data Audit</B> (Analytics) re-runs them across every deal.</>,
-        <><B>Cover & site plan</B> fit to screen — <B>click either to open a full-screen viewer</B> with zoom & pan (scroll or pinch to zoom, drag to move, double-click to reset); each has a 🗑 (with confirm). <B>📄 Deal Memo (PDF)</B> exports a one-page, branded institutional teaser (highlights, anchor summary, upside & risks) to share the whole deal at a glance; <B>Excel</B> and <B>Find Sale</B> export or research it; section titles show their source (OM vs. Census).</>,
+        <><B>Tenants & Sales</B> — every lease (SF, rent/SF, annual rent, dates, term, steps, options, reimbursements) with <B>Anchor / Investment-Grade / NAP / dark-store / ATM</B> badges; click a tenant for all its locations. <B>Tenant Sales</B> tracks figures by year with a green ▲ / red ▼ vs. the prior year. A roster bar lets you <B>⬆ Refresh from rent roll</B> (PDF/Excel), <B>⌘ Paste roster</B> (from Claude — token-free), and export as <B>Excel</B> or a polished one-page institutional <B>Rent roll — PDF</B>.</>,
+        <><B>Lease Risk (anchor dependency)</B> — on the Tenants tab, pick anchors to model "what if they go dark": the co-tenancy / kickout rent relief and termination exposure, read live from disclosed clauses and any uploaded lease abstracts (an executed abstract can flip a clause to <em>verified</em> or <em>mitigated</em>).</>,
+        <><B>AI Analysis</B> — narrative, deal score, upside & red flags, plus <B>Our Thesis</B> (type why you like it; <B>"Save & Re-grade"</B> folds it in, staying objective). The grade also reads <B>trade-area demographics</B> as a location-quality lens — dense + high-income/population supports higher rents and a tighter cap (and flags rent/cap that looks aggressive for a weaker area).</>,
+        <><B>Market & Comps</B> — the <B>Comp Benchmark</B> (median cap rate & price/SF vs. comparable trades, with ★ star / × drop / click-to-expand; tiered by relevance, withholds a verdict below a minimum sample) and <B>1/3/5-mile</B> Census demographics. The Summary also benchmarks this deal's <B>cap, expense ratio & rent PSF</B> against comparable deals in your own book (p25–median–p75) — informational, changes no numbers.</>,
+        <><B>Financing</B> — record the loan and estimate early-payoff cost: a <B>prepayment-penalty</B> calculator (<em>exact</em> for step-down, <em>indicative</em> for yield-maintenance / defeasance) and a <B>swap-breakage</B> estimator (indicative, proxying the market swap rate from Today's Rates — replace with your bank's quote). Import a swap confirmation or enter/edit it by hand. Preferred equity has its own block.</>,
+        <><B>Transaction & Underwriting</B> — the purchase / closing-cost record, plus <B>KPR's own economics & cash-flow projection</B> kept separate from the OM figures. <B>Closing Costs</B> estimates title/transfer/recording taxes by state (65% LTV default; entity-sale toggle), and the <B>Tax Reassessment forecaster</B> projects the post-sale bill step-up by state/county rules — both grounded in the real bill, saying "confirm locally" where county data is missing.</>,
+        <><B>Site Agreements / REAs & lease abstracts</B> — record property-level recorded documents (OEAs, easements, use restrictions, cost-share); upload per-tenant abstracts via <B>⬆ Upload abstracts</B>, and <B>Export abstracts</B> to an Excel workbook (Issues Summary + one tab per tenant).</>,
+        <><B>Edit any field</B> via its pencil icon (auto-saved, logged); lock verified figures so a re-extraction won't overwrite them. Click the address under the title to fill in street/city/state (drives Closing Costs); type a date any common way — <em>3/12/26</em> — and it standardizes.</>,
+        <>In a deal's <B>Analyze</B> menu, <B>↺ Rebuild from OM</B> re-reads the saved OM and regenerates everything (won't wipe a manual roster without confirming); <B>✨ Refresh Analysis (current roster)</B> regenerates the grade/narrative from the current roster (safe after a rent-roll paste). Each asks "this uses tokens — continue?" The score re-benchmarks against your portfolio automatically.</>,
+        <><B>Re-uploading never overwrites your data</B> — it recognizes the deal (even if renamed), fills only blank fields, and flags conflicting numbers (price, cap, NOI, SF, occupancy…) as a review item — keep yours or apply the OM's in one click.</>,
+        <><B>Automatic data checks</B> — every extraction runs deterministic tie-outs (NOI÷cap vs price, roster SF vs GLA, occupancy, weighted-avg rent…); contradictions surface in the <B>"📝 to confirm"</B> banner, a clean run shows <B>"Data checks passed."</B> The portfolio-wide <B>Data Audit</B> re-runs them across every deal.</>,
+        <><B>Cover & site plan</B> fit to screen — <B>click either for a full-screen zoom/pan viewer</B> (scroll/pinch to zoom, drag to move, double-click to reset); each has a 🗑 (with confirm). <B>📄 Deal Memo (PDF)</B> exports a one-page branded teaser; <B>Excel</B> and <B>Find Sale</B> export or research it.</>,
       ]} />
     ),
   },
@@ -191,29 +175,22 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     goTo: { dest: "analytics", label: "Go to Analytics" },
     brief: (
       <>
-        <p style={{ margin:0 }}>Analytics lives in a single <B>Analytics ▾</B> menu in the top bar, grouped into <B>Portfolio</B> (Portfolio Overview, Lease Rollover, Critical Dates, Co-Tenancy Cascade, Data Audit, Learning) and <B>Tenants</B> (Tenant Analytics, Mark-to-Market, Retailer Watchlist, Tenant Name Audit, Link Tenants) — each jumping straight to its page.</p>
+        <p style={{ margin:0 }}>Everything lives in one <B>Analytics ▾</B> menu, grouped into <B>Portfolio</B> (Overview, Lease Rollover, Critical Dates, Co-Tenancy Cascade, Data Audit, Learning) and <B>Tenants</B> (Tenant Analytics, Mark-to-Market, Retailer Watchlist, Name Audit, Link Tenants).</p>
         <BriefList items={[
-          <><B>Lease rollover chart</B> — GLA & rent expiring by year; click a year to drill into which tenants roll (sortable).</>,
-          <><B>📅 Critical Dates</B> — a portfolio-wide calendar of what's coming due: lease expirations, loan maturities, and pref-equity maturities, filterable by horizon (90 days / 6 months / 1 year…). Click any row to open the deal.</>,
-          <><B>📈 Mark-to-Market</B> — flags in-place rents sitting below your portfolio's median for the same brand, with the estimated annual $ upside to market — your re-leasing upside across the whole book.</>,
-          <><B>🔗 Co-Tenancy Cascade</B> — models which anchors, if they went dark, would trip co-tenancy / kickout rent relief or termination rights across the portfolio, and the rent exposed. Built from each deal's disclosed clauses plus any uploaded lease abstracts.</>,
-          <><B>🧮 Data Audit</B> — runs the deterministic arithmetic & consistency checks (NOI÷cap vs price, roster SF vs building GLA, occupancy, tax sanity…) across every deal at once and lists the contradictions to fix; click a row to jump to the deal.</>,
-          <><B>Tenant & Parent concentration</B> — top exposure by rent or store count; an eye-slash toggle excludes an outlier and stats recompute live.</>,
-          <><B>Pinned search</B> (Tenant Analytics) — jump to any tenant or parent; tenant/parent pages show a description plus all locations.</>,
-          <><B>🔗 Link Tenants</B> is its <B>own page</B> (Analytics ▾ → Tenants → Link Tenants): live-search the full tenant list, tick two spellings of the same brand (e.g. <em>Walmart</em> / <em>Wal-Mart</em>), pick the name to keep, and Link — they merge everywhere. Existing links are listed below with <B>Unlink</B>.</>,
-          <><B>Unlink on the spot</B> — on a tenant's detail page, an <B>unlink icon next to each row's eyeball</B> splits a stray that got wrongly grouped in, back out across the whole app.</>,
-          <><B>ATMs tracked separately</B> from bank branches (their own <B>ATM</B> badge) but still rolling up to the same parent bank. A <B>Hide ATMs</B> toggle appears only when the list you're viewing actually has ATMs.</>,
-          <><B>Tenant Name Audit</B> — review/merge the brand-name variants the app already suspects are the same (auto-rejects store-vs-fuel/storage pads).</>,
+          <><B>Lease Rollover & 📅 Critical Dates</B> — GLA/rent expiring by year (click a year to drill in), and a portfolio calendar of lease, loan and pref maturities by horizon.</>,
+          <><B>📈 Mark-to-Market & 🔗 Co-Tenancy Cascade</B> — in-place rents below your book's median for the same brand (with the $ upside), and which anchors going dark would trip co-tenancy / kickout relief.</>,
+          <><B>🧮 Data Audit</B> — runs the arithmetic & consistency tie-outs across every deal at once and lists the contradictions to fix (click a row to jump to the deal).</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
-        <><B>Updates live</B> as deals change — no refresh needed. All statuses are included by default.</>,
-        <><B>"Score unscored deals"</B> (Portfolio Overview) grades any deal missing a letter grade in one click.</>,
-        <><B>⚙ Maintenance ▾</B> (Portfolio Overview) gathers the housekeeping actions in one menu — <B>Clean & re-audit all</B> (auto-fix the unambiguous issues across every deal, then re-check the numbers; token-free, snapshots first), <B>Rebuild comps index</B>, and <B>Rebuild tenant index</B>.</>,
+        <><B>Tenant & Parent concentration</B> (Tenant Analytics) — top exposure by rent or store count; an eye-slash toggle excludes an outlier and stats recompute live. A pinned search jumps to any tenant/parent (their page shows a description + all locations).</>,
+        <><B>🔗 Link Tenants</B> (its own page) — tick two spellings of one brand (<em>Walmart</em> / <em>Wal-Mart</em>), pick the name to keep, and Link; they merge everywhere. Existing links list below with <B>Unlink</B>, and a tenant page has an <B>unlink icon</B> per row to split a stray back out.</>,
+        <><B>ATMs</B> are tracked separately from branches (their own <B>ATM</B> badge) but still roll up to the parent bank; a <B>Hide ATMs</B> toggle appears only when the list has them. <B>Tenant Name Audit</B> reviews suspected brand-name variants ("Burlington" vs "Burlington Coat Factory") to merge or keep separate — choices persist.</>,
+        <><B>Updates live</B> as deals change — no refresh; all statuses included. <B>"Score unscored deals"</B> (Overview) grades any deal missing a letter in one click.</>,
+        <><B>⚙ Maintenance ▾</B> (Overview) gathers the housekeeping — <B>Clean & re-audit all</B> (token-free auto-fix + re-check, snapshots first), <B>Rebuild comps index</B>, and <B>Rebuild tenant index</B>.</>,
         <><B>Learning</B> (Portfolio) is where you review and export the plain-English rules you've taught the extractor — your corrections in one place.</>,
-        <><B>Name Audit</B> catches "Burlington" vs "Burlington Coat Factory" etc.; mark pairs Correct (merge) or keep separate — choices persist.</>,
       ]} />
     ),
   },
@@ -244,18 +221,16 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
     brief: (
       <>
         <BriefList items={[
-          <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and get an email once they're approved. Logins now persist across updates.</>,
-          <><B>Today's Rates</B> (top bar) — Treasury yields (1–10yr), 1-month Term SOFR, and 5- & 10-year SOFR swaps live from the market board (the 3-year swap is <em>estimated</em>), all stamped in <B>Eastern time (ET)</B>; these also seed the deal-page <B>prepay & swap-breakage</B> estimates.</>,
-          <><B>Search (⌘K / Ctrl-K)</B> — the search box in the top bar jumps to any deal or tenant across the whole library in a couple keystrokes.</>,
-          <><B>Tenant names are clickable</B> everywhere → cross-portfolio summary.</>,
-          <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site.</>,
-          <><B>Verified fields</B> — lock a confirmed figure against future re-extractions.</>,
-          <><B>Feedback flag</B> (bottom-left) goes straight to the team; it lifts above the import panel while uploading.</>,
+          <><B>Accounts & access</B> — everyone signs in with their own login; new people request access from the sign-in screen and get an email once approved. Logins persist across updates.</>,
+          <><B>Today's Rates</B> (top bar) — Treasury yields, Term SOFR, and SOFR swaps live from the market (ET-stamped); they seed the deal-page prepay & swap-breakage estimates.</>,
+          <><B>Search (⌘K / Ctrl-K)</B> — jump to any deal or tenant across the library in a couple keystrokes. Tenant names are clickable everywhere → cross-portfolio summary.</>,
+          <><B>Feedback flag</B> (bottom-left life-ring) goes straight to the team.</>,
         ]} />
       </>
     ),
     detail: (
       <DetailList items={[
+        <><B>Back button</B> (on-page and browser/phone) steps back through the app, not off the site. <B>Verified fields</B> — lock a confirmed figure against future re-extractions.</>,
         <><B>What costs AI tokens:</B> uploading OMs / rent rolls / sales files, importing comps from Excel or PDF, rebuilding from the OM, and asking the Analyst (incl. Refresh Analysis, Find Comps, Find Sale). <B>Free:</B> browsing, editing, sorting/searching, all Analytics & Comp Benchmark, Closing Costs, demographics Re-Pull (Census, not AI), and JSON/Excel exports. Bottom line: uploading documents and talking to the Analyst are where the cost is.</>,
         <><B>Occupancy cost (health ratio)</B> is always the TOTAL: (base rent + reimbursements + percentage rent + other rent) ÷ gross sales — never base rent alone. Uses the stated total when given, else computes from disclosed components.</>,
         <><B>Upload on the live site, not the Replit preview</B> — they have separate databases.</>,
