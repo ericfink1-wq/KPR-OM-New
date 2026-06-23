@@ -42,7 +42,7 @@ const parseISO = (v: unknown): number | null => {
   return Number.isFinite(t) ? t : null;
 };
 
-interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown; occupancyCost?: unknown; salesPSF?: unknown; percentageRent?: unknown; otherRent?: unknown; leaseStart?: unknown; leaseExpiry?: unknown; remainingTermYears?: unknown }
+interface TenantLike { name?: unknown; sf?: unknown; suite?: unknown; rentPerSF?: unknown; annualRent?: unknown; expenseReimbursements?: unknown; isNAP?: unknown; isAnchor?: unknown; occupancyCost?: unknown; salesPSF?: unknown; percentageRent?: unknown; otherRent?: unknown; leaseStart?: unknown; leaseExpiry?: unknown; remainingTermYears?: unknown; leaseType?: unknown }
 
 // Namespaces these arithmetic checks so a re-audit can self-heal only its own flags
 // (drop ones that now pass, add new ones) without touching AI questions or lease-risk
@@ -291,10 +291,12 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
   // A leased (non-vacant, non-NAP) tenant occupying real SF must pay SOMETHING. A roster
   // row showing $0 annual rent AND $0 rent PSF is almost always a rent that fell out
   // during extraction (a blank rent-roll cell, an OCR drop, a column read from the wrong
-  // row). The ONE legitimate exception is a "percentage-in-lieu" deal where the tenant
-  // pays a percentage of sales instead of base rent (e.g. an outlet at 13% of gross) —
-  // recognized by a non-zero percentageRent or otherRent. Flag everything else so the
-  // missing rent is captured and the base-rent roll-up / GPR tie-out holds.
+  // row). The legitimate exception is a "percentage-in-lieu" deal where the tenant pays a
+  // percentage of sales INSTEAD of base rent (e.g. an outlet at 13% of gross, or legacy
+  // mall apparel on 3-9% of sales) — recognized EITHER by a non-zero percentageRent/
+  // otherRent OR by a leaseType flagged percentage-in-lieu (the $ amount isn't always
+  // known at extraction). Flag everything else so the missing rent is captured and the
+  // base-rent roll-up / GPR tie-out holds.
   for (const t of occupied) {
     const tsf = num(t.sf);
     if (tsf == null || tsf < 1000) continue;          // skip tiny ATM/kiosk pads
@@ -303,7 +305,9 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
     if ((ann != null && ann > 0) || (psf != null && psf > 0)) continue; // has base rent
     const pctRent = num(t.percentageRent) ?? 0;
     const other = num(t.otherRent) ?? 0;
-    if (pctRent > 0 || other > 0) continue;           // legit percentage-in-lieu / other-income deal
+    const lt = typeof t.leaseType === "string" ? t.leaseType.toLowerCase() : "";
+    const pctInLieu = /percent|in.?lieu|% of (gross|sales)/.test(lt);
+    if (pctRent > 0 || other > 0 || pctInLieu) continue;  // legit percentage-in-lieu / other-income deal
     const nm = String(t.name ?? "tenant");
     out.push({
       id: `audit-zero-rent-${nm}`.slice(0, 80), source: "check", severity: "medium",

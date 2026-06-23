@@ -96,6 +96,12 @@ describe("audit — occupied tenant with zero base rent", () => {
     ] };
     expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-zero-rent"))).toBe(false);
   });
+  it("does NOT flag a $0-base tenant whose leaseType is flagged percentage-in-lieu (amount unknown)", () => {
+    const deal = { tenants: [
+      { name: "Victoria's Secret", suite: "B01", sf: 5772, annualRent: 0, rentPerSF: 0, leaseType: "Percentage-in-lieu" },
+    ] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-zero-rent"))).toBe(false);
+  });
   it("does NOT flag a vacant suite or a tenant that pays base rent", () => {
     const deal = { tenants: [
       { name: "Vacant", suite: "08", sf: 1800, annualRent: 0, rentPerSF: 0, leaseType: "Vacant" },
