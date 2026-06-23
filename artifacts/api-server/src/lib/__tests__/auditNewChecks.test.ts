@@ -82,3 +82,25 @@ describe("audit — WALT recompute vs stated", () => {
     expect(auditExtraction(deal).some((q) => q.id === "audit-walt-recompute")).toBe(false);
   });
 });
+
+describe("audit — occupied tenant with zero base rent", () => {
+  it("flags a leased tenant with $0 base rent and no percentage/other rent", () => {
+    const deal = { tenants: [
+      { name: "Mystery Shop", suite: "12", sf: 4500, annualRent: 0, rentPerSF: 0 },
+    ] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-zero-rent"))).toBe(true);
+  });
+  it("does NOT flag a percentage-in-lieu tenant ($0 base but pays % of sales)", () => {
+    const deal = { tenants: [
+      { name: "Express Outlet", suite: "110", sf: 7640, annualRent: 0, rentPerSF: 0, percentageRent: 174737 },
+    ] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-zero-rent"))).toBe(false);
+  });
+  it("does NOT flag a vacant suite or a tenant that pays base rent", () => {
+    const deal = { tenants: [
+      { name: "Vacant", suite: "08", sf: 1800, annualRent: 0, rentPerSF: 0, leaseType: "Vacant" },
+      { name: "Chase Bank", suite: "13", sf: 4860, annualRent: 346060, rentPerSF: 71.21 },
+    ] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-zero-rent"))).toBe(false);
+  });
+});

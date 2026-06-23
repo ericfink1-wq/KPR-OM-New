@@ -287,6 +287,33 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
     }
   }
 
+  // ── E1c. Occupied tenant with ZERO base rent and no %/other rent — a dropped figure ──
+  // A leased (non-vacant, non-NAP) tenant occupying real SF must pay SOMETHING. A roster
+  // row showing $0 annual rent AND $0 rent PSF is almost always a rent that fell out
+  // during extraction (a blank rent-roll cell, an OCR drop, a column read from the wrong
+  // row). The ONE legitimate exception is a "percentage-in-lieu" deal where the tenant
+  // pays a percentage of sales instead of base rent (e.g. an outlet at 13% of gross) —
+  // recognized by a non-zero percentageRent or otherRent. Flag everything else so the
+  // missing rent is captured and the base-rent roll-up / GPR tie-out holds.
+  for (const t of occupied) {
+    const tsf = num(t.sf);
+    if (tsf == null || tsf < 1000) continue;          // skip tiny ATM/kiosk pads
+    const ann = num(t.annualRent);
+    const psf = num(t.rentPerSF);
+    if ((ann != null && ann > 0) || (psf != null && psf > 0)) continue; // has base rent
+    const pctRent = num(t.percentageRent) ?? 0;
+    const other = num(t.otherRent) ?? 0;
+    if (pctRent > 0 || other > 0) continue;           // legit percentage-in-lieu / other-income deal
+    const nm = String(t.name ?? "tenant");
+    out.push({
+      id: `audit-zero-rent-${nm}`.slice(0, 80), source: "check", severity: "medium",
+      field: `${nm} — zero base rent`,
+      question: `${nm} occupies ${sf(tsf)} but shows $0 base rent and no percentage/other rent. A leased space must pay something — the rent was likely dropped during extraction. Capture the base rent (or, if it's a percentage-in-lieu deal, record the percentage rent).`,
+      detail: `An occupied, non-NAP tenant with zero annual rent, zero rent PSF, and no percentage or other rent almost always means a rent-roll figure was missed. The only valid zero-base case is a percentage-in-lieu lease (pays a % of sales) — record that in percentageRent so the base-rent roll-up ties out.`,
+      suggestedValue: null, target: { kind: "tenant", fieldKey: "annualRent", tenantName: nm, valueType: "number" },
+    });
+  }
+
   // ── E2. Per-tenant: OM-STATED occupancy cost vs the COMPUTED one (rent ÷ sales) ─
   // A material gap means the OM figure was mis-read, OR the OM's sales are on a
   // different basis than the reported sales (e.g. a pharmacy's 3rd-party-plan Rx,
