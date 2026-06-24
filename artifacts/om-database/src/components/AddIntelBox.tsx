@@ -1,11 +1,7 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Deal } from "../lib/idb";
 import { parseDealIntel, buildIntelPatch, type IntelProposal } from "../lib/intelExtract";
-
-interface Props {
-  deal: Deal;
-  onApply: (patch: Partial<Deal>) => void;
-}
 
 const chip = (bg: string, border: string, color: string): React.CSSProperties => ({
   fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase",
@@ -18,15 +14,33 @@ function fmtSales(annual: number | null, psf: number | null): string {
   return "—";
 }
 
-export default function AddIntelBox({ deal, onApply }: Props) {
-  const [open, setOpen] = useState(false);
+// Trigger button — pinned in the top action bar and the tab row. Opens the shared modal.
+export function AddIntelButton({ onClick, style }: { onClick: () => void; style?: React.CSSProperties }) {
+  return (
+    <button onClick={onClick}
+      title="Type what you know about this deal — sales, lease changes, market color. I'll show you what I'll add before saving."
+      style={{ background: "#fff", border: "1px solid #8cbf63", color: "#3f7a1f", padding: "8px 16px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", ...style }}>
+      <span style={{ fontSize: 13 }}>✎</span> Add intel
+    </button>
+  );
+}
+
+interface Props {
+  deal: Deal;
+  open: boolean;
+  onClose: () => void;
+  onApply: (patch: Partial<Deal>) => void;
+}
+
+export default function AddIntelModal({ deal, open, onClose, onApply }: Props) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<IntelProposal | null>(null);
-  const [justApplied, setJustApplied] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
 
-  const reset = () => { setText(""); setProposal(null); setError(null); };
+  const reset = () => { setText(""); setProposal(null); setError(null); setDone(null); };
+  const close = () => { reset(); onClose(); };
 
   const review = async () => {
     if (!text.trim()) return;
@@ -51,109 +65,111 @@ export default function AddIntelBox({ deal, onApply }: Props) {
   const apply = () => {
     if (!proposal) return;
     const patch = buildIntelPatch(deal, proposal);
-    const n = (proposal.sales.filter(s => s.include).length) + (proposal.leases.filter(l => l.include).length);
+    const n = proposal.sales.filter(s => s.include).length + proposal.leases.filter(l => l.include).length;
     onApply(patch);
-    setJustApplied(`Added ${n} change${n === 1 ? "" : "s"} to the deal.`);
-    reset(); setOpen(false);
-    setTimeout(() => setJustApplied(null), 6000);
+    setDone(`Added ${n} change${n === 1 ? "" : "s"} to the deal.`);
+    setProposal(null); setText("");
+    setTimeout(() => { close(); }, 1400);
   };
 
+  if (!open) return null;
   const hasAnything = !!proposal && (proposal.sales.length + proposal.leases.length + proposal.notes.length) > 0;
 
-  if (!open) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <button onClick={() => setOpen(true)}
-          style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-          ✎ Add intel
-        </button>
-        {justApplied && <span style={{ fontSize: 12, color: "#3f7a1f", fontWeight: 600 }}>{justApplied}</span>}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ background: "#fbfaf6", border: "1px solid #e6dfd0", borderRadius: 12, padding: "16px 18px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#383a37" }}>Add intel</div>
-        <button onClick={() => { reset(); setOpen(false); }} style={{ border: "none", background: "transparent", color: "#a89f8f", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
-      </div>
-      <div style={{ fontSize: 11.5, color: "#8b8578", marginBottom: 10, lineHeight: 1.5 }}>
-        Type anything you know — sales figures, lease extensions, market color. I&rsquo;ll show you exactly what I&rsquo;ll add before saving. e.g. <i>&ldquo;Whole Foods is doing $40M here; Best Buy is extending early for 5 years; tenant says the nail salon is roughly $600k.&rdquo;</i>
-      </div>
-      <textarea
-        value={text}
-        onChange={e => setText(e.target.value)}
-        placeholder="What did you learn about this deal?"
-        rows={3}
-        style={{ width: "100%", boxSizing: "border-box", fontSize: 13, padding: "9px 11px", border: "1px solid #e3dccd", borderRadius: 8, color: "#2a2c28", background: "#fff", fontFamily: "'Inter',sans-serif", resize: "vertical" }}
-      />
-      <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <button onClick={review} disabled={busy || !text.trim()}
-          style={{ background: busy || !text.trim() ? "#cdd6c2" : "#3f7a1f", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: busy || !text.trim() ? "default" : "pointer", fontFamily: "'Inter',sans-serif" }}>
-          {busy ? "Reading…" : proposal ? "Re-read" : "Review changes"}
-        </button>
-        {error && <span style={{ fontSize: 12, color: "#c0392b" }}>{error}</span>}
-      </div>
-
-      {proposal && (
-        <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 11.5, color: "#6b6157", marginBottom: 10, fontStyle: "italic" }}>{proposal.summary}</div>
-          {!hasAnything && <div style={{ fontSize: 12.5, color: "#8b8578" }}>I couldn&rsquo;t find a concrete change to apply — it&rsquo;ll still be saved as a note.</div>}
-
-          {proposal.sales.length > 0 && (
-            <Section title="Sales → tenant sales chart">
-              {proposal.sales.map(s => (
-                <Row key={s.id} include={s.include} onInc={v => setInc("sales", s.id, v)}>
-                  <span style={{ fontWeight: 600, color: "#26281f" }}>{s.rosterMatch || s.tenantName}</span>
-                  {!s.rosterMatch && <span style={{ ...chip("#fff3df", "#f0d9a8", "#9a6a12"), marginLeft: 6 }} title="Not matched to a roster tenant — its sales won't attach until the name matches the roster">unmatched</span>}
-                  <span style={{ color: "#5c5850", marginLeft: 8 }}>{s.year} · {fmtSales(s.annualSales, s.salesPSF)}</span>
-                  <label style={{ marginLeft: 10, fontSize: 11, color: "#8b8578", display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
-                    <input type="checkbox" checked={s.anecdotal} onChange={e => setAnecdotal(s.id, e.target.checked)} style={{ accentColor: "#9a6a12" }} />
-                    anecdotal
-                  </label>
-                </Row>
-              ))}
-            </Section>
-          )}
-
-          {proposal.leases.length > 0 && (
-            <Section title="Lease changes → roster + analysis">
-              {proposal.leases.map(l => (
-                <Row key={l.id} include={l.include} onInc={v => setInc("leases", l.id, v)} disabled={!l.rosterMatch}>
-                  <span style={{ fontWeight: 600, color: "#26281f" }}>{l.rosterMatch || l.tenantName}</span>
-                  {!l.rosterMatch && <span style={{ ...chip("#fbeaea", "#e6bcbc", "#b03a2e"), marginLeft: 6 }} title="No roster match — can't apply this lease change">no match</span>}
-                  <span style={{ color: "#5c5850", marginLeft: 8 }}>{l.change}</span>
-                  {l.reported && <span style={{ ...chip("#eef1f7", "#cdd6e6", "#5a6b8c"), marginLeft: 6 }} title="Treated as expected but not yet executed">reported</span>}
-                </Row>
-              ))}
-            </Section>
-          )}
-
-          {proposal.notes.length > 0 && (
-            <Section title="Saved as deal intel (feeds the AI analysis)">
-              {proposal.notes.map(n => (
-                <Row key={n.id} include={n.include} onInc={v => setInc("notes", n.id, v)}>
-                  <span style={{ color: "#5c5850" }}>{n.text}</span>
-                  <span style={{ ...chip("#f1eadc", "#ddd5c8", "#8b8578"), marginLeft: 6 }}>{n.category}</span>
-                </Row>
-              ))}
-            </Section>
-          )}
-
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button onClick={apply}
-              style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-              Apply to deal
-            </button>
-            <button onClick={() => setProposal(null)}
-              style={{ background: "transparent", color: "#8b8578", border: "1px solid #d8cfbd", borderRadius: 8, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-              Cancel
-            </button>
-          </div>
+  return createPortal(
+    <div onClick={close} style={{ position: "fixed", inset: 0, zIndex: 6000, background: "rgba(38,40,31,0.34)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "8vh 14px 14px" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "min(620px, 100%)", maxHeight: "84vh", background: "#fff", border: "1px solid #e6dfd0", borderRadius: 14, boxShadow: "0 18px 50px rgba(38,40,31,0.3)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #f1eadc" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#383a37" }}>✎ Add intel — {deal.propertyName || "this deal"}</div>
+          <button onClick={close} style={{ border: "none", background: "transparent", color: "#a89f8f", cursor: "pointer", fontSize: 20, lineHeight: 1 }}>×</button>
         </div>
-      )}
-    </div>
+
+        <div style={{ overflowY: "auto", padding: "16px 18px" }}>
+          {done ? (
+            <div style={{ padding: "20px 4px", fontSize: 14, color: "#3f7a1f", fontWeight: 600 }}>✓ {done}</div>
+          ) : (
+            <>
+              <div style={{ fontSize: 12, color: "#8b8578", marginBottom: 10, lineHeight: 1.5 }}>
+                Type anything you know — sales figures, lease extensions, market color. I&rsquo;ll show you exactly what I&rsquo;ll add before saving. e.g. <i>&ldquo;Whole Foods is doing $40M here; Best Buy is extending early for 5 years; tenant says the nail salon is roughly $600k.&rdquo;</i>
+              </div>
+              <textarea
+                value={text}
+                onChange={e => setText(e.target.value)}
+                placeholder="What did you learn about this deal?"
+                rows={3}
+                autoFocus
+                style={{ width: "100%", boxSizing: "border-box", fontSize: 13, padding: "9px 11px", border: "1px solid #e3dccd", borderRadius: 8, color: "#2a2c28", background: "#fff", fontFamily: "'Inter',sans-serif", resize: "vertical" }}
+              />
+              <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button onClick={review} disabled={busy || !text.trim()}
+                  style={{ background: busy || !text.trim() ? "#cdd6c2" : "#3f7a1f", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: busy || !text.trim() ? "default" : "pointer", fontFamily: "'Inter',sans-serif" }}>
+                  {busy ? "Reading…" : proposal ? "Re-read" : "Review changes"}
+                </button>
+                {error && <span style={{ fontSize: 12, color: "#c0392b" }}>{error}</span>}
+              </div>
+
+              {proposal && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 11.5, color: "#6b6157", marginBottom: 10, fontStyle: "italic" }}>{proposal.summary}</div>
+                  {!hasAnything && <div style={{ fontSize: 12.5, color: "#8b8578" }}>I couldn&rsquo;t find a concrete change to apply — it&rsquo;ll still be saved as a note.</div>}
+
+                  {proposal.sales.length > 0 && (
+                    <Section title="Sales → tenant sales chart">
+                      {proposal.sales.map(s => (
+                        <Row key={s.id} include={s.include} onInc={v => setInc("sales", s.id, v)}>
+                          <span style={{ fontWeight: 600, color: "#26281f" }}>{s.rosterMatch || s.tenantName}</span>
+                          {!s.rosterMatch && <span style={{ ...chip("#fff3df", "#f0d9a8", "#9a6a12"), marginLeft: 6 }} title="Not matched to a roster tenant — its sales won't attach until the name matches the roster">unmatched</span>}
+                          <span style={{ color: "#5c5850", marginLeft: 8 }}>{s.year} · {fmtSales(s.annualSales, s.salesPSF)}</span>
+                          <label style={{ marginLeft: 10, fontSize: 11, color: "#8b8578", display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                            <input type="checkbox" checked={s.anecdotal} onChange={e => setAnecdotal(s.id, e.target.checked)} style={{ accentColor: "#9a6a12" }} />
+                            anecdotal
+                          </label>
+                        </Row>
+                      ))}
+                    </Section>
+                  )}
+
+                  {proposal.leases.length > 0 && (
+                    <Section title="Lease changes → roster + analysis">
+                      {proposal.leases.map(l => (
+                        <Row key={l.id} include={l.include} onInc={v => setInc("leases", l.id, v)} disabled={!l.rosterMatch}>
+                          <span style={{ fontWeight: 600, color: "#26281f" }}>{l.rosterMatch || l.tenantName}</span>
+                          {!l.rosterMatch && <span style={{ ...chip("#fbeaea", "#e6bcbc", "#b03a2e"), marginLeft: 6 }} title="No roster match — can't apply this lease change">no match</span>}
+                          <span style={{ color: "#5c5850", marginLeft: 8 }}>{l.change}</span>
+                          {l.reported && <span style={{ ...chip("#eef1f7", "#cdd6e6", "#5a6b8c"), marginLeft: 6 }} title="Treated as expected but not yet executed">reported</span>}
+                        </Row>
+                      ))}
+                    </Section>
+                  )}
+
+                  {proposal.notes.length > 0 && (
+                    <Section title="Saved as deal intel (feeds the AI analysis)">
+                      {proposal.notes.map(n => (
+                        <Row key={n.id} include={n.include} onInc={v => setInc("notes", n.id, v)}>
+                          <span style={{ color: "#5c5850" }}>{n.text}</span>
+                          <span style={{ ...chip("#f1eadc", "#ddd5c8", "#8b8578"), marginLeft: 6 }}>{n.category}</span>
+                        </Row>
+                      ))}
+                    </Section>
+                  )}
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                    <button onClick={apply}
+                      style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                      Apply to deal
+                    </button>
+                    <button onClick={() => setProposal(null)}
+                      style={{ background: "transparent", color: "#8b8578", border: "1px solid #d8cfbd", borderRadius: 8, padding: "8px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

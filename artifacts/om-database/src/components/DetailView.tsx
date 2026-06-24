@@ -45,7 +45,7 @@ import ClosingCostsCard from "./ClosingCostsCard";
 import TaxReassessmentCard from "./TaxReassessmentCard";
 import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
-import AddIntelBox from "./AddIntelBox";
+import AddIntelModal, { AddIntelButton } from "./AddIntelBox";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
@@ -1655,6 +1655,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // If the underwriting tabs are hidden while one of them is open, fall back to Summary.
   useEffect(() => { if (!showUnderwriting && UW_TABS.has(tab)) setTab("overview"); }, [showUnderwriting, tab]);
   const [navMenu, setNavMenu] = useState<string | null>(null);  // open jump-dropdown (a tab key, or "toc" on mobile)
+  const [intelOpen, setIntelOpen] = useState(false);            // Add-Intel modal (pinned in the top bar + tab row)
   const isMobileNav = useIsMobile();
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
   const [teachOpen, setTeachOpen] = useState(false);
@@ -2409,6 +2410,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             )}
           </div>
         ))}
+        <AddIntelButton onClick={() => setIntelOpen(true)} style={{ marginLeft: "auto", alignSelf: "center", padding: "5px 12px", fontSize: 11.5 }} />
       </div>
     )
    );
@@ -2647,7 +2649,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             </button>
           )}
         />
+        <AddIntelButton onClick={() => setIntelOpen(true)} />
       </div>
+      <AddIntelModal deal={d} open={intelOpen} onClose={() => setIntelOpen(false)} onApply={patch => onUpdate(d.id, patch)} />
       <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
 
       {/* Badges */}
@@ -3148,9 +3152,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               </div>
             </div>
           )}
-          <div style={{ marginBottom: 10 }}>
-            <AddIntelBox deal={d} onApply={patch => onUpdate(d.id, patch)} />
-          </div>
           <TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}
