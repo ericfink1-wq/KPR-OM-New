@@ -6,6 +6,7 @@ import { rebuildTenantIndex, parseLeaseDate } from "./tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount } from "./tenantBenchmarks";
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { lessonGuidance } from "./extractionLessons";
+import { filterNewTenants } from "./tenantDedup";
 import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
 import { auditExtraction, auditSourceText } from "./extractionAudit";
 import { applyImportFixes } from "./importFixes";
@@ -493,11 +494,12 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   while (stopReason === "max_tokens" && rounds < 20) {
     if (overBudget()) { budgetHit = true; break; }
     rounds++;
-    const tenants = extracted.tenants as Array<{ name?: string }>;
-    const haveNames = tenants.map((t) => t.name).filter(Boolean);
+    const tenants = extracted.tenants as Array<{ name?: string; suite?: unknown }>;
+    // Exclude by suite AND name — suites are the stable key when names are garbled.
+    const haveLabels = tenants.map((t) => (t.suite ? `${t.name ?? "?"} [${t.suite}]` : t.name)).filter(Boolean);
     const contInstruction =
-      "From the Offering Memorandum text above, extract ONLY the tenants NOT already in this list:\n" +
-      haveNames.join(", ") +
+      "From the Offering Memorandum text above, extract ONLY the tenants NOT already in this list (each shown as name [suite] — do NOT re-emit any suite already listed):\n" +
+      haveLabels.join(", ") +
       "\n\nINCLUSION RULE: Only include tenants that are actual occupants of THIS property — they must appear in the rent roll, tenant roster, or lease schedule with SF and/or rent data at this address. Do NOT include tenants mentioned as competitors, shadow anchors at other parcels, comparable-sale occupants, or trade-area/co-tenancy narrative references. The test: does this tenant have a lease at THIS property?\n\n" +
       "Return ONLY a JSON object: {\"tenants\":[...]} using this schema per tenant: " +
       "{name, suite, sf, rentPerSF, annualRent, leaseStart, leaseExpiry, leaseType, reimbursementMethod, camCapPct, camCapBasis, adminFeePct, mgmtFeeInCam, grossUpPct, recoverySF, rentBumps, rentSchedule, renewalOptions, recentlyExercisedRenewal, recentRenewalSpreadPct, percentageRentClause, percentageRentRate, percentageRentBreakpoint, percentageRentBreakpointType, expenseReimbursements, percentageRent, otherRent, creditRating, salesPSF, salesYear, priorSalesPSF, priorSalesYear, isAnchor, isDark, leaseStatus, remainingTermYears}. " +
@@ -507,8 +509,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
       const cont = await callExtract([...cachedBlocks, { type: "text", text: contInstruction }], FAST_MODEL);
       continuationMs += Date.now() - _cStart;
       const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
-      const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
-        .filter((t) => t?.name && !haveNames.includes(t.name));
+      const newOnes = filterNewTenants(tenants, (contParsed.tenants as Array<{ name?: string; suite?: unknown }>) || []);
       if (newOnes.length === 0) break;
       extracted.tenants = (extracted.tenants as unknown[]).concat(newOnes);
       lastProgressAt = Date.now();   // captured new tenants → still progressing
@@ -554,8 +555,7 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
         const cont = await callExtract([...cachedBlocks, { type: "text", text: gapInstruction }]);
         gapFillMs += Date.now() - _gStart;
         const contParsed = robustParseJSON(cont.raw) as Record<string, unknown>;
-        const newOnes = ((contParsed.tenants as Array<{ name?: string }>) || [])
-          .filter((t) => t?.name && !haveNames.includes(t.name));
+        const newOnes = filterNewTenants(tenants, (contParsed.tenants as Array<{ name?: string; suite?: unknown }>) || []);
         if (newOnes.length === 0) break;
         extracted.tenants = (extracted.tenants as unknown[]).concat(newOnes);
         lastProgressAt = Date.now();   // found missing tenants → still progressing

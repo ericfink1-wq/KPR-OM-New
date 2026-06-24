@@ -83,6 +83,18 @@ describe("audit — WALT recompute vs stated", () => {
   });
 });
 
+describe("audit — truncated annual rent vs rentPerSF × SF", () => {
+  it("flags a catastrophically truncated annual rent ($98 vs $98,728)", () => {
+    // Chicken Salad Chick at Dawson: rentPerSF 32.18 × 3,068 SF = ~$98,728, annualRent "98".
+    const deal = { tenants: [{ name: "Chicken Salad Chick", suite: "A-380", sf: 3068, rentPerSF: 32.18, annualRent: 98 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-rent-tie"))).toBe(true);
+  });
+  it("does NOT flag a tenant whose rent reconciles", () => {
+    const deal = { tenants: [{ name: "Chicken Salad Chick", suite: "A-380", sf: 3068, rentPerSF: 35.0, annualRent: 107380 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-rent-tie"))).toBe(false);
+  });
+});
+
 describe("audit — occupied tenant with zero base rent", () => {
   it("flags a leased tenant with $0 base rent and no percentage/other rent", () => {
     const deal = { tenants: [

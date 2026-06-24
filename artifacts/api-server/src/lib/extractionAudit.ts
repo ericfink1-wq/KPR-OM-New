@@ -237,7 +237,10 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
   const mism: { t: TenantLike; pct: number; psf: number; tsf: number; ann: number }[] = [];
   for (const t of occupied) {
     const psf = num(t.rentPerSF); const tsf = num(t.sf); const ann = num(t.annualRent);
-    if (psf != null && psf > 0 && tsf != null && tsf > 0 && ann != null && ann > 1000) {
+    // ann > 0 (not > 1000): a catastrophically TRUNCATED annual rent (e.g. "$98" where
+    // rentPerSF × SF says $98,728 — Chicken Salad Chick at Dawson) is exactly the kind of
+    // OCR slip this should catch, and the old > 1000 floor let it through silently.
+    if (psf != null && psf > 0 && tsf != null && tsf > 0 && ann != null && ann > 0) {
       const absGap = Math.abs(psf * tsf - ann);
       const pct = absGap / ann;
       // Need BOTH a material % AND a material $ gap — rounding and small inline tenants
