@@ -216,7 +216,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   // Format filter for the All-Tenants list: full stores only, just ATMs, just fuel
   // pads, or everything. ATMs/fuel pads are tracked as their own formats so their
   // small footprints don't skew brand medians; this lets you view each on its own.
-  const [formatFilter, setFormatFilter] = useState<"all" | "standard" | "atm" | "fuelpad">("all");
+  const [formatFilter, setFormatFilter] = useState<"all" | "standard" | "atm" | "fuelpad" | "storage">("all");
   // Pinned top search — jump straight to any tenant or parent company.
   const [navSearch, setNavSearch] = useState("");
   const [navFocused, setNavFocused] = useState(false);
@@ -378,6 +378,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   // Which special formats are present in the library (drives the filter buttons).
   const hasATMs = useMemo(() => rows.some(r => r.format === "atm"), [rows]);
   const hasFuelPads = useMemo(() => rows.some(r => r.format === "fuelpad"), [rows]);
+  const hasStorage = useMemo(() => rows.some(r => r.format === "storage"), [rows]);
   const filteredAllTenants = useMemo(() => {
     const q = tenantSearch.trim().toLowerCase();
     let list = q ? allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q)) : allTenantsSorted;
@@ -403,7 +404,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         : null;
       return { brands: fr.length, locations, totalRent, avgSF, medianPSF };
     };
-    return { atm: build("atm"), fuelpad: build("fuelpad") };
+    return { atm: build("atm"), fuelpad: build("fuelpad"), storage: build("storage") };
   }, [rows]);
   // ── Manual tenant linking ───────────────────────────────────────────────────
   const toggleMergeSel = (key: string) => setMergeSel(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
@@ -844,22 +845,23 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
           {/* Special formats — ATMs & fuel pads tracked on their own, with their
               average metrics, so they don't skew brand medians but stay viewable. */}
-          {(formatStats.atm || formatStats.fuelpad) && (
+          {(formatStats.atm || formatStats.fuelpad || formatStats.storage) && (
             <Card style={{ marginBottom: 14 }}>
               <SectionLabel>Special formats — separate from brand averages</SectionLabel>
               <div style={{ fontSize: 11, color: "#a69e91", marginTop: -8, marginBottom: 12, lineHeight: 1.5 }}>
-                ATMs and fuel / gas pads are tracked as their own formats so their small footprints don&rsquo;t skew a brand&rsquo;s size, rent or sales medians. Their own averages are below — tap a card to filter the list.
+                ATMs, fuel / gas pads and storage annexes are tracked as their own formats so their footprints don&rsquo;t skew a brand&rsquo;s size, rent or sales medians. Their own averages are below — tap a card to filter the list.
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-                {([["atm", formatStats.atm], ["fuelpad", formatStats.fuelpad]] as Array<["atm" | "fuelpad", typeof formatStats.atm]>).map(([fmt, s]) => {
+                {([["atm", formatStats.atm], ["fuelpad", formatStats.fuelpad], ["storage", formatStats.storage]] as Array<["atm" | "fuelpad" | "storage", typeof formatStats.atm]>).map(([fmt, s]) => {
                   if (!s) return null;
                   const active = formatFilter === fmt;
+                  const plural = fmt === "storage" ? "Storage annexes" : `${TENANT_FORMAT_LABEL[fmt]}s`;
                   return (
                     <div key={fmt} onClick={() => setFormatFilter(active ? "all" : fmt)}
-                      title={active ? "Showing this format — tap to clear" : `Filter the tenant list to ${TENANT_FORMAT_LABEL[fmt]}s`}
+                      title={active ? "Showing this format — tap to clear" : `Filter the tenant list to ${plural}`}
                       style={{ border: `1px solid ${active ? "#2a2c27" : "#ece5d7"}`, background: active ? "#faf8f3" : "#fff", borderRadius: 10, padding: "13px 15px", cursor: "pointer" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
-                        <span style={{ fontWeight: 700, color: "#383a37", fontSize: 13 }}>{TENANT_FORMAT_LABEL[fmt]}s</span>
+                        <span style={{ fontWeight: 700, color: "#383a37", fontSize: 13 }}>{plural}</span>
                         <span style={{ fontSize: 10, color: "#a69e91" }}>{s.brands} brand{s.brands !== 1 ? "s" : ""} · {s.locations} loc{s.locations !== 1 ? "s" : ""}</span>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -890,14 +892,15 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 All Tenants ({rows.length})
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                {(hasATMs || hasFuelPads) && (
+                {(hasATMs || hasFuelPads || hasStorage) && (
                   <div style={{ display: "inline-flex", background: "#f1eadc", borderRadius: 7, padding: 2, flexShrink: 0 }}
-                    title="Filter by store format. ATMs and fuel pads are tracked separately so their footprints don't skew brand size / rent / sales medians.">
+                    title="Filter by store format. ATMs, fuel pads and storage annexes are tracked separately so their footprints don't skew brand size / rent / sales medians.">
                     {([
                       ["all", "All"],
                       ["standard", "Stores"],
                       ...(hasATMs ? [["atm", "ATMs"] as const] : []),
                       ...(hasFuelPads ? [["fuelpad", "Fuel pads"] as const] : []),
+                      ...(hasStorage ? [["storage", "Storage"] as const] : []),
                     ] as Array<[typeof formatFilter, string]>).map(([val, lbl]) => (
                       <button key={val} onClick={() => setFormatFilter(val)}
                         style={{ background: formatFilter === val ? "#2a2c27" : "transparent", border: "none", color: formatFilter === val ? "#f6f2ea" : "#5c5047", padding: "4px 9px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
@@ -999,6 +1002,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                           )}
                           {row.format === "fuelpad" && (
                             <span style={{ fontSize: 8.5, color: "#8c6a3a", background: "#f7f1e8", border: "1px solid #e0d2b8", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="Fuel / gas pad — tracked separately from the full-size store (same parent company) so its footprint doesn't skew the brand's size / rent medians">FUEL PAD</span>
+                          )}
+                          {row.format === "storage" && (
+                            <span style={{ fontSize: 8.5, color: "#6b6157", background: "#f2efe9", border: "1px solid #ddd5c8", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="Storage annex — a tenant's supplemental storage SF, billed at a low PSF; tracked separately so it doesn't skew the brand's size / rent medians">STORAGE</span>
                           )}
                           {row.format === "standard" && row.totalSF === 0 && row.totalAnnualRent > 0 && (
                             <span style={{ fontSize: 8.5, color: "#3a5b7c", background: "#e8eff5", border: "1px solid #b8cce0", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="Ground lease — base rent with no leasable SF; excluded from SF-based averages">GROUND LEASE</span>

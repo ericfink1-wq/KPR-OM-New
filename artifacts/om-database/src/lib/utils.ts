@@ -1107,22 +1107,40 @@ export function isFuelPad(name?: unknown, _sf?: number | string | null): boolean
   return false;
 }
 
+// Distinguish a STORAGE annex (a tenant's supplemental stockroom / storage square
+// footage, billed separately at a low PSF — e.g. "T.J. Maxx - Storage" at $2.36 PSF
+// next to the store's $10.50) from the selling store itself. Pooling the cheap, large
+// storage SF with the store skews the brand's size and rent-PSF medians. Tracked as its
+// own format. NOTE: a genuine self-storage OPERATOR (Public Storage, CubeSmart, Extra
+// Space, U-Haul, a "Self Storage" facility) is a real tenant, NOT an annex — excluded.
+const SELF_STORAGE_OPERATOR =
+  /\b(public storage|extra space|cubesmart|cube smart|life storage|storagemart|storage mart|storquest|smartstop|smart stop|u-?haul|prime storage|storage king|simply self|self[\s-]?storage|mini[\s-]?storage|storage units?)\b/i;
+export function isStorageUnit(name?: unknown, _sf?: number | string | null): boolean {
+  const n = String(name ?? "");
+  if (!/\bstorage\b|\bstock\s?room\b/i.test(n)) return false;
+  if (SELF_STORAGE_OPERATOR.test(n)) return false; // a real self-storage tenant, not a store's annex
+  return true;
+}
+
 // A tenant's operational FORMAT, used to keep mismatched footprints from skewing a
 // brand's size/rent/sales medians and to let analytics view each format on its own.
-// "standard" is a full-line store/branch; "atm" and "fuelpad" are the pad/kiosk formats.
-export type TenantFormat = "atm" | "fuelpad" | "standard";
+// "standard" is a full-line store/branch; "atm" / "fuelpad" / "storage" are the
+// pad / kiosk / annex formats that a chain runs ALONGSIDE its real store.
+export type TenantFormat = "atm" | "fuelpad" | "storage" | "standard";
 export function tenantFormat(name?: unknown, sf?: number | string | null): TenantFormat {
   if (isATM(name, sf)) return "atm";
   if (isFuelPad(name, sf)) return "fuelpad";
+  if (isStorageUnit(name, sf)) return "storage";
   return "standard";
 }
 export const TENANT_FORMAT_LABEL: Record<TenantFormat, string> = {
-  atm: "ATM", fuelpad: "Fuel pad", standard: "Standard",
+  atm: "ATM", fuelpad: "Fuel pad", storage: "Storage", standard: "Standard",
 };
 
 // Brand-prototype benchmark key that SEPARATES formats: a brand's ATMs benchmark only
-// against other ATMs, its fuel pads against fuel pads, and its full stores against full
-// stores — so a kiosk-sized ATM or a 0-SF fuel pad never drags the store's median.
+// against other ATMs, its fuel pads against fuel pads, its storage annexes against
+// storage, and its full stores against full stores — so a kiosk-sized ATM, a 0-SF fuel
+// pad or a cheap storage annex never drags the store's median.
 export function brandBenchmarkKey(resolvedName?: unknown, sf?: number | string | null): string {
   return `${tenantKey(String(resolvedName ?? ""))}__${tenantFormat(resolvedName, sf)}`;
 }

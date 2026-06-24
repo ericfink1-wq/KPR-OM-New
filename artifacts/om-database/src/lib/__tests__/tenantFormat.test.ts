@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isATM, isFuelPad, tenantFormat, brandBenchmarkKey } from "../utils";
+import { isATM, isFuelPad, isStorageUnit, tenantFormat, brandBenchmarkKey } from "../utils";
 import { buildBrandSizeIndex, flagTenantSize } from "../tenantSizeBenchmark";
 import type { Deal } from "../idb";
 
@@ -22,10 +22,26 @@ describe("isFuelPad", () => {
   });
 });
 
+describe("isStorageUnit", () => {
+  it("flags a store's storage annex", () => {
+    expect(isStorageUnit("T.J. Maxx - Storage")).toBe(true);
+    expect(isStorageUnit("Marshalls Storage")).toBe(true);
+    expect(isStorageUnit("Old Navy Stockroom")).toBe(true);
+  });
+  it("does NOT flag a genuine self-storage operator (a real tenant)", () => {
+    expect(isStorageUnit("Public Storage")).toBe(false);
+    expect(isStorageUnit("CubeSmart Self Storage")).toBe(false);
+    expect(isStorageUnit("Extra Space Storage")).toBe(false);
+    expect(isStorageUnit("U-Haul")).toBe(false);
+  });
+});
+
 describe("tenantFormat", () => {
-  it("classifies ATMs, fuel pads, and standard stores", () => {
+  it("classifies ATMs, fuel pads, storage annexes, and standard stores", () => {
     expect(tenantFormat("Chase ATM", 120)).toBe("atm");
     expect(tenantFormat("Giant Gasoline", 0)).toBe("fuelpad");
+    expect(tenantFormat("T.J. Maxx - Storage", 2800)).toBe("storage");
+    expect(tenantFormat("Public Storage", 60000)).toBe("standard");
     expect(tenantFormat("Giant Food", 62000)).toBe("standard");
     // a bank-named kiosk footprint reads as an ATM even without the word
     expect(tenantFormat("Wells Fargo Bank", 150)).toBe("atm");
@@ -59,6 +75,22 @@ describe("size benchmark does not pool ATMs with full branches", () => {
   const idx = buildBrandSizeIndex(deals);
   it("does NOT flag a normal-size branch (ATMs are not in the branch pool)", () => {
     const f = flagTenantSize({ name: "Chase Bank", sf: 4050, annualRent: 60750, leaseExpiry: "2030-01-01" } as any, "subject", idx);
+    expect(f).toBeNull();
+  });
+});
+
+describe("size benchmark does not pool storage annexes with the selling store", () => {
+  // T.J. Maxx ~22,000 SF stores, each with a ~2,800 SF storage annex. The cheap small
+  // annexes must not drag the store median (and the stores must not shrink the annex one).
+  const deals = [
+    mk("d1", [{ name: "T.J. Maxx", sf: 22000 }, { name: "T.J. Maxx - Storage", sf: 2800 }]),
+    mk("d2", [{ name: "T.J. Maxx", sf: 21500 }, { name: "T.J. Maxx - Storage", sf: 2600 }]),
+    mk("d3", [{ name: "T.J. Maxx", sf: 22500 }, { name: "T.J. Maxx - Storage", sf: 3000 }]),
+    mk("subject", [{ name: "T.J. Maxx", sf: 22000 }, { name: "T.J. Maxx - Storage", sf: 2800 }]),
+  ];
+  const idx = buildBrandSizeIndex(deals);
+  it("does NOT flag a normal-size store (annexes are not in the store pool)", () => {
+    const f = flagTenantSize({ name: "T.J. Maxx", sf: 22000, annualRent: 231000, leaseExpiry: "2030-01-01" } as any, "subject", idx);
     expect(f).toBeNull();
   });
 });
