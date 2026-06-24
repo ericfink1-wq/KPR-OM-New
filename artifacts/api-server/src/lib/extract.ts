@@ -727,6 +727,7 @@ NEW UNDERWRITING SIGNALS — fold these into the grade, strengths, risks AND the
 - OTHER INCOME (otherIncome): non-rent MARGIN income (utility resale, etc.) is less durable than contractual rent — note it and do not credit it like NOI.
 - TAX REASSESSMENT: when currentAssessedValue and the purchase/asking price are both present, compare the assessed-implied market (assessedValue ÷ the state's commercial assessment ratio — e.g. Ohio ~35%, Texas ~100%) to the price. If the price is WELL ABOVE the implied current market, flag a likely property-tax reassessment INCREASE as a risk (a real go-forward NOI hit). A disclosed taxAbatement that may not survive the sale is also a risk (current taxes are artificially low).
 - LOCATION QUALITY (demographics: population3mi, avgHHIncome3mi/medianHHIncome3mi, trafficCountVPD): higher household income AND higher population — ESPECIALLY when BOTH are high together — generally support HIGHER rents and TIGHTER (lower) cap rates, and signal a dense INFILL / URBAN trade area where supply is constrained (a strength: durable demand, pricing power, stronger residual value). Use this as an interpretive lens: a high-density, high-income location helps justify above-average in-place rent or a tighter going-in cap, and supports mark-to-market upside; a thin or low-income trade area is the opposite (more cap-rate cushion warranted, weaker rent growth). Conversely, a deal whose rent/cap looks aggressive for a WEAK trade area is a pricing risk. Weave it into the location sentence of the narrative and the strengths/risks. Compare to comparableDeals' demographics where present rather than asserting absolute thresholds.
+- OPERATOR INTEL (the "operatorIntel" field, if present): these are notes the KPR deal team typed in directly about THIS property — sales they've learned, lease changes that are expected, market/tenant color. Treat them as INFORMED FIRST-HAND CONTEXT and weave the material ones into the narrative, strengths, risks and upside. Two cautions: (1) a note tagged "(reported — not yet executed)" or "anecdotal" is an EXPECTATION / soft figure, not a committed fact — frame it as such ("Best Buy is reportedly extending five years — confirm the executed amendment") and don't let it inflate in-place NOI or the grade as if signed/verified; (2) where an intel note has already been applied to the structured data (sales/expiry), don't double-count it. If operatorIntel is absent, ignore this.
 
 FINAL SELF-CHECK BEFORE YOU RETURN — re-read your own JSON and FIX any of these before outputting. These are the exact tie-outs verified downstream; catching them now keeps a wrong figure from landing:
 - UNITS: occupancy is a PERCENT 0–100 (never a 0–1 fraction, never >100). capRate is a percent ~3–12 (not basis points like 650, not a fraction like 0.065). Per-tenant occupancyCost is a percent (e.g. 11.8, not 0.118).
@@ -866,6 +867,16 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
   const t = Array.isArray(dealData.tenants) ? (dealData.tenants as Array<Record<string, unknown>>) : [];
   const thesis = typeof dealData.dealThesis === "string" ? dealData.dealThesis.trim() : "";
   const review = typeof dealData.dealReview === "string" ? dealData.dealReview.trim() : "";
+  // Operator-typed intel (Add-Intel box) — qualitative color + reported (not-yet-
+  // executed) changes. Surface the recent notes so the grade/narrative reflects them.
+  const intelArr = Array.isArray(dealData.dealIntel) ? (dealData.dealIntel as Array<Record<string, unknown>>) : [];
+  const dealIntel = intelArr.length
+    ? intelArr.slice(-12).map((e) => {
+        const txt = typeof e.text === "string" ? e.text.trim() : "";
+        const applied = typeof e.applied === "string" && e.applied ? ` [applied: ${e.applied}]` : "";
+        return txt ? `${txt}${applied}` : null;
+      }).filter(Boolean)
+    : undefined;
   const snapshot = {
     houseView: houseView || undefined,
     leaseRiskExposure: leaseRiskSummary || undefined,
@@ -887,6 +898,7 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
     avgHHIncome3mi: dealData.avgHHIncome3mi ?? undefined,
     trafficCountVPD: dealData.trafficCountVPD ?? undefined,
     kprThesis: thesis || undefined,
+    operatorIntel: dealIntel && dealIntel.length ? dealIntel : undefined,
     // Center-level non-rent income (utility resale, EV, parking, storage) — durability
     // of NOI; and the current tax facts so the grade can flag a reassessment step-up.
     otherIncome: dealData.otherIncome ?? undefined,

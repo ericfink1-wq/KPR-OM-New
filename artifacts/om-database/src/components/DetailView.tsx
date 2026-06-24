@@ -45,6 +45,7 @@ import ClosingCostsCard from "./ClosingCostsCard";
 import TaxReassessmentCard from "./TaxReassessmentCard";
 import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
+import AddIntelBox from "./AddIntelBox";
 import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
@@ -3147,6 +3148,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               </div>
             </div>
           )}
+          <div style={{ marginBottom: 10 }}>
+            <AddIntelBox deal={d} onApply={patch => onUpdate(d.id, patch)} />
+          </div>
           <TenantRoster
           tenants={d.tenants!}
           onTenantClick={onTenantClick}

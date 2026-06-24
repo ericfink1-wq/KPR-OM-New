@@ -759,14 +759,34 @@ export interface TenantSalesRecord {
   annualized?: boolean | null;
   salesNote?: string | null;
   removed?: boolean | null;     // soft-deleted (tenant no longer at the property) — shown struck-through, re-addable
+  // Set when this figure was typed in (Add-Intel box) rather than from an OM / sales
+  // report. `anecdotal` = a soft, tenant-reported number ("they say ~$X") — always
+  // badged. `provenance` records where it came from + when (e.g. "Tenant-reported,
+  // entered 6/24/26"). Both are surfaced on the sales table so a soft figure is clear.
+  anecdotal?: boolean | null;
+  provenance?: string | null;
 }
 
 // A year's worth of per-tenant sales data for a deal
 export interface TenantSalesYear {
   year: number;                  // the reporting year the sales belong to (e.g. 2023)
   uploadedAt: string;            // ISO timestamp of upload
-  source: "om" | "upload";
+  // "om" = derived from the OM roster; "upload" = parsed sales report; "manual" =
+  // a concrete figure typed in via the Add-Intel box; "anecdotal" = a soft, tenant-
+  // reported figure typed in (always badged so it's never mistaken for a hard number).
+  source: "om" | "upload" | "manual" | "anecdotal";
   tenants: TenantSalesRecord[];
+}
+
+// One free-text intel note the user typed in, plus a record of what it changed.
+export interface DealIntelEntry {
+  id: string;
+  enteredAt: string;             // ISO timestamp
+  text: string;                  // the user's verbatim wording
+  // Short, human-readable summary of the structured changes applied from this note
+  // (e.g. "Whole Foods 2024 sales → $40.0M; Best Buy expiry → 2034 (reported)").
+  applied?: string | null;
+  category?: "sales" | "lease" | "market" | "tenant" | "general" | null;
 }
 
 export interface DealScore {
@@ -1013,6 +1033,12 @@ export interface Deal {
   tenantsManual?: boolean;
   // Tenant sales history (uploaded year-by-year snapshots)
   tenantSalesHistory?: TenantSalesYear[];
+  // Free-text intel the user types in (Add-Intel box) — qualitative color and reported
+  // (not-yet-executed) changes. Preserved verbatim and fed into the AI grade/narrative
+  // and analyst chat so context like "redevelopment planned next door" shapes the
+  // analysis. Concrete sales/lease facts ALSO write to the structured fields; this log
+  // keeps the original wording + a record of what was applied.
+  dealIntel?: DealIntelEntry[] | null;
   // Cash flow
   cashFlowProjection?: CashFlowRow[];
   // Income/expense breakdown
