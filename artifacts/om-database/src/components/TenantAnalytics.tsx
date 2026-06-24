@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
-import { tenantKey, isVacant, isNAPTenant, isATM, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, buildSalesByDeal, resolveSalesPSF, type UserMerge } from "../lib/utils";
+import { tenantKey, isVacant, isNAPTenant, tenantFormat, TENANT_FORMAT_LABEL, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, buildSalesByDeal, resolveSalesPSF, type UserMerge, type TenantFormat } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { exportAggregateToExcel, type AggColumn } from "../lib/exportExcel";
 
@@ -41,6 +41,7 @@ interface SalesOccurrence {
 interface TenantRow {
   key: string;
   displayName: string;
+  format: TenantFormat;
   locationCount: number;
   ownedCount: number;
   totalAnnualRent: number;
@@ -212,7 +213,10 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSel, setMergeSel] = useState<Set<string>>(new Set());
   const [mergeVersion, setMergeVersion] = useState(0);
-  const [hideATMs, setHideATMs] = useState(false);
+  // Format filter for the All-Tenants list: full stores only, just ATMs, just fuel
+  // pads, or everything. ATMs/fuel pads are tracked as their own formats so their
+  // small footprints don't skew brand medians; this lets you view each on its own.
+  const [formatFilter, setFormatFilter] = useState<"all" | "standard" | "atm" | "fuelpad">("all");
   // Pinned top search — jump straight to any tenant or parent company.
   const [navSearch, setNavSearch] = useState("");
   const [navFocused, setNavFocused] = useState(false);
@@ -258,17 +262,23 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         const rawName = t.canonicalName || t.name;
         if (!rawName || isVacant(rawName)) continue;
         if (isNAPTenant(t)) continue;
-        const key = tenantKey(rawName);
+        const sf = num(t.sf);
+        // FORMAT-aware key: a brand's ATM / fuel-pad locations group SEPARATELY from
+        // its full stores, so a kiosk-sized ATM or a 0-SF fuel pad never drags the
+        // brand's size / rent / sales medians (and each format is viewable on its own).
+        const fmt = tenantFormat(rawName, sf);
+        const baseKey = tenantKey(rawName);
+        const key = fmt === "standard" ? baseKey : `${baseKey}__${fmt}`;
         const annualRent = num(t.annualRent) ?? 0;
         const rentPSF = num(t.rentPerSF);
         const salesPSF = resolveSalesPSF(salesByDeal, deal, t);
-        const sf = num(t.sf);
         const ig = isInvestmentGrade(rawName, t.creditRating);
 
         if (!map.has(key)) {
           map.set(key, {
             key,
             displayName: rawName,
+            format: fmt,
             locationCount: 0,
             ownedCount: 0,
             totalAnnualRent: 0,
@@ -365,19 +375,36 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
   // All tenants sorted by rent desc — searchable full list
   const allTenantsSorted = useMemo(() => [...rows].sort((a, b) => b.totalAnnualRent - a.totalAnnualRent), [rows]);
-  // Only offer the ATM filter when the CURRENTLY VISIBLE (search-filtered) list
-  // actually contains ATMs — so it doesn't show while browsing non-bank tenants.
-  const hasATMs = useMemo(() => {
-    const q = tenantSearch.trim().toLowerCase();
-    const base = q ? allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q)) : allTenantsSorted;
-    return base.some(r => isATM(r.displayName, r.totalSF));
-  }, [allTenantsSorted, tenantSearch]);
+  // Which special formats are present in the library (drives the filter buttons).
+  const hasATMs = useMemo(() => rows.some(r => r.format === "atm"), [rows]);
+  const hasFuelPads = useMemo(() => rows.some(r => r.format === "fuelpad"), [rows]);
   const filteredAllTenants = useMemo(() => {
     const q = tenantSearch.trim().toLowerCase();
     let list = q ? allTenantsSorted.filter(r => tenantLabel(r.displayName).toLowerCase().includes(q)) : allTenantsSorted;
-    if (hideATMs) list = list.filter(r => !isATM(r.displayName, r.totalSF));
+    if (formatFilter !== "all") list = list.filter(r => r.format === formatFilter);
     return list;
-  }, [allTenantsSorted, tenantSearch, hideATMs]);
+  }, [allTenantsSorted, tenantSearch, formatFilter]);
+
+  // Average metrics per special format (Eric: "see ATMs / fuel pads and know their
+  // average metrics"). Avg SF and median rent PSF are pooled across that format's rows.
+  const formatStats = useMemo(() => {
+    const build = (fmt: TenantFormat) => {
+      const fr = rows.filter(r => r.format === fmt);
+      if (fr.length === 0) return null;
+      const locations = fr.reduce((s, r) => s + r.locationCount, 0);
+      const totalRent = fr.reduce((s, r) => s + r.totalAnnualRent, 0);
+      const sfRows = fr.filter(r => r.totalSF > 0);
+      const totalSF = sfRows.reduce((s, r) => s + r.totalSF, 0);
+      const sfLocs = sfRows.reduce((s, r) => s + r.locationCount, 0);
+      const avgSF = sfLocs > 0 ? totalSF / sfLocs : null;
+      const psfVals = fr.flatMap(r => r.rentPSFValues).sort((a, b) => a - b);
+      const medianPSF = psfVals.length
+        ? (psfVals.length % 2 ? psfVals[(psfVals.length - 1) / 2] : (psfVals[psfVals.length / 2 - 1] + psfVals[psfVals.length / 2]) / 2)
+        : null;
+      return { brands: fr.length, locations, totalRent, avgSF, medianPSF };
+    };
+    return { atm: build("atm"), fuelpad: build("fuelpad") };
+  }, [rows]);
   // ── Manual tenant linking ───────────────────────────────────────────────────
   const toggleMergeSel = (key: string) => setMergeSel(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
   const selectedRows = useMemo(() => rows.filter(r => mergeSel.has(r.key)), [rows, mergeSel]);
@@ -815,19 +842,69 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
             </Card>
           )}
 
+          {/* Special formats — ATMs & fuel pads tracked on their own, with their
+              average metrics, so they don't skew brand medians but stay viewable. */}
+          {(formatStats.atm || formatStats.fuelpad) && (
+            <Card style={{ marginBottom: 14 }}>
+              <SectionLabel>Special formats — separate from brand averages</SectionLabel>
+              <div style={{ fontSize: 11, color: "#a69e91", marginTop: -8, marginBottom: 12, lineHeight: 1.5 }}>
+                ATMs and fuel / gas pads are tracked as their own formats so their small footprints don&rsquo;t skew a brand&rsquo;s size, rent or sales medians. Their own averages are below — tap a card to filter the list.
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                {([["atm", formatStats.atm], ["fuelpad", formatStats.fuelpad]] as Array<["atm" | "fuelpad", typeof formatStats.atm]>).map(([fmt, s]) => {
+                  if (!s) return null;
+                  const active = formatFilter === fmt;
+                  return (
+                    <div key={fmt} onClick={() => setFormatFilter(active ? "all" : fmt)}
+                      title={active ? "Showing this format — tap to clear" : `Filter the tenant list to ${TENANT_FORMAT_LABEL[fmt]}s`}
+                      style={{ border: `1px solid ${active ? "#2a2c27" : "#ece5d7"}`, background: active ? "#faf8f3" : "#fff", borderRadius: 10, padding: "13px 15px", cursor: "pointer" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
+                        <span style={{ fontWeight: 700, color: "#383a37", fontSize: 13 }}>{TENANT_FORMAT_LABEL[fmt]}s</span>
+                        <span style={{ fontSize: 10, color: "#a69e91" }}>{s.brands} brand{s.brands !== 1 ? "s" : ""} · {s.locations} loc{s.locations !== 1 ? "s" : ""}</span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b8b0a3", fontWeight: 700, marginBottom: 2 }}>Avg SF</div>
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#26281f" }}>{s.avgSF != null ? Math.round(s.avgSF).toLocaleString() : "—"}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b8b0a3", fontWeight: 700, marginBottom: 2 }}>Med. rent</div>
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#26281f" }}>{s.medianPSF != null ? `$${Math.round(s.medianPSF)}` : "—"}<span style={{ fontSize: 9, color: "#a69e91" }}>{s.medianPSF != null ? " PSF" : ""}</span></div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b8b0a3", fontWeight: 700, marginBottom: 2 }}>Total rent</div>
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#26281f" }}>{fmtRent(s.totalRent)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
           {/* All Tenants — searchable full list */}
           <Card>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 }}>
                 All Tenants ({rows.length})
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {hasATMs && (
-                  <button onClick={() => setHideATMs(h => !h)}
-                    title={hideATMs ? "ATMs are hidden — click to show them" : "Hide standalone ATMs from the list"}
-                    style={{ background: hideATMs ? "#2a2c27" : "transparent", border: `1px solid ${hideATMs ? "#2a2c27" : "#c8b89a"}`, color: hideATMs ? "#f6f2ea" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-                    {hideATMs ? "Show ATMs" : "Hide ATMs"}
-                  </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {(hasATMs || hasFuelPads) && (
+                  <div style={{ display: "inline-flex", background: "#f1eadc", borderRadius: 7, padding: 2, flexShrink: 0 }}
+                    title="Filter by store format. ATMs and fuel pads are tracked separately so their footprints don't skew brand size / rent / sales medians.">
+                    {([
+                      ["all", "All"],
+                      ["standard", "Stores"],
+                      ...(hasATMs ? [["atm", "ATMs"] as const] : []),
+                      ...(hasFuelPads ? [["fuelpad", "Fuel pads"] as const] : []),
+                    ] as Array<[typeof formatFilter, string]>).map(([val, lbl]) => (
+                      <button key={val} onClick={() => setFormatFilter(val)}
+                        style={{ background: formatFilter === val ? "#2a2c27" : "transparent", border: "none", color: formatFilter === val ? "#f6f2ea" : "#5c5047", padding: "4px 9px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
                 )}
                 <button onClick={exportTenants} disabled={activeRows.length === 0}
                   title="Export the tenant analysis list to Excel"
@@ -917,10 +994,13 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                           {mergeMode
                             ? <span style={{ color: "#383a37", fontWeight: 500 }}>{tenantLabel(row.displayName)}</span>
                             : <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />}
-                          {isATM(row.displayName, row.totalSF) && (
-                            <span style={{ fontSize: 8.5, color: "#5a6b8c", background: "#eef1f7", border: "1px solid #cdd6e6", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="ATM — tracked separately from full bank branches (same parent company)">ATM</span>
+                          {row.format === "atm" && (
+                            <span style={{ fontSize: 8.5, color: "#5a6b8c", background: "#eef1f7", border: "1px solid #cdd6e6", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="ATM — tracked separately from full bank branches (same parent company) so its tiny footprint doesn't skew the brand's size / rent medians">ATM</span>
                           )}
-                          {!isATM(row.displayName, row.totalSF) && row.totalSF === 0 && row.totalAnnualRent > 0 && (
+                          {row.format === "fuelpad" && (
+                            <span style={{ fontSize: 8.5, color: "#8c6a3a", background: "#f7f1e8", border: "1px solid #e0d2b8", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="Fuel / gas pad — tracked separately from the full-size store (same parent company) so its footprint doesn't skew the brand's size / rent medians">FUEL PAD</span>
+                          )}
+                          {row.format === "standard" && row.totalSF === 0 && row.totalAnnualRent > 0 && (
                             <span style={{ fontSize: 8.5, color: "#3a5b7c", background: "#e8eff5", border: "1px solid #b8cce0", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="Ground lease — base rent with no leasable SF; excluded from SF-based averages">GROUND LEASE</span>
                           )}
                         </div>

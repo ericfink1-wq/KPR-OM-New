@@ -8,7 +8,7 @@
 // signal. All deterministic — computed in code, never the model.
 
 import type { Deal, Tenant } from "./idb";
-import { tenantKey, isVacant, isNAPTenant } from "./utils";
+import { tenantKey, isVacant, isNAPTenant, brandBenchmarkKey } from "./utils";
 
 const MIN_OTHER_LOCATIONS = 2;   // need ≥2 OTHER locations (3 total) for a meaningful brand prototype
 const HIGH_RATIO = 1.6;          // ≥60% larger than the brand median → "way above"
@@ -38,7 +38,9 @@ export function buildBrandSizeIndex(allDeals: Deal[]): BrandSizeIndex {
     const perBrand = new Map<string, number>();
     for (const t of d.tenants || []) {
       if (!t || isVacant(t.name) || isNAPTenant(t)) continue;
-      const key = tenantKey(t.canonicalName || t.name);
+      // Key includes the tenant's FORMAT so a brand's ATMs / fuel pads benchmark
+      // against their own kind, never dragging the full-store median.
+      const key = brandBenchmarkKey(t.canonicalName || t.name, t.sf);
       const sf = num(t.sf);
       if (!key || sf == null) continue;
       perBrand.set(key, (perBrand.get(key) ?? 0) + sf);
@@ -66,7 +68,7 @@ export function flagTenantSize(
   if (isVacant(tenant.name) || isNAPTenant(tenant)) return null;
   const sf = num(tenant.sf);
   if (sf == null) return null;
-  const key = tenantKey(tenant.canonicalName || tenant.name);
+  const key = brandBenchmarkKey(tenant.canonicalName || tenant.name, tenant.sf);
   if (!key) return null;
   const others = (index.get(key) ?? []).filter((o) => o.dealId !== currentDealId).map((o) => o.sf);
   if (others.length < MIN_OTHER_LOCATIONS) return null;

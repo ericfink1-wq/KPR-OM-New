@@ -1093,6 +1093,40 @@ export function isATM(name?: unknown, sf?: number | string | null): boolean {
   return false;
 }
 
+// Distinguish a fuel/gas PAD (a grocer's or wholesaler's gas station, a standalone
+// fueling kiosk) from the full-size store. Like ATMs, a chain runs both formats — a
+// 60,000 SF grocery store AND a tiny/0-SF fuel pad — and the pad's footprint and rent
+// PSF are nothing like the store's, so pooling them skews the brand's size/rent/sales
+// medians. Tracked as its own format in analytics; rolls up to the same parent company.
+export function isFuelPad(name?: unknown, _sf?: number | string | null): boolean {
+  const n = String(name ?? "");
+  // Explicit fuel/gas wording. "(gas)" / "gas pad" / "gas station" / "fuel center" /
+  // "fueling" / "gasoline" / "petroleum" / "fuel pad". Avoid bare "gas" so we don't
+  // catch e.g. "Gaslight Cafe" — require a fuel-context token.
+  if (/\bgasoline\b|\bpetroleum\b|\bfuel(?:ing)?\b|\bgas\s*(?:pad|station|center|centre|bar|station|mart)\b|\(gas\)|\bgas\s*&\s*go\b|\bfuel\s*pad\b/i.test(n)) return true;
+  return false;
+}
+
+// A tenant's operational FORMAT, used to keep mismatched footprints from skewing a
+// brand's size/rent/sales medians and to let analytics view each format on its own.
+// "standard" is a full-line store/branch; "atm" and "fuelpad" are the pad/kiosk formats.
+export type TenantFormat = "atm" | "fuelpad" | "standard";
+export function tenantFormat(name?: unknown, sf?: number | string | null): TenantFormat {
+  if (isATM(name, sf)) return "atm";
+  if (isFuelPad(name, sf)) return "fuelpad";
+  return "standard";
+}
+export const TENANT_FORMAT_LABEL: Record<TenantFormat, string> = {
+  atm: "ATM", fuelpad: "Fuel pad", standard: "Standard",
+};
+
+// Brand-prototype benchmark key that SEPARATES formats: a brand's ATMs benchmark only
+// against other ATMs, its fuel pads against fuel pads, and its full stores against full
+// stores — so a kiosk-sized ATM or a 0-SF fuel pad never drags the store's median.
+export function brandBenchmarkKey(resolvedName?: unknown, sf?: number | string | null): string {
+  return `${tenantKey(String(resolvedName ?? ""))}__${tenantFormat(resolvedName, sf)}`;
+}
+
 // ── Expense-recovery estimation ──────────────────────────────────────────────
 // OMs disclose per-tenant recoveries only sometimes. When they don't, we estimate
 // each recovery-paying tenant's annual expense reimbursements by ALLOCATING the

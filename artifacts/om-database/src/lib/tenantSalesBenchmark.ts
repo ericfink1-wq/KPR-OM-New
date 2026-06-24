@@ -10,7 +10,7 @@
 // sales is a strength worth confirming. All deterministic — code, never the model.
 
 import type { Deal, Tenant } from "./idb";
-import { tenantKey, isVacant, isNAPTenant } from "./utils";
+import { tenantKey, isVacant, isNAPTenant, brandBenchmarkKey } from "./utils";
 
 const MIN_OTHER_LOCATIONS = 2;   // need ≥2 OTHER locations (3 total) for a meaningful brand prototype
 const HIGH_RATIO = 1.6;          // ≥60% above the brand median → "way above"
@@ -41,7 +41,9 @@ export function buildBrandSalesIndex(allDeals: Deal[]): BrandSalesIndex {
     const perBrand = new Map<string, number>();
     for (const t of d.tenants || []) {
       if (!t || isVacant(t.name) || isNAPTenant(t)) continue;
-      const key = tenantKey(t.canonicalName || t.name);
+      // Key includes the tenant's FORMAT so a brand's fuel-pad / ATM sales PSF
+      // benchmark against their own kind, never against the full-store median.
+      const key = brandBenchmarkKey(t.canonicalName || t.name, t.sf);
       const psf = num(t.salesPSF);
       if (!key || psf == null) continue;
       perBrand.set(key, Math.max(perBrand.get(key) ?? 0, psf));
@@ -69,7 +71,7 @@ export function flagTenantSales(
   if (isVacant(tenant.name) || isNAPTenant(tenant)) return null;
   const psf = num(tenant.salesPSF);
   if (psf == null) return null;
-  const key = tenantKey(tenant.canonicalName || tenant.name);
+  const key = brandBenchmarkKey(tenant.canonicalName || tenant.name, tenant.sf);
   if (!key) return null;
   const others = (index.get(key) ?? []).filter((o) => o.dealId !== currentDealId).map((o) => o.salesPSF);
   if (others.length < MIN_OTHER_LOCATIONS) return null;
