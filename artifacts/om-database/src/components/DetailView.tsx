@@ -60,6 +60,7 @@ import { deriveReassessmentFlag } from "../lib/reassessmentFlag";
 import { deriveTaxTriggerFlags } from "../lib/taxTriggerFlags";
 import { deriveRolloverFlag } from "../lib/rolloverRisk";
 import { deriveConcentrationFlag } from "../lib/concentrationRisk";
+import { buildBrandRentIndex, deriveOptionOverhangFlag } from "../lib/renewalOptionOverhang";
 import { deriveSpecialAssessmentFlag } from "../lib/specialAssessmentRisk";
 import { deriveStateTaxNuanceFlag } from "../lib/stateTaxNuance";
 import { deriveDebtMaturityFlag } from "../lib/debtMaturityRisk";
@@ -1772,6 +1773,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // typical productivity for that retailer across all OTHER deals (low = underperformer).
   const brandSalesIndex = useMemo(() => buildBrandSalesIndex(allDeals), [allDeals]);
   const salesFlags = useMemo(() => buildSalesFlags(d, brandSalesIndex), [d, brandSalesIndex]);
+  // Brand RENT medians across other deals — powers the renewal-option overhang flag
+  // (below-market fixed options that lock away the mark-to-market upside).
+  const brandRentIndex = useMemo(() => buildBrandRentIndex(allDeals), [allDeals]);
   // Cross-portfolio distribution anomalies as review questions — folded into the
   // "Confirm import details" overlay so each outlier can be confirmed/fixed/taught.
   const anomalyChecks = useMemo(() => anomalyReviewQuestions(d, allDeals), [d, allDeals]);
@@ -3334,8 +3338,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const groundLeaseFlag = deriveGroundLeaseFlag(d);
         const sizeOutlierFlag = deriveSizeOutlierFlag(d, brandSizeIndex);
         const salesOutlierFlag = deriveSalesOutlierFlag(d, brandSalesIndex);
+        const optionOverhangFlag = deriveOptionOverhangFlag(d, brandRentIndex);
         const anomalyFlag = deriveAnomalyFlag(d, allDeals);
-        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
+        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, optionOverhangFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));

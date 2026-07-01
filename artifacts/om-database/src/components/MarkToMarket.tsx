@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Deal } from "../lib/idb";
 import { isVacant, isNAPTenant, tenantKey } from "../lib/utils";
 import { apiLoadTenantBenchmarks, type AnalystTenantBenchmark } from "../lib/api";
+import { assessOptionOverhang } from "../lib/renewalOptionOverhang";
 import ScopeToggle, { scopeDeals, type Scope } from "./ScopeToggle";
 
 interface Props {
@@ -18,12 +19,17 @@ interface Gap {
   annual: number | null; // $ /yr to market (gapPSF * sf), null if no SF
   locations: number;
   years: [number | null, number | null];
+  // Renewal-option overhang: when the tenant holds fixed-rate options materially
+  // below market, the upside isn't capturable — the tenant can just renew cheap.
+  locked: boolean;
+  lockNote: string | null;  // e.g. "options at $9.50/SF (up to 20 yrs)"
 }
 
 interface DealMtm {
   dealId: string;
   dealName: string;
-  belowUpside: number;  // sum of annual upside for below-market leases past threshold
+  belowUpside: number;  // sum of annual upside for below-market leases past threshold (free, not option-locked)
+  lockedUpside: number; // upside sitting behind below-market renewal options
   belowCount: number;
   rows: Gap[];          // below-market past threshold, biggest upside first
 }
@@ -84,12 +90,18 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
         const sf = num(t.sf);
         const gapPct = ((median - inPlace) / median) * 100;
         const annual = sf != null ? (median - inPlace) * sf : null;
-        rows.push({ name: t.canonicalName || t.name || "Tenant", inPlace, median, sf, gapPct, annual, locations: b.locations, years: b.recencyYears });
+        const oh = assessOptionOverhang(t, median);
+        const locked = oh?.status === "encumbered";
+        const lockNote = locked && oh?.optionRentPSF != null
+          ? `options at $${oh.optionRentPSF.toFixed(2)}/SF${oh.parsed.totalOptionYears ? ` (up to ${oh.parsed.totalOptionYears} yrs)` : ""}`
+          : null;
+        rows.push({ name: t.canonicalName || t.name || "Tenant", inPlace, median, sf, gapPct, annual, locations: b.locations, years: b.recencyYears, locked, lockNote });
       }
       const below = rows.filter(r => r.gapPct >= threshold).sort((a, b) => (b.annual ?? 0) - (a.annual ?? 0));
-      const belowUpside = below.reduce((s, r) => s + (r.annual ?? 0), 0);
+      const belowUpside = below.filter(r => !r.locked).reduce((s, r) => s + (r.annual ?? 0), 0);
+      const lockedUpside = below.filter(r => r.locked).reduce((s, r) => s + (r.annual ?? 0), 0);
       if (below.length > 0) {
-        out.push({ dealId: d.id, dealName: d.propertyName || d.address || "Untitled deal", belowUpside, belowCount: below.length, rows: below });
+        out.push({ dealId: d.id, dealName: d.propertyName || d.address || "Untitled deal", belowUpside, lockedUpside, belowCount: below.length, rows: below });
       }
     }
     out.sort((a, b) => b.belowUpside - a.belowUpside);
@@ -97,6 +109,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
   }, [scopedDeals, benchByKey, threshold]);
 
   const totalUpside = perDeal.reduce((s, d) => s + d.belowUpside, 0);
+  const totalLocked = perDeal.reduce((s, d) => s + d.lockedUpside, 0);
   const totalLeases = perDeal.reduce((s, d) => s + d.belowCount, 0);
 
   return (
@@ -131,9 +144,15 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
           {/* Portfolio rollup */}
           <div style={{ background: "#f4f8ef", border: "1px solid #d7e6c6", borderRadius: 12, padding: "16px 18px", marginBottom: 16, display: "flex", gap: 28, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Total potential upside / yr</div>
+              <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Capturable upside / yr</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: "#2f6b1f", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtMoney(totalUpside)}</div>
             </div>
+            {totalLocked > 0 && (
+              <div title="Upside sitting behind fixed-rate renewal options priced below market — the tenant can renew at the cheap rate, so this rent isn't capturable while the options remain.">
+                <div style={{ fontSize: 10.5, color: "#9a6b1f", fontWeight: 600, marginBottom: 3 }}>🔒 Locked by options / yr</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#9a6b1f", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtMoney(totalLocked)}</div>
+              </div>
+            )}
             <div>
               <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Below-market leases</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{totalLeases}</div>
@@ -175,20 +194,28 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
                 </div>
                 <button onClick={() => toggleCollapse(dm.dealId)}
                   style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#2f6b1f", whiteSpace: "nowrap" }}>
-                  {fmtMoney(dm.belowUpside)}/yr · {dm.belowCount} lease{dm.belowCount === 1 ? "" : "s"}
+                  {fmtMoney(dm.belowUpside)}/yr{dm.lockedUpside > 0 ? <span style={{ color: "#9a6b1f" }}> (+{fmtMoney(dm.lockedUpside)} 🔒)</span> : null} · {dm.belowCount} lease{dm.belowCount === 1 ? "" : "s"}
                 </button>
               </div>
               {isOpen && (
                 <div style={{ marginTop: 6 }}>
                   {dm.rows.map((r, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderTop: "1px solid #f4efe4", fontSize: 12.5 }}>
-                      <div style={{ flex: 1, minWidth: 0, fontWeight: 600, color: "#2a2c28", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
+                      <div style={{ flex: 1, minWidth: 0, fontWeight: 600, color: "#2a2c28", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {r.name}
+                        {r.locked && (
+                          <span title={`Upside locked by below-market renewal ${r.lockNote ?? "options"} — the tenant can renew at the cheap rate.`}
+                            style={{ marginLeft: 6, fontSize: 10.5, fontWeight: 700, color: "#9a6b1f", background: "#fdf3e0", border: "1px solid #ecd9b4", borderRadius: 999, padding: "1px 7px", whiteSpace: "nowrap" }}>
+                            🔒 {r.lockNote ?? "options below market"}
+                          </span>
+                        )}
+                      </div>
                       <div style={{ color: "#7d766a", whiteSpace: "nowrap" }}>
                         ${r.inPlace.toFixed(2)} vs ${r.median.toFixed(2)} median
                         <span style={{ color: "#a89f8f" }}> ({r.locations} locs)</span>
                       </div>
                       <div style={{ width: 56, textAlign: "right", fontWeight: 700, color: "#b3711a" }}>{Math.round(r.gapPct)}%</div>
-                      <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: "#2f6b1f" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
+                      <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: r.locked ? "#9a6b1f" : "#2f6b1f", textDecoration: r.locked ? "line-through" : "none" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
                     </div>
                   ))}
                 </div>
