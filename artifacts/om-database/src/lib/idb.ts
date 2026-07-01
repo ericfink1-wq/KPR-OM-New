@@ -1059,6 +1059,10 @@ export interface Deal {
   // (deterministic arithmetic/missing-field checks + AI low-confidence captures).
   // Resolved items keep resolvedAt set so they aren't re-asked.
   reviewQuestions?: ReviewQuestion[] | null;
+  // WHERE each headline number came from in the OM (page + table/section, e.g.
+  // {"noi":"p.14 — Financial Summary"}), written by the extraction so a reviewer
+  // can verify a figure in seconds instead of hunting through the PDF.
+  fieldCitations?: Record<string, string> | null;
   // User data
   userNotes?: string | null;
   // KPR's own thesis / assumptions for this deal — free text the acquisitions team

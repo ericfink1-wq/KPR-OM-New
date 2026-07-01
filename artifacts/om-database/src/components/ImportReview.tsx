@@ -543,6 +543,9 @@ USER CORRECTION: ${instruction}`;
               {q.suggestedValue && editingId !== q.id && (
                 <div style={{ fontSize: 12, color: "#5c5047", marginTop: 6 }}>
                   Captured as: <span style={{ fontWeight: 600, background: "#fff", border: "1px solid #e7e0d2", borderRadius: 4, padding: "1px 6px" }}>{q.suggestedValue}</span>
+                  {q.target?.kind === "deal" && q.target.fieldKey && (deal.fieldCitations || {})[q.target.fieldKey] && (
+                    <span style={{ marginLeft: 8, color: "#a89f8f" }}>OM source: {(deal.fieldCitations || {})[q.target.fieldKey!]}</span>
+                  )}
                 </div>
               )}
 

@@ -2267,11 +2267,20 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     const lockable = !!(field && LOCKABLE[field]);
     const ver = lockable ? (d.verified || {})[field!] : null;
     const hasVal = v != null && v !== "";
+    // OM source citation (page + section) written by the extraction — hover to see
+    // where this number came from without opening the PDF.
+    const cite = field && hasVal ? (d.fieldCitations || {})[field] : null;
     return (
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e7e0d2", background:ver?"#0f9d6308":"transparent", margin:ver?"0 -6px":0, paddingLeft:ver?6:0, paddingRight:ver?6:0, borderRadius:ver?4:0 }}>
         <span style={{ fontSize:10, color:"#6f6a5f", letterSpacing:"0.05em" }}>{l}</span>
         <span style={{ display:"flex", alignItems:"center", gap:7 }}>
           <span style={{ fontSize:11, color:c||"#383a37", fontWeight:500 }}>{hasVal ? String(v) : <span style={{color:"#958d80"}}>—</span>}</span>
+          {cite && (
+            <span title={`OM source: ${cite}`}
+              style={{ fontSize:9, color:"#a89f8f", border:"1px solid #e3dccd", borderRadius:999, padding:"0 5px", lineHeight:"14px", cursor:"help", flexShrink:0, fontFamily:"'Inter',sans-serif" }}>
+              {cite.match(/p\.?\s?\d+/i)?.[0]?.replace(/\s/g, "") || "src"}
+            </span>
+          )}
           {warn && <ReconBadge msg={warn}/>}
           {lockable && hasVal && (
             <button onClick={() => onToggleVerified(d.id, field!)}
