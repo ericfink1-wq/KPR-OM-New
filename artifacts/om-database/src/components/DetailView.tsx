@@ -61,6 +61,7 @@ import { deriveTaxTriggerFlags } from "../lib/taxTriggerFlags";
 import { deriveRolloverFlag } from "../lib/rolloverRisk";
 import { deriveConcentrationFlag } from "../lib/concentrationRisk";
 import { buildBrandRentIndex, deriveOptionOverhangFlag } from "../lib/renewalOptionOverhang";
+import { buildRenewalRiskIndex, computeRentAtRisk } from "../lib/renewalRisk";
 import { deriveSpecialAssessmentFlag } from "../lib/specialAssessmentRisk";
 import { deriveStateTaxNuanceFlag } from "../lib/stateTaxNuance";
 import { deriveDebtMaturityFlag } from "../lib/debtMaturityRisk";
@@ -1776,6 +1777,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // Brand RENT medians across other deals — powers the renewal-option overhang flag
   // (below-market fixed options that lock away the mark-to-market upside).
   const brandRentIndex = useMemo(() => buildBrandRentIndex(allDeals), [allDeals]);
+  // Per-tenant renewal-probability read (occ cost, sales trend, watchlist, credit,
+  // options) — colors the rollover chart and drives the rent-at-risk stat.
+  const renewalRisks = useMemo(() => buildRenewalRiskIndex(d, { watch: watchMap, rentIndex: brandRentIndex }), [d, watchMap, brandRentIndex]);
+  const rentAtRisk36 = useMemo(() => computeRentAtRisk(d, renewalRisks, 36), [d, renewalRisks]);
   // Cross-portfolio distribution anomalies as review questions — folded into the
   // "Confirm import details" overlay so each outlier can be confirmed/fixed/taught.
   const anomalyChecks = useMemo(() => anomalyReviewQuestions(d, allDeals), [d, allDeals]);
@@ -3246,7 +3251,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       {/* Lease Rollover & WALT */}
       {(d.tenants||[]).length > 0 && (
-        <div id="section-rollover"><LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} /></div>
+        <div id="section-rollover"><LeaseRollover tenants={d.tenants!} tenantsAsOf={d.tenantsAsOf} risks={renewalRisks} rentAtRisk={rentAtRisk36} /></div>
       )}
 
       </>)}
