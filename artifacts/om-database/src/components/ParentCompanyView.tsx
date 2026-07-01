@@ -6,6 +6,7 @@ import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
+import PortfolioStressTest from "./PortfolioStressTest";
 import { stickyFirstCol } from "../lib/stickyCol";
 
 interface Props {
@@ -181,6 +182,15 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
       </div>
 
       <EntityDescription name={parentName} kind="parent" />
+
+      {/* "This company just filed" — every banner fails together: direct rent +
+          co-tenancy knock-on across the whole library */}
+      <PortfolioStressTest
+        tenantName={parentName}
+        brands={[...new Set(allRows.map(r => r.t.canonicalName || r.t.name || "").filter(Boolean))]}
+        deals={deals}
+        onOpenDeal={onOpenDeal}
+      />
 
       {/* Subtitle + scope toggle on same row */}
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>

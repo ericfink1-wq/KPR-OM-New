@@ -6,6 +6,7 @@ import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, fmtUSD, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName, buildSalesByDeal, resolveSalesPSF } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
+import PortfolioStressTest from "./PortfolioStressTest";
 import { stickyFirstCol } from "../lib/stickyCol";
 
 interface Props {
@@ -225,6 +226,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
       ) : null; })()}
 
       <EntityDescription name={tenantName} kind="tenant" />
+
+      {/* "This chain just filed" — portfolio-wide direct rent + co-tenancy knock-on */}
+      <PortfolioStressTest tenantName={tenantName} deals={deals} onOpenDeal={onOpenDeal} />
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
         <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>
