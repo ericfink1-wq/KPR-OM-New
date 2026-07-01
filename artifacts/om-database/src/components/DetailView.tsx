@@ -63,6 +63,7 @@ import { deriveConcentrationFlag } from "../lib/concentrationRisk";
 import { buildBrandRentIndex, deriveOptionOverhangFlag } from "../lib/renewalOptionOverhang";
 import { buildRenewalRiskIndex, computeRentAtRisk } from "../lib/renewalRisk";
 import { deriveLeaseVintageFlag } from "../lib/leaseVintage";
+import { deriveOmOmissionFlags } from "../lib/omOmissions";
 import LeaseVintageCard from "./LeaseVintageCard";
 import { deriveSpecialAssessmentFlag } from "../lib/specialAssessmentRisk";
 import { deriveStateTaxNuanceFlag } from "../lib/stateTaxNuance";
@@ -3359,8 +3360,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const salesOutlierFlag = deriveSalesOutlierFlag(d, brandSalesIndex);
         const optionOverhangFlag = deriveOptionOverhangFlag(d, brandRentIndex);
         const vintageFlag = deriveLeaseVintageFlag(d);
+        // Levers found in the EXECUTED leases that the OM never disclosed —
+        // termination options, kickouts, co-tenancy — the highest-trust flags here.
+        const omissionFlags = deriveOmOmissionFlags(d, abstracts);
         const anomalyFlag = deriveAnomalyFlag(d, allDeals);
-        const derivedExtra = [rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, optionOverhangFlag, vintageFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
+        const derivedExtra = [...omissionFlags, rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, optionOverhangFlag, vintageFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
