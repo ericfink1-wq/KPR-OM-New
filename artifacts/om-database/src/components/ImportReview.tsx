@@ -64,6 +64,7 @@ const TENANT_FIELDS: Record<string, "number" | "text" | "boolean"> = {
   annualRent: "number", leaseStart: "text", leaseExpiry: "text", remainingTermYears: "number",
   reimbursementMethod: "text", leaseType: "text", rentBumps: "text", rentSchedule: "text", renewalOptions: "text",
   salesPSF: "number", occupancyCost: "number", expenseReimbursements: "number",
+  screens: "number",
   percentageRent: "number", otherRent: "number", creditRating: "text",
   isAnchor: "boolean", isNAP: "boolean", isDark: "boolean", assumptionNote: "text", salesNotes: "text",
 };

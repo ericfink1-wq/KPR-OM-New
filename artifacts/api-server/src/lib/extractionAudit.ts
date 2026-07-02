@@ -88,6 +88,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-rentroll-incomplete": "Rent roll didn't extract",
   "audit-lease-dates": "Lease expiry before start",
   "audit-occupancy-over-100": "Occupancy over 100%",
+  "audit-screens-implausible": "Theater screen count implausibly high",
   "audit-sales-below-rent": "Sales PSF below rent PSF",
   "audit-reno-before-built": "Renovated before built",
   "audit-anchor-missing": "Grocery anchor missing",
@@ -612,6 +613,25 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       question: `Occupancy is ${occ}% — over 100% isn't possible. Re-check the occupied SF or the GLA.`,
       detail: `Occupancy can't exceed 100%; usually the occupied SF is overstated or the GLA is understated.`,
       suggestedValue: null, target: { kind: "deal", fieldKey: "occupancy", valueType: "number" },
+    });
+  }
+
+  // ── P2. Movie-theater screen count implausibly high (likely a misread) ────────
+  // A real multiplex almost never exceeds ~30 screens; a higher value is usually a
+  // seat count, store number, or year captured into `screens`. Flag for confirmation.
+  let screenFlags = 0;
+  for (const t of occupied) {
+    if (screenFlags >= 2) break;
+    const sc = num((t as Record<string, unknown>).screens);
+    if (sc == null || sc <= 30) continue;
+    const nm = String(t.name ?? "theater");
+    screenFlags++;
+    out.push({
+      id: `audit-screens-implausible-${nm}`.slice(0, 80), source: "check", severity: "low",
+      field: `${nm} — screens`,
+      question: `${nm}: ${sc} screens is implausibly high — a real theater rarely exceeds ~30. Confirm the screen count (it's likely a seat count, store number, or year).`,
+      detail: `Theaters are underwritten on sales PER SCREEN, so the screen count must be right. Most multiplexes are 6–24 screens; a value over ~30 is almost always a mis-capture.`,
+      suggestedValue: String(sc), target: { kind: "tenant", fieldKey: "screens", tenantName: nm, valueType: "number" },
     });
   }
 

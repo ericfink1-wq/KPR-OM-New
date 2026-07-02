@@ -7,6 +7,7 @@ import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, fmtUSD
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
 import PortfolioStressTest from "./PortfolioStressTest";
+import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { stickyFirstCol } from "../lib/stickyCol";
 
 interface Props {
@@ -372,7 +373,16 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{fmtUSD(r.t.annualRent)}</td>
                         <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
-                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(effSales(r), r.t.sf)}</td>
+                        <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>
+                          {fmtTenantSales(effSales(r), r.t.sf)}
+                          {(() => {
+                            // Theater: sales PER SCREEN is the comparable metric across locations.
+                            const cin = cinemaSalesRead(r.t, effSales(r));
+                            return cin.isCinema && cin.perScreen != null
+                              ? <span style={{ marginLeft:6, fontSize:9.5, fontWeight:700, color:"#6b4fa0" }} title={`${cin.screens} screens${cin.screenSource === "name" ? " (from the name — confirm)" : ""}. Theaters compare on sales per screen, not PSF.`}>· {fmtPerScreen(cin.perScreen)}</span>
+                              : null;
+                          })()}
+                        </td>
                         <td style={{ padding:"9px 10px", color:"#837c6e", fontSize:11, whiteSpace:"nowrap" }}>{r.t.reimbursementMethod || (r.t as any).leaseType || "—"}</td>
                         {/* Ignore + Unlink — sticky right, stopPropagation so they don't open the deal */}
                         <td

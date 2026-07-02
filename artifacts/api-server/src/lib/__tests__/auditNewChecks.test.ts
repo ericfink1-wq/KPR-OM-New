@@ -15,6 +15,17 @@ describe("audit — lease-date chronology", () => {
   });
 });
 
+describe("audit — theater screen count implausibly high", () => {
+  it("flags a theater screen count over 30 (likely a seat/store number)", () => {
+    const deal = { tenants: [{ name: "Regal Cinemas", sf: 55000, annualRent: 400000, rentPerSF: 7.27, screens: 250 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-screens-implausible"))).toBe(true);
+  });
+  it("does NOT flag a normal screen count", () => {
+    const deal = { tenants: [{ name: "Regal Cinemas", sf: 55000, annualRent: 400000, rentPerSF: 7.27, screens: 14 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-screens-implausible"))).toBe(false);
+  });
+});
+
 describe("audit — occupancy over 100%", () => {
   it("flags occupancy > 100", () => {
     expect(auditExtraction({ occupancy: 105 }).some((q) => q.id === "audit-occupancy-over-100")).toBe(true);

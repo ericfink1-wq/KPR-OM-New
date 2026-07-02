@@ -176,6 +176,10 @@ export interface Tenant {
   recentRenewalSpreadPct?: number | null;
   salesPSF?: number | string | null;
   salesYear?: number | null;        // year the salesPSF figure is from (from OM extraction)
+  // MOVIE THEATER only: number of screens/auditoriums. Theaters are underwritten on
+  // sales PER SCREEN, not PSF — so this lets the app derive sales/screen. Captured
+  // from the OM (or parsed from the name, e.g. "Regal … 14"). Null for non-theaters.
+  screens?: number | null;
   // Prior-year sales (when the OM prints TWO years, e.g. 2024 and 2025), so a
   // year-over-year sales TREND can be read — declining sales are a leading
   // indicator of a tenant in trouble. priorSalesPSF is per-SF, same basis as salesPSF.

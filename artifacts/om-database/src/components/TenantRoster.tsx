@@ -5,6 +5,7 @@ import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
 import type { SizeFlag } from "../lib/tenantSizeBenchmark";
 import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import type { RentFlag } from "../lib/tenantRentBenchmark";
+import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -667,8 +668,24 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   // weak / at-risk store (red). Intuitive polarity (opposite of rent —
                   // you want LOW rent and HIGH sales). Neutral gray when in-line/no bench.
                   const sColor = sFlag ? (sFlag.direction === "below" ? "#dc2626" : "#0f9d63") : "#5c5f57";
-                  return <td title={trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:sColor, fontWeight:sFlag?700:400, whiteSpace:"nowrap", cursor:(trend||t.salesNotes)?"help":"default" }}>
+                  // Movie theaters: sales PER SCREEN is the real productivity metric
+                  // (sales/SF is meaningless for a big box). Show it alongside.
+                  const cin = cinemaSalesRead(t, salesPSF);
+                  const perScreenTip = cin.perScreen != null
+                    ? `${cin.screens} screens${cin.screenSource === "name" ? " (read from the name — confirm)" : ""} · ${fmtPerScreen(cin.perScreen)}. Theaters are underwritten on sales PER SCREEN, not PSF.`
+                    : cin.suspect
+                      ? `Screen count reads ${cin.screens}, which is implausibly high — a real theater rarely exceeds 30 screens. This is likely a misread (a store/seat number). Confirm the screen count before trusting a per-screen figure.`
+                      : cin.needsScreens
+                        ? "Theater — add the screen count to see sales per screen (the metric that matters for a cinema, not PSF)."
+                        : "";
+                  return <td title={perScreenTip || trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:sColor, fontWeight:sFlag?700:400, whiteSpace:"nowrap", cursor:(perScreenTip||trend||t.salesNotes)?"help":"default" }}>
                     {fmtTenantSales(salesPSF, t.sf)}
+                    {cin.perScreen != null && (
+                      <span style={{ marginLeft:6, fontSize:9.5, fontWeight:700, color:"#6b4fa0" }} title={perScreenTip}>· {fmtPerScreen(cin.perScreen)}</span>
+                    )}
+                    {cin.suspect && (
+                      <FlagTip content={perScreenTip} color="#c97a18"><span style={{ marginLeft:5, fontSize:9.5, fontWeight:800, color:"#c97a18", lineHeight:1 }}>⚠ {cin.screens} scr?</span></FlagTip>
+                    )}
                     {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
                     {sFlag && <FlagTip content={sFlag.tip} color={sColor}><span style={{ marginLeft:4, fontSize:10, fontWeight:800, color:sColor, lineHeight:1 }}>{sFlag.direction==="below"?"▼":"▲"}</span></FlagTip>}
                   </td>;

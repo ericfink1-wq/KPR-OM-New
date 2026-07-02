@@ -209,6 +209,7 @@ export function buildRosterPatch(deal: Deal, result: RentRollResult): Partial<De
     "salesPSF", "salesYear", "priorSalesPSF", "priorSalesYear", "expenseReimbursements",
     "percentageRent", "percentageRentRate", "percentageRentBreakpoint", "percentageRentBreakpointType",
     "otherRent", "creditRating", "isAnchor", "isNAP", "isDark", "parentCompany",
+    "screens",  // theater screen count — stable, rarely on a rent roll; don't wipe it on refresh
   ];
   const blank = (v: unknown) => v == null || v === "";
   const nrm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
