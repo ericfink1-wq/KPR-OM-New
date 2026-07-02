@@ -26,6 +26,17 @@ describe("audit — theater screen count implausibly high", () => {
   });
 });
 
+describe("audit — sales PSF implausibly high (units error)", () => {
+  it("flags a wildly high sales PSF (e.g. a total captured as PSF)", () => {
+    const deal = { tenants: [{ name: "Regal Cinemas", sf: 63260, annualRent: 575000, rentPerSF: 9.09, salesPSF: 165836 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-sales-psf-implausible"))).toBe(true);
+  });
+  it("does NOT flag a normal (even high-productivity) sales PSF", () => {
+    const deal = { tenants: [{ name: "Chipotle", sf: 2400, annualRent: 120000, rentPerSF: 50, salesPSF: 1100 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-sales-psf-implausible"))).toBe(false);
+  });
+});
+
 describe("audit — occupancy over 100%", () => {
   it("flags occupancy > 100", () => {
     expect(auditExtraction({ occupancy: 105 }).some((q) => q.id === "audit-occupancy-over-100")).toBe(true);

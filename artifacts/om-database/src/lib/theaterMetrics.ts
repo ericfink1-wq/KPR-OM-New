@@ -105,13 +105,19 @@ export function cinemaSalesRead(t: Tenant, effectiveSalesPSF: number | null): Ci
   const { screens, source, suspect } = resolveScreens(t);
   const annualSales = tenantAnnualSales(effectiveSalesPSF, num(t.sf));
   const usable = isPlausibleScreens(screens);
+  const perScreenRaw = usable ? salesPerScreen(annualSales, screens) : null;
+  // Defensive: a healthy theater runs a few hundred $k to ~$1.5M/screen. A figure
+  // above ~$5M/screen means the underlying sales PSF is itself a units error (see
+  // audit-sales-psf-implausible) — don't surface a garbage per-screen number.
+  const perScreen = perScreenRaw != null && perScreenRaw <= 5_000_000 ? perScreenRaw : null;
+  const salesLooksBad = perScreenRaw != null && perScreen == null;
   return {
     isCinema: true,
     screens,
     screenSource: source,
-    suspect,
+    suspect: suspect || salesLooksBad,
     needsScreens: annualSales != null && !usable,
     annualSales,
-    perScreen: usable ? salesPerScreen(annualSales, screens) : null,
+    perScreen,
   };
 }

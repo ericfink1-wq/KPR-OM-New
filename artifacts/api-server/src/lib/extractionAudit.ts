@@ -89,6 +89,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-lease-dates": "Lease expiry before start",
   "audit-occupancy-over-100": "Occupancy over 100%",
   "audit-screens-implausible": "Theater screen count implausibly high",
+  "audit-sales-psf-implausible": "Sales PSF implausibly high (units error)",
   "audit-sales-below-rent": "Sales PSF below rent PSF",
   "audit-reno-before-built": "Renovated before built",
   "audit-anchor-missing": "Grocery anchor missing",
@@ -648,6 +649,31 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       field: `${nm} — sales vs rent`,
       question: `${nm}: reported sales of $${spsf.toFixed(0)} PSF are LOWER than the rent of $${rpsf.toFixed(2)} PSF — that implies an occupancy cost over 100%, which is implausible. One figure is mis-read.`,
       detail: `Sales PSF should comfortably exceed rent PSF (occupancy cost is typically 2–15%). Sales below rent usually means a units slip — e.g. sales captured in $000s, or a monthly/total figure read as an annual PSF.`,
+      suggestedValue: null, target: { kind: "tenant", fieldKey: "salesPSF", tenantName: nm, valueType: "number" },
+    });
+  }
+
+  // ── Q2. Per-tenant sales PSF implausibly HIGH → a units error ─────────────────
+  // No retailer does more than a few thousand $/SF (Apple ~$5k/SF is the ceiling of
+  // reality). A far higher figure is almost always a scale slip — a TOTAL sales
+  // number captured as a per-SF one, or sales reported in $000s and not converted.
+  // (Regal Cinemas landed at $165,836/SF: a total-vs-PSF mix-up. A cinema should be
+  // read per screen anyway.) Flag it — a bad salesPSF corrupts occupancy cost, the
+  // per-screen read, and the brand sales benchmark.
+  const SALES_PSF_CEILING = 5000;
+  let highSalesFlags = 0;
+  for (const t of occupied) {
+    if (highSalesFlags >= 3) break;
+    const spsf = num(t.salesPSF);
+    if (spsf == null || spsf <= SALES_PSF_CEILING) continue;
+    const nm = String(t.name ?? "tenant");
+    const isTheater = /\b(regal|amc|cinemark|cinema|cineplex|theat|megaplex|multiplex)/i.test(nm);
+    highSalesFlags++;
+    out.push({
+      id: `audit-sales-psf-implausible-${nm}`.slice(0, 80), source: "check", severity: "high",
+      field: `${nm} — sales PSF`,
+      question: `${nm}: sales of $${Math.round(spsf).toLocaleString()} PSF is implausibly high — no retail does that. Almost always a units error (a total-sales figure captured as a per-SF number, or sales in $000s not converted); the real figure is likely ~1000× smaller.`,
+      detail: `Retail sales top out around a few thousand $/SF. A figure this high corrupts occupancy cost and the sales benchmark — re-check against the OM.${isTheater ? " For a movie theater, sales are read PER SCREEN, not PSF — capture the screen count and the correct total sales." : ""}`,
       suggestedValue: null, target: { kind: "tenant", fieldKey: "salesPSF", tenantName: nm, valueType: "number" },
     });
   }

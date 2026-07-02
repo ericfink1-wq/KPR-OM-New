@@ -88,6 +88,13 @@ describe("salesPerScreen + cinemaSalesRead", () => {
     expect(r.needsScreens).toBe(true);    // prompts confirmation
   });
 
+  it("cinemaSalesRead: a units-error sales figure yields no per-screen (guards against garbage)", () => {
+    // Regal at $165,836/SF × 63,260 SF ÷ 14 screens ≈ $749M/screen — impossible.
+    const r = cinemaSalesRead({ name: "Regal Cinemas 14", sf: 63260, salesPSF: 165836 } as Tenant, 165836);
+    expect(r.perScreen).toBeNull();
+    expect(r.suspect).toBe(true);
+  });
+
   it("cinemaSalesRead: theater with sales but no screens → needsScreens", () => {
     const r = cinemaSalesRead({ name: "Downtown Cinema", sf: 40000, salesPSF: 100 } as Tenant, 100);
     expect(r.needsScreens).toBe(true);
