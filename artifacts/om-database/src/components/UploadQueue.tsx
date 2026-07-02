@@ -5,7 +5,7 @@ import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { playUploadSuccess, playUploadError } from "../lib/sounds";
-import { classifyDocument, matchDeal, hasPossibleMatch, type DocType } from "../lib/docClassify";
+import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, type DocType } from "../lib/docClassify";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 import type { FlyerResult } from "../lib/flyerExtract";
@@ -1084,7 +1084,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
       // ── Smart routing: what KIND of document is this? ──────────────────────
       updateItem(itemId, { msg: "Identifying document…", progress: 30 });
-      const cls = await classifyDocument(text, file.name);
+      const cls = await classifyDocument(text, file.name, pages);
       if (isCancelled(itemId)) return;
 
       if (cls.type === "rent-roll") {
@@ -1099,7 +1099,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         await routeSales(itemId, text, fileName, cls.propertyName, cls.address);
         return;
       }
-      if (cls.type === "flyer") {
+      // SAFEGUARD 5 — final routing gate. Even if classification says "flyer", never
+      // ACT on it for a document that carries sale-OM signals or is long: an OM must
+      // never be treated as a leasing flyer. Fall through to the full OM path instead.
+      if (cls.type === "flyer" && !hasOmSaleSignals(text) && !(pages != null && pages >= 8)) {
         const flyerImgs = xls ? Promise.resolve(null) : extractFlyerImages(buf.slice(0)).then(i => i as unknown as ImageBundle).catch(() => null);
         await routeFlyer(itemId, dealId, fileName, cls.propertyName, cls.address, flyerImgs);
         return;

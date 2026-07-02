@@ -21,13 +21,36 @@ export function detectLeaseOptions(text: string, fileName: string): boolean {
   return false;
 }
 
+// Strong, unambiguous SALE-OM signals a leasing flyer never carries (a flyer, by
+// definition, has no NOI / cap rate / offering summary / asking price / sale comps).
+// The single source of truth used by every OM-vs-flyer safeguard: the flyer
+// detector, the classifier's downgrade, and the router's final gate. Scans a
+// generous window because sale figures can sit a little past the cover.
+export function hasOmSaleSignals(text: string): boolean {
+  const t = (text || "").slice(0, 12000).toLowerCase();
+  // Only signals a LEASING flyer essentially never carries. Deliberately EXCLUDES
+  // flyer-ambiguous tokens like "$/SF" (flyers quote lease rates that way) so a real
+  // flyer isn't wrongly pulled onto the OM path — the guarantee is one-directional
+  // (an OM must never become a flyer), not the reverse.
+  return /(offering memorandum|offering summary|investment sales?|for sale\b|sale[- ]?leaseback|asking price|guidance price|whisper price|as[- ]?is[- ]?noi|net operating income|\bnoi\b|cap rate|going[- ]?in cap|sale comp|sale comparable|price per square foot)/.test(t);
+}
+
 // Deterministic detector for a LEASING FLYER (marketing one-pager for available
 // space) vs a sale OM. Distinct cues: it advertises space "for lease" / "available"
 // and lists a leasing contact, and is NOT a rent roll / sales / options file. Used
 // only to override an "om"/"unknown" guess, so we don't reclassify real OMs.
 export function detectFlyer(text: string, fileName: string): boolean {
   const fn = fileName.toLowerCase();
-  if (/\b(rent\s*roll|sales|option|swap|isda|loan)/.test(fn)) return false;
+  // SAFEGUARD 1 — filename guard. Never reclassify an explicit rent-roll / sales /
+  // options / financing file, OR a file titled as an Offering Memorandum / OM (a
+  // sale package, not a marketing one-pager), mirroring the loan/amort guards.
+  if (/\b(rent\s*roll|sales|option|swap|isda|loan|offering|memorandum)/.test(fn)) return false;
+  if (/\bom\b/.test(fn)) return false;
+  // SAFEGUARD 2 — sale-signal guard. If the body carries any sale-OM signal, this
+  // is an OM, even though an OM routinely markets "available" lease-up UPSIDE
+  // ("Currently Available for Lease Up") — which must NOT be read as a flyer's
+  // availability list. This is the exact miss that mislabeled a full JLL OM.
+  if (hasOmSaleSignals(text)) return false;
   const t = text.slice(0, 5000).toLowerCase();
   const fnHit = /flyer|leasing|availabilit|brochure/.test(fn);
   const bodyHit = /(for lease|space available|available sf|leasing department|leasing@|propertycapsule)/.test(t);
@@ -76,10 +99,42 @@ export interface Classification {
   confidence: "high" | "medium" | "low";
 }
 
+// A leasing flyer is a short marketing one-pager; a document this many pages or
+// more is a full package (OM / rent roll / brochure), never a flyer.
+const FLYER_MAX_PAGES = 8;
+
+// Apply the deterministic type overrides on top of the LLM's guess. Pure and
+// exported so the routing rules are unit-testable without a model call. Order
+// matters: the more specific financing detectors run before flyer, and the
+// page-count guard runs LAST so a long document can never end up a flyer.
+export function applyDeterministicOverrides(
+  llmType: DocType, text: string, fileName: string, pageCount?: number | null,
+): DocType {
+  let type = llmType;
+  // An options schedule must never be treated as a roster-replacing rent roll.
+  if ((type === "rent-roll" || type === "unknown") && detectLeaseOptions(text, fileName)) type = "lease-options";
+  // Swap and loan docs are financing, never a sale OM (swap first — more specific).
+  if ((type === "om" || type === "unknown") && detectSwap(text, fileName)) type = "swap";
+  // Amortization (numeric payment table) before "loan" so a "loan schedule" isn't grabbed by the loan detector.
+  if ((type === "om" || type === "loan" || type === "unknown") && detectAmort(text, fileName)) type = "amort";
+  if ((type === "om" || type === "unknown") && detectLoan(text, fileName)) type = "loan";
+  // A leasing flyer must never be read as a sale OM (which would mine it for
+  // financials / treat available space as in-place tenants).
+  if ((type === "om" || type === "unknown") && detectFlyer(text, fileName)) type = "flyer";
+  // SAFEGUARD 3 — sale-signal downgrade. Even if the LLM returned "flyer" DIRECTLY
+  // (so detectFlyer's guards were never consulted), a document carrying sale-OM
+  // signals is an OM. This closes the LLM-misfire hole regardless of length.
+  if (type === "flyer" && hasOmSaleSignals(text)) type = "om";
+  // SAFEGUARD 4 — length guard. A flyer is a short one-pager; a document this long
+  // is a full package, never a flyer (catches a loose cue AND an LLM misfire).
+  if (type === "flyer" && pageCount != null && pageCount >= FLYER_MAX_PAGES) type = "om";
+  return type;
+}
+
 // Cheap first-pass classification: read the opening of a document and decide
 // what KIND it is and which property it refers to. Uses Haiku on a truncated
 // slice (classification needs the top of the doc, not the whole thing).
-export async function classifyDocument(text: string, fileName: string): Promise<Classification> {
+export async function classifyDocument(text: string, fileName: string, pageCount?: number | null): Promise<Classification> {
   const slice = text.slice(0, 6000);
   const prompt = `You are a commercial real estate document classifier. Given the START of a document (and its file name), identify what it is and which property it concerns.
 
@@ -90,7 +145,7 @@ Definitions:
 - "rent-roll" = a tenant rent roll / lease schedule: a table of tenants with SF, rent, lease dates. NOT a marketing narrative.
 - "lease-options" = a renewal-OPTIONS schedule: rows of option periods per tenant (columns like Option Type, Option Date, Term To Date, Rate, Rate Descriptor, Option Notes). It lists option ladders, usually WITHOUT current SF/rent. Distinct from a rent roll.
 - "sales" = a tenant SALES report: tenant sales volumes / sales-per-SF / occupancy-cost figures, usually by year or trailing 12 months.
-- "flyer" = a LEASING flyer / availability brochure: a short marketing one-pager advertising AVAILABLE space FOR LEASE at a center. Has property highlights, demographics, a co-tenant lineup, available suites, and a leasing-contact — but NO sale price/NOI/cap rate and NO per-tenant rents. Distinct from an "om" (which is for SELLING the whole property).
+- "flyer" = a LEASING flyer / availability brochure: a SHORT marketing one-pager (typically 1–4 pages) advertising AVAILABLE space FOR LEASE at a center. Has property highlights, demographics, a co-tenant lineup, available suites, and a leasing-contact — but NO sale price/NOI/cap rate and NO per-tenant rents. Distinct from an "om". CRITICAL: a document that mentions "available space", "lease-up", or "for lease" but ALSO has sale financials (NOI, cap rate, offering summary, asking price, sale comps) is an "om", NOT a flyer — a sale OM routinely markets vacancy lease-up as UPSIDE. When in doubt between "om" and "flyer", if any sale financials are present it is "om".
 - "swap" = an interest-rate SWAP confirmation (e.g. an ISDA dealer confirmation): a notional amount, fixed rate, floating rate option (SOFR), spread, trade/effective/termination dates, and a Fixed/Floating Rate Payer.
 - "loan" = a LOAN document: a loan agreement, credit agreement, promissory note, loan term sheet, or closing statement — the FINANCING terms (lender, loan amount, rate, maturity, LTV, prepayment). Distinct from an "om" (a sale-marketing package, not a loan).
 - "amort" = an AMORTIZATION SCHEDULE: a table of periodic payments with a running principal balance (columns like Period/Date, Payment, Interest, Principal, Balance). The numeric schedule itself, not a legal loan agreement.
@@ -114,22 +169,9 @@ ${slice}`;
     });
     const raw = res.content?.[0]?.text ?? "";
     const parsed = robustParseJSON(raw) as Partial<Classification>;
-    let type = (["om", "rent-roll", "lease-options", "sales", "flyer", "swap", "loan", "amort", "unknown"] as const).includes(parsed.type as DocType)
+    const llmType = (["om", "rent-roll", "lease-options", "sales", "flyer", "swap", "loan", "amort", "unknown"] as const).includes(parsed.type as DocType)
       ? (parsed.type as DocType) : "unknown";
-    // Deterministic override: an options schedule must never be treated as a
-    // roster-replacing rent roll, so trust the column/filename signal over the LLM.
-    if ((type === "rent-roll" || type === "unknown") && detectLeaseOptions(text, fileName)) type = "lease-options";
-    // Swap and loan docs are financing, never a sale OM — trust their unambiguous
-    // cues over an "om"/"unknown" guess (swap is checked first, it's more specific).
-    if ((type === "om" || type === "unknown") && detectSwap(text, fileName)) type = "swap";
-    // An amortization schedule (numeric payment table) is checked before "loan" so
-    // a "loan schedule" file isn't grabbed by the loan detector.
-    if ((type === "om" || type === "loan" || type === "unknown") && detectAmort(text, fileName)) type = "amort";
-    if ((type === "om" || type === "unknown") && detectLoan(text, fileName)) type = "loan";
-    // A leasing flyer must never be read as a sale OM (which would mine it for
-    // financials / treat available space as in-place tenants). Trust the strong
-    // flyer cues over an "om"/"unknown" guess.
-    if ((type === "om" || type === "unknown") && detectFlyer(text, fileName)) type = "flyer";
+    const type = applyDeterministicOverrides(llmType, text, fileName, pageCount);
     const confidence = (["high", "medium", "low"] as const).includes(parsed.confidence as Classification["confidence"])
       ? (parsed.confidence as Classification["confidence"]) : "low";
     return {
