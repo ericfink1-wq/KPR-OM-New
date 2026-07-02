@@ -3,7 +3,7 @@ import {
   parseRenewalOptions,
   assessOptionOverhang,
   buildBrandRentIndex,
-  deriveOptionOverhangFlag,
+  deriveOptionOverhangNote,
 } from "../renewalOptionOverhang";
 import type { Deal, Tenant } from "../idb";
 
@@ -115,27 +115,30 @@ describe("buildBrandRentIndex + deriveOptionOverhangFlag", () => {
     mkDeal("d4", [{ name: "Dollar Tree", rentPerSF: 13, sf: 10000, annualRent: 130000 }]),
   ];
 
-  it("flags a below-market lease locked by cheap fixed options", () => {
+  it("notes a below-market lease locked by cheap fixed options as neutral income, not a risk", () => {
     const subject = mkDeal("d1", [
       { name: "Dollar Tree", rentPerSF: 9, sf: 10000, annualRent: 90000, renewalOptions: "Two 5-year options at $9.50" },
     ]);
     const idx = buildBrandRentIndex([subject, ...otherDeals]);
-    const flag = deriveOptionOverhangFlag(subject, idx);
-    expect(flag).not.toBeNull();
-    expect(flag!.description).toMatch(/Dollar Tree/);
-    expect(flag!.description).toMatch(/9\.50/);
+    const note = deriveOptionOverhangNote(subject, idx);
+    expect(note).not.toBeNull();
+    expect(note!.summary).toMatch(/Dollar Tree/);
+    expect(note!.summary).toMatch(/9\.50/);
+    // Framed as secure/sticky income, and no concern for a healthy tenant.
+    expect(note!.summary).toMatch(/sticky|durable|secure/i);
+    expect(note!.concern).toBeNull();
   });
 
-  it("does not flag FMV options or above-market leases", () => {
+  it("does not note FMV options or above-market leases", () => {
     const fmv = mkDeal("d1", [
       { name: "Dollar Tree", rentPerSF: 9, sf: 10000, annualRent: 90000, renewalOptions: "Two 5-year options at FMV" },
     ]);
-    expect(deriveOptionOverhangFlag(fmv, buildBrandRentIndex([fmv, ...otherDeals]))).toBeNull();
+    expect(deriveOptionOverhangNote(fmv, buildBrandRentIndex([fmv, ...otherDeals]))).toBeNull();
 
     const atMarket = mkDeal("d1", [
       { name: "Dollar Tree", rentPerSF: 14, sf: 10000, annualRent: 140000, renewalOptions: "Two 5-year options at $9.50" },
     ]);
-    expect(deriveOptionOverhangFlag(atMarket, buildBrandRentIndex([atMarket, ...otherDeals]))).toBeNull();
+    expect(deriveOptionOverhangNote(atMarket, buildBrandRentIndex([atMarket, ...otherDeals]))).toBeNull();
   });
 
   it("excludes the subject deal from its own benchmark and needs 2+ other locations", () => {
@@ -143,14 +146,27 @@ describe("buildBrandRentIndex + deriveOptionOverhangFlag", () => {
       { name: "Rare Tenant", rentPerSF: 9, sf: 10000, annualRent: 90000, renewalOptions: "Two 5-year options at $9.50" },
     ]);
     const oneOther = mkDeal("d2", [{ name: "Rare Tenant", rentPerSF: 15, sf: 10000, annualRent: 150000 }]);
-    expect(deriveOptionOverhangFlag(subject, buildBrandRentIndex([subject, oneOther]))).toBeNull();
+    expect(deriveOptionOverhangNote(subject, buildBrandRentIndex([subject, oneOther]))).toBeNull();
   });
 
-  it("anchor encumbrance is high severity", () => {
+  it("raises a concern only when a locked tenant shows distress (high occupancy cost)", () => {
+    const healthy = mkDeal("d1", [
+      { name: "Dollar Tree", rentPerSF: 9, sf: 10000, annualRent: 90000, occupancyCost: 6, renewalOptions: "Two 5-year options at $9.50" },
+    ]);
+    expect(deriveOptionOverhangNote(healthy, buildBrandRentIndex([healthy, ...otherDeals]))!.concern).toBeNull();
+
+    const distressed = mkDeal("d1", [
+      { name: "Dollar Tree", rentPerSF: 9, sf: 10000, annualRent: 90000, occupancyCost: 18, renewalOptions: "Two 5-year options at $9.50" },
+    ]);
+    expect(deriveOptionOverhangNote(distressed, buildBrandRentIndex([distressed, ...otherDeals]))!.concern).toMatch(/occupancy cost|renewal risk/i);
+  });
+
+  it("raises an anchor growth-cap concern when a dominant anchor is locked below market", () => {
     const subject = mkDeal("d1", [
       { name: "Dollar Tree", rentPerSF: 9, sf: 40000, annualRent: 360000, isAnchor: true, renewalOptions: "Four 5-year options at $9.25" },
+      { name: "Inline", rentPerSF: 20, sf: 5000, annualRent: 100000 },
     ]);
-    const flag = deriveOptionOverhangFlag(subject, buildBrandRentIndex([subject, ...otherDeals]));
-    expect(flag?.severity).toBe("high");
+    const note = deriveOptionOverhangNote(subject, buildBrandRentIndex([subject, ...otherDeals]));
+    expect(note!.concern).toMatch(/caps the center's income growth|growth/i);
   });
 });

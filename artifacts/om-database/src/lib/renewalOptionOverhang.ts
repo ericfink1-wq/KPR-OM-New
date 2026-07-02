@@ -7,7 +7,6 @@
 // lease's upside as capturable ("free") vs option-locked ("encumbered"), and
 // derives a token-free red flag. Deterministic; no model call.
 import type { Deal, Tenant } from "./idb";
-import type { DerivedFlag } from "./expenseRisk";
 import { isVacant, isNAPTenant, tenantKey } from "./utils";
 
 const num = (v: unknown): number | null => {
@@ -191,23 +190,44 @@ export function buildBrandRentIndex(allDeals: Deal[]): BrandRentIndex {
   };
 }
 
-// ---- Deal-level red flag -------------------------------------------------------
+// ---- Deal-level LEASE-ECONOMICS NOTE (NOT a red flag) ---------------------------
+// Below-market rent locked in by options is NOT a risk on its own — a tenant never
+// walks away from a below-market deal, so it is the STICKIEST, most secure income
+// in the center (near-zero vacancy/re-leasing risk). The only thing "lost" is
+// theoretical upside that was never underwritten. So this surfaces as a NEUTRAL
+// data point (secure income, mark-to-market not capturable in the hold), NOT a
+// red flag. It carries a CONCERN line ONLY when the low rent might not be as safe
+// as it looks (the tenant shows distress) or when a dominant anchor's locked rent
+// materially caps the asset's growth — the genuine risk cases (Eric, 7/2/26).
 const MIN_ANNUAL_LOCKED = 25_000;  // ignore trivial encumbrances
+const ANCHOR_CONCERN_SHARE = 25;   // locked anchor rent this % of base = growth-cap concern
+const HIGH_OCC_COST = 15;          // occupancy cost above this = the low rent may be soft
 
-export function deriveOptionOverhangFlag(deal: Deal, rentIndex: BrandRentIndex): DerivedFlag | null {
+export interface OverhangTenant {
+  name: string; sf: number | null; inPlace: number; median: number;
+  optionRentPSF: number; gapPct: number; lockedAnnual: number; years: number | null; isAnchor: boolean;
+}
+export interface OptionOverhangNote {
+  tenants: OverhangTenant[];   // biggest locked $/yr first
+  lockedTotal: number;         // Σ (median − option rent) × SF — upside that is NOT capturable
+  summary: string;             // neutral, income-durability framing
+  concern: string | null;      // set ONLY for genuine risk cases (distress / anchor growth-cap)
+}
+
+export function deriveOptionOverhangNote(deal: Deal, rentIndex: BrandRentIndex): OptionOverhangNote | null {
   const tenants = (deal.tenants || []).filter((t) => t && !isVacant(t.name) && !isNAPTenant(t));
   if (tenants.length === 0) return null;
   const totalRent = tenants.reduce((s, t) => s + (num(t.annualRent) || 0), 0);
 
-  interface Hit { name: string; sf: number | null; inPlace: number; median: number; optionRent: number; gapPct: number; lockedAnnual: number; years: number | null; isAnchor: boolean }
-  const hits: Hit[] = [];
+  const hits: OverhangTenant[] = [];
+  let lockedRentShare = 0;   // share of base rent from locked ANCHORS (growth-cap read)
+  let distressName: string | null = null;
   for (const t of tenants) {
     const inPlace = num(t.rentPerSF);
     if (inPlace == null || inPlace <= 0) continue;
     const bench = rentIndex.get(tenantKey(t.canonicalName || t.name || ""), deal.id);
     if (!bench) continue;
-    // Only leases that are themselves below market matter — an above-market lease
-    // with a cheap option is a (smaller) renewal-time risk, not locked upside.
+    // Only leases that are themselves below market matter.
     if (inPlace >= bench.median * (1 - ENCUMBERED_GAP_PCT / 100)) continue;
     const oh = assessOptionOverhang(t, bench.median);
     if (!oh || oh.status !== "encumbered" || oh.optionRentPSF == null) continue;
@@ -216,27 +236,33 @@ export function deriveOptionOverhangFlag(deal: Deal, rentIndex: BrandRentIndex):
     if (sf != null && lockedAnnual < MIN_ANNUAL_LOCKED) continue;
     hits.push({
       name: t.canonicalName || t.name || "Tenant", sf, inPlace, median: bench.median,
-      optionRent: oh.optionRentPSF, gapPct: oh.gapPct ?? 0,
+      optionRentPSF: oh.optionRentPSF, gapPct: oh.gapPct ?? 0,
       lockedAnnual: Math.max(0, lockedAnnual), years: oh.parsed.totalOptionYears,
       isAnchor: !!t.isAnchor,
     });
+    if (t.isAnchor && totalRent > 0) lockedRentShare += (num(t.annualRent) || 0) / totalRent * 100;
+    // Distress gate: a below-market lease is only a WORRY if the tenant looks shaky —
+    // then even the low rent may not be secure. Occupancy cost is the tell.
+    let occ = num(t.occupancyCost);
+    if (occ != null && occ > 0 && occ < 1) occ = occ * 100;
+    if (occ != null && occ > HIGH_OCC_COST && !distressName) distressName = t.canonicalName || t.name || "a locked tenant";
   }
   if (hits.length === 0) return null;
 
   hits.sort((a, b) => b.lockedAnnual - a.lockedAnnual);
   const lockedTotal = hits.reduce((s, h) => s + h.lockedAnnual, 0);
-  const lockedRentShare = totalRent > 0
-    ? hits.reduce((s, h) => s + (num(tenants.find((t) => (t.canonicalName || t.name) === h.name)?.annualRent) || 0), 0) / totalRent * 100
-    : null;
-  const severity: DerivedFlag["severity"] =
-    hits.some((h) => h.isAnchor) || (lockedRentShare != null && lockedRentShare >= 20) ? "high" : "medium";
-
   const fmt = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${Math.round(n / 1000)}K`;
   const worst = hits.slice(0, 3).map((h) =>
-    `${h.name} can renew at $${h.optionRent.toFixed(2)}/SF vs ~$${h.median.toFixed(2)} brand median (${Math.round(h.gapPct)}% below${h.years ? `, up to ${h.years} yrs of options` : ""})`
+    `${h.name} renews at $${h.optionRentPSF.toFixed(2)}/SF vs ~$${h.median.toFixed(2)} brand median (${Math.round(h.gapPct)}% below${h.years ? `, options run ~${h.years} yrs` : ""})`
   ).join("; ");
-  return {
-    severity,
-    description: `Below-market renewal options encumber the mark-to-market upside — ${worst}. The tenant, not the landlord, controls this space at the cheap rate${lockedTotal > 0 ? `; ~${fmt(lockedTotal)}/yr of apparent rent upside is not capturable while the options remain` : ""}. Brand medians are from your own library (directional) — verify option terms in the lease.`,
-  };
+
+  const summary = `${worst}. A below-market tenant rarely leaves, so this is sticky, durable income — but the mark-to-market is not capturable in a 5–7yr hold${lockedTotal > 0 ? ` (~${fmt(lockedTotal)}/yr of below-market rent, secure but not upside)` : ""}. Brand medians are from your own library (directional).`;
+
+  let concern: string | null = null;
+  if (distressName) {
+    concern = `${distressName} carries a high occupancy cost, so its below-market rent may reflect a soft location rather than pure upside — watch renewal risk, not just the rent gap.`;
+  } else if (lockedRentShare >= ANCHOR_CONCERN_SHARE) {
+    concern = `A dominant anchor's rent is locked below market for the long run — durable income, but it caps the center's income growth, which a buyer will price into the exit.`;
+  }
+  return { tenants: hits, lockedTotal, summary, concern };
 }

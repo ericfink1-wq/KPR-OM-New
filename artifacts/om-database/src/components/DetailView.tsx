@@ -60,7 +60,7 @@ import { deriveReassessmentFlag } from "../lib/reassessmentFlag";
 import { deriveTaxTriggerFlags } from "../lib/taxTriggerFlags";
 import { deriveRolloverFlag } from "../lib/rolloverRisk";
 import { deriveConcentrationFlag } from "../lib/concentrationRisk";
-import { buildBrandRentIndex, deriveOptionOverhangFlag } from "../lib/renewalOptionOverhang";
+import { buildBrandRentIndex, deriveOptionOverhangNote } from "../lib/renewalOptionOverhang";
 import { buildRenewalRiskIndex, computeRentAtRisk } from "../lib/renewalRisk";
 import { deriveLeaseVintageFlag } from "../lib/leaseVintage";
 import { deriveOmOmissionFlags } from "../lib/omOmissions";
@@ -3358,13 +3358,16 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const groundLeaseFlag = deriveGroundLeaseFlag(d);
         const sizeOutlierFlag = deriveSizeOutlierFlag(d, brandSizeIndex);
         const salesOutlierFlag = deriveSalesOutlierFlag(d, brandSalesIndex);
-        const optionOverhangFlag = deriveOptionOverhangFlag(d, brandRentIndex);
         const vintageFlag = deriveLeaseVintageFlag(d);
         // Levers found in the EXECUTED leases that the OM never disclosed —
         // termination options, kickouts, co-tenancy — the highest-trust flags here.
         const omissionFlags = deriveOmOmissionFlags(d, abstracts);
         const anomalyFlag = deriveAnomalyFlag(d, allDeals);
-        const derivedExtra = [...omissionFlags, rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, optionOverhangFlag, vintageFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
+        // NOTE: option overhang (below-market rent locked by options) is NOT a red
+        // flag — it's secure, sticky income, surfaced as a neutral lease-economics
+        // note below the flags. Only its genuine-risk cases (distress / anchor
+        // growth-cap) carry a caution, and that lives in that note, not here.
+        const derivedExtra = [...omissionFlags, rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, vintageFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
@@ -3385,6 +3388,25 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             </div>
             ); }}
           </CollapsibleBox>
+        );
+      })()}
+
+      {/* Lease economics — NEUTRAL data point, not a risk. Below-market rent locked
+          in by options is secure, sticky income; the mark-to-market simply isn't
+          capturable in the hold. Only its genuine-risk cases carry a caution line. */}
+      {(() => {
+        const note = deriveOptionOverhangNote(d, brandRentIndex);
+        if (!note) return null;
+        return (
+          <div id="section-leaseecon" style={{ background:"#f5f7fa", border:"1px solid #cdd7e3", borderRadius:8, padding:"14px 16px" }}>
+            <div style={{ fontSize:8, letterSpacing:"0.1em", color:"#4a6b8a", fontWeight:700, marginBottom:8 }}>🔒 LEASE ECONOMICS — LOCKED BELOW-MARKET RENT (data point, not a risk)</div>
+            <div style={{ fontSize:11, color:"#42505e", lineHeight:1.55 }}>{note.summary}</div>
+            {note.concern && (
+              <div style={{ fontSize:11, color:"#8a5a1a", lineHeight:1.55, marginTop:8, paddingTop:8, borderTop:"1px solid #dfe6ee" }}>
+                <span style={{ fontWeight:700 }}>Worth a look: </span>{note.concern}
+              </div>
+            )}
+          </div>
         );
       })()}
 
