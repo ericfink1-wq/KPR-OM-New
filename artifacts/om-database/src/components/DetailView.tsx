@@ -61,6 +61,7 @@ import { deriveTaxTriggerFlags } from "../lib/taxTriggerFlags";
 import { deriveRolloverFlag } from "../lib/rolloverRisk";
 import { deriveConcentrationFlag } from "../lib/concentrationRisk";
 import { buildBrandRentIndex, deriveOptionOverhangNote } from "../lib/renewalOptionOverhang";
+import { deriveAboveMarketRolldownFlag } from "../lib/aboveMarketRent";
 import { buildRenewalRiskIndex, computeRentAtRisk } from "../lib/renewalRisk";
 import { deriveLeaseVintageFlag } from "../lib/leaseVintage";
 import { deriveOmOmissionFlags } from "../lib/omOmissions";
@@ -3359,6 +3360,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const sizeOutlierFlag = deriveSizeOutlierFlag(d, brandSizeIndex);
         const salesOutlierFlag = deriveSalesOutlierFlag(d, brandSalesIndex);
         const vintageFlag = deriveLeaseVintageFlag(d);
+        // Above-market rent = rollover / mark-to-market DOWNSIDE (premium may reset
+        // down or the tenant leaves; it inflates in-place NOI). A real risk — gated
+        // so a premium that low occupancy cost clearly supports doesn't fire.
+        const aboveMarketFlag = deriveAboveMarketRolldownFlag(d, brandRentIndex);
         // Levers found in the EXECUTED leases that the OM never disclosed —
         // termination options, kickouts, co-tenancy — the highest-trust flags here.
         const omissionFlags = deriveOmOmissionFlags(d, abstracts);
@@ -3367,7 +3372,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         // flag — it's secure, sticky income, surfaced as a neutral lease-economics
         // note below the flags. Only its genuine-risk cases (distress / anchor
         // growth-cap) carry a caution, and that lives in that note, not here.
-        const derivedExtra = [...omissionFlags, rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, vintageFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
+        const derivedExtra = [...omissionFlags, rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, aboveMarketFlag, vintageFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
