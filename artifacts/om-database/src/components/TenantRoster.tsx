@@ -4,6 +4,7 @@ import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
 import type { SizeFlag } from "../lib/tenantSizeBenchmark";
 import type { SalesFlag } from "../lib/tenantSalesBenchmark";
+import type { RentFlag } from "../lib/tenantRentBenchmark";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -40,6 +41,9 @@ interface Props {
   // tenantKey -> SALES outlier flag (this store's sales PSF is way off the brand's
   // typical productivity across the database; below = underperformer). Next to Sales. Optional.
   salesFlags?: Map<string, SalesFlag>;
+  // tenantKey -> RENT outlier flag (this store's in-place rent PSF is way above/below
+  // the chain's median across the database). Colors the Rent/SF cell. Optional.
+  rentFlags?: Map<string, RentFlag>;
   // tenantKey -> kickout / early-termination summary (sales kickout, co-tenancy out,
   // early-termination option). Shown in the Kickout column. Optional.
   kickoutByTenant?: Map<string, { label: string; tip: string }>;
@@ -292,7 +296,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, kickoutByTenant }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant }: Props) {
   const watchMap = useWatchlist();
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [q, setQ] = useState("");
@@ -551,7 +555,21 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     })()}
                   </span>
                 </td>
-                <td style={{ padding:"8px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}</td>
+                {(() => {
+                  // Rent/SF vs the chain's median across the database. Below-chain =
+                  // favorable basis (green); above-chain = premium / rollover risk (red).
+                  // Neutral gray when in-line or no benchmark (was always-green before).
+                  const rf = rentFlags?.get(tenantKey(t.canonicalName || t.name));
+                  const color = !isVacantRow(t) && rf ? (rf.direction === "below" ? "#0f9d63" : "#dc2626") : "#5c5f57";
+                  return (
+                    <td style={{ padding:"8px 10px", textAlign:"right", color, fontWeight:rf?700:500, whiteSpace:"nowrap" }}>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:3, justifyContent:"flex-end" }}>
+                        {n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}
+                        {rf && <FlagTip content={rf.tip} color={color}><span style={{ fontSize:10, fontWeight:800, color, lineHeight:1 }}>{rf.direction === "below" ? "▼" : "▲"}</span></FlagTip>}
+                      </span>
+                    </td>
+                  );
+                })()}
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${Math.round(n(t.annualRent)!).toLocaleString()}`:"—"}</td>
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{fmtLeaseDate(t.leaseExpiry)}</td>
@@ -645,10 +663,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     }
                   }
                   const sFlag = salesFlags?.get(tenantKey(t.canonicalName || t.name));
-                  return <td title={trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap", cursor:(trend||t.salesNotes)?"help":"default" }}>
+                  // Sales vs the chain median: above = strong performer (green), below =
+                  // weak / at-risk store (red). Intuitive polarity (opposite of rent —
+                  // you want LOW rent and HIGH sales). Neutral gray when in-line/no bench.
+                  const sColor = sFlag ? (sFlag.direction === "below" ? "#dc2626" : "#0f9d63") : "#5c5f57";
+                  return <td title={trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:sColor, fontWeight:sFlag?700:400, whiteSpace:"nowrap", cursor:(trend||t.salesNotes)?"help":"default" }}>
                     {fmtTenantSales(salesPSF, t.sf)}
                     {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
-                    {sFlag && <FlagTip content={sFlag.tip} color={sFlag.direction==="below"?"#dc2626":"#0f9d63"}><span style={{ marginLeft:4, fontSize:10, fontWeight:800, color:sFlag.direction==="below"?"#dc2626":"#0f9d63", lineHeight:1 }}>⚑</span></FlagTip>}
+                    {sFlag && <FlagTip content={sFlag.tip} color={sColor}><span style={{ marginLeft:4, fontSize:10, fontWeight:800, color:sColor, lineHeight:1 }}>{sFlag.direction==="below"?"▼":"▲"}</span></FlagTip>}
                   </td>;
                 })()}
                 {(() => {

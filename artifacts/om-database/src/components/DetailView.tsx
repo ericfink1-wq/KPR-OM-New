@@ -50,6 +50,7 @@ import OwnershipStructure from "./OwnershipStructure";
 import { deriveExpenseRiskFlag } from "../lib/expenseRisk";
 import { buildBrandSizeIndex, buildSizeFlags, deriveSizeOutlierFlag } from "../lib/tenantSizeBenchmark";
 import { buildBrandSalesIndex, buildSalesFlags, deriveSalesOutlierFlag } from "../lib/tenantSalesBenchmark";
+import { buildBrandRentPsfIndex, buildRentFlags } from "../lib/tenantRentBenchmark";
 import { deriveAnomalyFlag, anomalyReviewQuestions } from "../lib/dealAnomalies";
 import { buildICMemo, buildICMemoModel } from "../lib/icMemo";
 import { scoreDealConfidence } from "../lib/dealConfidence";
@@ -1778,6 +1779,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // typical productivity for that retailer across all OTHER deals (low = underperformer).
   const brandSalesIndex = useMemo(() => buildBrandSalesIndex(allDeals), [allDeals]);
   const salesFlags = useMemo(() => buildSalesFlags(d, brandSalesIndex), [d, brandSalesIndex]);
+  // Brand RENT-PSF benchmark — flags a tenant whose in-place rent is way above
+  // (premium / rollover risk) or below (favorable basis) the chain's median rent
+  // across the database. Colors the roster's Rent/SF cell red/green.
+  const brandRentPsfIndex = useMemo(() => buildBrandRentPsfIndex(allDeals), [allDeals]);
+  const rentFlags = useMemo(() => buildRentFlags(d, brandRentPsfIndex), [d, brandRentPsfIndex]);
   // Brand RENT medians across other deals — powers the renewal-option overhang flag
   // (below-market fixed options that lock away the mark-to-market upside).
   const brandRentIndex = useMemo(() => buildBrandRentIndex(allDeals), [allDeals]);
@@ -3188,6 +3194,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           latestSales={buildLatestSales(d)}
           sizeFlags={sizeFlags}
           salesFlags={salesFlags}
+          rentFlags={rentFlags}
           kickoutByTenant={kickoutByTenant}
           abstractsByTenant={abstractsByTenant}
           abstractDiscrepancies={abstractDiscrepancies}
