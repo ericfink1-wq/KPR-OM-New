@@ -309,6 +309,20 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const [expandedReimb, setExpandedReimb] = useState<number | null>(null);
   const [editingOcc, setEditingOcc] = useState<number | null>(null);
   const [editVals, setEditVals] = useState<{ reimb: string; pctRent: string; other: string }>({ reimb: "", pctRent: "", other: "" });
+  // Theater screen/sales editor — a cinema is judged on sales PER SCREEN, so enter
+  // the screen count and either sales/screen or total sales; the app derives salesPSF.
+  const [editingScreens, setEditingScreens] = useState<number | null>(null);
+  const [screensForm, setScreensForm] = useState<{ screens: string; perScreen: string; total: string }>({ screens: "", perScreen: "", total: "" });
+  const openScreensEditor = (t: Tenant) => {
+    const idx = tenants.indexOf(t);
+    if (idx < 0) return;
+    const sc = t.screens != null ? String(t.screens) : "";
+    const sf = Number(t.sf) || 0;
+    const psf = Number(t.salesPSF) || 0;
+    const total = psf > 0 && sf > 0 ? Math.round(psf * sf) : 0;
+    setScreensForm({ screens: sc, perScreen: "", total: total > 0 ? String(total) : "" });
+    setEditingScreens(idx);
+  };
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
 
   // Filter + sort the roster. Previously ran in the render body on every render;
@@ -678,6 +692,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       : cin.needsScreens
                         ? "Theater — add the screen count to see sales per screen (the metric that matters for a cinema, not PSF)."
                         : "";
+                  const canEditCinema = cin.isCinema && !!onUpdateTenant && !isVacantRow(t) && !isNAPTenant(t);
                   return <td title={perScreenTip || trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:sColor, fontWeight:sFlag?700:400, whiteSpace:"nowrap", cursor:(perScreenTip||trend||t.salesNotes)?"help":"default" }}>
                     {fmtTenantSales(salesPSF, t.sf)}
                     {cin.perScreen != null && (
@@ -688,6 +703,10 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     )}
                     {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
                     {sFlag && <FlagTip content={sFlag.tip} color={sColor}><span style={{ marginLeft:4, fontSize:10, fontWeight:800, color:sColor, lineHeight:1 }}>{sFlag.direction==="below"?"▼":"▲"}</span></FlagTip>}
+                    {canEditCinema && (
+                      <button onClick={e => { e.stopPropagation(); openScreensEditor(t); }} title="Set screens & sales for this theater (sales per screen is the metric that matters)"
+                        style={{ marginLeft:6, background:"transparent", border:"none", cursor:"pointer", color:"#6b4fa0", fontSize:11, padding:"1px 2px", lineHeight:1, flexShrink:0 }}>🎬</button>
+                    )}
                   </td>;
                 })()}
                 {(() => {
@@ -987,6 +1006,55 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+      {editingScreens != null && onUpdateTenant && createPortal(
+        <>
+          <div onClick={() => setEditingScreens(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.32)", zIndex: 9998 }} />
+          <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 9999, background: "#fff", borderRadius: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.22)", padding: "20px 22px 18px", width: "min(360px, 92vw)", fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#383a37", marginBottom: 4 }}>Theater sales &amp; screens</div>
+            <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 14, lineHeight: 1.5 }}>
+              {tenants[editingScreens]?.canonicalName || tenants[editingScreens]?.name || "Theater"}<br />
+              A cinema is judged on sales <b>per screen</b>, not per SF. Enter the screen count and EITHER the sales per screen OR the total annual sales — the app computes the rest.
+            </div>
+            {[
+              { label: "Screens (auditoriums)", key: "screens" as const, placeholder: "e.g. 16", step: "1" },
+              { label: "Sales per screen (annual $)", key: "perScreen" as const, placeholder: "e.g. 165836", step: "1000" },
+              { label: "— or — Total annual sales ($)", key: "total" as const, placeholder: "e.g. 2653381", step: "10000" },
+            ].map(({ label, key, placeholder, step }) => (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>{label}</div>
+                <input type="number" min="0" step={step} placeholder={placeholder} value={screensForm[key]}
+                  onChange={e => setScreensForm(prev => ({ ...prev, [key]: e.target.value }))}
+                  style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e6dfd0", borderRadius: 8, padding: "8px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif", outline: "none", background: "#faf8f4" }} />
+              </div>
+            ))}
+            <div style={{ fontSize: 10, color: "#c4bbaa", marginBottom: 14, lineHeight: 1.5 }}>
+              Leave sales blank to set only the screen count. Total sales wins if you enter both. Sales/SF is derived so the roster and benchmarks stay correct.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => {
+                  const idx = editingScreens!;
+                  const t = tenants[idx];
+                  const parseNum = (s: string) => { const v = s.trim(); return v === "" || isNaN(Number(v)) ? null : Number(v); };
+                  const screens = parseNum(screensForm.screens);
+                  const sf = Number(t?.sf) || 0;
+                  const total = parseNum(screensForm.total);
+                  const perScreen = parseNum(screensForm.perScreen);
+                  // Total sales: explicit, else per-screen × screens. salesPSF = total ÷ SF.
+                  const totalSales = total != null ? total : (perScreen != null && screens != null ? perScreen * screens : null);
+                  const patch: Partial<Tenant> = { screens: screens != null ? Math.round(screens) : null };
+                  if (totalSales != null && sf > 0) patch.salesPSF = Math.round((totalSales / sf) * 100) / 100;
+                  onUpdateTenant!(idx, patch);
+                  setEditingScreens(null);
+                }}
+                style={{ flex: 1, background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+              >Save</button>
+              <button onClick={() => setEditingScreens(null)} style={{ flex: 1, background: "#f3f4f6", color: "#383a37", border: "none", borderRadius: 8, padding: "10px 0", fontFamily: "'Inter',sans-serif", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
         </>,
