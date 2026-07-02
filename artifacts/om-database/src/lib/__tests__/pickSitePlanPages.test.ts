@@ -51,4 +51,24 @@ describe("pickSitePlanPages", () => {
     const narrative = { page: 4, text: "the site plan on the following page shows the layout " .repeat(20), itemCount: 420 };
     expect(pickSitePlanPages([narrative, sitePlan(5)])).toEqual([5]);
   });
+
+  it("picks the page TITLED 'Site Plan' even with a property-name running header before it", () => {
+    const titled = { page: 9, text: "TRUSSVILLE PROMENADE  SITE PLAN  Regal 55,000 SF Walmart Marshalls Ross Pad", itemCount: 90 };
+    const mentions = { page: 4, text: "Our site plan highlights the layout. ".repeat(15), itemCount: 380 };
+    expect(pickSitePlanPages([mentions, titled])).toEqual([9]);
+  });
+
+  it("a titled 'Site Plan' page beats a graphic SF-dense page that is NOT titled", () => {
+    // An untitled but SF-dense graphic (e.g. a stacking/aerial page) must not win
+    // over the actually-titled plan.
+    const untitledGraphic = { page: 6, text: "Aerial 1,200 SF 2,400 SF 5,000 SF 8,000 SF 9,000 SF 3,000 SF", itemCount: 120 };
+    const titled = { page: 12, text: "SITE PLAN  Anchor 25,000 SF Shop A 1,200 SF", itemCount: 80 };
+    expect(pickSitePlanPages([untitledGraphic, titled])).toEqual([12]);
+  });
+
+  it("does NOT treat a prose lead-in as a title (the keyword must head the page)", () => {
+    // "see the site plan below" at the very top is prose, not a page title.
+    const prose = { page: 3, text: "See the site plan below for suite locations and availability.", itemCount: 40 };
+    expect(pickSitePlanPages([prose])).toEqual([]);
+  });
 });

@@ -561,6 +561,21 @@ export function pickSitePlanPages(
   const tableLike = /rent\s*roll|lease\s*expiration|expiration\s*report|rent\s*schedule|cash\s*flow|operating\s*statement|income\s*statement|tenant\s*sales|debt\s*service|argus|amortization/i;
   const sfLabel = /\b\d{1,3}(?:,\d{3})?\s*SF\b/gi;
 
+  // TITLE CHECK (first, and strongest — Eric's rule): the real site-plan page is
+  // LABELED "Site Plan" as a page title at the top (or a running header), not just
+  // mentioned in prose. A title = the strong keyword appears at/near the START of the
+  // page text and is NOT embedded in a sentence ("the site plan on the following
+  // page…"). We allow a property-name running header before it ("TRUSSVILLE
+  // PROMENADE  SITE PLAN …") but reject a lowercase article/verb lead-in.
+  const TITLE_ZONE = 80;
+  const proseLead = /\b(the|a|an|see|our|this|these|its|their|refer|following|below|above|on|to|as|per|for|of|in|at|and|shows?|depicts?|illustrat)\s+$/i;
+  const isTitled = (text: string): boolean => {
+    const zone = text.slice(0, TITLE_ZONE);
+    const m = zone.match(strong);
+    if (!m || m.index == null) return false;
+    return !proseLead.test(zone.slice(0, m.index));
+  };
+
   const scoreOf = (text: string, itemCount: number): { s: number; strongHit: boolean } => {
     if (toc.test(text)) return { s: 0, strongHit: false };
     const strongHit = strong.test(text);
@@ -569,10 +584,16 @@ export function pickSitePlanPages(
     if (tableLike.test(text) && !strongHit) return { s: 0, strongHit: false };
     const sfCount = (text.match(sfLabel) || []).length;
     let s = 0;
-    if (strongHit) {
-      // A real plan is graphic (few text items) or carries suite SF labels; a prose page
-      // that just references the plan is dense text with few SF tokens — score it lower.
-      s = (itemCount <= 300 || sfCount >= 3) ? 100 : 40;
+    if (isTitled(text)) {
+      // TITLED "Site Plan" — the highest-confidence signal. Dominates a page that
+      // merely mentions the plan in prose, and a graphic-but-untitled page.
+      s = 200;
+    } else if (strongHit && sfCount >= 3) {
+      // Not titled at the top, but carries the keyword AND suite-SF labels — a real
+      // plan whose title just wasn't first in the text stream. A bare keyword mention
+      // with NO SF labels ("see the site plan below") is a reference/divider, not a
+      // plan, and scores nothing.
+      s = 100;
     } else if (sfCount >= 6 && itemCount <= 220) {
       s = 50; // SF-dense GRAPHIC page (suite labels on a diagram), not a big table
     } else if (weak.test(text)) {
