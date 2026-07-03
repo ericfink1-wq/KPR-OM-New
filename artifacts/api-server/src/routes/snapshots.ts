@@ -48,11 +48,16 @@ export async function createSnapshot(
     .values({ reason, dealCount: deals.length, data: { deals, sources } })
     .returning({ id: snapshotsTable.id, createdAt: snapshotsTable.createdAt });
 
+  // Reason-aware pruning: keep the 30 newest AUTO snapshots and, SEPARATELY, the 20
+  // newest non-auto (manual / before-delete / before-restore) safety snapshots — so
+  // the daily autos can never evict the safety snapshots (the bug this fixes).
   const all = await db
-    .select({ id: snapshotsTable.id })
+    .select({ id: snapshotsTable.id, reason: snapshotsTable.reason })
     .from(snapshotsTable)
     .orderBy(desc(snapshotsTable.createdAt));
-  const toDelete = all.slice(30);
+  const autos = all.filter((s) => s.reason === "auto");
+  const others = all.filter((s) => s.reason !== "auto");
+  const toDelete = [...autos.slice(30), ...others.slice(20)];
   for (const { id } of toDelete) {
     await db.delete(snapshotsTable).where(eq(snapshotsTable.id, id));
   }

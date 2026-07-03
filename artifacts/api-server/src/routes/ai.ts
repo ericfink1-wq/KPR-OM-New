@@ -9,6 +9,20 @@ const router = Router();
 // one user monopolizing the Anthropic budget. Generous enough for normal analyst use.
 const aiLimit = rateLimit({ bucket: "ai", perMinute: 20, perHour: 240 });
 
+// Only allow the models the app actually uses. Without this, the authenticated
+// proxy could be pointed at an arbitrary (pricier) model on our API key. Built from
+// every "claude-" model the client sends today, plus the server default.
+const MODEL_ALLOWLIST = new Set([
+  "claude-sonnet-4-5",           // default
+  "claude-sonnet-4-6",
+  "claude-haiku-4-5-20251001",
+]);
+
+// A high SAFETY NET on answer length, not a real cap: legitimate callers request up
+// to 16000 (sales/abstract/amort extraction), so this only blocks a pathological
+// "give me 200,000 tokens" abuse request. NEVER clips normal analyst/extraction use.
+const MAX_TOKENS_CAP = 32000;
+
 // POST /api/ai/messages — generic Claude proxy (used by AnalystChat, DetailView lookups).
 // requireAuth is essential here: without it the public URL is an open proxy to the
 // Anthropic API key for anyone on the internet.
@@ -19,14 +33,27 @@ router.post("/ai/messages", requireAuth, aiLimit, async (req, res) => {
   }
 
   const { model, max_tokens, system, messages, tools } = req.body;
-  if (!max_tokens || !Array.isArray(messages)) {
-    res.status(400).json({ error: "max_tokens and messages are required" });
+  if (!Array.isArray(messages)) {
+    res.status(400).json({ error: "messages are required" });
+    return;
+  }
+  // Token count: reject a non-positive/garbage value; clamp a too-large one DOWN to
+  // the safety cap (don't error — just clamp, so normal use is never rejected).
+  const nTokens = Number(max_tokens);
+  if (!Number.isFinite(nTokens) || nTokens <= 0) {
+    res.status(400).json({ error: "max_tokens must be a positive number" });
+    return;
+  }
+  const cappedTokens = Math.min(nTokens, MAX_TOKENS_CAP);
+  // Reject an unknown/unsupported model (an omitted model falls back to the default).
+  if (model != null && model !== "" && !MODEL_ALLOWLIST.has(model)) {
+    res.status(400).json({ error: `Unsupported model "${String(model)}". Allowed models: ${[...MODEL_ALLOWLIST].join(", ")}.` });
     return;
   }
 
   try {
     const resolvedModel = model || "claude-sonnet-4-5";
-    const body: Record<string, unknown> = { model: resolvedModel, max_tokens, messages };
+    const body: Record<string, unknown> = { model: resolvedModel, max_tokens: cappedTokens, messages };
     if (system) {
       // Prompt-cache a LARGE, stable system prompt (e.g. the Analyst's whole-library
       // context) so follow-up turns and repeat queries reuse it at ~10% of the input
