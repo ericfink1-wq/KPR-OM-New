@@ -1502,6 +1502,14 @@ export function fmtUSD(v: unknown): string {
   return `$${Math.round(Number(v)).toLocaleString()}`;
 }
 
+// Marker embedded in the analyst system prompt whenever the library was too large
+// to include in full and trimming kicked in. AnalystChat checks for it to decide
+// whether to attach per-question FULL detail for the deals a question is about
+// (lib/analystRetrieval.ts) — the retrieval path that keeps answer quality intact
+// as the library grows. Exported as a constant so the check can't drift from the
+// note text below.
+export const LIBRARY_TRIMMED_MARKER = "the library is large, so to fit the context window";
+
 export function buildSystemPrompt(
   deals: Deal[],
   abstracts: LeaseAbstract[] = [],
@@ -1895,7 +1903,7 @@ export function buildSystemPrompt(
   }
 
   const trimNote = trimNotes.length
-    ? `\n\nNOTE: the library is large, so to fit the context window: ${trimNotes.join("; ")}. For anything trimmed, the full detail is on that deal's page — ask about the SPECIFIC deal or tenant and answer from what's shown, or say it's available there.`
+    ? `\n\nNOTE: ${LIBRARY_TRIMMED_MARKER}: ${trimNotes.join("; ")}. For anything trimmed, the full detail is on that deal's page — ask about the SPECIFIC deal or tenant and answer from what's shown, or say it's available there. When a "FULL DETAIL FOR THIS QUESTION" block accompanies a question, that block is complete and authoritative for those deals — prefer it over the trimmed library entries above.`
     : "";
 
   const abstractsSection = !absOut.length ? "" : abstractsSummarized ? `

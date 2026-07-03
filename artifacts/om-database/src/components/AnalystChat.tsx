@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
-import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount } from "../lib/utils";
+import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount, LIBRARY_TRIMMED_MARKER } from "../lib/utils";
+import { buildFocusContext } from "../lib/analystRetrieval";
 import { scoreDealConfidence } from "../lib/dealConfidence";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
@@ -158,6 +159,16 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     try {
       const systemPrompt = buildSystemPrompt(deals, abstracts, compsSummary, watch, tenantBenchmarks);
       const history = [...msgs, userMsg].map(m => ({ role: m.role, content: m.content }));
+
+      // RETRIEVAL: when the library was too large and the system prompt trimmed deal
+      // detail, attach the FULL, untrimmed data for the deals THIS question is about
+      // (matched by name/alias, city, or tenant brand) to the outgoing question only.
+      // The system prompt stays byte-identical across questions so prompt caching
+      // keeps working; the chat display shows the raw question, not the data block.
+      if (systemPrompt.includes(LIBRARY_TRIMMED_MARKER)) {
+        const focus = buildFocusContext(text, deals);
+        if (focus) history[history.length - 1] = { role: "user", content: `${focus}\n\nQUESTION: ${text}` };
+      }
 
       const resp = await sendMessage({
         data: {
