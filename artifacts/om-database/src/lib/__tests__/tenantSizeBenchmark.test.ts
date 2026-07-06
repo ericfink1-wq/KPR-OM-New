@@ -69,6 +69,25 @@ describe("deriveSizeOutlierFlag (deal red flag)", () => {
   });
 });
 
+describe("TJX combo boxes", () => {
+  const idx = buildBrandSizeIndex([]); // no prototype needed — combo path is size-based
+  it("returns a combo read (not an SF anomaly) for an oversized single-banner box", () => {
+    const f = flagTenantSize({ name: "Marshalls of MA, Inc.", sf: 55000, annualRent: 632500, leaseExpiry: "2030-01-01" } as any, "subject", idx);
+    expect(f).not.toBeNull();
+    expect(f!.combo).toBe(true);
+    expect(f!.label).toMatch(/combo/i);
+    expect(f!.tip).toMatch(/two banners/i);
+  });
+  it("suppresses the flag entirely for an explicit two-banner combo name", () => {
+    const f = flagTenantSize({ name: "Marshalls / HomeGoods", sf: 55000, annualRent: 632500, leaseExpiry: "2030-01-01" } as any, "subject", idx);
+    expect(f).toBeNull();
+  });
+  it("keeps combos out of the deal-level SF-error red flag", () => {
+    const subject = mk("subject", [{ name: "Marshalls of MA, Inc.", sf: 55000 }]);
+    expect(deriveSizeOutlierFlag(subject, idx)).toBeNull();
+  });
+});
+
 describe("3-location brand (the DSW case)", () => {
   // DSW across exactly 3 properties: Belden 31,859 (subject) vs Battlefield 20,000 + Paddock 14,673
   const deals = [

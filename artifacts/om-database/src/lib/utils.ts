@@ -653,7 +653,10 @@ export const TENANT_ALIASES: Record<string, string> = {
   "barnes and noble": "Barnes & Noble",
   "dick sporting goods": "Dick's Sporting Goods",
   "nordstrom rack": "Nordstrom Rack",
-  "tj maxx homegoods": "TJ Maxx / HomeGoods",
+  "tj maxx homegoods": "TJ Maxx / HomeGoods", "t j maxx homegoods": "TJ Maxx / HomeGoods",
+  // TJX co-branded combo boxes — two banners, one lease (see tjxCombo.ts).
+  "marshalls homegoods": "Marshalls / HomeGoods", "marshalls home goods": "Marshalls / HomeGoods",
+  "homegoods marshalls": "Marshalls / HomeGoods", "home goods marshalls": "Marshalls / HomeGoods",
   "homegoods": "HomeGoods", "home goods": "HomeGoods",
   "petco": "Petco", "petsmart": "PetSmart",
   "old navy": "Old Navy", "five below": "Five Below",
@@ -719,6 +722,8 @@ export const PARENT_COMPANIES: Record<string, string> = {
   "marshalls": "TJX Companies", "homegoods": "TJX Companies",
   "home goods": "TJX Companies", "homesense": "TJX Companies",
   "sierra": "TJX Companies",
+  // Combo boxes canonicalize (via tenantKey) to these keys — keep the TJX parent.
+  "marshalls homegoods": "TJX Companies", "tj maxx homegoods": "TJX Companies",
   "ross dress for less": "Ross Stores", "ross": "Ross Stores",
   "dds discounts": "Ross Stores",
   "dollar tree": "Dollar Tree Inc.", "family dollar": "Dollar Tree Inc.",

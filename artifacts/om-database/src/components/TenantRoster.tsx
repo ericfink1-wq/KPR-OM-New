@@ -6,6 +6,7 @@ import type { SizeFlag } from "../lib/tenantSizeBenchmark";
 import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import type { RentFlag } from "../lib/tenantRentBenchmark";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
+import { tjxComboRead } from "../lib/tjxCombo";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -472,6 +473,18 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
+                      {(() => {
+                        // TJX combo box — two banners (e.g. Marshalls + HomeGoods) on one
+                        // lease. Explicit two-banner names show "COMBO"; a single-banner
+                        // name on a combo-sized box shows "COMBO?" (verify the 2nd banner).
+                        const c = tjxComboRead(t.canonicalName || t.name, t.sf);
+                        if (!c.isCombo && !c.likely) return null;
+                        return (
+                          <span title={c.note} style={{ fontSize:9, color:"#7a3ea8", background:"#f2e9fb", border:"1px solid #ddc7f0", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>
+                            {c.isCombo ? "COMBO" : "COMBO?"}
+                          </span>
+                        );
+                      })()}
                       {isATM(t.name, t.sf) && (
                         <span style={{ fontSize:9, color:"#5a6b8c", background:"#eef1f7", border:"1px solid #cdd6e6", padding:"1px 6px", borderRadius:10, fontWeight:600 }} title="ATM — a cash machine, not a full bank branch (tracked separately, same parent company)">ATM</span>
                       )}
@@ -566,7 +579,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     {(() => {
                       const f = sizeFlags?.get(tenantKey(t.canonicalName || t.name));
                       if (!f) return null;
-                      return <FlagTip content={f.tip} color="#dc2626"><span style={{ fontSize:10, fontWeight:800, color:"#dc2626", lineHeight:1 }}>⚑</span></FlagTip>;
+                      // A likely-combo read is informational (amber), not a red anomaly.
+                      const col = f.combo ? "#7a3ea8" : "#dc2626";
+                      return <FlagTip content={f.tip} color={col}><span style={{ fontSize:10, fontWeight:800, color:col, lineHeight:1 }}>⚑</span></FlagTip>;
                     })()}
                   </span>
                 </td>

@@ -9,6 +9,7 @@
 
 import type { Deal, Tenant } from "./idb";
 import { tenantKey, isVacant, isNAPTenant, brandBenchmarkKey } from "./utils";
+import { tjxComboRead } from "./tjxCombo";
 
 const MIN_OTHER_LOCATIONS = 2;   // need ≥2 OTHER locations (3 total) for a meaningful brand prototype
 const HIGH_RATIO = 1.6;          // ≥60% larger than the brand median → "way above"
@@ -56,6 +57,7 @@ export function buildBrandSizeIndex(allDeals: Deal[]): BrandSizeIndex {
 export interface SizeFlag {
   severity: "watch";
   direction: "above" | "below";
+  combo?: boolean;   // this is a likely TJX combo box, NOT a size anomaly
   label: string;     // short badge, e.g. "+85% vs proto"
   tip: string;       // full explanation
 }
@@ -68,6 +70,19 @@ export function flagTenantSize(
   if (isVacant(tenant.name) || isNAPTenant(tenant)) return null;
   const sf = num(tenant.sf);
   if (sf == null) return null;
+
+  // TJX combo boxes: an explicit two-banner box ("Marshalls / HomeGoods") is a KNOWN
+  // combo, so it is not a size anomaly at all — suppress the flag (the roster shows a
+  // "combo" chip instead). A single-banner TJX name on a combo-sized box is a LIKELY
+  // combo — surface that read (one lease, two banners) rather than a misleading
+  // "oversized / possible SF error." This fires even with no brand prototype, so it
+  // works on the common case where the rent roll names only one banner.
+  const combo = tjxComboRead(tenant.canonicalName || tenant.name, tenant.sf);
+  if (combo.isCombo) return null;
+  if (combo.likely) {
+    return { severity: "watch", direction: "above", combo: true, label: "likely combo", tip: combo.note };
+  }
+
   const key = brandBenchmarkKey(tenant.canonicalName || tenant.name, tenant.sf);
   if (!key) return null;
   const others = (index.get(key) ?? []).filter((o) => o.dealId !== currentDealId).map((o) => o.sf);
@@ -98,7 +113,10 @@ export function deriveSizeOutlierFlag(deal: Deal, index: BrandSizeIndex): Derive
   const hits: { name: string; f: SizeFlag }[] = [];
   for (const t of deal.tenants || []) {
     const f = flagTenantSize(t, deal.id, index);
-    if (f) hits.push({ name: t.canonicalName || t.name || "Tenant", f });
+    // A TJX combo box is an expected two-banner store, not a footprint anomaly or SF
+    // error — keep it off the deal-level "SF off prototype" red flag (the roster chip
+    // and its tooltip carry the combo read instead).
+    if (f && !f.combo) hits.push({ name: t.canonicalName || t.name || "Tenant", f });
   }
   if (!hits.length) return null;
   // A wildly off footprint (≥2.2× or ≤0.4×) is more likely a SF entry error → medium;
