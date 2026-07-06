@@ -23,6 +23,10 @@ function fmtRent(r: number): string {
 export default function PortfolioStressTest({ tenantName, brands, deals, onOpenDeal }: Props) {
   const [abstracts, setAbstracts] = useState<LeaseAbstract[] | null>(null);
   const [expanded, setExpanded] = useState(false);
+  // The box is a heavy "what-if" — default it COLLAPSED so opening a tenant/parent
+  // page leads with the profile, not the stress test. The header stays a one-line
+  // summary (total at risk) and clicks open to reveal the full breakdown.
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     let live = true;
@@ -47,10 +51,24 @@ export default function PortfolioStressTest({ tenantName, brands, deals, onOpenD
 
   return (
     <div style={{ background: "#fff", border: "1px solid #e7d5c8", borderRadius: 12, padding: "16px 18px", marginBottom: 14 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "#a0561f", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
-        Stress test — if {result.target} goes dark
-      </div>
-      <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 12, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        aria-expanded={!collapsed}
+        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+      >
+        <span style={{ fontSize: 10, color: "#a0561f", lineHeight: 1, transform: collapsed ? "none" : "rotate(90deg)", transition: "transform 0.15s", display: "inline-block" }}>▶</span>
+        <span style={{ fontSize: 9, letterSpacing: "0.12em", color: "#a0561f", fontWeight: 700, textTransform: "uppercase" }}>
+          Stress test — if {result.target} goes dark
+        </span>
+        {collapsed && (
+          <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#9a2c12", fontWeight: 700, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+            {fmtRent(result.totalAtRisk)}/yr · {result.dealsWithPresence} deal{result.dealsWithPresence === 1 ? "" : "s"}
+          </span>
+        )}
+      </button>
+
+      {!collapsed && (<>
+      <div style={{ fontSize: 11, color: "#a89f8f", margin: "8px 0 12px", fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
         Portfolio-wide blast radius: {result.target}'s own rent, plus other tenants' rent that converts to reduced/alternate
         rent through co-tenancy clauses naming it{hasKnockOn ? "" : " (no co-tenancy linkage captured yet — direct rent only)"}.
       </div>
@@ -104,6 +122,7 @@ export default function PortfolioStressTest({ tenantName, brands, deals, onOpenD
           {expanded ? "Show fewer" : `Show all ${result.rows.length} deals`}
         </button>
       )}
+      </>)}
     </div>
   );
 }
