@@ -20,6 +20,7 @@ import { sql, eq } from "drizzle-orm";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "./extractionAudit";
 import { ensureExtractionLessonsTable } from "./extractionLessons";
 import { runAutofixSweep } from "./autofixSweep";
+import { watchlistFreshness } from "./watchlistFreshness";
 import { logger } from "./logger";
 
 let historyReady: Promise<void> | null = null;
@@ -69,6 +70,7 @@ const AUTO_LESSON_MIN_DEALS = 5; // mint a class-level rule only once a mistake 
 export interface SelfCleanResult {
   scanned: number; flagged: number; cleared: number; added: number; changedDeals: number;
   totalIssues: number; lessonsMinted: string[];
+  watchlistStale?: boolean; watchlistAsOf?: string;
 }
 
 export async function runDailySelfClean(reason = "scheduled"): Promise<SelfCleanResult> {
@@ -138,7 +140,18 @@ export async function runDailySelfClean(reason = "scheduled"): Promise<SelfClean
     if ((res.rowCount ?? 0) > 0) lessonsMinted.push(id);
   }
 
-  const result: SelfCleanResult = { scanned, flagged, cleared, added, changedDeals, totalIssues, lessonsMinted };
+  // 4) Retailer-health watchlist freshness: the curated distress list has no live
+  //    feed (it's hand-refreshed by Claude and re-seeded on deploy), so once/day —
+  //    this job runs at most daily — log a reminder when the curation goes stale.
+  //    The reminder is the "scheduled auto-refresh": it surfaces WHEN a refresh is
+  //    due so the operator asks Claude to update the list. Token-free, non-mutating.
+  const fresh = watchlistFreshness();
+  if (fresh.stale) {
+    logger.warn({ asOf: fresh.asOf, ageDays: fresh.ageDays, staleAfterDays: fresh.staleAfterDays },
+      `Retailer watchlist curated data is ${fresh.ageDays} days old (as of ${fresh.asOf}) — ask Claude to refresh it`);
+  }
+
+  const result: SelfCleanResult = { scanned, flagged, cleared, added, changedDeals, totalIssues, lessonsMinted, watchlistStale: fresh.stale, watchlistAsOf: fresh.asOf };
   logger.info({ reason, ...result }, "Self-improvement daily self-clean complete");
   return result;
 }

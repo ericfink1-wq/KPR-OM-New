@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { requireAuth } from "../middleware/auth";
 import { fetchWithTimeout } from "../lib/http";
+import { watchlistFreshness } from "../lib/watchlistFreshness";
 
 const router = Router();
 
@@ -12,7 +13,9 @@ const VALID_STATUS = new Set(["watch", "distressed", "bankruptcy", "liquidating"
 
 // Curated list of distressed / failed retail tenants, compiled from reputable
 // sources (Coresight Research store trackers, Retail Dive, RapidRatings, CNBC,
-// Axios, TheStreet) as of May 2026. Status reflects current condition:
+// Axios, TheStreet). Last refreshed on WATCHLIST_CURATED_AS_OF (see
+// lib/watchlistFreshness.ts) — bump that date whenever this list is refreshed.
+// Status reflects current condition:
 //   liquidating = closed / GOB now (a sighting in a rent roll = a dark box)
 //   bankruptcy  = in Chapter 11, operating but closing stores
 //   distressed  = not filed, but downgraded / mass closures / unsustainable
@@ -37,6 +40,7 @@ const CURATED: Array<{ brand: string; status: string; note: string; sourceUrl: s
   { brand: "Francesca's", status: "bankruptcy", note: "Filed Chapter 11 again in early 2026 (second time); closing mall apparel stores.", sourceUrl: "https://www.rapidratings.com/post/bankruptcy-watch-retailers-most-at-risk-after-saks-francescas-eddie-bauer-and-fat-brands" },
   { brand: "Claire's", status: "bankruptcy", note: "Filed Chapter 11 again in 2025 (PE-leveraged); closing stores and exploring an asset sale.", sourceUrl: "https://www.the-sun.com/money/15533893/retail-bankruptcy-joann-party-city-claires/" },
   { brand: "At Home", status: "bankruptcy", note: "Filed Chapter 11 in 2025; closing underperforming big-box home stores under restructuring.", sourceUrl: "https://www.retaildive.com/news/distressed-retailers-vulnerable-could-file-bankruptcy-2026/810234/" },
+  { brand: "West Marine", status: "bankruptcy", note: "Filed Chapter 11 in mid-2026; announced ~59 store closures under the restructuring (per Coresight's 2026 store-closure tracker). Boating/marine specialty retailer — watch as a junior-box tenant.", sourceUrl: "https://coresight.com/research/weekly-us-store-openings-and-closures-tracker-2026-week-24-west-marine-plans-59-closures-after-chapter-11-filing/" },
 
   // — Not filed, but materially distressed (downgrades / mass closures) —
   { brand: "Big Lots", status: "distressed", note: "2024 Chapter 11 closed ~340 net stores; Variety Wholesalers acquired the brand and reopened a subset. Surviving footprint is far smaller and fragile.", sourceUrl: "https://www.mmcginvest.com/post/the-great-american-store-closure-tracker-2026-edition" },
@@ -128,6 +132,13 @@ router.get("/watchlist", requireAuth, async (req, res) => {
     req.log.error({ err }, "Failed to load watchlist");
     res.status(500).json({ error: "Failed to load watchlist" });
   }
+});
+
+// GET /api/watchlist/freshness — how current the CURATED distress list is. There is
+// no live feed; the statuses are hand-refreshed by Claude and re-seeded on deploy,
+// so the UI shows an "as of" date and a nudge to refresh when it goes stale.
+router.get("/watchlist/freshness", requireAuth, (_req, res) => {
+  res.json(watchlistFreshness());
 });
 
 // ── Related news — recent headlines for a brand from Google News RSS (free, no

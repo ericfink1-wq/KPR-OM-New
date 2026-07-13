@@ -60,6 +60,18 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
 
   const closeForm = useCallback(() => { setAdding(false); setEditId(null); setNews(null); }, []);
 
+  // Freshness of the CURATED distress list — there's no live feed; Claude refreshes
+  // it and it re-seeds on deploy. Show how current it is and nudge a refresh when stale.
+  const [freshness, setFreshness] = useState<{ asOf: string; ageDays: number; stale: boolean } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/watchlist/freshness", { credentials: "include" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (alive && d && d.asOf) setFreshness(d); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   // While the modal is open, pull recent headlines for the typed brand (debounced).
   useEffect(() => {
     if (!adding) { setNews(null); return; }
@@ -267,6 +279,14 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
           <p style={{ fontSize: 11.5, color: "#8b8578", margin: "3px 0 0", maxWidth: 560 }}>
             Track distressed chains and instantly see every center exposed. Matching uses the same brand grouping as the rest of the app, so "Party City #042" still counts.
           </p>
+          {freshness && (
+            <p style={{ fontSize: 10.5, color: freshness.stale ? "#9a3412" : "#a89f8f", margin: "5px 0 0", fontWeight: freshness.stale ? 600 : 400 }}>
+              {freshness.stale ? "⚠ " : ""}Distress data curated as of {new Date(freshness.asOf + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+              {freshness.stale
+                ? ` (${freshness.ageDays} days old — ask Claude to refresh it).`
+                : " · hand-curated by Claude, re-applied on each deploy (no live feed)."}
+            </p>
+          )}
         </div>
         <button onClick={() => { setNews(null); setEditId(null); setForm({ brand: "", status: "watch", note: "", sourceUrl: "" }); setAdding(true); }}
           style={{ background: "#2a2c27", color: "#fff", border: "none", borderRadius: 7, padding: "7px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
