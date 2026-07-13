@@ -21,6 +21,7 @@ import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } f
 import { ensureExtractionLessonsTable } from "./extractionLessons";
 import { runAutofixSweep } from "./autofixSweep";
 import { watchlistFreshness } from "./watchlistFreshness";
+import { refreshWatchlistNews, WATCHLIST_NEWS_REFRESH_DAYS } from "./watchlistNews";
 import { logger } from "./logger";
 
 let historyReady: Promise<void> | null = null;
@@ -179,6 +180,19 @@ export function startSelfImproveScheduler(): void {
         await db.execute(sql`INSERT INTO self_improve_runs (kind, last_run) VALUES ('autofix', CURRENT_DATE)
           ON CONFLICT (kind) DO UPDATE SET last_run = CURRENT_DATE`);
         logger.info({ changedDeals: r.changedDeals, cleared: r.cleared }, "Self-improvement weekly auto-fix complete");
+      }
+
+      // FORTNIGHTLY (~every 2 weeks): auto-refresh the retailer-health watchlist from
+      // live news — scans each watched brand and flags any whose recent headlines
+      // suggest a worse status than the curated one (review-only; never auto-rewrites).
+      const lastNews = await db.execute(sql`SELECT last_run FROM self_improve_runs WHERE kind = 'watchlist-news' LIMIT 1`);
+      const lastNewsRun = (lastNews.rows?.[0] as { last_run?: string } | undefined)?.last_run;
+      const newsDue = !lastNewsRun || (Date.now() - new Date(String(lastNewsRun)).getTime()) >= WATCHLIST_NEWS_REFRESH_DAYS * 24 * 60 * 60 * 1000;
+      if (newsDue) {
+        const n = await refreshWatchlistNews();
+        await db.execute(sql`INSERT INTO self_improve_runs (kind, last_run) VALUES ('watchlist-news', CURRENT_DATE)
+          ON CONFLICT (kind) DO UPDATE SET last_run = CURRENT_DATE`);
+        logger.info({ ...n }, "Self-improvement fortnightly watchlist news refresh complete");
       }
     } catch (err) {
       logger.error({ err }, "Self-improvement tick failed (non-fatal)");

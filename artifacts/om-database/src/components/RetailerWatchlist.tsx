@@ -11,6 +11,13 @@ interface WatchRow {
   note: string | null;
   sourceUrl: string | null;
   addedBy: string | null;
+  // Fortnightly news auto-scan: set only when recent headlines suggest a MORE severe
+  // status than the curated one (review nudge; never auto-applied).
+  newsSuggestedStatus?: string | null;
+  newsHeadline?: string | null;
+  newsUrl?: string | null;
+  newsAt?: string | null;
+  newsScannedAt?: string | null;
 }
 
 interface WatchlistArticle {
@@ -213,6 +220,12 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
       <div key={w.id} style={{ background: "#fff", border: `1px solid ${exposed ? "#ecd9c0" : "#efe8da"}`, borderLeft: `3px solid ${exposed ? m.bg : "#efe8da"}`, borderRadius: 10, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", flexWrap: "wrap" }}>
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", color: m.color, background: m.bg, border: `1px solid ${m.border}`, borderRadius: 4, padding: "2px 7px", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</span>
+          {w.newsSuggestedStatus && (
+            <span title={`The fortnightly news auto-scan found recent headlines suggesting "${meta(w.newsSuggestedStatus).label}" — worse than the curated status. Review and update if warranted.`}
+              style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", color: "#9a3412", background: "#fdecdc", border: "1px solid #f0c08a", borderRadius: 4, padding: "2px 7px", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+              📰 review → {meta(w.newsSuggestedStatus).label}
+            </span>
+          )}
           {onTenantClick
             ? <button onClick={e => { e.stopPropagation(); onTenantClick(w.brand); }} title={`View ${w.brand} across the portfolio`}
                 style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif", background: "transparent", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline", textDecorationColor: "#d8cfbd", textUnderlineOffset: "2px" }}>{w.brand}</button>
@@ -252,6 +265,15 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
           </div>
         )}
         {w.note && <div style={{ fontSize: 11.5, color: "#8b8578", padding: "0 14px 10px", marginTop: -4 }}>{w.note}</div>}
+        {w.newsSuggestedStatus && w.newsHeadline && (
+          <div style={{ fontSize: 11, color: "#9a3412", padding: "0 14px 10px", marginTop: -4 }}>
+            📰 Recent news suggests review:{" "}
+            {w.newsUrl
+              ? <a href={w.newsUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#9a3412", fontWeight: 600 }}>{w.newsHeadline}</a>
+              : <span style={{ fontWeight: 600 }}>{w.newsHeadline}</span>}
+            {w.newsAt ? <span style={{ color: "#b98a5a" }}> · {fmtNewsDate(w.newsAt)}</span> : null}
+          </div>
+        )}
         {isOpen && exposed && (
           <div style={{ borderTop: "1px solid #f1ece1", padding: "4px 0" }}>
             {w.exp.centers.slice().sort((a, b) => b.annualRent - a.annualRent).map((c, i) => (
@@ -284,7 +306,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
               {freshness.stale ? "⚠ " : ""}Distress data curated as of {new Date(freshness.asOf + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
               {freshness.stale
                 ? ` (${freshness.ageDays} days old — ask Claude to refresh it).`
-                : " · hand-curated by Claude, re-applied on each deploy (no live feed)."}
+                : " · hand-curated by Claude; live news auto-scans every 2 weeks and flags any retailer to review."}
             </p>
           )}
         </div>

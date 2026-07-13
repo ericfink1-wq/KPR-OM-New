@@ -4,8 +4,8 @@ import { retailerWatchlistTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 
 import { requireAuth } from "../middleware/auth";
-import { fetchWithTimeout } from "../lib/http";
 import { watchlistFreshness } from "../lib/watchlistFreshness";
+import { fetchBrandNews, getWatchlistNewsSignals, refreshWatchlistNews, brandNorm as newsBrandNorm, WATCHLIST_NEWS_REFRESH_DAYS, type StoredNewsSignal } from "../lib/watchlistNews";
 
 const router = Router();
 
@@ -127,10 +127,40 @@ router.get("/watchlist", requireAuth, async (req, res) => {
     await ensureTable();
     const rows = await db.select().from(retailerWatchlistTable);
     rows.sort((a, b) => a.brand.localeCompare(b.brand));
-    res.json(rows);
+    // Merge the latest auto-scanned news signal per brand (best-effort — never blocks
+    // the list). exceedsCurrent means recent headlines suggest a MORE severe status
+    // than the curated one, so the UI shows a "review" nudge.
+    let signals = new Map<string, StoredNewsSignal>();
+    try { signals = await getWatchlistNewsSignals(); } catch { /* soft-fail */ }
+    const out = rows.map((r) => {
+      const s = signals.get(newsBrandNorm(r.brand));
+      return {
+        ...r,
+        newsSuggestedStatus: s?.exceedsCurrent ? s.suggestedStatus : null,
+        newsHeadline: s?.exceedsCurrent ? s.headline : null,
+        newsUrl: s?.exceedsCurrent ? s.url : null,
+        newsAt: s?.exceedsCurrent ? s.headlineAt : null,
+        newsScannedAt: s?.scannedAt ?? null,
+      };
+    });
+    res.json(out);
   } catch (err) {
     req.log.error({ err }, "Failed to load watchlist");
     res.status(500).json({ error: "Failed to load watchlist" });
+  }
+});
+
+// POST /api/watchlist/refresh-news — manually trigger the news auto-scan now (the
+// scheduler also runs it every ~2 weeks). Handy after adding retailers or to force a
+// fresh sweep. Best-effort; returns a per-run summary.
+router.post("/watchlist/refresh-news", requireAuth, async (req, res) => {
+  try {
+    await ensureTable();
+    const result = await refreshWatchlistNews();
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to refresh watchlist news");
+    res.status(500).json({ error: "Failed to refresh news" });
   }
 });
 
@@ -138,54 +168,18 @@ router.get("/watchlist", requireAuth, async (req, res) => {
 // no live feed; the statuses are hand-refreshed by Claude and re-seeded on deploy,
 // so the UI shows an "as of" date and a nudge to refresh when it goes stale.
 router.get("/watchlist/freshness", requireAuth, (_req, res) => {
-  res.json(watchlistFreshness());
+  res.json({ ...watchlistFreshness(), newsRefreshDays: WATCHLIST_NEWS_REFRESH_DAYS });
 });
 
-// ── Related news — recent headlines for a brand from Google News RSS (free, no
-//    key). Surfaces WHY a retailer is on the watchlist when adding/editing. ─────
-interface NewsArticle { title: string; link: string; source: string; publishedAt: string | null }
-
-function parseGoogleNews(xml: string): NewsArticle[] {
-  const decode = (s: string) => s
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
-    .trim();
-  const out: NewsArticle[] = [];
-  for (const chunk of xml.split(/<item>/i).slice(1)) {
-    const block = chunk.split(/<\/item>/i)[0] || "";
-    const pick = (tag: string): string | null => {
-      const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
-      return m ? m[1].trim() : null;
-    };
-    const link = pick("link");
-    const rawTitle = pick("title");
-    if (!link || !rawTitle) continue;
-    const source = pick("source");
-    const src = source ? decode(source) : "";
-    let title = decode(rawTitle);
-    // Google formats titles as "Headline - Source"; trim the trailing source.
-    if (src && title.endsWith(` - ${src}`)) title = title.slice(0, title.length - src.length - 3).trim();
-    const pubDate = pick("pubDate");
-    const d = pubDate ? new Date(pubDate) : null;
-    out.push({ title, link: decode(link), source: src, publishedAt: d && !isNaN(d.getTime()) ? d.toISOString() : null });
-  }
-  return out;
-}
-
-// GET /api/watchlist/news?brand=AMC Theatres — recent retail-health headlines.
+// GET /api/watchlist/news?brand=AMC Theatres — recent retail-health headlines (shared
+// with the fortnightly auto-scan via lib/watchlistNews). Surfaces WHY a retailer is on
+// the watchlist when adding/editing.
 router.get("/watchlist/news", requireAuth, async (req, res) => {
   const brand = typeof req.query.brand === "string" ? req.query.brand.trim() : "";
   if (!brand) { res.status(400).json({ error: "brand is required" }); return; }
   try {
-    const q = encodeURIComponent(
-      `"${brand}" when:180d (stores OR retail OR bankruptcy OR closing OR closures OR earnings OR layoffs OR sales)`,
-    );
-    const url = `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`;
-    const r = await fetchWithTimeout(url, 10_000);
-    if (!r.ok) throw new Error(`news HTTP ${r.status}`);
-    const xml = await r.text();
-    res.json({ brand, articles: parseGoogleNews(xml).slice(0, 6) });
+    const articles = await fetchBrandNews(brand);
+    res.json({ brand, articles: articles.slice(0, 6) });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch watchlist news");
     // Soft-fail: the modal still works without news.
