@@ -63,7 +63,15 @@ export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
       if (k && r != null) (brandRents.get(k) ?? brandRents.set(k, []).get(k)!).push(r);
     }
   }
-  const rentOutliers: string[] = [];
+  // A rent that is ABOVE the brand norm is worth a verify — it can be a gross/option-
+  // period rate mis-captured as base, and it inflates NOI. A rent only MODERATELY
+  // below the norm is NOT an error to confirm — it's a legitimate below-market /
+  // anchor / ground-lease OUTLIER (Eric's Kohl's-at-$3.43 case), already surfaced by
+  // the neutral "below-chain / favorable basis" rent badge and discussed in the AI
+  // analysis. Only an EGREGIOUS low (>75% under the norm) is more likely a units slip
+  // (a monthly rate read as annual, or a dropped digit) than real economics.
+  const rentHigh: string[] = [];
+  const rentLowSuspect: string[] = [];
   for (const t of deal.tenants || []) {
     if (isVacant(t.name) || isNAPTenant(t)) continue;
     const r = num(t.rentPerSF);
@@ -74,12 +82,16 @@ export function detectDealAnomalies(deal: Deal, allDeals: Deal[]): Anomaly[] {
     const med = median(peers);
     if (med <= 0) continue;
     const ratio = r / med;
-    if (ratio >= 1.7 || ratio <= 0.55) {
-      rentOutliers.push(`${t.name} $${r.toFixed(2)} vs ~$${med.toFixed(2)} (${peers.length} other locations)`);
-    }
+    const line = `${t.name} $${r.toFixed(2)} vs ~$${med.toFixed(2)} (${peers.length} other locations)`;
+    if (ratio >= 1.7) rentHigh.push(line);
+    else if (ratio <= 0.25) rentLowSuspect.push(line);
+    // 0.25 < ratio ≤ 0.55: a real below-norm outlier, NOT flagged as a question.
   }
-  if (rentOutliers.length) {
-    out.push({ id: "anomaly-rent-brand", severity: "low", message: `Tenant rent PSF off the brand norm: ${rentOutliers.slice(0, 6).join("; ")}${rentOutliers.length > 6 ? `; +${rentOutliers.length - 6} more` : ""} — verify (or a likely rent/SF mis-capture).` });
+  if (rentHigh.length) {
+    out.push({ id: "anomaly-rent-brand", severity: "low", message: `Tenant rent PSF well ABOVE the brand norm: ${rentHigh.slice(0, 6).join("; ")}${rentHigh.length > 6 ? `; +${rentHigh.length - 6} more` : ""} — verify (a possible gross/option-period rate captured as base rent, which also inflates NOI).` });
+  }
+  if (rentLowSuspect.length) {
+    out.push({ id: "anomaly-rent-low", severity: "low", message: `Tenant rent PSF far BELOW the brand norm (>75% under): ${rentLowSuspect.slice(0, 6).join("; ")}${rentLowSuspect.length > 6 ? `; +${rentLowSuspect.length - 6} more` : ""} — verify a units slip (a monthly rate read as annual, or a dropped digit). A merely below-market anchor/ground-lease rent is expected and not flagged.` });
   }
 
   // ── Tenant-level: total SF vs the SAME brand across OTHER deals — an SF-typo catch.

@@ -6,7 +6,9 @@
 //   • NOI ÷ cap rate vs price (the classic three-way tie-out).
 //   • Weighted-avg rent PSF vs the roster roll-up.
 //   • Per-tenant: rent PSF × SF vs annual rent (OCR / column errors).
-//   • Duplicate suite numbers across two different tenants.
+//   • Duplicated suite ROW — the same tenant listed twice at one suite (a repeated
+//     suite number across DIFFERENT tenants is normal in a phased/multi-building
+//     center and is NOT flagged).
 //   • Unit-of-measure sanity (occupancy as a fraction, cap rate as basis points).
 // Only fires on genuine CONTRADICTIONS — never on values that are simply absent.
 
@@ -75,7 +77,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-anchor-rent": "Anchor rent — verify",
   "audit-occ-stated-vs-computed": "Occ cost: stated vs computed",
   "audit-occcost-fraction": "Occ cost stored as fraction",
-  "audit-dupe-suite": "Duplicate suite #",
+  "audit-dupe-suite": "Duplicated suite row (same tenant twice)",
   "audit-occupancy-fraction": "Occupancy as a fraction",
   "audit-caprate-range": "Cap-rate units",
   "audit-price-psf": "Price PSF vs price ÷ GLA",
@@ -382,22 +384,32 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
     });
   }
 
-  // ── F. Duplicate suite numbers across two DIFFERENT tenants ───────────────────
-  const bySuite = new Map<string, Set<string>>();
+  // ── F. Duplicated suite ROW (same tenant twice at one suite) ──────────────────
+  // A suite number shared by two DIFFERENT tenants is NORMAL and expected in a
+  // multi-phase / multi-building center — Phase I Suite 1 AND Phase II Suite 1 both
+  // exist — so it is NOT an error and must not be flagged (this was the Trussville
+  // false-positive: two phases, each with a Suite 1). The only real error here is a
+  // genuinely DUPLICATED ROW: the SAME tenant listed twice at the same suite, which
+  // double-counts its SF and rent.
+  const bySuite = new Map<string, string[]>();
   for (const t of occupied) {
     const s = String(t.suite ?? "").trim().toLowerCase().replace(/^0+/, "");
     if (!s) continue;
     const nm = String(t.name ?? "").trim().toLowerCase();
-    if (!bySuite.has(s)) bySuite.set(s, new Set());
-    bySuite.get(s)!.add(nm);
+    if (!nm) continue;
+    if (!bySuite.has(s)) bySuite.set(s, []);
+    bySuite.get(s)!.push(nm);
   }
   for (const [s, names] of bySuite) {
-    if (names.size > 1) {
+    const counts = new Map<string, number>();
+    for (const nm of names) counts.set(nm, (counts.get(nm) ?? 0) + 1);
+    const dup = [...counts.entries()].find(([, c]) => c > 1);
+    if (dup) {
       out.push({
         id: `audit-dupe-suite-${s}`.slice(0, 80), source: "check", severity: "medium",
         field: `Suite ${s}`,
-        question: `Suite ${s} is assigned to ${names.size} different tenants (${[...names].join(", ")}). Likely a mis-keyed suite or a duplicate row.`,
-        detail: `Each occupied suite should map to one tenant. Confirm the suite numbers against the rent roll.`,
+        question: `Suite ${s} lists "${dup[0]}" ${dup[1]}× — likely a duplicated row that double-counts its SF and rent.`,
+        detail: `Two DIFFERENT tenants sharing a suite number is normal in a multi-phase/multi-building center and is not flagged; this fires only because the SAME tenant repeats at the suite. Confirm against the rent roll and keep one row (the most current lease).`,
         suggestedValue: null, target: null,
       });
     }

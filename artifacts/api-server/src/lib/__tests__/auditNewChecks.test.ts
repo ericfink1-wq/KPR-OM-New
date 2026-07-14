@@ -91,6 +91,25 @@ describe("audit — duplicate tenant row", () => {
   });
 });
 
+describe("audit — duplicated suite row (phase-aware)", () => {
+  it("does NOT flag two DIFFERENT tenants sharing a suite # (multi-phase center)", () => {
+    const deal = { tenants: [
+      { name: "Ross Dress for Less", suite: "1", sf: 25000, annualRent: 250000 },   // Phase I, Suite 1
+      { name: "Five Below", suite: "1", sf: 9000, annualRent: 180000 },             // Phase II, Suite 1
+      { name: "PetSmart", suite: "2", sf: 20000, annualRent: 200000 },
+      { name: "Ulta", suite: "2", sf: 10000, annualRent: 300000 },
+    ] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-dupe-suite"))).toBe(false);
+  });
+  it("DOES flag the SAME tenant listed twice at one suite (a duplicated row)", () => {
+    const deal = { tenants: [
+      { name: "Kohl's", suite: "1", sf: 55000, annualRent: 190000 },
+      { name: "Kohl's", suite: "1", sf: 55000, annualRent: 190000 },
+    ] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-dupe-suite"))).toBe(true);
+  });
+});
+
 describe("audit — WALT recompute vs stated", () => {
   it("flags a stated WALT that is far from the roster's SF-weighted expiries", () => {
     const tenants = Array.from({ length: 5 }, (_, i) => ({ name: `T${i}`, sf: 10000, leaseExpiry: "2031-01-01" }));

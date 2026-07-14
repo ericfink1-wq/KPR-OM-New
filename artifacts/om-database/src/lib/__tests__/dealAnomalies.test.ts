@@ -21,10 +21,24 @@ describe("dealAnomalies", () => {
     expect(detectDealAnomalies(subject, [...cohort, subject]).some((x) => /Cap rate/i.test(x.message))).toBe(false);
   });
 
-  it("flags a tenant rent PSF far off the brand norm", () => {
+  it("flags a tenant rent PSF far ABOVE the brand norm", () => {
     const subject = mk("subject", { capRate: 7, tenants: [{ name: "Five Below", sf: 9000, annualRent: 360000, rentPerSF: 40, leaseExpiry: "2032-01-01" } as any] });
     const a = detectDealAnomalies(subject, [...cohort, subject]);
-    expect(a.some((x) => /brand norm/i.test(x.message))).toBe(true);
+    expect(a.some((x) => x.id === "anomaly-rent-brand" && /ABOVE the brand norm/i.test(x.message))).toBe(true);
+  });
+
+  it("does NOT flag a merely below-norm rent as a question (the Kohl's-at-$3.43 case)", () => {
+    // $8 vs an $18 norm = 0.44× — a legitimate below-market/anchor outlier, not a mistake.
+    const subject = mk("subject", { capRate: 7, tenants: [{ name: "Five Below", sf: 9000, annualRent: 72000, rentPerSF: 8, leaseExpiry: "2032-01-01" } as any] });
+    const a = detectDealAnomalies(subject, [...cohort, subject]);
+    expect(a.some((x) => x.id === "anomaly-rent-brand" || x.id === "anomaly-rent-low")).toBe(false);
+  });
+
+  it("DOES flag an egregiously-low rent (>75% under norm) as a likely units slip", () => {
+    // $1.50 vs an $18 norm = 0.08× — more likely a monthly-as-annual / dropped-digit slip.
+    const subject = mk("subject", { capRate: 7, tenants: [{ name: "Five Below", sf: 9000, annualRent: 13500, rentPerSF: 1.5, leaseExpiry: "2032-01-01" } as any] });
+    const a = detectDealAnomalies(subject, [...cohort, subject]);
+    expect(a.some((x) => x.id === "anomaly-rent-low")).toBe(true);
   });
 
   it("returns null flag when nothing is anomalous", () => {
