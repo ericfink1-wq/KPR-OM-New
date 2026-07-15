@@ -26,7 +26,7 @@ interface Props {
   estimatedRecoveries?: Map<string, { value: number; estimated: boolean }>;
   // Latest sales (by tenantKey) from the Tenant Sales panel — when present, the
   // roster shows these (uploaded report figures) instead of the OM-stated sales.
-  latestSales?: Map<string, { salesPSF: number | null; occupancyCost: number | null; occSource?: "stated" | "computed"; occBreakdown?: OccBreakdown | null }>;
+  latestSales?: Map<string, { salesPSF: number | null; occupancyCost: number | null; occSource?: "stated" | "computed"; occBreakdown?: OccBreakdown | null; anecdotal?: boolean | null; provenance?: string | null }>;
   // Lease abstracts on file for this deal, keyed by lowercased tenant name. When a
   // tenant has one, an "Abstract" pill shows next to its name (opens the viewer);
   // otherwise a faint "+ Abstract" lets you add one. Both are optional — the roster
@@ -708,8 +708,15 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         ? "Theater — add the screen count to see sales per screen (the metric that matters for a cinema, not PSF)."
                         : "";
                   const canEditCinema = cin.isCinema && !!onUpdateTenant && !isVacantRow(t) && !isNAPTenant(t);
+                  // Soft, tenant-reported ("anecdotal") figure — only when the DISPLAYED
+                  // sales is the anecdotal snapshot value (not an OM/report fallback).
+                  const anecdotal = !!ls?.anecdotal && ls?.salesPSF != null;
                   return <td title={perScreenTip || trend?.tip || t.salesNotes || ""} style={{ padding:"8px 10px", textAlign:"right", color:sColor, fontWeight:sFlag?700:400, whiteSpace:"nowrap", cursor:(perScreenTip||trend||t.salesNotes)?"help":"default" }}>
                     {fmtTenantSales(salesPSF, t.sf)}
+                    {anecdotal && (
+                      <span title={ls?.provenance || "Anecdotal / unverified — a tenant-reported figure, not from an OM or sales report"}
+                        style={{ marginLeft:4, fontSize:8, fontWeight:700, letterSpacing:"0.03em", color:"#9a6a12", background:"#fdf3e3", border:"1px solid #eccf9a", borderRadius:3, padding:"0 3px", cursor:"help", verticalAlign:"middle" }}>ANEC</span>
+                    )}
                     {cin.perScreen != null && (
                       <span style={{ marginLeft:6, fontSize:9.5, fontWeight:700, color:"#6b4fa0" }} title={perScreenTip}>· {fmtPerScreen(cin.perScreen)}</span>
                     )}

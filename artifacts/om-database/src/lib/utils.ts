@@ -1253,6 +1253,10 @@ export interface LatestSale {
   occupancyCost: number | null;
   occSource?: "stated" | "computed";
   occBreakdown?: import("./idb").OccBreakdown | null;
+  // Set when the resolved figure is a soft, tenant-reported ("anecdotal") number
+  // typed in via Add-Intel — so the roster can badge it the same as the sales panel.
+  anecdotal?: boolean | null;
+  provenance?: string | null;
 }
 
 /**
@@ -1263,26 +1267,28 @@ export interface LatestSale {
  */
 export function buildLatestSales(deal: {
   tenants?: RecoveryTenant[] | null;
-  tenantSalesHistory?: Array<{ year: number; source?: string; tenants: Array<{ name: string; salesPSF?: number | null; annualSales?: number | null; sf?: number | null; occupancyCost?: number | null }> }> | null;
+  tenantSalesHistory?: Array<{ year: number; source?: string; tenants: Array<{ name: string; salesPSF?: number | null; annualSales?: number | null; sf?: number | null; occupancyCost?: number | null; anecdotal?: boolean | null; provenance?: string | null }> }> | null;
 } & Parameters<typeof estimateRecoveries>[0]): Map<string, LatestSale> {
   const out = new Map<string, LatestSale>();
   const rec = estimateRecoveries(deal).byName;
   const roster = new Map((deal.tenants || []).map(t => [tenantKey(t.canonicalName ?? t.name), t]));
 
   // Most-recent uploaded sales record per tenant (highest year wins; uploads over OM).
-  const latestByKey = new Map<string, { year: number; r: { salesPSF?: number | null; annualSales?: number | null; sf?: number | null; occupancyCost?: number | null }; isUpload: boolean }>();
+  const latestByKey = new Map<string, { year: number; r: { salesPSF?: number | null; annualSales?: number | null; sf?: number | null; occupancyCost?: number | null; anecdotal?: boolean | null; provenance?: string | null }; isUpload: boolean; anecdotal: boolean }>();
   for (const snap of deal.tenantSalesHistory || []) {
     const isUpload = snap.source !== "om";
+    // A soft, tenant-reported figure — flagged at the record OR the snapshot level.
+    const snapAnec = snap.source === "anecdotal";
     for (const r of snap.tenants) {
       const key = tenantKey(stripSuiteCode(r.name));
       const cur = latestByKey.get(key);
       if (!cur || (isUpload && !cur.isUpload) || (isUpload === cur.isUpload && snap.year > cur.year)) {
-        latestByKey.set(key, { year: snap.year, r, isUpload });
+        latestByKey.set(key, { year: snap.year, r, isUpload, anecdotal: r.anecdotal === true || snapAnec });
       }
     }
   }
 
-  for (const [key, { r, year }] of latestByKey) {
+  for (const [key, { r, year, anecdotal }] of latestByKey) {
     const rt = roster.get(key);
     let sf = _num(r.sf) ?? _num(rt?.sf);
     let psf = _num(r.salesPSF);
@@ -1311,7 +1317,7 @@ export function buildLatestSales(deal: {
       occSource = "computed";
       occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
     }
-    out.set(key, { salesPSF: psf, grossSales: gross, salesYear: year ?? null, occupancyCost, occSource, occBreakdown });
+    out.set(key, { salesPSF: psf, grossSales: gross, salesYear: year ?? null, occupancyCost, occSource, occBreakdown, anecdotal, provenance: r.provenance ?? null });
   }
   return out;
 }
