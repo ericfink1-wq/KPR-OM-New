@@ -11,6 +11,8 @@ export * from "./users";
 export * from "./loginEvents";
 export * from "./uploadLog";
 export * from "./extractionLessons";
+export * from "./watchlistNewsSignals";
+export * from "./selfImprove";
 export * from "./sessions";
 export * from "./leaseAbstracts";
 export * from "./siteAgreements";
