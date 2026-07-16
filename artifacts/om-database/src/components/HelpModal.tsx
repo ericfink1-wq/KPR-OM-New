@@ -91,7 +91,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
         <><B>Confirm import details</B> — if the AI was unsure of a value (or numbers don't reconcile), the deal shows a <B>"📝 N to confirm"</B> banner. Confirm, dismiss, or fix it (type the value, or describe the change in plain English). This corrects <em>this deal only</em> — it doesn't change how future OMs are read.</>,
         <><B>Smart sorting is automatic</B> — types are detected by content/name and merged into one deal; the rent roll's fresher rents win on shared tenants, nothing gets wiped. Analysis auto-refreshes after import.</>,
         <><B>Thin extraction?</B> Usually a scanned/low-quality PDF — try <B>Analyze → ↺ Rebuild from OM</B> (or the <em>Re-run from PDF</em> link if the saved text came out garbled), or fix any value with its pencil icon. A very large OM is capped at ~5 min so it can't churn tokens; if it stops early it flags the roster for review.</>,
-        <><B>Advanced:</B> the ▾ by Upload also offers <em>Import a folder</em> and <em>Upload .json</em> (both merge by address; JSON deals auto-score).</>,
+        <><B>Load a whole portfolio at once</B> — the ▾ by Upload offers <em>Upload .json</em>, and one JSON file can hold <B>many deals</B> (a whole portfolio in a single upload) or just one. It merges by address, so re-uploading updates the matching deals instead of duplicating them, and each deal auto-scores. <em>Import a folder</em> is also there for a folder of documents.</>,
       ]} />
     ),
   },
