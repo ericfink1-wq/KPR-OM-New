@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectFlyer, applyDeterministicOverrides, hasOmSaleSignals } from "../docClassify";
+import { detectFlyer, applyDeterministicOverrides, hasOmSaleSignals, detectUnsupportedDoc } from "../docClassify";
 
 // Real excerpt from the JLL "Trussville Promenade - Offering Memorandum.pdf" that
 // was wrongly routed to the flyer path: it markets vacancy LEASE-UP as upside
@@ -84,5 +84,45 @@ describe("hasOmSaleSignals (shared source of truth for the router gate)", () => 
   it("handles empty/nullish input", () => {
     expect(hasOmSaleSignals("")).toBe(false);
     expect(hasOmSaleSignals(undefined as unknown as string)).toBe(false);
+  });
+});
+
+// Advisory detection for documents the site can't build from — must catch a raw
+// lease and an REA, but NEVER a real OM, rent roll, or leasing flyer (which the
+// site handles), so it can only ever HELP, never block a supported upload.
+const RAW_LEASE = `RETAIL LEASE AGREEMENT
+THIS LEASE AGREEMENT is made and entered into by and between Maple Plaza Owner LLC ("Landlord")
+and Sunrise Nails LLC ("Tenant"). WITNESSETH, in consideration of the mutual covenants herein,
+Landlord leases to Tenant the Demised Premises (Suite 120). Commencement Date: the Base Rent
+shall be $28.00 per square foot. Term of this Lease: ten (10) years.`;
+const LEASE_FILE = "Sunrise Nails - Fully Executed Lease.pdf";
+
+const THIRD_AMENDMENT = `THIRD AMENDMENT TO LEASE
+This Third Amendment to Lease is entered into between Landlord and Tenant, amending the base
+rent and extending the term. The Tenant shall pay minimum rent as set forth herein.`;
+const AMENDMENT_FILE = "620-00072 - Third Amendment.pdf";
+
+const REA_DOC = `DECLARATION OF COVENANTS, CONDITIONS AND RESTRICTIONS AND RECIPROCAL EASEMENT AGREEMENT
+This Reciprocal Easement Agreement is made among the parties owning parcels within the shopping
+center, granting cross easements for ingress, egress, parking and common area maintenance.`;
+const REA_FILE = "Rockaway - REA.pdf";
+
+describe("detectUnsupportedDoc (advisory only — never blocks a supported upload)", () => {
+  it("flags a raw executed lease", () => {
+    const r = detectUnsupportedDoc(RAW_LEASE, LEASE_FILE);
+    expect(r?.kind).toBe("lease");
+  });
+  it("flags a lease amendment (named by store number, no tenant in the title)", () => {
+    expect(detectUnsupportedDoc(THIRD_AMENDMENT, AMENDMENT_FILE)?.kind).toBe("lease");
+  });
+  it("flags an REA / easement / CC&R document", () => {
+    expect(detectUnsupportedDoc(REA_DOC, REA_FILE)?.kind).toBe("rea");
+  });
+  it("does NOT flag a real sale OM (the guard that protects every real upload)", () => {
+    expect(detectUnsupportedDoc(TRUSSVILLE_OM, TRUSSVILLE_FILE)).toBeNull();
+  });
+  it("does NOT flag a leasing flyer or a rent roll", () => {
+    expect(detectUnsupportedDoc(REAL_FLYER, FLYER_FILE)).toBeNull();
+    expect(detectUnsupportedDoc("Tenant SF Rent LeaseStart LeaseEnd  Kroger 45000 12.00", "Rent Roll.xlsx")).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { playUploadSuccess, playUploadError } from "../lib/sounds";
-import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, type DocType } from "../lib/docClassify";
+import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, type DocType } from "../lib/docClassify";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 import type { FlyerResult } from "../lib/flyerExtract";
@@ -19,7 +19,7 @@ interface QueueItem {
   id: string;
   name: string;
   file?: File;
-  status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "done" | "error";
+  status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "done" | "error" | "advisory";
   msg: string;
   progress: number;
   startedAt?: number;   // ms when ACTIVE processing began (not queue/wait time)
@@ -313,7 +313,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     // each non-terminal item cancelled (so its background work is ignored) and
     // flip it to "Stopped".
     setQueue(prev => prev.map(it => {
-      if (it.status === "done" || it.status === "error") return it;
+      if (it.status === "done" || it.status === "error" || it.status === "advisory") return it;
       cancelledRef.current.add(it.id);
       return { ...it, status: "error", msg: "Stopped", error: "Stopped by user" };
     }));
@@ -1119,6 +1119,16 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         await routeAmort(itemId, dealId, text, fileName, cls.propertyName, cls.address);
         return;
       }
+      // Advisory: a raw lease / REA has no build path here — tell the user how to
+      // handle it (Claude Code → JSON import) instead of mis-reading it as an OM.
+      // The detector is guarded by hasOmSaleSignals, so a real sale OM is never
+      // caught; this only fires on the fall-through (nothing else claimed the doc).
+      const unsupported = detectUnsupportedDoc(text, file.name);
+      if (unsupported) {
+        updateItem(itemId, { status: "advisory", progress: 100, msg: unsupported.message });
+        return;
+      }
+
       // Otherwise treat as an OM / deal package (the original flow, unchanged).
 
       if (isCancelled(itemId)) return;
@@ -1420,12 +1430,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                   <div style={{ padding: "11px 28px", borderBottom: "1px solid #f4f6f7", display: "flex", gap: 14, alignItems: "flex-start" }}>
                     <div style={{
                       width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0,
-                      background: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "extracting" ? "#6dba43" : "#b3bac1",
+                      background: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" ? "#e0a52e" : item.status === "extracting" ? "#6dba43" : "#b3bac1",
                       animation: item.status === "extracting" ? "pulse 1.2s infinite" : "none",
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: "#383a37", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : "#a69e91", marginTop: 2 }}>{item.msg}</div>
+                      <div style={{ fontSize: 12, color: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" ? "#a9700a" : "#a69e91", marginTop: 2, lineHeight: item.status === "advisory" ? 1.5 : undefined }}>{item.status === "advisory" ? "⚠ " : ""}{item.msg}</div>
                       {(item.status === "extracting" || item.status === "pending") && (
                         <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ flex: 1, height: 5, background: "#efe8da", borderRadius: 3, overflow: "hidden" }}>

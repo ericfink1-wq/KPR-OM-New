@@ -92,6 +92,71 @@ export function detectLoan(text: string, fileName: string): boolean {
   return fnHit || bodyHit;
 }
 
+// ── Advisory detectors for documents the site has NO build path for ───────────
+// These NEVER change routing — they only let the uploader tell the user how to
+// handle a document it can't build from (a raw lease, or a recorded REA/easement),
+// instead of silently mis-reading it as an OM. Both are guarded so a real sale OM
+// is never caught (see detectUnsupportedDoc).
+
+// A RAW EXECUTED LEASE or lease AMENDMENT (the legal instrument itself) — distinct
+// from a rent roll, a lease-OPTIONS schedule, or a broker's lease ABSTRACT (which
+// has its own "Upload abstracts" reader). The site can't build a deal from a lease.
+export function detectLease(text: string, fileName: string): boolean {
+  const fn = fileName.toLowerCase();
+  // Don't second-guess a file explicitly named as a supported type or an abstract.
+  if (/(rent\s*roll|abstract|offering|memorandum|\bom\b|sales|flyer|swap|isda|\bloan\b|amort)/.test(fn)) return false;
+  const t = text.slice(0, 8000).toLowerCase();
+  // Unmistakable executed-lease / amendment legal language.
+  const strong = /(this lease( agreement)? is made|in consideration of the mutual covenants|witnesseth|demised premises|amendment to lease|lease amendment|(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth) amendment to (the )?lease)/.test(t);
+  if (strong) return true;
+  // Filename hints lease/amendment AND the body reads like a lease.
+  const fnHit = /lease|amendment|estoppel|\bsnda\b/.test(fn);
+  const bodyLease = /\blandlord\b/.test(t) && /\btenant\b/.test(t) && /(base rent|minimum rent|commencement date|term of th(e|is) lease|demised premises)/.test(t);
+  return fnHit && bodyLease;
+}
+
+// A recorded PROPERTY-LEVEL agreement — REA / OEA / CC&R / declaration of easements.
+// The site records these in Site Agreements but can't read the recorded PDF itself.
+export function detectREA(text: string, fileName: string): boolean {
+  const fn = fileName.toLowerCase();
+  if (/(rent\s*roll|abstract|offering|memorandum|\bom\b|sales|flyer|swap|isda|\bloan\b|amort)/.test(fn)) return false;
+  const t = text.slice(0, 8000).toLowerCase();
+  const strong = /(reciprocal easement agreement|operation and easement agreement|construction, operation and reciprocal easement|declaration of covenants,? conditions,? and restrictions|declaration of easements|declaration of restrictions|easements,? covenants,? and restrictions)/.test(t);
+  if (strong) return true;
+  const fnHit = /\b(rea|oea|ccr|cc&r)\b|reciprocal easement|easement|covenants|declaration/.test(fn);
+  const bodyHit = /(reciprocal easement|operation and easement|covenants, conditions and restrictions|declaration of easement)/.test(t);
+  return fnHit && bodyHit;
+}
+
+export interface UnsupportedDoc {
+  kind: "lease" | "rea";
+  title: string;    // short label for the badge
+  message: string;  // friendly, actionable line for the upload queue
+}
+
+// Advisory-only: identify a dropped document the site has no build path for, so the
+// uploader can tell the user how to handle it (via Claude Code → JSON import)
+// INSTEAD of mis-processing it. Returns null for every document the site DOES
+// handle. The hasOmSaleSignals guard guarantees a real sale OM is never flagged.
+export function detectUnsupportedDoc(text: string, fileName: string): UnsupportedDoc | null {
+  if (hasOmSaleSignals(text)) return null;   // a sale OM is always handled — never flag it
+  if (detectLease(text, fileName)) {
+    return {
+      kind: "lease",
+      title: "Looks like a lease / amendment",
+      message: "This looks like a raw lease or amendment. The site builds deals from OMs and rent rolls, not from a lease itself. Run it through Claude Code to get a lease-abstract JSON, then load it on the deal with “Upload abstracts.” Nothing was uploaded.",
+    };
+  }
+  if (detectREA(text, fileName)) {
+    return {
+      kind: "rea",
+      title: "Looks like an REA / easement",
+      message: "This looks like an REA, easement, or CC&R document. The site can’t read these directly. Run it through Claude Code to get JSON, then add it in the deal’s Site Agreements section. Nothing was uploaded.",
+    };
+  }
+  return null;
+}
+
 export interface Classification {
   type: DocType;
   propertyName: string | null;
