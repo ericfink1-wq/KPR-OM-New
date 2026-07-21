@@ -87,7 +87,7 @@ export function computeImportPlan(incoming: Deal[], existing: Deal[]): ImportPla
     const keys = new Set<string>([...Object.keys(inc), ...Object.keys(match)]);
     const changes: FieldChange[] = [];
     for (const k of keys) {
-      if (k === "id" || isPreserved(k)) continue;
+      if (k === "id" || k.startsWith("__") || isPreserved(k)) continue;  // "__" = client-only staging (e.g. inline abstracts), never a deal field
       const before = (match as unknown as Record<string, unknown>)[k];
       const after = (inc as unknown as Record<string, unknown>)[k];
       const hasBefore = before != null && before !== "";

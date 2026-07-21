@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog, apiBulkSaveLeaseAbstracts, apiBulkSaveSiteAgreements } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
@@ -250,6 +250,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           if (!r.status) r.status = "Prospect";
           if (!Array.isArray(r.tenants)) r.tenants = [];
           if (!r.uploadedAt) r.uploadedAt = new Date().toISOString();
+          // One-file upload: a deal MAY carry its lease abstracts and site agreements
+          // (REAs) inline. Stage them off the deal (so they don't bloat the deal blob)
+          // and route them to their own tables after the deal imports. Absent → no-op,
+          // so existing deal-only JSON behaves exactly as before.
+          const la = Array.isArray((r as any).leaseAbstracts) ? (r as any).leaseAbstracts
+                   : Array.isArray((r as any).abstracts) ? (r as any).abstracts : null;
+          const sa = Array.isArray((r as any).siteAgreements) ? (r as any).siteAgreements : null;
+          delete (r as any).leaseAbstracts; delete (r as any).abstracts; delete (r as any).siteAgreements;
+          if (la && la.length) (r as any).__pendingAbstracts = la;
+          if (sa && sa.length) (r as any).__pendingSiteAgreements = sa;
           allDeals.push(r as unknown as Deal);
         }
       } catch (err) {
@@ -291,9 +301,18 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     for (let i = 0; i < allDeals.length; i++) {
       setImportProgress({ current: i + 1, total: allDeals.length });
       try {
-        const result = await apiImportDeal(allDeals[i]);
-        const deal = result.merged ? { ...allDeals[i], id: result.id } : allDeals[i];
+        // Peel off inline abstracts / site agreements before importing the deal, then
+        // route them to their own tables using the id the server assigned/merged into.
+        const { __pendingAbstracts, __pendingSiteAgreements, ...cleanDeal } = allDeals[i] as any;
+        const result = await apiImportDeal(cleanDeal as Deal);
+        const deal = result.merged ? { ...(cleanDeal as Deal), id: result.id } : (cleanDeal as Deal);
         succeeded.push(deal);
+        if (Array.isArray(__pendingAbstracts) && __pendingAbstracts.length) {
+          await apiBulkSaveLeaseAbstracts(result.id, __pendingAbstracts).catch(() => {});
+        }
+        if (Array.isArray(__pendingSiteAgreements) && __pendingSiteAgreements.length) {
+          await apiBulkSaveSiteAgreements(result.id, __pendingSiteAgreements).catch(() => {});
+        }
         if (result.merged) {
           mergedNames.push(result.propertyName || allDeals[i].propertyName || "");
           const prior = existingById.get(result.id);
