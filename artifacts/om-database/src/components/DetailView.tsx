@@ -2235,6 +2235,24 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlan: arr.length } });
   };
 
+  // Download the site-plan image(s) as files (token-free — the images are already
+  // loaded as data URIs). Multi-page site plans download each page, staggered so
+  // the browser doesn't block rapid successive downloads.
+  const downloadSitePlan = () => {
+    const pages = imgs?.sitePlan || [];
+    if (!pages.length) return;
+    const base = (d.propertyName || d.fileName || "deal").replace(/[^\w\-]+/g, "_").replace(/^_+|_+$/g, "") || "deal";
+    pages.forEach((src, i) => {
+      const ext = /^data:image\/(png|jpe?g|webp|gif)/i.exec(src)?.[1]?.replace("jpeg", "jpg") || "png";
+      const name = pages.length > 1 ? `${base}-site-plan-${i + 1}.${ext}` : `${base}-site-plan.${ext}`;
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = src; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+      }, i * 250);
+    });
+  };
+
   const applyParsed = (parsed: { asOf?: string | null; tenants?: unknown[] }) => {
     const newTenants = Array.isArray(parsed.tenants) ? parsed.tenants as Deal["tenants"] : [];
     if (!newTenants || newTenants.length === 0) { setPasteError("No tenants found — check the pasted text."); return; }
@@ -2995,6 +3013,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Site Plan</div>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <button onClick={downloadSitePlan} title="Download the site plan image(s)" style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:10.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>⤓ Download</button>
                 <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
                 <button onClick={() => setConfirmDelImg("site")} title="Remove site plan" style={{ background:"transparent", border:"none", color:"#c0392b", fontSize:13, cursor:"pointer", padding:0 }}>🗑</button>
               </div>
@@ -3014,7 +3033,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Site Plan</div>
-              <button onClick={() => setConfirmDelImg("site")} title="Remove site plan" style={{ background:"transparent", border:"none", color:"#c0392b", fontSize:13, cursor:"pointer", padding:0 }}>🗑</button>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <button onClick={downloadSitePlan} title="Download the site plan image(s)" style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:10.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>⤓ Download</button>
+                <button onClick={() => setConfirmDelImg("site")} title="Remove site plan" style={{ background:"transparent", border:"none", color:"#c0392b", fontSize:13, cursor:"pointer", padding:0 }}>🗑</button>
+              </div>
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
