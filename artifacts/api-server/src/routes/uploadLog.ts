@@ -55,10 +55,38 @@ router.post("/upload-log", requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/upload-log/by-deal/:dealId — WHO first uploaded this deal (the earliest
-// successful upload row for it). Any signed-in user can see it — it's team
-// attribution ("uploaded by …"), not the full admin audit log. Returns null when
-// the deal has no logged upload (e.g. a JSON import predating logging).
+// The dominant uploader across the whole log — used to RETROACTIVELY attribute
+// deals that have no upload record of their own (older JSON imports, or uploads
+// from before logging existed). Cached briefly; recomputed from the log so it
+// tracks whoever actually does the uploading (no hard-coded name).
+let primaryCache: { userName: string | null; userEmail: string | null } | null = null;
+let primaryAt = 0;
+async function getPrimaryUploader(): Promise<{ userName: string | null; userEmail: string | null } | null> {
+  if (primaryCache && Date.now() - primaryAt < 300_000) return primaryCache;
+  try {
+    await ensureUploadLogTable();
+    const rows = await db.select().from(uploadLogTable);
+    const counts = new Map<string, { n: number; userName: string | null; userEmail: string | null }>();
+    for (const r of rows) {
+      if (r.status !== "success") continue;
+      const key = (r.userEmail || r.userName || "").toLowerCase();
+      if (!key) continue;
+      const c = counts.get(key) || { n: 0, userName: r.userName ?? null, userEmail: r.userEmail ?? null };
+      c.n++; counts.set(key, c);
+    }
+    let best: { n: number; userName: string | null; userEmail: string | null } | null = null;
+    for (const c of counts.values()) if (!best || c.n > best.n) best = { n: c.n, userName: c.userName, userEmail: c.userEmail };
+    primaryCache = best ? { userName: best.userName, userEmail: best.userEmail } : null;
+    primaryAt = Date.now();
+    return primaryCache;
+  } catch { return null; }
+}
+
+// GET /api/upload-log/by-deal/:dealId — WHO uploaded this deal. Uses the deal's own
+// earliest successful upload record when it has one; otherwise falls back to the
+// library's primary uploader (marked `inferred`) so EXISTING deals with no record
+// still show attribution. Any signed-in user can see it (team attribution, not the
+// full admin audit). Null only when the log is empty (no basis to attribute).
 router.get("/upload-log/by-deal/:dealId", requireAuth, async (req, res) => {
   try {
     await ensureUploadLogTable();
@@ -67,7 +95,9 @@ router.get("/upload-log/by-deal/:dealId", requireAuth, async (req, res) => {
       .where(eq(uploadLogTable.dealId, dealId))
       .orderBy(asc(uploadLogTable.createdAt));
     const r = rows.find(x => x.status === "success") ?? null;
-    res.json(r ? { userName: r.userName ?? null, userEmail: r.userEmail ?? null, at: r.createdAt } : null);
+    if (r) { res.json({ userName: r.userName ?? null, userEmail: r.userEmail ?? null, at: r.createdAt, inferred: false }); return; }
+    const primary = await getPrimaryUploader();
+    res.json(primary ? { userName: primary.userName, userEmail: primary.userEmail, at: null, inferred: true } : null);
   } catch (err) {
     req.log.error({ err }, "upload-log by-deal lookup failed");
     res.json(null);

@@ -2729,8 +2729,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <span style={{ fontSize:9, color:"#958d80", textAlign:"right" }}>
             {[d.omDate ? `OM ${d.omDate}` : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
             {uploader && (uploader.userName || uploader.userEmail) && (
-              <span title={uploader.at ? `Uploaded ${new Date(uploader.at).toLocaleDateString()}` : "Uploaded by"} style={{ display:"block" }}>
-                ⬆ Uploaded by {uploader.userName || uploader.userEmail}
+              <span title={uploader.inferred ? "No upload record for this deal — attributed to the library's primary uploader" : (uploader.at ? `Uploaded ${new Date(uploader.at).toLocaleDateString()}` : "Uploaded by")} style={{ display:"block" }}>
+                ⬆ Uploaded by {uploader.userName || uploader.userEmail}{uploader.inferred ? " *" : ""}
               </span>
             )}
           </span>
