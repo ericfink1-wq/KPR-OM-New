@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog, apiBulkSaveLeaseAbstracts, apiBulkSaveSiteAgreements } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog, apiRecordUpload, apiBulkSaveLeaseAbstracts, apiBulkSaveSiteAgreements } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
@@ -307,6 +307,9 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         const result = await apiImportDeal(cleanDeal as Deal);
         const deal = result.merged ? { ...(cleanDeal as Deal), id: result.id } : (cleanDeal as Deal);
         succeeded.push(deal);
+        // Attribute the upload to the current user (server fills in WHO from the
+        // session), so a JSON-imported deal shows "Uploaded by …" like OM uploads do.
+        void apiRecordUpload({ fileName: deal.propertyName || deal.fileName || "JSON import", docType: "json", status: "success", dealId: result.id });
         if (Array.isArray(__pendingAbstracts) && __pendingAbstracts.length) {
           await apiBulkSaveLeaseAbstracts(result.id, __pendingAbstracts).catch(() => {});
         }

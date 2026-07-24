@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { sql, desc } from "drizzle-orm";
+import { sql, desc, asc, eq } from "drizzle-orm";
 import { db, uploadLogTable } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 
@@ -52,6 +52,25 @@ router.post("/upload-log", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "upload-log insert failed");
     res.json({ ok: false }); // best-effort audit — never fail the upload flow
+  }
+});
+
+// GET /api/upload-log/by-deal/:dealId — WHO first uploaded this deal (the earliest
+// successful upload row for it). Any signed-in user can see it — it's team
+// attribution ("uploaded by …"), not the full admin audit log. Returns null when
+// the deal has no logged upload (e.g. a JSON import predating logging).
+router.get("/upload-log/by-deal/:dealId", requireAuth, async (req, res) => {
+  try {
+    await ensureUploadLogTable();
+    const dealId = String(req.params.dealId);
+    const rows = await db.select().from(uploadLogTable)
+      .where(eq(uploadLogTable.dealId, dealId))
+      .orderBy(asc(uploadLogTable.createdAt));
+    const r = rows.find(x => x.status === "success") ?? null;
+    res.json(r ? { userName: r.userName ?? null, userEmail: r.userEmail ?? null, at: r.createdAt } : null);
+  } catch (err) {
+    req.log.error({ err }, "upload-log by-deal lookup failed");
+    res.json(null);
   }
 });
 

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
-  apiListLeaseAbstracts } from "../lib/api";
+  apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, openAuditCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch, recognizeRateIndex } from "../lib/swapExtract";
@@ -1741,6 +1741,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   }, [d.id]);
   useEffect(() => { setAbstracts([]); reloadAbstracts(); }, [reloadAbstracts]);
 
+  // Who first uploaded this deal (from the upload log), shown as team attribution.
+  const [uploader, setUploader] = useState<DealUploader | null>(null);
+  useEffect(() => {
+    setUploader(null);
+    apiDealUploadedBy(d.id).then(setUploader).catch(() => setUploader(null));
+  }, [d.id]);
+
   const abstractsByTenant = useMemo(() => {
     const m = new Map<string, LeaseAbstract>();
     for (const a of abstracts) {
@@ -2719,11 +2726,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
             {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
           </div>
-          {(d.omDate || d.pdfPages) && (
-            <span style={{ fontSize:9, color:"#958d80" }}>
-              {[d.omDate ? `OM ${d.omDate}` : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
-            </span>
-          )}
+          <span style={{ fontSize:9, color:"#958d80", textAlign:"right" }}>
+            {[d.omDate ? `OM ${d.omDate}` : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
+            {uploader && (uploader.userName || uploader.userEmail) && (
+              <span title={uploader.at ? `Uploaded ${new Date(uploader.at).toLocaleDateString()}` : "Uploaded by"} style={{ display:"block" }}>
+                ⬆ Uploaded by {uploader.userName || uploader.userEmail}
+              </span>
+            )}
+          </span>
         </div>
         {(() => {
           const rawParts = [

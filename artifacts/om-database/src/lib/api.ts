@@ -195,6 +195,16 @@ export async function apiUploadLog(): Promise<UploadLogEntry[]> {
   if (!resp.ok) return [];
   return await resp.json().catch(() => []) as UploadLogEntry[];
 }
+// Who first uploaded a given deal (team attribution shown on the deal page). Any
+// signed-in user can read it; returns null when the deal has no logged upload.
+export interface DealUploader { userName: string | null; userEmail: string | null; at: string | null }
+export async function apiDealUploadedBy(dealId: string): Promise<DealUploader | null> {
+  try {
+    const resp = await apiFetch(`/upload-log/by-deal/${encodeURIComponent(dealId)}`);
+    if (!resp.ok) return null;
+    return await resp.json().catch(() => null) as DealUploader | null;
+  } catch { return null; }
+}
 
 export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; emailVerified?: boolean; createdAt: string; lastLoginAt: string | null; lastSeenAt?: string | null }
 export async function apiListMembers(): Promise<MemberAccount[]> {
