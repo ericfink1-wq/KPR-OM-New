@@ -454,7 +454,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} onClick={(k === "abstract" || k === "kickout") ? undefined : () => setSort(k)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: (k === "abstract" || k === "kickout") ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{(k === "abstract" || k === "kickout") ? null : arrow(k)}</th>
+                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : undefined} onClick={(k === "abstract" || k === "kickout") ? undefined : () => setSort(k)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: (k === "abstract" || k === "kickout") ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{(k === "abstract" || k === "kickout") ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
@@ -686,9 +686,11 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     if (Math.abs(chg) >= 1) {
                       const up = chg > 0;
                       trend = {
-                        arrow: up ? "▲" : "▼",
+                        // Diagonal arrow = sales TREND over time (this year vs last),
+                        // deliberately distinct from the ▲/▼ brand-median flag below.
+                        arrow: up ? "↗" : "↘",
                         color: up ? "#0f9d63" : (chg <= -5 ? "#dc2626" : "#c97a18"),
-                        tip: `${up ? "Up" : "Down"} ${Math.abs(Math.round(chg))}% vs ${t.priorSalesYear || "prior yr"} ($${Math.round(prior)} → $${Math.round(latest)}/SF)`,
+                        tip: `Sales trend — ${up ? "up" : "down"} ${Math.abs(Math.round(chg))}% vs ${t.priorSalesYear || "prior year"} ($${Math.round(prior)} → $${Math.round(latest)}/SF)`,
                       };
                     }
                   }
@@ -723,8 +725,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     {cin.suspect && (
                       <FlagTip content={perScreenTip} color="#c97a18"><span style={{ marginLeft:5, fontSize:9.5, fontWeight:800, color:"#c97a18", lineHeight:1 }}>⚠ {cin.screens} scr?</span></FlagTip>
                     )}
-                    {trend && <span style={{ marginLeft:4, color:trend.color, fontSize:9, fontWeight:700 }}>{trend.arrow}</span>}
-                    {sFlag && <FlagTip content={sFlag.tip} color={sColor}><span style={{ marginLeft:4, fontSize:10, fontWeight:800, color:sColor, lineHeight:1 }}>{sFlag.direction==="below"?"▼":"▲"}</span></FlagTip>}
+                    {trend && <FlagTip content={trend.tip} color={trend.color}><span style={{ marginLeft:4, color:trend.color, fontSize:11, fontWeight:800, lineHeight:1 }}>{trend.arrow}</span></FlagTip>}
+                    {sFlag && <FlagTip content={`Vs ${(t.canonicalName||t.name||"brand")} median — ${sFlag.tip}`} color={sColor}><span style={{ marginLeft:4, fontSize:10, fontWeight:800, color:sColor, lineHeight:1 }}>{sFlag.direction==="below"?"▼":"▲"}</span></FlagTip>}
                     {canEditCinema && (
                       <button onClick={e => { e.stopPropagation(); openScreensEditor(t); }} title="Set screens & sales for this theater (sales per screen is the metric that matters)"
                         style={{ marginLeft:6, background:"transparent", border:"none", cursor:"pointer", color:"#6b4fa0", fontSize:11, padding:"1px 2px", lineHeight:1, flexShrink:0 }}>🎬</button>
