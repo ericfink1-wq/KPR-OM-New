@@ -42,6 +42,28 @@ describe("estimateReassessment", () => {
     expect(exempt.estPostSaleAssessed).toBe(450_000); // × 0.75
   });
 
+  it("SC: a mislabeled APPRAISED value entered as 'assessed' still shows the reset RISE, not a fake drop", () => {
+    // Real case: $52M purchase, 6% commercial ratio, $755,782 taxes, and the OM's $23M
+    // APPRAISED value entered in the assessed box. Dividing $23M by 6% implies a $383M
+    // market > the $52M price — that's the mislabel signal. Treated as market, the reset
+    // raises taxes to ~$1.71M (+126%), not the old bogus -86% drop.
+    const r = estimateReassessment({ state: "SC", acquisitionPrice: 52_000_000, currentAssessedValue: 23_000_000, currentAnnualTaxes: 755_782 });
+    expect(r.resetsOnSale).toBe(true);
+    expect(r.estPostSaleTaxes!).toBeGreaterThan(1_600_000);
+    expect(r.estPostSaleTaxes!).toBeLessThan(1_800_000);
+    expect(r.estAnnualStepUp!).toBeGreaterThan(0);          // RISES, never a decrease
+    expect(r.stepUpPct!).toBeGreaterThan(100);
+    expect(r.detail.some((d) => /almost certainly the APPRAISED/i.test(d))).toBe(true);
+    expect(r.confidence).toBe("low");
+  });
+
+  it("SC: a CORRECTLY-entered assessed value is left alone (no mislabel misfire)", () => {
+    // assessed = price × 6% = $3.12M — the normal path, no market-value override.
+    const r = estimateReassessment({ state: "SC", acquisitionPrice: 52_000_000, currentAssessedValue: 3_120_000, currentAnnualTaxes: 755_782 });
+    expect(r.detail.some((d) => /almost certainly the APPRAISED/i.test(d))).toBe(false);
+    expect(r.estPostSaleAssessed).toBe(3_120_000);          // 52M × 6%, ratio applied once
+  });
+
   it("OH (no reset): no sale-time step-up, but flags the next-cycle move when buying above assessed", () => {
     const r = estimateReassessment({ state: "OH", acquisitionPrice: 10_000_000, currentAssessedValue: 2_000_000, currentAnnualTaxes: 80_000 });
     expect(r.resetsOnSale).toBe(false);

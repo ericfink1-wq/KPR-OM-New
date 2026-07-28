@@ -641,6 +641,21 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
   const effRate = adValoremTaxes != null && curAssessed != null && curAssessed > 0 ? adValoremTaxes / curAssessed : null;
   const impliedMarket = curAssessed != null && ratio != null && ratio > 0 ? curAssessed / (ratio / 100) : null;
 
+  // MISLABEL GUARD (ratio states). The reset math expects `currentAssessedValue` to be
+  // the ratio-adjusted assessed value (assessed = market × ratio). But OM tax pages
+  // usually show the APPRAISED (market) value, and that's often what gets entered here.
+  // Feeding a market value where the model expects the ratio-adjusted one applies the
+  // ratio TWICE and silently understates the reset — even flipping a real increase into
+  // a fake decrease (the SC "-86%" case). Detect it: the entered figure is treated as
+  // the market value when (a) dividing it by the ratio implies a market well above the
+  // price, and (b) reading it AS the market value lands closer to the price than that
+  // implied figure does. Robust across ratios; leaves a correctly-entered value alone.
+  const looksLikeMarketValue =
+    ratio != null && ratio > 0 && ratio < 100 &&
+    curAssessed != null && curAssessed > 0 && price != null && price > 0 && impliedMarket != null &&
+    impliedMarket > price * 1.5 &&
+    Math.abs(Math.log(curAssessed / price)) < Math.abs(Math.log(impliedMarket / price));
+
   const detail: string[] = [];
   const out: ReassessResult = {
     jurisdiction: j, codified: !!j,
@@ -663,6 +678,26 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
   const resetFactor = j.scAtiExemption && input.applyScAtiExemption ? 0.75 : 1;
   const fullValueAssessed = price != null && ratio != null ? price * (ratio / 100) * resetFactor : null;
 
+  // Post-sale ad-valorem tax at the new (purchase-price) basis. Two paths:
+  //  • normal — the entered value IS the ratio-adjusted assessed value, so effRate is a
+  //    rate-on-assessed and we apply it to the new ratio-adjusted assessed (fullValueAssessed).
+  //  • mislabel — the entered value is really the MARKET/appraised value, so effRate is a
+  //    rate-on-MARKET; apply it directly to the new market basis (price × resetFactor). This
+  //    avoids applying the assessment ratio twice (the SC "-86%" bug).
+  const postSaleAdValorem =
+    adValoremTaxes != null && curAssessed != null && curAssessed > 0 && price != null && effRate != null && fullValueAssessed != null
+      ? (looksLikeMarketValue ? price * resetFactor * effRate : fullValueAssessed * effRate)
+      : null;
+
+  if (looksLikeMarketValue && curAssessed != null && ratio != null && price != null) {
+    // Treat the entry as market value for the reset, and tell the user we did so + to verify.
+    out.impliedCurrentMarket = r2(curAssessed);
+    out.confidence = "low";
+    detail.push(
+      `Input check: the "current assessed value" you entered ($${curAssessed.toLocaleString()}) is far too large to be ${j.stateName}'s ${ratio}%-of-market assessed value for a $${price.toLocaleString()} purchase — it's almost certainly the APPRAISED (market) value. We've treated it as market value, so the sale reset raises taxes (not lowers them). If $${curAssessed.toLocaleString()} really is the assessed value, it's inconsistent with the ${ratio}% ratio and this tax bill — verify the figure with the county assessor.`
+    );
+  }
+
   const reset = j.saleTriggersReassessment !== "no" && !j.buyerFavorableCeiling;
   out.resetsOnSale = reset;
 
@@ -670,15 +705,15 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
     // GA — a sale CAPS next-year value at the price (protective). No upward step-up.
     out.headline = `Sale does NOT raise taxes — in fact ${j.stateName} caps next year's value at your purchase price.`;
     detail.push(j.saleTriggerNote);
-    if (effRate != null && fullValueAssessed != null && curTaxes != null) {
+    if (postSaleAdValorem != null && fullValueAssessed != null && curTaxes != null) {
       out.estPostSaleAssessed = r2(fullValueAssessed);
-      out.estPostSaleTaxes = r2(fullValueAssessed * effRate + navInBill);
+      out.estPostSaleTaxes = r2(postSaleAdValorem + navInBill);
     }
     return out;
   }
 
-  if (reset && fullValueAssessed != null && effRate != null && curTaxes != null) {
-    const postTaxes = fullValueAssessed * effRate + navInBill; // reassessed ad-valorem + flat non-ad-valorem
+  if (reset && postSaleAdValorem != null && fullValueAssessed != null && curTaxes != null) {
+    const postTaxes = postSaleAdValorem + navInBill; // reassessed ad-valorem + flat non-ad-valorem
     out.estPostSaleAssessed = r2(fullValueAssessed);
     out.estPostSaleTaxes = r2(postTaxes);
     out.estAnnualStepUp = r2(postTaxes - curTaxes);
@@ -703,8 +738,8 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
     if (j.assessmentCycleYears > 1) detail.push(`Reassessed every ${j.assessmentCycleYears} years — the next cycle is when value moves toward what you paid.`);
     else if (j.assessmentCycleYears === 1) detail.push("Valued to market annually, so a price above the current assessment can flow in within a year or two.");
     else detail.push("No fixed cycle — confirm the county's reassessment cadence (and equalization ratio).");
-    if (fullValueAssessed != null && effRate != null && curTaxes != null && impliedMarket != null && price != null && price > impliedMarket * 1.05) {
-      const nextTaxes = fullValueAssessed * effRate + navInBill; // reassessed ad-valorem + flat non-ad-valorem
+    if (postSaleAdValorem != null && curTaxes != null && impliedMarket != null && price != null && price > impliedMarket * 1.05) {
+      const nextTaxes = postSaleAdValorem + navInBill; // reassessed ad-valorem + flat non-ad-valorem
       out.estNextCycleTaxes = r2(nextTaxes);
       out.estNextCycleStepUp = r2(nextTaxes - curTaxes);
       detail.push(`If/when reassessed to your ~$${price.toLocaleString()} basis: taxes ≈ $${r2(nextTaxes).toLocaleString()}/yr (≈ +$${(out.estNextCycleStepUp!).toLocaleString()}/yr vs. today) — model this at the next cycle, not day one.`);
