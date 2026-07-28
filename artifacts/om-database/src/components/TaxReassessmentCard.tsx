@@ -19,13 +19,6 @@ const C = {
 };
 
 const fmt$ = (n: number | null | undefined) => n == null ? "—" : `$${Math.round(n).toLocaleString()}`;
-// Compact $ for chart labels: $2.4M / $756k / $980.
-const abbr$ = (n: number | null | undefined) => {
-  if (n == null) return "—";
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$${Math.round(n / 1e3)}k`;
-  return `$${Math.round(n)}`;
-};
 const commaFmt = (v: string): string => {
   const s = v.replace(/,/g, ""); const n = parseFloat(s);
   return !s || isNaN(n) ? v : Math.round(n).toLocaleString("en-US");
@@ -267,9 +260,9 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
           )}
 
           {/* Year-by-year ramp — the bill each year, scaled from $0 (true proportions),
-              with the dollar figure ABOVE each bar and the cumulative % over today BELOW,
-              so the numbers can be read straight off the chart for modeling. Scrolls
-              sideways on a narrow screen so the labels never crush. */}
+              with the EXACT dollar figure ABOVE each bar and the year-over-year % change
+              BELOW, so the numbers can be read straight off the chart for modeling. Scrolls
+              sideways on a narrow screen so the full figures never crush. */}
           {(() => {
             const ys = fc.years;
             const maxT = Math.max(...ys.map(y => y.taxes), 1);
@@ -280,20 +273,21 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
             return (
               <div style={{ marginTop: 12 }}>
                 <div style={{ overflowX: "auto", paddingBottom: 2 }}>
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, minWidth: ys.length * 40 }}>
-                    {ys.map((y) => {
-                      const cumPct = start > 0 ? Math.round((y.taxes / start - 1) * 100) : 0;
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, minWidth: ys.length * 64 }}>
+                    {ys.map((y, i) => {
+                      const prev = i > 0 ? ys[i - 1].taxes : null;
+                      const yoyPct = prev && prev > 0 ? Math.round((y.taxes / prev - 1) * 100) : 0;
                       const h = Math.max(3, BAR_H * (y.taxes / maxT));
                       const isStep = y.phase === "reassessing" || y.phase === "unabating";
                       return (
-                        <div key={y.year} title={`Year ${y.year}: ${fmt$(y.taxes)}/yr (+${cumPct}% vs today)${isStep ? ` — ${y.phase}` : ""}`}
-                          style={{ flex: "1 0 34px", display: "flex", flexDirection: "column", alignItems: "center", minWidth: 34 }}>
-                          <div style={{ fontSize: 8.5, fontWeight: 700, color: isStep ? C.amber : C.ink, whiteSpace: "nowrap", marginBottom: 2 }}>{abbr$(y.taxes)}</div>
+                        <div key={y.year} title={`Year ${y.year}: ${fmt$(y.taxes)}/yr${i > 0 ? ` (${yoyPct >= 0 ? "+" : ""}${yoyPct}% vs prior year)` : ""}${isStep ? ` — ${y.phase}` : ""}`}
+                          style={{ flex: "1 0 56px", display: "flex", flexDirection: "column", alignItems: "center", minWidth: 56 }}>
+                          <div style={{ fontSize: 8.5, fontWeight: 700, color: isStep ? C.amber : C.ink, whiteSpace: "nowrap", marginBottom: 2 }}>{fmt$(y.taxes)}</div>
                           <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H }}>
                             <div style={{ width: "100%", height: h, background: colorFor(y.phase), borderRadius: "2px 2px 0 0", opacity: y.phase === "grown" ? 0.9 : 1 }} />
                           </div>
                           <div style={{ fontSize: 8, color: C.sub, marginTop: 3, whiteSpace: "nowrap" }}>{y.year === 0 ? "Now" : `Y${y.year}`}</div>
-                          <div style={{ fontSize: 8, fontWeight: 700, whiteSpace: "nowrap", color: cumPct >= 100 ? C.red : cumPct > 0 ? C.amber : C.faint }}>{y.year === 0 ? "base" : `+${cumPct}%`}</div>
+                          <div style={{ fontSize: 8, fontWeight: 700, whiteSpace: "nowrap", color: yoyPct >= 15 ? C.red : yoyPct > 0 ? C.sub : C.faint }}>{y.year === 0 ? "base" : `${yoyPct >= 0 ? "+" : ""}${yoyPct}%`}</div>
                         </div>
                       );
                     })}
@@ -302,7 +296,7 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
                 <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "2px 10px", marginTop: 6, fontSize: 10, color: C.sub, borderTop: `1px solid ${C.line}`, paddingTop: 6 }}>
                   <span>Today <b style={{ color: C.ink }}>{fmt$(fc.startTaxes)}</b></span>
                   {(fc.reassessYear != null || fc.abatementStepYear != null) && <span style={{ color: C.amber, fontWeight: 700 }}>▲ resets ~yr {fc.reassessYear ?? fc.abatementStepYear} → {fmt$(fc.stabilizedTaxes)} (+{stepPct}%)</span>}
-                  <span>Yr {fc.years.length - 1} <b style={{ color: C.ink }}>{fmt$(fc.endTaxes)}</b> (+{fc.totalIncreasePct}%)</span>
+                  <span>Yr {fc.years.length - 1} <b style={{ color: C.ink }}>{fmt$(fc.endTaxes)}</b> (+{fc.totalIncreasePct}% total)</span>
                 </div>
               </div>
             );
