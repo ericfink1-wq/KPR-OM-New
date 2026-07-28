@@ -19,6 +19,13 @@ const C = {
 };
 
 const fmt$ = (n: number | null | undefined) => n == null ? "—" : `$${Math.round(n).toLocaleString()}`;
+// Compact $ for chart labels: $2.4M / $756k / $980.
+const abbr$ = (n: number | null | undefined) => {
+  if (n == null) return "—";
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}k`;
+  return `$${Math.round(n)}`;
+};
 const commaFmt = (v: string): string => {
   const s = v.replace(/,/g, ""); const n = parseFloat(s);
   return !s || isNaN(n) ? v : Math.round(n).toLocaleString("en-US");
@@ -259,25 +266,43 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
             </div>
           )}
 
-          {/* Year-by-year ramp — shows HOW the bill phases in over the hold. */}
+          {/* Year-by-year ramp — the bill each year, scaled from $0 (true proportions),
+              with the dollar figure ABOVE each bar and the cumulative % over today BELOW,
+              so the numbers can be read straight off the chart for modeling. Scrolls
+              sideways on a narrow screen so the labels never crush. */}
           {(() => {
             const ys = fc.years;
             const maxT = Math.max(...ys.map(y => y.taxes), 1);
-            const minT = Math.min(...ys.map(y => y.taxes));
+            const start = fc.startTaxes || ys[0]?.taxes || 1;
             const colorFor = (p: string) => p === "reassessing" || p === "unabating" ? C.amber : p === "current" ? C.ink : "#bcd3a3";
+            const BAR_H = 92;
+            const stepPct = start > 0 ? Math.round((fc.stabilizedTaxes / start - 1) * 100) : 0;
             return (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 44 }}>
-                  {ys.map((y) => {
-                    const h = 8 + 34 * ((y.taxes - minT) / ((maxT - minT) || 1));
-                    return <div key={y.year} title={`Year ${y.year}: ${fmt$(y.taxes)}/yr${y.phase !== "grown" && y.phase !== "current" ? ` (${y.phase})` : ""}`}
-                      style={{ flex: 1, height: h, minWidth: 4, background: colorFor(y.phase), borderRadius: "2px 2px 0 0", opacity: y.phase === "grown" ? 0.85 : 1 }} />;
-                  })}
+              <div style={{ marginTop: 12 }}>
+                <div style={{ overflowX: "auto", paddingBottom: 2 }}>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, minWidth: ys.length * 40 }}>
+                    {ys.map((y) => {
+                      const cumPct = start > 0 ? Math.round((y.taxes / start - 1) * 100) : 0;
+                      const h = Math.max(3, BAR_H * (y.taxes / maxT));
+                      const isStep = y.phase === "reassessing" || y.phase === "unabating";
+                      return (
+                        <div key={y.year} title={`Year ${y.year}: ${fmt$(y.taxes)}/yr (+${cumPct}% vs today)${isStep ? ` — ${y.phase}` : ""}`}
+                          style={{ flex: "1 0 34px", display: "flex", flexDirection: "column", alignItems: "center", minWidth: 34 }}>
+                          <div style={{ fontSize: 8.5, fontWeight: 700, color: isStep ? C.amber : C.ink, whiteSpace: "nowrap", marginBottom: 2 }}>{abbr$(y.taxes)}</div>
+                          <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H }}>
+                            <div style={{ width: "100%", height: h, background: colorFor(y.phase), borderRadius: "2px 2px 0 0", opacity: y.phase === "grown" ? 0.9 : 1 }} />
+                          </div>
+                          <div style={{ fontSize: 8, color: C.sub, marginTop: 3, whiteSpace: "nowrap" }}>{y.year === 0 ? "Now" : `Y${y.year}`}</div>
+                          <div style={{ fontSize: 8, fontWeight: 700, whiteSpace: "nowrap", color: cumPct >= 100 ? C.red : cumPct > 0 ? C.amber : C.faint }}>{y.year === 0 ? "base" : `+${cumPct}%`}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 9, color: C.faint }}>
-                  <span>Today {fmt$(fc.startTaxes)}</span>
-                  {(fc.reassessYear != null || fc.abatementStepYear != null) && <span style={{ color: C.amber, fontWeight: 700 }}>▲ step ~yr {fc.reassessYear ?? fc.abatementStepYear}</span>}
-                  <span>Yr {fc.years.length - 1} {fmt$(fc.endTaxes)}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "2px 10px", marginTop: 6, fontSize: 10, color: C.sub, borderTop: `1px solid ${C.line}`, paddingTop: 6 }}>
+                  <span>Today <b style={{ color: C.ink }}>{fmt$(fc.startTaxes)}</b></span>
+                  {(fc.reassessYear != null || fc.abatementStepYear != null) && <span style={{ color: C.amber, fontWeight: 700 }}>▲ resets ~yr {fc.reassessYear ?? fc.abatementStepYear} → {fmt$(fc.stabilizedTaxes)} (+{stepPct}%)</span>}
+                  <span>Yr {fc.years.length - 1} <b style={{ color: C.ink }}>{fmt$(fc.endTaxes)}</b> (+{fc.totalIncreasePct}%)</span>
                 </div>
               </div>
             );
