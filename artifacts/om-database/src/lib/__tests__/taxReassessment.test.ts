@@ -64,6 +64,15 @@ describe("estimateReassessment", () => {
     expect(r.estPostSaleAssessed).toBe(3_120_000);          // 52M × 6%, ratio applied once
   });
 
+  it("MI: a legitimate deep-discount buy (price well below assessed market) is NOT mistaken for a mislabel", () => {
+    // Genuine SEV of $10M (implies ~$20M market at 50%) but bought distressed at $8M.
+    // The mislabel guard must NOT fire here (market ≈ 2.5× price is the discount, not a
+    // wrong column) — taxes should still be computed off the real reset, no bogus override.
+    const r = estimateReassessment({ state: "MI", acquisitionPrice: 8_000_000, currentAssessedValue: 10_000_000, currentAnnualTaxes: 300_000 });
+    expect(r.detail.some((d) => /almost certainly the APPRAISED/i.test(d))).toBe(false);
+    expect(r.estPostSaleAssessed).toBe(4_000_000); // 8M × 50% SEV — reset to price, ratio once
+  });
+
   it("OH (no reset): no sale-time step-up, but flags the next-cycle move when buying above assessed", () => {
     const r = estimateReassessment({ state: "OH", acquisitionPrice: 10_000_000, currentAssessedValue: 2_000_000, currentAnnualTaxes: 80_000 });
     expect(r.resetsOnSale).toBe(false);

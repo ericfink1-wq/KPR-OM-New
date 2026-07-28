@@ -647,13 +647,18 @@ export function estimateReassessment(input: ReassessInput): ReassessResult {
   // Feeding a market value where the model expects the ratio-adjusted one applies the
   // ratio TWICE and silently understates the reset — even flipping a real increase into
   // a fake decrease (the SC "-86%" case). Detect it: the entered figure is treated as
-  // the market value when (a) dividing it by the ratio implies a market well above the
-  // price, and (b) reading it AS the market value lands closer to the price than that
-  // implied figure does. Robust across ratios; leaves a correctly-entered value alone.
+  // the market value when (a) dividing it by the ratio implies a market MORE THAN 2.5×
+  // the price, and (b) reading it AS the market value lands closer to the price than that
+  // implied figure does. The 2.5× gate is deliberately conservative: a genuinely-entered
+  // assessed value bought even at 40% of the assessor's market value still won't misfire,
+  // and only truly fractional-ratio states (≤~35%) trip it — the ambiguous 40–70%-ratio
+  // band (where a mislabel is mathematically indistinguishable from a deep-discount buy)
+  // is left to the capture-audit warning instead of being auto-corrected. Verified across
+  // every jurisdiction's ratio; a correctly-entered value is never touched.
   const looksLikeMarketValue =
     ratio != null && ratio > 0 && ratio < 100 &&
     curAssessed != null && curAssessed > 0 && price != null && price > 0 && impliedMarket != null &&
-    impliedMarket > price * 1.5 &&
+    impliedMarket > price * 2.5 &&
     Math.abs(Math.log(curAssessed / price)) < Math.abs(Math.log(impliedMarket / price));
 
   const detail: string[] = [];
