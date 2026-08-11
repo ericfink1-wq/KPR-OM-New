@@ -113,12 +113,15 @@ const NECESSITY_CATEGORIES = new Set<RetailCategory>([
   "Health & Medical", "Fitness", "Personal Services", "Automotive",
 ]);
 
-// Normalize a tenant name for matching: lowercase, drop store #, parentheticals, common
-// suffixes and punctuation. Mirrors the cleanup the rest of the app uses.
+// Normalize a tenant name for matching: lowercase, drop store #, common suffixes and
+// punctuation. IMPORTANT: we KEEP the words inside parentheses — the parenthetical is
+// almost always the brand/DBA ("Wakefern Food Corp. (ShopRite)", "Doherty Bread, LLC
+// (Panera Bread Bakery Café)"), so stripping it threw away the one recognizable name and
+// dumped the tenant into "Other". We only remove the parenthesis punctuation (via the
+// general punctuation strip below), leaving the brand words to match.
 function clean(name: string): string {
   return String(name ?? "")
     .toLowerCase()
-    .replace(/\(.*?\)/g, " ")
     .replace(/#\s*[\w-]+/g, " ")
     .replace(/\bsuite\b.*$/g, " ")
     .replace(/\b(corporation|corp|inc|llc|ltd|co|stores?|the)\b\.?/g, " ")

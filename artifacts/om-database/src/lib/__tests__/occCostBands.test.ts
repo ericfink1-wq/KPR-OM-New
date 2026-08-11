@@ -1,5 +1,29 @@
 import { describe, it, expect } from "vitest";
-import { gradeOccupancyCost, occCostBand } from "../retailCategory";
+import { gradeOccupancyCost, occCostBand, classifyTenant } from "../retailCategory";
+
+describe("brand in the parenthetical DBA still classifies (legal entity outside)", () => {
+  // The name is usually "Legal Entity, LLC (Brand)" — the brand lives in the parens,
+  // so the classifier must read inside them or it dumps the tenant into "Other".
+  it("Wakefern Food Corp. (ShopRite) → Grocery, and 4% reads elevated (not 'Healthy for Other')", () => {
+    expect(classifyTenant("Wakefern Food Corp. (ShopRite)").category).toBe("Grocery & Necessity");
+    const g = gradeOccupancyCost("Wakefern Food Corp. (ShopRite)", 4);
+    expect(g?.category).toBe("Grocery & Necessity");
+    expect(g?.tier).toBe("watch"); // grocery amber=5 → 4% is elevated, not healthy-Other-green
+  });
+  it("Doherty Bread, LLC (Panera Bread Bakery Café) → Restaurant & Food", () => {
+    expect(classifyTenant("Doherty Bread, LLC (Panera Bread Bakery Café)").category).toBe("Restaurant & Food");
+  });
+  it("Filove Inc. (European Wax Center) → Personal Services", () => {
+    expect(classifyTenant("Filove Inc. (European Wax Center)").category).toBe("Personal Services");
+  });
+  it("Bodymind LI LLC (Bodybar Pilates) → Fitness", () => {
+    expect(classifyTenant("Bodymind LI LLC (Bodybar Pilates)").category).toBe("Fitness");
+  });
+  it("still classifies when the brand is OUTSIDE the parens", () => {
+    expect(classifyTenant("Chipotle Mexican Grill of Colorado, LLC (Chipotle Mexican Grill)").category).toBe("Restaurant & Food");
+    expect(classifyTenant("The TJ Maxx Companies, Inc. (T.J. Maxx or Marshalls)").category).toBe("Off-Price & Discount");
+  });
+});
 
 describe("sector-relative occupancy-cost grading", () => {
   it("a grocer at 4% is ELEVATED (not green), and green at 2%", () => {
