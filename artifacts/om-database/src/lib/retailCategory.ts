@@ -46,6 +46,66 @@ export const CATEGORY_RESISTANCE: Record<RetailCategory, number> = {
   "Other": 60,
 };
 
+// SECTOR OCCUPANCY-COST HEALTH BANDS. Occupancy cost (rent + recoveries + % rent as a
+// share of a tenant's gross sales) is only meaningful RELATIVE TO THE SECTOR, because it
+// tracks gross margin: a thin-margin, high-volume grocer is stressed at a level that is
+// perfectly healthy for a high-margin apparel or specialty tenant. `green` = at/below is
+// healthy; between green and amber is elevated/watch; above amber is stressed for that
+// sector. Institutional rules of thumb — tune freely as the database teaches us more.
+export const OCC_COST_BANDS: Record<RetailCategory, { green: number; amber: number }> = {
+  "Grocery & Necessity": { green: 3, amber: 5 },    // grocers/clubs/supercenters run 1–3%
+  "Pharmacy & Drug":     { green: 5, amber: 8 },
+  "Off-Price & Discount":{ green: 6, amber: 9 },
+  "Home & Improvement":  { green: 6, amber: 10 },    // big-box low; furniture higher
+  "Automotive":          { green: 8, amber: 12 },
+  "Restaurant & Food":   { green: 8, amber: 12 },
+  "Specialty Retail":    { green: 11, amber: 16 },
+  "Financial & Telecom": { green: 10, amber: 15 },   // banks = deposits, not comparable
+  "Fitness":             { green: 12, amber: 18 },
+  "Health & Medical":    { green: 12, amber: 18 },    // often not sales-based
+  "Personal Services":   { green: 12, amber: 18 },
+  "Entertainment":       { green: 12, amber: 18 },    // cinema judged per-screen
+  "Apparel & Soft Goods":{ green: 14, amber: 18 },    // healthy 10–15%, stressed >18–20
+  "Other":               { green: 10, amber: 15 },    // generic fallback
+};
+
+export type OccTier = "healthy" | "watch" | "stressed";
+export interface OccGrade {
+  tier: OccTier; category: RetailCategory;
+  green: number; amber: number;
+  color: string;   // roster cell color for this tier
+  short: string;   // compact label, e.g. "Elevated for Grocery"
+  detail: string;  // tooltip line with the sector's healthy/stressed cut-offs
+}
+
+// Grade one tenant's occupancy cost AGAINST ITS SECTOR. `name` picks the category (via
+// classifyTenant); `occPct` is the occupancy-cost % (already ×100, e.g. 4.0 for 4%).
+// Returns null when there's no usable occ cost. Pure + synchronous + token-free.
+export function gradeOccupancyCost(name: string, occPct: number | null | undefined): OccGrade | null {
+  const occ = typeof occPct === "string" ? Number(occPct) : occPct;
+  if (occ == null || !Number.isFinite(occ) || occ <= 0) return null;
+  const { category } = classifyTenant(name);
+  const band = OCC_COST_BANDS[category];
+  const tier: OccTier = occ <= band.green ? "healthy" : occ <= band.amber ? "watch" : "stressed";
+  const color = tier === "healthy" ? "#0f9d63" : tier === "watch" ? "#c97a18" : "#dc2626";
+  const short = tier === "healthy" ? `Healthy for ${category}`
+    : tier === "watch" ? `Elevated for ${category}`
+    : `Stressed for ${category}`;
+  const detail = tier === "healthy"
+    ? `${occ.toFixed(1)}% is healthy for ${category} (typ. ≤${band.green}%; stressed >${band.amber}%).`
+    : tier === "watch"
+      ? `${occ.toFixed(1)}% is elevated for ${category} — healthy is ≤${band.green}%, stressed >${band.amber}%.`
+      : `${occ.toFixed(1)}% is stressed for ${category} (healthy ≤${band.green}%).`;
+  return { tier, category, green: band.green, amber: band.amber, color, short, detail };
+}
+
+// The sector band + category for a tenant name — used by closure-risk (utils) to scale its
+// stressed/unsustainable thresholds without a circular import of classifyTenant.
+export function occCostBand(name: string): { green: number; amber: number; category: RetailCategory } {
+  const { category } = classifyTenant(name);
+  return { ...OCC_COST_BANDS[category], category };
+}
+
 // Categories considered "necessity / service" (daily-needs, recession-tolerant) — the
 // share institutional retail buyers most want to see.
 const NECESSITY_CATEGORIES = new Set<RetailCategory>([
@@ -89,6 +149,8 @@ const BRANDS: Record<string, RetailCategory> = {
   "raley's": "Grocery & Necessity", "shoprite": "Grocery & Necessity", "cub foods": "Grocery & Necessity",
   "giant eagle": "Grocery & Necessity", "wertheimer": "Grocery & Necessity", "natural grocers": "Grocery & Necessity",
   "99 ranch": "Grocery & Necessity", "h mart": "Grocery & Necessity", "fareway": "Grocery & Necessity",
+  "hannaford": "Grocery & Necessity", "food city": "Grocery & Necessity", "vallarta": "Grocery & Necessity",
+  "hy vee": "Grocery & Necessity", "star market": "Grocery & Necessity", "the fresh market": "Grocery & Necessity",
   // Big-box / supercenter (necessity-anchored)
   "walmart": "Grocery & Necessity", "target": "Grocery & Necessity", "costco": "Grocery & Necessity",
   "sam's club": "Grocery & Necessity", "bj's wholesale": "Grocery & Necessity",
@@ -102,6 +164,8 @@ const BRANDS: Record<string, RetailCategory> = {
   "dollar tree": "Off-Price & Discount", "dollar general": "Off-Price & Discount", "family dollar": "Off-Price & Discount",
   "big lots": "Off-Price & Discount", "ollie's": "Off-Price & Discount", "tuesday morning": "Off-Price & Discount",
   "99 cents": "Off-Price & Discount", "dollar store": "Off-Price & Discount",
+  "ocean state job lot": "Off-Price & Discount", "ocean state": "Off-Price & Discount",
+  "gabe's": "Off-Price & Discount", "gabes": "Off-Price & Discount", "citi trends": "Off-Price & Discount",
   // Home & improvement / furniture
   "home depot": "Home & Improvement", "lowe's": "Home & Improvement", "menards": "Home & Improvement",
   "ace hardware": "Home & Improvement", "tractor supply": "Home & Improvement", "harbor freight": "Home & Improvement",

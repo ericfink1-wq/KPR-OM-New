@@ -9,6 +9,7 @@ import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { tjxComboRead } from "../lib/tjxCombo";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
+import { gradeOccupancyCost, type OccGrade } from "../lib/retailCategory";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import { stickyFirstCol } from "../lib/stickyCol";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
@@ -51,7 +52,7 @@ interface Props {
   kickoutByTenant?: Map<string, { label: string; tip: string }>;
 }
 
-function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
+function OccTip({ val, source, breakdown, grade }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null; grade?: OccGrade | null }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
@@ -94,7 +95,7 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
         onClick={e => { e.stopPropagation(); if (open) setOpen(false); else show(); }}
         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
       >
-        {val.toFixed(1)}%
+        <span style={{ color: grade ? grade.color : undefined, fontWeight: grade && grade.tier !== "healthy" ? 700 : undefined }}>{val.toFixed(1)}%</span>
         <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#7d766a", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
           {source}
         </span>
@@ -137,6 +138,12 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
             </>
           ) : (
             <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
+          )}
+          {grade && (
+            <div style={{ marginTop: 7, paddingTop: 6, borderTop: "1px solid #f1eadc", display: "flex", alignItems: "flex-start", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: grade.color, flexShrink: 0, marginTop: 3 }} />
+              <span style={{ color: "#5c5f57", lineHeight: 1.4 }}><b style={{ color: grade.color }}>{grade.short}.</b> {grade.detail}</span>
+            </div>
           )}
         </div>,
         document.body
@@ -739,10 +746,11 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   // for this tenant, mirror it so roster + sales table always agree.
                   if (ls && ls.occupancyCost != null && ls.occSource) {
                     const occ = ls.occupancyCost;
-                    const color = occ > 15 ? "#dc2626" : "#0f9d63";
+                    const grade = gradeOccupancyCost(t.canonicalName || t.name || "", occ);
+                    const color = grade ? grade.color : (occ > 15 ? "#dc2626" : "#0f9d63");
                     return (
                       <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
-                        <OccTip val={occ} source={ls.occSource} breakdown={ls.occBreakdown ?? null} />
+                        <OccTip val={occ} source={ls.occSource} breakdown={ls.occBreakdown ?? null} grade={grade} />
                       </td>
                     );
                   }
@@ -780,13 +788,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales, reimbEstimated };
                   }
 
-                  const color = occ != null ? (occ > 15 ? "#dc2626" : "#0f9d63") : "#a69e91";
+                  const occGrade = occ != null ? gradeOccupancyCost(t.canonicalName || t.name || "", occ) : null;
+                  const color = occ != null ? (occGrade ? occGrade.color : (occ > 15 ? "#dc2626" : "#0f9d63")) : "#a69e91";
                   const canEdit = !!onUpdateTenant && !isVacant(t) && !isNAPTenant(t);
                   return (
                     <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                         {occ != null && occSource
-                          ? <OccTip val={occ} source={occSource} breakdown={occBreakdown} />
+                          ? <OccTip val={occ} source={occSource} breakdown={occBreakdown} grade={occGrade} />
                           : <span>{occ != null ? `${occ.toFixed(1)}%` : "—"}</span>}
                         {canEdit && (
                           <button

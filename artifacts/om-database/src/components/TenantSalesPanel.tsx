@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
 import { tenantKey, stripSuiteCode, isVacant, assessClosureRisk } from "../lib/utils";
+import { occCostBand, gradeOccupancyCost } from "../lib/retailCategory";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
@@ -110,7 +111,7 @@ function buildOmSnapshot(tenants: Tenant[], omDate: string | null | undefined): 
   };
 }
 
-function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null }) {
+function OccTip({ val, source, breakdown, grade }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null; grade?: ReturnType<typeof gradeOccupancyCost> }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
@@ -148,7 +149,7 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
         onClick={e => { e.stopPropagation(); if (open) setOpen(false); else show(); }}
         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
       >
-        {val.toFixed(1)}%
+        <span style={{ color: grade ? grade.color : undefined, fontWeight: grade && grade.tier !== "healthy" ? 700 : undefined }}>{val.toFixed(1)}%</span>
         <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#7d766a", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
           {source}
         </span>
@@ -191,6 +192,12 @@ function OccTip({ val, source, breakdown }: { val: number; source: "stated" | "c
             </>
           ) : (
             <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
+          )}
+          {grade && (
+            <div style={{ marginTop: 7, paddingTop: 6, borderTop: "1px solid #f1eadc", display: "flex", alignItems: "flex-start", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: grade.color, flexShrink: 0, marginTop: 3 }} />
+              <span style={{ color: "#5c5f57", lineHeight: 1.4 }}><b style={{ color: grade.color }}>{grade.short}.</b> {grade.detail}</span>
+            </div>
           )}
         </div>,
         document.body
@@ -387,7 +394,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
     if (!yrs.length) return null;
     const latest = row.byYear[yrs[0]];
     const prior = yrs.length > 1 ? row.byYear[yrs[1]] : null;
-    return assessClosureRisk(latest?.occupancyCost ?? null, latest?.salesPSF ?? null, prior?.salesPSF ?? null);
+    return assessClosureRisk(latest?.occupancyCost ?? null, latest?.salesPSF ?? null, prior?.salesPSF ?? null, occCostBand(row.name));
   };
 
   const rows = useMemo(() => {
@@ -709,7 +716,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                                 <td key={`${y}-tot`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmt$(rec?.annualSales)}</td>
                                 <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
                                   {rec?.occupancyCost != null && rec.occSource
-                                    ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} />
+                                    ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} grade={gradeOccupancyCost(row.name, rec.occupancyCost)} />
                                     : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
                                 </td>
                               </>
@@ -724,7 +731,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>{fmtNum(rec?.sf)}</td>
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
                                   {rec?.occupancyCost != null && rec.occSource
-                                    ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} />
+                                    ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} grade={gradeOccupancyCost(row.name, rec.occupancyCost)} />
                                     : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
                                 </td>
                               </>
