@@ -704,6 +704,36 @@ router.post("/auth/users/:id/reset-2fa", requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Strong, readable temporary password (no ambiguous chars). ~14 chars in three
+// dash-separated groups — comfortably passes validatePassword (length + not common).
+function generateTempPassword(): string {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const grp = (n: number) => Array.from(randomBytes(n)).map((b) => alphabet[b % alphabet.length]).join("");
+  return `${grp(4)}-${grp(4)}-${grp(4)}`;
+}
+
+// POST /api/auth/users/:id/reset-password — admin resets a member's password WITHOUT
+// email (reliable even when transactional email isn't domain-verified). Sets a strong
+// temporary password (or an admin-supplied one) and returns the plaintext ONCE so the
+// admin can hand it to the user, who then changes it via change-password. Clears any
+// pending email-reset token. Does NOT touch 2FA — use reset-2fa for a lost authenticator.
+router.post("/auth/users/:id/reset-password", requireAdmin, async (req, res) => {
+  await ensureUsersTable();
+  const id = String(req.params.id);
+  const rows = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
+  const user = rows[0];
+  if (!user) { res.status(404).json({ error: "User not found." }); return; }
+  const provided = (req.body as Record<string, unknown> | undefined)?.newPassword;
+  const password = typeof provided === "string" && provided.trim() ? provided.trim() : generateTempPassword();
+  const invalid = validatePassword(password, user.email);
+  if (invalid) { res.status(400).json({ error: invalid }); return; }
+  await db.update(usersTable)
+    .set({ passwordHash: hashPassword(password), resetTokenHash: null, resetTokenExpires: null })
+    .where(eq(usersTable.id, id));
+  logger.info({ adminId: req.session.userId, targetId: id, targetEmail: user.email }, "admin reset user password");
+  res.json({ ok: true, email: user.email, password, twoFactorEnabled: !!user.totpEnabled });
+});
+
 // DELETE /api/auth/users/:id — remove an account entirely
 router.delete("/auth/users/:id", requireAdmin, async (req, res) => {
   await ensureUsersTable();

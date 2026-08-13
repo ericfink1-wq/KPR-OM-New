@@ -221,6 +221,14 @@ export async function apiRejectMember(id: string): Promise<void> { await apiFetc
 export async function apiSetMemberAdmin(id: string, isAdmin: boolean): Promise<void> { await apiFetch(`/auth/users/${id}/set-admin`, { method: "POST", body: JSON.stringify({ isAdmin }) }); }
 export async function apiDeleteMember(id: string): Promise<void> { await apiFetch(`/auth/users/${id}`, { method: "DELETE" }); }
 export async function apiResetMember2fa(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/reset-2fa`, { method: "POST" }); }
+// Admin resets a member's password (email-independent). Returns the new temporary
+// password ONCE so the admin can pass it to the user. Optionally set a specific one.
+export async function apiResetMemberPassword(id: string, newPassword?: string): Promise<{ email: string; password: string; twoFactorEnabled: boolean }> {
+  const r = await apiFetch(`/auth/users/${id}/reset-password`, { method: "POST", body: JSON.stringify(newPassword ? { newPassword } : {}) });
+  const j = await r.json().catch(() => ({})) as { error?: string; email?: string; password?: string; twoFactorEnabled?: boolean };
+  if (!r.ok || !j.password) throw new Error(j.error || "Could not reset the password.");
+  return { email: j.email || "", password: j.password, twoFactorEnabled: !!j.twoFactorEnabled };
+}
 
 // --- Extraction lessons (operator-taught rules) ---
 export type LessonScope = "all" | "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan";

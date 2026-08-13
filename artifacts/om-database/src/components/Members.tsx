@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
+import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiResetMemberPassword, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
 
 // Compact "time ago" for the last-seen / last-login line.
 function relTime(iso: string | null | undefined): string | null {
@@ -29,6 +29,8 @@ export default function Members({ onClose }: { onClose: () => void }) {
   const [uploads, setUploads] = useState<UploadLogEntry[] | null>(null);
   const [showUploads, setShowUploads] = useState(false);
   const [openMember, setOpenMember] = useState<string | null>(null); // member whose sign-in history is expanded
+  const [resetPw, setResetPw] = useState<{ email: string; password: string; twoFactorEnabled: boolean } | null>(null); // temp password to show once
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
@@ -80,6 +82,18 @@ export default function Members({ onClose }: { onClose: () => void }) {
         ? `Approved ${u.email} — they've been emailed that they can sign in.`
         : `Approved ${u.email}, but the notification email did NOT send — tell them to sign in with the password they created. (${r.emailDetail || "email not configured"})`);
     } catch { setError("Action failed — try again."); }
+    finally { setBusy(null); }
+  };
+
+  // Admin password reset — sets a temporary password and shows it ONCE (no email needed).
+  const resetPassword = async (u: MemberAccount) => {
+    if (!window.confirm(`Reset the password for ${u.email}?\n\nA new temporary password will be created and shown to you once, to give to them. Their old password stops working. (This does NOT change their two-factor — use "Reset 2FA" if they've lost that.)`)) return;
+    setBusy(u.id); setError(null);
+    try {
+      const r = await apiResetMemberPassword(u.id);
+      setCopied(false);
+      setResetPw(r);
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't reset the password — try again."); }
     finally { setBusy(null); }
   };
 
@@ -141,6 +155,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
         {u.status === "pending" && btn("Decline", () => act(u.id, () => apiRejectMember(u.id)), "#b3261e", busy === u.id)}
         {u.status === "rejected" && u.emailVerified && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#5c5047", busy === u.id)}
+        {u.status === "approved" && btn("Reset password", () => resetPassword(u), "#2c6e9b", busy === u.id)}
         {u.status === "approved" && btn("Reset 2FA", () => { if (window.confirm(`Reset two-factor for ${u.email}? They'll sign in with just their password next time and set it up again. Use this if they've lost their authenticator and backup codes.`)) act(u.id, () => apiResetMember2fa(u.id)); }, "#9a5b12", busy === u.id)}
         {btn("Remove", () => { if (window.confirm(`Remove ${u.email}? They'll lose access and would have to request a new account.`)) act(u.id, () => apiDeleteMember(u.id)); }, "#c0392b", busy === u.id)}
       </div>
@@ -256,6 +271,33 @@ export default function Members({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
+
+      {resetPw && (
+        <>
+          <div onClick={() => setResetPw(null)} style={{ position: "fixed", inset: 0, zIndex: 9800, background: "rgba(38,40,31,0.5)" }} />
+          <div role="dialog" aria-label="Temporary password" style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9801, width: "min(440px, 94vw)", background: "#fff", border: "1px solid #e0d8c8", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.32)", padding: "20px 22px", fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f", marginBottom: 4 }}>Temporary password set</div>
+            <div style={{ fontSize: 12.5, color: "#6f6a5f", lineHeight: 1.5, marginBottom: 14 }}>
+              Give this to <b style={{ color: "#26281f" }}>{resetPw.email}</b>. It replaces their old password — they can change it after signing in (Change password, top right). This is shown once, so copy it now.
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f7f4ec", border: "1px solid #e5ddcc", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
+              <code style={{ flex: 1, fontSize: 17, fontWeight: 700, letterSpacing: "0.02em", color: "#26281f", fontFamily: "ui-monospace, Menlo, monospace", wordBreak: "break-all" }}>{resetPw.password}</code>
+              <button onClick={() => { navigator.clipboard?.writeText(resetPw.password).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); }).catch(() => {}); }}
+                style={{ flexShrink: 0, background: copied ? "#0f7a3d" : "#2c6e9b", color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                {copied ? "✓ Copied" : "Copy"}
+              </button>
+            </div>
+            {resetPw.twoFactorEnabled && (
+              <div style={{ fontSize: 11.5, color: "#92400e", background: "#fef6e7", border: "1px solid #f5c842", borderRadius: 8, padding: "8px 11px", marginBottom: 14, lineHeight: 1.45 }}>
+                Note: this user still has two-factor on, so they'll also need their authenticator code to sign in. If they've lost that too, use "Reset 2FA".
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setResetPw(null)} style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Done</button>
+            </div>
+          </div>
+        </>
+      )}
     </>,
     document.body
   );
