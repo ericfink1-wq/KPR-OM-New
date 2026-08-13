@@ -10,5 +10,13 @@ export default {
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // A few test files transitively import the db module, whose top-level guard THROWS
+    // if DATABASE_URL is unset — which failed the whole api-server suite in CI (no DB
+    // there) and on any local run without a database, spamming CI-failure emails. The
+    // tests are pure functions that never actually query, and the pg Pool connects
+    // lazily, so a syntactically-valid dummy URL just satisfies the import-time guard.
+    env: {
+      DATABASE_URL: process.env.DATABASE_URL || "postgres://ci:ci@localhost:5432/ci",
+    },
   },
 };
