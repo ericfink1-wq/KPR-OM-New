@@ -9,6 +9,8 @@
 // DB-free on purpose: the model call is injected, so this module is unit-testable
 // with a mocked model and never imports the database layer.
 
+import { repairCoTenancyTrigger, checkCoTenancyStructure } from "./coTenancyStructure";
+
 // ── lightweight structural types (mirror the client idb.ts shapes) ───────────────
 export interface TriggerCondition {
   type: string;
@@ -210,7 +212,13 @@ function normCoTenancy(raw: unknown): CoTenancyClause | null {
   });
   // A co-tenancy with no trigger and no quote is noise — drop it.
   if (!clause.triggerLogic && !clause.verbatimQuote) return null;
-  return clause;
+  // SELF-HEAL the "X of N" collapse. If the clause's own quote states a count
+  // ("2 of the following must be open and operating") but the model built a
+  // per-anchor OR, rebuild it as an anchor_count_below leaf. The repair only fires
+  // when the quote's named list MATCHES the anchors the model already chose, so no
+  // store name is ever invented or dropped — only the count the quote states
+  // verbatim is applied. A disagreeing list is left alone and flagged instead.
+  return repairCoTenancyTrigger(clause).clause;
 }
 
 function normKickout(raw: unknown): SalesKickout | null {
@@ -509,6 +517,28 @@ export function validateLeaseRiskAtExtraction(extracted: Record<string, unknown>
         field: "Co-tenancy currently in effect",
         question: `${live.length} tenant${live.length > 1 ? "s are" : " is"} CURRENTLY paying reduced co-tenancy rent — confirm the in-place rent reflects the reduced amount and whether/when it cures.`,
         detail: `Already-triggered co-tenancy (not hypothetical): ${live.join("; ")}.`,
+        suggestedValue: null, target: null,
+      });
+    }
+  }
+
+  // 0b) CO-TENANCY TRIGGER STRUCTURE — the quote states an "X of N" requirement but
+  // the trigger could not be reconciled with it. Never silently trusted: an X-of-N
+  // read as a per-anchor trigger overstates single-anchor exposure enormously.
+  if (lr?.tenants?.length) {
+    const bad: string[] = [];
+    for (const t of lr.tenants) {
+      for (const c of t.coTenancy || []) {
+        const v = checkCoTenancyStructure(c);
+        if (v.kind === "mismatch") bad.push(`${t.tenant} — ${v.reason}`);
+      }
+    }
+    if (bad.length) {
+      out.push({
+        id: "check-cotenancy-structure", source: "check", severity: "high",
+        field: "Co-tenancy trigger structure",
+        question: `${bad.length} co-tenancy clause${bad.length > 1 ? "s state an" : " states an"} "X of N" requirement that doesn't match the stores in the modeled trigger — verify what actually trips ${bad.length > 1 ? "them" : "it"} before trusting the anchor-dependency exposure.`,
+        detail: `An "X of N" clause ("2 of the following must be open and operating") does NOT trip when a single anchor goes dark — it needs (N − X + 1) of them dark. Reading one as a per-anchor trigger overstates single-anchor exposure by a wide margin. Unreconciled: ${bad.join("; ")}.`,
         suggestedValue: null, target: null,
       });
     }

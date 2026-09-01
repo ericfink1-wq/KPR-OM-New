@@ -13,6 +13,7 @@
 // Only fires on genuine CONTRADICTIONS — never on values that are simply absent.
 
 import { normalizeDate } from "./importFixes";
+import { checkCoTenancyStructure, type CoTenancyLike } from "./coTenancyStructure";
 
 export interface AuditQuestion {
   id: string;
@@ -64,6 +65,7 @@ export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-sales-below-rent-")) return "audit-sales-below-rent";
   if (id.startsWith("audit-dupe-tenant-")) return "audit-dupe-tenant";
   if (id.startsWith("audit-remterm-expiry-")) return "audit-remterm-expiry";
+  if (id.startsWith("audit-cotenancy-xofn-")) return "audit-cotenancy-xofn";
   return id;
 }
 export const AUDIT_CHECK_LABELS: Record<string, string> = {
@@ -99,6 +101,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-dupe-tenant": "Duplicate tenant row",
   "audit-remterm-expiry": "Remaining term vs expiry",
   "audit-pop-gradient": "Population vs radius",
+  "audit-cotenancy-xofn": "Co-tenancy \"X of N\" read as a single-anchor trigger",
 };
 
 // SOURCE-LEVEL signal (runs on the raw PDF text BEFORE/alongside the LLM, not the
@@ -820,6 +823,38 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
           suggestedValue: null, target: { kind: "deal", fieldKey: `population${rCur}mi`, valueType: "number" },
         });
         break;
+      }
+    }
+  }
+
+  // ── T. Co-tenancy "X of N" modeled as a single-anchor trigger ─────────────────
+  // A clause whose own quote says "2 of the following must be open and operating"
+  // but whose trigger is a per-anchor OR claims that ONE anchor going dark trips it.
+  // It actually needs (N − X + 1) dark. This is the highest-leverage co-tenancy
+  // error there is: it multiplies the headline "if this anchor leaves" rent-at-risk
+  // by the number of stores named. Runs off the clause's own verbatim quote, so it
+  // is a genuine contradiction (the clause disagreeing with itself), never a guess —
+  // and being in the audit-* namespace it sweeps deals imported before the fix and
+  // self-heals once they are corrected.
+  {
+    const lr = deal.leaseRisk as { tenants?: Array<{ tenant?: unknown; coTenancy?: CoTenancyLike[] | null }> } | undefined;
+    for (const t of lr?.tenants ?? []) {
+      const nm = String(t?.tenant ?? "").trim();
+      if (!nm) continue;
+      for (const clause of t.coTenancy ?? []) {
+        const v = checkCoTenancyStructure(clause);
+        if (v.kind === "ok") continue;
+        const named = v.parsed.named.length ? v.parsed.named.join(", ") : "(list not parsed)";
+        const detail = v.kind === "repairable"
+          ? `The clause requires ${v.parsed.openRequired} of ${v.anchors.length} named stores (${named}) to stay open, so it trips only when ${v.darkNeeded} of them go dark — but the trigger lists them as ${v.anchors.length} independent single-anchor triggers. Run "Clean & re-audit all" (or re-import) to restructure it; the anchor list itself is unchanged.`
+          : `The clause requires ${v.parsed.openRequired} of ${v.parsed.totalNamed ?? "N"} named stores to stay open, but ${v.reason}. Resolve against the lease — do not trust the anchor-dependency exposure until it is reconciled.`;
+        out.push({
+          id: `audit-cotenancy-xofn-${nm}`.slice(0, 80), source: "check", severity: "high",
+          field: `${nm} — co-tenancy trigger`,
+          question: `${nm}'s co-tenancy is an "${v.parsed.openRequired} of ${v.parsed.totalNamed ?? v.anchors.length}" requirement but is modeled as if ANY one named store going dark trips it. That overstates the single-anchor rent at risk.`,
+          detail,
+          suggestedValue: null, target: null,
+        });
       }
     }
   }

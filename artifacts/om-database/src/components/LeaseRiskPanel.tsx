@@ -5,6 +5,7 @@ import {
   buildAnchorDependencyGraph, buildDiligenceList, buildRiskMatrix, type ExposureResult,
 } from "../lib/leaseRisk";
 import { exportLeaseRiskMatrix } from "../lib/leaseRiskExcel";
+import { checkCoTenancyStructure } from "../lib/coTenancyStructure";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
 
@@ -57,6 +58,27 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
   const resolved = useMemo(() => resolveTenantRisk(deal, abstracts), [deal, abstracts]);
   const anchors = useMemo(() => anchorsReferenced(resolved), [resolved]);
   const diligence = useMemo(() => buildDiligenceList(deal, abstracts), [deal, abstracts]);
+
+  // LIVE "X of N" structure check. Every figure in this panel is computed from the
+  // trigger tree, so a clause whose tree contradicts its own quote makes the numbers
+  // above wrong — most often by inflating Tier 1. Token-free and always current, so
+  // it warns here immediately rather than waiting on a re-audit.
+  const structureWarnings = useMemo(() => {
+    const out: { tenant: string; text: string }[] = [];
+    for (const r of resolved) {
+      for (const c of r.coTenancy || []) {
+        const v = checkCoTenancyStructure(c);
+        if (v.kind === "ok") continue;
+        out.push({
+          tenant: r.tenant,
+          text: v.kind === "repairable"
+            ? `the clause requires ${v.parsed.openRequired} of ${v.anchors.length} named stores to stay open (so it needs ${v.darkNeeded} dark), but it is stored as ${v.anchors.length} independent single-anchor triggers`
+            : `the clause requires ${v.parsed.openRequired} of ${v.parsed.totalNamed ?? "N"} named stores to stay open, but ${v.reason}`,
+        });
+      }
+    }
+    return out;
+  }, [resolved]);
 
   // How many tenants depend on each anchor — drives the per-chip count.
   const depByAnchor = useMemo(() => {
@@ -153,6 +175,22 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
           </div>
         );
       })()}
+
+      {structureWarnings.length > 0 && (
+        <div style={{ background: C.amberBg, border: `1px solid ${C.amberBd}`, borderRadius: 9, padding: "9px 11px", marginBottom: 10 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: C.amber, letterSpacing: "0.04em", marginBottom: 4 }}>
+            ⚠ CO-TENANCY TRIGGER MAY BE OVERSTATED
+          </div>
+          {structureWarnings.map((w, i) => (
+            <div key={i} style={{ fontSize: 11.5, color: C.ink, marginBottom: 3 }}>
+              <b>{w.tenant}</b> — {w.text}.
+            </div>
+          ))}
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>
+            An &ldquo;X of N&rdquo; co-tenancy does NOT trip when one anchor goes dark, so the Tier-1 figures below may be too high for the affected tenants. Run <b>Clean &amp; re-audit all</b> in Portfolio Analytics to restructure it, or verify against the executed lease.
+          </div>
+        </div>
+      )}
 
       {anchors.length > 0 && (
         <>

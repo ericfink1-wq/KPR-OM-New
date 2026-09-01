@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { auditExtraction, AUDIT_ID_PREFIX } from "./extractionAudit";
 import { createSnapshot } from "../routes/snapshots";
 import { normalizeDate, deriveRents } from "./importFixes";
+import { repairCoTenancyTrigger, type CoTenancyLike } from "./coTenancyStructure";
 import { logger } from "./logger";
 import type { Logger } from "pino";
 
@@ -16,6 +17,7 @@ export interface AutofixResult {
   scanned: number; occCostFixed: number; occUnitFixed: number; capUnitFixed: number;
   ppsfFixed: number; rentFixed: number; rentFilled: number; dupeFixed: number;
   dateFixed: number; metricFixes: number; changedDeals: number; cleared: number;
+  coTenancyFixed: number;
   snapshot: unknown;
 }
 
@@ -69,6 +71,7 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
   const snap = await createSnapshot("before-autofix");
   const rows = await db.select().from(dealsTable);
   let scanned = 0, occCostFixed = 0, rentFixed = 0, dupeFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
+  let coTenancyFixed = 0;
   let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0, dateFixed = 0, rentFilled = 0;
   for (const r of rows) {
     const data = r.data as Record<string, unknown>;
@@ -136,6 +139,30 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
         if (real > 0 && Math.abs(real - ppsf) / ppsf > 0.05) { updated.pricePerSF = real; ppsfFixed++; changed = true; }
       }
     }
+    // 1c. Restructure an "X of N" co-tenancy that was stored as a per-anchor OR.
+    // Safe by construction: the repair fires ONLY when the clause's own verbatim
+    // quote names the same store set the trigger already carries, so no store is
+    // added or removed — only the count the quote states verbatim is applied. A
+    // clause whose quote and trigger disagree is left untouched and stays flagged.
+    {
+      const lr = updated.leaseRisk as { tenants?: Array<{ coTenancy?: CoTenancyLike[] | null }> } | null | undefined;
+      if (lr?.tenants?.length) {
+        let anyFixed = false;
+        const nextTenants = lr.tenants.map((t) => {
+          if (!t?.coTenancy?.length) return t;
+          let touched = false;
+          const clauses = t.coTenancy.map((c) => {
+            const { clause, repaired } = repairCoTenancyTrigger(c);
+            if (repaired) { touched = true; coTenancyFixed++; }
+            return clause;
+          });
+          if (!touched) return t;
+          anyFixed = true;
+          return { ...t, coTenancy: clauses };
+        });
+        if (anyFixed) { updated.leaseRisk = { ...lr, tenants: nextTenants }; changed = true; }
+      }
+    }
     // 2. Recompute roster-derived metrics (honors verified locks)
     const m = recompute(withRents, updated.tenantsAsOf, updated);
     for (const k of ["occupancy", "walt", "weightedAvgRentPSF"] as const) {
@@ -152,6 +179,6 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
     if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
     if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
   }
-  log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, changedDeals, cleared }, "Auto-fix sweep complete");
-  return { scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, changedDeals, cleared, snapshot: snap };
+  log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, changedDeals, cleared }, "Auto-fix sweep complete");
+  return { scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, changedDeals, cleared, snapshot: snap };
 }
