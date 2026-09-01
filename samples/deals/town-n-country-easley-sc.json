@@ -1,0 +1,1279 @@
+{
+  "deals": [
+    {
+      "propertyName": "Town N' Country",
+      "address": "6101 Calhoun Memorial Highway",
+      "city": "Easley",
+      "state": "SC",
+      "zip": "29640",
+      "market": "Greenville MSA",
+      "submarket": "Easley",
+      "assetType": "Retail",
+      "centerType": "Power Center",
+      "omDate": "2026-12-01",
+      "broker": "Berkeley Capital Advisors (Alex Quarrier, David Webb, Alex McDonald, Payne Thrift)",
+      "totalSF": 262303,
+      "occupancy": 95.5,
+      "walt": 5.9,
+      "weightedAvgRentPSF": 8.98,
+      "yearBuilt": 1968,
+      "renovationYear": 2021,
+      "lotSizeAcres": 16.8,
+      "askingPrice": null,
+      "capRate": null,
+      "noi": 2153020,
+      "grossPotentialRent": 2252041,
+      "effectiveGrossIncome": 2891206,
+      "operatingExpenses": 738186,
+      "nnnRecoveries": 630212,
+      "pricePerSF": null,
+      "trafficCountVPD": 41100,
+      "population3mi": 33953,
+      "avgHHIncome3mi": 86613,
+      "medianHHIncome3mi": null,
+      "proximityHighways": "Calhoun Memorial Hwy (US-123 Business) 41,100 VPD frontage; direct access to Hwy-123 (44,500 VPD); ~15-minute drive to I-85 (120,400 VPD); 20 minutes to downtown Greenville; 18 miles to Clemson University.",
+      "retailCotenants": "Competitive centers within ~2.5 miles: Centerpoint Shopping Center (Publix, Home Depot, Workout Anytime — 195,568 SF, 0.7 mi), freestanding Lowe's (125,360 SF, 0.3 mi), Easley Village (Ollie's, Ashley HomeStore, Hamrick's — 160,882 SF, 1.6 mi), Rockville Center (Big Lots, Anytime Fitness — 128,840 SF, 1.7 mi), freestanding Walmart Supercenter (184,070 SF, 2.0 mi), Easley Town Center (Marshalls, PetSmart, Academy, Kohl's, Sam's Club — 447,529 SF, 2.4 mi).",
+      "tenantsAsOf": "2026-12-01",
+      "tenantsSource": "om",
+      "tenants": [
+        {
+          "name": "Belk",
+          "suite": "10",
+          "sf": 82632,
+          "rentPerSF": 3.26,
+          "annualRent": 269716,
+          "leaseStart": "1998-01-31",
+          "leaseExpiry": "2034-03-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + 7% admin on CAM; reimburses taxes off a 211,985 SF denominator",
+          "rentBumps": "Contractual increase to $6.00/SF on 04/01/2029 (+84%, ~$226k of additional base rent)",
+          "rentSchedule": "$3.26/SF ($269,716) through 03/31/2029; $6.00/SF ($495,792) from 04/01/2029 through 03/31/2034",
+          "renewalOptions": "(1) 5-year option at $9.00/SF",
+          "isAnchor": true,
+          "isDark": false,
+          "creditRating": null,
+          "parentCompany": null,
+          "assumptionNote": "OM annual rent of $269,716 implies $3.2641/SF vs the $3.26/SF printed; difference is rounding. Lease has a go-dark clause. Belk is the named anchor in the most co-tenancy clauses at the center and is the sole named anchor for Rack Room Shoes."
+        },
+        {
+          "name": "Hobby Lobby",
+          "suite": "11",
+          "sf": 51505,
+          "rentPerSF": 5.5,
+          "annualRent": 283278,
+          "leaseStart": "2008-01-13",
+          "leaseExpiry": "2033-01-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM; pays taxes on its individual parcel; 3% non-cumulative CAM cap",
+          "rentBumps": "Increase to $6.00/SF on 02/01/2028 (+9%)",
+          "rentSchedule": "$5.50/SF ($283,278) through 01/31/2028; $6.00/SF ($309,030) from 02/01/2028 through 01/31/2033",
+          "renewalOptions": "(2) 5-year options at $7.00/SF and $7.50/SF",
+          "camCapPct": 3,
+          "camCapBasis": "non-cumulative",
+          "isAnchor": true,
+          "isDark": false,
+          "assumptionNote": "Go-dark clause. Pays real estate taxes directly on its own parcel."
+        },
+        {
+          "name": "HomeGoods",
+          "suite": "14",
+          "sf": 22209,
+          "rentPerSF": 10.5,
+          "annualRent": 233195,
+          "leaseStart": "2020-11-01",
+          "leaseExpiry": "2030-10-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + mgmt; 15% admin on CAM & mgmt; 3% non-cumulative CAM cap on controllables (excludes utilities and snow); reimburses taxes off 211,985 SF",
+          "rentBumps": "None in the initial term",
+          "rentSchedule": "Flat at $10.50/SF ($233,195) through 10/31/2030",
+          "renewalOptions": "(4) 5-year options at $11.00 / $11.50 / $12.00 / $12.50 per SF",
+          "camCapPct": 3,
+          "camCapBasis": "non-cumulative",
+          "adminFeePct": 15,
+          "mgmtFeeInCam": true,
+          "recoverySF": 211985,
+          "isAnchor": true,
+          "isDark": false,
+          "parentCompany": "TJX Companies",
+          "creditRating": "A (S&P) — TJX Companies",
+          "assumptionNote": "Go-dark clause. Co-tenancy is a 2-of-3 requirement (Hobby Lobby / Belk / either Ross or Ulta) — a SINGLE anchor going dark does NOT trip it."
+        },
+        {
+          "name": "Ross Dress for Less",
+          "suite": "15",
+          "sf": 21985,
+          "rentPerSF": 11.45,
+          "annualRent": 251728,
+          "leaseStart": "2020-12-29",
+          "leaseExpiry": "2031-01-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "Fixed CAM ($24,024/yr, growing 3% annually over prior year); PRS insurance and taxes; reimburses taxes off 211,985 SF",
+          "rentBumps": "None in the initial term",
+          "rentSchedule": "Flat at $11.45/SF ($251,728) through 01/31/2031",
+          "renewalOptions": "(4) 5-year options at $11.95 / $12.45 / $12.95 / $13.45 per SF",
+          "recoverySF": 211985,
+          "isAnchor": true,
+          "isDark": false,
+          "parentCompany": "Ross Stores, Inc.",
+          "creditRating": "BBB+ (S&P) — Ross Stores, Inc.",
+          "assumptionNote": "Go-dark clause. Co-tenancy is a 2-of-3 requirement (HomeGoods / Hobby Lobby / Belk) PLUS a separate >65% center-occupancy requirement — a SINGLE anchor going dark does NOT trip the named-anchor prong."
+        },
+        {
+          "name": "Staples",
+          "suite": "5",
+          "sf": 21863,
+          "rentPerSF": 8.5,
+          "annualRent": 185836,
+          "leaseStart": "1998-06-25",
+          "leaseExpiry": "2031-06-30",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM; reimburses taxes off 211,985 SF",
+          "rentBumps": "None",
+          "rentSchedule": "Flat at $8.50/SF ($185,836) through 06/30/2031",
+          "renewalOptions": "None — no remaining renewal options",
+          "recoverySF": 211985,
+          "isAnchor": true,
+          "isDark": false,
+          "assumptionNote": "Go-dark clause. NO renewal options and $8.50/SF against a BCA market rent of $18.00/SF — the largest single mark-to-market item in the center, but also a hard 2031 rollover with no option protection. Staples has no co-tenancy right of its own; it appears only as a named store inside America's Best's 3-of-6 clause."
+        },
+        {
+          "name": "Ulta",
+          "suite": "13",
+          "sf": 9996,
+          "rentPerSF": 20.74,
+          "annualRent": 207317,
+          "leaseStart": "2021-03-01",
+          "leaseExpiry": "2031-02-28",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + 10% admin (excl. non-controllables); 3% non-cumulative CAM cap on controllables; reimburses taxes off 211,985 SF",
+          "rentBumps": "None in the initial term",
+          "rentSchedule": "Flat at $20.74/SF ($207,317) through 02/28/2031",
+          "renewalOptions": "(3) 5-year options at $22.81 / $25.09 / $27.60 per SF",
+          "camCapPct": 3,
+          "camCapBasis": "non-cumulative",
+          "adminFeePct": 10,
+          "recoverySF": 211985,
+          "isAnchor": true,
+          "isDark": false,
+          "parentCompany": "Ulta Beauty, Inc.",
+          "assumptionNote": "Rent roll lists this tenant as 'Ulta Salon'. Go-dark clause. Co-tenancy is a 3-of-4 requirement (Belk / Hobby Lobby / HomeGoods / Ross) — TWO of the four must go dark before it trips."
+        },
+        {
+          "name": "Five Below",
+          "suite": "12",
+          "sf": 8532,
+          "rentPerSF": 19.25,
+          "annualRent": 164241,
+          "leaseStart": "2020-08-24",
+          "leaseExpiry": "2031-01-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + 10% admin on CAM; 3% non-cumulative CAM cap; reimburses taxes off 211,985 SF",
+          "rentBumps": "None in the initial term",
+          "rentSchedule": "Flat at $19.25/SF ($164,241) through 01/31/2031",
+          "renewalOptions": "(3) 5-year options at $21.17 / $23.29 / $25.62 per SF",
+          "camCapPct": 3,
+          "camCapBasis": "non-cumulative",
+          "adminFeePct": 10,
+          "recoverySF": 211985,
+          "isAnchor": true,
+          "isDark": false,
+          "parentCompany": "Five Below, Inc.",
+          "assumptionNote": "Go-dark clause. Co-tenancy is a 3-of-5 requirement (Belk / Hobby Lobby / Ross / HomeGoods / Ulta) — THREE of the five must go dark before it trips."
+        },
+        {
+          "name": "7Brew",
+          "suite": "16",
+          "sf": 510,
+          "rentPerSF": 156.86,
+          "annualRent": 80000,
+          "leaseStart": "2026-09-01",
+          "leaseExpiry": "2041-08-31",
+          "leaseType": "Ground Lease",
+          "reimbursementMethod": "Gross (ground lease — tenant responsible for its own parcel)",
+          "rentBumps": "10% increases: Year 6 to $88,000, Year 11 to $96,800",
+          "rentSchedule": "$80,000/yr from 09/01/2026; $88,000/yr from Year 6 (09/01/2031); $96,800/yr from Year 11 (09/01/2036) through 08/31/2041",
+          "renewalOptions": "(6) 5-year options at $106,480 / $117,128 / $128,841 / $141,725 / $155,897 / $171,487 per year",
+          "isAnchor": false,
+          "isNAP": false,
+          "isDark": false,
+          "assumptionNote": "GROUND LEASE on a drive-thru outparcel — rent is a flat annual ground rent, not a $/SF deal. The $156.86/SF shown is $80,000 divided by the 510 SF building footprint and is NOT a comparable in-line rent; exclude it from any rent-PSF benchmark. Newest lease at the center (fresh 15-year term); BCA markets it as a potential separate outparcel spin-off at a lower cap rate."
+        },
+        {
+          "name": "Pet Supplies Plus",
+          "suite": "4",
+          "sf": 6188,
+          "rentPerSF": 16.25,
+          "annualRent": 100555,
+          "leaseStart": "2024-06-01",
+          "leaseExpiry": "2034-05-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + mgmt; 10% admin on CAM; 5% non-cumulative CAM cap on controllables",
+          "rentBumps": "Increase to $17.88/SF on 06/01/2029 (+10%)",
+          "rentSchedule": "$16.25/SF ($100,555) through 05/31/2029; $17.88/SF ($110,642) from 06/01/2029 through 05/31/2034",
+          "renewalOptions": "(2) 5-year options at $19.66/SF and $21.63/SF",
+          "camCapPct": 5,
+          "camCapBasis": "non-cumulative",
+          "adminFeePct": 10,
+          "mgmtFeeInCam": true,
+          "isAnchor": false,
+          "isDark": false
+        },
+        {
+          "name": "Rack Room Shoes",
+          "suite": "6",
+          "sf": 6250,
+          "rentPerSF": 11.02,
+          "annualRent": 68875,
+          "leaseStart": "2004-07-22",
+          "leaseExpiry": "2029-01-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + 10% admin on CAM (excl. electricity); 3% non-cumulative CAM cap; reimburses taxes off 211,985 SF",
+          "rentBumps": "None",
+          "rentSchedule": "Flat at $11.02/SF ($68,875) through 01/31/2029",
+          "renewalOptions": "None — no remaining renewal options",
+          "camCapPct": 3,
+          "camCapBasis": "non-cumulative",
+          "adminFeePct": 10,
+          "recoverySF": 211985,
+          "isAnchor": false,
+          "isDark": false,
+          "assumptionNote": "THE ONLY true single-anchor co-tenancy at the center: Belk alone must be open and operating, plus a landlord covenant to maintain 75% occupancy of the non-anchor floor area. Go-dark clause. No options and $11.02/SF against a BCA market rent of $20.00/SF — near-term (Jan-2029) mark-to-market."
+        },
+        {
+          "name": "Classic Jewelers",
+          "suite": "3",
+          "sf": 3914,
+          "rentPerSF": 17.5,
+          "annualRent": 68495,
+          "leaseStart": "2021-02-08",
+          "leaseExpiry": "2029-02-28",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + mgmt; 15% admin on CAM; reimburses taxes off 211,985 SF",
+          "rentBumps": "3% increases: $18.03/SF on 03/01/2027, $18.57/SF on 03/01/2028",
+          "rentSchedule": "$17.50/SF ($68,495) through 02/28/2027; $18.03/SF ($70,570) from 03/01/2027; $18.57/SF ($72,683) from 03/01/2028 through 02/28/2029",
+          "renewalOptions": "(1) 3-year option at $19.12 / $19.70 / $20.29 per SF (years 1-3 of the option)",
+          "adminFeePct": 15,
+          "mgmtFeeInCam": true,
+          "recoverySF": 211985,
+          "isAnchor": false,
+          "isDark": false
+        },
+        {
+          "name": "America's Best Contacts & Eyeglasses",
+          "suite": "7",
+          "sf": 3591,
+          "rentPerSF": 25.0,
+          "annualRent": 89775,
+          "leaseStart": "2022-05-01",
+          "leaseExpiry": "2032-04-30",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + mgmt; 10% admin on CAM; 5% non-cumulative CAM cap on controllables (excl. snow, utilities and insurance); reimburses taxes off 211,985 SF",
+          "rentBumps": "Increase to $27.50/SF on 05/01/2027 (+10%)",
+          "rentSchedule": "$25.00/SF ($89,775) through 04/30/2027; $27.50/SF ($98,753) from 05/01/2027 through 04/30/2032",
+          "renewalOptions": "(2) 5-year options at $30.25/SF and $33.28/SF",
+          "camCapPct": 5,
+          "camCapBasis": "non-cumulative",
+          "adminFeePct": 10,
+          "mgmtFeeInCam": true,
+          "recoverySF": 211985,
+          "isAnchor": false,
+          "isDark": false,
+          "parentCompany": "National Vision Holdings, Inc.",
+          "assumptionNote": "Go-dark clause. Co-tenancy is a 3-of-6 requirement (Ross / Hobby Lobby / Ulta / Staples / Belk / HomeGoods) — FOUR of the six must go dark before it trips. Separately carries a SALES KICKOUT: a one-time right to terminate if sales are not over $1.1MM by lease Year 6 (~05/2028); the OM discloses no tenant sales, so this cannot be scored today."
+        },
+        {
+          "name": "Bath & Body Works",
+          "suite": "2",
+          "sf": 3000,
+          "rentPerSF": 25.0,
+          "annualRent": 75000,
+          "leaseStart": "2024-12-01",
+          "leaseExpiry": "2034-11-30",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + 12.5% admin on CAM; reimburses taxes off 211,985 SF",
+          "rentBumps": "Increase to $27.50/SF on 12/01/2029 (+10%)",
+          "rentSchedule": "$25.00/SF ($75,000) through 11/30/2029; $27.50/SF ($82,500) from 12/01/2029 through 11/30/2034",
+          "renewalOptions": "(1) 5-year option at $30.25/SF",
+          "adminFeePct": 12.5,
+          "recoverySF": 211985,
+          "isAnchor": false,
+          "isDark": false,
+          "parentCompany": "Bath & Body Works, Inc."
+        },
+        {
+          "name": "Uptown Cheapskate",
+          "suite": "8",
+          "sf": 4600,
+          "rentPerSF": 23.0,
+          "annualRent": 105800,
+          "leaseStart": "2026-06-01",
+          "leaseExpiry": "2036-09-30",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + mgmt",
+          "rentBumps": "2.5% annual increases beginning 10/01/2027",
+          "rentSchedule": "$23.00/SF from 06/01/2026; $23.58 on 10/01/2027; $24.16 on 10/01/2028; $24.77 on 10/01/2029; $25.39 on 10/01/2030; $26.02 on 10/01/2031; $26.67 on 10/01/2032; $27.34 on 10/01/2033; $28.02 on 10/01/2034; $28.72 on 10/01/2035 through 09/30/2036",
+          "renewalOptions": "(2) 5-year options — Option 1 at $29.44/$30.18/$30.93/$31.71/$32.50 per SF, Option 2 at $33.31/$34.14/$35.00/$35.87/$36.77 per SF",
+          "mgmtFeeInCam": true,
+          "isAnchor": false,
+          "isDark": false,
+          "assumptionNote": "The site plan footnotes 4,600 SF 'plus an additional 1,350 SF storage space' against THIS tenant, while the rent roll labels the 1,350 SF storage row 'Bath & Body Works Storage'. The storage lease dates (06/01/2026 - 09/30/2036) match Uptown Cheapskate exactly and do NOT match Bath & Body Works (12/01/2024 - 11/30/2034), so the storage row is most likely Uptown Cheapskate's. Kept as printed on the rent roll pending confirmation — CONFIRM which tenant holds the storage space."
+        },
+        {
+          "name": "Bath & Body Works Storage",
+          "suite": null,
+          "sf": 1350,
+          "rentPerSF": 4.0,
+          "annualRent": 5400,
+          "leaseStart": "2026-06-01",
+          "leaseExpiry": "2036-09-30",
+          "leaseType": "Gross",
+          "reimbursementMethod": "Gross — no recoveries",
+          "rentBumps": "None",
+          "rentSchedule": "Flat at $4.00/SF ($5,400) through 09/30/2036",
+          "renewalOptions": "None",
+          "isAnchor": false,
+          "isDark": false,
+          "assumptionNote": "Storage space, named per the rent roll. The site plan attributes the 1,350 SF storage to Uptown Cheapskate, and the lease dates match Uptown Cheapskate exactly rather than Bath & Body Works — flagged for confirmation, not silently reassigned."
+        },
+        {
+          "name": "Dry Cleaners",
+          "suite": "1",
+          "sf": 2500,
+          "rentPerSF": 25.13,
+          "annualRent": 62830,
+          "leaseStart": "2017-10-01",
+          "leaseExpiry": "2032-12-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "PRS TICAM + mgmt (1.5% of CAM expenses); reimburses taxes off 211,985 SF",
+          "rentBumps": "3% annual increases every January 1 from 2027 through 2032",
+          "rentSchedule": "$25.13/SF ($62,830) through 12/31/2026; $25.89 on 01/01/2027; $26.66 on 01/01/2028; $27.46 on 01/01/2029; $28.29 on 01/01/2030; $29.13 on 01/01/2031; $30.01 on 01/01/2032 through 12/31/2032",
+          "renewalOptions": "None — no remaining renewal options",
+          "mgmtFeeInCam": true,
+          "recoverySF": 211985,
+          "isAnchor": false,
+          "isDark": false,
+          "assumptionNote": "Tenant is identified on the OM rent roll and site plan only as 'Dry Cleaners' — the operating banner is not disclosed."
+        },
+        {
+          "name": "Vacant",
+          "suite": "9",
+          "sf": 11678,
+          "rentPerSF": 0,
+          "annualRent": 0,
+          "leaseStart": null,
+          "leaseExpiry": null,
+          "leaseType": "Vacant",
+          "rentSchedule": null,
+          "renewalOptions": null,
+          "isAnchor": false,
+          "isDark": false,
+          "assumptionNote": "Former Belk annex, 11,678 SF — the center's only vacancy. BCA underwrites a 10-year lease at $13.00/SF NNN + mgmt with 3% annual bumps ($151,814 of pro-forma revenue)."
+        },
+        {
+          "name": "Panda Express",
+          "suite": null,
+          "sf": 0,
+          "rentPerSF": null,
+          "annualRent": 0,
+          "leaseStart": null,
+          "leaseExpiry": null,
+          "leaseType": "CAM contribution only",
+          "reimbursementMethod": "Fixed CAM contribution of $2,121.80/yr, increasing 3% annually",
+          "rentSchedule": null,
+          "renewalOptions": null,
+          "isAnchor": false,
+          "isNAP": true,
+          "isDark": false,
+          "assumptionNote": "Listed on the rent roll as FIXED CAM CONTRIBUTION ONLY — no SF, no lease dates and NO base rent to the landlord. Does not appear on the site plan's numbered roster. Treated as a non-owned (NAP) outparcel that participates in the CAM pool; confirm ownership/ground-lease status in diligence."
+        },
+        {
+          "name": "Chipotle",
+          "suite": null,
+          "sf": 0,
+          "rentPerSF": null,
+          "annualRent": 0,
+          "leaseStart": null,
+          "leaseExpiry": null,
+          "leaseType": "CAM contribution only",
+          "reimbursementMethod": "Fixed CAM contribution of $2,121.80/yr, increasing 3% annually",
+          "rentSchedule": null,
+          "renewalOptions": null,
+          "isAnchor": false,
+          "isNAP": true,
+          "isDark": false,
+          "assumptionNote": "Listed on the rent roll as FIXED CAM CONTRIBUTION ONLY — no SF, no lease dates and NO base rent to the landlord. Does not appear on the site plan's numbered roster. Treated as a non-owned (NAP) outparcel that participates in the CAM pool; confirm ownership/ground-lease status in diligence."
+        },
+        {
+          "name": "BC/BS",
+          "suite": null,
+          "sf": 0,
+          "rentPerSF": null,
+          "annualRent": 0,
+          "leaseStart": null,
+          "leaseExpiry": null,
+          "leaseType": "CAM contribution only",
+          "reimbursementMethod": "Fixed CAM contribution of $2,060.00/yr, increasing 3% annually",
+          "rentSchedule": null,
+          "renewalOptions": null,
+          "isAnchor": false,
+          "isNAP": true,
+          "isDark": false,
+          "assumptionNote": "Blue Cross Blue Shield — listed on the rent roll as FIXED CAM CONTRIBUTION ONLY — no SF, no lease dates and NO base rent to the landlord. Does not appear on the site plan's numbered roster. Treated as a non-owned (NAP) outparcel that participates in the CAM pool; confirm ownership/ground-lease status in diligence."
+        }
+      ],
+      "leaseRisk": {
+        "source": "OM",
+        "coTenancyDisclosed": true,
+        "tenants": [
+          {
+            "tenant": "HomeGoods",
+            "suite": "14",
+            "baseRentAnnual": 233195,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": {
+                  "operator": "OR",
+                  "conditions": [
+                    {
+                      "operator": "AND",
+                      "conditions": [
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Hobby Lobby",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        },
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Belk",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        }
+                      ]
+                    },
+                    {
+                      "operator": "AND",
+                      "conditions": [
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Hobby Lobby",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        },
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Ross",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        },
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Ulta",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        }
+                      ]
+                    },
+                    {
+                      "operator": "AND",
+                      "conditions": [
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Belk",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        },
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Ross",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        },
+                        {
+                          "type": "named_anchor_dark",
+                          "anchor": "Ulta",
+                          "note": "HomeGoods needs 2 of 3 slots open: (1) Hobby Lobby, (2) Belk, (3) EITHER Ross or Ulta. Slot 3 fails only if BOTH Ross and Ulta go dark. Expanded here into the explicit set of failure combinations so the exposure engine evaluates every named anchor correctly. A SINGLE anchor going dark does NOT trip this clause."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "remedy": null,
+                "reliefPeriodMonthsBeforeTermination": null,
+                "terminationNoticeDays": null,
+                "cureCondition": null,
+                "suitableReplacementDefinition": null,
+                "currentlyInEffect": false,
+                "currentStatusNote": null,
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Co-Tenancy Requirement: 2 of the following must be open and operating  i) Hobby Lobby  ii) Belk  iii) Either Ross or Ulta",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "HomeGoods has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "HomeGoods — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          },
+          {
+            "tenant": "Ross Dress for Less",
+            "suite": "15",
+            "baseRentAnnual": 251728,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": {
+                  "operator": "OR",
+                  "conditions": [
+                    {
+                      "type": "anchor_count_below",
+                      "anchors": [
+                        "HomeGoods",
+                        "Hobby Lobby",
+                        "Belk"
+                      ],
+                      "openRequired": 2,
+                      "totalNamed": 3,
+                      "note": "2-of-3 — trips only when 2 of the 3 named anchors go dark. A single anchor going dark does NOT trip it."
+                    },
+                    {
+                      "type": "occupancy_threshold",
+                      "scope": "Center GLA",
+                      "direction": "below",
+                      "pct": 65,
+                      "note": "Separate, standalone prong: the shopping center must remain more than 65% occupied."
+                    }
+                  ]
+                },
+                "remedy": null,
+                "reliefPeriodMonthsBeforeTermination": null,
+                "terminationNoticeDays": null,
+                "cureCondition": null,
+                "suitableReplacementDefinition": null,
+                "currentlyInEffect": false,
+                "currentStatusNote": null,
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Co-Tenancy Requirement: 2 of the following must be open and operating  i) HomeGoods  ii) Hobby Lobby  iii) Belk. Shopping Center Occupancy Requirement: > 65%",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "Ross Dress for Less has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Ross Dress for Less — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          },
+          {
+            "tenant": "Ulta",
+            "suite": "13",
+            "baseRentAnnual": 207317,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": {
+                  "type": "anchor_count_below",
+                  "anchors": [
+                    "Belk",
+                    "Hobby Lobby",
+                    "HomeGoods",
+                    "Ross"
+                  ],
+                  "openRequired": 3,
+                  "totalNamed": 4,
+                  "note": "3-of-4 — TWO of the four named anchors must go dark before it trips. A single anchor going dark does NOT trip it."
+                },
+                "remedy": null,
+                "reliefPeriodMonthsBeforeTermination": null,
+                "terminationNoticeDays": null,
+                "cureCondition": null,
+                "suitableReplacementDefinition": null,
+                "currentlyInEffect": false,
+                "currentStatusNote": null,
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Co-Tenancy Requirement: 3 of the following must be open and operating  i) Belk  ii) Hobby Lobby  iii) HomeGoods  iv) Ross",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "Ulta has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Ulta — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          },
+          {
+            "tenant": "Five Below",
+            "suite": "12",
+            "baseRentAnnual": 164241,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": {
+                  "type": "anchor_count_below",
+                  "anchors": [
+                    "Belk",
+                    "Hobby Lobby",
+                    "Ross",
+                    "HomeGoods",
+                    "Ulta"
+                  ],
+                  "openRequired": 3,
+                  "totalNamed": 5,
+                  "note": "3-of-5 — THREE of the five named anchors must go dark before it trips."
+                },
+                "remedy": null,
+                "reliefPeriodMonthsBeforeTermination": null,
+                "terminationNoticeDays": null,
+                "cureCondition": null,
+                "suitableReplacementDefinition": null,
+                "currentlyInEffect": false,
+                "currentStatusNote": null,
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Co-Tenancy Requirement: 3 of the following must be open and operating  i) Belk  ii) Hobby Lobby  iii) Ross  iv) HomeGoods  v) Ulta",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "Five Below has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Five Below — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          },
+          {
+            "tenant": "America's Best Contacts & Eyeglasses",
+            "suite": "7",
+            "baseRentAnnual": 89775,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": {
+                  "type": "anchor_count_below",
+                  "anchors": [
+                    "Ross",
+                    "Hobby Lobby",
+                    "Ulta",
+                    "Staples",
+                    "Belk",
+                    "HomeGoods"
+                  ],
+                  "openRequired": 3,
+                  "totalNamed": 6,
+                  "note": "3-of-6 — FOUR of the six named stores must go dark before it trips. This is the weakest anchor dependency in the center."
+                },
+                "remedy": null,
+                "reliefPeriodMonthsBeforeTermination": null,
+                "terminationNoticeDays": null,
+                "cureCondition": null,
+                "suitableReplacementDefinition": null,
+                "currentlyInEffect": false,
+                "currentStatusNote": null,
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Co-Tenancy Requirement: 3 of the following must be open and operating  i) Ross, Hobby Lobby, Ulta, Staples, Belk, and HomeGoods",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "salesKickout": [
+              {
+                "salesThresholdAmount": 1100000,
+                "salesThresholdPSF": null,
+                "measurementPeriod": "lease Year 6 (~May 2028)",
+                "noticeWindowDays": null,
+                "terminationFee": null,
+                "unamortizedTiRepayment": null,
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Termination Right: If sales are not over $1.1MM by Year 6 tenant has the one-time right to terminate.",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "America's Best Contacts & Eyeglasses has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "America's Best Contacts & Eyeglasses — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": {
+                "present": true,
+                "summary": "One-time right to terminate if sales are not over $1.1MM by lease Year 6 (~May 2028). $89,775 of base rent. The OM discloses no tenant sales, so whether the threshold is being met cannot be assessed — pull sales reporting in diligence.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Termination Right: If sales are not over $1.1MM by Year 6 tenant has the one-time right to terminate.",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            }
+          },
+          {
+            "tenant": "Rack Room Shoes",
+            "suite": "6",
+            "baseRentAnnual": 68875,
+            "coTenancy": [
+              {
+                "type": "operating",
+                "triggerLogic": {
+                  "operator": "OR",
+                  "conditions": [
+                    {
+                      "type": "named_anchor_dark",
+                      "anchor": "Belk",
+                      "note": "TRUE single-anchor dependency — Belk alone going dark trips this clause. The only such clause in the center."
+                    },
+                    {
+                      "type": "occupancy_threshold",
+                      "scope": "non-anchor floor area",
+                      "direction": "below",
+                      "pct": 75,
+                      "note": "Landlord covenant to maintain 75% occupancy of the NON-ANCHOR floor area — a separate, standalone prong."
+                    }
+                  ]
+                },
+                "remedy": null,
+                "reliefPeriodMonthsBeforeTermination": null,
+                "terminationNoticeDays": null,
+                "cureCondition": null,
+                "suitableReplacementDefinition": null,
+                "currentlyInEffect": false,
+                "currentStatusNote": null,
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Co-Tenancy Requirement: The following must be open and operating  i) Belk. Occupancy Requirement: LL must maintain 75% occupancy on non-anchor floor area",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              }
+            ],
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "Rack Room Shoes has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Rack Room Shoes — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          },
+          {
+            "tenant": "Belk",
+            "suite": "10",
+            "baseRentAnnual": 269716,
+            "coTenancy": null,
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "Belk has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Belk — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          },
+          {
+            "tenant": "Hobby Lobby",
+            "suite": "11",
+            "baseRentAnnual": 283278,
+            "coTenancy": null,
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "Hobby Lobby has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Hobby Lobby — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          },
+          {
+            "tenant": "Staples",
+            "suite": "5",
+            "baseRentAnnual": 185836,
+            "coTenancy": null,
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "goDarkRight": {
+                "present": true,
+                "summary": "Staples has a go-dark clause — it may cease operating while continuing to pay rent.",
+                "sourceDocument": "OM",
+                "sectionRef": "Rent Roll (as of Dec. 1, 2026)",
+                "verbatimQuote": "Staples — Go Dark Clause",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "recaptureAssignment": null,
+              "earlyTerminationOption": null
+            }
+          }
+        ]
+      },
+      "anchorStatus": [
+        {
+          "anchor": "Belk",
+          "status": "in_place",
+          "termExpiration": "2034-03-31",
+          "relocating": false
+        },
+        {
+          "anchor": "Hobby Lobby",
+          "status": "in_place",
+          "termExpiration": "2033-01-31",
+          "relocating": false
+        },
+        {
+          "anchor": "HomeGoods",
+          "status": "in_place",
+          "termExpiration": "2030-10-31",
+          "relocating": false
+        },
+        {
+          "anchor": "Ross Dress for Less",
+          "status": "in_place",
+          "termExpiration": "2031-01-31",
+          "relocating": false
+        },
+        {
+          "anchor": "Staples",
+          "status": "in_place",
+          "termExpiration": "2031-06-30",
+          "relocating": false
+        },
+        {
+          "anchor": "Ulta",
+          "status": "in_place",
+          "termExpiration": "2031-02-28",
+          "relocating": false
+        },
+        {
+          "anchor": "Five Below",
+          "status": "in_place",
+          "termExpiration": "2031-01-31",
+          "relocating": false
+        }
+      ],
+      "cashFlowProjection": [
+        {
+          "label": "Year 1 (Existing / in-place)",
+          "totalBaseRent": 2260994,
+          "reimbursements": 630212,
+          "egr": 2891206,
+          "operatingExpenses": 738186,
+          "noi": 2153020
+        },
+        {
+          "label": "Year 1 Pro-Forma (Dec 2026 - Nov 2027)",
+          "totalBaseRent": 2412808,
+          "reimbursements": 665078,
+          "egr": 3034986,
+          "operatingExpenses": 742500,
+          "noi": 2292486
+        },
+        {
+          "label": "Year 2 (Nov 2028)",
+          "totalBaseRent": 2449263,
+          "reimbursements": 684882,
+          "egr": 3090321,
+          "operatingExpenses": 763703,
+          "noi": 2326618
+        },
+        {
+          "label": "Year 3 (Nov 2029)",
+          "totalBaseRent": 2651891,
+          "reimbursements": 705699,
+          "egr": 3317908,
+          "operatingExpenses": 790661,
+          "noi": 2527248
+        },
+        {
+          "label": "Year 4 (Nov 2030)",
+          "totalBaseRent": 2787998,
+          "reimbursements": 731131,
+          "egr": 3469330,
+          "operatingExpenses": 815937,
+          "noi": 2653393
+        },
+        {
+          "label": "Year 5 (Nov 2031)",
+          "totalBaseRent": 2886115,
+          "reimbursements": 745354,
+          "egr": 3580648,
+          "operatingExpenses": 840632,
+          "noi": 2740016
+        },
+        {
+          "label": "Year 6 (Nov 2032)",
+          "totalBaseRent": 3160307,
+          "reimbursements": 785575,
+          "egr": 3901150,
+          "operatingExpenses": 872244,
+          "noi": 3028906
+        },
+        {
+          "label": "Year 7 (Nov 2033)",
+          "totalBaseRent": 3251848,
+          "reimbursements": 810991,
+          "egr": 4016018,
+          "operatingExpenses": 898346,
+          "noi": 3117673
+        },
+        {
+          "label": "Year 8 (Nov 2034)",
+          "totalBaseRent": 3440425,
+          "reimbursements": 833774,
+          "egr": 4226109,
+          "operatingExpenses": 927985,
+          "noi": 3298125
+        },
+        {
+          "label": "Year 9 (Nov 2035)",
+          "totalBaseRent": 3581593,
+          "reimbursements": 862980,
+          "egr": 4385021,
+          "operatingExpenses": 956788,
+          "noi": 3428233
+        },
+        {
+          "label": "Year 10 (Nov 2036)",
+          "totalBaseRent": 3648038,
+          "reimbursements": 888575,
+          "egr": 4476967,
+          "operatingExpenses": 984303,
+          "noi": 3492664
+        }
+      ],
+      "incomeBreakdown": {
+        "Scheduled Base Rental Revenue": 2260994,
+        "CAM Recoveries": 122827,
+        "Insurance Recoveries": 89181,
+        "Real Estate Tax Recoveries": 402075,
+        "Property Management Recoveries": 16130,
+        "Total Expense Recoveries": 630212,
+        "Effective Gross Revenue": 2891206
+      },
+      "expenseBreakdown": {
+        "CAM": 113520,
+        "Insurance": 98760,
+        "Real Estate Taxes": 439170,
+        "Property Management": 86736,
+        "Total Operating Expenses": 738186,
+        "Capital Reserves (below the line)": 39345
+      },
+      "currentAnnualTaxes": 439170,
+      "roofData": {
+        "summary": "Nine roof sections across the center with staggered install dates: 2025 (1 section, warranty to 2045), 2020 (3 sections - two under warranty to 2040, one with no warranty), 2015 (1 section, warranty to 2030), 2013 (2 sections, warranty expires 2028), and 2009 (2 sections, no warranty).",
+        "concern": "Four of the nine sections are effectively unprotected within the hold: the two 2009 sections carry NO warranty (~17 years old), one 2020 section carries no warranty, and the two 2013 sections lose warranty coverage in 2028. Section areas and a condition assessment are NOT disclosed in the OM - order a roof consultant's report and price near-term capital before bidding.",
+        "warrantyInfo": "2025 -> 2045; 2020 -> 2040 (x2); 2020 -> no warranty; 2015 -> 2030; 2013 -> 2028 (x2); 2009 -> no warranty (x2).",
+        "sections": [
+          {
+            "installedYear": 2025,
+            "area": null,
+            "ageYears": 1,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2020,
+            "area": null,
+            "ageYears": 6,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2020,
+            "area": null,
+            "ageYears": 6,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2020,
+            "area": null,
+            "ageYears": 6,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2015,
+            "area": null,
+            "ageYears": 11,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2013,
+            "area": null,
+            "ageYears": 13,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2013,
+            "area": null,
+            "ageYears": 13,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2009,
+            "area": null,
+            "ageYears": 17,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          },
+          {
+            "installedYear": 2009,
+            "area": null,
+            "ageYears": 17,
+            "condition": null,
+            "material": null,
+            "replacementCost": null
+          }
+        ]
+      },
+      "keyAssumptions": [
+        "Rent roll is as of December 1, 2026; all roster figures, dates and clause language are taken from the OM rent roll (pp. 11-13) and site plan (p. 6).",
+        "Roster ties out exactly: 250,625 SF occupied + 11,678 SF vacant = 262,303 SF stated total GLA (95.5% occupied; the OM rounds to 95%).",
+        "In-place contractual base rent rolls up to $2,252,041 across the 16 rent-paying suites. BCA's Year-1 'Base Rental Revenue' of $2,412,808 is higher because it (a) grosses up the vacant 11,678 SF at a $13.00/SF market rent ($151,814) and (b) picks up the rent steps that hit during the Dec-2026/Nov-2027 analysis year (~$9k).",
+        "Financial tie-out is clean: EGI $2,891,206 - OpEx $738,186 = NOI $2,153,020, matching the Year 1 'Existing' cash-flow column exactly.",
+        "NO asking price and NO cap rate are disclosed in the OM - both left null rather than derived.",
+        "7Brew is a GROUND LEASE at $80,000/yr on a 510 SF drive-thru footprint. Its $156.86/SF is arithmetic, not a comparable in-line rent; the center's weighted-average rent excluding 7Brew is $8.68/SF vs $8.98/SF including it.",
+        "Panda Express, Chipotle and BC/BS appear on the rent roll as FIXED CAM CONTRIBUTION ONLY - no SF, no dates, no base rent - and are absent from the site plan roster. Carried as NAP (non-owned) outparcels that participate in the CAM pool; confirm ownership/ground-lease status in diligence.",
+        "CO-TENANCY IS THE CORRECTION IN THIS FILE. Five of the six disclosed clauses are 'X of N' requirements, not per-anchor triggers: HomeGoods needs 2 of 3 (Hobby Lobby / Belk / either Ross or Ulta), Ross needs 2 of 3 (HomeGoods / Hobby Lobby / Belk), Ulta needs 3 of 4, Five Below needs 3 of 5, and America's Best needs 3 of 6. Losing ONE anchor does not trip any of them. Only Rack Room Shoes ($68,875) has a true single-anchor dependency on Belk.",
+        "Ross and Rack Room Shoes each carry a SEPARATE occupancy prong that stands alone from the named-anchor test: Ross requires the center to stay above 65% occupied; Rack Room requires the landlord to maintain 75% occupancy of the NON-ANCHOR floor area. Those, not a single anchor going dark, are the realistic near-term triggers.",
+        "All co-tenancy, go-dark and kickout language is sourced from OM rent-roll footnotes ONLY - a broker summary, never an executed lease. Everything is stamped unverified; pull the leases before relying on any trigger, remedy or notice window.",
+        "The OM discloses NO remedy for any co-tenancy clause (no alternate-rent percentage, no rent-reduction percentage, no relief period, no termination tail). Remedies are left null rather than assumed - the dollar at risk is the tenant's full base rent, but what actually happens to it is unknown until the leases are read.",
+        "NO tenant sales are disclosed anywhere in the OM, so occupancy cost cannot be computed for any tenant and America's Best's $1.1MM Year-6 sales kickout cannot be scored.",
+        "The site plan footnotes 'plus an additional 1,350 SF storage space' against Uptown Cheapskate, while the rent roll labels that row 'Bath & Body Works Storage'. The storage lease dates (06/01/2026-09/30/2036) match Uptown Cheapskate exactly and not Bath & Body Works (12/01/2024-11/30/2034). Kept as printed on the roll and flagged - not silently reassigned.",
+        "BCA's 7-year NOI CAGR of 6.28% is a PRO-FORMA figure that depends on leasing the 11,678 SF former Belk annex at $13.00/SF and re-leasing Staples and Rack Room Shoes at market on rollover. Underwrite it as a projection, not as in-place growth.",
+        "Real estate taxes of $439,170 come from BCA's internal South Carolina reassessment calculator, not from an assessor's bill. South Carolina reassesses on an assessable transfer of interest at a 6% commercial ratio (with a possible 25% ATI exemption on application) - model the post-sale bill independently.",
+        "Roof section AREAS are not disclosed - the roof report gives install year and warranty status only, so no replacement reserve can be sized from the OM."
+      ],
+      "notes": "**Town N' Country** is a **262,303 SF power center** on Calhoun Memorial Highway (**41,100 VPD**) in Easley, inside the Greenville MSA - South Carolina's first metro to pass one million residents, with **57,633 people and $88,741 average household income within 5 miles**. The anchor roster is unusually deep for a secondary Upstate market: **Belk (82,632 SF), Hobby Lobby (51,505 SF), HomeGoods, Ross Dress for Less, Staples, Ulta and Five Below** occupy 218,722 SF, with roughly 31,000 SF of shop space and a new **7Brew ground lease** on an outparcel. The economics are driven by **exceptionally low big-box rents** - Belk at **$3.26/SF**, Hobby Lobby at $5.50, Staples at $8.50, Rack Room at $11.02 - producing a **$8.98/SF weighted-average rent** on **95.5% occupancy** and a **$2,153,020 in-place NOI** that ties cleanly to the cash flow (EGI $2,891,206 less OpEx $738,186). Those rents cut both ways: where they are locked behind cheap options (Belk at $9.00, Hobby Lobby at $7.00-$7.50) they are **sticky, durable income** rather than a problem, but where the tenant has **no options at all - Staples ($8.50 vs an $18.00 market rent, expiring 6/2031) and Rack Room Shoes ($11.02 vs $20.00, expiring 1/2029)** - they are genuinely capturable mark-to-market, and together with the **11,678 SF former Belk annex vacancy** and **Belk's contractual step to $6.00/SF in April 2029 (+$226K)** they are what BCA's pro-forma 6.28% NOI CAGR actually rests on. The thesis is a deep-discount-basis power center with real, identifiable rent growth rather than a stabilized coupon - but the growth is **pro-forma, not in place**, and no price or cap rate is disclosed. The dominant risk is **rollover concentration around Belk**: HomeGoods, Ross, Staples, Ulta and Five Below - **84,585 SF and $1,042,317 of base rent, 46% of the center's income** - all roll between October 2030 and June 2031, and Belk itself (31.5% of GLA on a 1998 department-store lease) is the named store in five of the six disclosed co-tenancy clauses. **Important correction on co-tenancy: five of those six clauses are 'X of N' requirements, so a single anchor going dark does NOT trip them** - only **Rack Room Shoes ($68,875)** depends on Belk alone. All clause language is OM-summary only and must be verified against the executed leases.",
+      "dealScore": {
+        "grade": "B",
+        "rationale": "A **deeply below-market, credit-anchored 262,303 SF power center** at **95.5% occupancy** with genuine, identifiable rent growth (**Staples and Rack Room carry no options**, plus **Belk's +$226K 2029 step** and an **11,678 SF vacancy**), held back by **46% of base rent rolling in a nine-month window across 2030-31**, a **31.5%-of-GLA department-store anchor** at the center of the co-tenancy structure, and **no disclosed price or cap rate**.",
+        "strengths": [
+          "Seven national credit anchors (Belk, Hobby Lobby, HomeGoods, Ross, Staples, Ulta, Five Below) across 218,722 SF - anchor depth well above what a secondary Upstate market usually supports.",
+          "Big-box rents of $3.26-$11.02/SF against BCA market rents of $6.75-$18.00 make the boxes easily replaceable and store-level profitable; the low basis is the core protection.",
+          "Staples ($8.50/SF vs $18.00 market) and Rack Room Shoes ($11.02/SF vs $20.00 market) have NO renewal options - their below-market rent is genuinely capturable on 2031 and 2029 rollover, not locked away.",
+          "Belk's contractual step from $3.26 to $6.00/SF on 04/01/2029 adds ~$226K of base rent with no leasing cost or downtime.",
+          "Financials tie out exactly - EGI $2,891,206 less OpEx $738,186 equals the stated $2,153,020 NOI, and the roster reconciles to the printed 262,303 SF GLA to the square foot.",
+          "Corrected co-tenancy structure is far more benign than a per-anchor read implies: only $68,875 of base rent (Rack Room Shoes) is exposed to any single anchor going dark.",
+          "Strong and growing trade area - 57,633 people and $88,741 average household income within 5 miles, 41,100 VPD frontage, 20 minutes to downtown Greenville, in an MSA that grew 9.3% since 2020.",
+          "New 7Brew ground lease (15-year term, $80,000/yr with 10% steps and six options) is a separable outparcel that could be sold at a lower cap rate."
+        ],
+        "risks": [
+          "ROLLOVER CLIFF: HomeGoods (10/2030), Ross (1/2031), Five Below (1/2031), Ulta (2/2031) and Staples (6/2031) - 84,585 SF and $1,042,317 of base rent, 46% of the center's income - all expire within nine months of each other.",
+          "Belk is 31.5% of GLA on a 1998 department-store lease at $3.26/SF, is the named store in five of the six disclosed co-tenancy clauses, and its $9.00/SF option rent is above BCA's own $6.75/SF market rent - so the option is unlikely to be exercised as written. Department-store credit and go-dark risk is the single biggest binary in the deal.",
+          "The 6.28% NOI CAGR is PRO-FORMA - it requires leasing the 11,678 SF former Belk annex at $13.00/SF and achieving full mark-to-market on Staples and Rack Room. In-place NOI is $2,153,020, not the Year-8 $3,298,125.",
+          "Every co-tenancy, go-dark and kickout clause is sourced from OM rent-roll footnotes - a broker summary, never an executed lease - and the OM discloses NO remedy, relief period or notice window for any of them.",
+          "Ross's separate >65% center-occupancy prong and Rack Room's 75% non-anchor-occupancy prong stand alone from the named-anchor tests and are the more realistic near-term triggers; the center is 95.5% occupied today but a Belk or Staples box going dark moves the non-anchor math quickly.",
+          "America's Best has a one-time right to terminate if sales are not over $1.1MM by lease Year 6 (~5/2028) - $89,775 of base rent - and the OM discloses no tenant sales anywhere, so the risk cannot be sized.",
+          "No asking price and no cap rate are disclosed, so going-in yield and basis cannot be tested against the comp set.",
+          "Four of nine roof sections are out of or losing warranty (two 2009 sections with no warranty, one 2020 section with no warranty, two 2013 sections expiring 2028) and no section areas or condition report are provided.",
+          "Real estate taxes of $439,170 come from BCA's internal SC reassessment calculator, not an assessor's bill - South Carolina reassesses on an assessable transfer of interest and the post-sale bill needs to be modeled independently."
+        ]
+      },
+      "upsideItems": [
+        {
+          "priority": "high",
+          "item": "Lease the 11,678 SF former Belk annex",
+          "detail": "The center's only vacancy. BCA underwrites a 10-year lease at $13.00/SF NNN + mgmt with 3% annual bumps - about $151,814 of gross revenue, roughly 7% on top of in-place NOI. Confirm the annex's frontage, depth and demisability before crediting the full market rent."
+        },
+        {
+          "priority": "high",
+          "item": "Staples mark-to-market on the 6/2031 expiry",
+          "detail": "21,863 SF at $8.50/SF with NO renewal options against a BCA market rent of $18.00/SF - roughly $207,700 of annual lift if achieved. The absence of options is what makes this capturable rather than theoretical, but it is also an unprotected rollover: model both re-leasing at market and losing the box."
+        },
+        {
+          "priority": "high",
+          "item": "Belk contractual rent step, April 2029",
+          "detail": "Belk steps from $3.26/SF to $6.00/SF on 04/01/2029, adding about $226,076 of base rent with no leasing cost, no downtime and no negotiation - the single most certain piece of NOI growth in the deal."
+        },
+        {
+          "priority": "medium",
+          "item": "Rack Room Shoes mark-to-market on the 1/2029 expiry",
+          "detail": "6,250 SF at $11.02/SF with no options against a $20.00/SF market rent - about $56,100 of lift. The nearest-term rollover in the center, and the same tenant that carries the only true single-anchor co-tenancy on Belk."
+        },
+        {
+          "priority": "medium",
+          "item": "7Brew outparcel spin-off",
+          "detail": "The 510 SF 7Brew drive-thru sits on a fresh 15-year ground lease at $80,000/yr with 10% steps in Years 6 and 11 and six 5-year options. A separable single-tenant net-lease asset that typically trades at a materially tighter cap rate than the center - an immediate partial-basis recovery."
+        },
+        {
+          "priority": "medium",
+          "item": "Contractual steps already embedded across the shop space",
+          "detail": "Nine tenants carry dated increases within the hold - Hobby Lobby to $6.00 (2/2028), Pet Supplies Plus +10% (6/2029), America's Best +10% (5/2027), Bath & Body Works +10% (12/2029), Classic Jewelers +3%/yr, Dry Cleaners +3%/yr, Uptown Cheapskate +2.5%/yr and 7Brew +10% in Year 6 - so a meaningful part of the growth curve is contractual rather than speculative."
+        },
+        {
+          "priority": "low",
+          "item": "Recovery structure is landlord-favourable",
+          "detail": "Most leases are PRS TICAM with 10-15% CAM admin loads and management fees inside CAM; recoveries run $630,212 against $738,186 of operating expenses, an 85% recovery ratio on in-place occupancy that should improve as the annex leases up."
+        }
+      ],
+      "redFlags": [
+        {
+          "severity": "high",
+          "description": "ROLLOVER CONCENTRATION - HomeGoods (10/31/2030), Ross (1/31/2031), Five Below (1/31/2031), Ulta (2/28/2031) and Staples (6/30/2031) all expire within nine months: 84,585 SF and $1,042,317 of base rent, 46% of the center's income. Four of the five have options, but a coordinated non-renewal or a hard negotiation across that window is the deal's dominant re-leasing exposure."
+        },
+        {
+          "severity": "high",
+          "description": "BELK ANCHOR DEPENDENCY - 82,632 SF (31.5% of GLA) on a 1998 department-store lease at $3.26/SF running to 3/2034, with a go-dark clause and a single 5-year option at $9.00/SF that sits ABOVE BCA's own $6.75/SF market rent for the box. Belk is the named store in five of the six disclosed co-tenancy clauses and the sole trigger for Rack Room Shoes. Diligence the credit, store-level sales and any relocation/downsizing discussions."
+        },
+        {
+          "severity": "medium",
+          "description": "CO-TENANCY IS OM-SUMMARY ONLY AND CARRIES NO DISCLOSED REMEDY - all six clauses come from rent-roll footnotes, never an executed lease, and none discloses an alternate-rent percentage, rent-reduction percentage, relief period or termination notice window. $1,015,131 of base rent sits behind clauses whose consequences are unknown. Pull the HomeGoods, Ross, Ulta, Five Below, America's Best and Rack Room leases before underwriting any of it."
+        },
+        {
+          "severity": "medium",
+          "description": "STANDALONE OCCUPANCY PRONGS - Ross's co-tenancy has a separate '>65% of Center GLA occupied' requirement and Rack Room's has a separate '75% occupancy of non-anchor floor area' landlord covenant. Both stand alone from the named-anchor tests and are the more realistic near-term triggers: at 95.5% occupied there is headroom today, but Belk (31.5% of GLA) going dark plus the existing 11,678 SF vacancy would put the center at roughly 64% occupied and trip Ross's prong on its own."
+        },
+        {
+          "severity": "medium",
+          "description": "AMERICA'S BEST SALES KICKOUT - one-time right to terminate if sales are not over $1.1MM by lease Year 6 (~5/2028), putting $89,775 of base rent at risk inside a normal hold. The OM discloses NO tenant sales for any tenant, so the threshold cannot be tested. Request sales reporting and the executed lease."
+        },
+        {
+          "severity": "medium",
+          "description": "NO PRICE AND NO CAP RATE DISCLOSED - the OM markets a growth story (6.28% 7-year CAGR) without a going-in yield. Basis cannot be tested against the comp set or against the $8.98/SF in-place rent until pricing guidance is given."
+        },
+        {
+          "severity": "medium",
+          "description": "PRO-FORMA NOI GROWTH - the headline 53% NOI increase by Year 8 depends on leasing the 11,678 SF annex at $13.00/SF, re-leasing Staples at $18.00 and Rack Room at $20.00, and all renewal options being exercised (BCA states the analysis assumes exactly that). In-place NOI is $2,153,020."
+        },
+        {
+          "severity": "medium",
+          "description": "ROOF CAPITAL NOT SIZEABLE FROM THE OM - two 2009 sections carry no warranty, one 2020 section carries no warranty and two 2013 sections lose coverage in 2028. Section AREAS and any condition assessment are absent, so no reserve can be sized. Order a roof consultant's report."
+        },
+        {
+          "severity": "medium",
+          "description": "SOUTH CAROLINA REASSESSMENT ON SALE - the $439,170 tax line comes from BCA's internal reassessment calculator, not an assessor's bill. SC reassesses on an assessable transfer of interest at a 6% commercial ratio, with a 25% ATI exemption available only on timely application. Model the post-sale bill independently before crediting the projected expense."
+        },
+        {
+          "severity": "low",
+          "description": "1968 vintage - the center was built in 1968 with renovations in 1997 and 2021. Confirm what the 2021 work actually covered (facade, parking field, MEP) and what deferred maintenance sits behind it."
+        },
+        {
+          "severity": "low",
+          "description": "STORAGE-ROW ATTRIBUTION - the site plan footnotes the 1,350 SF storage space against Uptown Cheapskate while the rent roll labels it 'Bath & Body Works Storage'. The storage lease dates match Uptown Cheapskate exactly (06/01/2026-09/30/2036) and not Bath & Body Works. $5,400 of rent, so immaterial to value, but confirm which tenant holds it."
+        },
+        {
+          "severity": "low",
+          "description": "THREE CAM-ONLY OUTPARCELS - Panda Express, Chipotle and BC/BS appear on the rent roll with a fixed CAM contribution and NO square footage, dates or base rent, and are absent from the site plan roster. Carried as NAP; confirm whether any are ground-leased parcels the seller actually owns, which would change the income and the GLA."
+        }
+      ],
+      "shadowAnchors": null,
+      "fieldCitations": {
+        "noi": "p.14 - Cash Flow, Year 1 'Existing' column ($2,153,020); corroborated on p.3 Property Details",
+        "effectiveGrossIncome": "p.14 - Cash Flow, Year 1 'Existing' Effective Gross Revenue",
+        "operatingExpenses": "p.14 - Cash Flow, Year 1 'Existing' Total Operating Expenses; detail on p.15",
+        "grossPotentialRent": "Computed - roll-up of the 16 rent-paying suites on the p.11-13 Rent Roll",
+        "totalSF": "p.3 Property Details and p.13 Rent Roll footer ('TOTAL GLA 262,303')",
+        "occupancy": "Computed from the p.11-13 Rent Roll (250,625 occupied / 262,303 GLA); OM states 95% on p.3",
+        "walt": "Computed - SF-weighted lease expiry from the p.11-13 Rent Roll, as of 12/01/2026",
+        "weightedAvgRentPSF": "Computed - SF-weighted rent PSF from the p.11-13 Rent Roll",
+        "tenants": "pp.11-13 Rent Roll (as of Dec. 1, 2026); cross-checked to the p.6 Site Plan tenant roster",
+        "leaseRisk": "pp.11-12 Rent Roll co-tenancy / go-dark / termination footnotes",
+        "trafficCountVPD": "p.4 Location Overview ('Calhoun Memorial Hwy | 41,100 VPD')",
+        "population3mi": "p.23 Surrounding Demographics, 2025 Population, 3-mile",
+        "avgHHIncome3mi": "p.23 Surrounding Demographics, 2025 Average Household Income, 3-mile",
+        "yearBuilt": "p.3 Property Details ('YEAR BUILT / RENOV. 1968 / 1997 / 2021')",
+        "lotSizeAcres": "p.3 Property Details ('TOTAL LAND SIZE 16.8 AC')",
+        "currentAnnualTaxes": "p.14/p.15 - Real Estate Taxes line, BCA internal SC reassessment calculator",
+        "roofData": "p.7 Roof Report",
+        "cashFlowProjection": "p.14 Cash Flow (10-year)"
+      }
+    }
+  ]
+}

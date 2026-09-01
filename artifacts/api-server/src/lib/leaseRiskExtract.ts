@@ -13,6 +13,15 @@
 export interface TriggerCondition {
   type: string;
   anchor?: string | null;
+  // for "anchor_count_below" ("X of N" co-tenancy): the FULL named list and how many
+  // must stay open. The clause fails only when fewer than openRequired stay open —
+  // i.e. when (anchors.length − openRequired + 1) of them go dark. Losing ONE named
+  // store does NOT trip it (unless openRequired === anchors.length). These fields
+  // MUST survive normalisation: dropping them silently collapses an X-of-N clause
+  // into a per-anchor trigger and massively overstates single-anchor exposure.
+  anchors?: string[] | null;
+  openRequired?: number | null;
+  totalNamed?: number | null;
   scope?: string | null;
   direction?: "above" | "below" | null;
   pct?: number | null;
@@ -86,7 +95,7 @@ Return ONLY a single valid JSON object, no markdown:
       "coTenancy": [
         {
           "type": "opening|operating",
-          "triggerLogic": <AND/OR tree>,   // branch = {"operator":"AND|OR","conditions":[...]}; leaf = {"type":"named_anchor_dark","anchor":"Target"} or {"type":"occupancy_threshold","scope":"Center GLA","direction":"below","pct":80}. Encode EXACTLY what the clause says and preserve which anchors are named. A "fewer than N of {A,B,C} open" requirement = an OR of every AND-pair of those anchors going dark.
+          "triggerLogic": <AND/OR tree>,   // branch = {"operator":"AND|OR","conditions":[...]}; leaf = {"type":"named_anchor_dark","anchor":"Target"} or {"type":"occupancy_threshold","scope":"Center GLA","direction":"below","pct":80}. Encode EXACTLY what the clause says and preserve which anchors are named. See the CO-TENANCY TRIGGER FIDELITY rules below — an "X of N" requirement is NEVER a per-anchor trigger.
           "remedy": {"mechanism":"alternate_rent_pct_sales|percent_rent_reduction|fixed_reduction","value":<number>,"cap":"string or null","additionalRentTreatment":"tenant_continues|swept|unknown"},
           "reliefPeriodMonthsBeforeTermination": <number or null>,
           "terminationNoticeDays": <number or null>,
@@ -108,6 +117,14 @@ Return ONLY a single valid JSON object, no markdown:
     }
   ]
 }
+
+CO-TENANCY TRIGGER FIDELITY — the single most important thing about a co-tenancy clause is WHAT ACTUALLY TRIPS IT. Getting this wrong by one word turns a benign clause into a fake headline risk. Match the clause to one of these three shapes:
+ 1. "ANY named tenant" ("Tenant gets relief if ANY of the following ceases to operate", or a list of exactly ONE named store) -> losing that ONE anchor DOES trip it. Encode as {"type":"named_anchor_dark","anchor":"Belk"}, OR'd together when several anchors each trip it alone.
+ 2. "X of N" ("2 of the following must be open and operating: i) Hobby Lobby ii) Belk iii) Ross", "at least 7 of these 10 Key Stores", "3 of the following") -> encode as ONE leaf {"type":"anchor_count_below","anchors":[<the FULL named list>],"openRequired":X,"totalNamed":N}. Losing ONE named store does NOT trip it — it trips only when (N − X + 1) of them go dark. NEVER model an X-of-N as an OR of per-anchor triggers; that is the most damaging error in this whole extraction and it massively overstates single-anchor exposure.
+   - If a slot in the list is itself compound ("iii) EITHER Ross or Ulta"), that slot fails only when BOTH are dark. Expand the clause into an explicit OR of AND-branches over named_anchor_dark leaves so every named anchor is evaluated, rather than inventing a combined "Ross or Ulta" anchor name.
+ 3. "Occupancy threshold" ("below 75% of GLA occupied", "landlord must maintain 75% occupancy of the non-anchor floor area") -> encode as {"type":"occupancy_threshold","scope":"Center GLA"|"non-anchor floor area","direction":"below","pct":75}. There is NO named anchor here — do not invent one.
+A single clause often has BOTH a named-anchor prong AND a standalone occupancy prong (e.g. "2 of {A,B,C} open" PLUS "center must stay above 65% occupied"). Those are SEPARATE, independent triggers — OR them together, never fold the occupancy percentage into the anchor count.
+Always carry the exact verbatim clause text in verbatimQuote so the structure can be audited.
 
 RULES:
 - Include a tenant entry ONLY if it actually has at least one disclosed clause. Omit tenants the OM is silent on (they are handled downstream as "pull leases").
@@ -138,6 +155,15 @@ export function coerceTriggerNode(raw: unknown): TriggerNode | null {
   if (typeof o.type === "string" && o.type.trim()) {
     const leaf: TriggerCondition = { type: o.type.trim() };
     if (o.anchor != null) leaf.anchor = str(o.anchor);
+    // Preserve the "X of N" shape. Without this an anchor_count_below leaf loses its
+    // named list and count and degrades into a bare per-anchor trigger downstream.
+    if (Array.isArray(o.anchors)) {
+      const list = o.anchors.map(str).filter((a): a is string => !!a);
+      if (list.length) leaf.anchors = list;
+    }
+    const req = num(o.openRequired); if (req != null) leaf.openRequired = req;
+    const tot = num(o.totalNamed); if (tot != null) leaf.totalNamed = tot;
+    if (leaf.anchors && leaf.totalNamed == null) leaf.totalNamed = leaf.anchors.length;
     if (o.scope != null) leaf.scope = str(o.scope);
     if (o.direction === "above" || o.direction === "below") leaf.direction = o.direction;
     const p = num(o.pct); if (p != null) leaf.pct = p;

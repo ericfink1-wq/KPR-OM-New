@@ -188,3 +188,56 @@ describe("summarizeLeaseRisk (narrative input)", () => {
     expect(summarizeLeaseRisk({ tenants: [] }, [])).toBe("");
   });
 });
+
+// REGRESSION (Town N' Country, BCA): an "X of N" co-tenancy ("2 of the following
+// must be open and operating") was being flattened into an OR of per-anchor
+// triggers because coerceTriggerNode silently dropped anchors/openRequired/
+// totalNamed. That turned a clause needing TWO dark anchors into one that trips on
+// a single anchor, and overstated Belk's Tier-1 exposure at Town N' Country by
+// ~15x ($1,015,131 across 6 tenants vs the true $68,875 on 1 tenant).
+describe("coerceTriggerNode — X-of-N co-tenancy", () => {
+  it("preserves anchors / openRequired / totalNamed on an anchor_count_below leaf", () => {
+    const node = coerceTriggerNode({
+      type: "anchor_count_below",
+      anchors: ["Belk", "Hobby Lobby", "HomeGoods", "Ross"],
+      openRequired: 3,
+      totalNamed: 4,
+    }) as Record<string, unknown>;
+    expect(node).toBeTruthy();
+    expect(node.type).toBe("anchor_count_below");
+    expect(node.anchors).toEqual(["Belk", "Hobby Lobby", "HomeGoods", "Ross"]);
+    expect(node.openRequired).toBe(3);
+    expect(node.totalNamed).toBe(4);
+  });
+
+  it("defaults totalNamed to the named-list length when the model omits it", () => {
+    const node = coerceTriggerNode({
+      type: "anchor_count_below",
+      anchors: ["HomeGoods", "Hobby Lobby", "Belk"],
+      openRequired: 2,
+    }) as Record<string, unknown>;
+    expect(node.totalNamed).toBe(3);
+  });
+
+  it("keeps an X-of-N leaf intact when OR'd with a standalone occupancy prong", () => {
+    const node = coerceTriggerNode({
+      operator: "OR",
+      conditions: [
+        { type: "anchor_count_below", anchors: ["HomeGoods", "Hobby Lobby", "Belk"], openRequired: 2, totalNamed: 3 },
+        { type: "occupancy_threshold", scope: "Center GLA", direction: "below", pct: 65 },
+      ],
+    }) as { operator: string; conditions: Array<Record<string, unknown>> };
+    expect(node.operator).toBe("OR");
+    expect(node.conditions).toHaveLength(2);
+    expect(node.conditions[0].anchors).toEqual(["HomeGoods", "Hobby Lobby", "Belk"]);
+    expect(node.conditions[0].openRequired).toBe(2);
+    expect(node.conditions[1].pct).toBe(65);
+  });
+
+  it("leaves a genuine single-anchor trigger untouched", () => {
+    const node = coerceTriggerNode({ type: "named_anchor_dark", anchor: "Belk" }) as Record<string, unknown>;
+    expect(node.anchor).toBe("Belk");
+    expect(node.anchors).toBeUndefined();
+    expect(node.openRequired).toBeUndefined();
+  });
+});
