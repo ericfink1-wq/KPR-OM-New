@@ -1,41 +1,56 @@
 // Global search ranking — pure, so the ORDER Eric asked for is pinned by tests
 // rather than by whoever last edited the component.
 //
-// Three result kinds, ranked deliberately:
-//   1. DEAL   — the property itself; always the most specific thing you can open.
-//   2. PARENT — a company that owns brands in the library (TJX, Ahold Delhaize).
-//               It is a roll-up of many tenant rows, so it outranks any single one,
-//               but never a named property.
-//   3. TENANT — one brand at one center.
-// A parent has no row of its own in any table (it's derived from the roster via the
-// curated PARENT_COMPANIES map), so unless it is indexed here it can never be found
-// by search at all — which is exactly the gap this closes.
+// Four result kinds, ranked deliberately from most-specific to broadest, with the
+// per-property rows LAST because they are the noisiest (one per center):
+//   1. DEAL     — the property itself.
+//   2. TENANT   — the brand's roll-up page ("Lowes Foods across 11 properties").
+//                 This is the page you actually want when you type a retailer's
+//                 name, so it sits directly under the deals.
+//   3. PARENT   — the holdco above the brand (TJX, Ahold Delhaize).
+//   4. LOCATION — that brand at ONE center; opens that deal.
+// Neither the brand roll-up nor the parent has a row of its own in any table (both
+// are derived from the roster), so unless they are indexed here they cannot be
+// reached by search at all — which is exactly the gap this closes.
 import type { Deal } from "./idb";
 import { isVacant, isNAPTenant, parentCompany, tenantLabel, tenantKey } from "./utils";
 
 export interface DealHit { kind: "deal"; dealId: string; title: string; sub: string; where: string }
+export interface TenantPageHit { kind: "tenantPage"; tenantName: string; title: string; sub: string; where: string }
 export interface ParentHit { kind: "parent"; parentName: string; title: string; sub: string; where: string }
-export interface TenantHit { kind: "tenant"; dealId: string; title: string; sub: string; where: string }
-export type Hit = DealHit | ParentHit | TenantHit;
+export interface LocationHit { kind: "location"; dealId: string; title: string; sub: string; where: string }
+export type Hit = DealHit | TenantPageHit | ParentHit | LocationHit;
 
 export const MIN_QUERY = 2;
-const MAX_DEALS = 30, MAX_PARENTS = 12, MAX_TENANTS = 40;
+const MAX_DEALS = 30, MAX_BRANDS = 12, MAX_PARENTS = 8, MAX_LOCATIONS = 40;
 
 function s(v: unknown): string { return typeof v === "string" ? v : v == null ? "" : String(v); }
+
+/** "11 properties · NC, SC" — breadth first, then where. */
+function spread(nDeals: number, states: Set<string>): string {
+  const st = [...states].filter(Boolean).sort();
+  const where = st.length ? ` · ${st.slice(0, 3).join(", ")}${st.length > 3 ? ` +${st.length - 3}` : ""}` : "";
+  return `${nDeals} ${nDeals === 1 ? "property" : "properties"}${where}`;
+}
 
 export function buildSearchHits(deals: Deal[], query: string): Hit[] {
   const needle = query.trim().toLowerCase();
   if (needle.length < MIN_QUERY) return [];
 
   const dealHits: DealHit[] = [];
-  const tenantHits: TenantHit[] = [];
-  // parentKey -> { display name, brand label by tenantKey, distinct deal ids }
-  const parents = new Map<string, { name: string; brands: Map<string, string>; deals: Set<string> }>();
+  const locationHits: LocationHit[] = [];
+  // tenantKey -> the brand roll-up behind the tenant overview page
+  const brands = new Map<string, {
+    label: string; nav: string; aliases: Set<string>; deals: Set<string>; states: Set<string>;
+  }>();
+  // parentKey -> the holdco roll-up
+  const parents = new Map<string, { name: string; brands: Map<string, string>; deals: Set<string>; states: Set<string> }>();
 
   for (const d of deals) {
     if (d.trashedAt) continue;
     const name = s(d.propertyName) || s(d.address) || "Untitled deal";
     const loc = [s(d.city), s(d.state)].filter(Boolean).join(", ");
+    const st = s(d.state).toUpperCase();
 
     const dealHay = [d.propertyName, d.address, d.city, d.state, d.market, d.notes, d.dealThesis, d.dealReview, d.assetType, d.centerType]
       .map(s).join(" ").toLowerCase();
@@ -46,59 +61,83 @@ export function buildSearchHits(deals: Deal[], query: string): Hit[] {
     const seen = new Set<string>();
     for (const t of d.tenants || []) {
       if (!t || isVacant(t.name) || isNAPTenant(t)) continue;
-      const brand = s(t.canonicalName || t.name);
-      if (!brand) continue;
+      const raw = s(t.canonicalName || t.name);
+      if (!raw) continue;
 
-      // one tenant row per brand per center
-      const k = brand.toLowerCase();
-      if (!seen.has(k) && k.includes(needle)) {
-        seen.add(k);
-        tenantHits.push({ kind: "tenant", dealId: d.id, title: brand, sub: `in ${name}`, where: "Tenant" });
+      // ── brand roll-up (the tenant overview page) ──────────────────────────────
+      // Keyed exactly as TenantView keys itself, and navigated with a raw name from
+      // the group, so the page opens on the same set of rows we counted here.
+      const bk = tenantKey(raw);
+      if (bk) {
+        let b = brands.get(bk);
+        if (!b) { b = { label: tenantLabel(raw, t.canonicalName), nav: raw, aliases: new Set(), deals: new Set(), states: new Set() }; brands.set(bk, b); }
+        b.aliases.add(s(t.name).toLowerCase());
+        b.aliases.add(raw.toLowerCase());
+        b.deals.add(d.id);
+        if (st) b.states.add(st);
       }
 
-      // Index every brand under its parent regardless of whether the brand itself
-      // matched — searching "tjx" must find HomeGoods' parent even though no tenant
-      // is literally named "TJX".
+      // ── this brand at THIS center ────────────────────────────────────────────
+      const k = raw.toLowerCase();
+      if (!seen.has(k) && k.includes(needle)) {
+        seen.add(k);
+        locationHits.push({ kind: "location", dealId: d.id, title: raw, sub: `in ${name}`, where: "Location" });
+      }
+
+      // ── holdco roll-up ───────────────────────────────────────────────────────
+      // Indexed regardless of whether the brand matched, so "tjx" finds HomeGoods'
+      // parent even though no tenant is literally named TJX.
       const parent = parentCompany(t.name, t.parentCompany);
       if (!parent) continue;
       const pk = parent.toLowerCase();
-      let entry = parents.get(pk);
-      if (!entry) { entry = { name: parent, brands: new Map(), deals: new Set() }; parents.set(pk, entry); }
-      entry.brands.set(tenantKey(brand), tenantLabel(brand, t.canonicalName));
-      entry.deals.add(d.id);
+      let p = parents.get(pk);
+      if (!p) { p = { name: parent, brands: new Map(), deals: new Set(), states: new Set() }; parents.set(pk, p); }
+      p.brands.set(bk, tenantLabel(raw, t.canonicalName));
+      p.deals.add(d.id);
+      if (st) p.states.add(st);
     }
+  }
+
+  const brandHits: TenantPageHit[] = [];
+  for (const b of brands.values()) {
+    const hay = [b.label.toLowerCase(), ...b.aliases];
+    if (!hay.some(h => h.includes(needle))) continue;
+    brandHits.push({
+      kind: "tenantPage", tenantName: b.nav, title: b.label, where: "Tenant",
+      sub: spread(b.deals.size, b.states),
+    });
   }
 
   const parentHits: ParentHit[] = [];
   for (const p of parents.values()) {
-    const brands = [...p.brands.values()];
+    const brandList = [...p.brands.values()];
     const nameMatch = p.name.toLowerCase().includes(needle);
-    const matchedBrands = brands.filter(b => b.toLowerCase().includes(needle));
-    if (!nameMatch && matchedBrands.length === 0) continue;
+    const matched = brandList.filter(x => x.toLowerCase().includes(needle));
+    if (!nameMatch && matched.length === 0) continue;
     // Lead the subtitle with the brands that actually matched — that's what was typed.
-    const pool = matchedBrands.length ? matchedBrands : brands;
-    const shown = pool.slice(0, 4);
+    const pool = matched.length ? matched : brandList;
+    const shown = pool.slice(0, 3);
     const more = pool.length - shown.length;
-    const n = p.deals.size;
     parentHits.push({
       kind: "parent", parentName: p.name, title: p.name, where: "Parent",
-      sub: `${shown.join(", ")}${more > 0 ? ` +${more} more` : ""} · ${n} ${n === 1 ? "property" : "properties"}`,
+      sub: `${shown.join(", ")}${more > 0 ? ` +${more}` : ""} · ${spread(p.deals.size, p.states)}`,
     });
   }
-  // A parent matched by its OWN name outranks one reached only through a brand;
-  // ties break on breadth (more properties = more relevant), then name for stability.
-  parentHits.sort((a, b) => {
-    const ax = a.title.toLowerCase().includes(needle) ? 0 : 1;
-    const bx = b.title.toLowerCase().includes(needle) ? 0 : 1;
-    if (ax !== bx) return ax - bx;
-    const an = Number(a.sub.match(/(\d+) propert/)?.[1] ?? 0);
-    const bn = Number(b.sub.match(/(\d+) propert/)?.[1] ?? 0);
-    return bn - an || a.title.localeCompare(b.title);
-  });
+
+  // Within a tier: something whose NAME starts with what you typed beats a mere
+  // substring, then breadth (more properties = more likely what you meant).
+  const rank = <T extends { title: string; sub: string }>(a: T, b: T) => {
+    const t = (x: T) => x.title.toLowerCase().startsWith(needle) ? 0 : x.title.toLowerCase().includes(needle) ? 1 : 2;
+    const n = (x: T) => Number(x.sub.match(/(\d+) propert/)?.[1] ?? 0);
+    return t(a) - t(b) || n(b) - n(a) || a.title.localeCompare(b.title);
+  };
+  brandHits.sort(rank);
+  parentHits.sort(rank);
 
   return [
     ...dealHits.slice(0, MAX_DEALS),
+    ...brandHits.slice(0, MAX_BRANDS),
     ...parentHits.slice(0, MAX_PARENTS),
-    ...tenantHits.slice(0, MAX_TENANTS),
+    ...locationHits.slice(0, MAX_LOCATIONS),
   ];
 }

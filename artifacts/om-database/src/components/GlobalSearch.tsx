@@ -8,9 +8,19 @@ interface Props {
   onClose: () => void;
   onOpenDeal: (dealId: string) => void;
   onOpenParent: (parentName: string) => void;
+  onOpenTenantPage: (tenantName: string) => void;
 }
 
-export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenParent }: Props) {
+// One tone per result tier, so Deal / Tenant / Parent / Location are separable
+// without reading the label.
+const BADGE: Record<Hit["kind"], { color: string; background: string }> = {
+  deal:       { color: "#3f7a1f", background: "#eef5e6" },
+  tenantPage: { color: "#9a6a12", background: "#fff3df" },
+  parent:     { color: "#6b4fa0", background: "#f2eefa" },
+  location:   { color: "#7d766a", background: "#f3efe7" },
+};
+
+export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenParent, onOpenTenantPage }: Props) {
   const [q, setQ] = useState("");
   // Keyboard-highlighted row, navigable with ↑/↓ before pressing Enter.
   const [sel, setSel] = useState(0);
@@ -31,6 +41,7 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenP
 
   const go = (h: Hit) => {
     if (h.kind === "parent") onOpenParent(h.parentName);
+    else if (h.kind === "tenantPage") onOpenTenantPage(h.tenantName);
     else onOpenDeal(h.dealId);
     onClose();
   };
@@ -52,7 +63,7 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenP
             value={q}
             onChange={e => setQ(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search deals, parent companies, tenants, markets…"
+            placeholder="Search deals, tenants, parent companies, markets…"
             style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#2a2c28", background: "transparent" }}
           />
           <button onClick={onClose} style={{ border: "none", background: "transparent", color: "#a89f8f", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
@@ -60,16 +71,16 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenP
 
         <div style={{ overflowY: "auto" }}>
           {q.trim().length < MIN_QUERY ? (
-            <div style={{ padding: "22px 16px", fontSize: 12.5, color: "#a89f8f" }}>Type at least two letters. Searches property names, addresses, markets, parent companies, tenants, and your notes.</div>
+            <div style={{ padding: "22px 16px", fontSize: 12.5, color: "#a89f8f" }}>Type at least two letters. Searches property names, addresses, markets, tenants and their parent companies, and your notes.</div>
           ) : hits.length === 0 ? (
             <div style={{ padding: "22px 16px", fontSize: 13, color: "#a89f8f" }}>No matches for “{q.trim()}”.</div>
           ) : (
             hits.map((h, i) => (
-              <button key={`${h.kind}-${h.kind === "parent" ? h.parentName : h.dealId}-${i}`} onClick={() => go(h)}
+              <button key={`${h.kind}-${h.kind === "parent" ? h.parentName : h.kind === "tenantPage" ? h.tenantName : h.dealId}-${i}`} onClick={() => go(h)}
                 ref={i === sel ? selRef : undefined}
                 onMouseEnter={() => setSel(i)}
                 style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: i === sel ? "#f4f0e8" : "transparent", border: "none", borderBottom: "1px solid #f6f1e7", borderLeft: `3px solid ${i === sel ? "#3f7a1f" : "transparent"}`, padding: "11px 16px 11px 13px", cursor: "pointer" }}>
-                <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: h.kind === "deal" ? "#3f7a1f" : h.kind === "parent" ? "#6b4fa0" : "#9a6a12", background: h.kind === "deal" ? "#eef5e6" : h.kind === "parent" ? "#f2eefa" : "#fff3df", borderRadius: 5, padding: "3px 7px", minWidth: 52, textAlign: "center" }}>
+                <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", ...BADGE[h.kind], borderRadius: 5, padding: "3px 7px", minWidth: 58, textAlign: "center" }}>
                   {h.where}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
