@@ -17,7 +17,7 @@ interface Props {
   onOpenDeal: (d: Deal) => void;
 }
 
-type SortKey = "property" | "brand" | "market" | "sf" | "rentPSF" | "annualRent" | "expiry" | "salesPSF";
+type SortKey = "property" | "brand" | "market" | "sf" | "rentPSF" | "annualRent" | "start" | "expiry" | "salesPSF";
 
 export default function ParentCompanyView({ parentName, deals, onBack, onTenantClick, onOpenDeal }: Props) {
   const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
@@ -30,7 +30,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
 
   const setSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
-    else { setSortKey(k); setSortDir(["property","brand","market","expiry"].includes(k) ? "asc" : "desc"); }
+    else { setSortKey(k); setSortDir(["property","brand","market","start","expiry"].includes(k) ? "asc" : "desc"); }
   };
   const arrow = (k: SortKey) => sortKey !== k ? "" : sortDir === "desc" ? " ▼" : " ▲";
 
@@ -79,6 +79,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
         case "sf":         av = num(a.t.sf); bv = num(b.t.sf); break;
         case "rentPSF":    av = num(a.t.rentPerSF); bv = num(b.t.rentPerSF); break;
         case "annualRent": av = num(a.t.annualRent); bv = num(b.t.annualRent); break;
+        case "start":      av = a.t.leaseStart || ""; bv = b.t.leaseStart || ""; break;
         case "expiry":     av = a.t.leaseExpiry || ""; bv = b.t.leaseExpiry || ""; break;
         case "salesPSF":   av = effSales(a); bv = effSales(b); break;
         default: av = null; bv = null;
@@ -147,6 +148,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     ["sf",         "SF",        true],
     ["rentPSF",    "Rent/SF",   true],
     ["annualRent", "Ann. Rent", true],
+    ["start",      "Start",     false],
     ["expiry",     "Expiry",    false],
     ["salesPSF",   "Sales/SF",  true],
   ];
@@ -266,6 +268,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{fmtUSD(r.t.annualRent)}</td>
+                        <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseStart)}</td>
                         <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtTenantSales(effSales(r), r.t.sf)}</td>
                       </tr>

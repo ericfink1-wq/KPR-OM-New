@@ -48,7 +48,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const salesByDeal = useMemo(() => buildSalesByDeal(deals || []), [deals]);
   const effSales = (r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }) => resolveSalesPSF(salesByDeal, r.deal, r.t);
 
-  type SortKey = "property"|"recorded"|"market"|"sf"|"rentPSF"|"annualRent"|"expiry"|"salesPSF"|"reimbursement";
+  type SortKey = "property"|"recorded"|"market"|"sf"|"rentPSF"|"annualRent"|"start"|"expiry"|"salesPSF"|"reimbursement";
   const [sortKey, setSortKey] = useState<SortKey>("annualRent");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [scope, setScope] = useState<"all"|"owned">("all");
@@ -97,7 +97,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
 
   const setSort = (k: SortKey) => {
     if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
-    else { setSortKey(k); setSortDir(["property","market","expiry","reimbursement"].includes(k) ? "asc" : "desc"); }
+    else { setSortKey(k); setSortDir(["property","market","start","expiry","reimbursement"].includes(k) ? "asc" : "desc"); }
   };
 
   const val = (r: typeof rows[number], k: SortKey) => {
@@ -108,6 +108,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
       case "sf":            return num(r.t.sf);
       case "rentPSF":       return num(r.t.rentPerSF);
       case "annualRent":    return num(r.t.annualRent);
+      case "start":         return r.t.leaseStart || "";
       case "expiry":        return r.t.leaseExpiry || "";
       case "salesPSF":      return effSales(r);
       case "reimbursement": return norm(r.t.reimbursementMethod);
@@ -172,7 +173,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const cols: [SortKey, string, boolean][] = [
     ["property","Property",false], ["recorded","Recorded As",false], ["market","Market",false],
     ["sf","SF",true], ["rentPSF","Rent/SF",true], ["annualRent","Ann. Rent",true],
-    ["expiry","Expiry",false], ["salesPSF","Sales",true], ["reimbursement","Reimb.",false],
+    ["start","Start",false], ["expiry","Expiry",false], ["salesPSF","Sales",true], ["reimbursement","Reimb.",false],
   ];
 
   const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
@@ -372,6 +373,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>{num(r.t.sf) != null ? num(r.t.sf)!.toLocaleString() : "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#0f9d63", fontWeight:500, whiteSpace:"nowrap" }}>{num(r.t.rentPerSF) != null ? `$${num(r.t.rentPerSF)!.toFixed(2)}` : "—"}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{fmtUSD(r.t.annualRent)}</td>
+                        <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseStart)}</td>
                         <td style={{ padding:"9px 10px", color:"#5c5f57", whiteSpace:"nowrap" }}>{fmtLeaseDate(r.t.leaseExpiry)}</td>
                         <td style={{ padding:"9px 10px", textAlign:"right", color:"#5c5f57", whiteSpace:"nowrap" }}>
                           {fmtTenantSales(effSales(r), r.t.sf)}

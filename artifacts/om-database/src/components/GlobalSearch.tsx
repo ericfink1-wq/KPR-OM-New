@@ -1,21 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Deal } from "../lib/idb";
-import { isVacant, isNAPTenant } from "../lib/utils";
+import { buildSearchHits, MIN_QUERY, type Hit } from "../lib/globalSearch";
 
 interface Props {
   open: boolean;
   deals: Deal[];
   onClose: () => void;
   onOpenDeal: (dealId: string) => void;
+  onOpenParent: (parentName: string) => void;
 }
 
-interface DealHit { kind: "deal"; dealId: string; title: string; sub: string; where: string }
-interface TenantHit { kind: "tenant"; dealId: string; title: string; sub: string; where: string }
-type Hit = DealHit | TenantHit;
-
-function s(v: unknown): string { return typeof v === "string" ? v : v == null ? "" : String(v); }
-
-export default function GlobalSearch({ open, deals, onClose, onOpenDeal }: Props) {
+export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenParent }: Props) {
   const [q, setQ] = useState("");
   // Keyboard-highlighted row, navigable with ↑/↓ before pressing Enter.
   const [sel, setSel] = useState(0);
@@ -24,36 +19,7 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal }: Props
 
   useEffect(() => { if (open) { setQ(""); setSel(0); setTimeout(() => inputRef.current?.focus(), 30); } }, [open]);
 
-  const active = useMemo(() => deals.filter(d => !d.trashedAt), [deals]);
-
-  const hits = useMemo<Hit[]>(() => {
-    const needle = q.trim().toLowerCase();
-    if (needle.length < 2) return [];
-    const dealHits: DealHit[] = [];
-    const tenantHits: TenantHit[] = [];
-    for (const d of active) {
-      const name = s(d.propertyName) || s(d.address) || "Untitled deal";
-      const loc = [s(d.city), s(d.state)].filter(Boolean).join(", ");
-      // Deal-level match across the fields an analyst would search by.
-      const dealHay = [d.propertyName, d.address, d.city, d.state, d.market, d.notes, d.dealThesis, d.dealReview, d.assetType, d.centerType]
-        .map(s).join(" ").toLowerCase();
-      if (dealHay.includes(needle)) {
-        dealHits.push({ kind: "deal", dealId: d.id, title: name, sub: [loc, d.status].filter(Boolean).join(" · "), where: "Deal" });
-      }
-      // Tenant matches — one row per matching tenant, pointing at its center.
-      const seen = new Set<string>();
-      for (const t of d.tenants || []) {
-        if (!t || isVacant(t.name) || isNAPTenant(t)) continue;
-        const tn = s(t.canonicalName || t.name);
-        if (!tn) continue;
-        const k = tn.toLowerCase();
-        if (seen.has(k) || !k.includes(needle)) continue;
-        seen.add(k);
-        tenantHits.push({ kind: "tenant", dealId: d.id, title: tn, sub: `in ${name}`, where: "Tenant" });
-      }
-    }
-    return [...dealHits.slice(0, 30), ...tenantHits.slice(0, 40)];
-  }, [q, active]);
+  const hits = useMemo<Hit[]>(() => buildSearchHits(deals, q), [q, deals]);
 
   // Reset the highlight to the top whenever the result set changes, and keep it in
   // range if the list shrinks. Keep the selected row scrolled into view.
@@ -63,13 +29,17 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal }: Props
 
   if (!open) return null;
 
-  const go = (dealId: string) => { onOpenDeal(dealId); onClose(); };
+  const go = (h: Hit) => {
+    if (h.kind === "parent") onOpenParent(h.parentName);
+    else onOpenDeal(h.dealId);
+    onClose();
+  };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") { onClose(); return; }
     if (e.key === "ArrowDown") { e.preventDefault(); if (hits.length) setSel(s => Math.min(s + 1, hits.length - 1)); return; }
     if (e.key === "ArrowUp") { e.preventDefault(); if (hits.length) setSel(s => Math.max(s - 1, 0)); return; }
-    if (e.key === "Enter") { const h = hits[sel] ?? hits[0]; if (h) go(h.dealId); return; }
+    if (e.key === "Enter") { const h = hits[sel] ?? hits[0]; if (h) go(h); return; }
   };
 
   return (
@@ -82,24 +52,24 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal }: Props
             value={q}
             onChange={e => setQ(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search deals, tenants, markets, notes…"
+            placeholder="Search deals, parent companies, tenants, markets…"
             style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#2a2c28", background: "transparent" }}
           />
           <button onClick={onClose} style={{ border: "none", background: "transparent", color: "#a89f8f", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ overflowY: "auto" }}>
-          {q.trim().length < 2 ? (
-            <div style={{ padding: "22px 16px", fontSize: 12.5, color: "#a89f8f" }}>Type at least two letters. Searches property names, addresses, markets, tenants, and your notes.</div>
+          {q.trim().length < MIN_QUERY ? (
+            <div style={{ padding: "22px 16px", fontSize: 12.5, color: "#a89f8f" }}>Type at least two letters. Searches property names, addresses, markets, parent companies, tenants, and your notes.</div>
           ) : hits.length === 0 ? (
             <div style={{ padding: "22px 16px", fontSize: 13, color: "#a89f8f" }}>No matches for “{q.trim()}”.</div>
           ) : (
             hits.map((h, i) => (
-              <button key={`${h.kind}-${h.dealId}-${i}`} onClick={() => go(h.dealId)}
+              <button key={`${h.kind}-${h.kind === "parent" ? h.parentName : h.dealId}-${i}`} onClick={() => go(h)}
                 ref={i === sel ? selRef : undefined}
                 onMouseEnter={() => setSel(i)}
                 style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: i === sel ? "#f4f0e8" : "transparent", border: "none", borderBottom: "1px solid #f6f1e7", borderLeft: `3px solid ${i === sel ? "#3f7a1f" : "transparent"}`, padding: "11px 16px 11px 13px", cursor: "pointer" }}>
-                <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: h.kind === "deal" ? "#3f7a1f" : "#9a6a12", background: h.kind === "deal" ? "#eef5e6" : "#fff3df", borderRadius: 5, padding: "3px 7px", minWidth: 52, textAlign: "center" }}>
+                <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: h.kind === "deal" ? "#3f7a1f" : h.kind === "parent" ? "#6b4fa0" : "#9a6a12", background: h.kind === "deal" ? "#eef5e6" : h.kind === "parent" ? "#f2eefa" : "#fff3df", borderRadius: 5, padding: "3px 7px", minWidth: 52, textAlign: "center" }}>
                   {h.where}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>

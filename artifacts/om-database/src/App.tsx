@@ -777,7 +777,7 @@ function AppInner() {
         onPanelHeightChange={setUploadPanelH}
       />
       <SaveStatusIndicator />
-      <GlobalSearch open={searchOpen} deals={deals} onClose={() => setSearchOpen(false)} onOpenDeal={handleOpenDeal} />
+      <GlobalSearch open={searchOpen} deals={deals} onClose={() => setSearchOpen(false)} onOpenDeal={handleOpenDeal} onOpenParent={name => handleOpenTenant("__parent__" + name)} />
     </div>
   );
 }
