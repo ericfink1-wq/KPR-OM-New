@@ -185,3 +185,82 @@ describe("audit sweep catches deals stored before the fix", () => {
     expect(auditExtraction(stored).find((x) => x.id.startsWith("audit-cotenancy-xofn-"))).toBeUndefined();
   });
 });
+
+// ── the REAL document, not a tidied fixture ─────────────────────────────────────
+// A rent-roll table extracts COLUMN-INTERLEAVED: recovery-method and option-rent
+// text gets glued into each enumerated co-tenancy slot. The first cut of this
+// guardrail passed on hand-cleaned quotes and would have repaired NOTHING on the
+// Town N' Country OM that motivated it. These are verbatim from that PDF's text.
+const RAW = {
+  homeGoods: "Co-Tenancy Requirement: 2 of the following must be open and operating + 15% Admin on CAM & Mgmt Option 2 $11.50 i) Hobby Lobby 3% Non-Cumulative CAM Cap Option 3 $12.00 ii) Belk on Controllables Option 4 $12.50 iii) Either Ross or Ulta (Excludes utilities and snow) Reimburses Tax off 211,985 SF",
+  ross: "Co-Tenancy Requirement: 2 of the following must be open and operating over PY Option 2 $12.45 i) HomeGoods PRS INS/Tax Option 3 $12.95 ii) Hobby Lobby Reimburses Tax off 211,985 SF Option 4 $13.45 iii) Belk Shopping Center Occupancy Requirement: > 65%",
+  ulta: "Co-Tenancy Requirement: 3 of the following must be open and operating Controllables) Option 2 $25.09 i) Belk 3% Non-Cumulative CAM Cap Option 3 $27.60 ii) Hobby Lobby on Controllables iii) HomeGoods Reimburses Tax off 211,985 SF iv) Ross",
+  americasBest: "Co-Tenancy Requirement: 3 of the following must be open and operating 5% Non-Cumulative CAM Cap i) Ross, Hobby Lobby, Ulta, Staples, Belk, and HomeGoods on Cont. Termination Right: If sales are not over $1.1MM by (exc. snow, utilities, and insurance) Year 6 tenant has the one-time right to terminate.",
+  rackRoom: "Co-Tenancy Requirement: The following must be open and operating (excl. Electricity) i) Belk 3% Non-Cumulative CAM Cap Occupancy Requirement: LL must maintain 75% Reimburses Tax off 211,985 SF occupancy on non-anchor floor area",
+};
+
+describe("interleaved rent-roll text (the real document)", () => {
+  it("recovers the count and repairs a 3-of-4 despite column noise in every slot", () => {
+    const t = repairCoTenancyTrigger({ verbatimQuote: RAW.ulta, triggerLogic: orOf("Belk", "Hobby Lobby", "HomeGoods", "Ross") });
+    expect(t.repaired).toBe(true);
+    expect(t.clause.triggerLogic).toMatchObject({
+      type: "anchor_count_below", openRequired: 3, totalNamed: 4,
+      anchors: ["Belk", "Hobby Lobby", "HomeGoods", "Ross"],
+    });
+  });
+
+  it("repairs a 2-of-3 and keeps the >65% occupancy prong separate", () => {
+    const t = repairCoTenancyTrigger({
+      verbatimQuote: RAW.ross,
+      triggerLogic: { operator: "OR" as const, conditions: [
+        { type: "named_anchor_dark", anchor: "HomeGoods" },
+        { type: "named_anchor_dark", anchor: "Hobby Lobby" },
+        { type: "named_anchor_dark", anchor: "Belk" },
+        { type: "occupancy_threshold", scope: "Center GLA", direction: "below", pct: 65 },
+      ] },
+    });
+    const n = t.clause.triggerLogic as { conditions: Array<Record<string, unknown>> };
+    expect(n.conditions[0]).toMatchObject({ type: "anchor_count_below", openRequired: 2, totalNamed: 3 });
+    expect(n.conditions[1]).toMatchObject({ type: "occupancy_threshold", pct: 65 });
+  });
+
+  it("recovers a comma series glued to trailing column text (3 of 6)", () => {
+    const t = repairCoTenancyTrigger({
+      verbatimQuote: RAW.americasBest,
+      triggerLogic: orOf("Ross", "Hobby Lobby", "Ulta", "Staples", "Belk", "HomeGoods"),
+    });
+    expect(t.clause.triggerLogic).toMatchObject({ type: "anchor_count_below", openRequired: 3, totalNamed: 6 });
+  });
+
+  it("expands a compound 'Either Ross or Ulta' slot into explicit AND-branches", () => {
+    const t = repairCoTenancyTrigger({ verbatimQuote: RAW.homeGoods, triggerLogic: orOf("Hobby Lobby", "Belk", "Ross", "Ulta") });
+    expect(t.repaired).toBe(true);
+    const n = t.clause.triggerLogic as { operator: string; conditions: Array<{ conditions?: Array<{ anchor: string }> }> };
+    expect(n.operator).toBe("OR");
+    // 2 of 3 slots must fail => C(3,2) = 3 combinations
+    expect(n.conditions).toHaveLength(3);
+    const combos = n.conditions.map(x => (x.conditions ?? []).map(l => l.anchor).sort().join("+")).sort();
+    expect(combos).toEqual(["Belk+Hobby Lobby", "Belk+Ross+Ulta", "Hobby Lobby+Ross+Ulta"]);
+  });
+
+  it("still leaves the genuine single-anchor clause alone", () => {
+    expect(checkCoTenancyStructure({ verbatimQuote: RAW.rackRoom, triggerLogic: { type: "named_anchor_dark", anchor: "Belk" } }).kind).toBe("ok");
+  });
+
+  it("does NOT match an anchor inside a longer word (Ross vs Crossing)", () => {
+    const v = checkCoTenancyStructure({
+      verbatimQuote: "2 of the following must be open and operating i) Wake Forest Crossing ii) Belk iii) Kohl's",
+      triggerLogic: orOf("Ross", "Belk", "Kohl's"),
+    });
+    expect(v.kind).toBe("mismatch");   // Ross is genuinely absent; never a false 'found'
+  });
+
+  it("flags rather than guesses when a shared slot is joined by AND, not OR", () => {
+    const v = checkCoTenancyStructure({
+      verbatimQuote: "2 of the following must be open and operating i) Hobby Lobby ii) Belk iii) Ross plus Ulta",
+      triggerLogic: orOf("Hobby Lobby", "Belk", "Ross", "Ulta"),
+    });
+    expect(v.kind).toBe("mismatch");
+    if (v.kind === "mismatch") expect(v.compoundSlot).toBe(true);
+  });
+});

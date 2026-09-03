@@ -13,7 +13,7 @@
 // Only fires on genuine CONTRADICTIONS — never on values that are simply absent.
 
 import { normalizeDate } from "./importFixes";
-import { checkCoTenancyStructure, type CoTenancyLike } from "./coTenancyStructure";
+import { checkCoTenancyStructure, isPerAnchorTrigger, collectAnchorLeaves, type CoTenancyLike } from "./coTenancyStructure";
 
 export interface AuditQuestion {
   id: string;
@@ -66,6 +66,7 @@ export function auditCheckKey(id: string): string {
   if (id.startsWith("audit-dupe-tenant-")) return "audit-dupe-tenant";
   if (id.startsWith("audit-remterm-expiry-")) return "audit-remterm-expiry";
   if (id.startsWith("audit-cotenancy-xofn-")) return "audit-cotenancy-xofn";
+  if (id.startsWith("audit-cotenancy-unquoted-")) return "audit-cotenancy-unquoted";
   return id;
 }
 export const AUDIT_CHECK_LABELS: Record<string, string> = {
@@ -102,6 +103,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-remterm-expiry": "Remaining term vs expiry",
   "audit-pop-gradient": "Population vs radius",
   "audit-cotenancy-xofn": "Co-tenancy \"X of N\" read as a single-anchor trigger",
+  "audit-cotenancy-unquoted": "Co-tenancy trigger with no clause text to check",
 };
 
 // SOURCE-LEVEL signal (runs on the raw PDF text BEFORE/alongside the LLM, not the
@@ -842,6 +844,18 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
       const nm = String(t?.tenant ?? "").trim();
       if (!nm) continue;
       for (const clause of t.coTenancy ?? []) {
+        // No quote => the structure check cannot run at all. Say so instead of
+        // letting an unverifiable clause read as a checked one.
+        if (!clause.verbatimQuote && isPerAnchorTrigger(clause.triggerLogic) && collectAnchorLeaves(clause.triggerLogic).length >= 2) {
+          out.push({
+            id: `audit-cotenancy-unquoted-${nm}`.slice(0, 80), source: "check", severity: "medium",
+            field: `${nm} — co-tenancy trigger`,
+            question: `${nm}'s co-tenancy is modeled as several independent single-anchor triggers, but no clause text was captured, so it can't be checked. Confirm whether ANY one anchor going dark trips it or whether it is an "X of N" requirement.`,
+            detail: `The "X of N" structure check reconciles a clause against its own quoted text; with no quote it cannot run. Re-upload the OM (the extraction now captures the clause text) or paste the lease abstract.`,
+            suggestedValue: null, target: null,
+          });
+          continue;
+        }
         const v = checkCoTenancyStructure(clause);
         if (v.kind === "ok") continue;
         const named = v.parsed.named.length ? v.parsed.named.join(", ") : "(list not parsed)";

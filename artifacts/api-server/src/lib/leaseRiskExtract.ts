@@ -9,7 +9,7 @@
 // DB-free on purpose: the model call is injected, so this module is unit-testable
 // with a mocked model and never imports the database layer.
 
-import { repairCoTenancyTrigger, checkCoTenancyStructure } from "./coTenancyStructure";
+import { repairCoTenancyTrigger, checkCoTenancyStructure, isPerAnchorTrigger, collectAnchorLeaves, parseXofN } from "./coTenancyStructure";
 
 // ── lightweight structural types (mirror the client idb.ts shapes) ───────────────
 export interface TriggerCondition {
@@ -539,6 +539,30 @@ export function validateLeaseRiskAtExtraction(extracted: Record<string, unknown>
         field: "Co-tenancy trigger structure",
         question: `${bad.length} co-tenancy clause${bad.length > 1 ? "s state an" : " states an"} "X of N" requirement that doesn't match the stores in the modeled trigger — verify what actually trips ${bad.length > 1 ? "them" : "it"} before trusting the anchor-dependency exposure.`,
         detail: `An "X of N" clause ("2 of the following must be open and operating") does NOT trip when a single anchor goes dark — it needs (N − X + 1) of them dark. Reading one as a per-anchor trigger overstates single-anchor exposure by a wide margin. Unreconciled: ${bad.join("; ")}.`,
+        suggestedValue: null, target: null,
+      });
+    }
+  }
+
+  // 0c) A multi-anchor per-anchor trigger with NO verbatim quote can't be checked
+  // at all — the X-of-N guardrail reconciles a clause against its OWN quoted text,
+  // so an unquoted clause is the one shape that slips past it silently. Surface it
+  // rather than let it read as verified-by-omission.
+  if (lr?.tenants?.length) {
+    const unquoted: string[] = [];
+    for (const t of lr.tenants) {
+      for (const c of t.coTenancy || []) {
+        if (c.verbatimQuote) continue;
+        if (!isPerAnchorTrigger(c.triggerLogic) || collectAnchorLeaves(c.triggerLogic).length < 2) continue;
+        unquoted.push(String(t.tenant));
+      }
+    }
+    if (unquoted.length) {
+      out.push({
+        id: "check-cotenancy-unquoted", source: "check", severity: "medium",
+        field: "Co-tenancy trigger — not quoted",
+        question: `${unquoted.join(", ")} ${unquoted.length === 1 ? "has a co-tenancy modeled as" : "have co-tenancy modeled as"} several independent single-anchor triggers, but no clause text was captured to check that against. Confirm whether ANY one of those anchors going dark really trips it, or whether it is an "X of N" requirement.`,
+        detail: `The structure check reconciles a clause against its own quoted text; with no quote it cannot run. An "X of N" clause read as per-anchor overstates single-anchor exposure by a wide margin, so this one needs eyes on the OM or the lease.`,
         suggestedValue: null, target: null,
       });
     }

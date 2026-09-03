@@ -179,16 +179,60 @@ export function parseNamedList(tail: string): string[] {
 
 export type StructureVerdict =
   | { kind: "ok" }
-  | { kind: "repairable"; parsed: ParsedXofN; anchors: string[]; darkNeeded: number }
-  | { kind: "mismatch"; parsed: ParsedXofN; anchors: string[]; reason: string };
+  | { kind: "repairable"; parsed: ParsedXofN; anchors: string[]; darkNeeded: number; slots: string[][] }
+  | { kind: "mismatch"; parsed: ParsedXofN; anchors: string[]; reason: string; compoundSlot: boolean };
+
+/** Word tokens, for boundary-safe matching ("Ross" must not match "Crossing"). */
+function tokens(s: string): string[] {
+  return anchorKey(s).split(" ").filter(Boolean);
+}
+/** Does `hay` contain `needle`'s tokens as a contiguous run? */
+function containsTokens(hay: string[], needle: string[]): boolean {
+  if (!needle.length || needle.length > hay.length) return false;
+  outer: for (let i = 0; i <= hay.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) if (hay[i + j] !== needle[j]) continue outer;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Is a two-anchor slot joined by a plain "or"? Looks ONLY at the tokens BETWEEN the
+ * two names, so trailing interleaved column text ("… Excludes utilities and snow")
+ * can't be mistaken for the conjunction.
+ */
+function slotIsDisjunctive(slot: string[], pair: string[]): boolean {
+  const pos = pair.map((a) => {
+    const at = tokens(a);
+    for (let i = 0; i <= slot.length - at.length; i++) {
+      if (at.every((t, j) => slot[i + j] === t)) return { start: i, end: i + at.length };
+    }
+    return null;
+  });
+  if (pos.some((p) => p == null)) return false;
+  const [a, b] = (pos as { start: number; end: number }[]).sort((x, y) => x.start - y.start);
+  const between = slot.slice(a.end, b.start);
+  return between.length > 0 && between.every((t) => t === "or");
+}
 
 /**
  * Compare a clause's modeled trigger against its own quote.
  *  • "ok"         — no count phrase, or the trigger already models the count.
- *  • "repairable" — the quote states X-of-N and the parsed store list matches the
- *                   anchors already in the trigger, so the count can be applied
- *                   without inventing or dropping a single store name.
- *  • "mismatch"   — the quote states X-of-N but the lists disagree; flag for a human.
+ *  • "repairable" — the quote's enumerated slots line up 1:1 with the anchors the
+ *                   model already chose, so the count can be applied without
+ *                   inventing or dropping a single store name.
+ *  • "mismatch"   — the quote states X-of-N but the two can't be reconciled; flag.
+ *
+ * RECONCILIATION IS BY CONTAINMENT, NOT EQUALITY. A rent-roll table extracted from
+ * a PDF comes out COLUMN-INTERLEAVED: the real Town N' Country text reads
+ * "i) Hobby Lobby 3% Non-Cumulative CAM Cap Option 3 $12.00 ii) Belk on
+ * Controllables Option 4 $12.50 …", with recovery-method and option-rent text
+ * glued into each enumerated slot. Requiring the parsed names to EQUAL the
+ * trigger's anchors fails on every such clause, so the repair never fired on the
+ * document that motivated it. What survives interleaving is (a) the count, which
+ * sits contiguous right after "X of the following", and (b) each anchor NAME
+ * appearing somewhere inside its own slot. So: find which slot each anchor lands
+ * in, and require a clean 1:1 placement.
  */
 export function checkCoTenancyStructure(clause: CoTenancyLike): StructureVerdict {
   const trigger = clause?.triggerLogic;
@@ -200,23 +244,63 @@ export function checkCoTenancyStructure(clause: CoTenancyLike): StructureVerdict
   const anchors = collectAnchorLeaves(trigger).map((l) => String(l.anchor)).filter(Boolean);
   if (anchors.length < 2) return { kind: "ok" };
 
-  const quoteSet = new Set(parsed.named.map(anchorKey).filter(Boolean));
-  const trigSet = new Set(anchors.map(anchorKey).filter(Boolean));
-  const sameSet = quoteSet.size === trigSet.size && [...trigSet].every((k) => quoteSet.has(k));
+  // Which enumerated slot does each anchor fall in? (token-boundary matching, so
+  // "Ross" doesn't match "Wake Forest Crossing")
+  const slotTokens = parsed.named.map(tokens);
+  const placement = anchors.map((a) => {
+    const at = tokens(a);
+    return slotTokens.reduce<number[]>((acc, st, i) => (containsTokens(st, at) ? [...acc, i] : acc), []);
+  });
 
-  // A list that disagrees with the quote is flagged whatever the count says — the
-  // set check must come FIRST, or a disagreeing list hides behind the count
-  // short-circuit below and reads as "ok".
-  if (!sameSet) {
+  const missing = anchors.filter((_, i) => placement[i].length === 0);
+  if (missing.length) {
     return {
-      kind: "mismatch", parsed, anchors,
-      reason: `the clause names ${parsed.named.length ? parsed.named.join(", ") : "a list that could not be parsed"} but the trigger was built from ${anchors.join(", ")}`,
+      kind: "mismatch", parsed, anchors, compoundSlot: false,
+      reason: `${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} in the trigger but ${missing.length === 1 ? "does" : "do"} not appear in the clause text`,
     };
   }
+
+  // Group anchors by the slot they landed in. Anchors sharing a slot are a COMPOUND
+  // slot ("iii) Either Ross or Ulta"): the slot stays satisfied while EITHER is
+  // open, so it fails only when BOTH go dark.
+  const slotOwners = new Map<number, string[]>();
+  anchors.forEach((a, i) => {
+    for (const s of placement[i]) slotOwners.set(s, [...(slotOwners.get(s) ?? []), a]);
+  });
+  const slots = [...slotOwners.entries()].sort((a, b) => a[0] - b[0]).map(([i, a]) => ({ i, anchors: a }));
+
+  // A shared slot is only safe to act on when the clause literally says OR between
+  // the two names. "X and Y" in one slot means the opposite (the slot fails when
+  // EITHER goes dark), and anything else is unreadable — flag rather than guess.
+  for (const sl of slots) {
+    if (sl.anchors.length < 2) continue;
+    if (sl.anchors.length > 2 || !slotIsDisjunctive(slotTokens[sl.i], sl.anchors)) {
+      return {
+        kind: "mismatch", parsed, anchors, compoundSlot: true,
+        reason: `${sl.anchors.join(" / ")} share one entry in the clause and the conjunction between them is not a plain "or" — a count cannot express that slot`,
+      };
+    }
+  }
+
   // openRequired >= N means "all of them must stay open", which genuinely IS a
-  // per-anchor trigger — the model's shape is already right.
-  if (parsed.openRequired >= anchors.length) return { kind: "ok" };
-  return { kind: "repairable", parsed, anchors, darkNeeded: anchors.length - parsed.openRequired + 1 };
+  // per-anchor trigger — the model's shape is already right. N is the SLOT count,
+  // not the anchor count (a compound slot is one slot holding two anchors).
+  const n = slots.length;
+  if (parsed.openRequired >= n) return { kind: "ok" };
+  return {
+    kind: "repairable", parsed, anchors,
+    darkNeeded: n - parsed.openRequired + 1,
+    slots: slots.map((s) => s.anchors),
+  };
+}
+
+/** All ways to choose k items from xs (order-insensitive). */
+function choose<T>(xs: T[], k: number): T[][] {
+  if (k <= 0 || k > xs.length) return [];
+  if (k === xs.length) return [xs.slice()];
+  if (k === 1) return xs.map((x) => [x]);
+  const [head, ...rest] = xs;
+  return [...choose(rest, k - 1).map((c) => [head, ...c]), ...choose(rest, k)];
 }
 
 export interface RepairResult {
@@ -235,26 +319,47 @@ export function repairCoTenancyTrigger<T extends CoTenancyLike>(clause: T): Repa
   const verdict = checkCoTenancyStructure(clause);
   if (verdict.kind !== "repairable") return { clause, repaired: false, verdict };
 
-  const { parsed, anchors, darkNeeded } = verdict;
+  const { parsed, darkNeeded, slots } = verdict;
+  const n = slots.length;
   const note =
-    `${parsed.openRequired}-of-${anchors.length} co-tenancy: ${darkNeeded === 1 ? "one" : darkNeeded} of the named stores must go dark before it trips` +
+    `${parsed.openRequired}-of-${n} co-tenancy: ${darkNeeded === 1 ? "one" : darkNeeded} of the named slots must fail before it trips` +
     (darkNeeded > 1 ? " — a SINGLE anchor going dark does NOT trip this clause." : ".");
-  const countLeaf: TriggerLeafLike = {
-    type: "anchor_count_below",
-    anchors,
-    openRequired: parsed.openRequired,
-    totalNamed: anchors.length,
-    note,
-  };
+
+  let rebuilt: TriggerNodeLike;
+  if (slots.every((sl) => sl.length === 1)) {
+    // Plain X-of-N — the engine models this natively and it reads clearly.
+    rebuilt = {
+      type: "anchor_count_below",
+      anchors: slots.map((sl) => sl[0]),
+      openRequired: parsed.openRequired,
+      totalNamed: n,
+      note,
+    };
+  } else {
+    // A compound slot can't be a flat count, so expand to the explicit set of
+    // failure combinations: pick `darkNeeded` slots, AND together every anchor in
+    // them. Nothing is invented — slots come from the clause's own enumeration,
+    // anchors from the trigger, the count from the quote.
+    const combos = choose(slots, darkNeeded);
+    if (!combos.length || combos.length > 60) return { clause, repaired: false, verdict };
+    rebuilt = {
+      operator: "OR",
+      conditions: combos.map((combo) => {
+        const names = combo.flat();
+        const leaves = names.map((a) => ({ type: "named_anchor_dark", anchor: a, note } as TriggerLeafLike));
+        return leaves.length === 1 ? leaves[0] : { operator: "AND" as const, conditions: leaves };
+      }),
+    };
+  }
 
   const trigger = clause.triggerLogic!;
   let next: TriggerNodeLike;
   if (!isBranch(trigger)) {
-    next = countLeaf;
+    next = rebuilt;
   } else {
     // keep every non-anchor branch/leaf (occupancy prongs, nested ANDs) untouched
     const others = trigger.conditions.filter((c) => isBranch(c) || !(c as TriggerLeafLike).anchor);
-    next = others.length ? { operator: "OR", conditions: [countLeaf, ...others] } : countLeaf;
+    next = others.length ? { operator: "OR", conditions: [rebuilt, ...others] } : rebuilt;
   }
   return { clause: { ...clause, triggerLogic: next }, repaired: true, verdict };
 }
