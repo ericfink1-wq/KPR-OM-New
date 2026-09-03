@@ -13,6 +13,8 @@ import { startAiTask, updateAiTask, finishAiTask } from "../lib/aiProgress";
 // click time so it stays out of the initial bundle (DealGrid is on the first
 // paint). See onClick below.
 import RecencyBadge from "./RecencyBadge";
+import PdfDownloadButton from "./PdfDownloadButton";
+import { n0, m0, type ExportCol } from "../lib/tableExport";
 
 interface Props {
   deals: Deal[];
@@ -1204,6 +1206,40 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
           style={{ background: "transparent", border: "1px solid #c8b89a", color: rows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 11px", borderRadius: 7, cursor: rows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
           ⬇ Excel
         </button>
+        <PdfDownloadButton
+          fileName={`KPR_Portfolio_${filterStatuses.length === 1 ? filterStatuses[0].replace(/\s+/g, "") : "All"}.pdf`}
+          makeDoc={async () => {
+            const { default: TablePDF } = await import("./TablePDF");
+            const cols: ExportCol[] = [
+              { header: "Property", width: 26, tone: "bold", text: r => String(r.propertyName || r.fileName || "—") },
+              { header: "Location", width: 20, tone: "faint", text: r => [r.city, r.state].filter(Boolean).join(", ") || "—" },
+              { header: "Status",   width: 11, text: r => String(r.status ?? "—") },
+              { header: "Type",     width: 14, text: r => String(r.centerType || r.assetType || "—") },
+              { header: "GLA (SF)", width: 11, align: "right", text: r => n0(r.totalSF), value: r => (r.totalSF as number) ?? "", fmt: "#,##0" },
+              { header: "Occ %",    width: 8,  align: "right", text: r => r.occupancy != null ? `${Number(r.occupancy).toFixed(1)}%` : "—" },
+              { header: "NOI",      width: 14, align: "right", text: r => m0(r.noi), value: r => (r.noi as number) ?? "", fmt: "$#,##0" },
+              { header: "Cap",      width: 8,  align: "right", text: r => r.capRate != null ? `${Number(r.capRate).toFixed(2)}%` : "—" },
+              { header: "Price",    width: 14, align: "right", text: r => m0(r.askingPrice), value: r => (r.askingPrice as number) ?? "", fmt: "$#,##0" },
+            ];
+            const sumSF = rows.reduce((a, r) => a + (Number(r.totalSF) || 0), 0);
+            const sumNOI = rows.reduce((a, r) => a + (Number(r.noi) || 0), 0);
+            return <TablePDF
+              title="Deal Portfolio"
+              kicker="PORTFOLIO"
+              subtitle={`${rows.length} deal${rows.length === 1 ? "" : "s"}${filterStatuses.length ? ` · ${filterStatuses.join(", ")}` : ""}`}
+              columns={cols}
+              rows={rows as unknown as Record<string, unknown>[]}
+              totalRow={cols.map(col => col.header === "Property" ? `TOTAL · ${rows.length} deals` : col.header === "GLA (SF)" ? n0(sumSF) : col.header === "NOI" ? m0(sumNOI) : "")}
+              notes="Reflects the filters and sort applied on screen. Cap rate and price are shown only where the OM disclosed them."
+            />;
+          }}
+          render={(busy) => (
+            <span title="Export the current (filtered) deal list to PDF"
+              style={{ background: "transparent", border: "1px solid #c8b89a", color: rows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 11px", borderRadius: 7, fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              {busy ? "Preparing…" : "⬇ PDF"}
+            </span>
+          )}
+        />
         <button onClick={() => setViewMode(v => v === "table" ? "grid" : "table")}
           style={{ background: "transparent", border: "1px solid #e3dccd", color: "#a89f8f", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11 }}>
           {viewMode === "table" ? "⊞" : "☰"}

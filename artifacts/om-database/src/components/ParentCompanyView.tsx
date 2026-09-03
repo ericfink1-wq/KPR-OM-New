@@ -5,6 +5,11 @@ import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTena
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import StatusTag from "./StatusTag";
+import { ExportButtons } from "./PdfDownloadButton";
+import { rollupColumns, rollupTotalRow } from "./TenantView";
+import { exportAggregateToExcel } from "../lib/exportExcel";
+import { toAggColumns, safeFileName } from "../lib/tableExport";
+import { curatedParentDescription } from "../lib/tenantDescriptions";
 import EntityDescription from "./EntityDescription";
 import PortfolioStressTest from "./PortfolioStressTest";
 import { stickyFirstCol } from "../lib/stickyCol";
@@ -133,6 +138,29 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}${extra}`
     : `${uniqueBrands} brand${uniqueBrands !== 1 ? "s" : ""} · ${allRows.length} location${allRows.length !== 1 ? "s" : ""}${extra}`;
 
+  // Export payload — from `sorted`, i.e. exactly the rows on screen (scope + sort).
+  const exportRows: Record<string, unknown>[] = sorted.map(r => ({
+    property: r.deal.propertyName || r.deal.fileName || "—",
+    status: r.deal.status || null,
+    brand: r.brandLabel || null,
+    market: r.deal.market || cityState(r.deal) || null,
+    sf: num(r.t.sf),
+    rentPSF: num(r.t.rentPerSF),
+    annualRent: num(r.t.annualRent),
+    start: fmtLeaseDate(r.t.leaseStart) || null,
+    expiry: fmtLeaseDate(r.t.leaseExpiry) || null,
+    sales: fmtTenantSales(effSales(r), r.t.sf) || null,
+  }));
+  const exportKpis = [
+    { label: "Brands", value: String(uniqueBrands) },
+    { label: "Locations", value: String(rows.length) },
+    { label: "Avg Size (SF)", value: avgSF != null ? Math.round(avgSF).toLocaleString() : "—" },
+    { label: "Avg Rent / SF", value: avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—" },
+    { label: "Avg Annual Rent", value: avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—" },
+    { label: "Avg Sales / SF", value: avgSales != null ? `$${Math.round(avgSales).toLocaleString()}` : "—" },
+  ];
+  const exportBase = `KPR_${safeFileName(parentName)}${scope === "owned" ? "_Owned" : ""}`;
+
   const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
     <div style={{ flex:"1 1 130px", background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"13px 16px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ fontSize:10, letterSpacing:"0.06em", color:"#a69e91", marginBottom:6, fontWeight:500, textTransform:"uppercase" }}>{label}</div>
@@ -197,6 +225,32 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
       {/* Subtitle + scope toggle on same row */}
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
         <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", justifyContent:"flex-end" }}>
+        <ExportButtons
+          disabled={exportRows.length === 0}
+          onExcel={() => exportAggregateToExcel(
+            exportRows, toAggColumns(rollupColumns("Brand")),
+            parentName.slice(0, 28) || "Locations",
+            `${exportBase}_Locations.xlsx`,
+          )}
+          fileName={`${exportBase}_Summary.pdf`}
+          makeDoc={async () => {
+            const { default: TablePDF } = await import("./TablePDF");
+            const cols = rollupColumns("Brand");
+            return <TablePDF
+              title={parentName}
+              kicker="PARENT COMPANY"
+              subtitle={subtitle}
+              chips={[anchorCount > 0 ? `ANCHOR · ${anchorCount}` : "", headerCredit ? `Credit: ${headerCredit}` : ""].filter(Boolean)}
+              description={curatedParentDescription(parentName)}
+              kpis={exportKpis}
+              columns={cols}
+              rows={exportRows}
+              totalRow={rollupTotalRow(cols, exportRows)}
+              notes={`Rent/SF on the total line is BLENDED (total annual rent \u00f7 total SF), so it differs from the simple average above. Annual rent is BASE rent only \u2014 recoveries, percentage rent and other income are excluded.${scope === "owned" ? " Scope: OWNED properties only." : ""}`}
+            />;
+          }}
+        />
         <div style={{ display:"flex", border:"1px solid #e7e0d2", borderRadius:7, overflow:"hidden", fontFamily:"'Inter',sans-serif", fontSize:12, flexShrink:0 }}>
           {(["all","owned"] as const).map(s => (
             <button key={s} onClick={() => setScope(s)}
@@ -204,6 +258,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
               {s === "all" ? "All" : "Owned"}
             </button>
           ))}
+        </div>
         </div>
       </div>
 

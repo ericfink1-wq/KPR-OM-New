@@ -5,6 +5,8 @@ import { exportCompsToExcel } from "../lib/exportExcel";
 import { extractAnyFile, isPdf, isSpreadsheet } from "../lib/fileExtract";
 import { extractCompsFromText } from "../lib/compsImport";
 import { stickyFirstCol } from "../lib/stickyCol";
+import PdfDownloadButton from "./PdfDownloadButton";
+import { n0, m0, m2, type ExportCol } from "../lib/tableExport";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -905,6 +907,37 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
               Clear filters
             </button>
           )}
+          <PdfDownloadButton
+            fileName="KPR_Sale_Comps.pdf"
+            makeDoc={async () => {
+              const { default: TablePDF } = await import("./TablePDF");
+              const cols: ExportCol[] = [
+                { header: "Property",  width: 24, tone: "bold", text: r => String(r.name ?? "—") },
+                { header: "Market",    width: 18, tone: "faint", text: r => [r.market, r.state].filter(Boolean).join(", ") || "—" },
+                { header: "Sale Date", width: 11, text: r => String(r.saleDate ?? "—") },
+                { header: "Price",     width: 14, align: "right", text: r => m0(r.salePrice), value: r => (r.salePrice as number) ?? "", fmt: "$#,##0" },
+                { header: "Cap",       width: 8,  align: "right", text: r => r.capRate != null ? `${Number(r.capRate).toFixed(2)}%` : "—" },
+                { header: "$/SF",      width: 10, align: "right", tone: "money", text: r => m2(r.pricePerSf) },
+                { header: "SF",        width: 10, align: "right", text: r => n0(r.sf), value: r => (r.sf as number) ?? "", fmt: "#,##0" },
+                { header: "Anchor",    width: 17, text: r => String(r.anchor ?? "—") },
+                { header: "Source",    width: 12, tone: "faint", text: r => r.isOwnTransaction ? "KPR owned" : r.isManual ? "Broker/manual" : "OM-sourced" },
+              ];
+              return <TablePDF
+                title="Sale Comps"
+                kicker="COMPS"
+                subtitle={`${rows.length} comp${rows.length === 1 ? "" : "s"} · reflects the filters applied on screen`}
+                columns={cols}
+                rows={rows as unknown as Record<string, unknown>[]}
+                notes="Source tiers: KPR owned transactions are the most reliable, then broker/manual, then OM-sourced (seller-selected, the weakest). Medians — not these raw rows — drive any benchmark verdict."
+              />;
+            }}
+            render={(busy) => (
+              <span title="Export the current (filtered) comp set to PDF"
+                style={{ background: "transparent", border: "1px solid #c8ddb5", color: rows.length === 0 ? "#c9c2b8" : "#5a9c30", padding: "7px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {busy ? "Preparing…" : "⬇ PDF"}
+              </span>
+            )}
+          />
           <button
             onClick={() => exportCompsToExcel(rows)}
             disabled={rows.length === 0}

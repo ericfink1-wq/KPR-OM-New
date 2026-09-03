@@ -6,6 +6,10 @@ import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { cityState, tenantKey, tenantLabel, fmtLeaseDate, fmtTenantSales, fmtUSD, parentCompany, tenantLogoDomain, isNAPTenant, unlinkTenantName, buildSalesByDeal, resolveSalesPSF } from "../lib/utils";
 import StatusTag from "./StatusTag";
 import EntityDescription from "./EntityDescription";
+import { ExportButtons } from "./PdfDownloadButton";
+import { exportAggregateToExcel } from "../lib/exportExcel";
+import { toAggColumns, safeFileName as sfn, n0, m0, m2, type ExportCol } from "../lib/tableExport";
+import { curatedTenantDescription } from "../lib/tenantDescriptions";
 import PortfolioStressTest from "./PortfolioStressTest";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { stickyFirstCol } from "../lib/stickyCol";
@@ -26,6 +30,34 @@ function rowId(r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }): stri
     r.t.sf ?? "",
     r.t.leaseExpiry ?? "",
   ].join("__");
+}
+
+// Locations-table columns for the tenant and parent-company roll-up pages. ONE
+// definition drives both the PDF and the Excel file, so they can't drift.
+export function rollupColumns(brandHeader: string): ExportCol[] {
+  return [
+    { header: "Property",     width: 26, tone: "bold",  text: r => String(r.property ?? "—") },
+    { header: brandHeader,    width: 20,                text: r => String(r.brand ?? "—") },
+    { header: "Market",       width: 20, tone: "faint", text: r => String(r.market ?? "—") },
+    { header: "SF",           width: 10, align: "right", text: r => n0(r.sf),      value: r => (r.sf as number) ?? "",         fmt: "#,##0" },
+    { header: "Rent / SF",    width: 10, align: "right", tone: "money", text: r => m2(r.rentPSF), value: r => (r.rentPSF as number) ?? "", fmt: "$#,##0.00" },
+    { header: "Annual Rent",  width: 13, align: "right", text: r => m0(r.annualRent), value: r => (r.annualRent as number) ?? "", fmt: "$#,##0" },
+    { header: "Start",        width: 11,                text: r => String(r.start ?? "—") },
+    { header: "Expiry",       width: 11,                text: r => String(r.expiry ?? "—") },
+    { header: "Sales",        width: 19, align: "right", text: r => String(r.sales ?? "—") },
+  ];
+}
+
+/** Blended totals row for the roll-up tables. */
+export function rollupTotalRow(cols: ExportCol[], rows: Record<string, unknown>[]): string[] {
+  const sum = (k: string) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const sf = sum("sf"), rent = sum("annualRent");
+  return cols.map(col =>
+    col.header === "Property"    ? `TOTAL · ${rows.length} ${rows.length === 1 ? "location" : "locations"}`
+    : col.header === "SF"          ? n0(sf)
+    : col.header === "Rent / SF"   ? (sf > 0 ? m2(rent / sf) : "—")
+    : col.header === "Annual Rent" ? m0(rent)
+    : "");
 }
 
 export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onParentClick }: Props) {
@@ -191,6 +223,30 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     ? `Across ${rows.length} owned ${rows.length === 1 ? "property" : "properties"}${extra}`
     : `Across ${rows.length} ${rows.length === 1 ? "property" : "properties"} in your database${extra}`;
 
+  // Export payload — built from `sorted`, i.e. the rows CURRENTLY on screen, so the
+  // file matches the scope filter and sort the user is actually looking at.
+  const exportRows: Record<string, unknown>[] = sorted.map(r => ({
+    property: r.deal.propertyName || r.deal.fileName || "—",
+    status: r.deal.status || null,
+    brand: r.t.name || null,
+    market: r.deal.market || cityState(r.deal) || null,
+    sf: num(r.t.sf),
+    rentPSF: num(r.t.rentPerSF),
+    annualRent: num(r.t.annualRent),
+    start: fmtLeaseDate(r.t.leaseStart) || null,
+    expiry: fmtLeaseDate(r.t.leaseExpiry) || null,
+    sales: fmtTenantSales(effSales(r), r.t.sf) || null,
+    isAnchor: !!r.t.isAnchor,
+  }));
+  const exportKpis = [
+    { label: "Locations", value: String(rows.length) },
+    { label: "Avg Size (SF)", value: avgSF != null ? avgSF.toLocaleString() : "—" },
+    { label: "Avg Rent / SF", value: avgRentPSF != null ? `$${avgRentPSF.toFixed(2)}` : "—" },
+    { label: "Avg Annual Rent", value: avgAnnRent != null ? `$${Math.round(avgAnnRent).toLocaleString()}` : "—" },
+    { label: "Avg Sales / SF", value: avgSales != null ? `$${Math.round(avgSales).toLocaleString()}` : "—" },
+  ];
+  const exportBase = `KPR_${sfn(tenantLabel(tenantName))}${scope === "owned" ? "_Owned" : ""}`;
+
   return (
     <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
       {/* Centered max-width column — same DETAIL_MAX_WIDTH as the deal page, so a
@@ -234,6 +290,32 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
         <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", justifyContent:"flex-end" }}>
+        <ExportButtons
+          disabled={exportRows.length === 0}
+          onExcel={() => exportAggregateToExcel(
+            exportRows, toAggColumns(rollupColumns("Recorded As")),
+            tenantLabel(tenantName).slice(0, 28) || "Locations",
+            `${exportBase}_Locations.xlsx`,
+          )}
+          fileName={`${exportBase}_Summary.pdf`}
+          makeDoc={async () => {
+            const { default: TablePDF } = await import("./TablePDF");
+            const cols = rollupColumns("Recorded As");
+            return <TablePDF
+              title={tenantLabel(tenantName)}
+              kicker="TENANT SUMMARY"
+              subtitle={subtitle}
+              chips={[anchors > 0 ? `ANCHOR · ${anchors}` : "", credit ? `Credit: ${credit}` : ""].filter(Boolean)}
+              description={curatedTenantDescription(tenantName)}
+              kpis={exportKpis}
+              columns={cols}
+              rows={exportRows}
+              totalRow={rollupTotalRow(cols, exportRows)}
+              notes={`Rent/SF on the total line is BLENDED (total annual rent \u00f7 total SF), so it differs from the simple average above. Annual rent is BASE rent only \u2014 recoveries, percentage rent and other income are excluded.${scope === "owned" ? " Scope: OWNED properties only." : ""}`}
+            />;
+          }}
+        />
         {/* Scope toggle */}
         <div style={{ display:"flex", border:"1px solid #e7e0d2", borderRadius:7, overflow:"hidden", fontFamily:"'Inter',sans-serif", fontSize:12, flexShrink:0 }}>
           {(["all","owned"] as const).map(s => (
@@ -255,6 +337,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
               {s === "all" ? "All" : "Owned"}
             </button>
           ))}
+        </div>
         </div>
       </div>
 

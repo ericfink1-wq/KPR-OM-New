@@ -58,6 +58,7 @@ import { buildKickoutByTenant } from "../lib/leaseRisk";
 import { deriveUnsignedLeaseFlag } from "../lib/unsignedLeaseRisk";
 import { deriveSalesTrendFlag } from "../lib/salesTrendRisk";
 import { deriveReassessmentFlag } from "../lib/reassessmentFlag";
+import PdfDownloadButton from "./PdfDownloadButton";
 import { deriveTaxTriggerFlags } from "../lib/taxTriggerFlags";
 import { deriveRolloverFlag } from "../lib/rolloverRisk";
 import { deriveConcentrationFlag } from "../lib/concentrationRisk";
@@ -1602,30 +1603,6 @@ function TeachExtractorModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
-}
-
-// Generates a PDF on click by dynamically importing @react-pdf + the document
-// component — keeps the heavy PDF engine out of the deal page's initial load.
-function PdfDownloadButton({ fileName, makeDoc, render }: {
-  fileName: string;
-  makeDoc: () => Promise<React.ReactElement>;
-  render: (busy: boolean) => React.ReactNode;
-}) {
-  const [busy, setBusy] = useState(false);
-  const onClick = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const [{ pdf }, doc] = await Promise.all([import("@react-pdf/renderer"), makeDoc()]);
-      const blob = await pdf(doc as Parameters<typeof pdf>[0]).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = fileName; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch { /* ignore — user can retry */ }
-    finally { setBusy(false); }
-  };
-  return <span onClick={onClick} style={{ display: "contents", cursor: "pointer" }}>{render(busy)}</span>;
 }
 
 export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpdate, onQuery, onCompare, onTenantClick, isAdmin }: Props) {
