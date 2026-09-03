@@ -116,3 +116,84 @@ describe("guards", () => {
     expect(buildSearchHits(d, "vacant")).toEqual([]);
   });
 });
+
+
+// ── WHY did this match? (Eric: "I have no idea why its choosing this property") ──
+describe("every hit explains itself", () => {
+  const withProse = [
+    deal("p1", "Middle Creek Commons", "Raleigh", "NC", [{ name: "Lowes Foods", sf: 46522, annualRent: 709931 }]),
+    deal("p2", "Garner Station", "Garner", "NC", [{ name: "Food Lion", sf: 38000, annualRent: 400000 }]),
+  ];
+  (withProse[0] as unknown as Record<string, unknown>).notes =
+    "A strong infill center serving the Garner and Clayton trade areas south of Raleigh.";
+  (withProse[0] as unknown as Record<string, unknown>).market = "Raleigh-Durham";
+
+  it("names the field a prose-only match came from, with the phrase around it", () => {
+    const hit = buildSearchHits(withProse, "garner").find(h => h.dealId === "p1")!;
+    expect(hit.match.field).toBe("Notes");
+    expect(hit.match.hit).toBe("Garner");                       // as it appears, not lowercased
+    expect(hit.match.before + hit.match.hit + hit.match.after).toContain("trade areas");
+  });
+
+  it("ranks a NAME/CITY hit above a passing mention in the narrative", () => {
+    const hits = buildSearchHits(withProse, "garner").filter(h => h.kind === "deal");
+    expect(hits[0].title).toBe("Garner Station");               // name+city hit first
+    expect(hits[0].match.field).toBe("Name");
+    expect(hits[1].title).toBe("Middle Creek Commons");         // prose hit second
+    expect(hits[1].match.field).toBe("Notes");
+  });
+
+  it("labels a city match as City, not Name", () => {
+    const h = buildSearchHits(withProse, "raleigh").find(x => x.dealId === "p1")!;
+    expect(h.match.field).toBe("City");
+    expect(h.match.hit).toBe("Raleigh");
+  });
+
+  it("labels a market match when nothing stronger hit", () => {
+    const h = buildSearchHits(withProse, "durham").find(x => x.dealId === "p1")!;
+    expect(h.match.field).toBe("Market");
+  });
+
+  it("explains a tenant page row", () => {
+    const h = buildSearchHits(deals, "lowes foods").find(x => x.kind === "tenantPage")!;
+    expect(h.match.field).toBe("Tenant");
+    expect(h.match.hit).toBe("Lowes Foods");
+  });
+
+  it("explains a parent row reached THROUGH a brand", () => {
+    const h = buildSearchHits(deals, "homegoods").find(x => x.kind === "parent")!;
+    expect(h.match.field).toBe("Owns brand");
+    expect(h.match.hit).toBe("HomeGoods");
+  });
+
+  it("explains a parent row matched on its own name", () => {
+    const h = buildSearchHits(deals, "tjx").find(x => x.kind === "parent")!;
+    expect(h.match.field).toBe("Parent");
+  });
+
+  it("explains a per-property location row", () => {
+    const h = buildSearchHits(deals, "lowes foods").find(x => x.kind === "location")!;
+    expect(h.match.field).toBe("Tenant");
+  });
+
+  it("gives EVERY hit a match reason — no blanks", () => {
+    for (const q of ["lowes", "raleigh", "nc", "tjx", "garner", "homegoods"]) {
+      for (const h of buildSearchHits([...deals, ...withProse], q)) {
+        expect(h.match, `${q} / ${h.kind} / ${h.title}`).toBeTruthy();
+        expect(h.match.field.length).toBeGreaterThan(0);
+        expect(h.match.hit.toLowerCase()).toContain(q.slice(0, 4).toLowerCase().slice(0, h.match.hit.length));
+      }
+    }
+  });
+
+  it("trims a long narrative to a readable window around the hit", () => {
+    const long = [deal("L", "Long Notes Center", "Raleigh", "NC", [])];
+    (long[0] as unknown as Record<string, unknown>).notes =
+      "x".repeat(400) + " Garner " + "y".repeat(400);
+    const h = buildSearchHits(long, "garner")[0];
+    expect(h.match.before.length).toBeLessThan(40);
+    expect(h.match.after.length).toBeLessThan(40);
+    expect(h.match.before.startsWith("…")).toBe(true);
+    expect(h.match.after.endsWith("…")).toBe(true);
+  });
+});

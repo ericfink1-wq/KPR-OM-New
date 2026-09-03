@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useIsMobile } from "../hooks/use-mobile";
 import type { Deal } from "../lib/idb";
 import { buildSearchHits, MIN_QUERY, type Hit } from "../lib/globalSearch";
 
@@ -20,7 +21,30 @@ const BADGE: Record<Hit["kind"], { color: string; background: string }> = {
   location:   { color: "#7d766a", background: "#f3efe7" },
 };
 
+// WHY a row matched: the field it hit, plus the phrase around the hit with the
+// matched text highlighted. Without this a search for "garner" returning a Raleigh
+// property just looks broken — the reason (a mention in the narrative) is invisible.
+function MatchReason({ match, stacked }: { match: Hit["match"]; stacked: boolean }) {
+  return (
+    <span style={{
+      flexShrink: 0, maxWidth: stacked ? "100%" : 260, minWidth: 0,
+      textAlign: stacked ? "left" : "right",
+      display: "block", marginTop: stacked ? 3 : 0,
+    }}>
+      <span style={{ display: "block", fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#a89f8f" }}>
+        {match.field}
+      </span>
+      <span style={{ display: "block", fontSize: 11, color: "#8b8578", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {match.before}
+        <mark style={{ background: "#fdf1c7", color: "#5c4a12", fontWeight: 600, padding: "0 1px", borderRadius: 2 }}>{match.hit}</mark>
+        {match.after}
+      </span>
+    </span>
+  );
+}
+
 export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenParent, onOpenTenantPage }: Props) {
+  const isMobile = useIsMobile();
   const [q, setQ] = useState("");
   // Keyboard-highlighted row, navigable with ↑/↓ before pressing Enter.
   const [sel, setSel] = useState(0);
@@ -86,7 +110,11 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenP
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.title}</span>
                   {h.sub && <span style={{ display: "block", fontSize: 11.5, color: "#8b8578", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.sub}</span>}
+                  {/* On a phone the row is too narrow for a right-hand column, so the
+                      reason stacks under the subtitle instead of being squeezed out. */}
+                  {isMobile && <MatchReason match={h.match} stacked />}
                 </span>
+                {!isMobile && <MatchReason match={h.match} stacked={false} />}
               </button>
             ))
           )}
