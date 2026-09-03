@@ -6,7 +6,7 @@ import { isInvestmentGrade } from "../lib/tenantCredit";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import StatusTag from "./StatusTag";
 import { ExportButtons } from "./PdfDownloadButton";
-import { rollupColumns, rollupTotalRow } from "./TenantView";
+import { rollupColumns, rollupTotalRow } from "../lib/rollupColumns";
 import { exportAggregateToExcel } from "../lib/exportExcel";
 import { toAggColumns, safeFileName } from "../lib/tableExport";
 import { curatedParentDescription } from "../lib/tenantDescriptions";
@@ -229,7 +229,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
         <ExportButtons
           disabled={exportRows.length === 0}
           onExcel={() => exportAggregateToExcel(
-            exportRows, toAggColumns(rollupColumns("Brand")),
+            exportRows, toAggColumns(rollupColumns("Brand"), exportRows),
             parentName.slice(0, 28) || "Locations",
             `${exportBase}_Locations.xlsx`,
           )}

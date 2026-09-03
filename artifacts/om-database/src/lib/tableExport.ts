@@ -5,7 +5,11 @@ import type { AggColumn } from "./exportExcel";
 
 export interface ExportCol {
   header: string;
-  /** PDF: share of the table width. Excel: character width. */
+  /**
+   * FALLBACK width in characters, used for Excel when no rows are supplied to
+   * `toAggColumns`. The PDF ignores it entirely — pdfLayout measures the real
+   * content and sizes columns to fit (see fitColumns).
+   */
   width: number;
   align?: "left" | "right";
   /** Visual weight in the PDF only. */
@@ -18,14 +22,32 @@ export interface ExportCol {
   fmt?: string;
 }
 
-/** Adapt the shared spec to the existing Excel writer. */
-export function toAggColumns(cols: ExportCol[]): AggColumn[] {
-  return cols.map(c => ({
-    header: c.header,
-    width: c.width,
-    fmt: c.fmt,
-    get: (r: Record<string, unknown>) => (c.value ? c.value(r) : c.text(r)),
-  }));
+/**
+ * Adapt the shared spec to the Excel writer. Pass `rows` and each column is sized to
+ * its actual content (clamped to something readable) — a column left too narrow
+ * renders numbers as "###", which is the spreadsheet version of the cramped-column
+ * problem the PDF had.
+ */
+export function toAggColumns(cols: ExportCol[], rows?: Record<string, unknown>[]): AggColumn[] {
+  const MIN_CH = 9, MAX_CH = 46;
+  return cols.map(c => {
+    let width = c.width;
+    if (rows?.length) {
+      let longest = c.header.length;
+      for (const r of rows) {
+        let t: string;
+        try { t = String(c.value ? c.value(r) : c.text(r)); } catch { t = ""; }
+        if (t.length > longest) longest = t.length;
+      }
+      width = Math.min(MAX_CH, Math.max(MIN_CH, longest + 2));
+    }
+    return {
+      header: c.header,
+      width,
+      fmt: c.fmt,
+      get: (r: Record<string, unknown>) => (c.value ? c.value(r) : c.text(r)),
+    };
+  });
 }
 
 /** Percent widths for the PDF, normalised to sum to 100. */

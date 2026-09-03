@@ -1,5 +1,20 @@
-import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
-import { pdfWidths, type ExportCol } from "../lib/tableExport";
+import { Document, Page, View, Text, Image, StyleSheet, Font } from "@react-pdf/renderer";
+import { type ExportCol } from "../lib/tableExport";
+import { fitColumns, CELL_PAD } from "../lib/pdfLayout";
+
+// Never hyphenate a real word. The default callback split "Little Giant Farmers
+// Market" into "Little Gi-ant Farmers Market" in a cramped column, which reads like
+// a typo in a document going to a lender. The ONE exception is a runaway token —
+// no real property name, market or money string is 40+ characters with no space, so
+// anything that long is machine junk (a pasted id, a mangled cell) and is allowed to
+// break rather than spill across the neighbouring column.
+const RUNAWAY = 40;
+Font.registerHyphenationCallback((word) => {
+  if (word.length <= RUNAWAY) return [word];
+  const parts: string[] = [];
+  for (let i = 0; i < word.length; i += RUNAWAY) parts.push(word.slice(i, i + RUNAWAY));
+  return parts;
+});
 
 // Branded, shareable PDF for the two ROLL-UP pages — one retailer across the
 // library (tenant page) and one holdco across its brands (parent-company page).
@@ -12,6 +27,11 @@ const C = {
   olive: "#3f7a1f", oliveDk: "#2f5d16", sage: "#eef3e6", sageBd: "#cfe3b8",
   rule: "#e3dccd", cream: "#fcfbf6", green: "#0f6d47",
 };
+
+// LETTER landscape, minus the page padding below and the row padding on each side.
+const PAGE_W = { landscape: 792, portrait: 612 };
+const PAGE_PAD = 26;
+const ROW_PAD = 4;
 
 const today = (): string => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
@@ -36,16 +56,16 @@ const s = StyleSheet.create({
   kpiVal: { fontSize: 11, fontFamily: "Helvetica-Bold", color: C.oliveDk },
   kpiSub: { fontSize: 6.5, color: C.faint, marginTop: 1 },
 
-  th: { flexDirection: "row", backgroundColor: C.olive, paddingVertical: 4.5, paddingHorizontal: 4 },
+  th: { flexDirection: "row", backgroundColor: C.olive, paddingVertical: 4.5, paddingHorizontal: ROW_PAD },
   thTxt: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: "#fff", letterSpacing: 0.2 },
-  tr: { flexDirection: "row", paddingVertical: 3.5, paddingHorizontal: 4, borderBottomWidth: 0.5, borderBottomColor: "#efe9dc", borderBottomStyle: "solid", alignItems: "center" },
+  tr: { flexDirection: "row", paddingVertical: 3.5, paddingHorizontal: ROW_PAD, borderBottomWidth: 0.5, borderBottomColor: "#efe9dc", borderBottomStyle: "solid", alignItems: "center" },
   trAlt: { backgroundColor: "#faf8f2" },
   td: { fontSize: 7, color: C.body },
   tdBold: { fontSize: 7, fontFamily: "Helvetica-Bold", color: C.ink },
   tdFaint: { fontSize: 7, color: C.faint },
   tdRent: { fontSize: 7, color: C.green },
 
-  totalRow: { flexDirection: "row", paddingVertical: 5, paddingHorizontal: 4, borderTopWidth: 1.5, borderTopColor: C.olive, borderTopStyle: "solid", marginTop: 1, backgroundColor: C.sage },
+  totalRow: { flexDirection: "row", paddingVertical: 5, paddingHorizontal: ROW_PAD, borderTopWidth: 1.5, borderTopColor: C.olive, borderTopStyle: "solid", marginTop: 1, backgroundColor: C.sage },
   totalTxt: { fontSize: 8, fontFamily: "Helvetica-Bold", color: C.ink },
 
   note: { fontSize: 6.5, color: C.faint, marginTop: 8, lineHeight: 1.4 },
@@ -72,15 +92,29 @@ export interface TablePDFProps {
 
 export default function TablePDF(p: TablePDFProps) {
   const logoUrl = `${window.location.origin}/apple-touch-icon.png`;
-  const widths = pdfWidths(p.columns);
+  const orientation = p.orientation ?? "landscape";
+  const available = PAGE_W[orientation] - PAGE_PAD * 2 - ROW_PAD * 2;
+  // Measure the REAL content and size the columns to it, shrinking the font a step
+  // at a time until nothing overflows. Same routine for every export.
+  const layout = fitColumns(p.columns, p.rows, available);
+  const widths = layout.columns.map(c => c.width);
   const kpis = p.kpis ?? [];
   const kpiW = `${100 / Math.max(kpis.length, 1)}%`;
   const toneStyle = (t?: ExportCol["tone"]) =>
     t === "bold" ? s.tdBold : t === "faint" ? s.tdFaint : t === "money" ? s.tdRent : s.td;
+  // A real gutter on the side the text is pushed against — this is what stopped
+  // "$593,776" from touching "Jan-2009" in the next column.
+  const cellBox = (col: ExportCol, i: number) => ({
+    width: widths[i],
+    textAlign: (col.align ?? "left") as "left" | "right",
+    paddingLeft: col.align === "right" ? 2 : CELL_PAD,
+    paddingRight: col.align === "right" ? CELL_PAD : 2,
+    fontSize: layout.fontSize,
+  });
 
   return (
     <Document title={`${p.title} — KPR Deal Library`} author="KPR Centers">
-      <Page size="LETTER" orientation={p.orientation ?? "landscape"} style={s.page}>
+      <Page size="LETTER" orientation={orientation} style={s.page}>
         <View fixed>
           <View style={s.hdrRow}>
             <View style={s.logoZone}>
@@ -113,7 +147,7 @@ export default function TablePDF(p: TablePDFProps) {
 
         <View style={s.th} fixed>
           {p.columns.map((col, i) => (
-            <Text key={col.header} style={[s.thTxt, { width: widths[i], textAlign: col.align ?? "left" }]}>
+            <Text key={col.header} style={[s.thTxt, cellBox(col, i), { fontSize: layout.headerFontSize }]}>
               {col.header.toUpperCase()}
             </Text>
           ))}
@@ -122,7 +156,7 @@ export default function TablePDF(p: TablePDFProps) {
         {p.rows.map((r, i) => (
           <View key={i} style={[s.tr, ...(i % 2 ? [s.trAlt] : [])]} wrap={false}>
             {p.columns.map((col, ci) => (
-              <Text key={col.header} style={[toneStyle(col.tone), { width: widths[ci], textAlign: col.align ?? "left" }]}>
+              <Text key={col.header} style={[toneStyle(col.tone), cellBox(col, ci)]}>
                 {col.text(r)}
               </Text>
             ))}
@@ -132,7 +166,7 @@ export default function TablePDF(p: TablePDFProps) {
         {p.totalRow && (
           <View style={s.totalRow} wrap={false}>
             {p.columns.map((col, ci) => (
-              <Text key={col.header} style={[s.totalTxt, { width: widths[ci], textAlign: col.align ?? "left" }]}>
+              <Text key={col.header} style={[s.totalTxt, cellBox(col, ci), { fontSize: layout.fontSize + 0.5 }]}>
                 {p.totalRow?.[ci] ?? ""}
               </Text>
             ))}

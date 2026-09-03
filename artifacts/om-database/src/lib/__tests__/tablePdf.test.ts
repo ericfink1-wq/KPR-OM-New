@@ -62,3 +62,36 @@ describe("safeFileName", () => {
     expect(safeFileName("x".repeat(200)).length).toBe(80);
   });
 });
+
+describe("Excel columns auto-size to content", () => {
+  const cs: ExportCol[] = [
+    { header: "Recorded As", width: 24, text: r => String(r.brand ?? "") },
+    { header: "SF", width: 11, align: "right", text: r => n0(r.sf), value: r => (r.sf as number) ?? "", fmt: "#,##0" },
+  ];
+  const short = [{ brand: "Food Lion", sf: 34928 }];
+  const long = [{ brand: "Food Lion (subleased to Little Giant Farmers Market)", sf: 34928 }];
+
+  it("widens a column when the data is long, up to the cap", () => {
+    const w = toAggColumns(cs, long)[0].width;
+    expect(w).toBeGreaterThan(toAggColumns(cs, short)[0].width);
+    // the value is 52 chars; the column stops at the 46-char cap rather than
+    // producing an unwieldy sheet (Excel lets the reader widen it from there)
+    expect(w).toBe(46);
+  });
+
+  it("never goes below a readable floor (so numbers don't render as ###)", () => {
+    expect(toAggColumns(cs, short)[1].width).toBeGreaterThanOrEqual(9);
+  });
+
+  it("caps runaway widths", () => {
+    expect(toAggColumns(cs, [{ brand: "x".repeat(500), sf: 1 }])[0].width).toBeLessThanOrEqual(46);
+  });
+
+  it("falls back to the declared width when no rows are given", () => {
+    expect(toAggColumns(cs)[0].width).toBe(24);
+  });
+
+  it("still keeps values numeric after auto-sizing", () => {
+    expect(toAggColumns(cs, short)[1].get(short[0])).toBe(34928);
+  });
+});
