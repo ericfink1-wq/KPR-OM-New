@@ -1,0 +1,350 @@
+{
+  "deals": [
+    {
+      "propertyName": "Conyers Crossing",
+      "aka": ["WHLR Conyers Crossing LLC"],
+      "address": "1485-1527 Highway 138 Southeast",
+      "city": "Conyers",
+      "state": "GA",
+      "zip": "30013",
+      "assetType": "Retail",
+      "centerType": "Community Center",
+      "broker": "CBRE National Retail Partners",
+      "seller": "Wheeler Real Estate Investment Trust (WHLR)",
+      "omDate": "2026-08-26",
+      "fileName": "Project Evergreen_GA_Conyers Crossing",
+
+      "totalSF": 170475,
+      "occupancy": 100,
+      "yearBuilt": 1978,
+      "renovationYear": 1985,
+      "lotSizeAcres": 15.14,
+      "parkingRatio": 3.97,
+      "walt": 3.31,
+      "weightedAvgRentPSF": 5.93,
+
+      "askingPrice": null,
+      "capRate": null,
+      "noi": 1635494,
+      "effectiveGrossIncome": 2378168,
+      "operatingExpenses": 742674,
+      "grossPotentialRent": 1011066,
+      "nnnRecoveries": 411621,
+
+      "currentAnnualTaxes": 259094,
+      "assessmentYear": 2025,
+
+      "assumableDebt": false,
+      "loanBalance": null,
+      "loanRate": null,
+      "loanMaturity": null,
+      "debtNotes": "Not part of the assumable Guggenheim loan pool. The $100,441,000 / 5.25% / Nov-2032 assumable financing encumbers a nine-asset subset (Brickyard Plaza, Fairview Commons, Gold Star Plaza, Golden Triangle, Hamburg Square, Pine Grove Plaza, Southington Center, Trexler Mall, Washington Center Shoppes) - Conyers Crossing is unencumbered.",
+
+      "trafficCountVPD": 167000,
+      "population3mi": 43286,
+      "avgHHIncome3mi": 88038,
+      "medianHHIncome3mi": 74003,
+      "proximityHighways": "825 feet of straight-line, signalized frontage on Highway 138 SE, positioned just south of the I-20 / Highway 138 interchange (167,000 VPD) roughly 20 miles east of Atlanta. GADOT has an $85 million reconstruction and widening of that interchange in process, with planned completion in summer 2028.",
+      "retailCotenants": "Inside a major regional retail node - Walmart, Home Depot, Kroger, Publix, Lowe's, Best Buy, TJ Maxx, HomeGoods, Ross, Floor & Decor and Academy all sit within one mile, and the OM states the nearest concentration of similar scale is more than 10 miles away. Adjacent centers include Conyers Commons, Conyers Crossroads, Salem Gate, Village at Millers Chapel and Conyers Pointe (coming soon). Other demand drivers: Piedmont Rockdale Hospital (181 beds, completed 2017), Emblem (264 apartments, 2023), Alder Park (119 single-family homes, 2023) and major industrial and distribution facilities.",
+      "shadowAnchors": null,
+
+      "marketDemographics": {
+        "pop1mi": 4985,
+        "pop3mi": 43286,
+        "pop5mi": 95125,
+        "avgHHI1mi": 81616,
+        "avgHHI3mi": 88038,
+        "avgHHI5mi": 100774,
+        "confidence": "high",
+        "source": "Project Evergreen property OM (CBRE), Demographics page - 2025 current-year estimates",
+        "asOf": "2026-08-26",
+        "note": "A genuinely growing Atlanta MSA trade area: 5-mile population is up 23% since 2010 (77,338 to 95,125) and growing 1.18% annually, with the 1-mile ring growing 1.68% annually and households up 1.70%. The true trade area holds 228,293 people at $100,800 average household income with a 209,055 daytime population - the OM notes 56% of visitors travel more than five miles, consistent with a regional draw. Average household income is projected up 13-16% by 2030 across every ring."
+      },
+
+      "notes": "READ THE NOI CAVEAT FIRST. Conyers Crossing is a 170,475 SF community center on approximately 15.14 acres with 825 feet of signalized frontage on Highway 138 just south of the I-20 interchange (167,000 VPD) in Conyers, Georgia, 20 miles east of Atlanta, built in 1978 and expanded in 1985. The marketed in-place NOI of $1,635,494 IS NOT WHAT THE CENTER EARNS TODAY. It rests on a PENDING, UNEXECUTED lease: CBRE models a National Fitness User at 46,573 SF and $14.00 PSF - $652,022 of base rent plus $154,063 of recoveries, or $806,085, which is 34% of the entire $2,378,168 of modeled tenant revenue - and its own note states the lease is pending and expected to open by early 2028 at the latest, while modeling the tenant as rent-paying from the start of the analysis for in-place NOI purposes. That space does not exist as leasable area yet either: it is carved out of Burlington's current 83,552 SF box through a right-sizing to 36,979 SF that ownership is still finalizing. The owner's actual YE-2025 income statement shows NET OPERATING INCOME OF $1,020,433 on $1,645,818 of total income. The 9/1/2026 rent roll shows in-place base rent of $1,011,066, or $5.93 PSF across 170,475 SF, with Burlington still occupying its full 83,552 SF at $2.11 PSF. So roughly $615,000 of the marketed NOI is contingent on two transactions closing. Mitigating that, CBRE states the seller plans to cover any gap rent, tenant improvements, landlord work and leasing commissions to the extent tenants are not yet rent-paying at closing - get that in the contract, because it is the difference between a 2.7% CAGR stabilized center and a lease-up deal. What is real is a strong location and two long-tenured anchors: Hobby Lobby (55,363 SF, 25 years at the center, $138 PSF sales at an 8% occupancy cost) and Burlington (24 years, 3% occupancy cost), both ranking above chain averages on Placer.ai, inside a regional retail node with Walmart, Home Depot, Kroger, Publix, Lowe's and Best Buy within a mile and nothing comparable for ten miles. The Burger King ground lease is a genuine hidden asset - 3,820 SF paying $66,500 with 47 years of tenure, a corporate lease, and CBRE marking it roughly 68% below market with three options to 2044 - and could be sold separately to reduce basis.",
+
+      "keyAssumptions": [
+        "THE HEADLINE NOI IS PRO-FORMA, NOT ACTUAL. noi / effectiveGrossIncome / operatingExpenses carry CBRE's published In-Place Pro-Forma ($2,378,168 EGR less $742,674 of operating expense = $1,635,494) so this deal stays comparable with the rest of the library, which also carries OM-stated in-place NOI. But that figure INCLUDES $806,085 from a PENDING, UNEXECUTED lease (the National Fitness User at 46,573 SF and $14.00 PSF, being $652,022 of base rent plus $154,063 of recoveries - 34% of total tenant revenue). The owner's actual YE-2025 NOI was $1,020,433. Do not treat $1,635,494 as a going-in number without confirming both the fitness lease and the Burlington right-sizing are executed.",
+        "THE ROSTER IS THE ACTUAL 9/1/2026 RENT ROLL, NOT CBRE'S MODELED RECONFIGURATION. Per the standing rule that the rent roll is the final say on the roster, the 15 tenant rows here reflect what is actually leased today: Burlington in its full 83,552 SF at $2.11 PSF, F&D Barber Shop in suite B106, and NO fitness user. CBRE's model instead shows the post-reconfiguration state - Burlington at 36,979 SF, a 46,573 SF fitness user, B106 vacant, and a 589 SF unleasable mechanical/riser area that will only be created by the demising work. That is why totalSF here is 170,475 (the roll) rather than the OM's 171,064, and why occupancy reads 100% rather than 99%.",
+        "SOURCES: roster from the WHLR MRI rent roll dated 9/1/2026; options, recovery methods, the pending-lease disclosures, reported sales and occupancy-cost health ratios from the CBRE Argus model Project Evergreen_GA_Conyers Crossing (FINAL).xlsx dated 7/21/2026; historical income and expense from the WHLR income statement for the 12 months ended December 2025 (entity WHLRCC); demographics, traffic counts, parking ratio, Placer.ai rankings and property description from the property OM.",
+        "ROSTER TIE-OUT: 15 leases sum to 170,475 SF, exactly the rent roll's stated GLA (0 SF vacant, 100.0% occupied). Monthly base rent sums to $84,255.55, exactly the roll's printed total; annualized = $1,011,066. Monthly cost recovery sums to $34,301.68, exactly the roll's printed total; annualized = $411,621.",
+        "RECOVERIES BASIS DIFFERS FROM THE OTHER PROPERTIES IN THIS BATCH: nnnRecoveries and per-tenant expenseReimbursements come from the RENT ROLL here, not from CBRE's in-place table, because CBRE's per-tenant recoveries correspond to the post-reconfiguration roster (fitness user included, Burlington downsized) and cannot be matched to the actual roster. CBRE's modeled total is $717,411; the roll's actual is $411,621.",
+        "TWO TENANTS ARE LEASED BUT NOT YET PAYING RENT, and both are carried at $0 base rent so the roster ties to the roll: Caribbean Marketplace (1,050 SF, suite A102, rent commences 12/2/2026 at $28.00 PSF) and Pao Pao Ramen (3,825 SF, suite B102, rent commences 5/18/2027 at $24.17 PSF). CBRE describes Pao Pao as an executed lease with a projected rent commencement date. Both are flagged leaseStatus signed-not-open.",
+        "SUITE B106 CONFLICT - VERIFY: the 9/1/2026 rent roll shows F&D BARBER SHOP occupying 1,075 SF at $29.00 PSF on a lease running 11/1/2025 to 10/31/2030. The OM site plan and CBRE's model both show suite B106 as AVAILABLE and model a January 2028 re-lease at $27.00 PSF. Those cannot both be right. The roster follows the roll. Confirm whether F&D has vacated, is being bought out, or the OM is stale.",
+        "ACREAGE: the property OM states 15.14 acres; the VDR portfolio table states 15.16. Immaterial, but note the discrepancy.",
+        "WALT: 3.31 years on the actual roll as of 9/1/2026. CBRE reports 7.42 years, but that reflects the pending 10-year Burlington extension to December 2037 and the pending 10-year fitness lease - neither of which is executed. The VDR portfolio table's 2.8 is the anchor WALT. The gap between 3.31 and 7.42 is a good measure of how much of this deal is contingent.",
+        "ACTUAL vs PRO-FORMA EXPENSES: the owner's YE-2025 statement shows $625,386 of total operating expense against CBRE's $742,674 model. The 2025 actuals include $37,000 of one-time stormwater maintenance and $31,143 of bad debt expense - the highest bad-debt line in the batch, worth understanding. Real estate taxes ran $259,094 in 2025 versus CBRE's $272,920 modeled. CBRE explicitly did NOT reassess taxes and modeled them at 2026 budgeted amounts; Georgia counties reassess annually to fair market value, so a sale materially above the current assessment will flow through.",
+        "SALES BASIS: salesPSF and occupancyCost are CBRE's In-Place Pro-Forma reported sales and health ratios. Four tenants report; the rest are null rather than estimated. Note CBRE's sales columns for this property are partially column-shifted in the source file - the figures recorded here are the ones that reconcile against the OM's stated anchor health ratios (Burlington 3%, Hobby Lobby 8%).",
+        "CHIPOTLE IS NOT OWNED: an outparcel Chipotle sits on land the seller does not own, operating under a recorded REA through January 2068 and paying $5,280 a year of CAM contribution (the rent roll books it in the cost-recovery column, not base rent). It is carried as a 0 SF tenant marked isNAP so it does not distort GLA or rent metrics, with its CAM contribution preserved so recoveries tie to the roll.",
+        "LEASE CLAUSES ARE OM-SOURCED, NOT ABSTRACTED: the pending-lease terms, Burlington CAM structure and option schedules recorded in tenant notes come from CBRE's Argus lease summaries. The Burlington right-sizing amendment and the fitness lease should be reviewed in executed form before any of this NOI is underwritten.",
+        "NO PRICING: the portfolio is marketed unpriced, so askingPrice, capRate and pricePerSF are null rather than estimated."
+      ],
+
+      "redFlags": [
+        { "severity": "high", "description": "34% OF THE MARKETED IN-PLACE REVENUE COMES FROM AN UNEXECUTED LEASE. CBRE's in-place pro-forma includes a Pending National Fitness User at 46,573 SF and $14.00 PSF, contributing $652,022 of base rent and $154,063 of recoveries - $806,085 of the $2,378,168 total. CBRE's own note reads: pending lease, expected to open by early 2028 at the latest; CBRE models tenant as rent paying at the start of the analysis for purposes of in-place NOI. The tenant is not in the 9/1/2026 rent roll, is not paying, and the space it would occupy has not been demised. If this lease does not sign, the marketed NOI does not exist." },
+        { "severity": "high", "description": "The 46,573 SF the fitness user would occupy DOES NOT EXIST as separate leasable area today. It has to be carved out of Burlington's current 83,552 SF box through a right-sizing to 36,979 SF that ownership is still finalizing. CBRE states Burlington will remain open during construction, shifting over and back while a demising wall is built, with an estimated opening in the downsized space of late 2027 at the latest. That is construction risk, tenant-cooperation risk and timing risk stacked on top of leasing risk - and it also creates the 589 SF of unleasable mechanical/riser area the OM adds to GLA." },
+        { "severity": "high", "description": "Actual NOI is roughly $615,000 below the marketed figure. The owner's YE-2025 income statement shows NET OPERATING INCOME OF $1,020,433 on $1,645,818 of total income and $625,386 of operating expense. The 9/1/2026 rent roll shows in-place base rent of $1,011,066 ($5.93 PSF), with Burlington still at its full 83,552 SF. Against CBRE's $1,635,494 in-place NOI, that is the size of the leasing and construction execution a buyer is underwriting. Note Burlington's rent also FALLS from $175,920 to $78,026 in the right-sizing, so the fitness user has to more than replace $97,894 of lost anchor rent before adding a dollar." },
+        { "severity": "medium", "description": "SELLER COVERAGE OF THE GAP IS THE KEY CONTRACT TERM. CBRE states: to the extent that tenants are not yet rent paying and/or any leasing costs are outstanding at closing, seller plans to cover any gap rent, TI, LL work and leasing commissions. That is the right structure and it substantially de-risks the pro-forma - but plans to is not an executed obligation. Get a specific, funded, escrowed seller obligation covering gap rent through rent commencement, all tenant improvement and landlord work costs for both the Burlington demising and the fitness build-out, and all leasing commissions. Without it, the NOI gap is the buyer's." },
+        { "severity": "medium", "description": "Suite B106 is shown two different ways. The 9/1/2026 rent roll has F&D Barber Shop in 1,075 SF at $29.00 PSF through 10/31/2030; the OM site plan and CBRE's model both show the suite AVAILABLE and model a January 2028 re-lease at $27.00 PSF. One of the two is wrong. If F&D is in fact leaving, that is a small additional vacancy; if the OM is stale, CBRE's lease-up assumption is double-counting income already in place. Resolve it in diligence." },
+        { "severity": "medium", "description": "Near-term anchor and box rollover. Burlington's CURRENT lease expires 3/31/2029 and Appliances 4 Less (3,500 SF, $51,380) expires 4/30/2027, within months of a closing with no options recorded. Hobby Lobby, 32% of GLA, expires 5/31/2030 with two options at $7.15 and $7.87 PSF - CBRE assumes exercise, and at $6.50 against a $14.00 PSF market rent that assumption is reasonable, but it concentrates 32% of the building in a single 2030 decision." },
+        { "severity": "medium", "description": "Mindy's Nails reports a 21% occupancy cost on $160 PSF sales - 2,100 SF at $26.46 PSF stepping to $29.78 by 2029. That is unsustainable for a nail salon, and the contracted escalations make it worse each year. The lease runs to 9/30/2030 with no options. Rainbow is also elevated at a 10% occupancy cost on $186 PSF sales across 8,640 SF." },
+        { "severity": "medium", "description": "Burlington's rent is $2.11 PSF - 85% below CBRE's $14.00 PSF market - and the pending deal keeps it there for another ten years. The right-sizing comes with a fresh 10-year term at the SAME $2.11 PSF through December 2037, plus four 5-year options at $8.00, $9.00, $10.00 and $11.00 PSF running to 2057. The OM presents the $8.00 first-option rent as driving cash flow growth and exit cap compression, but that step is eleven years away and everything before it is locked. Treat this as secure, sticky income on a 24-year-tenured anchor at a 3% occupancy cost - not as capturable mark-to-market." },
+        { "severity": "low", "description": "Bad debt expense of $31,143 in 2025 - the highest in this batch and roughly 1.9% of total income. Combined with $2,259 of collection legal fees, it suggests real collection friction in the shop line. Ask for an aged receivable schedule." },
+        { "severity": "low", "description": "GADOT's $85 million reconstruction and widening of the I-20 / Highway 138 interchange is IN PROCESS with completion planned for summer 2028. Long term this improves access to a center whose entire location thesis rests on that interchange. Through 2027 and into 2028, however, it means construction disruption on the primary access route during exactly the period the fitness user is meant to open and stabilize." }
+      ],
+
+      "upsideItems": [
+        { "priority": "high", "item": "The fitness user, if it signs, transforms the asset", "detail": "46,573 SF at $14.00 PSF with a 10% step to $15.50 in 2033 and four options running to 2057 at up to $22.69 PSF. That is $652,022 of base rent plus $154,063 of recoveries against a center currently producing $1,011,066 of total base rent. CBRE calls it a game-changing addition that should significantly increase traffic, and a fitness anchor is genuinely complementary to Hobby Lobby and Burlington rather than competitive. This is the deal - but it is an opportunity, not an in-place fact, and it should be priced as such." },
+        { "priority": "high", "item": "Burger King ground lease - a separately saleable hidden asset", "detail": "3,820 SF on a freestanding outparcel paying $66,500 of ground rent on a CORPORATE lease, with 47 years of tenure at the center (since April 1979) and three 5-year options at $73,150, $80,465 and $88,512 carrying it to 2044. CBRE marks it roughly 68% below market. The tenant self-maintains its building and the parking in front of it, and CBRE excludes its GLA from capital reserves. A separate sale at a ground-lease cap rate would be materially accretive against a community-center cap and would reduce basis - the OM explicitly flags this." },
+        { "priority": "high", "item": "A dominant location inside a regional retail node, with public money going into the access", "detail": "825 feet of signalized frontage on Highway 138 just south of an interchange carrying 167,000 VPD, with Walmart, Home Depot, Kroger, Publix, Lowe's, Best Buy, TJ Maxx, HomeGoods, Ross, Floor & Decor and Academy all within one mile and nothing of similar scale for ten miles. 1.6 million annual visits with 56% of visitors travelling more than five miles. GADOT's $85 million interchange reconstruction completes in summer 2028. Under the demographics-to-rent lens, a growing Atlanta MSA trade area (5-mile population up 23% since 2010, still compounding 1.18% annually, $100,774 average household income) with constrained competing supply supports pushing shop rents on rollover." },
+        { "priority": "medium", "item": "Two proven anchors with 24-plus years of tenure and excellent health ratios", "detail": "Hobby Lobby has been at the center since August 2001 and does $138 PSF at an 8% occupancy cost; Burlington since 2009 at the center (and per the OM 24-plus years of tenure) at a 3% occupancy cost. Placer.ai ranks Hobby Lobby in the top 48% and Burlington in the top 45% of their chains, and the OM states all other tracked tenants also rank above chain averages. Anchors average 11 miles to their nearest same-store location, which protects sales from cannibalization." },
+        { "priority": "medium", "item": "Genuine below-market rent across a shop line that rolls", "detail": "In-place rent averages $5.93 PSF against CBRE's $16.97 weighted-average market. Much of that gap is the locked anchors, but the shops are also below market with short terms: Appliances 4 Less at $14.68 vs $25.00 (expires 4/2027, no options), Rainbow at $10.59 vs $16.00, Republic Finance at $18.77 vs $27.00, Rose Couture at $24.40 vs $27.00. Nine of the fifteen leases carry contracted annual escalations already signed, including Pao Pao Ramen stepping from $24.17 to $37.84 by 2036." },
+        { "priority": "low", "item": "Recent leasing momentum in the shop line", "detail": "Six leases commenced or renewed in the last eighteen months - Caribbean Marketplace (August 2026), Pao Pao Ramen (August 2026, an 11-year term), Rainbow (February 2026), F&D Barber Shop (November 2025), Mindy's Nails (October 2025), Republic Finance (October 2025) and Boost Mobile (July 2025). Whatever the pending anchor deals do, the small-shop market at this center is clearly active." }
+      ],
+
+      "cashFlowProjection": [
+        { "label": "2027", "totalBaseRent": 1671567, "reimbursements": 714641, "egr": 2386208, "operatingExpenses": 742915, "noi": 1643293 },
+        { "label": "2028", "totalBaseRent": 1748586, "reimbursements": 744844, "egr": 2480672, "operatingExpenses": 765889, "noi": 1714783 },
+        { "label": "2029", "totalBaseRent": 1778881, "reimbursements": 769167, "egr": 2532219, "operatingExpenses": 788179, "noi": 1744039 },
+        { "label": "2030", "totalBaseRent": 1800275, "reimbursements": 789575, "egr": 2578976, "operatingExpenses": 810948, "noi": 1768028 },
+        { "label": "2031", "totalBaseRent": 1906452, "reimbursements": 786911, "egr": 2678457, "operatingExpenses": 835940, "noi": 1842516 },
+        { "label": "2032", "totalBaseRent": 1927583, "reimbursements": 809523, "egr": 2727870, "operatingExpenses": 860090, "noi": 1867780 },
+        { "label": "2033", "totalBaseRent": 2064101, "reimbursements": 851592, "egr": 2899599, "operatingExpenses": 888590, "noi": 2011009 },
+        { "label": "2034", "totalBaseRent": 2093479, "reimbursements": 876417, "egr": 2953346, "operatingExpenses": 914250, "noi": 2039096 },
+        { "label": "2035", "totalBaseRent": 2131526, "reimbursements": 899744, "egr": 3015951, "operatingExpenses": 940898, "noi": 2075054 },
+        { "label": "2036", "totalBaseRent": 2152862, "reimbursements": 918058, "egr": 3055071, "operatingExpenses": 967584, "noi": 2087487 },
+        { "label": "2037", "totalBaseRent": 2204081, "reimbursements": 952452, "egr": 3141903, "operatingExpenses": 996467, "noi": 2145437 }
+      ],
+
+      "incomeBreakdown": {
+        "Base Rent": 997263,
+        "Base Rent - Ground (Burger King)": 66500,
+        "CAM Recovery (incl. accruals)": 250746,
+        "Tax Recovery (incl. annual billing and accruals)": 258926,
+        "Insurance Recovery (incl. accruals)": 71558,
+        "Trash / R&M / Other Tenant Recovery": 3953,
+        "Prior-Year Recovery True-Ups": -11156,
+        "Late Fee Income": 8029,
+        "Total Income": 1645818
+      },
+      "expenseBreakdown": {
+        "Grounds & Landscape": 69208,
+        "Security / Fire-Life-Safety": 300,
+        "Repairs & Maintenance (incl. $37,000 one-time stormwater)": 55434,
+        "Structural / Roof": 11866,
+        "Utilities": 8548,
+        "Administrative (incl. $31,143 bad debt)": 44995,
+        "Management Fee / Cost Reimbursement Allocation": 75409,
+        "Real Estate Taxes": 259094,
+        "Insurance": 91066,
+        "Non-CAM Operating": 9466,
+        "Total Operating Expenses": 625386
+      },
+
+      "tenantsAsOf": "2026-09-01",
+      "tenantsSource": "rent-roll",
+      "tenantsManual": true,
+
+      "tenants": [
+        {
+          "name": "Burlington", "parentCompany": "Burlington Stores, Inc.", "suite": "MAJB", "sf": 83552, "rentPerSF": 2.11, "annualRent": 175920,
+          "leaseStart": "2024-04-01", "leaseExpiry": "2029-03-31", "remainingTermYears": 2.58,
+          "leaseType": "NNN", "reimbursementMethod": "No monthly cost recovery billed on the current rent roll. Under the pending right-sizing, CAM would be FIXED at $0.50 PSF growing 3% annually through year 5, stepping to $1.00 PSF fixed in year 6 (CBRE models January 2033) with 3% annual increases; in option periods CAM reverts to a pro rata structure.",
+          "expenseReimbursements": 0,
+          "rentSchedule": "Flat at $2.11 PSF ($14,660.00/month, $175,920/year) on the current 83,552 SF through 3/31/2029.",
+          "renewalOptions": "Under the PENDING right-sizing: a fresh 10-year term to December 2037 at the SAME $2.11 PSF on 36,979 SF, then four 5-year options at $8.00, $9.00, $10.00 and $11.00 PSF running to 2057.",
+          "rentBumps": "None in the current term. Under the pending deal, none until the first option in 2038.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": 3, "percentageRent": null, "otherRent": null,
+          "isAnchor": true, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "PENDING RIGHT-SIZING - THE CENTRAL FACT OF THIS DEAL. Rent roll entity BURLINGTON COAT FACTORY #437. The tenant CURRENTLY OCCUPIES 83,552 SF at $2.11 PSF ($175,920/year) with the lease expiring 3/31/2029, and that is what this roster carries. Ownership is finalizing a downsizing to 36,979 SF in conjunction with a fresh 10-year term at the same $2.11 PSF, freeing 46,573 SF for a pending national fitness user. CBRE states Burlington will be open during construction, essentially shifting over and back while a demising wall is built, with estimated opening in the downsized space of late 2027 at the latest, and models the 10-year term ending December 2037. NOTE THE ARITHMETIC: post-downsizing Burlington rent FALLS to $78,026, so the fitness user must replace $97,894 of lost anchor rent before adding anything. 24-plus years of tenure at the center with a 3% occupancy cost and a Placer.ai ranking in the top 45% of its chain. At $2.11 against CBRE's $14.00 PSF market rent this is 85% below market, but locked for another decade plus - secure, sticky income, not capturable mark-to-market. Clause detail is OM-sourced and unverified against the executed amendment, which should be reviewed before closing.",
+          "salesNotes": "Does not report sales figures in the material provided; the OM states a 3% occupancy cost and a top-45% Placer.ai chain ranking."
+        },
+        {
+          "name": "Hobby Lobby", "parentCompany": "Hobby Lobby Stores, Inc.", "suite": "MAJA", "sf": 55363, "rentPerSF": 6.50, "annualRent": 359859,
+          "leaseStart": "2025-06-01", "leaseExpiry": "2030-05-31", "remainingTermYears": 3.75,
+          "leaseType": "NNN", "reimbursementMethod": "Custom Hobby Lobby recovery schedule", "expenseReimbursements": 290507,
+          "rentSchedule": "Flat at $6.50 PSF ($29,988.29/month) through 5/31/2030.",
+          "renewalOptions": "Two 5-year options: 6/2030-5/2035 at $7.15 PSF ($395,845/year) and 6/2035-5/2040 at $7.87 PSF ($435,707/year).",
+          "rentBumps": "None in current term; 10% at each option.",
+          "salesPSF": 138, "salesYear": 2025, "occupancyCost": 8, "percentageRent": null, "otherRent": null,
+          "isAnchor": true, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Rent roll entity HOBBY LOBBY CREATIVE CENTER. The largest genuinely in-place tenant at 32.5% of GLA and 36% of in-place base rent. CBRE shows original occupancy August 2001 - 25 years at the center - and the current five-year term commenced June 2025. Sales of $138 PSF at an 8% occupancy cost is a workable position for the format, and Placer.ai ranks the store in the top 48% of its chain. At $6.50 against CBRE's $14.00 PSF large-anchor market rent this is 54% below market; the two options at $7.15 and $7.87 keep it well below market through 2040, so this is durable income rather than upside. Contributes $290,507 of expense recovery - 71% of all recoveries at the center.",
+          "salesNotes": "2025 sales $138 PSF at an 8% occupancy cost. Placer.ai: top 48% of chain foot traffic."
+        },
+        {
+          "name": "Rainbow", "suite": "B108", "sf": 8640, "rentPerSF": 10.59, "annualRent": 91476,
+          "leaseStart": "2026-02-01", "leaseExpiry": "2031-01-31", "remainingTermYears": 4.42,
+          "leaseType": "NNN", "reimbursementMethod": "Custom Rainbow recovery schedule", "expenseReimbursements": 50997,
+          "rentSchedule": "Flat at $10.59 PSF ($7,623.00/month) through 1/31/2031.",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "None.",
+          "salesPSF": 186, "salesYear": 2025, "occupancyCost": 10, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Rent roll entity RAINBOW APPAREL, STORE #488. CBRE shows original occupancy February 2001, roughly 25 years at the center; renewed into a fresh five-year term effective 2/1/2026. A 10% occupancy cost on $186 PSF sales is elevated for value apparel and worth monitoring. At $10.59 against CBRE's $16.00 PSF Rainbow market rent this is 34% below market with NO renewal options, so the 8,640 SF is genuinely resettable at the 1/31/2031 expiry. Worth noting that Rainbow's leases at Tampa Festival in this same portfolio are on triggered co-tenancy relief paying zero base rent - check whether any co-tenancy provision exists here, particularly given the pending anchor reconfiguration.",
+          "salesNotes": "2025 sales $186 PSF at a 10% occupancy cost - elevated for value apparel."
+        },
+        {
+          "name": "Pao Pao Ramen", "suite": "B102", "sf": 3825, "rentPerSF": 0, "annualRent": 0,
+          "leaseStart": "2026-08-21", "leaseExpiry": "2037-05-31", "remainingTermYears": 10.75,
+          "leaseType": "NNN", "reimbursementMethod": "Custom Pao Pao recovery schedule; CAM, insurance and tax recovery commence 2/17/2027", "expenseReimbursements": 0,
+          "rentSchedule": "NOT YET RENT-PAYING as of the 9/1/2026 rent roll. Base rent commences 5/18/2027 at $24.17 PSF ($7,704.19/month), then steps annually: 5/2028 to $29.87 PSF, 5/2029 $30.77, 5/2030 $31.69, 5/2031 $32.64, 5/2032 $33.62, 5/2033 $34.63, 5/2034 $35.67, 5/2035 $36.74, 5/2036 $37.84 PSF.",
+          "renewalOptions": "Two 5-year options: 1/2037-12/2041 at $43.52 PSF and 1/2042-12/2046 at $50.04 PSF.",
+          "rentBumps": "Approximately 3% annually from May 2028 through 2036.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "signed-not-open",
+          "assumptionNote": "Rent roll entity PAO PAO RAMEN FACTORY & BOBA. EXECUTED BUT NOT YET RENT-PAYING - CBRE's note reads: Executed lease - RCD is projected. The rent roll shows base rent commencing 5/18/2027 and recoveries commencing 2/17/2027, so the tenant contributes $0 to current in-place income and is carried at $0 so the roster ties to the roll. This is the longest term at the center - eleven years to May 2037 with two options to 2046 - at rents that climb to $37.84 PSF, well above CBRE's $29.00 PSF restaurant market rent. A strong signing, but confirm the rent commencement date and whether any landlord work or free rent remains outstanding.",
+          "salesNotes": "Not yet open - no sales."
+        },
+        {
+          "name": "Burger King", "parentCompany": "Restaurant Brands International Inc.", "suite": "OUTB", "sf": 3820, "rentPerSF": 17.41, "annualRent": 66500,
+          "leaseStart": "2019-01-01", "leaseExpiry": "2029-01-17", "remainingTermYears": 2.38,
+          "leaseType": "NNN ground lease", "reimbursementMethod": "NNN ground lease - tenant self-maintains its building and the parking areas in front of it", "expenseReimbursements": 6644,
+          "rentSchedule": "Flat at $66,500/year ($5,541.67/month) through 1/17/2029. CAM contribution steps to $570.31/month in April 2027 and $587.42/month in April 2028.",
+          "renewalOptions": "Three 5-year options: 1/2029-1/2034 at $73,150/year, 1/2034-1/2039 at $80,465/year, 1/2039-1/2044 at $88,512/year.",
+          "rentBumps": "None in current term; 10% at each option.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "creditRating": "Corporate lease",
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Rent roll entity BURGER KING #2433. A SEPARATELY PARCELED, FREESTANDING OUTPARCEL ON A CORPORATE NNN GROUND LEASE - the hidden asset at this center. CBRE shows original occupancy April 1979, 47 years of tenure. The tenant self-maintains its building and the parking in front of it, and CBRE excludes its GLA from capital reserves. CBRE marks the ground lease at $52.356 PSF, so the $17.41 in place is roughly 68% below market, with three options carrying corporate credit to 2044. The OM explicitly flags embedded value in a separate sale at accretive pricing and/or to reduce basis - a corporate-credit QSR ground lease trades at a materially tighter cap rate than a 1978-vintage community center.",
+          "salesNotes": "Ground lease - does not report sales."
+        },
+        {
+          "name": "Appliances 4 Less", "suite": "B112", "sf": 3500, "rentPerSF": 14.68, "annualRent": 51380,
+          "leaseStart": "2021-09-14", "leaseExpiry": "2027-04-30", "remainingTermYears": 0.66,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 13287,
+          "rentSchedule": "Flat at $14.68 PSF ($4,281.67/month) through 4/30/2027.",
+          "renewalOptions": "None.",
+          "rentBumps": "None.",
+          "salesPSF": 304, "salesYear": 2025, "occupancyCost": 6, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "THE NEAREST EXPIRY AT THE CENTER - 4/30/2027, within months of a 2027 closing, with NO renewal options. Sales of $304 PSF at a 6% occupancy cost is a healthy position, which supports renewal, and at $14.68 against CBRE's $25.00 PSF large-shop market rent there is substantial mark-to-market available on rollover - roughly $36,000 of additional annual rent at market.",
+          "salesNotes": "2025 sales $304 PSF at a 6% occupancy cost - healthy."
+        },
+        {
+          "name": "Golden Krust", "suite": "A106", "sf": 2100, "rentPerSF": 22.76, "annualRent": 47796,
+          "leaseStart": "2022-11-01", "leaseExpiry": "2032-10-31", "remainingTermYears": 6.17,
+          "leaseType": "NNN", "reimbursementMethod": "Custom Golden Krust recovery schedule with contracted CAM, insurance and tax step-ups each November through 2031", "expenseReimbursements": 12870,
+          "rentSchedule": "Six contracted annual steps: 11/1/2026 to $23.22 PSF, 11/1/2027 to $23.88, 11/1/2028 to $24.16, 11/1/2029 to $24.64, 11/1/2030 to $25.13, 11/1/2031 to $25.63 PSF.",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "Approximately 2-3% annually, 2026 through 2031.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Caribbean bakery and restaurant. CBRE shows original occupancy November 2012, roughly 14 years at the center. One of the few leases with fully contracted escalations on BOTH base rent and every recovery component through 2031 - unusually well structured for the owner. At $22.76 against CBRE's $29.00 PSF restaurant market rent this is 21% below market, closing to roughly 12% by 2031.",
+          "salesNotes": "Does not report sales at this location."
+        },
+        {
+          "name": "Mindy's Nails & Spa", "suite": "B110", "sf": 2100, "rentPerSF": 26.46, "annualRent": 55566,
+          "leaseStart": "2025-10-01", "leaseExpiry": "2030-09-30", "remainingTermYears": 4.08,
+          "leaseType": "NNN", "reimbursementMethod": "Custom Mindy's recovery schedule", "expenseReimbursements": 8461,
+          "rentSchedule": "Four contracted annual steps: 10/1/2026 to $27.25 PSF, 10/1/2027 to $28.07, 10/1/2028 to $28.91, 10/1/2029 to $29.78 PSF.",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "Approximately 3% annually, 2026 through 2029.",
+          "salesPSF": 160, "salesYear": 2025, "occupancyCost": 21, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "THE WEAKEST REPORTING TENANT AT THE CENTER - a 21% occupancy cost on $160 PSF sales. CBRE shows original occupancy October 2020; the tenant renewed into a fresh five-year term effective 10/1/2025, which cuts against the distress read, but the contracted escalations push rent to $29.78 PSF by 2029 while the occupancy cost is already double a sustainable level for a nail salon. At $26.46 against CBRE's $27.00 PSF market rent the lease is essentially at market, so there is no rent cushion. No renewal options - treat the 2,100 SF as re-leasing exposure at the 9/30/2030 expiry.",
+          "salesNotes": "2025 sales $160 PSF at a 21% occupancy cost - unsustainable for the format, and contracted escalations make it worse each year."
+        },
+        {
+          "name": "Boost Mobile", "suite": "B100", "sf": 1500, "rentPerSF": 23.00, "annualRent": 34500,
+          "leaseStart": "2025-07-01", "leaseExpiry": "2030-06-30", "remainingTermYears": 3.83,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 5695,
+          "rentSchedule": "Flat at $23.00 PSF ($2,875.00/month) through 6/30/2030.",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "None.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "CBRE shows original occupancy September 2014, roughly 12 years at the center; renewed into a fresh five-year term effective 7/1/2025. At $23.00 against CBRE's $27.00 PSF non-restaurant shop market rent this is 15% below market with no options, so the 1,500 SF is resettable at the 6/30/2030 expiry.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "Republic Finance", "suite": "A110", "sf": 1500, "rentPerSF": 18.77, "annualRent": 28154,
+          "leaseStart": "2025-10-01", "leaseExpiry": "2030-09-30", "remainingTermYears": 4.08,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 5695,
+          "rentSchedule": "Four contracted annual steps: 10/1/2026 to $19.14 PSF, 10/1/2027 to $19.53, 10/1/2028 to $19.92, 10/1/2029 to $20.32 PSF.",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "Approximately 2% annually, 2026 through 2029.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Consumer lender. CBRE shows original occupancy May 2020; renewed into a fresh five-year term effective 10/1/2025. At $18.77 against CBRE's $27.00 PSF non-restaurant shop market rent this is 30% below market - the largest shop-level gap at the center - with no renewal options, so the full 1,500 SF is genuinely resettable at the 9/30/2030 expiry.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "Wingstop", "parentCompany": "Wingstop Inc.", "suite": "A100", "sf": 1400, "rentPerSF": 30.80, "annualRent": 43120,
+          "leaseStart": "2025-01-01", "leaseExpiry": "2029-12-31", "remainingTermYears": 3.33,
+          "leaseType": "NNN", "reimbursementMethod": "Custom Wingstop recovery schedule", "expenseReimbursements": 4194,
+          "rentSchedule": "Flat at $30.80 PSF ($3,593.33/month) through 12/31/2029.",
+          "renewalOptions": "Two 5-year options: 1/2030-12/2034 at $33.88 PSF ($47,432/year) and 1/2035-12/2039 at $37.27 PSF ($52,178/year).",
+          "rentBumps": "None in current term; 10% at each option.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "THE HIGHEST RENT PSF AT THE CENTER at $30.80. CBRE shows original occupancy December 2019; renewed into a fresh five-year term effective 1/1/2025. At $30.80 against CBRE's $29.00 PSF restaurant market rent this is roughly 6% ABOVE market - per the standing rule that is mark-to-market downside rather than upside, though the option chain to 2039 at rising rents suggests the tenant is comfortable. No sales reported, so whether the premium is supported cannot be tested - flag it to verify.",
+          "salesNotes": "Does not report sales - worth requesting given this is the center's highest rent PSF and sits above market."
+        },
+        {
+          "name": "F&D Barber Shop", "suite": "B106", "sf": 1075, "rentPerSF": 29.00, "annualRent": 31175,
+          "leaseStart": "2025-11-01", "leaseExpiry": "2030-10-31", "remainingTermYears": 4.17,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 4005,
+          "rentSchedule": "Four contracted annual steps: 11/1/2026 to $29.87 PSF, 11/1/2027 to $30.77, 11/1/2028 to $31.69, 11/1/2029 to $32.64 PSF. Also pays $261.03/month of other income, stepping to $260.94 in December 2027.",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "Approximately 3% annually, 2026 through 2029.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "CONFLICT - VERIFY. The 9/1/2026 rent roll shows this tenant in occupancy at $29.00 PSF on a five-year lease running 11/1/2025 to 10/31/2030, and that is what the roster carries. However the OM SITE PLAN AND CBRE'S MODEL BOTH SHOW SUITE B106 AS AVAILABLE, with CBRE modeling a January 2028 re-lease at $27.00 PSF with $15.00 PSF of tenant improvements and 6% commissions. Those cannot both be true. Either F&D has vacated or is being bought out (in which case this is additional vacancy the roll has not caught up with), or the OM is stale (in which case CBRE's lease-up assumption double-counts income already in place). Resolve in diligence - it is only 1,075 SF but it points to how current the marketing materials are.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "Caribbean Marketplace", "suite": "A102", "sf": 1050, "rentPerSF": 0, "annualRent": 0,
+          "leaseStart": "2026-08-04", "leaseExpiry": "2031-12-31", "remainingTermYears": 5.33,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee; CAM, insurance and tax recovery commence 12/2/2026", "adminFeePct": 15, "expenseReimbursements": 0,
+          "rentSchedule": "NOT YET RENT-PAYING as of the 9/1/2026 rent roll. Base rent commences 12/2/2026 at $28.00 PSF ($2,450.00/month), then steps annually: 12/2027 to $28.84 PSF, 12/2028 $29.71, 12/2029 $30.61, 12/2030 $31.53 PSF.",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "Approximately 3% annually from December 2027.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "signed-not-open",
+          "assumptionNote": "Rent roll entity CARIBBEAN MARKETPLACE, INC. Lease signed 8/4/2026 with rent commencing 12/2/2026, so the tenant contributes $0 to current in-place income and is carried at $0 so the roster ties to the roll. At $28.00 against CBRE's $29.00 PSF restaurant market rent this is essentially at market with contracted 3% annual growth. Confirm rent commencement and any outstanding landlord work or free rent.",
+          "salesNotes": "Not yet open - no sales."
+        },
+        {
+          "name": "Rose Couture", "suite": "A108", "sf": 1050, "rentPerSF": 24.40, "annualRent": 25620,
+          "leaseStart": "2023-10-25", "leaseExpiry": "2028-10-31", "remainingTermYears": 2.17,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 3986,
+          "rentSchedule": "11/1/2026 step to $25.13 PSF ($2,198.88/month); 11/1/2027 step to $25.89 PSF ($2,265.38/month).",
+          "renewalOptions": "None recorded.",
+          "rentBumps": "Approximately 3% annually on 11/1/2026 and 11/1/2027.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "CBRE shows original occupancy August 2023. At $24.40 stepping to $25.89 against CBRE's $27.00 PSF non-restaurant shop market rent this is roughly 10% below market. No renewal options, so the 1,050 SF is resettable at the 10/31/2028 expiry.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "Chipotle", "parentCompany": "Chipotle Mexican Grill, Inc.", "suite": "OUTC", "sf": 0, "rentPerSF": null, "annualRent": 0,
+          "leaseStart": "2018-02-01", "leaseExpiry": "2068-01-31", "remainingTermYears": 41.42,
+          "leaseType": "NAP - not owned", "reimbursementMethod": "CAM contribution under a recorded REA", "expenseReimbursements": 5280,
+          "rentSchedule": "No base rent to the landlord. Pays $440.00/month of CAM contribution, stepping to $484.00/month in January 2027.",
+          "renewalOptions": "REA runs to January 2068.",
+          "rentBumps": "CAM contribution steps January 2027.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": true, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Rent roll entity MCP STABLE - CHIPOTLE. NOT OWNED - CBRE labels this Chipotle (Not Owned) and marks it NAP. The outparcel sits on land the seller does not own; Chipotle contributes CAM under a recorded reciprocal easement agreement running to January 2068. Carried at 0 SF with $0 base rent so it does not distort GLA or rent-per-SF metrics, but its $5,280 annual CAM contribution IS preserved so recoveries tie to the rent roll's printed total (the roll books this amount in the cost-recovery column, not base rent). CBRE models $5,808 in its CY2027 in-place table. A Chipotle adjacent to the center is a traffic positive even though it pays no rent.",
+          "salesNotes": "Not owned - no sales reporting to this landlord."
+        }
+      ],
+
+      "fieldCitations": {
+        "totalSF": "WHLR MRI rent roll 9/1/2026 - printed Total Sqft 170,475 (the OM's 171,064 adds 589 SF of unleasable mechanical/riser area that would be created by the pending Burlington right-sizing)",
+        "occupancy": "WHLR MRI rent roll 9/1/2026 - Occupied Sqft 100.00%, Vacant 0 (the OM's 99% reflects the post-reconfiguration state with suite B106 shown available)",
+        "grossPotentialRent": "WHLR MRI rent roll 9/1/2026 - total monthly base rent $84,255.55 x 12",
+        "nnnRecoveries": "WHLR MRI rent roll 9/1/2026 - total monthly cost recovery $34,301.68 x 12",
+        "noi": "CBRE Argus model (FINAL, 7/21/2026) - In-Place Pro-Forma, Net Operating Income $1,635,494; property OM page 2. PRO-FORMA: includes $806,085 from a pending, unexecuted fitness lease. Actual YE-2025 NOI was $1,020,433.",
+        "effectiveGrossIncome": "CBRE Argus model (FINAL) - In-Place Pro-Forma, Effective Gross Revenue $2,378,168",
+        "operatingExpenses": "CBRE Argus model (FINAL) - In-Place Pro-Forma, Total Expenses $742,674",
+        "cashFlowProjection": "CBRE Argus model (FINAL) - Cash Flow tab, CY2027-CY2037",
+        "lotSizeAcres": "Property OM page 2 - 15.14 acres (VDR portfolio table states 15.16)",
+        "parkingRatio": "Property OM page 2 - 3.97 spaces per 1,000 SF",
+        "trafficCountVPD": "Property OM pages 2-3 - I-20 / Highway 138 interchange 167,000 VPD",
+        "population3mi": "Property OM page 5 - Demographics, 2025 current-year estimate, 3-mile ring",
+        "currentAnnualTaxes": "WHLR income statement, 12 months ended December 2025 - Real Estate Tax Expense $259,093.63"
+      }
+    }
+  ]
+}
