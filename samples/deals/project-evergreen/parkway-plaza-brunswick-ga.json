@@ -1,0 +1,446 @@
+{
+  "deals": [
+    {
+      "propertyName": "Parkway Plaza",
+      "address": "303 - 363 Venture Drive",
+      "city": "Brunswick",
+      "state": "GA",
+      "zip": "31525",
+      "market": "Brunswick, GA (Golden Isles)",
+      "submarket": "Perry Lane Road / Golden Isles Parkway",
+      "assetType": "Retail",
+      "centerType": "Grocery-Anchored Neighborhood Center",
+      "omDate": "2026-08-17",
+      "broker": "CBRE (Project Evergreen portfolio offering)",
+      "totalSF": 52365,
+      "occupancy": 84.8,
+      "walt": 7.3,
+      "weightedAvgRentPSF": 11.23,
+      "yearBuilt": null,
+      "renovationYear": null,
+      "lotSizeAcres": 8.1,
+      "parkingRatio": 5.1,
+      "askingPrice": null,
+      "capRate": null,
+      "pricePerSF": null,
+      "noi": 460765,
+      "grossPotentialRent": 629930,
+      "effectiveGrossIncome": 637885,
+      "operatingExpenses": 177120,
+      "nnnRecoveries": 139465,
+      "currentAnnualTaxes": 58501,
+      "trafficCountVPD": 33600,
+      "population3mi": 25079,
+      "avgHHIncome3mi": 104045,
+      "medianHHIncome3mi": 76845,
+      "proximityHighways": "Signalized Perry Lane Road / Golden Isles Parkway intersection (33,600 VPD), one-half mile northwest of the I-95 / Golden Isles Parkway interchange. Brunswick Golden Isles Airport is immediately adjacent; Jacksonville is roughly 70 miles south.",
+      "retailCotenants": "Thin competitive set — the next-nearest grocery store is 2 miles away and there are only 3 other neighborhood grocers within 5 miles. Pointe Villas (186 apartment units) was completed in 2025 one mile north of the asset.",
+      "shadowAnchors": null,
+      "tenantsAsOf": "2027-01-01",
+      "tenantsSource": "om",
+      "tenants": [
+        {
+          "name": "China Panda",
+          "suite": "2",
+          "sf": 1600,
+          "rentPerSF": 21.46,
+          "annualRent": 34343,
+          "leaseStart": "2003-02-01",
+          "leaseExpiry": "2029-05-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "NNN + 15% admin fee on all NNNs",
+          "rentBumps": "Site plan prints a current rate of $20.00/SF; the CY2027 pro-forma blends to $21.46/SF, implying a contractual step during 2027.",
+          "rentSchedule": "Current $20.00/SF stepping to a CY2027 average of $21.46/SF ($34,343). Individual steps not printed.",
+          "renewalOptions": null,
+          "expenseReimbursements": 6129,
+          "percentageRent": null,
+          "otherRent": null,
+          "salesPSF": null,
+          "salesYear": null,
+          "occupancyCost": null,
+          "creditRating": null,
+          "parentCompany": null,
+          "isAnchor": false,
+          "isNAP": false,
+          "isDark": false,
+          "assumptionNote": "Highest-rented suite in the center and the longest-tenured tenant — in place since February 2003 (23 years). No sales disclosed."
+        },
+        {
+          "name": "LA Nails",
+          "suite": "3",
+          "sf": 1600,
+          "rentPerSF": 18.24,
+          "annualRent": 29187,
+          "leaseStart": "2006-06-01",
+          "leaseExpiry": "2031-10-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "NNN + 15% admin fee on all NNNs",
+          "rentBumps": "Site plan current rate $18.18/SF; CY2027 pro-forma $18.24/SF.",
+          "rentSchedule": "Current $18.18/SF stepping to a CY2027 average of $18.24/SF ($29,187). Individual steps not printed.",
+          "renewalOptions": null,
+          "expenseReimbursements": 6129,
+          "percentageRent": null,
+          "otherRent": null,
+          "salesPSF": null,
+          "salesYear": null,
+          "occupancyCost": null,
+          "creditRating": null,
+          "parentCompany": null,
+          "isAnchor": false,
+          "isNAP": false,
+          "isDark": false,
+          "assumptionNote": "20 years of tenure. Longest shop term at the center (October 2031). No sales disclosed."
+        },
+        {
+          "name": "Available",
+          "suite": "4",
+          "sf": 7980,
+          "rentPerSF": 0,
+          "annualRent": 0,
+          "leaseStart": null,
+          "leaseExpiry": null,
+          "leaseType": "Vacant",
+          "reimbursementMethod": null,
+          "rentBumps": null,
+          "rentSchedule": null,
+          "renewalOptions": null,
+          "expenseReimbursements": 0,
+          "percentageRent": null,
+          "otherRent": null,
+          "salesPSF": null,
+          "salesYear": null,
+          "occupancyCost": null,
+          "creditRating": null,
+          "parentCompany": null,
+          "isAnchor": false,
+          "isNAP": false,
+          "isDark": false,
+          "assumptionNote": "The center's only vacancy — a single 7,980 SF block (15.2% of GLA). CBRE models absorption over 12 months from 1/1/2027 with first absorption 1/1/2028 at $16.00/SF large-shop market rent, 5-year term, NNN + 15% admin, $15/SF new TI, 6% new commissions and 9 months of downtime. At 7,980 SF this is a large-shop / junior-box lease-up, not a small-shop fill — a slower and less certain leasing task than the OM's single absorption date implies."
+        },
+        {
+          "name": "Aldi",
+          "suite": "5",
+          "sf": 37985,
+          "rentPerSF": 9.85,
+          "annualRent": 374000,
+          "leaseStart": "2002-10-01",
+          "leaseExpiry": "2034-12-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "NNN + 15% admin fee on all NNNs",
+          "rentBumps": "OM highlights: pays $9.64/SF increasing to $10.86/SF in October 2027 (+12.7%).",
+          "rentSchedule": "$9.64/SF currently, stepping to $10.86/SF in October 2027 per the p.3 highlights. The CY2027 pro-forma carries $374,000 ($9.85/SF blended). NOTE: a clean 10/1/2027 step on 37,985 SF would blend to about $9.95/SF ($377,760), so the $374,000 modeled figure implies either a slightly later step date or a stated flat contract rent — reconcile against the rent roll.",
+          "renewalOptions": null,
+          "expenseReimbursements": 114949,
+          "percentageRent": null,
+          "otherRent": null,
+          "salesPSF": null,
+          "salesYear": null,
+          "occupancyCost": null,
+          "creditRating": null,
+          "parentCompany": "ALDI Inc. (Aldi Süd)",
+          "isAnchor": true,
+          "isNAP": false,
+          "isDark": false,
+          "assumptionNote": "The anchor: 73% of GLA, 75% of base rent and 76% of total revenue. Aldi converted the former Winn-Dixie (in place at this location since 2002) and OPENED IN DECEMBER 2024; the Oct-2002 commencement on the roll is the original premises commencement, not Aldi's. About 8 to 8.5 years of primary term remain to December 2034. Aldi's credit is described in the OM as 'well capitalized' (privately held — no public rating), and the chain is expanding aggressively with ~180 planned US openings in 2026. Top 40% of the chain in foot traffic per Placer.ai. MATERIAL LEASE STRUCTURE: Aldi operates in only about 60% of the 37,985 SF premises ('Aldi Space') but pays rent on the entire premises. Through March 2027 Aldi has the exclusive right to sublease the remaining ~40% ('Residual Space'); after that, if no sublease is executed, the landlord may recapture the Residual Space on 30 days' notice, at which point Aldi's PSF rent and recoveries would apply only to the Aldi Space. Aldi can defeat the recapture by delivering evidence of a sublease, signed LOI or similar within the 30-day window. CBRE has modeled Aldi at the full contract rent with NO recapture. No sales are disclosed."
+        },
+        {
+          "name": "Lucky Stars Tobacco & Vape",
+          "suite": "6",
+          "sf": 1600,
+          "rentPerSF": 17.5,
+          "annualRent": 28000,
+          "leaseStart": "2023-12-01",
+          "leaseExpiry": "2028-12-31",
+          "leaseType": "NNN",
+          "reimbursementMethod": "NNN + 15% admin fee on all NNNs",
+          "rentBumps": null,
+          "rentSchedule": "Flat $17.50/SF ($28,000) in CY2027 through the December 2028 expiry.",
+          "renewalOptions": null,
+          "expenseReimbursements": 6129,
+          "percentageRent": null,
+          "otherRent": null,
+          "salesPSF": null,
+          "salesYear": null,
+          "occupancyCost": null,
+          "creditRating": null,
+          "parentCompany": null,
+          "isAnchor": false,
+          "isNAP": false,
+          "isDark": false,
+          "assumptionNote": "Newest lease at the center (December 2023) and the shortest term (December 2028). Tobacco/vape is a regulatory- and headline-risk use category, and the only tenant here that breaks the OM's '100% daily needs' framing. No sales disclosed."
+        },
+        {
+          "name": "Subway",
+          "suite": "7",
+          "sf": 1600,
+          "rentPerSF": 20.56,
+          "annualRent": 32891,
+          "leaseStart": "2009-06-01",
+          "leaseExpiry": "2029-06-30",
+          "leaseType": "NNN",
+          "reimbursementMethod": "NNN + 15% admin fee on all NNNs",
+          "rentBumps": null,
+          "rentSchedule": "Flat $20.56/SF ($32,891) in CY2027.",
+          "renewalOptions": null,
+          "expenseReimbursements": 6129,
+          "percentageRent": null,
+          "otherRent": null,
+          "salesPSF": null,
+          "salesYear": null,
+          "occupancyCost": null,
+          "creditRating": null,
+          "parentCompany": "Subway (Roark Capital) — franchised location; franchisee not disclosed",
+          "isAnchor": false,
+          "isNAP": false,
+          "isDark": false,
+          "assumptionNote": "17 years of tenure since June 2009. Franchised QSR — confirm whether the lease is with the franchisee or a corporate entity, and whether any guaranty exists. No sales disclosed."
+        }
+      ],
+      "anchorStatus": [
+        {
+          "anchor": "Aldi",
+          "status": "in_place",
+          "termExpiration": "2034-12-31",
+          "relocating": false
+        }
+      ],
+      "leaseRisk": {
+        "coTenancyDisclosed": false,
+        "source": "OM",
+        "tenants": [
+          {
+            "tenant": "Aldi",
+            "suite": "5",
+            "baseRentAnnual": 374000,
+            "coTenancy": null,
+            "salesKickout": null,
+            "otherRiskClauses": {
+              "recaptureAssignment": {
+                "present": true,
+                "summary": "Landlord recapture of the ~40% 'Residual Space' within Aldi's 37,985 SF premises. Aldi operates in only ~60% ('Aldi Space') but pays rent on the whole premises. Through March 2027 Aldi holds the EXCLUSIVE right to sublease the Residual Space; thereafter, if Aldi has not executed a sublease, the landlord may recapture it on 30 days' notice, after which Aldi's PSF rent and recoveries apply only to the Aldi Space. Aldi may negate the recapture by delivering evidence within the 30-day period of a sublease, signed LOI or similar agreement for the Residual Space. CBRE has modeled Aldi at full contract rent and has NOT modeled any recapture.",
+                "sourceDocument": "OM In-Place Pro-Forma footnote [3] (page 9)",
+                "verbatimQuote": "T operates in ~60% of the overall space (\"Aldi Space\") but pays rent on the entire 37,985 SF premises, as presented herein. Through March 2027, T has exclusive right to sublease the remaining ~40% of the premises (\"Residual Space\"); thereafter, if T has not executed a sublease on the Residual Space, LL may on 30 days notice recapture the Residual Space, at which point Aldi's PSF rent and recoveries would apply only to the Aldi Space (Aldi may negate LL's recapture if it delivers evidence within the 30-day recapture period that Aldi has entered into a sublease, signed letter of intent, or similar agreement for the Residual Space).",
+                "provenance": "extracted",
+                "verifiedAgainstExecutedDoc": false
+              },
+              "goDarkRight": null,
+              "continuousOperationCovenant": null,
+              "exclusiveUse": null,
+              "rofrRofo": null,
+              "earlyTerminationOption": null
+            }
+          }
+        ]
+      },
+      "cashFlowProjection": [
+        {
+          "label": "CY2027 (In-place)",
+          "totalBaseRent": 498420,
+          "reimbursements": 139465,
+          "egr": 637885,
+          "operatingExpenses": 177120,
+          "noi": 460765
+        },
+        {
+          "label": "CY2028",
+          "totalBaseRent": 676425,
+          "reimbursements": 176933,
+          "egr": 846909,
+          "operatingExpenses": 188130,
+          "noi": 658778
+        },
+        {
+          "label": "CY2029",
+          "totalBaseRent": 683725,
+          "reimbursements": 179883,
+          "egr": 859015,
+          "operatingExpenses": 193375,
+          "noi": 665639
+        },
+        {
+          "label": "CY2030 (spec. ground lease commences)",
+          "totalBaseRent": 832063,
+          "reimbursements": 188716,
+          "egr": 1013636,
+          "operatingExpenses": 203042,
+          "noi": 810594
+        },
+        {
+          "label": "CY2031",
+          "totalBaseRent": 836492,
+          "reimbursements": 192990,
+          "egr": 1023386,
+          "operatingExpenses": 208514,
+          "noi": 814872
+        },
+        {
+          "label": "CY2032",
+          "totalBaseRent": 864012,
+          "reimbursements": 200028,
+          "egr": 1056286,
+          "operatingExpenses": 214835,
+          "noi": 841451
+        },
+        {
+          "label": "CY2033",
+          "totalBaseRent": 850433,
+          "reimbursements": 199338,
+          "egr": 1043113,
+          "operatingExpenses": 219934,
+          "noi": 823179
+        },
+        {
+          "label": "CY2034",
+          "totalBaseRent": 864165,
+          "reimbursements": 207832,
+          "egr": 1067922,
+          "operatingExpenses": 226338,
+          "noi": 841584
+        },
+        {
+          "label": "CY2035",
+          "totalBaseRent": 897666,
+          "reimbursements": 218132,
+          "egr": 1107417,
+          "operatingExpenses": 233352,
+          "noi": 874066
+        },
+        {
+          "label": "CY2036",
+          "totalBaseRent": 910841,
+          "reimbursements": 224544,
+          "egr": 1126756,
+          "operatingExpenses": 239936,
+          "noi": 886820
+        },
+        {
+          "label": "CY2037",
+          "totalBaseRent": 916262,
+          "reimbursements": 229664,
+          "egr": 1138503,
+          "operatingExpenses": 246472,
+          "noi": 892031
+        }
+      ],
+      "incomeBreakdown": {
+        "Gross Potential Rent (CY2027, incl. vacancy at market)": 629930,
+        "Absorption & Turnover Vacancy": -131510,
+        "Total Scheduled Base Rent (in-place)": 498420,
+        "Expense Recoveries": 139465,
+        "Effective Gross Revenue": 637885
+      },
+      "expenseBreakdown": {
+        "CAM": 63575,
+        "Management Fee": 19137,
+        "Insurance": 33211,
+        "Real Estate Taxes": 58501,
+        "Non-Recoverable": 2697,
+        "Total Operating Expenses": 177120,
+        "Capital Reserves (below the line)": 13484
+      },
+      "keyAssumptions": [
+        "ROSTER BASIS: CBRE's IN-PLACE PRO-FORMA for calendar year 2027 (page 9) — what the $460,765 in-place NOI, the $139,465 recovery line and the $637,885 effective gross revenue tie to. Where a suite has a 2027 step the PSF is a CY2027 blend; the site plan's current rate is recorded in each tenant's rentSchedule.",
+        "The OM's In-Place Pro-Forma prints lease dates as month-year only (e.g. \"Oct-02\" / \"Dec-34\") with no day. Commencements are recorded as the FIRST day and expirations as the LAST day of the printed month — a stated convention, not a figure read off the document. Re-key the exact days from the rent roll in diligence.",
+        "Four-way tie-out against the OM's printed totals: (a) 44,385 SF occupied + 7,980 SF vacant = 52,365 SF GLA; (b) 44,385 / 52,365 = 84.8% occupancy; (c) base rents sum to $498,421 vs the $498,420 printed (rounding); (d) $637,885 EGR - $177,120 OpEx = $460,765 NOI. Tenant recoveries sum to $139,465 exactly.",
+        "THE SPECULATIVE GROUND LEASE IS NOT IN THE ROSTER. The pro-forma carries a 'Ground Lease (Speculative)' row at $0 in CY2027 — it is a modeled future deal on the ±2.09-acre developable outparcel, not a tenant. CBRE assumes a 10-year as-is ground lease starting in year 4 of the analysis at $125,000/year growing 2% annually, paying 100% of taxes on its parcel (and removing the existing tenancy's recovery for those taxes once it commences). It has been deliberately EXCLUDED from the tenant roster so occupancy, GLA and rent-PSF math stay clean; it is captured in upsideItems instead. The parcel contains wetlands/undevelopable area, so CBRE assumes only the front portion is ground leased.",
+        "THE OM QUOTES TWO DIFFERENT GROWTH RATES ON PURPOSE: 12.8% five-year NOI CAGR INCLUDING the speculative outparcel ground lease, versus 9% EXCLUDING it. The 12.8% headline therefore embeds a development that has not been entitled, leased or costed. Underwrite the 9% and treat the outparcel as optionality.",
+        "ALDI'S RESIDUAL-SPACE RECAPTURE is the most important lease term in the deal and is captured in leaseRisk: Aldi occupies ~60% of its 37,985 SF premises but pays on 100%. After March 2027 the landlord may recapture the ~40% Residual Space on 30 days' notice if Aldi has not subleased it, and Aldi's rent and recoveries would then apply only to the Aldi Space. CBRE has modeled NO recapture. The clause cuts both ways — recapture frees ~15,000 SF of leasable area but reduces Aldi's rent — and the OM does not disclose the resulting rent split. Get the lease.",
+        "ALDI'S COMMENCEMENT DATE ON THE ROLL (Oct-2002) IS THE ORIGINAL WINN-DIXIE PREMISES COMMENCEMENT, not Aldi's. Aldi converted the box and opened in December 2024 per the p.2 narrative. Term remaining is ~8 years to December 2034.",
+        "NO PRICE AND NO CAP RATE are quoted — unpriced marketing package. Value must be underwritten off the $460,765 in-place NOI.",
+        "TAXES ARE NOT REASSESSED. The $58,501 CY2027 tax line equals the 2026 budget grown forward; the OM states expressly that reassessment is the investor's responsibility. Glynn County, GA will reassess on the sale — the modeled tax line is 13% of NOI, so the step-up matters.",
+        "NO SALES ARE DISCLOSED FOR ANY TENANT, including Aldi. Tenant health cannot be assessed from this book.",
+        "The OM does not print a year built, a renovation year, individual rent steps, renewal-option terms, or any co-tenancy, exclusive or kickout clause. Left null rather than estimated."
+      ],
+      "redFlags": [
+        {
+          "severity": "high",
+          "description": "Single-tenant concentration is extreme: Aldi is 73% of GLA, 75% of base rent and 76% of total revenue. Outside Aldi the center is four 1,600 SF shop suites. This underwrites much closer to a single-tenant net-lease asset with a small shop strip attached than to a diversified neighborhood center, and it should be priced that way."
+        },
+        {
+          "severity": "high",
+          "description": "Aldi's residual-space recapture is unmodeled and unquantified. Aldi pays rent on 37,985 SF but occupies only ~60% of it; after March 2027 the landlord can recapture the ~40% Residual Space on 30 days' notice, after which Aldi's rent and recoveries apply only to the Aldi Space. CBRE models full contract rent with no recapture, and the OM never discloses what Aldi's rent becomes if recapture happens. Until the lease is read, roughly 40% of the anchor's premises — and an undisclosed share of its $374,000 rent — is an open question."
+        },
+        {
+          "severity": "high",
+          "description": "15.2% vacancy sits in ONE 7,980 SF block, not in small shop suites. CBRE models it absorbed in a single event on 1/1/2028 at $16.00/SF with 9 months of downtime; a large-shop lease-up in a Brunswick submarket is a materially slower and less certain task than four small-shop fills, and CY2028 NOI of $658,778 (a 43% jump over in-place) depends on it landing."
+        },
+        {
+          "severity": "medium",
+          "description": "The 12.8% five-year NOI CAGR headline includes a SPECULATIVE ground lease on the ±2.09-acre outparcel at $125,000/year beginning in year 4 — a parcel that contains wetlands, has no disclosed entitlement, no tenant and no cost estimate. Excluding it, CBRE's own figure is 9%."
+        },
+        {
+          "severity": "high",
+          "description": "NO SALES DATA IS DISCLOSED FOR ANY TENANT, including Aldi. There is no way to test the anchor's productivity or any shop tenant's health from this book."
+        },
+        {
+          "severity": "medium",
+          "description": "The shop roster is four suites of local/regional credit plus a franchised Subway — no investment-grade tenancy, no disclosed guaranties, and Lucky Stars Tobacco & Vape (the shortest lease, December 2028) carries regulatory and headline risk."
+        },
+        {
+          "severity": "medium",
+          "description": "Taxes are NOT reassessed in the pro-forma; the $58,501 modeled tax line is 13% of NOI and a Georgia sale typically triggers reassessment to the transaction price."
+        }
+      ],
+      "upsideItems": [
+        {
+          "priority": "high",
+          "item": "Lease up the 7,980 SF large-shop block",
+          "detail": "Lease-up of the 7,980 SF vacancy (15.2% of GLA) at CBRE's $16.00/SF large-shop market rent — the single largest driver of the modeled jump from $460,765 (CY2027) to $658,778 (CY2028)."
+        },
+        {
+          "priority": "high",
+          "item": "The included 2.09-acre developable outparcel",
+          "detail": "The ±2.09-acre developable outparcel is INCLUDED in the offering. CBRE models a 10-year as-is ground lease at $125,000/year from year 4, growing 2% annually, with the ground tenant paying 100% of taxes on its parcel. This is the difference between the OM's 9% and 12.8% five-year NOI CAGR — real optionality, but unentitled, unleased, uncosted and partly wetlands."
+        },
+        {
+          "priority": "high",
+          "item": "Aldi's contractual +12.7% step in October 2027",
+          "detail": "Aldi steps from $9.64/SF to $10.86/SF in October 2027, a contractual +12.7% on 73% of the GLA that requires no leasing effort."
+        },
+        {
+          "priority": "medium",
+          "item": "Unusually thin grocery competition",
+          "detail": "Very thin grocery competition: the next-nearest grocery store is 2 miles away and only 3 other neighborhood grocers operate within 5 miles — an unusually protected position for a discount grocer."
+        },
+        {
+          "priority": "medium",
+          "item": "High-income, growing trade area",
+          "detail": "Strong and improving trade area for this portfolio group: 3-mile average household income of $104,045 (median $76,845), 1-mile average of $117,986, with 1-mile population growing 2.78% annually since 2020 and 186 apartment units delivered one mile north in 2025. Higher income plus growing density supports both the shop rents and a tighter going-in cap than the Brunswick market alone would suggest."
+        },
+        {
+          "priority": "medium",
+          "item": "Aldi is expanding and performing here",
+          "detail": "Aldi is expanding aggressively (~180 planned US openings in 2026) and ranks in the top 40% of the chain by foot traffic here per Placer.ai — a discount grocer performing well in a high-income, supply-constrained trade area."
+        },
+        {
+          "priority": "low",
+          "item": "Half a mile from the I-95 interchange",
+          "detail": "Half a mile from the I-95 / Golden Isles Parkway interchange on a signalized 33,600 VPD corner, with a straight-line configuration and 5.1 parking spaces per 1,000 SF."
+        }
+      ],
+      "notes": "Parkway Plaza is a 52,365 SF Aldi-anchored neighborhood center at the signalized Perry Lane Road / Golden Isles Parkway intersection (33,600 VPD) in Brunswick, Georgia, half a mile from the I-95 interchange, offered unpriced by CBRE within the Project Evergreen portfolio. Aldi converted the former Winn-Dixie box — in place at this location since 2002 — and opened in December 2024, taking 37,985 SF at $9.64/SF stepping to $10.86/SF in October 2027, with roughly eight years of primary term to December 2034. That single tenant is 73% of the GLA, 75% of base rent and 76% of revenue, so the asset underwrites much closer to a net-leased grocery box with a four-suite shop strip attached than to a diversified center. In-place CY2027 NOI is $460,765 on $637,885 of effective gross revenue against $177,120 of operating expenses, with a $11.23/SF weighted-average base rent. The most important term in the deal is buried in a rent-roll footnote: Aldi occupies only about 60% of its premises but pays rent on all of it, and after March 2027 the landlord may recapture the remaining ~40% on thirty days' notice if Aldi has not subleased it — at which point Aldi's rent and recoveries would apply only to the space it occupies. CBRE models no recapture and never discloses the resulting rent, so a meaningful share of the anchor's income is unresolved until the lease is read. The growth case is the 7,980 SF vacancy (a single large-shop block, not easy small-shop fill) plus a speculative ground lease on the included ±2.09-acre outparcel at $125,000/year from year four, which is the entire difference between CBRE's 9% and 12.8% five-year NOI CAGR. The trade area is genuinely good — $104,045 3-mile average household income, $117,986 within a mile, 2.78% annual 1-mile population growth and 186 new apartments a mile north — and grocery competition is unusually thin, with the nearest store two miles away. The top risk is that no sales are disclosed for any tenant, Aldi included, so an asset whose value is three-quarters one lease offers no way to test that lease's health.",
+      "fieldCitations": {
+        "noi": "p.2 Property Summary ($460,765) and p.9 In-Place Pro-Forma Net Operating Income",
+        "effectiveGrossIncome": "p.9 In-Place Pro-Forma TOTAL GROSS REVENUE / EFFECTIVE GROSS REVENUE $637,885",
+        "operatingExpenses": "p.9 In-Place Pro-Forma Total Expenses $177,120",
+        "grossPotentialRent": "p.10 Cash Flow CY2027 Gross Potential Rent $629,930",
+        "nnnRecoveries": "p.9 Operating Expenses recovery column $139,465; verified against the per-tenant roll-up",
+        "totalSF": "p.2 Property Summary and p.4 Site Plan (52,365 SF); confirmed by the roster roll-up",
+        "occupancy": "p.9 pro-forma (84.8%) and p.4 Site Plan (Occupied 44,385 / Total 52,365 = 85%)",
+        "weightedAvgRentPSF": "p.3 Property Highlights ($11.23 PSF Average Base Rent); independently reproduced as $498,420 / 44,385 SF",
+        "walt": "Computed SF-weighted from the roster's expiries as of 01/01/2027; not stated in the OM (the OM's '±8 Years' is Aldi's remaining term, not center WALT)",
+        "currentAnnualTaxes": "p.9/p.10 RET expense line $58,501 (2026 budget; NOT reassessed)",
+        "lotSizeAcres": "p.2 Property Summary (8.1 Acres)",
+        "parkingRatio": "p.2 Property Summary (5.1 spaces / 1,000 SF)",
+        "trafficCountVPD": "p.2 Property Summary — Perry Lane Rd / Golden Isles Pkwy intersection, 33,600 VPD",
+        "population3mi": "p.5 Demographics, 2025 Population 3 Miles (25,079)",
+        "avgHHIncome3mi": "p.5 Demographics, 2025 Average Household Income 3 Miles ($104,045)",
+        "medianHHIncome3mi": "p.5 Demographics, 2025 Median Household Income 3 Miles ($76,845)",
+        "tenants": "p.9 In-Place Pro-Forma rent roll cross-checked against the p.4 Site Plan roster",
+        "leaseRisk": "p.9 In-Place Pro-Forma footnote [3] — Aldi Residual Space recapture (quoted verbatim)",
+        "cashFlowProjection": "p.10 Cash Flow Projections (Argus Enterprise 14.0.2), CY2027-CY2037",
+        "omDate": "p.8/p.9/p.10 footer stamp 8/17/2026"
+      }
+    }
+  ]
+}
