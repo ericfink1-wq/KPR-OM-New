@@ -1297,9 +1297,21 @@ export function buildLatestSales(deal: {
     if (gross == null && psf != null && sf != null && sf > 0) gross = Math.round(psf * sf);
 
     let occupancyCost = _num(r.occupancyCost);
-    // A stated occupancy cost in (0,1) is a fraction that lost its ×100 on import
-    // (0.225 = 22.5%); normalize so it doesn't render as "0.2%". Under 1% is impossible.
-    if (occupancyCost != null && occupancyCost > 0 && occupancyCost < 1) occupancyCost = occupancyCost * 100;
+    // A stated occupancy cost in (0,1) is USUALLY a fraction that lost its ×100 on
+    // import (0.225 = 22.5%); normalize so it doesn't render as "0.2%". But sub-1% is
+    // NOT impossible: a high-volume tenant (a pharmacy on script revenue, ~$2,800 PSF)
+    // genuinely pays under 1% of sales, and rescaling that would show a healthy 0.87%
+    // as a distressed 87%. So only rescale when this row's own rent and sales do not
+    // corroborate the sub-1 figure.
+    if (occupancyCost != null && occupancyCost > 0 && occupancyCost < 1) {
+      const ocBase = _num(rt?.annualRent);
+      const ocTotal = ocBase == null ? null
+        : ocBase + (_num(rt?.expenseReimbursements) ?? 0) + (_num(rt?.percentageRent) ?? 0) + (_num(rt?.otherRent) ?? 0);
+      const ocImplied = ocTotal != null && gross != null && gross > 0 ? (ocTotal / gross) * 100 : null;
+      const corroborated = ocImplied != null && ocImplied > 0 && ocImplied < 1
+        && Math.abs(ocImplied - occupancyCost) / ocImplied <= 0.30;
+      if (!corroborated) occupancyCost = occupancyCost * 100;
+    }
     let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
     let occBreakdown: import("./idb").OccBreakdown | null = null;
     const base = _num(rt?.annualRent);

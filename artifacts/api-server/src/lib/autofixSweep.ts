@@ -8,7 +8,7 @@ import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { auditExtraction, AUDIT_ID_PREFIX } from "./extractionAudit";
 import { createSnapshot } from "../routes/snapshots";
-import { normalizeDate, deriveRents } from "./importFixes";
+import { normalizeDate, deriveRents, occCostCorroboratedBySales } from "./importFixes";
 import { repairCoTenancyTrigger, type CoTenancyLike } from "./coTenancyStructure";
 import { logger } from "./logger";
 import type { Logger } from "pino";
@@ -82,7 +82,10 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
     const tenants = (Array.isArray(data.tenants) ? data.tenants : []).map((raw) => {
       const t = { ...(raw as Record<string, unknown>) };
       const oc = nA(t.occupancyCost);
-      if (oc != null && oc > 0 && oc < 1) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
+      // Sub-1% is normally a dropped ×100 — but NOT when the tenant's own sales confirm
+      // it (a high-volume pharmacy really does pay under 1% of sales). This sweep runs
+      // library-wide, so an unguarded rescale would corrupt every such tenant at once.
+      if (oc != null && oc > 0 && oc < 1 && !occCostCorroboratedBySales(t)) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
       for (const f of ["leaseStart", "leaseExpiry", "originalLeaseDate", "rentCommencement", "rentStart"] as const) {
         const iso = normalizeDate(t[f]);
         if (iso) { t[f] = iso; dateFixed++; changed = true; }
