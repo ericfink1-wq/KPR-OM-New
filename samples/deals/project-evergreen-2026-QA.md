@@ -58,3 +58,22 @@ SF = stated GLA.
 - Pierpont Centre carries ten **NAP parcels** (Lowe's, two hotels, Wendy's, Outback, etc.)
   that contribute $38,520 of CAM reimbursement and no base rent; their pro-forma lease
   dates are 01/01/27–12/31/46 placeholders and are stored as null.
+
+## Import behaviour (how these land in an existing library)
+
+`POST /deals/import` matches an existing deal on **propertyName (exact, case-insensitive)
++ address** (address compared only when both sides have one, after abbreviating
+road/street/avenue/boulevard/drive/lane/parkway). Addresses here are stored in each OM's
+own printed form to maximise a clean match. Two consequences worth knowing:
+
+- **A match MERGES**, and `USER_PRESERVED_KEYS` win — which includes `tenants`,
+  `tenantsAsOf`, `tenantsManual`, `occupancy`, `walt`, `weightedAvgRentPSF` and
+  `dealScore`. So an existing deal takes the new financials, narrative, red flags and
+  cash flow, but KEEPS its old roster. Refresh the roster deliberately (deal page →
+  "Paste roster from Claude") if the stored one is stale.
+- **A near-miss creates a duplicate.** A stored name like "Brook Run" vs
+  "Brook Run Shopping Center", or an address the normaliser can't reconcile
+  ("Commonwealth Blvd W" vs "Commonwealth Boulevard West"), will insert a second deal.
+  `auditDuplicates` (Data Audit → "Possible duplicate deals") only groups on an exact
+  name match, so a differently-named duplicate will not be caught there either — search
+  the library by name before importing.
