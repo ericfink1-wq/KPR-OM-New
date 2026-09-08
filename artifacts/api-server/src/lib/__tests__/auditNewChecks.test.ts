@@ -163,3 +163,32 @@ describe("audit — occupied tenant with zero base rent", () => {
     expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-zero-rent"))).toBe(false);
   });
 });
+
+// ── Occupancy cost under 1%: a unit slip, or a genuinely exceptional tenant? ──────
+// The ×100 auto-fix and the "stored as a fraction" audit both assumed any value in
+// (0,1) was a dropped ×100. That is right for a 0.NN fraction, but WRONG when the
+// tenant's own disclosed sales confirm the figure: CBRE's Project Evergreen OMs print a
+// "health ratio" column, and Waterway Pharmacy really does run 0.87% ($48,120 base +
+// $10,532 recoveries on 2,400 SF at $2,816 PSF = $6.76M of sales). Before this guard the
+// import silently rewrote it to 87.0%, turning the healthiest tenant in the center into
+// a catastrophically distressed one.
+describe("audit — sub-1% occupancy cost corroborated by the tenant's own sales", () => {
+  const pharmacy = {
+    name: "Waterway Pharmacy", sf: 2400, annualRent: 48120, rentPerSF: 20.05,
+    expenseReimbursements: 10532, percentageRent: 0, salesPSF: 2816, occupancyCost: 0.87,
+  };
+  it("does NOT flag a sub-1% occupancy cost the sales arithmetic confirms", () => {
+    const flags = auditExtraction({ tenants: [pharmacy] });
+    expect(flags.some((q) => q.id.startsWith("audit-occcost-fraction"))).toBe(false);
+  });
+  it("still flags a real dropped-×100 whose sales imply a ~100× larger ratio", () => {
+    // Same rent and sales, but occupancyCost stored as 0.0087 — the sales say 0.87%,
+    // so 0.0087 is a genuine fraction slip and must still be caught.
+    const deal = { tenants: [{ ...pharmacy, occupancyCost: 0.0087 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-occcost-fraction"))).toBe(true);
+  });
+  it("still flags a sub-1 value when the row carries no sales to corroborate it", () => {
+    const deal = { tenants: [{ name: "Pet Supplies Plus", sf: 6400, occupancyCost: 0.225, annualRent: 132032 }] };
+    expect(auditExtraction(deal).some((q) => q.id.startsWith("audit-occcost-fraction"))).toBe(true);
+  });
+});

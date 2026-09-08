@@ -12,7 +12,7 @@
 //   • Unit-of-measure sanity (occupancy as a fraction, cap rate as basis points).
 // Only fires on genuine CONTRADICTIONS — never on values that are simply absent.
 
-import { normalizeDate } from "./importFixes";
+import { normalizeDate, occCostCorroboratedBySales } from "./importFixes";
 import { checkCoTenancyStructure, isPerAnchorTrigger, collectAnchorLeaves, type CoTenancyLike } from "./coTenancyStructure";
 
 export interface AuditQuestion {
@@ -377,6 +377,10 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
     if (occUnitFlags >= 6) break;
     const oc = num(t.occupancyCost);
     if (oc == null || oc <= 0 || oc >= 1) continue;
+    // ...UNLESS the tenant's own disclosed sales and rent confirm the sub-1% figure. A
+    // high-volume pharmacy really does pay under 1% of sales, and flagging (or worse,
+    // ×100-ing) a verified figure would turn the healthiest tenant into a distressed one.
+    if (occCostCorroboratedBySales(t as unknown as Record<string, unknown>)) continue;
     const nm = String(t.name ?? "tenant");
     const fixed = oc * 100;
     occUnitFlags++;

@@ -107,6 +107,29 @@ function recompute(tenants: Record<string, unknown>[], asOf: unknown, deal: Reco
   return out;
 }
 
+// A sub-1 occupancyCost is USUALLY a 0.NN fraction that lost its ×100 — but not always.
+// When the tenant's OWN disclosed sales and rent reconcile TO the stored value, it is a
+// VERIFIED figure, not a unit slip: a high-volume pharmacy (script revenue runs $2,500+
+// PSF) genuinely pays under 1% of sales, and CBRE prints exactly that as a "health
+// ratio" (Waterway Pharmacy: $58,652 of rent + recoveries on $6.76M of sales = 0.87%).
+// Multiplying that by 100 would turn the healthiest tenant in a center into a
+// catastrophically distressed one, so the fix must yield to the row's own arithmetic.
+// Returns true ONLY when the row carries enough data to CONFIRM the sub-1 value — a
+// genuine dropped-×100 (whose sales imply ~87%, not ~0.87%) still gets corrected.
+export function occCostCorroboratedBySales(t: Record<string, unknown>): boolean {
+  const oc = nA(t.occupancyCost);
+  if (oc == null || oc <= 0 || oc >= 1) return false;
+  const base = nA(t.annualRent), psf = nA(t.salesPSF), sf = nA(t.sf);
+  if (base == null || psf == null || sf == null) return false;
+  const sales = psf * sf;
+  if (!(sales > 0)) return false;
+  const total = base + (nA(t.expenseReimbursements) ?? 0) + (nA(t.percentageRent) ?? 0) + (nA(t.otherRent) ?? 0);
+  const computed = (total / sales) * 100;
+  // Must itself land under 1% AND agree with the stored value (same 30% tolerance the
+  // stated-vs-computed occupancy-cost audit uses, so OM rounding never breaks it).
+  return computed > 0 && computed < 1 && Math.abs(computed - oc) / computed <= 0.30;
+}
+
 export interface ImportFixResult {
   deal: Record<string, unknown>;
   changed: boolean;
@@ -162,7 +185,7 @@ export function applyImportFixes(input: Record<string, unknown>): ImportFixResul
   const fixed = raw.map((src) => {
     const t = { ...src };
     const oc = nA(t.occupancyCost);
-    if (oc != null && oc > 0 && oc < 1) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
+    if (oc != null && oc > 0 && oc < 1 && !occCostCorroboratedBySales(t)) { t.occupancyCost = Math.round(oc * 100 * 100) / 100; occCostFixed++; changed = true; }
     for (const f of TENANT_DATE_FIELDS) {
       const iso = normalizeDate(t[f]);
       if (iso) { t[f] = iso; dateFixed++; changed = true; }

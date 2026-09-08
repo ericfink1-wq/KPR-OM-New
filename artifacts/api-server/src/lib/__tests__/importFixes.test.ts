@@ -72,3 +72,24 @@ describe("deriveRents — gated blank base-rent fill (never assumes on shaky dat
     expect(filled).toBe(0);
   });
 });
+
+describe("importFixes — occupancy cost corroborated by sales is NOT rewritten", () => {
+  const pharmacy = {
+    name: "Waterway Pharmacy", sf: 2400, annualRent: 48120, rentPerSF: 20.05,
+    expenseReimbursements: 10532, percentageRent: 0, salesPSF: 2816, occupancyCost: 0.87,
+  };
+  it("leaves a verified 0.87% alone (was silently becoming 87%)", () => {
+    const r = applyImportFixes({ tenants: [{ ...pharmacy }] });
+    expect((r.deal.tenants as any)[0].occupancyCost).toBe(0.87);
+    expect(r.occCostFixed).toBe(0);
+  });
+  it("still converts a genuine fraction the sales contradict", () => {
+    const r = applyImportFixes({ tenants: [{ ...pharmacy, occupancyCost: 0.0087 }] });
+    expect((r.deal.tenants as any)[0].occupancyCost).toBe(0.87);
+    expect(r.occCostFixed).toBe(1);
+  });
+  it("still converts a sub-1 value with no sales to corroborate it", () => {
+    const r = applyImportFixes({ tenants: [{ name: "X", sf: 6400, occupancyCost: 0.225, annualRent: 132032 }] });
+    expect((r.deal.tenants as any)[0].occupancyCost).toBe(22.5);
+  });
+});
