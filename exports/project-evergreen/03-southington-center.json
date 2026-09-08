@@ -1,0 +1,309 @@
+{
+  "deals": [
+    {
+      "propertyName": "Southington Center",
+      "aka": ["Cedar Southington Plaza, LLC", "WHLR Southington Center"],
+      "address": "235 Queen Street",
+      "city": "Southington",
+      "state": "CT",
+      "zip": "06489",
+      "assetType": "Retail",
+      "centerType": "Community Center",
+      "broker": "CBRE National Retail Partners",
+      "seller": "Wheeler Real Estate Investment Trust (WHLR)",
+      "omDate": "2026-08-26",
+      "fileName": "Project Evergreen_CT_Southington Center",
+
+      "totalSF": 155842,
+      "occupancy": 83.4,
+      "yearBuilt": 1973,
+      "renovationYear": 2000,
+      "lotSizeAcres": 16.0,
+      "parkingRatio": 4.36,
+      "walt": 3.78,
+      "weightedAvgRentPSF": 6.81,
+
+      "askingPrice": null,
+      "capRate": null,
+      "noi": 658091,
+      "effectiveGrossIncome": 1476566,
+      "operatingExpenses": 818474,
+      "grossPotentialRent": 884626,
+      "nnnRecoveries": 576790,
+
+      "currentAnnualTaxes": 309108,
+      "assessmentYear": 2025,
+
+      "assumableDebt": true,
+      "loanBalance": 7537712,
+      "loanRate": 5.25,
+      "loanMaturity": "2032-11-30",
+      "loanType": "Fixed-rate portfolio loan, 5 years interest-only then amortizing",
+      "debtLender": "Guggenheim Real Estate",
+      "debtLoanAmount": 7537712,
+      "debtRate": 5.25,
+      "debtRateType": "Fixed",
+      "debtOriginationDate": "2022-10-01",
+      "debtMaturityDate": "2032-11-30",
+      "debtIOPeriod": 5,
+      "debtAssumable": "Yes",
+      "debtPrepay": "Prior to the 7th loan year: yield maintenance. 7th to 8th loan year: 2.0% of principal prepaid. 8th to 9th loan year: 1.0% of principal prepaid. After the 9th loan year: no fee.",
+      "debtNotes": "Southington Center is one of NINE assets encumbered by a single $100,441,000 Guggenheim Real Estate loan (Oct-2022 origination, 5.25% fixed, matures Nov-2032, 5 years IO then amortizing). The $7,537,712 shown here is Southington's allocated balance, not a standalone loan. Release requires a payment of 110% of the allocated loan amount plus prepayment premium or yield maintenance, a minimum 10.0% post-release debt yield, no default, and sits under a cumulative $26.87 million pool release cap. NOTE: the collateral is a LEASEHOLD interest, not fee - lender consent and ground-lessor consent mechanics on assumption need to be confirmed.",
+
+      "trafficCountVPD": 21100,
+      "population3mi": 37069,
+      "avgHHIncome3mi": 134584,
+      "medianHHIncome3mi": 110572,
+      "proximityHighways": "230 feet of frontage with a signalized entrance on Queen Street (Route 10, 21,100 VPD), the region's primary retail corridor in Hartford County. Interstate 84 runs immediately north of the center.",
+      "retailCotenants": "Competing centers on the same Queen Street corridor include RK Queen Plaza, Shop Rite Plaza Southington and Queen Bee Plaza.",
+      "shadowAnchors": null,
+
+      "marketDemographics": {
+        "pop1mi": 5642,
+        "pop3mi": 37069,
+        "pop5mi": 106185,
+        "avgHHI1mi": 159393,
+        "avgHHI3mi": 134584,
+        "avgHHI5mi": 125219,
+        "confidence": "high",
+        "source": "Project Evergreen property OM (CBRE), Demographics page - 2025 current-year estimates",
+        "asOf": "2026-08-26",
+        "note": "OM also publishes a True Trade Area beyond 5 miles: 129,067 population, $127,319 average household income, 124,424 daytime population. The 1-mile ring at $159,393 average household income is the most affluent immediate ring in the portfolio. Population is DECLINING in the 3- and 5-mile rings (-0.10% and -0.13% annually 2020-2025, projected -0.32% and -0.25% through 2030); household income is projected to grow roughly 11% by 2030. Note the OM's Property Highlights page prints $126,319 for trade-area income while the demographics table prints $127,319 - the table figure is used here."
+      },
+
+      "notes": "Southington Center is a 155,842 SF, 83.4%-leased community center on approximately 16 acres with 230 feet of signalized frontage on Queen Street (Route 10, 21,100 VPD) in Southington, Connecticut, built in 1973 and renovated in 2000. Walmart has anchored the center since 2001 and occupies 95,482 SF, 61% of the GLA, on a base term through January 2030 with two 10-year options carrying control to 2050. The balance of the roster is a stable mix of Southington Wine & Spirits, NAMCO Pools, Noble Japanese Steakhouse, Star Nails, Great Clips and a Santander Bank pad. In-place base rent from the 9/1/2026 rent roll is $884,626, or $6.81 PSF against CBRE's $10.93 PSF market - a 37.6% gap that is the widest in the portfolio, driven almost entirely by Walmart at $2.87 PSF, 64% below market. CBRE's in-place NOI is $658,091 and the projected 8.54% ten-year NOI CAGR is the second-highest in the portfolio, but essentially all of that growth is lease-up and rollover, not contractual escalation: the model absorbs 25,939 SF of vacancy between 2028 and mid-2029 and NOI does not reach $1.2 million until 2030. Two structural features dominate the underwriting and neither is captured in a headline cap rate. First, this is a LEASEHOLD - the entire center sits on a ground lease running to May 2071 with a local family as fee owner, and ground rent of $205,731 escalates to $238,498 in 2029 and $276,483 in 2034 on a CPI-U reset with no cap or floor, while Walmart's contribution toward it is FROZEN at $89,846 per year. That mismatch is a roughly $114,000 annual leak today, widening to about $187,000 by 2034, and it grows with inflation while the offsetting recovery does not. Second, Walmart's two 10-year options are at a FLAT $2.87 PSF through January 2050, so the 64% below-market anchor rent is not upside a buyer can capture - it is secure income that permanently caps the asset's income growth and its resale value. The genuine value creation is the 25,939 SF of vacancy, and 20,000 SF of that is currently generating seasonal Spirit Halloween income that expires in November 2026 and should not be underwritten as recurring.",
+
+      "keyAssumptions": [
+        "SOURCES: roster built from the WHLR MRI rent roll dated 9/1/2026 (authoritative for current tenant, suite, SF, rent, dates and contractual steps); options, recovery methods, ground-rent mechanics, go-dark and relocation clauses from the CBRE Argus model Project Evergreen_CT_Southington Center (FINAL).xlsx; historical income and expense from the WHLR income statement for the 12 months ended December 2025 (entity 0200, Cedar Southington Plaza, LLC); demographics, traffic count, parking count, Placer.ai visitation and property description from the property OM; portfolio debt terms from the Project Evergreen portfolio OM (CBRE, data as of 8/26/2026).",
+        "OCCUPANCY - THE ROLL AND THE OM DISAGREE, AND THE OM IS RIGHT FOR UNDERWRITING: the 9/1/2026 rent roll shows 96.19% occupied (149,903 SF) because it counts SPIRIT HALLOWEEN in suite 003 (20,000 SF) as an occupied suite. That is a seasonal lease running 6/29/2026 to 11/16/2026. The OM and CBRE's model both correctly treat suite 003 as AVAILABLE, giving 83.4% occupancy on 129,903 SF. This roster follows the OM. Spirit Halloween pays ZERO base rent as of 9/1/2026 (its $10,000 and $15,000 monthly amounts are future increases beginning 10/1/2026 and 11/1/2026), so excluding it does NOT break the base-rent tie-out to the roll.",
+        "ROSTER TIE-OUT: 7 paying leases plus four available suites sum to 155,842 SF, exactly the rent roll's stated GLA (129,903 occupied, 25,939 available, 83.4% occupied). Monthly base rent for the seven paying tenants sums to $73,718.82, exactly the roll's printed total; annualized = $884,626.",
+        "HEADLINE NOI BASIS: noi / effectiveGrossIncome / operatingExpenses are CBRE's published In-Place Pro-Forma for calendar 2027 ($1,476,566 EGR less $818,474 of operating expense = $658,091), which ties exactly and is the basis behind the OM's stated in-place NOI. The VDR portfolio table rounds this to $660,000. NOTE: operatingExpenses INCLUDES $205,731 of ground rent, which CBRE books above the NOI line.",
+        "RECOVERIES BASIS: nnnRecoveries of $576,790 and the per-tenant expenseReimbursements are CBRE's in-place figures and combine BOTH the operating-expense recovery and the separately-billed real estate tax recovery. CBRE's published total is $581,388; the per-tenant table sums to $576,790, leaving $4,598 that CBRE does not allocate by tenant. The rent roll's monthly cost-recovery column totals only $423,604 annualized because Connecticut real estate taxes are billed annually rather than monthly.",
+        "NOBLE JAPANESE STEAKHOUSE RENT - THE OM SITE PLAN IS MISLEADING: the OM site plan shows $20.59 PSF and CBRE's in-place pro-forma shows $81,835. Those are a PARTIAL-YEAR figure (nine months of a lease expiring 9/30/2027), not the contract rent. The rent roll and CBRE's own rent-roll tab both show the contract rent as $27.45 PSF / $109,114 per year. The roster carries the contract rent.",
+        "STAR NAILS TERM: the rent roll shows the current lease expiring 6/30/2028 and a follow-on lease for the same 2,000 SF running 7/1/2028 to 6/30/2033 under New Leases, so leaseExpiry carries 6/30/2033. Current contract rent of $23.13 PSF is held so base rent ties to the roll, with the 7/1/2027 step to $24.00 in the rent schedule.",
+        "ACTUAL vs IN-PLACE: the owner's YE-2025 income statement shows actual NOI of $881,847 on $1,769,716 of total income and $887,869 of operating expense (including $205,731 of ground rent). Actual 2025 NOI is HIGHER than CBRE's 2027 in-place figure largely because 2025 recoveries of $722,988 included favourable prior-year true-ups (CAM $16,139, tax $4,693, insurance $14,777) that do not repeat, and because 2025 base rent of $938,728 predates the current vacancy. Do not read the $881,847 as a run rate.",
+        "CBRE MODELED PURCHASE PRICE - NOT AN ASKING PRICE: unlike the other Project Evergreen models, the Southington Argus file carries a filled-in acquisition section showing a $9,401,307 purchase price, a 7.00% year-one NOI return, a 14.02% unleveraged IRR, a 21.67% leveraged IRR on a $6,110,850 market loan, and a $17,979,407 residual. These are CBRE's illustrative underwriting inputs, NOT a quoted price. askingPrice and capRate are left null.",
+        "SALES: CBRE's In-Place Pro-Forma reports $0 sales and N/A health ratio for every tenant at this center, so no tenant sales are recorded. Two sales report PDFs sit in the DD folder (2022-2025 and 2022-2026) - upload them through the app's sales-report import to confirm and to build any trend history.",
+        "LEASE CLAUSES ARE OM-SOURCED, NOT ABSTRACTED: the go-dark, co-tenancy, relocation and ground-rent terms recorded in tenant notes come from CBRE's Argus lease summaries, not from executed lease documents. THE GROUND LEASE ITSELF HAS NOT BEEN ABSTRACTED - the DD folder holds a full chain of 16-plus documents running from the original May 17, 1972 lease through amendments in 1978, 1982, 1984, 1987, 1992, 1997, 2002, 2005, 2008, 2010, 2011, 2012 and a 2020 attorney beneficiary letter, plus a ground landlord estoppel. That chain must be abstracted end to end before relying on any ground-lease term stated here.",
+        "NO PRICING: the portfolio is marketed unpriced, so askingPrice, capRate and pricePerSF are null rather than estimated."
+      ],
+
+      "redFlags": [
+        { "severity": "high", "description": "LEASEHOLD, NOT FEE - and the ground rent escalates faster than the recovery. The entire center sits on a ground lease running through May 2071 with a local family as fee owner. Ground rent is $205,731 in 2027-2028, steps to $238,498 in 2029 and to $276,483 in 2034, resetting every five years on CPI-U with NO CAP AND NO FLOOR (CBRE substituted a 3% annual assumption in lieu of CPI). Walmart's contribution toward ground rent is FIXED at $89,846.48 per year and is expressly NOT adjusted for underlying increases. The landlord therefore absorbs the entire escalation: roughly $114,000 of unrecovered ground rent today, widening to about $187,000 by 2034 on CBRE's own numbers, and more if CPI runs above 3%. This is a permanent, inflation-linked drag on NOI that a headline cap rate does not show." },
+        { "severity": "high", "description": "The ground lease chain has NOT been abstracted. The DD folder holds the original May 17, 1972 lease plus at least fifteen subsequent instruments - amendments to the separate rent agreement (1978, 1982, 1987, 1992, 1997, 2002, 2008), an assignment and assumption (1984), ground lease amendments (2005, 2012), a ground landlord estoppel (2003), succession of ownership (2010), change of address notice (2010), a 2011 letter and a 2020 attorney beneficiary letter. Every economic term stated here - the 2071 expiration, the CPI reset, the escalation schedule - comes from CBRE's summary, not from the documents. Renewal rights, purchase options or rights of first refusal, assignment and lender-consent mechanics, and default and cure provisions are all unknown until that chain is read end to end. On a leasehold this is the single most important diligence item at the asset." },
+        { "severity": "high", "description": "Walmart is 61% of GLA at $2.87 PSF with two 10-year options at a FLAT $2.87 through January 2050. CBRE marks the space 64% below market. This is NOT capturable mark-to-market: Walmart will never walk away from a rent this cheap, so the income is secure and sticky - but a dominant anchor holding 61% of the building at a frozen rent for another 24 years materially caps the asset's income growth and its resale value, and it is the reason the in-place rent sits at $6.81 PSF against a $10.93 PSF market. Underwrite it as durable income with a capped exit, never as embedded upside." },
+        { "severity": "high", "description": "20,000 SF of the 25,939 SF vacancy is currently masked by a seasonal tenant. Spirit Halloween occupies suite 003 on a lease running 6/29/2026 to 11/16/2026 at $10,000 per month from October and $15,000 from November - roughly $27,500 of one-time income that ends in November 2026. The 9/1/2026 rent roll counts the suite as occupied at 96.19%; the real stabilized occupancy is 83.4%. CBRE models this 20,000 SF box not re-leasing until July 2029 - a 30-month absorption at $13.00 PSF with $530,450 of tenant improvements and $86,127 of commissions. That is the single largest lease-up assumption in the portfolio and it is nearly three years of carry." },
+        { "severity": "medium", "description": "Walmart's base term ends 1/31/2030, roughly three years after a 2027 closing, and its go-dark protection is weak on the front end. Walmart must continuously operate only for the FIRST FIVE YEARS of the term; after that period, if it ceases continuous operation the landlord may terminate on 90 days' notice unless Walmart resumes within 90 days. Since the current term began February 2020, that continuous-operation covenant has already expired. A dark Walmart paying $2.87 PSF would leave the landlord with a termination right but no practical remedy and 61% of the center non-operating." },
+        { "severity": "medium", "description": "Population is declining in the 3- and 5-mile rings - down 0.10% and 0.13% annually from 2020 to 2025 and projected to fall a further 0.32% and 0.25% annually through 2030. Households are essentially flat. The offsetting strength is income: $134,584 average household income at three miles and $159,393 at one mile, projected to grow roughly 11% by 2030. This is a spending-power trade area, not a growth trade area - underwrite rent growth off income and off the Route 10 corridor, not off rooftops." },
+        { "severity": "medium", "description": "Nearly all projected NOI growth is leasing execution, not contractual escalation. CBRE's 8.54% ten-year NOI CAGR depends on absorbing 25,939 SF across four suites between January 2028 and July 2029 and on capital of roughly $598,395 of tenant improvements in 2029 alone, which drives operating cash flow down to $274,181 that year - less than half of year one. If the 20,000 SF box takes longer than 30 months or leases below $13.00 PSF, the growth case does not hold." },
+        { "severity": "medium", "description": "Real estate taxes of $309,108 in 2025 rising to $327,098 in CBRE's 2027 model - $2.10 PSF, 40% of the operating expense load. CBRE explicitly did NOT reassess and modeled taxes at 2026 budgeted amounts. Connecticut municipalities revalue on a five-year cycle. On a leasehold the tax exposure sits with the tenant-in-possession under most ground lease structures, but that allocation must be confirmed in the ground lease documents." },
+        { "severity": "low", "description": "Concentrated small-shop rollover in 2027-2029 with limited protection. Noble Japanese Steakhouse (3,975 SF) expires 9/30/2027, Santander Bank (2,700 SF) 12/31/2028 and Great Clips (1,134 SF) 8/31/2029. Noble and Great Clips both carry aggressive continuous-operation defaults - a discontinuance of business for more than five business days, or vacancy for two or more weeks, is an event of default allowing the landlord to terminate on five days' notice and accelerate remaining rent. Those clauses favour the landlord but convert a quietly struggling tenant into vacancy quickly." },
+        { "severity": "low", "description": "No tenant at the center reports sales - CBRE's In-Place Pro-Forma shows $0 sales and N/A health ratio for all seven paying tenants. Without sales there is no way to test the durability of the small-shop rents or to size renewal risk on Noble, Star Nails or Great Clips from the data provided. Request sales reporting in diligence." }
+      ],
+
+      "upsideItems": [
+        { "priority": "high", "item": "Lease up 25,939 SF across four suites - the largest lease-up opportunity in the portfolio", "detail": "16.6% of GLA is available: a 20,000 SF box (suite 003) plus three shop suites of 2,335, 1,967 and 1,637 SF. CBRE models the box at $13.00 PSF NNN on a 10-year term from July 2029 and the shops at $27.00 PSF NNN on 5-year terms starting January 2028, July 2028 and January 2029. Fully absorbed, that is roughly $443,000 of incremental base rent plus recoveries against $658,091 of in-place NOI - the reason CBRE projects NOI reaching $1,208,854 by 2030. It requires roughly $685,000 of tenant improvements and commissions and up to 30 months, so it is real value creation with real execution risk and real capital." },
+        { "priority": "medium", "item": "Affluent, high-spend trade area on the region's primary retail corridor", "detail": "$159,393 average household income at one mile, $134,584 at three and $125,219 at five - the strongest income profile in Project Evergreen after Brickyard, with $110,572 median at three miles. 1.9 million annual visits (TTM, Placer.ai), 124,424 daytime population and 230 feet of signalized frontage on Queen Street. Under the demographics-to-rent lens this location supports CBRE's $27.00 PSF shop market rent and gives real depth to the tenant pool for the four vacant suites." },
+        { "priority": "medium", "item": "Walmart control through 2050 at a rent that will never be a burden", "detail": "Two 10-year options at a flat $2.87 PSF carry Walmart to January 2050. A tenant paying 64% below market has near-zero incentive to leave, which makes 61% of the building close to the most durable income in the portfolio and effectively eliminates anchor re-leasing risk for the hold period. The trade-off is that this income cannot grow - it is a floor, not a ladder." },
+        { "priority": "low", "item": "Santander Bank pad with contractual step-ups", "detail": "The 2,700 SF bank pad pays $40.00 PSF ($108,000) on a ground lease with two 5-year options at $44.00 and $48.40 PSF - 10% escalations at each option, running to December 2038. CBRE marks the pad at $125,000 per year, so the current rent is roughly 14% below market with genuine step-ups already contracted." },
+        { "priority": "low", "item": "Assumable below-market debt", "detail": "$7,537,712 of allocated Guggenheim debt at 5.25% fixed, interest-only into 2027 and maturing November 2032. Note the collateral is a leasehold interest, so assumption will require both lender and ground-lessor cooperation - confirm the consent mechanics in the ground lease chain before treating this as a clean assumption." }
+      ],
+
+      "cashFlowProjection": [
+        { "label": "2027", "totalBaseRent": 887876, "reimbursements": 588690, "egr": 1476566, "operatingExpenses": 818474, "noi": 658091 },
+        { "label": "2028", "totalBaseRent": 978176, "reimbursements": 619032, "egr": 1597207, "operatingExpenses": 839147, "noi": 758060 },
+        { "label": "2029", "totalBaseRent": 1219274, "reimbursements": 712738, "egr": 1922654, "operatingExpenses": 899242, "noi": 1023412 },
+        { "label": "2030", "totalBaseRent": 1368460, "reimbursements": 792442, "egr": 2132483, "operatingExpenses": 923629, "noi": 1208854 },
+        { "label": "2031", "totalBaseRent": 1371377, "reimbursements": 805329, "egr": 2152362, "operatingExpenses": 942860, "noi": 1209502 },
+        { "label": "2032", "totalBaseRent": 1399975, "reimbursements": 833674, "egr": 2208754, "operatingExpenses": 963746, "noi": 1245008 },
+        { "label": "2033", "totalBaseRent": 1441915, "reimbursements": 854535, "egr": 2275665, "operatingExpenses": 985522, "noi": 1290143 },
+        { "label": "2034", "totalBaseRent": 1446906, "reimbursements": 856371, "egr": 2287168, "operatingExpenses": 1044216, "noi": 1242952 },
+        { "label": "2035", "totalBaseRent": 1548662, "reimbursements": 906449, "egr": 2421985, "operatingExpenses": 1069234, "noi": 1352751 },
+        { "label": "2036", "totalBaseRent": 1571543, "reimbursements": 930178, "egr": 2467914, "operatingExpenses": 1092214, "noi": 1375700 },
+        { "label": "2037", "totalBaseRent": 1564724, "reimbursements": 943684, "egr": 2476808, "operatingExpenses": 1114732, "noi": 1362076 }
+      ],
+
+      "incomeBreakdown": {
+        "Base Rent": 938728,
+        "Base Rent - Ground (Santander pad)": 108000,
+        "CAM Recovery (net of accruals)": 256099,
+        "Tax Recovery (incl. annual billing and accruals)": 286567,
+        "Insurance Recovery (net of accruals)": 39974,
+        "Ground Rent Recovery (Walmart, fixed)": 92102,
+        "Utilities / Water / Sewer Recovery": 8731,
+        "R&M Recovery": 1507,
+        "Prior-Year Recovery True-Ups": 35608,
+        "Late Fee Income": 2401,
+        "Total Income": 1769716
+      },
+      "expenseBreakdown": {
+        "Grounds & Landscape (incl. $78,316 snow removal)": 149712,
+        "Security / Fire-Life-Safety": 9095,
+        "HVAC": 870,
+        "Repairs & Maintenance": 3607,
+        "Structural / Roof": 11093,
+        "Utilities": 8153,
+        "Administrative (incl. $26,406 legal and $15,844 bad debt)": 50165,
+        "Management Fee": 70789,
+        "Real Estate Taxes": 309108,
+        "Insurance": 48086,
+        "Non-CAM Operating (excl. ground rent)": 21461,
+        "Ground Rent Expense": 205731,
+        "Total Operating Expenses": 887869
+      },
+
+      "tenantsAsOf": "2026-09-01",
+      "tenantsSource": "rent-roll",
+      "tenantsManual": true,
+
+      "tenants": [
+        {
+          "name": "Walmart", "parentCompany": "Walmart Inc.", "suite": "010", "sf": 95482, "rentPerSF": 2.87, "annualRent": 274365,
+          "leaseStart": "2020-02-01", "leaseExpiry": "2030-01-31", "remainingTermYears": 3.42,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus a fixed ground-rent contribution", "expenseReimbursements": 424943,
+          "rentSchedule": "Flat at $2.87 PSF ($22,863.75/month) through 1/31/2030 - no contractual increases in the current term.",
+          "renewalOptions": "Two 10-year options at a FLAT $2.87 PSF: 2/2030-1/2040 and 2/2040-1/2050. No rent increase at either option.",
+          "rentBumps": "None - rent is flat at $2.87 PSF for the next 24 years if both options are exercised.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "creditRating": "Investment grade",
+          "isAnchor": true, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Rent roll entity WAL-MART #2897. Anchoring the center since 2001 (CBRE shows original occupancy 1/1/2001); the current term began February 2020. 61.3% of GLA and 48% of anchor revenue. GROUND RENT: Walmart's ground lease payment is FIXED at $89,846.48 per year and is expressly NOT adjusted for increases in the underlying ground rent the landlord owes the fee owner. Landlord ground rent is $205,731 rising to $238,498 (2029) and $276,483 (2034) on a CPI-U reset with no cap or floor - so the escalation falls entirely on ownership. GO DARK / RECAPTURE: tenant must continuously operate during usual business days and hours for the FIRST FIVE YEARS of the term only. That period has already run. After it, if tenant ceases continuous operation, landlord may terminate on 90 days' notice unless tenant resumes within 90 days. CBRE marks the space 64.13% below its $8.00 PSF anchor market rent, but with flat options to 2050 that gap is permanently locked - secure income that caps growth and exit value, never capturable upside. Clause detail is OM-sourced and unverified against the executed lease.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "Southington Wine & Spirits", "suite": "001", "sf": 14612, "rentPerSF": 12.40, "annualRent": 181189,
+          "leaseStart": "2022-12-01", "leaseExpiry": "2032-11-30", "remainingTermYears": 6.25,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee, with a capped CAM", "adminFeePct": 15, "expenseReimbursements": 64928,
+          "rentSchedule": "12/1/2027 step to $13.64 PSF ($16,608.97/month, $199,308/year, +10.0%). Flat thereafter through 11/30/2032.",
+          "renewalOptions": "One 5-year option: 12/2032-11/2037 at $15.00 PSF ($219,238/year).",
+          "rentBumps": "One step, 12/1/2027, +10.0%; +10% at the option.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": true, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "The second-largest tenant at 9.4% of GLA. CBRE shows original occupancy August 2002 - roughly 24 years at the center - with the current 10-year term commencing December 2022. At $12.40 against CBRE's $14.00 PSF end-cap market rent this is 11.4% below market, with a contracted 10% step in December 2027 and a further 10% at the option, so a meaningful share of the gap closes on its own. The lease carries a capped CAM, which limits recovery growth. Clause detail is OM-sourced and unverified.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "NAMCO", "suite": "002", "sf": 10000, "rentPerSF": 13.00, "annualRent": 130000,
+          "leaseStart": "2026-04-26", "leaseExpiry": "2031-03-31", "remainingTermYears": 4.58,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 46257,
+          "rentSchedule": "Flat at $13.00 PSF ($10,833.33/month) through 3/31/2031 - no contractual increases in the current term.",
+          "renewalOptions": "None.",
+          "rentBumps": "None.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Pool and patio retailer. CBRE shows original occupancy March 2013, roughly 13 years at the center; renewed into a fresh five-year term effective 4/26/2026 - a recent commitment and the strongest leasing signal at the asset. At $13.00 against CBRE's $13.50 PSF junior-box market rent this is essentially at market, and with NO renewal options the full 10,000 SF is genuinely open at the 3/31/2031 expiry. GO-DARK / RECAPTURE: tenant must continuously operate during regular hours (minimum Monday to Saturday 10am to 6 or 8pm seasonal, Sunday 11am to 6pm). If tenant goes dark 30 or more consecutive days (excluding casualty, force majeure and alterations up to 45 days), landlord may terminate or recapture on notice unless tenant reopens within 10 days and stays open 30 or more days. Seasonal pool retail carries above-average sales volatility. Clause detail is OM-sourced and unverified.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "Noble Japanese Steakhouse", "suite": "005", "sf": 3975, "rentPerSF": 27.45, "annualRent": 109114,
+          "leaseStart": "2022-10-01", "leaseExpiry": "2027-09-30", "remainingTermYears": 1.08,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 13790,
+          "rentSchedule": "Flat at $27.45 PSF ($9,092.81/month) through 9/30/2027.",
+          "renewalOptions": "One 5-year option: 10/2027-9/2032 starting at $27.45 PSF with a step to $28.27 PSF in October 2028.",
+          "rentBumps": "None in current term.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "RENT FIGURE - THE OM SITE PLAN IS MISLEADING: the OM site plan shows $20.59 PSF and CBRE's in-place pro-forma shows $81,835, but those are a nine-month partial-year figure reflecting the 9/30/2027 expiry. The contract rent per both the rent roll and CBRE's own rent-roll tab is $27.45 PSF / $109,114 per year. CBRE shows original occupancy October 2007, roughly 19 years at the center. At $27.45 against a $27.00 PSF inline market rent this is 1.7% ABOVE market - the only tenant at the center priced above market. GO DARK / DEFAULT: tenant must continuously operate in ALL of the premises during customary hours (minimum Monday to Saturday until 11pm, Sunday 11am to 11pm). Discontinuance of business for more than FIVE BUSINESS DAYS, or vacancy or abandonment for two or more weeks, is an event of default; landlord may at its option terminate on five days' notice and recover damages or accelerate all rent for the remaining term. RELOCATION: landlord may require relocation to comparable-dimension space for the balance of the term, with rent proportionately adjusted and landlord reimbursing actual reasonable out-of-pocket moving costs. Clause detail is OM-sourced and unverified.",
+          "salesNotes": "Does not report sales - a gap worth closing given this is the only above-market rent at the center and it rolls in September 2027."
+        },
+        {
+          "name": "Santander Bank", "parentCompany": "Banco Santander, S.A.", "suite": "011", "sf": 2700, "rentPerSF": 40.00, "annualRent": 108000,
+          "leaseStart": "2021-08-01", "leaseExpiry": "2028-12-31", "remainingTermYears": 2.33,
+          "leaseType": "Ground lease", "reimbursementMethod": "NNN plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 10244,
+          "rentSchedule": "Flat at $40.00 PSF ($9,000.00/month, $108,000/year) through 12/31/2028.",
+          "renewalOptions": "Two 5-year options: 1/2029-12/2033 at $44.00 PSF ($118,800/year) and 1/2034-12/2038 at $48.40 PSF ($130,680/year).",
+          "rentBumps": "None in current term; 10% at each option.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "creditRating": "Investment grade",
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "Rent roll entity SANTANDER BANK #0514. A bank pad held on a GROUND LEASE from the landlord - the owner's income statement books this $108,000 separately as Base Rent Ground. CBRE shows original occupancy January 1974, making this the longest-tenured position at the center at roughly 52 years. CBRE marks the pad at $125,000 per year, so the current rent is 13.6% below market with contracted 10% step-ups at each of two options carrying the position to December 2038. Investment-grade credit on a pad is among the most durable income at the asset. Clause detail is OM-sourced and unverified.",
+          "salesNotes": "Bank deposit and transaction volume is not comparable to retail sales PSF and is not reported."
+        },
+        {
+          "name": "Star Nails", "suite": "008", "sf": 2000, "rentPerSF": 23.13, "annualRent": 46260,
+          "leaseStart": "2023-07-01", "leaseExpiry": "2033-06-30", "remainingTermYears": 6.83,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus ground rent plus 15% administrative fee", "adminFeePct": 15, "expenseReimbursements": 11507,
+          "rentSchedule": "7/1/2027 step to $24.00 PSF ($4,000.00/month, $48,000/year, +3.8%).",
+          "renewalOptions": "The rent roll records a follow-on lease for the same premises running 7/1/2028 to 6/30/2033, which is reflected in leaseExpiry. No further options disclosed.",
+          "rentBumps": "One step, 7/1/2027, +3.8%.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "CBRE shows original occupancy May 2000, roughly 26 years at the center. The rent roll's New Leases section carries a follow-on term to 6/30/2033, so the position is committed for nearly seven more years. At $23.13 (stepping to $24.00) against CBRE's $27.00 PSF inline market rent this is roughly 11% below market. This lease is one of the few that carries a share of ground rent in its recovery structure. Clause detail is OM-sourced and unverified.",
+          "salesNotes": "Does not report sales."
+        },
+        {
+          "name": "Great Clips", "suite": "004", "sf": 1134, "rentPerSF": 31.48, "annualRent": 35698,
+          "leaseStart": "2024-09-01", "leaseExpiry": "2029-08-31", "remainingTermYears": 3.00,
+          "leaseType": "NNN", "reimbursementMethod": "NNN plus 10% administrative fee", "adminFeePct": 10, "expenseReimbursements": 5121,
+          "rentSchedule": "Flat at $31.48 PSF ($2,974.86/month) through 8/31/2029.",
+          "renewalOptions": "None.",
+          "rentBumps": "None.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null, "percentageRent": null, "otherRent": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": "executed",
+          "assumptionNote": "CBRE shows original occupancy August 2014, roughly 12 years at the center; renewed into a fresh five-year term effective 9/1/2024. At $31.48 against a $27.00 PSF inline market rent this is 16.6% ABOVE market - the highest rent PSF at the center. Per the standing rule, above-market rent is mark-to-market DOWNSIDE, not upside: at the 8/31/2029 expiry this rent could reset toward $27.00, and there are no renewal options to hold it. No sales are reported, so whether the premium is supported cannot be tested - flag it to verify. GO DARK / DEFAULT: tenant must operate a minimum of 60 hours per week (Monday to Friday 9am to 9pm, 9 hours Saturday, 5 hours Sunday). Discontinuance of business for five or more business days, or vacancy or abandonment for two or more weeks, is a default; landlord may terminate on five days' notice and recover damages or accelerate remaining rent, subject to a duty to mitigate. RELOCATION: landlord may relocate on 90 days' notice to comparable space that is not smaller, paying all buildout, moving, signage and up to 90 days of rent abatement; no relocation between October 1 and January 31 or in the last two years of term. Clause detail is OM-sourced and unverified.",
+          "salesNotes": "Does not report sales - a gap that matters because this is the center's highest rent PSF and it sits 16.6% above market."
+        },
+        {
+          "name": "Available", "suite": "003", "sf": 20000, "rentPerSF": 0, "annualRent": 0,
+          "leaseStart": null, "leaseExpiry": null, "remainingTermYears": null,
+          "leaseType": "Vacant", "reimbursementMethod": null, "expenseReimbursements": 0,
+          "rentSchedule": "No permanent rent in place.",
+          "renewalOptions": "None.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": null,
+          "assumptionNote": "The largest vacancy in Project Evergreen. TEMPORARILY OCCUPIED BY SPIRIT HALLOWEEN on a seasonal lease running 6/29/2026 to 11/16/2026, paying $0 as of the 9/1/2026 rent roll with scheduled amounts of $10,000 per month from 10/1/2026 and $15,000 per month from 11/1/2026 - roughly $27,500 of one-time income that ends in November 2026 and must NOT be underwritten as recurring. The 9/1/2026 rent roll counts this suite as occupied (96.19%); the OM and CBRE's model both correctly treat it as available, giving 83.4% stabilized occupancy. CBRE models a 10-year re-lease at $13.00 PSF NNN with 2% annual increases beginning July 2029 - a 30-month absorption requiring $530,450 of tenant improvements and $86,127 of leasing commissions.",
+          "salesNotes": "No permanent tenant."
+        },
+        {
+          "name": "Vacant", "suite": "009", "sf": 2335, "rentPerSF": 0, "annualRent": 0,
+          "leaseStart": null, "leaseExpiry": null, "remainingTermYears": null,
+          "leaseType": "Vacant", "reimbursementMethod": null, "expenseReimbursements": 0,
+          "rentSchedule": "Vacant - no rent in place.",
+          "renewalOptions": "None.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": null,
+          "assumptionNote": "Vacant shop suite. CBRE models a 5-year re-lease at $27.00 PSF NNN with 3% annual increases beginning January 2029, with $61,930 of tenant improvements and $21,306 of commissions.",
+          "salesNotes": null
+        },
+        {
+          "name": "Vacant", "suite": "007", "sf": 1967, "rentPerSF": 0, "annualRent": 0,
+          "leaseStart": null, "leaseExpiry": null, "remainingTermYears": null,
+          "leaseType": "Vacant", "reimbursementMethod": null, "expenseReimbursements": 0,
+          "rentSchedule": "Vacant - no rent in place.",
+          "renewalOptions": "None.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": null,
+          "assumptionNote": "Vacant shop suite. CBRE models a 5-year re-lease at $27.00 PSF NNN with 3% annual increases beginning July 2028, with $50,650 of tenant improvements and $17,425 of commissions.",
+          "salesNotes": null
+        },
+        {
+          "name": "Vacant", "suite": "006", "sf": 1637, "rentPerSF": 0, "annualRent": 0,
+          "leaseStart": null, "leaseExpiry": null, "remainingTermYears": null,
+          "leaseType": "Vacant", "reimbursementMethod": null, "expenseReimbursements": 0,
+          "rentSchedule": "Vacant - no rent in place.",
+          "renewalOptions": "None.",
+          "salesPSF": null, "salesYear": null, "occupancyCost": null,
+          "isAnchor": false, "isNAP": false, "isDark": false, "leaseStatus": null,
+          "assumptionNote": "Vacant shop suite - the first suite CBRE models absorbing, on a 5-year term at $27.00 PSF NNN with 3% annual increases beginning January 2028, with $42,153 of tenant improvements and $14,502 of commissions.",
+          "salesNotes": null
+        }
+      ],
+
+      "fieldCitations": {
+        "totalSF": "WHLR MRI rent roll 9/1/2026 - printed Total Sqft 155,842",
+        "occupancy": "Property OM page 2 and CBRE Argus In-Place Pro-Forma - 83.4% occupied, 25,939 SF available (the rent roll's 96.19% counts the seasonal Spirit Halloween lease)",
+        "grossPotentialRent": "WHLR MRI rent roll 9/1/2026 - total monthly base rent $73,718.82 x 12",
+        "noi": "CBRE Argus model (FINAL) - In-Place Pro-Forma, Net Operating Income $658,091; property OM page 2",
+        "effectiveGrossIncome": "CBRE Argus model (FINAL) - In-Place Pro-Forma, Effective Gross Revenue $1,476,566",
+        "operatingExpenses": "CBRE Argus model (FINAL) - In-Place Pro-Forma, Total Expenses $818,474 (includes $205,731 ground rent)",
+        "cashFlowProjection": "CBRE Argus model (FINAL) - Cash Flow tab, CY2027-CY2037",
+        "lotSizeAcres": "Property OM page 2 - approximately 16.00 acres",
+        "parkingRatio": "Property OM page 2 - 680 spaces across 155,842 SF",
+        "trafficCountVPD": "Property OM page 3 - Queen Street (Route 10) 21,100 VPD",
+        "population3mi": "Property OM page 5 - Demographics, 2025 current-year estimate, 3-mile ring",
+        "currentAnnualTaxes": "WHLR income statement, 12 months ended December 2025 - Real Estate Tax Expense $309,107.82",
+        "debtLoanAmount": "Project Evergreen portfolio OM - Assumable Debt page and portfolio detail table"
+      }
+    }
+  ]
+}
