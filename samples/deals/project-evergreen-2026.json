@@ -1,0 +1,3616 @@
+{
+ "deals": [
+  {
+   "fileName": "Project_Evergreen_VA_Brook_Run_Shopping_Center.pdf",
+   "propertyName": "Brook Run Shopping Center",
+   "address": "5700 Brook Road",
+   "city": "Richmond",
+   "state": "VA",
+   "zip": "23227",
+   "market": "Richmond MSA",
+   "submarket": "North Richmond / Henrico County",
+   "assetType": "Retail",
+   "centerType": "Community Center",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 147738,
+   "occupancy": 87.2,
+   "walt": 5.7,
+   "weightedAvgRentPSF": 7.43,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 682632,
+   "grossPotentialRent": 1254244,
+   "effectiveGrossIncome": 1054058,
+   "operatingExpenses": 371426,
+   "nnnRecoveries": 96773,
+   "currentAnnualTaxes": 83758,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 195077,
+    "realEstateTax": 83758,
+    "insurance": 53237,
+    "managementFee": 31747,
+    "nonRecoverable": 7609
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 716208,
+    "shopBaseRent": 239877,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 20.1,
+   "parkingRatio": 5.28,
+   "trafficCountVPD": 20600,
+   "population3mi": 73320,
+   "avgHHIncome3mi": 102284,
+   "medianHHIncome3mi": 72832,
+   "proximityHighways": "Frontage on Brook Road / U.S. Route 1 (20,600 AADT), eight miles north of downtown Richmond; immediate access to I-95 (119,100 AADT).",
+   "retailCotenants": "North Richmond retail node within five miles: Staples Mill Plaza, Westland Shopping Center, Brookhollow Shopping Center, Olde Town Shopping Center, Westpark Shopping Center, Hanover Square, Willow Lawn, Virginia Center Marketplace, Creeks at Virginia Centre, Short Pump Town Center and West Broad Village; Bon Secours St. Mary's Hospital is within the trade area.",
+   "shadowAnchors": "No shadow anchor disclosed. Adjacent Lakeside Landing townhome development (126 units sold out in 2022, 45 more under construction as Lakeside Landing II); historic Belmont and Lakeside golf courses nearby.",
+   "notes": "**Brook Run Shopping Center** is a **147,738 SF community center** on Brook Road / U.S. Route 1 (**20,600 AADT**) eight miles north of downtown Richmond in Henrico County, with immediate access to I-95 (119,100 AADT). It is co-anchored by a **58,473 SF Gabe's** (through Dec-2032, three five-year options) and a **32,000 SF Crunch Fitness** (13+ years on site, through Mar-2033, one five-year option), with junior anchors **Aaron's (10,344 SF)** and a **Dollar Tree (11,979 SF) that is still only an LOI**; together those four are 73.5% of revenue. The in-place pro-forma produces **$682,632 of NOI** on **$1,054,058 of effective gross revenue** less **$371,426 of operating expenses**, off **$956,085 of base rent** at a **$7.43/SF weighted average** \u2014 anchor rents of $5.75 (Gabe's) and $5.65 (Crunch) sit at or just below CBRE's own $6.00/SF anchor market rent, so they are secure, market-rate income rather than a repricing opportunity. The real story is the **18,983 SF (12.8%) of vacancy spread across 10 in-line suites**: CBRE models a 36-month absorption at $13.00-$19.00/SF inline market rents to carry occupancy from 87.2% to ~99.5% by 2030, which is what drives the advertised **5.88% ten-year NOI CAGR (75.8% NOI growth)**. Two things temper that. First, **$119,215 of the modeled revenue (11.3%) rests on an unexecuted Dollar Tree LOI**, so the true in-place NOI is closer to $563,000 until that lease is signed. Second, **54% of GLA rolls in 2032-2033** when Gabe's and Crunch expire four months apart \u2014 squarely in the exit window of a normal hold. The trade area supports the lease-up thesis: **235,192 residents earning a $98,326 average household income** (3-mile: 73,320 people, $102,284 AHHI), growing ~4% through 2030, with 126 townhomes just sold out next door and 45 more under construction. Real estate taxes in the model are the un-reassessed 2026 budget ($83,758, $0.57/SF), and Henrico County will reassess on a sale \u2014 underwrite a step-up. Net: a value-add lease-up story in a solid Richmond infill trade area, priced on an NOI that has to be discounted for the LOI and re-cut for the 2032-33 anchor roll.",
+   "keyAssumptions": [
+    "Roster and financials are taken from the OM's In-Place Pro-Forma (page 9), which is stated on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss) \u2014 not a current-day rent roll. Site-plan 'current' rents differ for several shop tenants because 2027 steps are embedded.",
+    "Dollar Tree (Suite 5620) is an LOI under negotiation, not an executed lease, yet is modeled in-place at $7.12/SF from 01/01/27.",
+    "Ten vacant suites totaling 18,983 SF are carried in the roster at $0 so that roster SF ties to the 147,738 SF GLA.",
+    "CBRE's 2027 market rents: $6.00/SF anchor, $7.00-$11.00/SF junior anchor, $13.00-$19.00/SF inline; 3.00% annual market-rent growth; NNN+15% recoveries on new leases; 80% retention; 36-month absorption of the vacancy beginning 01/01/27.",
+    "Real estate taxes are NOT reassessed in the model \u2014 they equal the 2026 budget ($83,758). Operating expenses are the 2026 budget with owner-specific costs removed and a $0.05/SF non-recoverable assumption.",
+    "Tenants expiring in FY 2027/2028 without options are assumed to remain at current terms; tenants with options are assumed to exercise them.",
+    "No asking price or cap rate is published in this OM, so price-based metrics are null."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "$119,215 of the in-place pro-forma (11.3% of total revenue: $85,290 base + $33,924 recoveries) comes from Dollar Tree, which the OM itself labels an LOI under negotiation. In-place NOI net of that space is roughly $563,000, not $682,632."
+    },
+    {
+     "severity": "high",
+     "description": "54.1% of GLA expires in 2032-2033 \u2014 Gabe's (58,473 SF, Dec-2032) and Crunch Fitness (32,000 SF, Mar-2033) roll within four months of each other, inside the exit window of a typical five-to-seven-year hold."
+    },
+    {
+     "severity": "medium",
+     "description": "12.8% vacancy (18,983 SF in 10 in-line suites). The 5.88% ten-year NOI CAGR depends on absorbing all of it within 36 months at $13-$19/SF; a slower lease-up materially changes the return."
+    },
+    {
+     "severity": "medium",
+     "description": "Top's China at $31.12/SF is 64%-139% above the OM's own $13-$19 inline market rent with no sales disclosed. That premium is rollover DOWNSIDE at the May-2030 expiry, not durable income \u2014 verify sales support it."
+    },
+    {
+     "severity": "medium",
+     "description": "Real estate taxes are the un-reassessed 2026 budget ($83,758 / $0.57 PSF). A sale typically triggers reassessment in Henrico County; the model does not carry that step-up."
+    },
+    {
+     "severity": "low",
+     "description": "Site-plan 'current' rents disagree with the CY-2027 pro-forma for several shops (H&R Block $19.91 vs $21.24, Best Cleaners $9.99 vs $11.49, Blessed 4 Less $10.89 vs $11.47, Crunch $5.57 vs $5.65) and America's Best Wings is LOWER in the pro-forma ($12.72) than on the site plan ($14.76). Reconcile against the actual rent roll."
+    },
+    {
+     "severity": "low",
+     "description": "Gabe's, Crunch Fitness, Mullins Hearing and Blessed 4 Less carry no modeled expense reimbursement \u2014 effectively gross or fixed-CAM leases on 62.5% of the occupied GLA. Confirm recovery structures; they cap the ability to pass through rising CAM/taxes."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "high",
+     "item": "Lease up 18,983 SF of vacancy",
+     "detail": "Ten in-line suites at CBRE's $13.00-$19.00/SF market rents; full absorption is worth roughly $250K-$360K of incremental base rent plus recoveries, and drives the modeled 75.8% ten-year NOI growth."
+    },
+    {
+     "priority": "medium",
+     "item": "Sign the Dollar Tree LOI",
+     "detail": "Converting the 11,979 SF LOI to an executed 10-year lease adds $85,290 of base rent and $33,924 of recoveries and removes the largest single underwriting question in the deal."
+    },
+    {
+     "priority": "medium",
+     "item": "Dense, growing infill trade area",
+     "detail": "235,192 residents at a $98,326 average household income with 4% projected growth, plus 171 new townhomes contiguous to the center, supports both the lease-up rents and a tighter exit cap than a thin suburban location."
+    },
+    {
+     "priority": "low",
+     "item": "Junior-anchor mark-to-market at renewal",
+     "detail": "Aaron's at $11.00/SF is at the top of the $7-$11 junior-anchor band and Darling Nails at $9.24/SF is below the inline range; renewals in 2031/2034 could be repriced toward the inline band."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "Dollar Tree (LOI)",
+     "suite": "5620",
+     "sf": 11979,
+     "rentPerSF": 7.12,
+     "annualRent": 85290,
+     "leaseStart": "2027-01-01",
+     "leaseExpiry": "2033-12-31",
+     "remainingTermYears": 7.0,
+     "expenseReimbursements": 33924,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "leaseStatus": "loi",
+     "parentCompany": "Dollar Tree, Inc.",
+     "assumptionNote": "NOT AN EXECUTED LEASE. The OM labels this an LOI under negotiation yet models it in the in-place pro-forma from 01/01/27 at $7.12/SF \u2014 $85,290 of base rent plus $33,924 of recoveries ($119,215, 11.3% of total revenue). Underwrite the space as vacant until a signed lease is produced."
+    },
+    {
+     "name": "Vacant",
+     "suite": "5642",
+     "sf": 1615,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Darling Nails",
+     "suite": "5644",
+     "sf": 4815,
+     "rentPerSF": 9.24,
+     "annualRent": 44491,
+     "leaseStart": "1994-11-01",
+     "leaseExpiry": "2034-02-28",
+     "remainingTermYears": 7.2,
+     "expenseReimbursements": 13636,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Vacant",
+     "suite": "5646",
+     "sf": 1215,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Vacant",
+     "suite": "5648",
+     "sf": 1200,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "America's Best Wings",
+     "suite": "5650",
+     "sf": 1519,
+     "rentPerSF": 12.72,
+     "annualRent": 19322,
+     "leaseStart": "2017-05-28",
+     "leaseExpiry": "2027-05-27",
+     "remainingTermYears": 0.4,
+     "expenseReimbursements": 3631,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Site plan shows $14.76/SF current vs $12.72/SF modeled for CY-2027 \u2014 the pro-forma rent is LOWER than the stated current rent; reconcile against the rent roll. Expires 05/27/27."
+    },
+    {
+     "name": "Vacant",
+     "suite": "5652",
+     "sf": 900,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Vacant",
+     "suite": "5656",
+     "sf": 2400,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Top's China",
+     "suite": "5660",
+     "sf": 1519,
+     "rentPerSF": 31.12,
+     "annualRent": 47271,
+     "leaseStart": "2002-06-01",
+     "leaseExpiry": "2030-05-31",
+     "remainingTermYears": 3.4,
+     "expenseReimbursements": 4302,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$31.12/SF is 64%-139% ABOVE CBRE's own $13.00-$19.00 inline market rent. No sales are disclosed, so the premium is unsupported on the face of the OM \u2014 treat the May-2030 expiry as mark-to-market DOWNSIDE (the rent can reset toward market) rather than durable income, and verify the tenant's sales."
+    },
+    {
+     "name": "Cary Vape",
+     "suite": "5662",
+     "sf": 911,
+     "rentPerSF": 16.1,
+     "annualRent": 14667,
+     "leaseStart": "2018-09-01",
+     "leaseExpiry": "2030-08-31",
+     "remainingTermYears": 3.7,
+     "expenseReimbursements": 2580,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Vacant",
+     "suite": "5664",
+     "sf": 1215,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Aaron's",
+     "suite": "5670",
+     "sf": 10344,
+     "rentPerSF": 11.0,
+     "annualRent": 113784,
+     "leaseStart": "2024-03-28",
+     "leaseExpiry": "2031-03-31",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 23311,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Aaron's / IQVentures Holdings",
+     "assumptionNote": "Junior anchor; 10,344 SF at $11.00/SF, within CBRE's $7.00-$11.00 junior-anchor market range."
+    },
+    {
+     "name": "H&R Block",
+     "suite": "5680",
+     "sf": 1628,
+     "rentPerSF": 21.24,
+     "annualRent": 34573,
+     "leaseStart": "1997-05-01",
+     "leaseExpiry": "2027-04-30",
+     "remainingTermYears": 0.3,
+     "expenseReimbursements": 4472,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Site plan shows a current rent of $19.91/SF; the CY-2027 pro-forma models $21.24/SF, so a 2027 step is embedded. Lease expires 04/30/27 \u2014 the OM assumes it stays at current terms."
+    },
+    {
+     "name": "Vacant",
+     "suite": "5694",
+     "sf": 1629,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Gabe's",
+     "suite": "5700",
+     "sf": 58473,
+     "rentPerSF": 5.75,
+     "annualRent": 336220,
+     "leaseStart": "2022-06-05",
+     "leaseExpiry": "2032-12-31",
+     "remainingTermYears": 6.0,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "renewalOptions": "Three (3) five-year options (per the OM narrative).",
+     "assumptionNote": "Lead anchor, 39.6% of GLA and 31.9% of revenue. $5.75/SF is just below CBRE's $6.00/SF anchor market rent \u2014 market-rate, not a mark-to-market gap. No expense reimbursement is modeled, so the lease is effectively gross/fixed-CAM \u2014 confirm the recovery structure in the lease."
+    },
+    {
+     "name": "Vacant",
+     "suite": "5710",
+     "sf": 3296,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Vacant",
+     "suite": "5714",
+     "sf": 1125,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Vacant",
+     "suite": "5720",
+     "sf": 4388,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Best Cleaners",
+     "suite": "5730",
+     "sf": 1515,
+     "rentPerSF": 11.49,
+     "annualRent": 17407,
+     "leaseStart": "2013-11-01",
+     "leaseExpiry": "2027-03-31",
+     "remainingTermYears": 0.2,
+     "expenseReimbursements": 4290,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Site plan shows $9.99/SF current vs $11.49/SF modeled for CY-2027. Expires 03/31/27; OM assumes holdover at current terms."
+    },
+    {
+     "name": "Mullins Hearing Aid Center",
+     "suite": "5732",
+     "sf": 500,
+     "rentPerSF": 21.6,
+     "annualRent": 10800,
+     "leaseStart": "2011-01-01",
+     "leaseExpiry": "2027-12-31",
+     "remainingTermYears": 1.0,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$21.60/SF on 500 SF, above the $13-$19 inline market range; no expense recovery modeled."
+    },
+    {
+     "name": "Melanie L. Boone Dentistry",
+     "suite": "5734",
+     "sf": 2340,
+     "rentPerSF": 16.0,
+     "annualRent": 37440,
+     "leaseStart": "2005-09-01",
+     "leaseExpiry": "2031-12-31",
+     "remainingTermYears": 5.0,
+     "expenseReimbursements": 6627,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Blessed 4 Less Boutique",
+     "suite": "5740",
+     "sf": 1212,
+     "rentPerSF": 11.47,
+     "annualRent": 13906,
+     "leaseStart": "2017-09-11",
+     "leaseExpiry": "2027-05-31",
+     "remainingTermYears": 0.4,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "No expense reimbursement modeled (gross or fixed-CAM lease). Expires 05/31/27."
+    },
+    {
+     "name": "Crunch Fitness",
+     "suite": "5750",
+     "sf": 32000,
+     "rentPerSF": 5.65,
+     "annualRent": 180914,
+     "leaseStart": "2013-02-01",
+     "leaseExpiry": "2033-03-31",
+     "remainingTermYears": 6.2,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "renewalOptions": "One (1) additional five-year option (per the OM narrative).",
+     "assumptionNote": "Co-anchor for 13+ years. $5.65/SF with no modeled expense recovery \u2014 confirm whether CAM is fixed or gross in the lease. Expires 03/31/33, four months after Gabe's."
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 959581,
+     "reimbursements": 97444,
+     "egr": 1058224,
+     "operatingExpenses": 371426,
+     "noi": 686798
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 1090155,
+     "reimbursements": 119565,
+     "egr": 1210919,
+     "operatingExpenses": 386197,
+     "noi": 824722
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 1193972,
+     "reimbursements": 142137,
+     "egr": 1337309,
+     "operatingExpenses": 400485,
+     "noi": 936823
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 1329591,
+     "reimbursements": 172897,
+     "egr": 1494767,
+     "operatingExpenses": 416020,
+     "noi": 1078748
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 1374064,
+     "reimbursements": 180350,
+     "egr": 1540026,
+     "operatingExpenses": 428513,
+     "noi": 1111513
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 1392520,
+     "reimbursements": 184578,
+     "egr": 1565099,
+     "operatingExpenses": 440734,
+     "noi": 1124365
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 1435434,
+     "reimbursements": 187054,
+     "egr": 1614251,
+     "operatingExpenses": 454022,
+     "noi": 1160228
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 1471317,
+     "reimbursements": 193615,
+     "egr": 1651895,
+     "operatingExpenses": 467320,
+     "noi": 1184575
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 1446961,
+     "reimbursements": 193055,
+     "egr": 1633412,
+     "operatingExpenses": 479298,
+     "noi": 1154114
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 1509419,
+     "reimbursements": 207979,
+     "egr": 1701401,
+     "operatingExpenses": 494247,
+     "noi": 1207154
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 1525323,
+     "reimbursements": 212872,
+     "egr": 1724506,
+     "operatingExpenses": 508236,
+     "noi": 1216270
+    }
+   ]
+  },
+  {
+   "fileName": "Project_Evergreen_VA_Coliseum_Marketplace.pdf",
+   "propertyName": "Coliseum Marketplace",
+   "address": "2170 Coliseum Drive",
+   "city": "Hampton",
+   "state": "VA",
+   "zip": "23666",
+   "market": "Hampton Roads / Virginia Peninsula",
+   "submarket": "Coliseum Central",
+   "assetType": "Retail",
+   "centerType": "Community Center",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 106648,
+   "occupancy": 100.0,
+   "walt": 8.06,
+   "weightedAvgRentPSF": 12.86,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 1319800,
+   "grossPotentialRent": 1371239,
+   "effectiveGrossIncome": 1806065,
+   "operatingExpenses": 486265,
+   "nnnRecoveries": 434826,
+   "currentAnnualTaxes": 233377,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 133322,
+    "realEstateTax": 233377,
+    "insurance": 60345,
+    "managementFee": 53889,
+    "nonRecoverable": 5332
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 738358,
+    "shopBaseRent": 632881,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 11.2,
+   "parkingRatio": 5.8,
+   "trafficCountVPD": 16900,
+   "population3mi": 77796,
+   "avgHHIncome3mi": 84369,
+   "medianHHIncome3mi": 67006,
+   "proximityHighways": "Coliseum Drive frontage (16,900 AADT) in the Coliseum Central submarket, at the confluence of I-64 and I-664 and two miles from the James River Bridge.",
+   "retailCotenants": "Coliseum Central is the primary commercial hub of the Virginia Peninsula (Hampton, Newport News, Poquoson, Williamsburg); the OM does not publish a competitive-center set.",
+   "shadowAnchors": "No shadow anchor disclosed. Demand drivers within five miles: Langley Air Force Base (15,000 active duty, 2,100 guard/reserve, 7,000+ civilian), Newport News Shipbuilding / Huntington Ingalls (26,000+ on-site employees); Naval Station Norfolk 15 miles away (46,000 active duty, 18,000 civilian); Hampton University (4,686 students) and Christopher Newport University (4,700 students) within 10 miles.",
+   "notes": "**Coliseum Marketplace** is a **106,648 SF, 100%-leased community center** at 2170 Coliseum Drive (**16,900 AADT**) in the Coliseum Central submarket of Hampton \u2014 the main commercial hub of the Virginia Peninsula, at the confluence of I-64 and I-664. It is co-anchored by a **57,662 SF Onelife Fitness** on a 15-year lease signed in February 2024 through **January 2039** (two five-year options) and a **23,981 SF Michaels** of nearly 15 years' tenure through **February 2029**; together they are **59.1% of revenue**. Two pads on Coliseum Drive \u2014 a **Chick-fil-A ground lease** (the busiest QSR within five miles of 106, \u00b11.1 million annual visits, top 15% nationally) and a **Primis Bank ground lease** \u2014 plus a compact shop row of eateries and services fill out the roster. The in-place pro-forma is **$1,319,800 of NOI**: $1,371,239 of base rent plus $434,826 of recoveries for $1,806,065 of effective gross revenue, less $486,265 of operating expenses. That is a **$12.86/SF weighted-average base rent** and a **\u00b18.06-year WALT** \u2014 by far the longest lease term in the Evergreen portfolio, and the reason the growth profile is a modest **2.75% ten-year CAGR** rather than a lease-up story. The risk is concentration, not vacancy: **Onelife takes 54% of the GLA and 41.8% of revenue** on a single fitness lease with no sales disclosed, and Michaels' **February 2029** expiry (17.3% of revenue) is the one meaningful roll inside a normal hold \u2014 at $9.75/SF against CBRE's own $10.50/SF market rent for 20,000+ SF space, a renewal would not reprice much either way. The trade area is dense but flat \u2014 **203,982 people and $91,524 average household income** in the true trade area (3-mile: 77,796 people, $84,369 AHHI) with essentially no projected population growth \u2014 so this underwrites as durable in-place income anchored by military and shipbuilding employment (Langley AFB, Newport News Shipbuilding, Naval Station Norfolk) rather than a growth market. Real estate taxes at **$233,377 ($2.19/SF)** are the un-reassessed 2026 budget and are the largest single expense line; Hampton reassesses annually, so a sale-driven step-up should be underwritten.",
+   "keyAssumptions": [
+    "Roster and financials come from the OM's In-Place Pro-Forma (page 9) on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss).",
+    "The center is 100% leased, so there is no lease-up assumption; CBRE's 2027 second-generation market rents are $20.00/SF (Suite 11 pad), $32.00/SF (Suite 12 pad), $30.00/SF (sub-2,000 SF shops), $24.00/SF (2,000-6,000 SF shops) and $10.50/SF (20,000+ SF anchor space), all NNN+MF with 3.00% growth.",
+    "Real estate taxes are NOT reassessed \u2014 they equal the 2026 budget ($233,377). Operating expenses follow the 2026 budget with owner-specific costs removed and a $0.05/SF non-recoverable assumption.",
+    "Chick-fil-A and Primis Bank are pad ground leases; their rents are shown per SF of building area, which overstates the rent per land SF.",
+    "Onelife Fitness and Michaels' renewal options (2x5 and per-lease terms) are described in the OM narrative only \u2014 the option rents are not disclosed.",
+    "No asking price or cap rate is published in this OM."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "Single-tenant concentration: Onelife Fitness is 54.1% of GLA and 41.8% of revenue on one fitness lease. No sales, membership counts or financials are disclosed, so tenant health cannot be tested from the OM \u2014 request Onelife's sales/EBITDAR and the guaranty."
+    },
+    {
+     "severity": "medium",
+     "description": "Michaels (17.3% of revenue) expires February 2029, inside a normal hold. At $9.75/SF against the OM's own $10.50/SF market rent for 20,000+ SF space there is no renewal upside to offset the retention risk, and a 23,981 SF vacancy would be the hardest space in the center to backfill."
+    },
+    {
+     "severity": "medium",
+     "description": "Real estate taxes of $233,377 ($2.19/SF, 48% of total operating expenses) are the un-reassessed 2026 budget. Hampton reassesses annually \u2014 underwrite a post-sale step-up."
+    },
+    {
+     "severity": "low",
+     "description": "70 East Tobacco & Vape at $35.19/SF is ~17% above the OM's $30.00/SF sub-2,000 SF market rent with no sales disclosed; that premium is mark-to-market downside at the Jan-2031 expiry, and vape/tobacco is a regulatory-exposed use."
+    },
+    {
+     "severity": "low",
+     "description": "Flat trade area: 3-mile population of 77,796 is projected to grow 0.25% over five years and the 5-mile count is projected to decline. Rent growth must come from the leases, not the market."
+    },
+    {
+     "severity": "low",
+     "description": "Recoveries are $434,826 \u2014 24% of effective gross revenue and 89% of operating expenses. That leverage cuts both ways: any recovery leakage on renewal (caps, gross-ups, admin-fee limits) flows straight to NOI. The OM does not disclose per-lease recovery structures."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "medium",
+     "item": "Long, locked anchor term",
+     "detail": "Onelife's 15-year lease to Jan-2039 at $8.75/SF (below the $10.50/SF market for big-box space) is the stickiest income in the portfolio \u2014 near-zero re-leasing risk for 12+ years. It is secure income, not capturable upside, and it underpins the 8.06-year WALT."
+    },
+    {
+     "priority": "medium",
+     "item": "Two pad ground leases",
+     "detail": "Chick-fil-A (\u00b11.1M annual visits, busiest QSR within five miles of 106) and Primis Bank on Coliseum Drive frontage are low-management, high-credit income and support a tighter exit cap on that share of NOI."
+    },
+    {
+     "priority": "low",
+     "item": "Contractual growth without leasing risk",
+     "detail": "At 100% occupancy the modeled 2.75% ten-year NOI CAGR comes from contractual steps and recoveries rather than speculative lease-up \u2014 a lower-variance cash flow than the vacancy-driven Evergreen assets."
+    },
+    {
+     "priority": "low",
+     "item": "Employment-anchored demand",
+     "detail": "Langley AFB, Newport News Shipbuilding and Naval Station Norfolk put roughly 100,000 defense-related jobs inside the trade area, and daytime population is 218,773 against 203,982 residents \u2014 a net importer of daytime traffic."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "Onelife Fitness",
+     "suite": "001",
+     "sf": 57662,
+     "rentPerSF": 8.75,
+     "annualRent": 504543,
+     "leaseStart": "2024-02-01",
+     "leaseExpiry": "2039-01-31",
+     "remainingTermYears": 12.1,
+     "expenseReimbursements": 250719,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "renewalOptions": "Two (2) additional five-year options (per the OM narrative).",
+     "assumptionNote": "Lead anchor: 54.1% of GLA and 41.8% of revenue on a 15-year lease signed February 2024 through Jan-2039. $8.75/SF vs CBRE's $10.50/SF market rent for 20,000+ SF space \u2014 below market and locked for 12+ years, i.e. secure, sticky income rather than capturable upside. Single-tenant fitness concentration is the main credit question; no sales are disclosed."
+    },
+    {
+     "name": "70 East Tobacco & Vape",
+     "suite": "002",
+     "sf": 1500,
+     "rentPerSF": 35.19,
+     "annualRent": 52785,
+     "leaseStart": "2021-02-01",
+     "leaseExpiry": "2031-01-31",
+     "remainingTermYears": 4.1,
+     "expenseReimbursements": 8138,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$35.19/SF vs CBRE's $30.00/SF market rent for sub-2,000 SF space \u2014 ~17% ABOVE market with no sales disclosed. Treat the Jan-2031 expiry as mark-to-market downside, not durable income."
+    },
+    {
+     "name": "AT&T Mobility",
+     "suite": "003",
+     "sf": 4334,
+     "rentPerSF": 25.3,
+     "annualRent": 109650,
+     "leaseStart": "2007-08-01",
+     "leaseExpiry": "2028-07-31",
+     "remainingTermYears": 1.6,
+     "expenseReimbursements": 19276,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "parentCompany": "AT&T Inc.",
+     "assumptionNote": "$25.30/SF against the $24.00/SF market rent for 2,000-6,000 SF space \u2014 at market. Jul-2028 expiry is the second-largest near-term roll."
+    },
+    {
+     "name": "Michaels",
+     "suite": "004",
+     "sf": 23981,
+     "rentPerSF": 9.75,
+     "annualRent": 233815,
+     "leaseStart": "2012-07-01",
+     "leaseExpiry": "2029-02-28",
+     "remainingTermYears": 2.2,
+     "expenseReimbursements": 79252,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Michaels Companies (Apollo Global Management)",
+     "assumptionNote": "Co-anchor, 22.5% of GLA and 17.3% of revenue, nearly 15 years on site. $9.75/SF against CBRE's $10.50/SF 20,000+ SF market rent \u2014 essentially at market, so the Feb-2029 expiry is a re-leasing/retention risk rather than a repricing opportunity. OM cites \u00b1301.8K annual visits, the busiest hobby/craft retailer within 10 miles (of 21)."
+    },
+    {
+     "name": "China Wok",
+     "suite": "008A",
+     "sf": 1500,
+     "rentPerSF": 21.45,
+     "annualRent": 32177,
+     "leaseStart": "2006-04-01",
+     "leaseExpiry": "2031-03-31",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 7933,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "America's Best Wings",
+     "suite": "008B",
+     "sf": 1500,
+     "rentPerSF": 27.6,
+     "annualRent": 41401,
+     "leaseStart": "2018-11-01",
+     "leaseExpiry": "2028-10-31",
+     "remainingTermYears": 1.8,
+     "expenseReimbursements": 8010,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$27.60/SF vs the $30.00/SF sub-2,000 SF market rent \u2014 modestly below market. Expires Oct-2028."
+    },
+    {
+     "name": "Miracle Nails",
+     "suite": "009",
+     "sf": 1800,
+     "rentPerSF": 30.9,
+     "annualRent": 55620,
+     "leaseStart": "2006-06-01",
+     "leaseExpiry": "2028-06-30",
+     "remainingTermYears": 1.5,
+     "expenseReimbursements": 9519,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$30.90/SF vs the $30.00/SF sub-2,000 SF market rent \u2014 at market. Expires Jun-2028."
+    },
+    {
+     "name": "Eggs Up Grill",
+     "suite": "010",
+     "sf": 5450,
+     "rentPerSF": 22.0,
+     "annualRent": 119900,
+     "leaseStart": "2026-07-01",
+     "leaseExpiry": "2036-12-31",
+     "remainingTermYears": 10.0,
+     "expenseReimbursements": 24005,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "New 10.5-year lease commencing 07/01/26 at $22.00/SF (CBRE market for 2,000-6,000 SF space is $24.00/SF) \u2014 recently transacted, near-market rent."
+    },
+    {
+     "name": "Chick-fil-A (Ground Lease)",
+     "suite": "011",
+     "sf": 4211,
+     "rentPerSF": 18.25,
+     "annualRent": 76865,
+     "leaseStart": "2000-03-01",
+     "leaseExpiry": "2030-05-31",
+     "remainingTermYears": 3.4,
+     "expenseReimbursements": 9830,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "leaseType": "Ground Lease",
+     "parentCompany": "Chick-fil-A, Inc.",
+     "assumptionNote": "Pad ground lease at $18.25/SF of building area. OM: ranked the busiest fast-food/QSR within five miles (of 106) with \u00b11.1 million annual visits, top 15% nationally by chain. No sales figures disclosed."
+    },
+    {
+     "name": "Primis Bank (Ground Lease)",
+     "suite": "012",
+     "sf": 4710,
+     "rentPerSF": 30.68,
+     "annualRent": 144483,
+     "leaseStart": "2011-02-01",
+     "leaseExpiry": "2030-09-30",
+     "remainingTermYears": 3.7,
+     "expenseReimbursements": 18143,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "leaseType": "Ground Lease",
+     "parentCompany": "Primis Financial Corp.",
+     "assumptionNote": "Pad ground lease at $30.68/SF of building area, through Sep-2030."
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 1371239,
+     "reimbursements": 434826,
+     "egr": 1796297,
+     "operatingExpenses": 486265,
+     "noi": 1310032
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 1368499,
+     "reimbursements": 445674,
+     "egr": 1805896,
+     "operatingExpenses": 499525,
+     "noi": 1306371
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 1499155,
+     "reimbursements": 459956,
+     "egr": 1948941,
+     "operatingExpenses": 517176,
+     "noi": 1431764
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 1529334,
+     "reimbursements": 474011,
+     "egr": 1993065,
+     "operatingExpenses": 532261,
+     "noi": 1460804
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 1562202,
+     "reimbursements": 484116,
+     "egr": 2039044,
+     "operatingExpenses": 547815,
+     "noi": 1491229
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 1616506,
+     "reimbursements": 500951,
+     "egr": 2106271,
+     "operatingExpenses": 564431,
+     "noi": 1541840
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 1593021,
+     "reimbursements": 510242,
+     "egr": 2094735,
+     "operatingExpenses": 579122,
+     "noi": 1515613
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 1704685,
+     "reimbursements": 531052,
+     "egr": 2224111,
+     "operatingExpenses": 598492,
+     "noi": 1625619
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 1719045,
+     "reimbursements": 549929,
+     "egr": 2257975,
+     "operatingExpenses": 615461,
+     "noi": 1642514
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 1738736,
+     "reimbursements": 573228,
+     "egr": 2302068,
+     "operatingExpenses": 633215,
+     "noi": 1668853
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 1792924,
+     "reimbursements": 593495,
+     "egr": 2370838,
+     "operatingExpenses": 652203,
+     "noi": 1718635
+    }
+   ]
+  },
+  {
+   "fileName": "Project_Evergreen_VA_Laburnum_Square.pdf",
+   "propertyName": "Laburnum Square",
+   "address": "4816 S Laburnum Avenue",
+   "city": "Richmond",
+   "state": "VA",
+   "zip": "23231",
+   "market": "Richmond MSA",
+   "submarket": "East Richmond / Henrico County",
+   "assetType": "Retail",
+   "centerType": "Grocery-Anchored",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 109387,
+   "occupancy": 97.4,
+   "walt": 3.9,
+   "weightedAvgRentPSF": 10.06,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 955630,
+   "grossPotentialRent": 1152728,
+   "effectiveGrossIncome": 1286176,
+   "operatingExpenses": 330546,
+   "nnnRecoveries": 205588,
+   "currentAnnualTaxes": 92637,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 147183,
+    "realEstateTax": 92637,
+    "insurance": 46671,
+    "managementFee": 38585,
+    "nonRecoverable": 5469
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 428340,
+    "shopBaseRent": 643488,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 11.7,
+   "parkingRatio": 4.85,
+   "trafficCountVPD": 30000,
+   "population3mi": 51437,
+   "avgHHIncome3mi": 74415,
+   "medianHHIncome3mi": 59458,
+   "proximityHighways": "Frontage on S Laburnum Avenue (30,000 AADT) between I-64 (48,900 AADT) and U.S. Route 60 (14,100 AADT), six miles east of downtown Richmond.",
+   "retailCotenants": "The OM does not publish a competitive-center set; Kroger is ranked the 2nd busiest grocer within five miles (of 22).",
+   "shadowAnchors": "No shadow anchor disclosed. Kroger operates an on-site fuel station (leased on the roster as a separate 5,144 SF pad).",
+   "notes": "**Laburnum Square** is a **109,387 SF, 97.4%-leased grocery-anchored neighborhood center** on S Laburnum Avenue (**30,000 AADT**) in Henrico County, six miles east of downtown Richmond and between I-64 (48,900 AADT) and U.S. Route 60. The anchor is a **45,157 SF Kroger with an on-site fuel station** and a roughly 50-year operating history: the OM reports **anecdotal sales of $39 million ($864 PSF)** and \u00b1947.3K annual visits, ranking it the 2nd busiest grocer within five miles of 22. Kroger's term runs to **October 2031 with six five-year options at 5% steps**, so at $5.96/SF \u2014 dead-on CBRE's $6.00/SF anchor market rent \u2014 the income is secure and option-controlled rather than repriceable. Junior anchors **Dollar General (9,960 SF at $9.33)** and **Pleasants Hardware / Taylor's Do it Center (10,080 SF at $6.58)** sit beside a deep shop row; the OM's stability claim is real, with **78.7% of GLA occupied for 15+ years and a 32-year average tenure**. The in-place pro-forma is **$955,630 of NOI** \u2014 $1,071,828 of base rent plus $205,588 of recoveries and $8,760 of donation-bin income for $1,286,176 of effective gross revenue, less $330,546 of operating expenses \u2014 at a **$10.06/SF weighted-average base rent**. The pressure point is term, not occupancy: **WALT is only \u00b13.9 years**, and beyond Kroger the roster is shop-heavy with three 2027 expirations (Martial Arts World, Rent-A-Center, Sistar Seafood \u2014 7,767 SF). Dollar General's $9.33/SF is 17%-33% **above** CBRE's own $7-$8 junior-anchor market rent, so its 2029 roll is downside rather than a mark-to-market gain, and the same caution applies to the $31-$32/SF small-shop rents (Cigarette Hub, Nail Studio 1) at the top of the $13-$35 inline band with no sales disclosed. One internal contradiction needs resolution before pricing: the site plan shows Rent-A-Center's current rent at **$12.50/SF ($47,250)** while the pro-forma models **$8.33/SF ($31,500)** for CY-2027 on a lease expiring in August 2027. The trade area is solid but not affluent \u2014 **102,201 residents in the true trade area at an $87,589 average household income** (3-mile: 51,437 people, $74,415 AHHI) with flat projected population growth \u2014 which argues for a cap-rate cushion rather than aggressive rent-growth assumptions, with the Kroger's productivity doing the heavy lifting.",
+   "keyAssumptions": [
+    "Roster and financials are the OM's In-Place Pro-Forma (page 9), stated on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss).",
+    "Kroger's $39 million / $864 PSF sales figure is described by the OM as ANECDOTAL \u2014 it is not a tenant-reported sales report. The 0.84% occupancy cost derived from it is therefore unverified.",
+    "Two vacant suites totaling 2,800 SF (4752 and 4846) are carried in the roster at $0 so roster SF ties to the 109,387 SF GLA; CBRE models a 12-month absorption beginning 01/01/27.",
+    "CBRE's 2027 market rents: $6.00/SF anchor, $7.00-$8.00/SF junior anchor, $13.00-$35.00/SF inline, $12.00/SF fuel; 3.00% annual growth; NNN+15% recoveries on new leases; 80% retention.",
+    "Real estate taxes are NOT reassessed \u2014 they equal the 2026 budget ($92,637). Operating expenses follow the 2026 budget with owner-specific costs removed and a $0.05/SF non-recoverable assumption.",
+    "Miscellaneous revenue of $8,760 is a Planet Aid donation-bin license, included in effective gross revenue.",
+    "Rent-A-Center's CY-2027 rent ($8.33/SF) contradicts the site plan's stated current rent ($12.50/SF) \u2014 the pro-forma figure is carried in the roster and the discrepancy is flagged.",
+    "No asking price or cap rate is published in this OM."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "WALT is only \u00b13.9 years. Excluding Kroger and its fuel pad (option-controlled to 2031+), the shop roster turns over almost entirely inside a normal hold \u2014 7,767 SF expires in 2027 alone (Martial Arts World, Rent-A-Center, Sistar Seafood)."
+    },
+    {
+     "severity": "high",
+     "description": "OM contradiction on Rent-A-Center: the site plan states $12.50/SF current rent ($47,250) while the In-Place Pro-Forma models $8.33/SF ($31,500) for CY-2027 \u2014 a $15,750 difference on a lease expiring 08/31/27. Resolve against the rent roll; the pro-forma NOI depends on which is right."
+    },
+    {
+     "severity": "medium",
+     "description": "Dollar General at $9.33/SF is 17%-33% ABOVE the OM's own $7.00-$8.00/SF junior-anchor market rent, with no sales disclosed. Its Jan-2029 expiry is mark-to-market DOWNSIDE \u2014 the rent can reset toward market or the tenant leaves \u2014 and it inflates current NOI."
+    },
+    {
+     "severity": "medium",
+     "description": "Kroger's sales are 'anecdotal' per the OM, not tenant-reported. A $864 PSF grocer is exceptional and it is the entire investment thesis \u2014 condition any pricing on verified sales reports."
+    },
+    {
+     "severity": "medium",
+     "description": "Small-shop rents at the top of the band: Cigarette Hub $32.08/SF and Nail Studio 1 $31.80/SF against a $13-$35 inline market range, no sales disclosed. Tobacco/vape carries regulatory risk. Both are rollover downside rather than durable income."
+    },
+    {
+     "severity": "low",
+     "description": "Pleasants Hardware (10,080 SF, 9.2% of GLA) carries no modeled expense reimbursement \u2014 effectively a gross or fixed-CAM lease. Confirm the recovery structure; it caps CAM and tax pass-throughs."
+    },
+    {
+     "severity": "low",
+     "description": "Real estate taxes are the un-reassessed 2026 budget ($92,637 / $0.85 PSF); Henrico County reassesses annually and a sale typically resets the basis."
+    },
+    {
+     "severity": "low",
+     "description": "Flat trade area \u2014 3-mile population of 51,437 is projected to DECLINE slightly by 2030 and the $74,415 3-mile average household income is below the Richmond metro average. Underwrite modest rent growth and a cap-rate cushion."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "medium",
+     "item": "Lease 2,800 SF of vacancy",
+     "detail": "Two suites (2,000 SF and 800 SF) at CBRE's $13-$35/SF inline market rents; a 12-month absorption is modeled and is worth roughly $36K-$70K of base rent plus recoveries."
+    },
+    {
+     "priority": "medium",
+     "item": "Anchor durability",
+     "detail": "Kroger at $5.96/SF with a 50-year history, $864 PSF anecdotal sales, an on-site fuel station and six five-year options is about as sticky as grocery income gets \u2014 near-zero vacancy risk and a defensible exit cap on that share of NOI."
+    },
+    {
+     "priority": "low",
+     "item": "Long-tenured shop base",
+     "detail": "78.7% of GLA has been occupied 15+ years with a 32-year average tenure; renewal probability is well above the 80% retention CBRE models, which lowers real TI/LC drag versus the pro-forma."
+    },
+    {
+     "priority": "low",
+     "item": "Below-band shop rents",
+     "detail": "New Beginnings Family Day Care ($10.61) and Pleasants Hardware ($6.58) sit below their market bands; renewals in 2030 could be marked up, though both are long-tenured tenants where retention likely matters more than the spread."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "Beauty World",
+     "suite": "4724",
+     "sf": 5792,
+     "rentPerSF": 15.09,
+     "annualRent": 87424,
+     "leaseStart": "2009-01-10",
+     "leaseExpiry": "2029-01-31",
+     "remainingTermYears": 2.1,
+     "expenseReimbursements": 19409,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Largest shop tenant at 5,792 SF and $15.09/SF, inside CBRE's $13.00-$35.00/SF inline market range; on site since 2009, expiring Jan-2029."
+    },
+    {
+     "name": "Cigarette Hub",
+     "suite": "4726",
+     "sf": 1008,
+     "rentPerSF": 32.08,
+     "annualRent": 32337,
+     "leaseStart": "2018-12-01",
+     "leaseExpiry": "2031-11-30",
+     "remainingTermYears": 4.9,
+     "expenseReimbursements": 3445,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$32.08/SF sits at the very top of CBRE's $13.00-$35.00/SF inline market range, on 1,008 SF with no sales disclosed. Tobacco/vape is a regulatory-exposed use \u2014 treat the Nov-2031 rent as at-risk of resetting down, not as durable."
+    },
+    {
+     "name": "America's Best Wings",
+     "suite": "4730",
+     "sf": 3440,
+     "rentPerSF": 15.18,
+     "annualRent": 52202,
+     "leaseStart": "2017-09-01",
+     "leaseExpiry": "2032-09-30",
+     "remainingTermYears": 5.7,
+     "expenseReimbursements": 11756,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Nail Studio 1",
+     "suite": "4736",
+     "sf": 900,
+     "rentPerSF": 31.8,
+     "annualRent": 28620,
+     "leaseStart": "1994-09-01",
+     "leaseExpiry": "2030-11-30",
+     "remainingTermYears": 3.9,
+     "expenseReimbursements": 3076,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$31.80/SF, near the top of the $13-$35 inline market range on 900 SF; 30+ years of tenure (since 1994). No sales disclosed."
+    },
+    {
+     "name": "New Day Barber Shop",
+     "suite": "4738",
+     "sf": 960,
+     "rentPerSF": 21.54,
+     "annualRent": 20677,
+     "leaseStart": "2024-06-27",
+     "leaseExpiry": "2029-06-30",
+     "remainingTermYears": 2.5,
+     "expenseReimbursements": 3281,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Salon Suites & Studios",
+     "suite": "4744",
+     "sf": 2400,
+     "rentPerSF": 16.0,
+     "annualRent": 38400,
+     "leaseStart": "2023-04-03",
+     "leaseExpiry": "2029-04-30",
+     "remainingTermYears": 2.3,
+     "expenseReimbursements": 8202,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Dominion Health Education",
+     "suite": "4746",
+     "sf": 1600,
+     "rentPerSF": 17.5,
+     "annualRent": 28000,
+     "leaseStart": "2016-06-01",
+     "leaseExpiry": "2029-05-31",
+     "remainingTermYears": 2.4,
+     "expenseReimbursements": 5361,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Martial Arts World",
+     "suite": "4748",
+     "sf": 2700,
+     "rentPerSF": 12.12,
+     "annualRent": 32724,
+     "leaseStart": "2022-08-28",
+     "leaseExpiry": "2027-08-31",
+     "remainingTermYears": 0.7,
+     "expenseReimbursements": 9227,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Expires 08/31/27 \u2014 one of three 2027 shop rolls totaling 7,767 SF (with Rent-A-Center and Sistar Seafood)."
+    },
+    {
+     "name": "Rent-A-Center",
+     "suite": "4750A",
+     "sf": 3780,
+     "rentPerSF": 8.33,
+     "annualRent": 31500,
+     "leaseStart": "1997-06-01",
+     "leaseExpiry": "2027-08-31",
+     "remainingTermYears": 0.7,
+     "expenseReimbursements": 8131,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "CONTRADICTION IN THE OM: the site plan states a current rent of $12.50/SF ($47,250) but the In-Place Pro-Forma models $8.33/SF ($31,500) for CY-2027 \u2014 a 33% lower rent on a lease that expires 08/31/27. Reconcile against the rent roll before underwriting this income."
+    },
+    {
+     "name": "Boost Mobile",
+     "suite": "4750B",
+     "sf": 1260,
+     "rentPerSF": 17.33,
+     "annualRent": 21840,
+     "leaseStart": "2011-07-31",
+     "leaseExpiry": "2030-07-31",
+     "remainingTermYears": 3.6,
+     "expenseReimbursements": 4222,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Dollar General",
+     "suite": "4750C",
+     "sf": 9960,
+     "rentPerSF": 9.33,
+     "annualRent": 92927,
+     "leaseStart": "1992-11-01",
+     "leaseExpiry": "2029-01-31",
+     "remainingTermYears": 2.1,
+     "expenseReimbursements": 21223,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Dollar General Corporation",
+     "assumptionNote": "Junior anchor, 9,960 SF at $9.33/SF versus CBRE's $7.00-$8.00/SF junior-anchor market rent \u2014 17%-33% ABOVE market. The Jan-2029 expiry is therefore rollover downside, not upside; no sales disclosed."
+    },
+    {
+     "name": "Vacant",
+     "suite": "4752",
+     "sf": 2000,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "H&R Block",
+     "suite": "4754",
+     "sf": 2000,
+     "rentPerSF": 17.48,
+     "annualRent": 34966,
+     "leaseStart": "1998-05-01",
+     "leaseExpiry": "2030-04-30",
+     "remainingTermYears": 3.3,
+     "expenseReimbursements": 6453,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Pleasants Hardware (Taylor's Do it Center)",
+     "suite": "4756",
+     "sf": 10080,
+     "rentPerSF": 6.58,
+     "annualRent": 66277,
+     "leaseStart": "2001-02-01",
+     "leaseExpiry": "2030-06-30",
+     "remainingTermYears": 3.5,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "assumptionNote": "Junior anchor, 10,080 SF at $6.58/SF \u2014 within the $7.00-$8.00/SF junior-anchor band, slightly below. No expense reimbursement is modeled, so this is effectively a gross or fixed-CAM lease on 9.2% of GLA; confirm the recovery structure."
+    },
+    {
+     "name": "Skrimp Shack",
+     "suite": "4758",
+     "sf": 3154,
+     "rentPerSF": 18.4,
+     "annualRent": 58049,
+     "leaseStart": "2018-03-30",
+     "leaseExpiry": "2031-03-31",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 10779,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "New Beginnings Family Day Care",
+     "suite": "4762",
+     "sf": 3946,
+     "rentPerSF": 10.61,
+     "annualRent": 41867,
+     "leaseStart": "2015-09-01",
+     "leaseExpiry": "2030-10-31",
+     "remainingTermYears": 3.8,
+     "expenseReimbursements": 13223,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Kroger",
+     "suite": "4816",
+     "sf": 45157,
+     "rentPerSF": 5.96,
+     "annualRent": 269136,
+     "leaseStart": "1978-11-01",
+     "leaseExpiry": "2031-10-31",
+     "remainingTermYears": 4.8,
+     "expenseReimbursements": 56525,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 864,
+     "occupancyCost": 0.84,
+     "renewalOptions": "Six (6) five-year options, each at a 5% increase over the prior term (per the OM narrative).",
+     "salesNotes": "OM states 'anecdotal' sales of $39 million ($864 PSF) and \u00b1947.3K annual customer visits \u2014 2nd busiest grocer within five miles (of 22). Anecdotal means unverified by the tenant; request sales reports. Occupancy cost of 0.84% is base rent ($269,136) plus modeled recoveries ($56,525) over $39.0M of sales.",
+     "assumptionNote": "Lead anchor: 41.3% of GLA, 25.1% of base rent, ~50-year operating history. $5.96/SF vs CBRE's $6.00/SF anchor market rent \u2014 at market. Term runs to Oct-2031 with six five-year options at 5% steps, so the income is effectively option-controlled to 2061 at the tenant's election: durable, sticky income, and the rent cannot be repriced within any realistic hold."
+    },
+    {
+     "name": "Puritan Cleaners",
+     "suite": "4842",
+     "sf": 2019,
+     "rentPerSF": 26.65,
+     "annualRent": 53806,
+     "leaseStart": "1999-02-01",
+     "leaseExpiry": "2036-02-29",
+     "remainingTermYears": 9.2,
+     "expenseReimbursements": 6900,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$26.65/SF through Feb-2036 \u2014 the longest shop term in the center, in the upper half of the inline market range."
+    },
+    {
+     "name": "Sistar Seafood",
+     "suite": "4844",
+     "sf": 1287,
+     "rentPerSF": 16.39,
+     "annualRent": 21097,
+     "leaseStart": "2012-08-01",
+     "leaseExpiry": "2027-07-31",
+     "remainingTermYears": 0.6,
+     "expenseReimbursements": 4313,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Expires 07/31/27; $16.39/SF, mid-range against the $13-$35 inline market."
+    },
+    {
+     "name": "Vacant",
+     "suite": "4846",
+     "sf": 800,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Kroger Fuel",
+     "suite": "FUEL",
+     "sf": 5144,
+     "rentPerSF": 11.66,
+     "annualRent": 59979,
+     "leaseStart": "2010-05-01",
+     "leaseExpiry": "2031-10-31",
+     "remainingTermYears": 4.8,
+     "expenseReimbursements": 10061,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Kroger's on-site fuel pad, 5,144 SF at $11.66/SF against CBRE's $12.00/SF fuel market rent \u2014 at market. Coterminous with the Kroger lease (10/31/31)."
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 1071828,
+     "reimbursements": 205588,
+     "egr": 1286176,
+     "operatingExpenses": 330546,
+     "noi": 955630
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 1153683,
+     "reimbursements": 219942,
+     "egr": 1372903,
+     "operatingExpenses": 341907,
+     "noi": 1030996
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 1163847,
+     "reimbursements": 237831,
+     "egr": 1399515,
+     "operatingExpenses": 351727,
+     "noi": 1047789
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 1203282,
+     "reimbursements": 250313,
+     "egr": 1454294,
+     "operatingExpenses": 362662,
+     "noi": 1091632
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 1250208,
+     "reimbursements": 260335,
+     "egr": 1507910,
+     "operatingExpenses": 373842,
+     "noi": 1134068
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 1271493,
+     "reimbursements": 264978,
+     "egr": 1535488,
+     "operatingExpenses": 384527,
+     "noi": 1150961
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 1308902,
+     "reimbursements": 273288,
+     "egr": 1579331,
+     "operatingExpenses": 395996,
+     "noi": 1183334
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 1340184,
+     "reimbursements": 284129,
+     "egr": 1621436,
+     "operatingExpenses": 407718,
+     "noi": 1213718
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 1365257,
+     "reimbursements": 308106,
+     "egr": 1670405,
+     "operatingExpenses": 419959,
+     "noi": 1250445
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 1387680,
+     "reimbursements": 341725,
+     "egr": 1729954,
+     "operatingExpenses": 432841,
+     "noi": 1297113
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 1443127,
+     "reimbursements": 353958,
+     "egr": 1795886,
+     "operatingExpenses": 446247,
+     "noi": 1349638
+    }
+   ]
+  },
+  {
+   "fileName": "Project_Evergreen_SC_Westland_Square.pdf",
+   "propertyName": "Westland Square",
+   "address": "2250 Sunset Boulevard",
+   "city": "West Columbia",
+   "state": "SC",
+   "zip": "29169",
+   "market": "Columbia MSA",
+   "submarket": "West Columbia / Lexington County",
+   "assetType": "Retail",
+   "centerType": "Grocery-Anchored",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 62735,
+   "occupancy": 100.0,
+   "walt": 5.58,
+   "weightedAvgRentPSF": 8.86,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 542984,
+   "grossPotentialRent": 563664,
+   "effectiveGrossIncome": 735720,
+   "operatingExpenses": 192736,
+   "nnnRecoveries": 172056,
+   "currentAnnualTaxes": 92184,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 48707,
+    "realEstateTax": 92184,
+    "insurance": 26759,
+    "managementFee": 21856,
+    "nonRecoverable": 3231
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 285686,
+    "shopBaseRent": 269968,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 5.94,
+   "parkingRatio": 4.7,
+   "trafficCountVPD": 29900,
+   "population3mi": 53449,
+   "avgHHIncome3mi": 83552,
+   "medianHHIncome3mi": 62821,
+   "proximityHighways": "Sunset Boulevard frontage (29,900 VPD) just off Interstate 26 (10,400 VPD), adjacent to Lexington Medical Center.",
+   "retailCotenants": "The OM does not publish a competitive-center set; Lexington Medical Center sits directly across from the property.",
+   "shadowAnchors": "No shadow anchor disclosed.",
+   "notes": "**Westland Square** is a **62,735 SF, 100%-leased Food Lion-anchored neighborhood center** on Sunset Boulevard (**29,900 VPD**) just off I-26 in West Columbia, South Carolina, directly across from Lexington Medical Center. The anchor carries the deal: **Food Lion occupies 29,000 SF (46.2% of GLA) at $7.75/SF** \u2014 at CBRE's own $8.00/SF grocer market rent \u2014 and reports **$690 PSF of sales against a 1.44% health ratio**, roughly $20 million out of a 29,000 SF box. That is exceptional grocer productivity and about the most defensible income in the Evergreen portfolio; the lease runs to December 2032. Ownership recently executed a **10-year AutoZone lease (9,375 SF at $6.50/SF, through May 2036, with 20 years of option control)**, adding an investment-grade credit and roughly $87,000 of annual revenue. The in-place pro-forma shows **$542,984 of NOI** on $735,720 of effective gross revenue less $192,736 of operating expenses. Two figures in the OM do not reconcile and both need to be resolved before pricing: page 2 headlines in-place NOI at **$535,784** versus the pro-forma's **$542,984**, and the pro-forma's printed totals ($563,664 base rent / $172,056 recoveries) exceed the sum of its own twelve printed tenant rows by **$8,010 of base rent and $3,092 of recoveries** \u2014 the suite letter 'K' is skipped on both the site plan and the rent roll, so a row appears to be missing from the presentation. The shop row is where the risk sits. The OM markets a **72.4% renewal spread on $2.89 Dry Cleaners** (from $11.50 to ~$19/SF) as proof of mark-to-market, but that tenant reports **$65 PSF of sales and a 33.75% occupancy cost** \u2014 an unsustainable ratio, which makes the new rent a default risk rather than evidence of market. Pho & Banh Mi's 13.00% ratio on $96 PSF sales is similarly stretched. The trade area is deep \u2014 **293,651 residents at a $94,809 average household income** with ~14.8% projected income growth (3-mile: 53,449 people, $83,552 AHHI) \u2014 and roughly 12% of GLA rolls near-term against shop market rents of $12-$20/SF versus $9-$16/SF in place, which is the genuine value-add. Net: a small, well-located grocery box with a superb anchor, a credit-tenant addition and a real mark-to-market case, wrapped in an OM whose own arithmetic needs a correction from the broker.",
+   "keyAssumptions": [
+    "Roster and financials are the OM's In-Place Pro-Forma (page 9), stated on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss).",
+    "UNRECONCILED: the pro-forma's printed totals ($563,664 base rent, $172,056 recoveries, $735,720 total revenue) exceed the sum of its twelve printed tenant rows ($555,654 / $168,964 / $724,617) by $8,010 / $3,092 / $11,102. Suite 'K' is absent from both the rent roll and the site plan. The roster here carries the twelve DISCLOSED rows; NOI, EGI and recoveries carry the OM's printed totals (which tie to each other: $735,720 - $192,736 = $542,984).",
+    "UNRECONCILED: page 2 states in-place NOI of $535,784; the page-9 pro-forma states $542,984 (a $7,200 difference). The page-9 figure is used because it ties to EGI less operating expenses.",
+    "Tenant sales PSF and 'health ratio' figures are the OM's own per-tenant disclosures; health ratio is used as the occupancy-cost ratio.",
+    "CBRE's 2027 market rents: $12.00-$20.00/SF shops, $6.50-$10.00/SF large shops, $8.00/SF grocer, NNN+MF; operating expenses are the 2026 budget grown 3%; capital reserves $0.25/SF.",
+    "Real estate taxes are NOT reassessed \u2014 they equal the 2026 budget ($92,184). South Carolina reassesses on transfer (assessable transfer of interest), so a post-sale step-up should be underwritten explicitly.",
+    "The center is 100% leased, so there is no lease-up assumption; growth is contractual (1.58% five-year / 1.79% ten-year NOI CAGR).",
+    "No asking price or cap rate is published in this OM."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "The OM's rent roll does not foot: printed totals exceed the sum of the twelve printed tenant rows by $8,010 of base rent and $3,092 of recoveries ($11,102 of revenue, 1.5% of EGI), and suite 'K' is skipped on both the site plan and the rent roll. Ask CBRE for the missing row before relying on the $542,984 NOI."
+    },
+    {
+     "severity": "high",
+     "description": "Two different in-place NOI figures appear in the same OM: $535,784 (page 2) and $542,984 (page 9 pro-forma). A $7,200 discrepancy on a ~$543K NOI is roughly 1.3% of value at any cap rate."
+    },
+    {
+     "severity": "high",
+     "description": "$2.89 Dry Cleaners: a 33.75% occupancy cost on $65 PSF of sales. The OM presents its 72.4% renewal spread (to ~$19/SF, from $11.50) as mark-to-market evidence, but no tenant sustains a one-third occupancy cost \u2014 treat the $29,400 of rent as at risk and do not extrapolate that spread to the rest of the shop row."
+    },
+    {
+     "severity": "medium",
+     "description": "Small asset, single anchor: Food Lion is 46.2% of GLA and ~40% of revenue. Its Dec-2032 expiry sits just past a normal hold, but there is no second anchor to absorb a loss."
+    },
+    {
+     "severity": "medium",
+     "description": "Pho & Banh Mi carries a 13.00% occupancy cost on $96 PSF sales across 5,970 SF (9.5% of GLA) through Jun-2034 \u2014 elevated for a restaurant and worth monitoring for sales deterioration."
+    },
+    {
+     "severity": "low",
+     "description": "Woody's Pet Supply: site plan states $8.00/SF current rent, the pro-forma models $5.33/SF for CY-2027 on a lease expiring 08/31/27. Reconcile against the rent roll."
+    },
+    {
+     "severity": "low",
+     "description": "Real estate taxes ($92,184, 48% of operating expenses) are the un-reassessed 2026 budget. South Carolina's assessable-transfer-of-interest rules typically reset the assessment on a sale \u2014 this is one of the larger tax-step risks in the portfolio."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "high",
+     "item": "Shop mark-to-market",
+     "detail": "Roughly 12% of GLA rolls near-term with in-place shop rents of $9-$16/SF against CBRE's $12-$20/SF market range. Tienda Faby Guatemix ($10.00, Dec-2027), Smokers Town ($9.19, Mar-2029) and Woody's Pet Supply ($5.33, Aug-2027) are the clearest candidates \u2014 subject to each tenant's sales supporting the increase."
+    },
+    {
+     "priority": "high",
+     "item": "Exceptional grocer productivity",
+     "detail": "Food Lion at $690 PSF sales and a 1.44% occupancy cost has enormous headroom; the rent is at market, the store is not going anywhere, and that supports a tighter exit cap on the anchor share of income."
+    },
+    {
+     "priority": "medium",
+     "item": "Recently executed AutoZone",
+     "detail": "A 10-year investment-grade lease signed 05/2026 at $6.50/SF with 20 years of option control adds credit, term and roughly $87,000 of annual revenue with no residual leasing cost."
+    },
+    {
+     "priority": "medium",
+     "item": "Deep, income-growing trade area",
+     "detail": "293,651 residents at a $94,809 average household income with ~14.8% projected AHHI growth through 2030, adjacent to Lexington Medical Center \u2014 a supportive backdrop for pushing shop rents toward the $12-$20 band."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "$2.89 Dry Cleaners",
+     "suite": "A",
+     "sf": 1600,
+     "rentPerSF": 18.38,
+     "annualRent": 29400,
+     "leaseStart": "2016-06-01",
+     "leaseExpiry": "2032-01-31",
+     "remainingTermYears": 5.1,
+     "expenseReimbursements": 5558,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "salesPSF": 65,
+     "occupancyCost": 33.75,
+     "salesNotes": "OM-stated sales of $65 PSF against a 33.75% health ratio \u2014 by far the weakest occupancy cost in the portfolio.",
+     "assumptionNote": "The OM markets this suite's 5-year renewal at ~$19/SF as a 72.4% leasing spread and evidence of mark-to-market. The tenant's own numbers argue the opposite: a 33.75% occupancy cost on $65 PSF sales is not sustainable, so the CY-2027 $18.37/SF rent is at genuine risk of default or reset rather than being proof of market. Site plan shows the pre-renewal rent at $11.50/SF."
+    },
+    {
+     "name": "Booze Barn",
+     "suite": "B",
+     "sf": 1600,
+     "rentPerSF": 16.5,
+     "annualRent": 26400,
+     "leaseStart": "2018-04-01",
+     "leaseExpiry": "2028-03-31",
+     "remainingTermYears": 1.2,
+     "expenseReimbursements": 5558,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "salesPSF": 424,
+     "occupancyCost": 4.71,
+     "salesNotes": "OM-stated sales of $424 PSF with a 4.71% health ratio \u2014 healthy.",
+     "assumptionNote": "$16.50/SF, inside CBRE's $12.00-$20.00/SF shop market range, with sales that comfortably support the rent. Expires Mar-2028."
+    },
+    {
+     "name": "Check 'n Go",
+     "suite": "C",
+     "sf": 1600,
+     "rentPerSF": 19.47,
+     "annualRent": 31152,
+     "leaseStart": "2003-04-01",
+     "leaseExpiry": "2028-03-31",
+     "remainingTermYears": 1.2,
+     "expenseReimbursements": 4530,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$19.47/SF, at the top of the $12-$20 shop market range; expires Mar-2028, no sales disclosed."
+    },
+    {
+     "name": "Tienda Faby Guatemix",
+     "suite": "D",
+     "sf": 1600,
+     "rentPerSF": 10.0,
+     "annualRent": 16000,
+     "leaseStart": "2021-11-19",
+     "leaseExpiry": "2027-12-31",
+     "remainingTermYears": 1.0,
+     "expenseReimbursements": 5558,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$10.00/SF, below the $12-$20 shop market range; expires Dec-2027 \u2014 the nearest-term roll."
+    },
+    {
+     "name": "Smokers Town",
+     "suite": "E",
+     "sf": 2400,
+     "rentPerSF": 9.19,
+     "annualRent": 22050,
+     "leaseStart": "2021-03-08",
+     "leaseExpiry": "2029-03-31",
+     "remainingTermYears": 2.2,
+     "expenseReimbursements": 8337,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$9.19/SF, below CBRE's $12.00-$20.00/SF shop market range; expires Mar-2029."
+    },
+    {
+     "name": "Woody's Pet Supply",
+     "suite": "F",
+     "sf": 2670,
+     "rentPerSF": 5.33,
+     "annualRent": 14240,
+     "leaseStart": "2022-02-04",
+     "leaseExpiry": "2027-08-31",
+     "remainingTermYears": 0.7,
+     "expenseReimbursements": 6183,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Site plan states a current rent of $8.00/SF but the pro-forma models $5.33/SF for CY-2027 \u2014 reconcile against the rent roll. Lease expires 08/31/27."
+    },
+    {
+     "name": "Food Lion",
+     "suite": "G",
+     "sf": 29000,
+     "rentPerSF": 7.75,
+     "annualRent": 224750,
+     "leaseStart": "1986-08-31",
+     "leaseExpiry": "2032-12-31",
+     "remainingTermYears": 6.0,
+     "expenseReimbursements": 63899,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 690,
+     "occupancyCost": 1.44,
+     "parentCompany": "Food Lion (Ahold Delhaize)",
+     "salesNotes": "OM-stated sales of $690 PSF with a 1.44% health ratio \u2014 roughly $20.0 million on 29,000 SF. Exceptional grocer productivity; the health ratio is the OM's own occupancy-cost figure.",
+     "assumptionNote": "Anchor: 46.2% of GLA at $7.75/SF against CBRE's $8.00/SF grocer market rent \u2014 at market. A 1.44% occupancy cost on $690 PSF sales makes this among the most defensible grocery leases in the portfolio; term runs to Dec-2032."
+    },
+    {
+     "name": "AutoZone",
+     "suite": "H",
+     "sf": 9375,
+     "rentPerSF": 6.5,
+     "annualRent": 60936,
+     "leaseStart": "2026-05-17",
+     "leaseExpiry": "2036-05-31",
+     "remainingTermYears": 9.4,
+     "expenseReimbursements": 26145,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "AutoZone, Inc.",
+     "creditRating": "Investment grade (AutoZone, Inc.)",
+     "renewalOptions": "Per the OM, the recently executed 10-year lease is secured by 20 years of additional option control.",
+     "assumptionNote": "Newly executed (05/17/26) 10-year lease at $6.50/SF through May-2036, plus 20 years of options. The OM credits it with ~$80,000 of annual NOI; the pro-forma shows $60,936 of base rent plus $26,145 of recoveries."
+    },
+    {
+     "name": "Pho & Banh Mi",
+     "suite": "I",
+     "sf": 5970,
+     "rentPerSF": 9.0,
+     "annualRent": 53730,
+     "leaseStart": "2024-06-05",
+     "leaseExpiry": "2034-06-30",
+     "remainingTermYears": 7.5,
+     "expenseReimbursements": 20739,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "salesPSF": 96,
+     "occupancyCost": 13.0,
+     "salesNotes": "OM-stated sales of $96 PSF with a 13.00% health ratio \u2014 elevated for a restaurant use.",
+     "assumptionNote": "$9.00/SF on 5,970 SF through Jun-2034. The 13% occupancy cost on $96 PSF sales is high; monitor sales trend."
+    },
+    {
+     "name": "Magic Nails",
+     "suite": "J",
+     "sf": 2300,
+     "rentPerSF": 11.0,
+     "annualRent": 25300,
+     "leaseStart": "2015-08-01",
+     "leaseExpiry": "2032-05-31",
+     "remainingTermYears": 5.4,
+     "expenseReimbursements": 7990,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Cosmo Prof",
+     "suite": "L",
+     "sf": 2310,
+     "rentPerSF": 10.5,
+     "annualRent": 24255,
+     "leaseStart": "2021-02-15",
+     "leaseExpiry": "2028-02-29",
+     "remainingTermYears": 1.2,
+     "expenseReimbursements": 6442,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Cucinella's Pizzeria and Italian Ice",
+     "suite": "M",
+     "sf": 2310,
+     "rentPerSF": 11.88,
+     "annualRent": 27441,
+     "leaseStart": "2021-08-20",
+     "leaseExpiry": "2029-11-30",
+     "remainingTermYears": 2.9,
+     "expenseReimbursements": 8025,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 563664,
+     "reimbursements": 172056,
+     "egr": 728521,
+     "operatingExpenses": 192736,
+     "noi": 535784
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 571442,
+     "reimbursements": 173438,
+     "egr": 739719,
+     "operatingExpenses": 198199,
+     "noi": 541520
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 594867,
+     "reimbursements": 178887,
+     "egr": 767079,
+     "operatingExpenses": 204300,
+     "noi": 562779
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 611432,
+     "reimbursements": 184781,
+     "egr": 787930,
+     "operatingExpenses": 210364,
+     "noi": 577566
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 622037,
+     "reimbursements": 189569,
+     "egr": 803110,
+     "operatingExpenses": 216421,
+     "noi": 586689
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 624063,
+     "reimbursements": 190298,
+     "egr": 809210,
+     "operatingExpenses": 222374,
+     "noi": 586836
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 636769,
+     "reimbursements": 196531,
+     "egr": 827894,
+     "operatingExpenses": 228877,
+     "noi": 599017
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 660755,
+     "reimbursements": 204047,
+     "egr": 856904,
+     "operatingExpenses": 235869,
+     "noi": 621035
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 676331,
+     "reimbursements": 210976,
+     "egr": 877582,
+     "operatingExpenses": 242794,
+     "noi": 634788
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 688966,
+     "reimbursements": 216463,
+     "egr": 895448,
+     "operatingExpenses": 249824,
+     "noi": 645624
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 685692,
+     "reimbursements": 216921,
+     "egr": 896597,
+     "operatingExpenses": 256547,
+     "noi": 640050
+    }
+   ]
+  },
+  {
+   "fileName": "Project_Evergreen_TN_Crockett_Square.pdf",
+   "propertyName": "Crockett Square",
+   "address": "507 S Davy Crockett Parkway",
+   "city": "Morristown",
+   "state": "TN",
+   "zip": null,
+   "market": "Morristown, TN (Knoxville CSA)",
+   "submarket": "US 25E retail corridor",
+   "assetType": "Retail",
+   "centerType": "Community Center",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 107122,
+   "occupancy": 100.0,
+   "walt": 3.6,
+   "weightedAvgRentPSF": 9.6,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 961861,
+   "grossPotentialRent": 1028163,
+   "effectiveGrossIncome": 1275657,
+   "operatingExpenses": 313795,
+   "nnnRecoveries": 247494,
+   "currentAnnualTaxes": 126124,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 97400,
+    "realEstateTax": 126124,
+    "insurance": 46485,
+    "managementFee": 38270,
+    "nonRecoverable": 5517
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 1028163,
+    "shopBaseRent": 0,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 12.91,
+   "parkingRatio": 5.05,
+   "trafficCountVPD": 30742,
+   "population3mi": 28056,
+   "avgHHIncome3mi": 61870,
+   "medianHHIncome3mi": 51562,
+   "proximityHighways": "Signalized access on US 25E (S Davy Crockett Parkway) with \u00b1530 feet of frontage; the OM site plan notes \u00b130,742 VPD on the adjacent Walters State CC Drive corridor, and 43,293 VPD at the US 25E/11E interchange one mile north. TDOT has a $67 million project underway to realign the 25E/11E interchange and widen 11E for 10 miles northeast. Knoxville is 35 miles away.",
+   "retailCotenants": "One-half mile north of College Square Mall \u2014 the #3 most-visited enclosed mall in Tennessee per Placer.ai \u2014 anchored by Dick's Sporting Goods, TJ Maxx, Ulta, Books-A-Million, Belk and AMC.",
+   "shadowAnchors": "Walmart Supercenter (corporately owned, adjacent) \u2014 ranked in the top 23% of Tennessee stores by foot traffic per Placer.ai; drives cross-shopping traffic to the center.",
+   "notes": "**Crockett Square** is a **107,122 SF, 100%-leased community center** on US 25E (S Davy Crockett Parkway) in Morristown, Tennessee, 35 miles from Knoxville, shadow-anchored by a **corporately owned Walmart Supercenter** and one-half mile from College Square Mall, the #3 most-visited enclosed mall in the state. The rent roll is four national tenants and nothing else: **Hobby Lobby (58,935 SF, $7.25/SF)**, **Ross Dress for Less (30,187 SF, $12.75)**, **Dollar Tree (10,000 SF, $10.00)** and **Shoe Station (8,000 SF, $14.50)**. Hobby Lobby, Ross and Dollar Tree are original tenants at 21 years' tenure and Hobby Lobby and Ross each exercised a five-year option within the last two years; the OM reports **89% of EGI from original tenants** and a 20-year average tenure. In-place economics are clean and tie out exactly: **$1,028,163 of base rent** ($9.60/SF weighted average) plus **$247,494 of recoveries** for $1,275,657 of effective gross revenue, less $313,795 of operating expenses, for **$961,861 of NOI**. Hobby Lobby reports **$142 PSF of sales at a 7% occupancy cost** \u2014 healthy for a craft box \u2014 and CBRE puts market rent at **$13.00/SF**, so three of the four leases are 10%-44% below market. Per KPR's standing read, that below-market rent is **secure, sticky income rather than capturable upside**: these tenants will not walk from rents this cheap, and the options are what keep them locked. The corollary is that the income does not grow much either \u2014 the OM models a **2.15% ten-year NOI CAGR**. The real exposure is binary rollover in a four-tenant building: **WALT is \u00b13.6 years**, Shoe Station rolls January 2028, and **Hobby Lobby and Dollar Tree (64.4% of GLA) both expire in September 2030**, with Ross following in January 2031 \u2014 effectively the entire center inside four years. Shoe Station is also the one tenant above market ($14.50 vs $13.00) at the earliest expiry. The trade area is modest \u2014 **108,129 residents in the true trade area at a $76,961 average household income** (3-mile: 28,056 people, $61,870 AHHI) \u2014 but supply is genuinely constrained (the OM notes area topography makes new centers unlikely), 51% of visitors come from more than seven miles away, and TDOT's $67 million 25E/11E interchange project is under construction one mile north. A thin, lower-income trade area of this kind argues for cap-rate cushion rather than aggressive rent-growth assumptions.",
+   "keyAssumptions": [
+    "Roster and financials are the OM's In-Place Pro-Forma (page 9), stated on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss). This OM prints lease dates as month-year only; day precision is inferred (start = first of month, expiry = last of month).",
+    "Hobby Lobby's 7% 'health ratio' is the OM's own occupancy-cost figure and reconciles to base rent plus recoveries over ~$8.4 million of sales ($142 PSF). No other tenant's sales are disclosed.",
+    "CBRE's 2027 market rent is a single $13.00/SF assumption for the center, growing 3.00% annually; general vacancy loss is set to NONE because there has been no vacancy at the property for nine years running.",
+    "Real estate taxes are NOT reassessed \u2014 they equal the 2026 budget ($126,124). Tennessee counties reassess on a 4-6 year cycle (Hamblen County) rather than on sale, but a purchase price materially above the assessment is still a reappraisal-cycle risk.",
+    "Ross's property-insurance reimbursement is capped by lease at its own-carrier cost; CBRE modeled it as the 2025 reimbursement grown 3% annually (OM footnote 4).",
+    "Tenants with options are assumed to exercise them; Hobby Lobby and Ross each exercised within the last two years.",
+    "No asking price or cap rate is published in this OM."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "Four tenants, no shops: 100% of income sits in four leases and Hobby Lobby alone is 55% of GLA and 44% of revenue. There is no diversification to absorb a single vacancy, and a 58,935 SF box in Morristown would be very slow to backfill."
+    },
+    {
+     "severity": "high",
+     "description": "Concentrated rollover on a \u00b13.6-year WALT: Shoe Station expires Jan-2028, then Hobby Lobby AND Dollar Tree (64.4% of GLA combined) both expire September 2030 with Ross following January 2031. Essentially the entire center rolls within four years of the analysis start."
+    },
+    {
+     "severity": "medium",
+     "description": "Shoe Station at $14.50/SF is ~12% above the OM's own $13.00/SF market rent, at the earliest expiry in the center and with no sales disclosed. That is mark-to-market downside on 7.5% of GLA, not upside."
+    },
+    {
+     "severity": "medium",
+     "description": "Thin trade area: 28,056 people within three miles at a $61,870 average household income, and 108,129 in the true trade area at $76,961. Below-average income and modest density argue for a cap-rate cushion and conservative rent-growth assumptions."
+    },
+    {
+     "severity": "low",
+     "description": "Ross's insurance reimbursement is capped at the tenant's own-carrier cost rather than pro-rata share of landlord expense \u2014 a structural recovery leakage that grows if landlord insurance premiums outpace the modeled 3%."
+    },
+    {
+     "severity": "low",
+     "description": "The OM notes Ross's lease fully expires without remaining options in January 2036 at a rent it projects to be ~21% below trended market \u2014 a genuine repositioning opportunity, but outside a normal hold and therefore a residual-value item, not underwriting income."
+    },
+    {
+     "severity": "low",
+     "description": "Real estate taxes ($126,124, 40% of operating expenses) are the un-reassessed 2026 budget; confirm Hamblen County's reappraisal cycle and where the property sits in it."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "medium",
+     "item": "Durable, deeply below-market anchor income",
+     "detail": "Hobby Lobby at $7.25/SF and Dollar Tree at $10.00/SF against a $13.00/SF market are the stickiest kind of income \u2014 a tenant does not walk away from a lease this cheap. The value is retention certainty and low re-leasing risk, not a rent increase that can be captured in a five-to-seven-year hold."
+    },
+    {
+     "priority": "medium",
+     "item": "Constrained competitive supply",
+     "detail": "The OM notes area topography makes new shopping-center development highly unlikely, which supports landlord leverage at the 2030-2031 renewals; the Walmart Supercenter shadow anchor and College Square Mall a half-mile away concentrate regional traffic on this node."
+    },
+    {
+     "priority": "low",
+     "item": "Detached \u00b10.3-acre parcel",
+     "detail": "An undeveloped parking area the OM flags as a candidate for an ATM, EV charging or a small pad \u2014 incremental income with no impact on existing tenancy."
+    },
+    {
+     "priority": "low",
+     "item": "TDOT interchange project",
+     "detail": "A $67 million realignment of the US 25E/11E interchange one mile north, plus 10 miles of widening, improves access to the node during the hold."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "Hobby Lobby",
+     "suite": "001",
+     "sf": 58935,
+     "rentPerSF": 7.25,
+     "annualRent": 427279,
+     "leaseStart": "2005-10-01",
+     "leaseExpiry": "2030-09-30",
+     "remainingTermYears": 3.7,
+     "expenseReimbursements": 134936,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 142,
+     "occupancyCost": 7.0,
+     "parentCompany": "Hobby Lobby Stores, Inc.",
+     "recentlyExercisedRenewal": "Exercised a five-year renewal option within the last two years (per the OM).",
+     "salesNotes": "OM-stated sales of $142 PSF with a 7% health ratio (~$8.4 million on 58,935 SF). Ranks in the top 47% of Tennessee stores by foot traffic per Placer.ai.",
+     "assumptionNote": "Lead anchor: 55.0% of GLA and 44% of revenue at $7.25/SF versus CBRE's $13.00/SF market rent \u2014 roughly 44% below market, locked by a recently exercised option through Sep-2030. Per KPR's read that is secure, sticky income (the tenant will not walk from a rent this cheap), not capturable upside inside a normal hold; the exposure is concentration, since one tenant is more than half the building."
+    },
+    {
+     "name": "Ross Dress for Less",
+     "suite": "002",
+     "sf": 30187,
+     "rentPerSF": 12.75,
+     "annualRent": 384884,
+     "leaseStart": "2005-10-01",
+     "leaseExpiry": "2031-01-31",
+     "remainingTermYears": 4.1,
+     "expenseReimbursements": 68663,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Ross Stores, Inc.",
+     "creditRating": "Investment grade (Ross Stores, Inc.)",
+     "recentlyExercisedRenewal": "Exercised a five-year renewal option within the last two years (per the OM).",
+     "reimbursementMethod": "Property-insurance reimbursement is capped by lease at what the tenant would pay for comparable coverage through its own carrier; CBRE modeled it at the 2025 reimbursement grown 3% annually (OM footnote 4).",
+     "assumptionNote": "28.2% of GLA at $12.75/SF, just under CBRE's $13.00/SF market rent \u2014 at market. Current term runs to Jan-2031; per the OM the lease fully expires WITHOUT remaining options in January 2036, and the OM projects the rent then to be ~21% below trended market."
+    },
+    {
+     "name": "Dollar Tree",
+     "suite": "003",
+     "sf": 10000,
+     "rentPerSF": 10.0,
+     "annualRent": 100000,
+     "leaseStart": "2005-10-01",
+     "leaseExpiry": "2030-09-30",
+     "remainingTermYears": 3.7,
+     "expenseReimbursements": 25714,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Dollar Tree, Inc.",
+     "salesNotes": "Ranks in the top 35% of Tennessee stores by foot traffic per Placer.ai; sales not disclosed. Only one other Dollar Tree within 10 miles.",
+     "assumptionNote": "9.3% of GLA at $10.00/SF versus the $13.00/SF market rent \u2014 below market and expiring Sep-2030, the same month as Hobby Lobby."
+    },
+    {
+     "name": "Shoe Station",
+     "suite": "004",
+     "sf": 8000,
+     "rentPerSF": 14.5,
+     "annualRent": 116000,
+     "leaseStart": "2017-07-01",
+     "leaseExpiry": "2028-01-31",
+     "remainingTermYears": 1.1,
+     "expenseReimbursements": 18181,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "assumptionNote": "7.5% of GLA at $14.50/SF, ~12% ABOVE CBRE's $13.00/SF market rent, and the earliest expiry in the center (Jan-2028). No sales disclosed, so treat the premium as rollover downside to verify rather than durable income. Nine years on site, having replaced Pier 1 after its liquidation."
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 1028163,
+     "reimbursements": 247494,
+     "egr": 1275657,
+     "operatingExpenses": 313795,
+     "noi": 961861
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 1035496,
+     "reimbursements": 255802,
+     "egr": 1291299,
+     "operatingExpenses": 322530,
+     "noi": 968768
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 1036163,
+     "reimbursements": 264405,
+     "egr": 1300568,
+     "operatingExpenses": 331322,
+     "noi": 969245
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 1041096,
+     "reimbursements": 273311,
+     "egr": 1314408,
+     "operatingExpenses": 340507,
+     "noi": 973901
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 1083568,
+     "reimbursements": 282534,
+     "egr": 1366102,
+     "operatingExpenses": 351090,
+     "noi": 1015012
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 1086084,
+     "reimbursements": 292084,
+     "egr": 1378168,
+     "operatingExpenses": 360755,
+     "noi": 1017413
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 1093417,
+     "reimbursements": 301975,
+     "egr": 1395392,
+     "operatingExpenses": 370854,
+     "noi": 1024538
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 1094084,
+     "reimbursements": 312218,
+     "egr": 1406302,
+     "operatingExpenses": 381051,
+     "noi": 1025251
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 1099017,
+     "reimbursements": 322828,
+     "egr": 1421846,
+     "operatingExpenses": 391683,
+     "noi": 1030163
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 1128881,
+     "reimbursements": 339886,
+     "egr": 1468767,
+     "operatingExpenses": 403561,
+     "noi": 1065206
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 1234052,
+     "reimbursements": 373814,
+     "egr": 1607865,
+     "operatingExpenses": 418519,
+     "noi": 1189346
+    }
+   ]
+  },
+  {
+   "fileName": "Project_Evergreen_VA_Port_Crossing_Shopping_Center.pdf",
+   "propertyName": "Port Crossing Shopping Center",
+   "address": "1021 Port Republic Road",
+   "city": "Harrisonburg",
+   "state": "VA",
+   "zip": "22801",
+   "market": "Harrisonburg, VA",
+   "submarket": "James Madison University / Port Republic Road",
+   "assetType": "Retail",
+   "centerType": "Grocery-Anchored",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 65365,
+   "occupancy": 100.0,
+   "walt": 2.4,
+   "weightedAvgRentPSF": 13.64,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 843451,
+   "grossPotentialRent": 891806,
+   "effectiveGrossIncome": 1150843,
+   "operatingExpenses": 307392,
+   "nnnRecoveries": 256037,
+   "currentAnnualTaxes": 114464,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 120819,
+    "realEstateTax": 114464,
+    "insurance": 34591,
+    "managementFee": 34250,
+    "nonRecoverable": 3268
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 543375,
+    "shopBaseRent": 348431,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 6.6,
+   "parkingRatio": 3.95,
+   "trafficCountVPD": 14500,
+   "population3mi": 60013,
+   "avgHHIncome3mi": 94490,
+   "medianHHIncome3mi": 68711,
+   "proximityHighways": "At the intersection of Port Republic Road (14,500 AADT) and Neff Avenue (11,700 AADT), one-half mile from I-81 (54,500 AADT).",
+   "retailCotenants": "The OM does not publish a competitive-center set. Sentara RMH Medical Center (238 beds, 600,000 SF, ~71,000 patients annually) is 1.5 miles away; Massanutten Resort (\u00b11.4 million annual visitors) is 10 miles away.",
+   "shadowAnchors": "No shadow anchor disclosed. Directly adjacent to James Madison University (23,000 students) and across from JMU's Sentara Park athletic complex; a 376-unit apartment project (Peach Grove) and a 460-bed student-housing project are planned adjacent to the center.",
+   "notes": "**Port Crossing Shopping Center** is a **65,365 SF, 100%-occupied Food Lion-anchored neighborhood center** at Port Republic Road (14,500 AADT) and Neff Avenue in Harrisonburg, Virginia \u2014 directly adjacent to **James Madison University (23,000 students)** and across from JMU's Sentara Park, one-half mile from I-81. **Food Lion is the deal**: 45,000 SF (68.8% of GLA, 60.2% of revenue) at **$12.08/SF**, with OM-stated sales of **$15.8 million ($351 PSF)** and \u00b1760.1K annual visits \u2014 the chain's busiest store within 10 miles of four \u2014 for a **4.38% occupancy cost** including recoveries. It has anchored the center since its 1999 development, with term to **May 2029** and two five-year options. The seven-tenant shop row is a Virginia ABC store (**$2.4 million / $660 PSF of sales**, 4.0% occupancy cost, state-agency credit) plus local restaurants and services. In-place economics: **$891,806 of base rent** ($13.64/SF weighted average) plus **$256,037 of recoveries** and $3,000 of miscellaneous income for **$1,150,843 of effective gross revenue**, less $307,392 of operating expenses, for **$843,451 of NOI**. Rents are almost uniformly **at CBRE's own market assumptions** \u2014 Food Lion $12.08 against $12.25, Vietopia $24.99 against $25.00, Madison Nails $25.63 against $25.00, Bobo Cafe $19.58 against $20.00 \u2014 which is why the OM only models a **1.87% ten-year NOI CAGR**. There is no meaningful mark-to-market in either direction here; the return has to come from the going-in yield and the trade area. The dominant risk is term. **WALT is \u00b12.4 years, the shortest in the Evergreen portfolio**: Vito's Italian Kitchen rolls April 2027, You Made It June 2028, Bobo Cafe October 2028, and then Food Lion itself in **May 2029**, inside almost any hold period. A grocer renewal at 60% of revenue is the single decision that determines this asset's value, and the OM also discloses that Food Lion holds a right \u2014 exercisable every five years \u2014 to **expand its premises by 10,560 SF**, which would displace shop tenants; that clause needs to be read from the lease. The demand story is genuinely strong: **70,364 residents in the true trade area at a $110,489 average household income** (3-mile: 60,013 people, $94,490 AHHI), roughly 70% of JMU students living off campus, a 376-unit apartment project behind the property and a 460-bed student-housing project next door, plus Sentara RMH Medical Center 1.5 miles away and Massanutten Resort's \u00b11.4 million annual visitors ten miles out. A dense, high-income, supply-constrained college trade area of this kind supports both the in-place rents and a tighter going-in cap \u2014 but not without pricing the 2029 grocer renewal.",
+   "keyAssumptions": [
+    "Roster and financials are the OM's In-Place Pro-Forma (page 9), stated on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss).",
+    "Food Lion and Virginia ABC sales are OM-stated; occupancy costs shown are computed as base rent plus modeled recoveries over those sales, per KPR's convention. No other tenant sales are disclosed.",
+    "CBRE's 2027 market rents are set suite-by-suite: $12.25/SF for the 45,000 SF Food Lion box, $20.00/SF for shops, $25.00/SF for suites 1015/1017 and $6.00/SF for suite 1019, all NNN+MF+15%, growing 3.00% annually.",
+    "The center is 100% leased with no projected vacancy at 1/1/27, so there is no lease-up assumption; the modeled 1.87% ten-year NOI CAGR is contractual growth plus renewal assumptions.",
+    "Tenants expiring in FY 2027/2028 without options are assumed to remain at current terms; tenants with options are assumed to exercise. Food Lion's May-2029 expiry therefore appears in the model as a renewal, not as a vacancy.",
+    "Real estate taxes are NOT reassessed \u2014 they equal the 2026 budget ($114,464). Harrisonburg reassesses periodically and a sale can reset the basis.",
+    "Miscellaneous income of $3,000 is included in effective gross revenue.",
+    "No asking price or cap rate is published in this OM."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "\u00b12.4-year WALT \u2014 the shortest in the portfolio. Food Lion (60.2% of revenue) expires May 2029 with two five-year options, and three shop leases roll before it (Vito's Apr-2027, You Made It Jun-2028, Bobo Cafe Oct-2028). The grocer's renewal decision governs the asset's value and lands inside almost any hold."
+    },
+    {
+     "severity": "high",
+     "description": "Anchor concentration: Food Lion is 68.8% of GLA and 60.2% of revenue in a 65,365 SF center. There is no second anchor, and a dark grocery box adjacent to JMU would be difficult and expensive to re-tenant."
+    },
+    {
+     "severity": "medium",
+     "description": "Food Lion holds a right, exercisable every five years, to EXPAND its premises by 10,560 SF. Exercised, it displaces roughly 16% of the center's GLA of shop tenants and forces relocations or terminations. Obtain and abstract the clause \u2014 trigger, notice window, rent on the expansion space and the landlord's obligations \u2014 before pricing."
+    },
+    {
+     "severity": "medium",
+     "description": "Rents are already at CBRE's market assumptions across nearly the whole roster, so there is little mark-to-market cushion if any tenant has to be replaced; the modeled 1.87% ten-year CAGR reflects that."
+    },
+    {
+     "severity": "low",
+     "description": "Student-driven demand: a trade area dominated by JMU is exposed to enrollment and academic-calendar seasonality, and several shop tenants are local operators without published sales."
+    },
+    {
+     "severity": "low",
+     "description": "Real estate taxes ($114,464, 37% of operating expenses) are the un-reassessed 2026 budget; underwrite a post-sale step-up."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "high",
+     "item": "Dominant grocer with real sales support",
+     "detail": "$15.8 million / $351 PSF of sales at a 4.38% occupancy cost, the busiest Food Lion within 10 miles, at a rent already at market. That combination makes the 2029 renewal likely and supports a tighter exit cap on the anchor income."
+    },
+    {
+     "priority": "high",
+     "item": "High-income, supply-constrained college trade area",
+     "detail": "70,364 residents at a $110,489 average household income, JMU's 23,000 students directly adjacent with ~70% living off campus, a 376-unit apartment and a 460-bed student-housing project under way next door \u2014 genuine demand growth that should keep the shop row full."
+    },
+    {
+     "priority": "medium",
+     "item": "Near-term shop mark-to-market",
+     "detail": "Vito's Italian Kitchen (5,465 SF at $17.67, expiring Apr-2027) and Papa Joe's ($15.89) sit below the $20.00/SF shop market rent \u2014 roughly $25K-$35K of achievable base-rent pickup on renewal or replacement."
+    },
+    {
+     "priority": "low",
+     "item": "State-agency credit with strong productivity",
+     "detail": "Virginia ABC at $660 PSF of sales and a 4.0% occupancy cost through Apr-2030 is durable, low-risk income from a Commonwealth of Virginia tenant."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "Vietopia",
+     "suite": "1015",
+     "sf": 1160,
+     "rentPerSF": 24.99,
+     "annualRent": 28988,
+     "leaseStart": "2014-01-01",
+     "leaseExpiry": "2034-07-31",
+     "remainingTermYears": 7.6,
+     "expenseReimbursements": 6379,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$24.99/SF against CBRE's $25.00/SF market rent for suites 1015/1017 \u2014 at market, through Jul-2034."
+    },
+    {
+     "name": "Madison Nails",
+     "suite": "1017",
+     "sf": 1200,
+     "rentPerSF": 25.63,
+     "annualRent": 30756,
+     "leaseStart": "2013-12-01",
+     "leaseExpiry": "2031-02-28",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 6820,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$25.63/SF against the $25.00/SF market rent for suites 1015/1017 \u2014 at market, through Feb-2031."
+    },
+    {
+     "name": "You Made It",
+     "suite": "1019",
+     "sf": 3600,
+     "rentPerSF": 5.92,
+     "annualRent": 21312,
+     "leaseStart": "2022-07-01",
+     "leaseExpiry": "2028-06-30",
+     "remainingTermYears": 1.5,
+     "expenseReimbursements": 13820,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$5.92/SF \u2014 CBRE models this specific suite's market rent at $6.00/SF, so it is at market despite looking cheap next to the rest of the shop row. Expires Jun-2028."
+    },
+    {
+     "name": "Food Lion",
+     "suite": "1021",
+     "sf": 45000,
+     "rentPerSF": 12.07,
+     "annualRent": 543375,
+     "leaseStart": "1999-03-01",
+     "leaseExpiry": "2029-05-31",
+     "remainingTermYears": 2.4,
+     "expenseReimbursements": 148018,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 351,
+     "occupancyCost": 4.38,
+     "parentCompany": "Food Lion (Ahold Delhaize)",
+     "renewalOptions": "Two (2) additional five-year options (per the OM narrative); the grocer also holds a right every five years to expand its premises by 10,560 SF.",
+     "salesNotes": "OM-stated sales of over $15.8 million ($351 PSF) with \u00b1760.1K annual visits \u2014 the chain's busiest location within 10 miles (of 4). Occupancy cost of 4.38% is base rent ($543,375) plus modeled recoveries ($148,018) over $15.8M of sales.",
+     "assumptionNote": "Anchor since the 1999 development: 68.8% of GLA and 60.2% of revenue at $12.08/SF, essentially at CBRE's $12.25/SF market rent for the space. Term expires 05/31/29 with two five-year options. IMPORTANT LEASE LEVER: the OM states Food Lion may elect every five years to EXPAND its premises by 10,560 SF \u2014 that right would displace shop tenants and change the center's configuration; get the clause from the lease."
+    },
+    {
+     "name": "Virginia ABC Board",
+     "suite": "1037",
+     "sf": 3600,
+     "rentPerSF": 21.16,
+     "annualRent": 76187,
+     "leaseStart": "2014-09-01",
+     "leaseExpiry": "2030-04-30",
+     "remainingTermYears": 3.3,
+     "expenseReimbursements": 19849,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "salesPSF": 660,
+     "occupancyCost": 4.0,
+     "creditRating": "Commonwealth of Virginia (state agency tenant)",
+     "salesNotes": "OM-stated sales of $2.4 million ($660 PSF). Occupancy cost of 4.00% is base rent ($76,187) plus recoveries ($19,849) over $2.4M of sales.",
+     "assumptionNote": "State-agency credit at $21.16/SF through Apr-2030, above the $20.00/SF shop market rent but supported by $660 PSF of sales (4.0% occupancy cost)."
+    },
+    {
+     "name": "Bobo Cafe",
+     "suite": "1039",
+     "sf": 2650,
+     "rentPerSF": 19.58,
+     "annualRent": 51896,
+     "leaseStart": "2023-04-01",
+     "leaseExpiry": "2028-10-31",
+     "remainingTermYears": 1.8,
+     "expenseReimbursements": 15269,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$19.58/SF against the $20.00/SF shop market rent \u2014 at market. Expires Oct-2028."
+    },
+    {
+     "name": "Papa Joe's Smoke Shop",
+     "suite": "1041",
+     "sf": 2690,
+     "rentPerSF": 15.89,
+     "annualRent": 42744,
+     "leaseStart": "2016-02-01",
+     "leaseExpiry": "2030-02-28",
+     "remainingTermYears": 3.2,
+     "expenseReimbursements": 14393,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$15.89/SF, below the $20.00/SF shop market rent; expires Feb-2030. Tobacco/vape use carries regulatory exposure."
+    },
+    {
+     "name": "Vito's Italian Kitchen",
+     "suite": "1047",
+     "sf": 5465,
+     "rentPerSF": 17.67,
+     "annualRent": 96548,
+     "leaseStart": "2014-06-01",
+     "leaseExpiry": "2027-04-30",
+     "remainingTermYears": 0.3,
+     "expenseReimbursements": 31489,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$17.67/SF (site plan shows $17.00 current), below CBRE's $20.00/SF shop market rent. Expires 04/30/27 \u2014 the nearest-term roll at 8.4% of GLA, and the clearest mark-to-market candidate in the center."
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 891806,
+     "reimbursements": 256037,
+     "egr": 1141654,
+     "operatingExpenses": 307392,
+     "noi": 834262
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 893281,
+     "reimbursements": 262809,
+     "egr": 1151263,
+     "operatingExpenses": 315874,
+     "noi": 835389
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 916387,
+     "reimbursements": 276788,
+     "egr": 1186561,
+     "operatingExpenses": 325373,
+     "noi": 861188
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 939952,
+     "reimbursements": 278387,
+     "egr": 1214349,
+     "operatingExpenses": 334900,
+     "noi": 879448
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 981514,
+     "reimbursements": 291375,
+     "egr": 1266766,
+     "operatingExpenses": 345427,
+     "noi": 921340
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 992685,
+     "reimbursements": 293779,
+     "egr": 1279901,
+     "operatingExpenses": 355044,
+     "noi": 924857
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 1017924,
+     "reimbursements": 300706,
+     "egr": 1313048,
+     "operatingExpenses": 365538,
+     "noi": 947510
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 1058404,
+     "reimbursements": 314399,
+     "egr": 1362347,
+     "operatingExpenses": 376801,
+     "noi": 985547
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 1048871,
+     "reimbursements": 317531,
+     "egr": 1357745,
+     "operatingExpenses": 386741,
+     "noi": 971004
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 1090217,
+     "reimbursements": 333084,
+     "egr": 1412142,
+     "operatingExpenses": 398753,
+     "noi": 1013389
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 1087363,
+     "reimbursements": 337573,
+     "egr": 1413486,
+     "operatingExpenses": 409485,
+     "noi": 1004002
+    }
+   ]
+  },
+  {
+   "fileName": "Project_Evergreen_VA_Village_of_Martinsville.pdf",
+   "propertyName": "Village of Martinsville",
+   "address": "240 Commonwealth Boulevard West",
+   "city": "Martinsville",
+   "state": "VA",
+   "zip": "24112",
+   "market": "Martinsville, VA",
+   "submarket": "Commonwealth Boulevard",
+   "assetType": "Retail",
+   "centerType": "Power Center",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 288254,
+   "occupancy": 99.6,
+   "walt": 3.4,
+   "weightedAvgRentPSF": 8.21,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 2062617,
+   "grossPotentialRent": 2395265,
+   "effectiveGrossIncome": 2762835,
+   "operatingExpenses": 700218,
+   "nnnRecoveries": 405420,
+   "currentAnnualTaxes": 257667,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 244545,
+    "realEstateTax": 257667,
+    "insurance": 100763,
+    "managementFee": 82830,
+    "nonRecoverable": 14413
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 1652806,
+    "shopBaseRent": 704608,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 33.1,
+   "parkingRatio": 5.7,
+   "trafficCountVPD": 12900,
+   "population3mi": 20706,
+   "avgHHIncome3mi": 63282,
+   "medianHHIncome3mi": 48817,
+   "proximityHighways": "Frontage on Commonwealth Boulevard West (12,900 AADT), Martinsville's primary commercial thoroughfare, with three points of signalized ingress/egress. Ten miles from the North Carolina line; Greensboro, NC is 48 miles and Danville, VA 30 miles away.",
+   "retailCotenants": "The OM does not publish a competitive-center set; the property is the dominant power center on Martinsville's main retail corridor with \u00b12.8 million annual customer visits.",
+   "shadowAnchors": "No shadow anchor disclosed. Martinsville Speedway (NASCAR-owned, 60,000+ seats, $78.2 million of annual visitor spending) is six miles away.",
+   "notes": "**Village of Martinsville** is a **288,254 SF, 99.6%-leased grocery-anchored power center** on Commonwealth Boulevard West (**12,900 AADT**), Martinsville's primary commercial corridor, ten miles north of the North Carolina line and six miles from NASCAR's Martinsville Speedway. It is the dominant retail node in its market, with \u00b12.8 million annual customer visits. The anchor lineup is unusually deep for a market this size: a **55,969 SF Kroger with fuel station** (30-year history, **$39 million / $697 PSF of anecdotal sales**, busiest grocer within 15 miles of 17, six five-year options), **Belk (85,000 SF)**, **Marshalls (24,100 SF, $10.2 million / $423 PSF of sales)**, **Dunham's Sports (43,872 SF, $2.7 million)** and **Harbor Freight (15,338 SF)**, with **83.7% of revenue from national credit tenants** and a **21.4-year average tenure**. Leasing has been active \u2014 over 32,000 SF signed since 2025, including **Five Below (14,957 SF, RCD September 2026)**, **Rack Room Shoes** and **Petsense**. In-place economics: **$2,357,414 of base rent** ($8.21/SF weighted average) plus **$405,420 of recoveries** for $2,762,835 of effective gross revenue, less $700,218 of operating expenses, for **$2,062,617 of NOI** \u2014 a clean tie-out, with only 1,200 SF vacant. Rents sit at or below CBRE's market assumptions almost everywhere (Kroger $10.27 vs $10.50, Marshalls $8.00 vs $10.75, Dunham's $5.95 vs $7.50, Harbor Freight $10.50 vs $10.75), which per KPR's standing read is **secure, sticky income rather than capturable upside**. The exception that defines the deal is **Belk: 29.5% of GLA at $2.94/SF against an $8.00/SF market**, with option control running to **2037**. That rent is far too cheap for Belk to walk away from, so the income is durable \u2014 but a dominant anchor locked at roughly a third of market rent for another decade also caps the center's income growth and its exit value, and Belk's **$49 PSF of sales at a 7.51% occupancy cost** is weak productivity even at that rent. Term is the other pressure point: **WALT is \u00b13.4 years**, and **Belk (Aug-2028) and Marshalls (Oct-2028) \u2014 109,100 SF, 37.9% of GLA \u2014 expire within two months of each other**. Marshalls at $423 PSF of sales and a 2.91% occupancy cost is the renewal you want; Belk is the one to plan around. The trade area is the weakest in the Evergreen portfolio \u2014 **20,706 residents within three miles at a $63,282 average household income, with population projected to decline slightly through 2030** (55,927 in the true trade area at $68,707). Low density and below-average incomes argue for a meaningful cap-rate cushion and conservative rent-growth assumptions, notwithstanding the strong in-place sales at Kroger and Marshalls.",
+   "keyAssumptions": [
+    "Roster and financials are the OM's In-Place Pro-Forma (page 9), stated on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss).",
+    "Kroger's $39 million / $697 PSF sales figure is described by the OM as ANECDOTAL (not tenant-reported). Belk ($4.2M), Marshalls ($10.2M) and Dunham's ($2.7M) sales are OM-stated totals; the PSF figures and occupancy costs here are computed from those totals over leased SF and over base rent plus modeled recoveries.",
+    "One vacant suite (304A, 1,200 SF) is carried in the roster at $0 so roster SF ties to the 288,254 SF GLA; CBRE models a 12-month absorption beginning 01/01/27.",
+    "CBRE's 2027 market rents: $10.50/SF grocer, $8.00/SF for 80,000+ SF space (Belk), $7.50/SF for suite 064 (Dunham's), $10.75/SF for 15,000-25,000 SF space, $18.00/SF for suites 303/305/309-312, $28.00/SF for sub-3,000 SF inline and $4.05/SF for the fuel pad, all NNN with 3.00% growth.",
+    "Belk's below-market rent is treated as SECURE, STICKY INCOME (the tenant will not walk from $2.94/SF), not as mark-to-market upside \u2014 the OM's own note is that its rent can only be replaced when options expire in 2037, outside a normal hold.",
+    "Real estate taxes are NOT reassessed \u2014 they equal the 2026 budget ($257,667). A sale in Virginia typically triggers a reassessment; underwrite a step-up.",
+    "Dunham's Sports, Luxury Nails, Rack Room Shoes and iTech carry no (or minimal) modeled expense reimbursement \u2014 effectively gross or fixed-CAM structures on roughly 21% of GLA. Confirm from the leases.",
+    "No asking price or cap rate is published in this OM."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "Belk and Marshalls \u2014 109,100 SF and 37.9% of GLA \u2014 expire within two months of each other (Aug-2028 and Oct-2028), on a \u00b13.4-year WALT. Two big-box renewals in one quarter is the single largest event risk in the deal."
+    },
+    {
+     "severity": "high",
+     "description": "Belk's productivity is weak: $4.2 million of sales on 85,000 SF (~$49 PSF) at a 7.51% occupancy cost even paying only $2.94/SF. The rent is cheap enough that staying is rational, but a department-store closure would leave 85,000 SF dark in a small, shrinking market with no obvious replacement."
+    },
+    {
+     "severity": "medium",
+     "description": "Belk's $2.94/SF rent on 29.5% of GLA is locked by options through 2037. That is durable income, not upside \u2014 but it structurally caps NOI growth and the resale value of nearly a third of the building for the entire hold. Do not underwrite the gap to the $8.00/SF market rent as capturable."
+    },
+    {
+     "severity": "medium",
+     "description": "Declining trade area: 3-mile population of 20,706 is projected to fall by 2030 and average household income is $63,282, the weakest in the Evergreen portfolio. Rent growth beyond contractual steps should not be assumed, and the exit cap needs a cushion."
+    },
+    {
+     "severity": "medium",
+     "description": "Five Below's brand-new 14,957 SF lease is modeled at $5.97/SF while CBRE assigns $18.00/SF market rent to that suite group \u2014 a gap large enough that the lease terms (TI, free rent, percentage rent, actual base) should be verified against the executed document."
+    },
+    {
+     "severity": "low",
+     "description": "Dunham's Sports (15.2% of GLA) reports $2.7 million of sales (~$62 PSF) at a 9.67% occupancy cost with no modeled expense recovery; it expires Jan-2030 and is the weakest big-box performer after Belk."
+    },
+    {
+     "severity": "low",
+     "description": "Rack Room Shoes signed a short three-year term (Feb-2026 to Jan-2029) at $21.85/SF, above the $18.00/SF suite-group market rent \u2014 a premium at risk at an early expiry."
+    },
+    {
+     "severity": "low",
+     "description": "Real estate taxes ($257,667, 37% of operating expenses) are the un-reassessed 2026 budget."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "high",
+     "item": "Marshalls renewal leverage",
+     "detail": "$423 PSF of sales at a 2.91% occupancy cost while paying $8.00/SF against a $10.75/SF market rent. TJX has both the productivity and the headroom to absorb a mark-up at the Oct-2028 expiry \u2014 the clearest genuine mark-to-market in the deal."
+    },
+    {
+     "priority": "medium",
+     "item": "Dominant, sales-supported grocer",
+     "detail": "Kroger at $697 PSF (anecdotal), the busiest grocer within 15 miles of 17, a 1.72% occupancy cost, a fuel pad and six five-year options \u2014 near-zero anchor vacancy risk and the backbone of the center's traffic."
+    },
+    {
+     "priority": "medium",
+     "item": "Recent leasing momentum",
+     "detail": "Over 32,000 SF signed since 2025 (Five Below, Rack Room Shoes, Petsense) in a market where new supply is effectively nil \u2014 evidence of real tenant demand for the node and a modernized merchandise mix."
+    },
+    {
+     "priority": "low",
+     "item": "Lease the last 1,200 SF",
+     "detail": "A single vacant inline suite at CBRE's $28.00/SF market rent; small dollars, but it takes the center to 100% leased."
+    },
+    {
+     "priority": "low",
+     "item": "Long-dated Belk repositioning",
+     "detail": "When Belk's option control ends in 2037, 85,000 SF at $2.94/SF can be re-tenanted or redeveloped. This is a residual-value consideration for a long-hold or generational owner, not income that can be underwritten in a five-to-seven-year hold."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "Dunham's Sports",
+     "suite": "064",
+     "sf": 43872,
+     "rentPerSF": 5.95,
+     "annualRent": 261038,
+     "leaseStart": "2014-02-01",
+     "leaseExpiry": "2030-01-31",
+     "remainingTermYears": 3.1,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 62,
+     "occupancyCost": 9.67,
+     "salesNotes": "OM-stated sales of $2.7 million on 43,872 SF (~$62 PSF). Occupancy cost of 9.67% is base rent ($261,038) over those sales \u2014 no expense reimbursement is modeled for this lease.",
+     "assumptionNote": "15.2% of GLA at $5.95/SF versus CBRE's $7.50/SF market rent for this suite \u2014 below market and therefore sticky income, but the tenant's own productivity is weak: $62 PSF of sales and a 9.67% occupancy cost even at a cheap rent. Expires Jan-2030. No recoveries are modeled, so this is effectively a gross or fixed-CAM lease on 15% of the center."
+    },
+    {
+     "name": "Marshalls",
+     "suite": "202",
+     "sf": 24100,
+     "rentPerSF": 8.0,
+     "annualRent": 192800,
+     "leaseStart": "2013-11-01",
+     "leaseExpiry": "2028-10-31",
+     "remainingTermYears": 1.8,
+     "expenseReimbursements": 103723,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 423,
+     "occupancyCost": 2.91,
+     "parentCompany": "TJX Companies",
+     "creditRating": "Investment grade (TJX Companies)",
+     "salesNotes": "OM-stated sales of $10.2 million on 24,100 SF (~$423 PSF). Occupancy cost of 2.91% is base rent ($192,800) plus recoveries ($103,723) over those sales.",
+     "assumptionNote": "Best-performing box in the center: $423 PSF of sales at a 2.91% occupancy cost, paying $8.00/SF against CBRE's $10.75/SF market rent for 15,000-25,000 SF space. Below-market and well-supported by sales \u2014 durable income with genuine renewal leverage at the Oct-2028 expiry."
+    },
+    {
+     "name": "Kroger",
+     "suite": "202A",
+     "sf": 55969,
+     "rentPerSF": 10.27,
+     "annualRent": 574801,
+     "leaseStart": "1996-07-01",
+     "leaseExpiry": "2031-07-31",
+     "remainingTermYears": 4.6,
+     "expenseReimbursements": 95705,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 697,
+     "occupancyCost": 1.72,
+     "parentCompany": "The Kroger Co.",
+     "creditRating": "Investment grade (The Kroger Co.)",
+     "renewalOptions": "Six (6) additional five-year options (per the OM narrative).",
+     "salesNotes": "OM-stated ANECDOTAL sales of $39 million ($697 PSF) with \u00b1795.2K annual visits \u2014 the busiest grocer within 15 miles (of 17). Occupancy cost of 1.72% is base rent ($574,801) plus recoveries ($95,705) over $39M of sales. Anecdotal means unverified by the tenant; request sales reports.",
+     "assumptionNote": "Lead anchor: 19.4% of GLA and 24.4% of base rent at $10.27/SF versus CBRE's $10.50/SF grocer market rent \u2014 at market, with a 30-year operating history and six five-year options to Jul-2031 and beyond. Fuel pad is leased separately and is coterminous."
+    },
+    {
+     "name": "Belk",
+     "suite": "302",
+     "sf": 85000,
+     "rentPerSF": 2.94,
+     "annualRent": 250250,
+     "leaseStart": "1988-09-01",
+     "leaseExpiry": "2028-08-31",
+     "remainingTermYears": 1.7,
+     "expenseReimbursements": 65262,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 49,
+     "occupancyCost": 7.51,
+     "parentCompany": "Belk, Inc. (Sycamore Partners)",
+     "renewalOptions": "Options run through 2037 per the OM narrative (option rents not disclosed).",
+     "salesNotes": "OM-stated sales of $4.2 million on 85,000 SF (~$49 PSF) \u2014 weak department-store productivity. Occupancy cost of 7.51% is base rent ($250,250) plus recoveries ($65,262) over those sales.",
+     "assumptionNote": "The center's largest tenant at 29.5% of GLA but only 10.6% of base rent, paying $2.94/SF against CBRE's $8.00/SF market rent for 80,000+ SF space. Two readings apply and both matter: the rent is so far below market that Belk has every incentive to stay and the income is secure and sticky through its 2037 option control \u2014 this is NOT capturable mark-to-market inside a hold \u2014 but a dominant anchor locked at a third of market rent also caps the center's income growth and its resale value, and $49 PSF of sales at a 7.51% occupancy cost is weak even at that rent. Underwrite it as durable-but-static income with real go-dark risk to monitor."
+    },
+    {
+     "name": "Five Below",
+     "suite": "303",
+     "sf": 14957,
+     "rentPerSF": 5.97,
+     "annualRent": 89256,
+     "leaseStart": "2026-09-01",
+     "leaseExpiry": "2037-01-31",
+     "remainingTermYears": 10.1,
+     "expenseReimbursements": 28586,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Five Below, Inc.",
+     "assumptionNote": "New lease with a September 2026 rent commencement running to Jan-2037 at $5.97/SF. CBRE assigns an $18.00/SF market rent to the suite group that includes 303, which looks aimed at the smaller suites in that group \u2014 a brand-new 14,957 SF lease at $5.97/SF should be verified against the executed lease and any TI/free-rent structure."
+    },
+    {
+     "name": "G4 Hearing Inc.",
+     "suite": "304",
+     "sf": 1200,
+     "rentPerSF": 18.06,
+     "annualRent": 21672,
+     "leaseStart": "2025-06-01",
+     "leaseExpiry": "2028-05-31",
+     "remainingTermYears": 1.4,
+     "expenseReimbursements": 3122,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Vacant",
+     "suite": "304A",
+     "sf": 1200,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Great Clips",
+     "suite": "304B",
+     "sf": 1500,
+     "rentPerSF": 18.83,
+     "annualRent": 28245,
+     "leaseStart": "2022-09-01",
+     "leaseExpiry": "2028-03-31",
+     "remainingTermYears": 1.2,
+     "expenseReimbursements": 4337,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Petsense",
+     "suite": "305",
+     "sf": 5532,
+     "rentPerSF": 17.55,
+     "annualRent": 97087,
+     "leaseStart": "2025-12-01",
+     "leaseExpiry": "2030-11-30",
+     "remainingTermYears": 3.9,
+     "expenseReimbursements": 4945,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "parentCompany": "Tractor Supply Company",
+     "creditRating": "Investment grade (Tractor Supply Company)",
+     "assumptionNote": "New Dec-2025 lease at $17.55/SF, at CBRE's $18.00/SF market rent for the suite group. No expense reimbursement modeled for CY-2027 beyond $4,945 \u2014 confirm the recovery structure."
+    },
+    {
+     "name": "AT&T",
+     "suite": "306",
+     "sf": 1137,
+     "rentPerSF": 20.95,
+     "annualRent": 23820,
+     "leaseStart": "2020-02-01",
+     "leaseExpiry": "2028-01-31",
+     "remainingTermYears": 1.1,
+     "expenseReimbursements": 3287,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Surge Staffing",
+     "suite": "307",
+     "sf": 1203,
+     "rentPerSF": 22.7,
+     "annualRent": 27308,
+     "leaseStart": "2022-05-01",
+     "leaseExpiry": "2027-04-30",
+     "remainingTermYears": 0.3,
+     "expenseReimbursements": 3317,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Luxury Nails",
+     "suite": "308",
+     "sf": 2627,
+     "rentPerSF": 21.21,
+     "annualRent": 55719,
+     "leaseStart": "2021-11-01",
+     "leaseExpiry": "2031-10-31",
+     "remainingTermYears": 4.8,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$21.21/SF, below CBRE's $28.00/SF market rent for sub-3,000 SF inline space. No expense reimbursement modeled."
+    },
+    {
+     "name": "Maurices",
+     "suite": "309",
+     "sf": 5108,
+     "rentPerSF": 15.0,
+     "annualRent": 76620,
+     "leaseStart": "2015-01-01",
+     "leaseExpiry": "2033-06-30",
+     "remainingTermYears": 6.5,
+     "expenseReimbursements": 12249,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "5,108 SF at $15.00/SF against the $18.00/SF suite-group market rent \u2014 below market, with the longest shop term in the center (Jun-2033)."
+    },
+    {
+     "name": "Rack Room Shoes",
+     "suite": "310",
+     "sf": 5881,
+     "rentPerSF": 21.85,
+     "annualRent": 128500,
+     "leaseStart": "2026-02-01",
+     "leaseExpiry": "2029-01-31",
+     "remainingTermYears": 2.1,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "New Feb-2026 lease at $21.85/SF \u2014 above CBRE's $18.00/SF market rent for the suite group \u2014 but on a short three-year term to Jan-2029. No expense reimbursement is modeled. Treat the premium as at-risk at that early expiry."
+    },
+    {
+     "name": "Aaron's, LLC",
+     "suite": "311",
+     "sf": 10301,
+     "rentPerSF": 12.0,
+     "annualRent": 123612,
+     "leaseStart": "2023-03-01",
+     "leaseExpiry": "2030-05-31",
+     "remainingTermYears": 3.4,
+     "expenseReimbursements": 22993,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Aaron's / IQVentures Holdings",
+     "assumptionNote": "10,301 SF at $12.00/SF through May-2030."
+    },
+    {
+     "name": "Papa Johns",
+     "suite": "313",
+     "sf": 1700,
+     "rentPerSF": 23.82,
+     "annualRent": 40486,
+     "leaseStart": "2022-04-01",
+     "leaseExpiry": "2029-09-30",
+     "remainingTermYears": 2.7,
+     "expenseReimbursements": 4915,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "ITech & Repairs",
+     "suite": "314",
+     "sf": 2140,
+     "rentPerSF": 21.11,
+     "annualRent": 45175,
+     "leaseStart": "2026-05-01",
+     "leaseExpiry": "2031-04-30",
+     "remainingTermYears": 4.3,
+     "expenseReimbursements": 0,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "US Army Recruiting",
+     "suite": "601",
+     "sf": 2409,
+     "rentPerSF": 27.56,
+     "annualRent": 66392,
+     "leaseStart": "2025-04-01",
+     "leaseExpiry": "2030-03-31",
+     "remainingTermYears": 3.2,
+     "expenseReimbursements": 11491,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "creditRating": "U.S. Government (GSA-type tenant)",
+     "assumptionNote": "Government tenant at $27.56/SF, at the $28.00/SF inline market rent, through Mar-2030."
+    },
+    {
+     "name": "Martinsville Tobacco & Vape",
+     "suite": "602A",
+     "sf": 1500,
+     "rentPerSF": 28.62,
+     "annualRent": 42930,
+     "leaseStart": "2021-07-01",
+     "leaseExpiry": "2031-09-30",
+     "remainingTermYears": 4.7,
+     "expenseReimbursements": 4337,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$28.62/SF, at CBRE's $28.00/SF inline market rent. Tobacco/vape use carries regulatory exposure."
+    },
+    {
+     "name": "Hospice of Surry County",
+     "suite": "602B",
+     "sf": 1500,
+     "rentPerSF": 22.77,
+     "annualRent": 34154,
+     "leaseStart": "2022-05-01",
+     "leaseExpiry": "2027-08-31",
+     "remainingTermYears": 0.7,
+     "expenseReimbursements": 4337,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false
+    },
+    {
+     "name": "Harbor Freight Tools",
+     "suite": "604",
+     "sf": 15338,
+     "rentPerSF": 10.5,
+     "annualRent": 161049,
+     "leaseStart": "2021-04-01",
+     "leaseExpiry": "2031-03-31",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 25839,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Harbor Freight Tools USA, Inc.",
+     "assumptionNote": "15,338 SF at $10.50/SF versus CBRE's $10.75/SF market rent for 15,000-25,000 SF space \u2014 at market, through Mar-2031."
+    },
+    {
+     "name": "Kroger Fuel",
+     "suite": "FUEL",
+     "sf": 4080,
+     "rentPerSF": 4.04,
+     "annualRent": 16500,
+     "leaseStart": "2022-07-01",
+     "leaseExpiry": "2031-07-31",
+     "remainingTermYears": 4.6,
+     "expenseReimbursements": 6977,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "Kroger's fuel pad, 4,080 SF at $4.04/SF, at CBRE's $4.05/SF fuel-pad market rent; coterminous with the Kroger lease (07/31/31)."
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 2356051,
+     "reimbursements": 404948,
+     "egr": 2760999,
+     "operatingExpenses": 700218,
+     "noi": 2060781
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 2418210,
+     "reimbursements": 426373,
+     "egr": 2830170,
+     "operatingExpenses": 720814,
+     "noi": 2109355
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 2414998,
+     "reimbursements": 451365,
+     "egr": 2851717,
+     "operatingExpenses": 740538,
+     "noi": 2111179
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 2452992,
+     "reimbursements": 465275,
+     "egr": 2906095,
+     "operatingExpenses": 761819,
+     "noi": 2144276
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 2510095,
+     "reimbursements": 485066,
+     "egr": 2984147,
+     "operatingExpenses": 784400,
+     "noi": 2199747
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 2602364,
+     "reimbursements": 513717,
+     "egr": 3102618,
+     "operatingExpenses": 808800,
+     "noi": 2293818
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 2622292,
+     "reimbursements": 528256,
+     "egr": 3137825,
+     "operatingExpenses": 831328,
+     "noi": 2306497
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 2692092,
+     "reimbursements": 548903,
+     "egr": 3217419,
+     "operatingExpenses": 855832,
+     "noi": 2361587
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 2700129,
+     "reimbursements": 565159,
+     "egr": 3251157,
+     "operatingExpenses": 879623,
+     "noi": 2371534
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 2776157,
+     "reimbursements": 593215,
+     "egr": 3352422,
+     "operatingExpenses": 906124,
+     "noi": 2446299
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 3062960,
+     "reimbursements": 614970,
+     "egr": 3663550,
+     "operatingExpenses": 939624,
+     "noi": 2723926
+    }
+   ]
+  },
+  {
+   "fileName": "Project_Evergreen_WV_Pierpont_Centre.pdf",
+   "propertyName": "Pierpont Centre",
+   "address": "I-68 & Cheat Road",
+   "city": "Morgantown",
+   "state": "WV",
+   "zip": "26508",
+   "market": "Morgantown, WV",
+   "submarket": "I-68 Exit 7 / Cheat Lake",
+   "assetType": "Retail",
+   "centerType": "Grocery-Anchored",
+   "broker": "CBRE (Project Evergreen portfolio offering)",
+   "totalSF": 111158,
+   "occupancy": 94.6,
+   "walt": 3.7,
+   "weightedAvgRentPSF": 10.8,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 1109872,
+   "grossPotentialRent": 1256340,
+   "effectiveGrossIncome": 1468154,
+   "operatingExpenses": 358282,
+   "nnnRecoveries": 329522,
+   "currentAnnualTaxes": 94769,
+   "expenseBreakdown": {
+    "commonAreaExpenses": 165107,
+    "realEstateTax": 94769,
+    "insurance": 49239,
+    "managementFee": 43609,
+    "nonRecoverable": 5558
+   },
+   "incomeBreakdown": {
+    "anchorBaseRent": 690193,
+    "shopBaseRent": 446143,
+    "percentageRentIncome": 0,
+    "vacancyLoss": 0
+   },
+   "lotSizeAcres": 17.5,
+   "parkingRatio": 4.7,
+   "trafficCountVPD": 31300,
+   "population3mi": 30781,
+   "avgHHIncome3mi": 107643,
+   "medianHHIncome3mi": 68904,
+   "proximityHighways": "At the intersection of I-68 (27,900 AADT) and Cheat Road (31,300 AADT), three miles east of West Virginia University and downtown Morgantown; Pennsylvania is six miles north via WV Route 43 and Maryland 22 miles east.",
+   "retailCotenants": "The Exit 7 node carries over \u00b1632,000 SF of retail \u2014 the highest density of national big-box retailers and chain restaurants of the four primary I-68 exits in Morgantown.",
+   "shadowAnchors": "Shadow-anchored by Lowe's (3rd busiest hardware store within 30 miles of 64), WVU Medicine, and two hotels with 126+ rooms; surrounding restaurants include Wendy's, Outback, Ruby Tuesday and IHOP. Ten of these pads are carried on the rent roll as NAP parcels that contribute CAM reimbursements but no base rent.",
+   "notes": "**Pierpont Centre** is a **111,158 SF, 94.6%-leased community center** at I-68 (27,900 AADT) and Cheat Road (31,300 AADT) in Morgantown, West Virginia, three miles east of West Virginia University \u2014 the dominant retail node of the four primary I-68 exits, with \u00b1632,000 SF of retail. It is anchored by a **37,500 SF Price Cutter** (on site since 2000, **$11.7 million / $312 PSF of anecdotal sales**, top 16% of West Virginia grocers, term to Dec-2029 with two five-year options) and a **20,580 SF Michaels** (to Mar-2031, one five-year option), with a new **11,916 SF Five Below** on a 10-year lease to 2035 and a **Dollar Tree**. In-place economics: **$1,136,335 of base rent** ($10.80/SF weighted average) plus **$329,522 of recoveries** and $2,297 of pylon income for $1,468,154 of effective gross revenue, less $358,282 of operating expenses, for **$1,109,872 of NOI**. Ten NAP pads \u2014 Lowe's, two hotels, Wendy's, Outback, Ruby Tuesday, Talbots and others \u2014 contribute **$38,520 of CAM reimbursements** with no base rent; confirm those reimbursement agreements survive a transfer. Two structural cautions sit inside the in-place number. First, **the pro-forma assumes renewals that the site plan does not show**: Dollar Tree's site-plan expiry is January 2027 but the model carries it to January 2032 (**$78,933, 5.4% of revenue**), and Mail & More is carried to September 2031 against a December 2027 site-plan expiry. Second, the anchor is a **local independent grocer with eight stores**, not national credit \u2014 good operator, but no corporate balance sheet behind 28.7% of revenue. The growth case is real but leasing-dependent: **5,969 SF is vacant across three suites** and **24,003 SF (21.6% of GLA) expires during the hold**, which is what produces the modeled **4.21% ten-year NOI CAGR / 37.5% NOI growth** \u2014 the strongest in the portfolio. Some of that roll is genuinely below market (Our Family Craft Shop at $10.07 against a $14.50 market, Michaels at $8.00 against $9.50), but a cluster of shop rents is **above** CBRE's own market \u2014 Eye to Eye Optical at $25.74 vs $20.00, Honey Baked Ham at $23.58 vs $18.50, Comcast at $20.54 vs $18.50 \u2014 with no sales disclosed, so those renewals are downside risk rather than upside. The trade area is the most affluent in the Evergreen portfolio: **103,669 residents at a $102,287 average household income** (3-mile: 30,781 people, $107,643 AHHI), bordering the Cheat Lake community at a **$187,038 average household income**, with WVU and WVU Medicine driving employment. Density plus income of that quality supports the in-place rents and a tighter going-in cap than a typical secondary-market center.",
+   "keyAssumptions": [
+    "Roster and financials are the OM's In-Place Pro-Forma (page 9), stated on a CY-2027 basis (Jan-27 to Dec-27 contractual rent and recoveries, no general vacancy loss).",
+    "THE MODEL ASSUMES OPTION EXERCISES THAT THE SITE PLAN DOES NOT SHOW: Dollar Tree (site plan Jan-2027 vs modeled Jan-2032) and Mail & More (site plan Dec-2027 vs modeled Sep-2031). Together roughly $108,700 of revenue depends on renewals being confirmed from the leases.",
+    "WALT is carried at the OM's stated \u00b13.7 years, which is only reproducible with Dollar Tree expiring Jan-2027. The roster's own (pro-forma) expiries roll up to 4.1 years SF-weighted as of 01/01/27 \u2014 the gap is exactly the Dollar Tree renewal the income model assumes.",
+    "Ten NAP parcels (Lowe's, two hotels, Wendy's, Outback, Ruby Tuesday, Talbots, Clear Mountain Bank, BF's, Los Mariachis) are carried on the roster with no SF and no base rent; they contribute $38,520 of CAM reimbursement, 11.7% of total recoveries. Their lease dates are modeled 01/01/27-12/31/46 placeholders, not actual terms.",
+    "Three vacant suites totaling 5,969 SF (03, 13, 15) are carried at $0 so roster SF ties to the 111,158 SF GLA; CBRE models a 16-month absorption beginning 01/01/27 with first absorption 01/01/28.",
+    "Price Cutter's $11.7 million / $312 PSF sales figure is described as ANECDOTAL \u2014 unverified by the tenant. Price Cutter is a local independent operator (eight stores), not a national credit.",
+    "CBRE's 2027 market rents: $8.50/SF for suite 17, $20.00/SF sub-2,000 SF, $18.50/SF for 2,000-5,000 SF, $14.50/SF for 5,000-7,000 SF, $13.50/SF for suite 11 and $9.50/SF for 20,000+ SF space, all NNN+MF with 3.00% growth; new-lease TI is $35.00/SF.",
+    "Real estate taxes are NOT reassessed \u2014 they equal the 2026 budget ($94,769). West Virginia assesses at 60% of appraised value and reappraises annually; a sale price above the current appraisal will flow through.",
+    "No asking price or cap rate is published in this OM."
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "The in-place pro-forma credits renewals the site plan contradicts: Dollar Tree is carried to Jan-2032 (site plan says Jan-2027) at $6.46/SF, and Mail & More to Sep-2031 (site plan says Dec-2027). Roughly $108,700 of revenue \u2014 7.4% of EGI \u2014 rests on options that must be confirmed from the leases."
+    },
+    {
+     "severity": "high",
+     "description": "The OM's headline WALT and its NOI use DIFFERENT assumptions for the same lease. Recomputing WALT from the pro-forma's own expiries gives 4.1 years; the OM's stated \u00b13.7 years is only reproducible if Dollar Tree is treated as expiring January 2027 \u2014 i.e. the marketing WALT excludes the renewal that the income statement counts. One of the two is wrong, and the income side is the one that matters."
+    },
+    {
+     "severity": "high",
+     "description": "The anchor is a local independent: Price Cutter operates eight stores in northcentral West Virginia and carries 28.7% of revenue with term only to Dec-2029. Sales are 'anecdotal' ($11.7M / $312 PSF), there is no national credit behind the lease, and grocery in a small market is unforgiving of a weak operator."
+    },
+    {
+     "severity": "medium",
+     "description": "21.6% of GLA (24,003 SF) expires during the hold on top of 5,969 SF already vacant \u2014 the modeled 4.21% ten-year NOI CAGR depends on re-leasing roughly a quarter of the center at CBRE's market rents with $35.00/SF of new-lease TI."
+    },
+    {
+     "severity": "medium",
+     "description": "A cluster of shop rents sits ABOVE the OM's own market assumptions with no sales disclosed \u2014 Eye to Eye Optical $25.74 vs $20.00, Honey Baked Ham $23.58 vs $18.50, Comcast $20.54 vs $18.50. Those are mark-to-market DOWNSIDE at their 2029-2031 expiries and they inflate current NOI."
+    },
+    {
+     "severity": "medium",
+     "description": "$38,520 of recoveries (11.7% of total) comes from ten NAP parcels the seller does not own, on reimbursement agreements the OM does not describe. Confirm the REA/CAM agreements, their assignability and their expiry before capitalizing that income."
+    },
+    {
+     "severity": "low",
+     "description": "Three vacant suites (2,646, 1,725 and 1,598 SF) require a 16-month absorption; at $35.00/SF of TI plus commissions, lease-up capital is a real drag on early-year cash flow."
+    },
+    {
+     "severity": "low",
+     "description": "Real estate taxes ($94,769) are the un-reassessed 2026 budget. West Virginia reappraises annually at 60% of value, so a sale price above the current appraisal should be expected to flow into the bill."
+    }
+   ],
+   "upsideItems": [
+    {
+     "priority": "high",
+     "item": "Lease-up plus roll to market",
+     "detail": "5,969 SF vacant in three suites at $18.50-$20.00/SF market rents, plus below-market rolls including Our Family Craft Shop (6,222 SF at $10.07 vs a $14.50 market, expiring Oct-2027) and Michaels ($8.00 vs $9.50). This is what drives the modeled 37.5% ten-year NOI growth \u2014 the highest in the portfolio."
+    },
+    {
+     "priority": "high",
+     "item": "Affluent, supply-constrained trade area",
+     "detail": "$107,643 average household income within three miles and $187,038 in the adjacent Cheat Lake community, with WVU, WVU Medicine and the dominant I-68 Exit 7 retail node (\u00b1632,000 SF) driving traffic. High income plus high density is exactly the profile that supports above-average rents and a tighter cap."
+    },
+    {
+     "priority": "medium",
+     "item": "Shadow-anchor traffic without the ownership",
+     "detail": "Lowe's (3rd busiest hardware store within 30 miles of 64), WVU Medicine, two hotels and a cluster of national restaurants sit on NAP parcels \u2014 the center gets the traffic and $38,520 of CAM reimbursements without carrying the real estate."
+    },
+    {
+     "priority": "low",
+     "item": "Recent national leasing",
+     "detail": "Five Below signed a 10-year lease to 2035 at $12.53/SF and Spencer & Kuehn signed in Oct-2025 \u2014 evidence that national and regional tenants are still choosing this node."
+    }
+   ],
+   "tenants": [
+    {
+     "name": "Price Cutter",
+     "suite": "01",
+     "sf": 37500,
+     "rentPerSF": 8.63,
+     "annualRent": 323625,
+     "leaseStart": "2000-01-01",
+     "leaseExpiry": "2029-12-31",
+     "remainingTermYears": 3.0,
+     "expenseReimbursements": 105347,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "salesPSF": 312,
+     "occupancyCost": 3.67,
+     "renewalOptions": "Two (2) additional five-year options (per the OM narrative).",
+     "salesNotes": "OM-stated ANECDOTAL sales of $11.7 million ($312 PSF) with \u00b1301.3K annual visits, ranking in the top 16% of West Virginia grocery stores. Occupancy cost of 3.67% is base rent ($323,625) plus recoveries ($105,347) over $11.7M of sales.",
+     "assumptionNote": "Lead anchor: 33.7% of GLA and 28.7% of revenue at $8.63/SF versus CBRE's $9.50/SF market rent for 20,000+ SF space \u2014 slightly below market. Operating here since 2000 (as SHOP 'n SAVE until a 2018 rebrand). IMPORTANT: Price Cutter is a LOCAL, independently owned grocer with eight stores in northcentral West Virginia \u2014 not national credit. Term to Dec-2029 with two five-year options."
+    },
+    {
+     "name": "Michaels",
+     "suite": "02",
+     "sf": 20580,
+     "rentPerSF": 8.0,
+     "annualRent": 164640,
+     "leaseStart": "2016-04-01",
+     "leaseExpiry": "2031-03-31",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 31503,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Michaels Companies (Apollo Global Management)",
+     "renewalOptions": "One (1) additional five-year option (per the OM narrative).",
+     "assumptionNote": "Co-anchor: 18.5% of GLA and 14.2% of revenue at $8.00/SF versus the $9.50/SF market rent for 20,000+ SF space \u2014 below market and therefore sticky income through the Mar-2031 expiry."
+    },
+    {
+     "name": "Vacant",
+     "suite": "03",
+     "sf": 2646,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Honey Baked Ham",
+     "suite": "04",
+     "sf": 2646,
+     "rentPerSF": 23.58,
+     "annualRent": 62393,
+     "leaseStart": "2016-10-01",
+     "leaseExpiry": "2029-09-30",
+     "remainingTermYears": 2.7,
+     "expenseReimbursements": 10795,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$23.58/SF against CBRE's $18.50/SF market rent for 2,000-5,000 SF space \u2014 ~27% ABOVE market with no sales disclosed. Rollover downside at the Sep-2029 expiry, not durable income."
+    },
+    {
+     "name": "Pam's Hallmark Shop",
+     "suite": "05",
+     "sf": 5020,
+     "rentPerSF": 14.57,
+     "annualRent": 73133,
+     "leaseStart": "2016-03-01",
+     "leaseExpiry": "2031-02-28",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 14129,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$14.57/SF against the $14.50/SF market rent for 5,000-7,000 SF space \u2014 at market, through Feb-2031."
+    },
+    {
+     "name": "Our Family Craft Shop",
+     "suite": "06/07",
+     "sf": 6222,
+     "rentPerSF": 10.07,
+     "annualRent": 62656,
+     "leaseStart": "2022-08-01",
+     "leaseExpiry": "2027-10-31",
+     "remainingTermYears": 0.8,
+     "expenseReimbursements": 24379,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "6,222 SF at $10.07/SF against CBRE's $14.50/SF market rent for 5,000-7,000 SF space \u2014 below market, expiring Oct-2027. The most tangible near-term mark-to-market in the center."
+    },
+    {
+     "name": "Mail & More",
+     "suite": "08",
+     "sf": 1563,
+     "rentPerSF": 19.04,
+     "annualRent": 29757,
+     "leaseStart": "1999-07-01",
+     "leaseExpiry": "2031-09-30",
+     "remainingTermYears": 4.7,
+     "expenseReimbursements": 5824,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "THE PRO-FORMA ASSUMES A RENEWAL: the site plan shows a Dec-2027 expiry and $16.66/SF, while the pro-forma carries the lease to Sep-2031 at $19.04/SF. Confirm the option and its rent from the lease."
+    },
+    {
+     "name": "Spencer and Kuehn Fine Jewelry",
+     "suite": "09/10",
+     "sf": 3559,
+     "rentPerSF": 15.57,
+     "annualRent": 55396,
+     "leaseStart": "2025-10-01",
+     "leaseExpiry": "2030-09-30",
+     "remainingTermYears": 3.7,
+     "expenseReimbursements": 13945,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "New Oct-2025 lease at $15.56/SF, above the $14.50/SF market rent for 5,000-7,000 SF space."
+    },
+    {
+     "name": "Five Below",
+     "suite": "11",
+     "sf": 11916,
+     "rentPerSF": 12.53,
+     "annualRent": 149325,
+     "leaseStart": "2025-07-01",
+     "leaseExpiry": "2035-06-30",
+     "remainingTermYears": 8.5,
+     "expenseReimbursements": 28902,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Five Below, Inc.",
+     "assumptionNote": "New 10-year lease (Jul-2025 to Jun-2035) at $12.53/SF against CBRE's $13.50/SF market rent for this suite \u2014 recently transacted at market and the longest term in the center."
+    },
+    {
+     "name": "Eye to Eye Optical",
+     "suite": "12",
+     "sf": 1436,
+     "rentPerSF": 25.74,
+     "annualRent": 36963,
+     "leaseStart": "2002-05-01",
+     "leaseExpiry": "2030-04-30",
+     "remainingTermYears": 3.3,
+     "expenseReimbursements": 3981,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$25.74/SF against the $20.00/SF market rent for sub-2,000 SF space \u2014 ~29% ABOVE market, expiring Apr-2030. Verify sales support before capitalizing the premium."
+    },
+    {
+     "name": "Vacant",
+     "suite": "13",
+     "sf": 1725,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Ellie's Cafe",
+     "suite": "14",
+     "sf": 1598,
+     "rentPerSF": 15.66,
+     "annualRent": 25025,
+     "leaseStart": "2021-04-01",
+     "leaseExpiry": "2031-03-31",
+     "remainingTermYears": 4.2,
+     "expenseReimbursements": 6261,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$15.66/SF against the $18.50/SF market rent for 2,000-5,000 SF space \u2014 below market, through Mar-2031."
+    },
+    {
+     "name": "Vacant",
+     "suite": "15",
+     "sf": 1598,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "expenseReimbursements": null,
+     "percentageRent": null,
+     "rentSchedule": "Not applicable \u2014 vacant suite.",
+     "isAnchor": false
+    },
+    {
+     "name": "Comcast",
+     "suite": "16",
+     "sf": 3045,
+     "rentPerSF": 20.54,
+     "annualRent": 62544,
+     "leaseStart": "2012-07-01",
+     "leaseExpiry": "2031-06-30",
+     "remainingTermYears": 4.5,
+     "expenseReimbursements": 11931,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "parentCompany": "Comcast Corporation",
+     "creditRating": "Investment grade (Comcast Corporation)",
+     "assumptionNote": "$20.54/SF against the $18.50/SF market rent for 2,000-5,000 SF space \u2014 modestly above market, through Jun-2031."
+    },
+    {
+     "name": "Dollar Tree",
+     "suite": "17",
+     "sf": 8145,
+     "rentPerSF": 6.46,
+     "annualRent": 52603,
+     "leaseStart": "2022-01-01",
+     "leaseExpiry": "2032-01-31",
+     "remainingTermYears": 5.1,
+     "expenseReimbursements": 26330,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": true,
+     "parentCompany": "Dollar Tree, Inc.",
+     "assumptionNote": "THE PRO-FORMA ASSUMES A RENEWAL: the site plan shows this lease expiring Jan-2027, but the In-Place Pro-Forma carries it to 01/31/32 at $6.46/SF, well below CBRE's own $8.50/SF market rent for suite 17. $52,603 of base rent plus $26,330 of recoveries (5.4% of total revenue) depends on that option/renewal actually being exercised \u2014 confirm from the lease before crediting the income."
+    },
+    {
+     "name": "Bella Nails",
+     "suite": "28",
+     "sf": 1959,
+     "rentPerSF": 19.54,
+     "annualRent": 38276,
+     "leaseStart": "2016-06-01",
+     "leaseExpiry": "2031-05-31",
+     "remainingTermYears": 4.4,
+     "expenseReimbursements": 7676,
+     "percentageRent": 0,
+     "rentSchedule": "Not disclosed in the OM: the In-Place Pro-Forma prints only the CY-2027 (Jan-27 through Dec-27) contractual rent, not the step schedule. Request the rent roll / lease abstract for dated steps.",
+     "isAnchor": false,
+     "assumptionNote": "$19.54/SF against the $20.00/SF sub-2,000 SF market rent \u2014 at market."
+    },
+    {
+     "name": "Ruby Tuesday (NAP)",
+     "suite": "NAP01",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 1855,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "Clear Mountain Bank (NAP)",
+     "suite": "NAP02",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 4562,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "BF's (NAP)",
+     "suite": "NAP03",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 2534,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "Wendy's (NAP)",
+     "suite": "NAP04",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 1132,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "Los Mariachis (NAP)",
+     "suite": "NAP05",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 1702,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "Talbots (NAP)",
+     "suite": "NAP06",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 1419,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "Super 8 Motel (NAP)",
+     "suite": "NAP07",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 3143,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel (hotel); contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "Holiday Inn Express (NAP)",
+     "suite": "NAP08",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 4269,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel (hotel); contributes CAM reimbursement only, no base rent."
+    },
+    {
+     "name": "Lowe's (NAP)",
+     "suite": "NAP09",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 16009,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; Lowe's is the largest NAP contributor at $16,009 of annual CAM reimbursement and is the node's principal traffic driver (3rd busiest hardware store within 30 miles of 64)."
+    },
+    {
+     "name": "Outback (NAP)",
+     "suite": "NAP10",
+     "sf": null,
+     "rentPerSF": null,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "expenseReimbursements": 1895,
+     "percentageRent": 0,
+     "rentSchedule": "Not applicable \u2014 not-owned (NAP) parcel: it pays a CAM reimbursement only, no base rent. The OM's pro-forma prints placeholder 01/01/27-12/31/46 dates for these rows, not actual lease terms.",
+     "isAnchor": false,
+     "isNAP": true,
+     "assumptionNote": "Not-owned parcel; contributes CAM reimbursement only, no base rent."
+    }
+   ],
+   "tenantsSource": "om",
+   "tenantsAsOf": "2027-01-01",
+   "cashFlowProjection": [
+    {
+     "label": "CY 2027 (in-place)",
+     "totalBaseRent": 1125892,
+     "reimbursements": 325459,
+     "egr": 1453648,
+     "operatingExpenses": 358282,
+     "noi": 1095366
+    },
+    {
+     "label": "CY 2028",
+     "totalBaseRent": 1269718,
+     "reimbursements": 349624,
+     "egr": 1612002,
+     "operatingExpenses": 372473,
+     "noi": 1239529
+    },
+    {
+     "label": "CY 2029",
+     "totalBaseRent": 1292810,
+     "reimbursements": 359809,
+     "egr": 1642663,
+     "operatingExpenses": 383116,
+     "noi": 1259546
+    },
+    {
+     "label": "CY 2030",
+     "totalBaseRent": 1323291,
+     "reimbursements": 382228,
+     "egr": 1697989,
+     "operatingExpenses": 394791,
+     "noi": 1303198
+    },
+    {
+     "label": "CY 2031",
+     "totalBaseRent": 1379234,
+     "reimbursements": 387269,
+     "egr": 1762376,
+     "operatingExpenses": 407038,
+     "noi": 1355337
+    },
+    {
+     "label": "CY 2032",
+     "totalBaseRent": 1448074,
+     "reimbursements": 401809,
+     "egr": 1836229,
+     "operatingExpenses": 419879,
+     "noi": 1416350
+    },
+    {
+     "label": "CY 2033",
+     "totalBaseRent": 1425494,
+     "reimbursements": 402853,
+     "egr": 1822421,
+     "operatingExpenses": 430408,
+     "noi": 1392012
+    },
+    {
+     "label": "CY 2034",
+     "totalBaseRent": 1478713,
+     "reimbursements": 419378,
+     "egr": 1885005,
+     "operatingExpenses": 443558,
+     "noi": 1441447
+    },
+    {
+     "label": "CY 2035",
+     "totalBaseRent": 1522753,
+     "reimbursements": 445782,
+     "egr": 1959312,
+     "operatingExpenses": 457398,
+     "noi": 1501915
+    },
+    {
+     "label": "CY 2036",
+     "totalBaseRent": 1513643,
+     "reimbursements": 466786,
+     "egr": 1975651,
+     "operatingExpenses": 469846,
+     "noi": 1505805
+    },
+    {
+     "label": "CY 2037",
+     "totalBaseRent": 1649191,
+     "reimbursements": 513995,
+     "egr": 2142241,
+     "operatingExpenses": 487161,
+     "noi": 1655080
+    }
+   ]
+  }
+ ]
+}
