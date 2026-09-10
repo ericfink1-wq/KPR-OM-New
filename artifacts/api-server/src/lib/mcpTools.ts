@@ -119,6 +119,63 @@ function spread(values: number[]) {
   return { n: clean.length, median: quantile(clean, 0.5), p25: quantile(clean, 0.25), p75: quantile(clean, 0.75), min: quantile(clean, 0), max: quantile(clean, 1) };
 }
 
+// ─── recency weighting ──────────────────────────────────────────────────────
+// Eric's judgement (9/10/26): in retail, a data point older than about ten years is
+// fairly stale. So the corpus decays a capture's influence linearly to nothing across
+// a ten-year horizon rather than either trusting a 2014 rent as much as a 2025 one or
+// throwing it away at an arbitrary cliff. "Fairly stale" is a fade, not a wall.
+//
+// Change RECENCY_HORIZON_YEARS to re-tune it; everything downstream follows.
+export const RECENCY_HORIZON_YEARS = 10;
+
+export function recencyWeight(captureYear: number | null, nowYear: number): number {
+  if (captureYear == null) return 0.25;   // unknown vintage still counts, but weakly
+  const age = nowYear - captureYear;
+  if (age <= 0) return 1;
+  return Math.max(0, 1 - age / RECENCY_HORIZON_YEARS);
+}
+
+// Weighted percentile: sort by value, walk the cumulative weight, and take the point
+// where it crosses q. A weighted MEDIAN, not a weighted mean — one freak lease must not
+// be able to drag the figure, which is why this library reports medians everywhere.
+export function weightedQuantile(entries: Array<{ value: number; weight: number }>, q: number): number | null {
+  const clean = entries.filter(e => Number.isFinite(e.value) && e.weight > 0).sort((a, b) => a.value - b.value);
+  if (!clean.length) return null;
+  const total = clean.reduce((s, e) => s + e.weight, 0);
+  if (total <= 0) return null;
+  let acc = 0;
+  for (const e of clean) {
+    acc += e.weight;
+    if (acc >= total * q) return Math.round(e.value * 100) / 100;
+  }
+  return Math.round(clean[clean.length - 1]!.value * 100) / 100;
+}
+
+// A metric summarised twice: recency-weighted (what the market looks like NOW, as far as
+// this corpus can tell) and unweighted (everything ever seen). Reporting both means a
+// caller can see when the two diverge — which is itself a signal that rents have moved.
+export function weightedSpread(entries: Array<{ value: number; year: number | null }>, nowYear: number) {
+  const clean = entries.filter(e => Number.isFinite(e.value));
+  if (!clean.length) return null;
+  const weighted = clean.map(e => ({ value: e.value, weight: recencyWeight(e.year, nowYear) }));
+  // Strictly inside: a record AT the horizon has weight 0, so it informs nothing and must
+  // not be counted as current — otherwise nWithinHorizon overstates how fresh the median is.
+  const withinHorizon = clean.filter(e => recencyWeight(e.year, nowYear) > 0 && e.year != null).length;
+  const plain = clean.map(e => e.value);
+  return {
+    n: clean.length,
+    nWithinHorizon: withinHorizon,
+    nStale: clean.length - withinHorizon,
+    median: weightedQuantile(weighted, 0.5),
+    p25: weightedQuantile(weighted, 0.25),
+    p75: weightedQuantile(weighted, 0.75),
+    min: quantile(plain, 0),
+    max: quantile(plain, 1),
+    unweightedMedian: quantile(plain, 0.5),
+    basis: `recency-weighted: influence fades linearly to zero over ${RECENCY_HORIZON_YEARS} years`,
+  };
+}
+
 // KPR runs a SEPARATE internal system of record for assets it owns today. Where that
 // system is connected, it outranks this library on live roster and financial facts —
 // this library's copy of an owned asset is an acquisition-era snapshot. Every tool
@@ -955,18 +1012,37 @@ const brandLeaseTerms: McpToolDef = {
       };
     }
 
+    const nowYear = new Date().getFullYear();
     const captureYears = locations.map(l => yearOf(l.capturedAsOf)).filter((y): y is number => y != null);
     const startYears = locations.map(l => yearOf(str(l.leaseStart))).filter((y): y is number => y != null);
+    // Two different clocks, and they mean different things:
+    //  • CAPTURE year ages the NUMBER — the rent shown was true as of capture.
+    //  • COMMENCEMENT year ages the DEAL — when these economics were actually negotiated.
+    // The weighting runs off capture (the vintage of the figure); commencement is reported
+    // separately because a lease struck 15 years ago is legacy rent, not a market signal,
+    // however recently we happened to record it.
+    const struckWithinHorizon = startYears.filter(y => nowYear - y < RECENCY_HORIZON_YEARS).length;
     const vintage = {
+      horizonYears: RECENCY_HORIZON_YEARS,
       capturedBetween: captureYears.length ? [Math.min(...captureYears), Math.max(...captureYears)] : null,
       leasesCommencedBetween: startYears.length ? [Math.min(...startYears), Math.max(...startYears)] : null,
+      leasesStruckWithinHorizon: struckWithinHorizon,
+      leasesStruckBeforeHorizon: startYears.length - struckWithinHorizon,
       warning:
-        "These medians BLEND VINTAGES. This corpus is static — each lease was captured from a " +
-        "document on the date shown and never re-checked — so a median across it is an average " +
-        "over however many years the capture dates span, not today's market rent. If the span is " +
-        "wide, say so, and weight recent captures when calling something above or below market. " +
-        "For a KPR-owned location, take the CURRENT figure from Datex instead of this snapshot.",
+        `Medians here are RECENCY-WEIGHTED: a capture's influence fades linearly to zero over ` +
+        `${RECENCY_HORIZON_YEARS} years, because in retail a data point older than that is fairly ` +
+        "stale. \`median\` is therefore the market as this corpus currently sees it; " +
+        "\`unweightedMedian\` is every record ever captured, equally weighted. When the two " +
+        "diverge materially, rents have MOVED — say so rather than quoting one figure. Separately, " +
+        "\`leasesStruckWithinHorizon\` counts leases actually NEGOTIATED inside the horizon: those " +
+        "are the real market signal, while an old lease captured recently is legacy rent. For a " +
+        "KPR-owned location take the current figure from Datex instead of any of this.",
     };
+
+    const withYear = (pick: (l: Loc) => number | null | undefined) =>
+      locations
+        .map(l => ({ value: num(pick(l)) as number, year: yearOf(l.capturedAsOf) }))
+        .filter(e => e.value != null && Number.isFinite(e.value) && e.value > 0);
 
     return {
       brand,
@@ -974,10 +1050,10 @@ const brandLeaseTerms: McpToolDef = {
       returned: Math.min(limit, locations.length),
       vintage,
       comparison: {
-        rentPerSF: spread(locations.map(l => l.rentPerSF!).filter(v => v != null && v > 0)),
-        sf: spread(locations.map(l => l.sf!).filter(v => v != null && v > 0)),
-        originalTermYears: spread(locations.map(l => l.termYears!).filter(v => v != null && v > 0)),
-        salesPSF: spread(locations.map(l => num(l.salesPSF)!).filter(v => v != null && v > 0)),
+        rentPerSF: weightedSpread(withYear(l => l.rentPerSF), nowYear),
+        sf: weightedSpread(withYear(l => l.sf), nowYear),
+        originalTermYears: weightedSpread(withYear(l => l.termYears), nowYear),
+        salesPSF: weightedSpread(withYear(l => num(l.salesPSF)), nowYear),
       },
       leverPrevalence,
       locations: locations.slice(0, limit),
@@ -989,9 +1065,11 @@ const brandLeaseTerms: McpToolDef = {
         "them is itself the finding — whether KPR is outperforming or paying up. Do not merge " +
         "them into one number.",
       howToUse:
-        "Compare the lease in front of you to the MEDIAN and the p25–p75 band, and say how " +
-        "many locations the band is built from — a two-location median is an anecdote, not a " +
-        "benchmark. A rent above the band is a premium to interrogate (mark-to-market DOWNSIDE " +
+        "Compare the lease in front of you to the recency-weighted MEDIAN and the p25–p75 band, " +
+        "and say how many locations the band is built from AND how many of those fall inside the " +
+        `${RECENCY_HORIZON_YEARS}-year horizon (nWithinHorizon). A two-location median is an ` +
+        "anecdote, not a benchmark; a median resting entirely on stale captures is history, not " +
+        "market — say which you are quoting. A rent above the band is a premium to interrogate (mark-to-market DOWNSIDE " +
         "unless the store's sales or a low occupancy cost support it), never 'upside'. Below the " +
         "band with locked options is secure, sticky income, not a risk. On the levers: `false` " +
         "means the source says the clause is absent, `unknown` means nothing here says either " +
@@ -1103,6 +1181,27 @@ const dataCoverage: McpToolDef = {
       ...coverage.pricing, ...coverage.tradeArea, ...coverage.leaseStructure,
     ].filter(f => thin(f.pct)).map(f => f.field);
 
+    // COVERAGE BY VINTAGE. Raw field coverage says whether the corpus can answer a
+    // question at all; this says whether it can answer it about TODAY. A brand with 40
+    // captured leases, all from 2013, supports a historical claim and not a market one.
+    const nowYear = new Date().getFullYear();
+    const buckets = [
+      { label: "0-3 years (current market)", min: 0, max: 3 },
+      { label: "4-6 years", min: 4, max: 6 },
+      { label: `7-${RECENCY_HORIZON_YEARS - 1} years (fading)`, min: 7, max: RECENCY_HORIZON_YEARS - 1 },
+      { label: `${RECENCY_HORIZON_YEARS}+ years (stale — zero weight)`, min: RECENCY_HORIZON_YEARS, max: Infinity },
+    ];
+    const ages = deals.map(r => {
+      const y = yearOf(capturedAt(r.data, r.updatedAt).asOf);
+      return y == null ? null : nowYear - y;
+    });
+    const byVintage = buckets.map(b => {
+      const n = ages.filter(a => a != null && a >= b.min && a <= b.max).length;
+      return { bucket: b.label, deals: n, pct: pctOf(n, deals.length) };
+    });
+    const unknownVintage = ages.filter(a => a == null).length;
+    const freshPct = pctOf(ages.filter(a => a != null && a < RECENCY_HORIZON_YEARS).length, deals.length);
+
     return {
       scope: wanted ? { status: str(a.status) } : { status: "all active deals" },
       dealsScanned: deals.length,
@@ -1110,6 +1209,18 @@ const dataCoverage: McpToolDef = {
       abstractsInLibrary: abstractRows.length,
       coverage,
       thinlyCovered: sparse,
+      vintage: {
+        horizonYears: RECENCY_HORIZON_YEARS,
+        byVintage,
+        unknownVintage,
+        pctWithinHorizon: freshPct,
+        note:
+          `${freshPct}% of these deals were captured within the last ${RECENCY_HORIZON_YEARS} ` +
+          "years. Field coverage tells you whether the corpus can answer a question at all; this " +
+          "tells you whether it can answer it about TODAY'S market. A brand well covered but " +
+          "captured mostly before the horizon supports a historical claim, not a market one — " +
+          "say which you are making.",
+      },
       howToUse:
         "Treat anything under ~25% coverage as ANECDOTAL: quote it per-deal, never as a " +
         "portfolio finding, and say how many records it rests on. Missing pricing is expected " +
@@ -1176,9 +1287,13 @@ continuously by KPR's team and reflects today. So default to Datex for anything 
 have changed, and whenever you quote a figure from this library, say what it is as-of. Never
 present a captured figure as a current rent, occupancy or value.
 
-That also applies to averages: a median across this corpus BLENDS VINTAGES spanning however
-many years the captures cover. It is the market as observed over that period, not today's
-market. Say the span; weight recent captures when calling something above or below market.
+That also applies to averages, and the corpus now handles it for you: **in retail, a data
+point older than about ten years is fairly stale**, so medians here are RECENCY-WEIGHTED — a
+capture's influence fades linearly to zero across a ten-year horizon. Each metric reports
+\`median\` (recency-weighted: the market as this corpus currently sees it), \`unweightedMedian\`
+(everything ever captured), and \`nWithinHorizon\`. When the weighted and unweighted figures
+diverge materially, RENTS HAVE MOVED — say that, rather than quoting one number as if it
+settled the question. A median resting entirely on stale captures is history, not market.
 
 **On tenants and brands, use BOTH and cite BOTH.** These sources answer different questions,
 so the best answer carries them separately rather than picking one:

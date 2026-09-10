@@ -113,11 +113,21 @@ describe("Datex precedence", () => {
       expect(text).toMatch(/never\s+updated|frozen/i);
     }
   });
-  it("warns that a corpus median blends vintages rather than showing today's market", () => {
+  it("states the ten-year staleness horizon and that medians are recency-weighted", () => {
     for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
-      expect(text).toMatch(/blend/i);
-      expect(text).toMatch(/vintage/i);
-      expect(text).toMatch(/not\s+today's\s+market/i);
+      expect(text).toMatch(/ten years/i);
+      expect(text).toMatch(/recency-weighted/i);
+      expect(text).toMatch(/unweightedMedian/);
+      expect(text).toMatch(/nWithinHorizon/);
+    }
+  });
+  it("treats weighted-vs-unweighted divergence as the signal that rents moved", () => {
+    // The two medians together say something neither says alone. Quoting one as if it
+    // settled the question throws that away.
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/diverge/i);
+      expect(text).toMatch(/(rents\s+have\s+)?moved/i);
+      expect(text).toMatch(/history,\s+not\s+market/i);
     }
   });
   it("requires BOTH sources cited separately on tenant and brand questions", () => {

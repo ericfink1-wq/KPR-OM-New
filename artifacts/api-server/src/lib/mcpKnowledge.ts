@@ -67,9 +67,19 @@ its capture date (each record reports \`capturedAsOf\`). Datex is fed continuous
 team and reflects today. So default to Datex for anything that can change, and always state
 the as-of date when quoting from this library. A captured figure is never "the current rent."
 
-This applies to averages too: a median across this corpus blends vintages across however
-many years the captures span — the market as observed over a period, not today's market.
-State the span, and weight recent captures when judging above or below market.
+**Ten years is the staleness horizon.** In retail a data point older than about a decade is
+fairly stale, so this corpus recency-weights its medians: a capture's influence fades
+linearly to zero across ten years. Every metric reports \`median\` (recency-weighted — the
+market as the corpus currently sees it), \`unweightedMedian\` (everything ever captured), and
+\`nWithinHorizon\` (how many records fall inside the horizon).
+
+Read them together. When the weighted and unweighted medians diverge materially, **rents
+have moved**, and saying so is a better answer than either number alone. A median resting
+entirely on stale captures is history, not market — call it history. And distinguish the two
+clocks: a capture date ages the NUMBER, while a lease commencement date ages the DEAL. A
+lease struck fifteen years ago is legacy rent even if it was recorded last month, so
+\`leasesStruckWithinHorizon\` — leases actually negotiated inside the horizon — is the truest
+market signal in the set.
 
 **On tenants and brands, use BOTH sources and cite BOTH.** They answer different questions:
   *"Across KPR's own properties we see rents of X (Datex, current). Across the broader set of

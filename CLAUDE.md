@@ -154,6 +154,23 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   own properties we see X (Datex, current); across everything we've reviewed the market shows
   Y (corpus, 20NN–20NN)". What KPR achieves as a landlord ≠ what the market shows, and the GAP
   is itself the finding. NEVER merge them into one blended number.
+- **TEN-YEAR STALENESS HORIZON (Eric, 9/10/26): "in retail, once you get past 10 years it's
+  probably fairly stale."** Implemented as a FADE, not a wall: `recencyWeight` (mcpTools.ts)
+  decays a capture's influence LINEARLY to zero across `RECENCY_HORIZON_YEARS = 10`, and
+  `weightedSpread`/`weightedQuantile` compute a recency-weighted MEDIAN (never a mean — one
+  freak lease must not drag it). Every metric now reports `median` (weighted),
+  `unweightedMedian`, `nWithinHorizon`/`nStale`, with min/max left UNWEIGHTED so the true
+  range is never hidden. **The DIVERGENCE between weighted and unweighted is the signal that
+  rents moved** — the prompt tells the model to report that rather than quoting one number.
+  On the test set the gap was $19.75 vs $14.25 (39%): the unweighted median would have called
+  a perfectly-market rent "way above market." Boundary discipline: a record AT the horizon has
+  weight 0, so it is NOT counted in `nWithinHorizon` (a test caught this — the count and the
+  math must agree). TWO CLOCKS: capture date ages the NUMBER, lease commencement ages the
+  DEAL; weighting runs off capture, and `leasesStruckWithinHorizon` separately reports leases
+  actually NEGOTIATED inside the horizon (the truest market signal). `data_coverage` also
+  reports COVERAGE BY VINTAGE — field coverage says whether the corpus can answer at all,
+  vintage says whether it can answer about TODAY. Tests: `__tests__/mcpRecency.test.ts`.
+  To re-tune, change `RECENCY_HORIZON_YEARS`; everything downstream follows.
 - **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
   the tools (which tool for which question + the non-negotiables). Plain-English setup doc
   for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).

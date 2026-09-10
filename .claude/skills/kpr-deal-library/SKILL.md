@@ -83,9 +83,28 @@ never updated.** Every figure is frozen as of its capture date, which each recor
 So: default to Datex for anything that can change, and **always state the as-of date when
 you quote this library.** A captured figure is never "the current rent."
 
-This applies to averages too. A median across this corpus **blends vintages** over however
-many years the captures span — it's the market as observed across that period, not today's
-market. State the span, and weight recent captures when judging above or below market.
+### Ten years is the staleness horizon
+
+In retail a data point older than about a decade is fairly stale, so the corpus
+**recency-weights its medians**: a capture's influence fades linearly to zero across ten
+years. Every metric reports three things together:
+
+- `median` — recency-weighted. The market as the corpus currently sees it.
+- `unweightedMedian` — every record ever captured, equally weighted.
+- `nWithinHorizon` — how many records actually inform the weighted figure.
+
+**Read them together, because the divergence is the finding.** When the weighted median sits
+well above the unweighted one, rents have risen; below, they've fallen. Saying *"the weighted
+median is $19.75 against an all-time $14.25 — rents have moved"* is a better answer than
+either number alone, and quoting only the unweighted figure will make a perfectly-market rent
+look wildly above market.
+
+A median resting entirely on stale captures is **history, not market** — call it history.
+
+**Two clocks, and they mean different things.** A capture date ages the *number* (the rent was
+true as of capture). A lease commencement date ages the *deal* (when those economics were
+negotiated). A lease struck fifteen years ago is legacy rent even if it was recorded last
+month — so `leasesStruckWithinHorizon` is the truest market signal in the set.
 
 ### On tenants and brands, cite BOTH
 
@@ -130,10 +149,15 @@ Then:
 
 ## Non-negotiables when answering
 
-**Check the denominator before generalizing.** Before stating anything as a portfolio
-finding — "our centers typically…", "we usually pay…" — call `data_coverage`. Under ~25%
-coverage a field supports a per-deal observation, not a portfolio claim, and you must say
-how many records it rests on. Missing pricing is expected, not a defect.
+**Check the denominator before generalizing.** Before stating anything as a market finding —
+"these centers typically…", "the market pays…" — call `data_coverage`. Under ~25% coverage a
+field supports a per-deal observation, not a market claim, and you must say how many records
+it rests on. Missing pricing is expected, not a defect.
+
+`data_coverage` also reports **coverage by vintage**. Field coverage says whether the corpus
+can answer a question at all; vintage says whether it can answer it about *today*. A brand
+with forty captured leases all recorded before the horizon supports a historical claim, not a
+market one — be explicit about which you're making.
 
 **Never invent a number.** If a figure isn't in the returned data, say it isn't
 captured. `null` means NOT CAPTURED — never zero, never "assume market." A
