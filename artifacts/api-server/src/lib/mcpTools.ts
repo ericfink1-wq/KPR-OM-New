@@ -1295,6 +1295,14 @@ capture's influence fades linearly to zero across a ten-year horizon. Each metri
 diverge materially, RENTS HAVE MOVED — say that, rather than quoting one number as if it
 settled the question. A median resting entirely on stale captures is history, not market.
 
+**Comparing to Datex: match BASE to BASE.** Datex splits rent into \`AnnualRentPSF\` (base),
+\`AnnualNNNPSF\` (recoveries) and \`AnnualOtherPSF\`. This corpus's \`rentPerSF\` is BASE ONLY, so
+the only valid comparison is Datex \`AnnualRentPSF\` vs this corpus's \`rentPerSF\`. Folding NNN
+into the Datex side inflates it by the entire recovery load — often $8–15/SF — and turns an
+ordinary rent into a phantom above-market finding. Also: Datex \`TenantsMetrics\` is monthly
+history keyed by \`Period\` (YYYYMM), so "current" is the LATEST period; and Datex sales are
+trailing-twelve-month and live, while this corpus's salesPSF is as-of its capture date.
+
 **On tenants and brands, use BOTH and cite BOTH.** These sources answer different questions,
 so the best answer carries them separately rather than picking one:
   "Across KPR's own properties we see rents of X (Datex, current). Across the broader set of

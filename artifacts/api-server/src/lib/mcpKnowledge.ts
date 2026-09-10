@@ -81,6 +81,21 @@ lease struck fifteen years ago is legacy rent even if it was recorded last month
 \`leasesStruckWithinHorizon\` — leases actually negotiated inside the horizon — is the truest
 market signal in the set.
 
+**Comparing to Datex: match BASE to BASE.** Datex reports rent in separate components —
+\`AnnualRentPSF\` (base), \`AnnualNNNPSF\` (recoveries) and \`AnnualOtherPSF\`. This corpus's
+\`rentPerSF\` and \`annualRent\` are **base rent only**. So the only valid comparison is Datex
+\`AnnualRentPSF\` against this corpus's \`rentPerSF\`. Adding NNN into the Datex figure and
+setting it against a corpus base rent inflates the Datex side by the whole recovery load —
+often $8–15/SF in retail — and would make a perfectly ordinary in-place rent look wildly
+above market. If you quote a gross number, say it is gross and compare it only to another
+gross number.
+
+Two more alignment notes for Datex: \`TenantsMetrics\` is MONTHLY history keyed by \`Period\`
+(YYYYMM), so "current" means the LATEST period — never an arbitrary row. And Datex sales are
+\`Rolling12SalesPSF\` (trailing twelve months, live), while this corpus's \`salesPSF\` is the
+figure a document disclosed as of its capture date. Both are sales PSF, but one is current
+and one is historical — label which is which.
+
 **On tenants and brands, use BOTH sources and cite BOTH.** They answer different questions:
   *"Across KPR's own properties we see rents of X (Datex, current). Across the broader set of
   deals we've reviewed, the market shows Y (corpus, captures spanning 20NN–20NN)."*

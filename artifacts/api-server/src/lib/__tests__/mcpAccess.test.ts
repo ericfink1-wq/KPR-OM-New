@@ -140,6 +140,16 @@ describe("Datex precedence", () => {
       expect(text).toMatch(/[Nn]ever\s+(merge|blend)\s+them/);
     }
   });
+  it("forces a base-to-base rent comparison against Datex", () => {
+    // Datex splits base from NNN; this corpus is base-only. Comparing a Datex gross
+    // figure to a corpus base rent inflates the Datex side by the whole recovery load
+    // and manufactures an above-market finding out of nothing.
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/AnnualRentPSF/);
+      expect(text).toMatch(/AnnualNNNPSF/);
+      expect(text).toMatch(/BASE\s+to\s+BASE/i);
+    }
+  });
   it("forbids averaging the two sources on a disagreement", () => {
     expect(MCP_SERVER_INSTRUCTIONS).toMatch(/[Nn]ever average/);
     expect(KPR_PLAYBOOK).toMatch(/[Nn]ever average/);

@@ -171,6 +171,17 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   reports COVERAGE BY VINTAGE — field coverage says whether the corpus can answer at all,
   vintage says whether it can answer about TODAY. Tests: `__tests__/mcpRecency.test.ts`.
   To re-tune, change `RECENCY_HORIZON_YEARS`; everything downstream follows.
+- **DATEX FIELD MAP + THE BASE-vs-GROSS TRAP (verified against Datex's real schema 9/10/26).**
+  `TenantsMetrics` is the dual-cite counterpart: `AnnualRentPSF` (BASE) ↔ our `rentPerSF`;
+  `Rolling12SalesPSF` (TTM, live) ↔ our `salesPSF` (as-of capture); `SuiteSQFT` ↔ `sf`;
+  `AnnualNNNPSF` is recoveries, held SEPARATELY; `TENTID` is the national-brand grouping key.
+  **HARD RULE: compare BASE to BASE.** Our `rentPerSF`/`annualRent` are base-only, so folding
+  Datex NNN into the comparison inflates the Datex side by the entire recovery load (~$8–15/SF
+  in retail) and manufactures a phantom above-market finding. Also: `TenantsMetrics` is MONTHLY
+  history keyed by `Period` (YYYYMM) — "current" is the LATEST period, never an arbitrary row.
+  Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
+  `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
+  (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
 - **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
   the tools (which tool for which question + the non-negotiables). Plain-English setup doc
   for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).

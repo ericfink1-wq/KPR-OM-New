@@ -106,6 +106,23 @@ true as of capture). A lease commencement date ages the *deal* (when those econo
 negotiated). A lease struck fifteen years ago is legacy rent even if it was recorded last
 month — so `leasesStruckWithinHorizon` is the truest market signal in the set.
 
+### Comparing to Datex: match base to base
+
+Datex splits rent into `AnnualRentPSF` (base), `AnnualNNNPSF` (recoveries) and
+`AnnualOtherPSF`. This corpus's `rentPerSF` is **base rent only**.
+
+**The only valid comparison is Datex `AnnualRentPSF` against this corpus's `rentPerSF`.**
+Folding NNN into the Datex side inflates it by the entire recovery load — often $8–15/SF in
+retail — and manufactures an above-market finding out of an entirely ordinary rent. If you
+quote a gross number, say it's gross and compare it only to another gross number.
+
+Two more alignment traps:
+- Datex `TenantsMetrics` is **monthly history** keyed by `Period` (YYYYMM). "Current" means
+  the *latest* period, never an arbitrary row.
+- Datex sales are `Rolling12SalesPSF` — trailing twelve months, live. This corpus's
+  `salesPSF` is what a document disclosed as of its capture date. Both are sales PSF; one is
+  current and one is historical. Label which is which.
+
 ### On tenants and brands, cite BOTH
 
 Don't pick one. They answer different questions, and the best answer carries both:
