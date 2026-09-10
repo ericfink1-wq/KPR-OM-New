@@ -81,6 +81,20 @@ function parseRuntimeDdl(): { tables: Map<string, Cols>; indexes: Map<string, Id
 
 const { tables: runtimeTables, indexes: runtimeIndexes } = parseRuntimeDdl();
 
+// The pull hook (.replit [postMerge] → scripts/post-merge.sh) mirrors these same
+// tables onto the DEV database. Replit's publish step diffs DEV against PRODUCTION,
+// so a table that exists only in prod reads as one you deleted and the diff proposes
+// DROP TABLE ... CASCADE. Being absent from this script is therefore a standing
+// data-loss risk, which is exactly how the live mcp_api_keys key was destroyed.
+const PULL_HOOK = "lib/db/scripts/ensure-runtime-tables.mjs";
+const pullHookSrc = readFileSync(resolve(ROOT, PULL_HOOK), "utf8");
+const hookTables = new Set(
+  [...pullHookSrc.matchAll(/CREATE TABLE IF NOT EXISTS "?([a-z_]+)"?/g)].map((m) => m[1]),
+);
+const hookIndexes = new Set(
+  [...pullHookSrc.matchAll(/CREATE (?:UNIQUE )?INDEX IF NOT EXISTS "?([a-zA-Z_]+)"?/g)].map((m) => m[1]),
+);
+
 const declared = new Map<string, ReturnType<typeof getTableConfig>>();
 for (const value of Object.values(dbSchema as Record<string, unknown>)) {
   try { const cfg = getTableConfig(value as never); declared.set(cfg.name, cfg); } catch { /* not a table */ }
@@ -121,6 +135,19 @@ describe("runtime DDL vs drizzle schema (guards against DROP TABLE on publish)",
         }
       });
 
+      it(`is provisioned on the dev database by ${PULL_HOOK} (or publish proposes DROP)`, () => {
+        expect(
+          hookTables.has(table),
+          `${table} is created at runtime but missing from ${PULL_HOOK}, so it will exist only in production — Replit's publish diff will propose to DROP it and take its data with it`,
+        ).toBe(true);
+      });
+
+      it("has its runtime indexes mirrored onto dev by the pull hook", () => {
+        for (const name of runtimeIndexes.get(table)?.keys() ?? []) {
+          expect(hookIndexes.has(name), `index ${name} on ${table} is missing from ${PULL_HOOK}`).toBe(true);
+        }
+      });
+
       it("declares every runtime index, with matching uniqueness", () => {
         const cfg = declared.get(table);
         if (!cfg) return;
@@ -141,6 +168,12 @@ describe("runtime DDL vs drizzle schema (guards against DROP TABLE on publish)",
 // The table that actually got dropped — pinned explicitly so the specific
 // regression is named in the suite, not just covered by the generic sweep.
 describe("mcp_api_keys (the 2026-09-10 regression)", () => {
+  it("is listed in the pull hook, so dev and production agree it exists", () => {
+    expect(hookTables.has("mcp_api_keys")).toBe(true);
+    expect(hookIndexes.has("mcp_api_keys_hash_idx")).toBe(true);
+    expect(hookIndexes.has("mcp_api_keys_user_idx")).toBe(true);
+  });
+
   it("keeps user_id NULLABLE on both sides — ADD COLUMN IF NOT EXISTS cannot backfill NOT NULL", () => {
     expect(runtimeTables.get("mcp_api_keys")!.get("user_id")).toBe(false);
     expect(declared.get("mcp_api_keys")!.columns.find((c) => c.name === "user_id")!.notNull).toBe(false);

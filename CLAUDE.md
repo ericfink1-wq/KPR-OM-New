@@ -393,20 +393,28 @@ cd ../api-server && npx tsc --noEmit | grep -v TS6305 | grep "error TS"
 - The api-server has **pre-existing** `TS7006 implicit any` errors in compBenchmark.ts / analytics.ts / comps.ts / deals.ts(list handler) / tenantIndex.ts. Those are not yours — the runtime build tolerates them. Only worry about NEW errors your change introduces.
 - A clean change adds **zero** new errors.
 
-## DB tables: the runtime DDL and the drizzle declaration MUST match (learned 9/10/26 — it deleted live data)
-Most tables here are provisioned TWICE: at runtime by an `ensure*Table()` helper
-(`CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`), and again as a
-drizzle declaration in `lib/db/src/schema/` so Replit's publish diff knows the table belongs.
-**If the two disagree, the diff can't ALTER across the gap and proposes `DROP TABLE "<t>" CASCADE`
-— every row gone on publish.** That is not hypothetical: `mcp_api_keys` was declared `user_id NOT NULL`
-while the runtime created it nullable (an `ADD COLUMN IF NOT EXISTS` can't be NOT NULL over existing
-rows), and declared neither of the two indexes the runtime creates. Eric saw the warning, approved it,
-and his live MCP access key was destroyed.
-- Adding a table or column means updating **BOTH** sides, matching **nullability and indexes**, not just names.
-- A NOT NULL invariant that the runtime can't enforce is enforced in **code, failing closed** (e.g.
-  `verifyMcpKey` rejects a key with a null `userId`), never by declaring NOT NULL the database doesn't have.
-- `schemaRuntimeDrift.test.ts` (api-server) parses the real runtime DDL and holds every declaration to it,
-  table by table. If it fails, do NOT "fix" the test — a red test here means a publish would drop data.
+## DB tables: RUNTIME-CREATED TABLES MUST BE MIRRORED ONTO DEV (learned 9/10/26 — it deleted live data)
+**Replit's publish step diffs the DEV database against PRODUCTION.** A table that exists
+only in prod looks to that diff like something you deleted, so it proposes
+`DROP TABLE "<t>" CASCADE` — data and all. Most tables here are created at RUNTIME by an
+`ensure*Table()` helper, so production grows them the moment the feature is used while dev
+stays empty unless something puts them there. That is what `scripts/post-merge.sh` →
+**`lib/db/scripts/ensure-runtime-tables.mjs`** is for: it runs on every pull and provisions
+those tables/indexes on the dev DB. **`mcp_api_keys` was never added to it**, so the diff
+proposed the drop, Eric approved it, and a live Claude access key was destroyed. It would
+have recurred on EVERY publish. All runtime tables are in the script now.
+- **Adding a runtime-created table means THREE places, not one:** the `ensure*Table()` DDL,
+  the drizzle declaration in `lib/db/src/schema/` (so drizzle-kit knows it), and
+  `ensure-runtime-tables.mjs` (so dev has it and publish never proposes the drop). **Indexes
+  count too** — an index only in prod is dropped the same way.
+- The drizzle declaration must also MATCH the runtime DDL on **nullability and indexes**.
+  A NOT NULL the runtime can't enforce (`ADD COLUMN IF NOT EXISTS` can't backfill NOT NULL)
+  belongs in **code, failing closed** — `verifyMcpKey` rejects a key with a null `userId` —
+  never in a declaration the database doesn't back.
+- `schemaRuntimeDrift.test.ts` (api-server) parses the real runtime DDL and holds BOTH the
+  drizzle schema and the pull-hook script to it, table by table. **If it fails, do NOT "fix"
+  the test** — a red test there means the next publish would drop data.
+- **Never approve a `DROP TABLE` in the publish diff.** Cancel, and fix the mirror first.
 
 ## Cardinal rules
 1. **Every UI/site change must work on desktop AND mobile** — by default, unprompted. Layouts reflow for narrow screens (grids/strips/tables collapse sensibly, not just shrink), finger-friendly tap targets, compact formatting, working touch interactions (modals, dropdowns, toggles). Wide tables (comps/tenants) break most easily on phones — test them.
