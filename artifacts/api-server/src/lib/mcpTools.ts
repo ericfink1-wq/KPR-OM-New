@@ -1373,7 +1373,11 @@ const dataCoverage: McpToolDef = {
     ];
     const ages = deals.map(r => {
       const y = yearOf(capturedAt(r.data, r.updatedAt).asOf);
-      return y == null ? null : nowYear - y;
+      // Clamp at 0: a forward-dated record has a NEGATIVE age, which fell through every
+      // bucket and silently vanished from the totals — on production 46 of 301 deals were
+      // missing from the vintage breakdown for exactly this reason. Treat "captured in the
+      // future" as "captured today" for bucketing.
+      return y == null ? null : Math.max(0, nowYear - y);
     });
     const byVintage = buckets.map(b => {
       const n = ages.filter(a => a != null && a >= b.min && a <= b.max).length;

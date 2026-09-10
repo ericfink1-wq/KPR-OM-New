@@ -151,3 +151,20 @@ describe("lease vintage, not capture vintage", () => {
     expect(byCommencement.nStale).toBe(3);
   });
 });
+
+describe("vintage bucketing", () => {
+  // Production showed 255 of 301 deals bucketed and the remaining 46 simply absent:
+  // forward-dated records produced a negative age that matched no bucket. A total that
+  // silently omits records is worse than one that is obviously wrong.
+  it("never yields a negative age for a forward-dated capture", () => {
+    const nowYear = 2026;
+    const age = (y: number) => Math.max(0, nowYear - y);
+    expect(age(2027)).toBe(0);
+    expect(age(2030)).toBe(0);
+    expect(age(2026)).toBe(0);
+    expect(age(2016)).toBe(10);
+  });
+  it("still gives a future-dated record full weight rather than discarding it", () => {
+    expect(recencyWeight(2027, 2026)).toBe(1);
+  });
+});
