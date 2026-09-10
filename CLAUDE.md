@@ -411,9 +411,17 @@ have recurred on EVERY publish. All runtime tables are in the script now.
   A NOT NULL the runtime can't enforce (`ADD COLUMN IF NOT EXISTS` can't backfill NOT NULL)
   belongs in **code, failing closed** — `verifyMcpKey` rejects a key with a null `userId` —
   never in a declaration the database doesn't back.
+- **The pull hook is TIME-BUDGETED (`.replit [postMerge] timeoutMs`), so ORDER MATTERS.**
+  The dev-DB mirror originally ran LAST, behind `pnpm install` and a slow `drizzle push`,
+  inside 20s — so it could be starved and silently never run, which is why the DROP kept
+  coming back after the table was added to the list. The mirror now runs FIRST (with a
+  post-install retry for cold clones) and the budget is 180s. Never reorder it back.
 - `schemaRuntimeDrift.test.ts` (api-server) parses the real runtime DDL and holds BOTH the
   drizzle schema and the pull-hook script to it, table by table. **If it fails, do NOT "fix"
   the test** — a red test there means the next publish would drop data.
+- VERIFIED against a real Postgres, not by reading code: the mirror produces a table
+  byte-identical to the runtime DDL (same columns, nullability, defaults, both indexes),
+  and `drizzle-kit push` against the mirrored DB then proposes NOTHING for the table.
 - **Never approve a `DROP TABLE` in the publish diff.** Cancel, and fix the mirror first.
 
 ## Cardinal rules
