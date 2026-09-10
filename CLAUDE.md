@@ -142,6 +142,18 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   all three.** COROLLARY: do NOT build site tools for things Datex owns (critical dates /
   option notices, mark-to-market on owned, portfolio stress test on owned) — build the
   MARKET-INTELLIGENCE engines the site is uniquely able to serve.
+- **STATIC vs LIVING, and the DUAL-CITE rule (Eric, 9/10/26).** The site is STATIC — a deal
+  is captured from an OM/rent roll and then essentially never updated — while Datex is fed
+  continuously by the team. That, not just thoroughness, is why Datex leads. Consequences
+  now built in: (a) every record reports `capturedAsOf` (from `tenantsAsOf` → `uploadedAt` →
+  last change, with the basis named) and `get_deal` carries a `vintage` note; (b)
+  `brand_lease_terms` reports `vintage.capturedBetween` / `leasesCommencedBetween` and warns
+  that **a corpus median BLENDS VINTAGES across a rent cycle — it is the market as observed
+  over that span, NOT today's market.** Weight recent captures. (c) **DUAL-CITE on tenant/
+  brand questions:** query Datex AND the corpus and report them SEPARATELY LABELLED — "on our
+  own properties we see X (Datex, current); across everything we've reviewed the market shows
+  Y (corpus, 20NN–20NN)". What KPR achieves as a landlord ≠ what the market shows, and the GAP
+  is itself the finding. NEVER merge them into one blended number.
 - **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
   the tools (which tool for which question + the non-negotiables). Plain-English setup doc
   for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).

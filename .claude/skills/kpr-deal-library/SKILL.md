@@ -74,6 +74,31 @@ The strongest pattern is the two together: **take the subject property's own fig
 Datex, then benchmark it against this corpus.** That's what the corpus is for, and Datex
 structurally cannot do it — it only knows KPR's own buildings.
 
+### Static vs living — why Datex leads
+
+A deal here is captured from an offering memorandum or a rent roll and then **essentially
+never updated.** Every figure is frozen as of its capture date, which each record reports as
+`capturedAsOf`. Datex is fed continuously by KPR's team and reflects today.
+
+So: default to Datex for anything that can change, and **always state the as-of date when
+you quote this library.** A captured figure is never "the current rent."
+
+This applies to averages too. A median across this corpus **blends vintages** over however
+many years the captures span — it's the market as observed across that period, not today's
+market. State the span, and weight recent captures when judging above or below market.
+
+### On tenants and brands, cite BOTH
+
+Don't pick one. They answer different questions, and the best answer carries both:
+
+> Across KPR's own properties we see rents of $X (Datex, current). Across the broader set of
+> deals we've reviewed, the market shows $Y (corpus, captures spanning 2019–2026).
+
+What KPR **achieves as a landlord** is not the same thing as what the **market shows**, and
+the gap between them is itself the finding — whether KPR is outperforming or paying up.
+Never blend them into one number, and never let a corpus figure read as if it described
+KPR's own properties.
+
 **Rules:**
 - For any live fact about a KPR-owned property, go to Datex first. This library's copy is
   the acquisition-era snapshot and doesn't track what happened since. Owned records here

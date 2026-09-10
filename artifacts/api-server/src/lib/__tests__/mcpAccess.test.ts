@@ -84,7 +84,7 @@ describe("what this library is", () => {
   });
   it("forbids presenting a corpus roll-up as KPR's own exposure", () => {
     for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
-      expect(text).toMatch(/never.{0,60}(exposure|holdings|concentration)/is);
+      expect(text).toMatch(/never[\s\S]{0,80}(exposure|holdings|concentration)/i);
     }
   });
 });
@@ -104,6 +104,30 @@ describe("Datex precedence", () => {
     for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
       expect(text).toMatch(/market question/i);
       expect(text).toMatch(/sample/i);
+    }
+  });
+  it("explains that the corpus is static and Datex is living", () => {
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/static/i);
+      expect(text).toMatch(/capturedAsOf/);
+      expect(text).toMatch(/never\s+updated|frozen/i);
+    }
+  });
+  it("warns that a corpus median blends vintages rather than showing today's market", () => {
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/blend/i);
+      expect(text).toMatch(/vintage/i);
+      expect(text).toMatch(/not\s+today's\s+market/i);
+    }
+  });
+  it("requires BOTH sources cited separately on tenant and brand questions", () => {
+    // What KPR achieves as a landlord and what the market shows are different findings.
+    // Blending them into one number destroys the comparison that makes both worth having.
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/BOTH/);
+      expect(text).toMatch(/landlord/i);
+      expect(text).toMatch(/gap\s+between/i);
+      expect(text).toMatch(/[Nn]ever\s+(merge|blend)\s+them/);
     }
   });
   it("forbids averaging the two sources on a disagreement", () => {

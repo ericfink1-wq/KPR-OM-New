@@ -86,6 +86,23 @@ function trimDeal(d: DealData, opts: Record<string, boolean>): DealData {
 
 const nameOf = (d: DealData) => String(d.propertyName || d.fileName || "Untitled");
 
+// WHEN was this record true? This corpus is STATIC: a deal is captured from an offering
+// memorandum or rent roll and then essentially never updated. So every figure here is
+// as-of its capture date, not as-of today — and a benchmark built across the corpus is a
+// blend of vintages spanning a rent cycle, not a snapshot of today's market. Nothing can
+// read these numbers honestly without knowing that, so the date rides along with them.
+function capturedAt(d: DealData, fallback: Date): { asOf: string; basis: string } {
+  const rosterAsOf = str(d.tenantsAsOf);
+  const uploaded = str(d.uploadedAt);
+  if (rosterAsOf) return { asOf: rosterAsOf.slice(0, 10), basis: `roster as-of date${d.tenantsSource ? ` (${String(d.tenantsSource)})` : ""}` };
+  if (uploaded) return { asOf: uploaded.slice(0, 10), basis: "document upload date" };
+  return { asOf: fallback.toISOString().slice(0, 10), basis: "last record change (no capture date stored)" };
+}
+const yearOf = (iso: string | null | undefined): number | null => {
+  const y = Number(String(iso ?? "").slice(0, 4));
+  return Number.isFinite(y) && y > 1900 && y < 2200 ? y : null;
+};
+
 // Median / quartiles — the only summary statistics this library reports. Means are
 // never used: one outlier lease would drag a mean somewhere no real deal sits.
 function quantile(values: number[], q: number): number | null {
@@ -146,6 +163,7 @@ function dealSummary(r: DealRecord) {
     tenantCount: tenants.length,
     anchors: anchors.slice(0, 6),
     updatedAt: r.updatedAt.toISOString(),
+    capturedAsOf: capturedAt(d, r.updatedAt).asOf,
     ...(authorityFor(d) ? { authority: OWNED_AUTHORITY_NOTE } : {}),
   };
 }
@@ -388,6 +406,9 @@ const getDeal: McpToolDef = {
     const deal = trimDeal(found.data, opts);
     deal.dealId = found.id;
     deal.updatedAt = found.updatedAt.toISOString();
+    const cap = capturedAt(found.data, found.updatedAt);
+    deal.capturedAsOf = cap.asOf;
+    deal.capturedAsOfBasis = cap.basis;
     // The live deterministic tie-out audit, so the caller sees data-integrity
     // contradictions on this deal instead of quoting a number that doesn't add up.
     const audit = auditExtraction(found.data);
@@ -402,6 +423,10 @@ const getDeal: McpToolDef = {
       reminder:
         "annualRent is BASE RENT ONLY. Recoveries are in expenseReimbursements / percentageRent / " +
         "otherRent and are null when the source never disclosed them. Null means not captured — never zero.",
+      vintage:
+        `Every figure in this record is AS OF ${cap.asOf} (${cap.basis}) — the corpus is static, ` +
+        "captured from the source document and rarely updated after. Say the as-of date when you " +
+        "quote a figure, and never present it as today's rent, occupancy or value.",
     };
   },
 };
@@ -840,6 +865,7 @@ const brandLeaseTerms: McpToolDef = {
       renewalOptions: unknown; salesPSF: unknown; salesYear: unknown; occupancyCost: unknown;
       creditRating: unknown; isAnchor: unknown; isDark: unknown;
       levers: Record<string, string | boolean>;
+      capturedAsOf: string;
       abstract?: DealData; abstractTenantName?: string;
       authority?: string;
     }
@@ -901,6 +927,7 @@ const brandLeaseTerms: McpToolDef = {
           salesPSF: t.salesPSF ?? null, salesYear: t.salesYear ?? null, occupancyCost: t.occupancyCost ?? null,
           creditRating: t.creditRating ?? null, isAnchor: t.isAnchor ?? null, isDark: t.isDark ?? null,
           levers,
+          capturedAsOf: capturedAt(d, r.updatedAt).asOf,
           ...(withAbstracts && abs ? { abstract: abs.data, abstractTenantName: abs.tenantName } : {}),
           ...(authorityFor(d) ? { authority: OWNED_AUTHORITY_NOTE } : {}),
         });
@@ -928,10 +955,24 @@ const brandLeaseTerms: McpToolDef = {
       };
     }
 
+    const captureYears = locations.map(l => yearOf(l.capturedAsOf)).filter((y): y is number => y != null);
+    const startYears = locations.map(l => yearOf(str(l.leaseStart))).filter((y): y is number => y != null);
+    const vintage = {
+      capturedBetween: captureYears.length ? [Math.min(...captureYears), Math.max(...captureYears)] : null,
+      leasesCommencedBetween: startYears.length ? [Math.min(...startYears), Math.max(...startYears)] : null,
+      warning:
+        "These medians BLEND VINTAGES. This corpus is static — each lease was captured from a " +
+        "document on the date shown and never re-checked — so a median across it is an average " +
+        "over however many years the capture dates span, not today's market rent. If the span is " +
+        "wide, say so, and weight recent captures when calling something above or below market. " +
+        "For a KPR-owned location, take the CURRENT figure from Datex instead of this snapshot.",
+    };
+
     return {
       brand,
       matched: locations.length,
       returned: Math.min(limit, locations.length),
+      vintage,
       comparison: {
         rentPerSF: spread(locations.map(l => l.rentPerSF!).filter(v => v != null && v > 0)),
         sf: spread(locations.map(l => l.sf!).filter(v => v != null && v > 0)),
@@ -940,6 +981,13 @@ const brandLeaseTerms: McpToolDef = {
       },
       leverPrevalence,
       locations: locations.slice(0, limit),
+      alsoCheckDatex:
+        "If KPR OWNS any location of this brand, run the same question against Datex and CITE " +
+        "BOTH, separately labelled: what KPR achieves as a landlord on its own properties " +
+        "(Datex, current) versus what the broader market shows across every deal reviewed (this " +
+        "corpus, as-of each capture date). They answer different questions, and the GAP between " +
+        "them is itself the finding — whether KPR is outperforming or paying up. Do not merge " +
+        "them into one number.",
       howToUse:
         "Compare the lease in front of you to the MEDIAN and the p25–p75 band, and say how " +
         "many locations the band is built from — a two-location median is an anecdote, not a " +
@@ -1120,6 +1168,25 @@ signal lives. So:
   Take the subject figure from Datex, then benchmark it against this corpus.
 Going to Datex for a market question shrinks the sample to KPR's own holdings, which
 defeats the reason this corpus exists.
+
+**Why Datex leads: this corpus is STATIC, Datex is LIVING.** A deal here is captured from an
+offering memorandum or a rent roll and then essentially never updated — every figure is
+frozen as of its capture date, which each record reports as \`capturedAsOf\`. Datex is fed
+continuously by KPR's team and reflects today. So default to Datex for anything that could
+have changed, and whenever you quote a figure from this library, say what it is as-of. Never
+present a captured figure as a current rent, occupancy or value.
+
+That also applies to averages: a median across this corpus BLENDS VINTAGES spanning however
+many years the captures cover. It is the market as observed over that period, not today's
+market. Say the span; weight recent captures when calling something above or below market.
+
+**On tenants and brands, use BOTH and cite BOTH.** These sources answer different questions,
+so the best answer carries them separately rather than picking one:
+  "Across KPR's own properties we see rents of X (Datex, current). Across the broader set of
+   deals we've reviewed, the market shows Y (corpus, captures spanning 20NN–20NN)."
+What KPR achieves as a landlord is not the same thing as what the market shows, and the GAP
+between them is itself the finding. Never merge them into a single blended number, and never
+imply the corpus figure describes KPR's properties.
 
 On a disagreement about an owned property, Datex wins. Name the source of each figure and
 flag the gap — never average them, never silently pick one.

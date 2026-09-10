@@ -61,6 +61,23 @@ So the split is by QUESTION, not just by property:
 - On a disagreement about an owned property: **Datex wins.** Say which source each figure
   came from, and flag the gap. Never average the two, and never silently pick one.
 
+**Why Datex leads — static vs living.** A deal in this library is captured from an offering
+memorandum or a rent roll and then essentially never updated. Every figure is frozen as of
+its capture date (each record reports \`capturedAsOf\`). Datex is fed continuously by KPR's
+team and reflects today. So default to Datex for anything that can change, and always state
+the as-of date when quoting from this library. A captured figure is never "the current rent."
+
+This applies to averages too: a median across this corpus blends vintages across however
+many years the captures span — the market as observed over a period, not today's market.
+State the span, and weight recent captures when judging above or below market.
+
+**On tenants and brands, use BOTH sources and cite BOTH.** They answer different questions:
+  *"Across KPR's own properties we see rents of X (Datex, current). Across the broader set of
+  deals we've reviewed, the market shows Y (corpus, captures spanning 20NN–20NN)."*
+What KPR achieves as a landlord is not what the market shows, and the gap between the two is
+itself the finding — whether KPR is outperforming, or paying up. Never blend them into one
+number, and never let a corpus figure be read as describing KPR's own properties.
+
 ## Cardinal rule: accuracy over speed
 Never fabricate a precise-looking figure. When a number can't be verified from the
 data returned by these tools, say so and leave it blank. A confidently-worded wrong
