@@ -110,6 +110,21 @@ wrong number.** Before aggregating anything out of \`TenantsMetrics\`:
 4. **Datex tenant names carry store numbers** ("Dollar Tree #4516"); this corpus stores the
    brand alone. Match on the brand, not the raw string.
 
+**A lease ages from when it was STRUCK, not from when we read it.** A 2010 lease sitting
+inside a 2026 offering memorandum is a 2010 rent — reading it recently does not make it a
+current market signal. Benchmarks here are therefore weighted by LEASE COMMENCEMENT, with
+capture date used only where commencement was never recorded. The caveat: amendments and
+exercised options RESET the economics, so a lease renegotiated later has a later effective
+vintage than its commencement date shows, and the roster does not reliably record when that
+happened. An old lease with recent rent steps may be fresher than it looks — say so rather
+than over-claiming in either direction.
+
+**A rent roll dated in the FUTURE is the OM's assumed closing date, not a capture date.**
+Retail offering memoranda routinely start their financials a few months out, on the date a
+buyer would realistically own the asset — a mid-2026 book will model from 1/1/2027. That is
+a normal marketing convention, not an error and not evidence of a pro forma roster. It does
+NOT mean the roster is current to that date, so never read a forward as-of date as freshness.
+
 **On tenants and brands, use BOTH sources and cite BOTH.** They answer different questions:
   *"Across KPR's own properties we see rents of X (Datex, current). Across the broader set of
   deals we've reviewed, the market shows Y (corpus, captures spanning 20NN–20NN)."*

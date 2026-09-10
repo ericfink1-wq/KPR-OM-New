@@ -243,14 +243,35 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   #4516") vs brand-only here — match on brand. Also confirmed the base-vs-gross guard matters:
   Dollar Tree NNN averages ~$5.40/SF, so a gross comparison would have shown ~$16.28 vs an
   $11.00 base median and manufactured a 48% "above market" finding.
-- **52 of 301 DEALS ARE FORWARD-DATED** (`tenantsAsOf: 2027-01-01`, all the same date — looks
-  like a pro-forma/forward rent-roll convention). A future as-of date makes a record look
-  maximally fresh to the recency weighting, so `capturedAt` now labels it "FORWARD-DATED …
-  a projection, not an observation" rather than letting it pass as captured today. Worth Eric
-  confirming whether that date is deliberate.
-- **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
-  the tools (which tool for which question + the non-negotiables). Plain-English setup doc
-  for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).
+- **FORWARD-DATED ROLLS ARE NORMAL — NOT A BUG (Eric, 9/10/26).** 46 deals carry
+  `tenantsAsOf: 2027-01-01`. Eric: "the OM chooses to start the financials on 1/1/27, it
+  assumes that by the time a buyer reasonably closes it will be 1/1/27. Most OMs do this."
+  So the value is faithfully captured — but it is the OM's **assumed closing date**, NOT an
+  observation date, and `capturedAt` was wrongly preferring it (crediting 46 records with
+  six months of freshness they don't have). FIXED: when `tenantsAsOf` is in the future,
+  `capturedAt` falls back to `uploadedAt` and reports the OM's assumption separately as
+  `omAssumedClosing`. Verified on Publix Pointe: now 2026-07-15, not 2027-01-01.
+- **WEIGHT BY LEASE COMMENCEMENT, NOT CAPTURE DATE (Eric, 9/10/26 — corrected my design).**
+  "If an OM is from 2026 and the lease was signed in 2010, that doesn't mean the lease vintage
+  is 2026, it's 2010." The first cut weighted by capture date, which gives a 16-year-old rent
+  full influence over a today's-market read. `brand_lease_terms` now weights on `leaseStart`
+  (falling back to capture where commencement is missing). REAL EFFECT on the corpus:
+  **Starbucks $50.00 weighted vs $46.00 unweighted (only 11 of 33 leases struck within the
+  horizon) — the unweighted figure understates today's market by ~$4/SF**; Dollar Tree $12.00
+  vs $11.00 (44 of 83 within horizon); Five Below $17.99 vs $18.00 (50 of 59 recent — correctly
+  moves almost nothing when the data is already fresh). Eric's caveat is documented, not
+  papered over: amendments and exercised options RESET the economics, so an old lease with
+  recent rent steps may be fresher than its commencement implies, and the roster doesn't
+  reliably record when that happened.
+- **Companion skill (RESCOPED 9/10/26): `.claude/skills/kpr-retail-analysis/SKILL.md`** — was
+  `kpr-deal-library`, now governs **BOTH** systems because Eric's team has Datex access too and
+  the connector's own `instructions` only reach Claude when it calls THIS library. The skill is
+  what makes the rules apply to a Datex-only question. Covers: which source answers which
+  question, dual-cite, base-vs-gross, the four Datex row traps, lease-vintage weighting, the
+  doctrine. **Team members on claude.ai must add it manually** (Settings → Capabilities →
+  Skills); Claude Code picks it up in-repo. NOTE: the MCP SERVER name stays `kpr-deal-library`
+  — changing it would break every existing client config. Plain-English setup doc:
+  `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts`, `mcpRecency.test.ts`.
 
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).

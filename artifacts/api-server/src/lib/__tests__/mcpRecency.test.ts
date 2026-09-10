@@ -5,6 +5,9 @@ import { RECENCY_HORIZON_YEARS, recencyWeight, weightedQuantile, weightedSpread 
 // "Fairly stale" is a fade, not a wall — so influence decays across the horizon rather
 // than dropping off a cliff at an arbitrary birthday.
 
+// Eric's correction (9/10/26): "if an OM is from 2026 and the lease was signed in 2010,
+// that doesn't mean the lease vintage is 2026, it's 2010." The clock is when the economics
+// were struck, not when someone typed them into a database.
 describe("recency weight", () => {
   it("gives a current capture full weight", () => {
     expect(recencyWeight(2026, 2026)).toBe(1);
@@ -118,5 +121,33 @@ describe("vacancy name matching", () => {
     expect(isVacantName(null)).toBe(false);
     expect(isVacantName(undefined)).toBe(false);
     expect(isVacantName("")).toBe(false);
+  });
+});
+
+// ── what ages, and from when ────────────────────────────────────────────────
+describe("lease vintage, not capture vintage", () => {
+  const now = 2026;
+  it("treats an old lease read recently as OLD", () => {
+    // A 2010 lease captured in a 2026 OM is a 2010 rent. Weighting it by capture date
+    // would give a sixteen-year-old rent full influence over today's market read.
+    expect(recencyWeight(2010, now)).toBe(0);
+    expect(recencyWeight(2026, now)).toBe(1);
+  });
+  it("ranks a recently-struck lease above an old one read on the same day", () => {
+    const recent = recencyWeight(2024, now);
+    const old = recencyWeight(2014, now);
+    expect(recent).toBeGreaterThan(old);
+    expect(old).toBe(0);
+  });
+  it("moves the median toward recently-struck leases", () => {
+    // Old leases cheap, recent leases dear: weighting by commencement must surface
+    // today's market rather than an average across sixteen years of rent growth.
+    const byCommencement = weightedSpread([
+      { value: 9, year: 2011 }, { value: 10, year: 2012 }, { value: 11, year: 2013 },
+      { value: 26, year: 2024 }, { value: 28, year: 2025 },
+    ], now)!;
+    expect(byCommencement.median!).toBeGreaterThan(byCommencement.unweightedMedian!);
+    expect(byCommencement.nWithinHorizon).toBe(2);
+    expect(byCommencement.nStale).toBe(3);
   });
 });

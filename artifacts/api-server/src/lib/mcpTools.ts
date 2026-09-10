@@ -169,24 +169,30 @@ export const isVacantName = (name: unknown): boolean => VACANT_NAME.test(String(
 // as-of its capture date, not as-of today — and a benchmark built across the corpus is a
 // blend of vintages spanning a rent cycle, not a snapshot of today's market. Nothing can
 // read these numbers honestly without knowing that, so the date rides along with them.
-function capturedAt(d: DealData, fallback: Date): { asOf: string; basis: string } {
+function capturedAt(d: DealData, fallback: Date): { asOf: string; basis: string; omAssumedClosing?: string } {
   const rosterAsOf = str(d.tenantsAsOf);
   const uploaded = str(d.uploadedAt);
-  if (rosterAsOf) {
-    const iso = rosterAsOf.slice(0, 10);
-    // A rent roll dated in the FUTURE is a real convention — a forward/pro-forma roll — but
-    // it also makes the record look maximally fresh to the recency weighting. On the real
-    // corpus 52 of 301 deals carry the same forward date, so say so rather than let it pass
-    // as "captured today".
-    const forward = iso > new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // A FORWARD-DATED tenantsAsOf is not an observation date. Retail OMs routinely start
+  // their financials on an assumed closing date a few months out — a mid-2026 book will
+  // model from 1/1/27, because that is when a buyer would realistically own it. The
+  // roster underneath is still as of publication. Treating that assumed closing date as
+  // "when this data was true" credits the record with freshness it does not have, so the
+  // observation date falls back to when the document was actually read, and the OM's own
+  // assumption is reported separately as what it is.
+  if (rosterAsOf && rosterAsOf.slice(0, 10) > today && uploaded) {
     return {
-      asOf: iso,
-      basis: `roster as-of date${d.tenantsSource ? ` (${String(d.tenantsSource)})` : ""}${forward ? " — FORWARD-DATED: this roll is dated in the future, so it is a projection, not an observation" : ""}`,
+      asOf: uploaded.slice(0, 10),
+      basis: "document upload date (the roster's stated as-of is the OM's assumed closing date, not an observation)",
+      omAssumedClosing: rosterAsOf.slice(0, 10),
     };
   }
+  if (rosterAsOf) return { asOf: rosterAsOf.slice(0, 10), basis: `roster as-of date${d.tenantsSource ? ` (${String(d.tenantsSource)})` : ""}` };
   if (uploaded) return { asOf: uploaded.slice(0, 10), basis: "document upload date" };
   return { asOf: fallback.toISOString().slice(0, 10), basis: "last record change (no capture date stored)" };
 }
+
 const yearOf = (iso: string | null | undefined): number | null => {
   const y = Number(String(iso ?? "").slice(0, 4));
   return Number.isFinite(y) && y > 1900 && y < 2200 ? y : null;
@@ -210,16 +216,30 @@ function spread(values: number[]) {
 
 // ─── recency weighting ──────────────────────────────────────────────────────
 // Eric's judgement (9/10/26): in retail, a data point older than about ten years is
-// fairly stale. So the corpus decays a capture's influence linearly to nothing across
-// a ten-year horizon rather than either trusting a 2014 rent as much as a 2025 one or
-// throwing it away at an arbitrary cliff. "Fairly stale" is a fade, not a wall.
+// fairly stale. So influence decays linearly to nothing across a ten-year horizon rather
+// than either trusting a 2014 rent as much as a 2025 one or throwing it away at an
+// arbitrary cliff. "Fairly stale" is a fade, not a wall.
+//
+// WHAT AGES, AND FROM WHEN (Eric, 9/10/26 — this corrected an earlier mistake here):
+// "if an OM is from 2026 and the lease was signed in 2010, that doesn't mean the lease
+// vintage is 2026, it's 2010." The first cut weighted by CAPTURE date, which is wrong for
+// the question actually being asked. A rent negotiated in 2010 tells you about the 2010
+// market no matter when someone typed it into a database; reading it recently does not
+// make it a current market signal. So the clock that matters is LEASE COMMENCEMENT — when
+// the economics were struck — and capture date is only the fallback when commencement is
+// unknown.
+//
+// The caveat Eric attaches: amendments and exercised options RESET the economics, so a
+// lease whose terms were renegotiated later has a later effective vintage. The roster does
+// not reliably record when that last happened, so this weights on commencement and flags
+// the limitation rather than pretending to a precision it does not have.
 //
 // Change RECENCY_HORIZON_YEARS to re-tune it; everything downstream follows.
 export const RECENCY_HORIZON_YEARS = 10;
 
-export function recencyWeight(captureYear: number | null, nowYear: number): number {
-  if (captureYear == null) return 0.25;   // unknown vintage still counts, but weakly
-  const age = nowYear - captureYear;
+export function recencyWeight(vintageYear: number | null, nowYear: number): number {
+  if (vintageYear == null) return 0.25;   // unknown vintage still counts, but weakly
+  const age = nowYear - vintageYear;
   if (age <= 0) return 1;
   return Math.max(0, 1 - age / RECENCY_HORIZON_YEARS);
 }
@@ -1167,26 +1187,36 @@ const brandLeaseTerms: McpToolDef = {
     // separately because a lease struck 15 years ago is legacy rent, not a market signal,
     // however recently we happened to record it.
     const struckWithinHorizon = startYears.filter(y => nowYear - y < RECENCY_HORIZON_YEARS).length;
+    const datedByCommencement = locations.filter(l => yearOf(str(l.leaseStart)) != null).length;
     const vintage = {
       horizonYears: RECENCY_HORIZON_YEARS,
+      weightedBy: "lease commencement — when the economics were struck, not when the document was read",
+      leasesDatedByCommencement: `${datedByCommencement} of ${locations.length} (the rest fall back to capture date)`,
       capturedBetween: captureYears.length ? [Math.min(...captureYears), Math.max(...captureYears)] : null,
       leasesCommencedBetween: startYears.length ? [Math.min(...startYears), Math.max(...startYears)] : null,
       leasesStruckWithinHorizon: struckWithinHorizon,
       leasesStruckBeforeHorizon: startYears.length - struckWithinHorizon,
       warning:
-        `Medians here are RECENCY-WEIGHTED: a capture's influence fades linearly to zero over ` +
-        `${RECENCY_HORIZON_YEARS} years, because in retail a data point older than that is fairly ` +
-        "stale. \`median\` is therefore the market as this corpus currently sees it; " +
-        "\`unweightedMedian\` is every record ever captured, equally weighted. When the two " +
-        "diverge materially, rents have MOVED — say so rather than quoting one figure. Separately, " +
-        "\`leasesStruckWithinHorizon\` counts leases actually NEGOTIATED inside the horizon: those " +
-        "are the real market signal, while an old lease captured recently is legacy rent. For a " +
-        "KPR-owned location take the current figure from Datex instead of any of this.",
+        "Medians here are RECENCY-WEIGHTED BY LEASE COMMENCEMENT — a lease's influence fades " +
+        `linearly to zero over ${RECENCY_HORIZON_YEARS} years from the date its economics were ` +
+        "STRUCK, not from when the document was read. A 2010 lease sitting inside a 2026 offering " +
+        "memorandum is a 2010 rent and is weighted as such. \`median\` is the market as this corpus " +
+        "currently sees it; \`unweightedMedian\` treats every lease equally regardless of age. When " +
+        "the two diverge materially, rents have MOVED — say so rather than quoting one figure. " +
+        "CAVEAT: amendments and exercised options RESET a lease's economics, giving it a later " +
+        "effective vintage than its original commencement, and the roster does not reliably record " +
+        "when that happened — so an old lease showing recent rent steps may be fresher than its " +
+        "commencement date implies. Note it rather than over-claiming. For a KPR-owned location " +
+        "take the current figure from Datex instead of any of this.",
     };
 
+    // The vintage of a LEASE is when its economics were struck, not when we read the
+    // document. A 2010 lease inside a 2026 offering memorandum is a 2010 rent. Fall back
+    // to the capture date only where commencement was never recorded.
+    const vintageOf = (l: Loc): number | null => yearOf(str(l.leaseStart)) ?? yearOf(l.capturedAsOf);
     const withYear = (pick: (l: Loc) => number | null | undefined) =>
       locations
-        .map(l => ({ value: num(pick(l)) as number, year: yearOf(l.capturedAsOf) }))
+        .map(l => ({ value: num(pick(l)) as number, year: vintageOf(l) }))
         .filter(e => e.value != null && Number.isFinite(e.value) && e.value > 0);
 
     const head = {
@@ -1573,6 +1603,21 @@ wrong number.** Before aggregating anything out of \`TenantsMetrics\`:
    completely false. Exclude them; report how many locations actually reported.
 4. **Datex tenant names carry store numbers** ("Dollar Tree #4516"); this corpus stores the
    brand alone. Match on the brand, not the raw string.
+
+**A lease ages from when it was STRUCK, not from when we read it.** A 2010 lease sitting
+inside a 2026 offering memorandum is a 2010 rent — reading it recently does not make it a
+current market signal. Benchmarks here are therefore weighted by LEASE COMMENCEMENT, with
+capture date used only where commencement was never recorded. The caveat: amendments and
+exercised options RESET the economics, so a lease renegotiated later has a later effective
+vintage than its commencement date shows, and the roster does not reliably record when that
+happened. An old lease with recent rent steps may be fresher than it looks — say so rather
+than over-claiming in either direction.
+
+**A rent roll dated in the FUTURE is the OM's assumed closing date, not a capture date.**
+Retail offering memoranda routinely start their financials a few months out, on the date a
+buyer would realistically own the asset — a mid-2026 book will model from 1/1/2027. That is
+a normal marketing convention, not an error and not evidence of a pro forma roster. It does
+NOT mean the roster is current to that date, so never read a forward as-of date as freshness.
 
 **On tenants and brands, use BOTH and cite BOTH.** These sources answer different questions,
 so the best answer carries them separately rather than picking one:

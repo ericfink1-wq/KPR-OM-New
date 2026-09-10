@@ -113,12 +113,22 @@ Claude does not infer this on its own. The rule is sent to the client on every
 connection, repeated in the playbook, and attached to each owned record — so it holds
 even in a fresh chat where nobody explained it.
 
-## Also in the repo: a matching skill
+## The matching skill — give this to the team too
 
-`.claude/skills/kpr-deal-library/SKILL.md` teaches Claude how to *use* these tools well
-— which one to reach for, and the KPR rules it must not break. Claude Code picks it up
-automatically in this repo. To use it elsewhere, upload that folder as a skill in Claude
-settings.
+`.claude/skills/kpr-retail-analysis/SKILL.md` is the house rulebook. It governs **both**
+systems, not just this one: which source answers which question, how to cite Datex and the
+corpus side by side, the row-level traps in each that silently produce wrong numbers, and
+KPR's underwriting doctrine.
+
+This matters because your team has Datex access too. The connector's own instructions only
+reach Claude when it calls *this* library — the skill is what makes the rules apply to a
+Datex-only question as well.
+
+**Claude Code** picks it up automatically inside this repo.
+
+**claude.ai / desktop:** it has to be added once per person, under Settings → Capabilities →
+Skills. Upload the `kpr-retail-analysis` folder (the `SKILL.md` file inside it). Anyone with
+Datex access should have it, whether or not they use the deal library.
 
 ## For developers
 
