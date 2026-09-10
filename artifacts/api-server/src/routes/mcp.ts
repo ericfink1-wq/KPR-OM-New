@@ -149,12 +149,35 @@ async function handleMcp(req: Request, res: Response): Promise<void> {
   }
 }
 
-// The two supported shapes. `/mcp` with an Authorization: Bearer header is the
-// preferred one. `/mcp/k/<key>` exists for clients that accept only a bare URL
-// (some claude.ai custom-connector setups) — same key, same revocation, but the
-// secret rides in the path, so the admin UI labels it as the less-private option.
-router.all("/mcp", requireMcpKey, handleMcp);
-router.all("/mcp/k/:key", requireMcpKey, handleMcp);
+// GET on a Streamable HTTP endpoint opens a server→client notification stream. This
+// server is STATELESS and never sends unsolicited notifications, so that stream can only
+// ever sit there — and it did: a GET held the connection open indefinitely instead of
+// returning, which is an accidental resource leak and a very cheap way to tie up a
+// single-process server. The spec permits refusing it, so refuse it explicitly. DELETE
+// gets the same treatment: it exists to end a session that stateless mode never creates.
+function methodNotAllowed(_req: Request, res: Response): void {
+  res.setHeader("Allow", "POST");
+  res.status(405).json({
+    jsonrpc: "2.0",
+    error: {
+      code: -32000,
+      message: "This MCP endpoint is stateless and accepts POST only. It never sends " +
+        "server-initiated notifications, so there is no GET stream to open.",
+    },
+    id: null,
+  });
+}
+
+// `/mcp` with an Authorization: Bearer header is the preferred shape. `/mcp/k/<key>`
+// exists for clients that accept only a bare URL (some claude.ai custom-connector
+// setups) — same key, same revocation, but the secret rides in the path, so the admin UI
+// labels it as the less-private option.
+router.post("/mcp", requireMcpKey, handleMcp);
+router.post("/mcp/k/:key", requireMcpKey, handleMcp);
+router.get("/mcp", methodNotAllowed);
+router.get("/mcp/k/:key", methodNotAllowed);
+router.delete("/mcp", methodNotAllowed);
+router.delete("/mcp/k/:key", methodNotAllowed);
 
 // ─── admin: key management (session-authenticated, admin only) ──────────────
 // Ordinary site routes behind the session + 2FA gate. Access is SELF-SERVICE and tied to

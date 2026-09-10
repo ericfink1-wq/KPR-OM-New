@@ -205,6 +205,15 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
+- **`GET /api/mcp` HUNG FOREVER — fixed (9/10/26).** `router.all` sent GET into the
+  Streamable-HTTP transport, which opens a server→client notification stream. This server is
+  STATELESS and never sends unsolicited notifications, so that stream just sat there holding
+  the connection open — an accidental resource leak and a very cheap way to tie up a
+  single-process server (a plain `curl -X GET` never returned). Now `router.post` for the
+  protocol and an explicit 405 `methodNotAllowed` for GET/DELETE on both URL shapes; verified
+  405 in ~2ms with POST unaffected. **Load/limits verified:** 40 concurrent tool calls all
+  200 in 4.8s total, no failures; the 120/min per-key rate limit engages correctly (79×200
+  then 429s, after 40 already spent in the same window).
 - **BUDGET RE-CALIBRATED TO WHAT CLIENTS ACCEPT (9/10/26).** The 60 KB budget was set from
   curl measurements, which enforce nothing. Calling the DEPLOYED server through a real MCP
   client had `lease_abstracts` **REJECTED at 56,925 characters — the response never reached
