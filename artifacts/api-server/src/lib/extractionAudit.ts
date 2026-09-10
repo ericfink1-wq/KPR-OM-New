@@ -99,6 +99,7 @@ export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-reno-before-built": "Renovated before built",
   "audit-anchor-missing": "Grocery anchor missing",
   "audit-walt-recompute": "WALT vs roster expiries",
+  "audit-expiry-in-past": "Lease expired before the roll's as-of date",
   "audit-dupe-tenant": "Duplicate tenant row",
   "audit-remterm-expiry": "Remaining term vs expiry",
   "audit-pop-gradient": "Population vs radius",
@@ -728,6 +729,60 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
         question: `This is a grocery-anchored center, but no grocery anchor appears in the roster — no tenant is flagged as an anchor, none matches a known grocer, and there's no anchor-sized box (≥25,000 SF). Did the anchor drop out of the rent roll?`,
         detail: `A grocery-anchored center's defining tenant is the grocer. If it's missing, the anchor row likely didn't extract (a large box printed as an image) — add it from the rent roll / site plan, or correct the center type.`,
         suggestedValue: null, target: null,
+      });
+    }
+  }
+
+  // ── S2. Lease EXPIRED BEFORE THE ROLL'S OWN AS-OF DATE ────────────────────────
+  // A rent roll printed 2026-05-26 that lists a lease expiring 2026-02-28 contradicts
+  // itself: on its own stated date that tenant had no lease left. Either an amendment
+  // or exercised option never made it into the roster, or the tenant is holding over.
+  //
+  // Why this matters beyond tidiness: WALT is SF-weighted remaining term and BOTH the
+  // stored figure and the recompute below floor a past expiry at `Math.max(0, …)`, so
+  // an expired lease contributes ZERO years but its FULL SF to the denominator. One
+  // stale anchor row therefore drags the whole centre's WALT toward zero while the two
+  // WALT figures still agree with each other — the recompute cannot catch it, which is
+  // exactly why this check is separate. Real cases in the library: Tops Market (92,000
+  // SF), Shaw's (56,007 SF) and Dick's (70,000 SF), all anchors, all reading expired.
+  //
+  // SCOPED DELIBERATELY TO A CONTRADICTION, NOT TO STALENESS. Only expiries before the
+  // roll's OWN as-of date fire. A lease that has simply rolled since capture is not an
+  // extraction error — this library is static by design, so flagging that would light
+  // up hundreds of deals as they age and bury the real signal. Vintage is reported via
+  // capturedAsOf instead. Needs a real as-of date to contradict; no date, no check.
+  const rollRefRaw = (typeof deal.tenantsAsOf === "string" && deal.tenantsAsOf) || (typeof deal.omDate === "string" && deal.omDate) || null;
+  const rollRefMs = parseISO(rollRefRaw);
+  // A forward-dated roll is the OM's ASSUMED CLOSING, not an observation date (most OMs
+  // start financials at an assumed close). Measuring against it would invent expiries
+  // that had not happened when the roll was printed, so fall back to today.
+  const asOfMs = rollRefMs != null ? Math.min(rollRefMs, Date.now()) : null;
+  if (asOfMs != null && occupied.length >= 3) {
+    // A lease flagged month-to-month / holdover / at-will is SUPPOSED to sit past its
+    // expiry — that is the arrangement, not a contradiction.
+    const MTM = /(m-?t-?m|month[\s-]*to[\s-]*month|holdover|hold[\s-]*over|at[\s-]*will|tenancy[\s-]*at)/i;
+    const expired = occupied.filter(t => {
+      if (MTM.test(String(t.leaseType ?? "")) || MTM.test(String(t.leaseExpiry ?? ""))) return false;
+      const exp = parseISO(t.leaseExpiry);
+      return exp != null && exp < asOfMs;
+    });
+    if (expired.length > 0) {
+      const expiredSF = sumSF(expired);
+      const glaBasis = totalSF && totalSF > 0 ? totalSF : rosterSF;
+      const sharePct = glaBasis > 0 ? (expiredSF / glaBasis) * 100 : 0;
+      const anchors = expired.filter(t => t.isAnchor === true || (num(t.sf) ?? 0) >= 25000);
+      const asOfLabel = String(rollRefRaw).slice(0, 10);
+      const names = expired.slice(0, 4).map(t => `${String(t.name ?? "?")} (${sf(num(t.sf) ?? 0)}, exp. ${String(t.leaseExpiry ?? "?").slice(0, 10)})`).join("; ");
+      const more = expired.length > 4 ? ` …and ${expired.length - 4} more` : "";
+      out.push({
+        id: "audit-expiry-in-past",
+        source: "check",
+        severity: anchors.length > 0 || sharePct >= 10 ? "high" : "medium",
+        field: "Lease expiry",
+        question: `${expired.length === 1 ? "One lease" : `${expired.length} leases`} (${sf(expiredSF)}, ${sharePct.toFixed(1)}% of GLA) show an expiry BEFORE the roster's own as-of date of ${asOfLabel}${anchors.length > 0 ? `, including ${anchors.length === 1 ? "the anchor" : `${anchors.length} anchors`}` : ""}. Has an option been exercised or an amendment signed that isn't reflected here — or ${expired.length === 1 ? "is that tenant" : "are those tenants"} holding over?`,
+        detail: `${names}${more}. These rows are counted at ZERO remaining term in WALT while still carrying their full SF, so the centre's WALT is understated${anchors.length > 0 ? " — and an anchor at zero term distorts it heavily" : ""}. Fix the expiry from the current rent roll or lease amendment, or mark the tenant month-to-month/holdover if that is genuinely the arrangement.`,
+        suggestedValue: null,
+        target: expired.length === 1 ? { kind: "tenant", fieldKey: "leaseExpiry", tenantName: String(expired[0].name ?? ""), valueType: "text" } : null,
       });
     }
   }
