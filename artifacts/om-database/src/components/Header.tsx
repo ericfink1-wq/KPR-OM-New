@@ -733,15 +733,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         )}
         {membersOpen && <Members onClose={() => setMembersOpen(false)} />}
 
-        {/* Claude access (MCP keys) — admin only. Lets Eric hand a key to someone so
-            their Claude can read the library live, and switch it off again. */}
-        {isAdmin && (
-          <button onClick={() => setMcpOpen(true)} title="Let Claude read this deal library — create or switch off access keys"
+        {/* Claude access (MCP keys). Available to EVERY signed-in member: keys are tied to
+            your own account and you mint your own, so this is not an admin handout. Admins
+            additionally get oversight of everyone's keys inside the panel. */}
+        {(
+          <button onClick={() => setMcpOpen(true)} title="Connect Claude to this deal library — create or switch off your own access key"
             style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
             Claude access
           </button>
         )}
-        {mcpOpen && <McpAccess onClose={() => setMcpOpen(false)} />}
+        {mcpOpen && <McpAccess onClose={() => setMcpOpen(false)} isAdmin={isAdmin} />}
 
         {/* Backup menu — admin only */}
         {isAdmin && <div ref={backupTriggerRef} style={{ position: "relative" }}>

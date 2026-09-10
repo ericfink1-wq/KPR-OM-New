@@ -13,12 +13,16 @@ import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
 // here so the deploy's schema-diff recognizes it instead of proposing to DROP it.
 export const mcpKeysTable = pgTable("mcp_api_keys", {
   id: text("id").primaryKey(),
-  name: text("name").notNull(),                       // human label: "Eric — laptop", "Analyst: Sarah"
+  // The OWNER. A key acts as this user and is only valid while that account is an
+  // approved KPR account — so removing someone's login removes their MCP access with it,
+  // rather than leaving an orphaned credential that outlives their employment.
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),                       // human label: "Eric — laptop", "Sarah — desktop"
   keyHash: text("key_hash").notNull(),                // sha256(raw key) — the raw key is never stored
   keyPrefix: text("key_prefix").notNull(),            // e.g. "kpr_mcp_a1b2…" for display only
   scope: text("scope").notNull().default("read"),     // read-only today; reserved for future write scopes
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  createdBy: text("created_by"),                      // admin user id that minted it
+  createdBy: text("created_by"),                      // user id that performed the mint
   createdByEmail: text("created_by_email"),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
   useCount: integer("use_count").notNull().default(0),

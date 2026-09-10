@@ -156,6 +156,23 @@ describe("Datex precedence", () => {
   });
 });
 
+describe("comp benchmark tool", () => {
+  it("is registered and steers callers away from eyeballing raw comp rows", () => {
+    const t = MCP_TOOLS_BY_NAME.get("comp_benchmark");
+    expect(t).toBeDefined();
+    expect(t!.description).toMatch(/never eyeball/i);
+    expect(t!.description).toMatch(/median/i);
+    // The whole point of exposing the engine is that thin samples are refused rather
+    // than dressed up as a benchmark.
+    expect(t!.description).toMatch(/too thin|insufficient/i);
+  });
+  it("tells sale_comps callers to use the engine for a verdict", () => {
+    const t = MCP_TOOLS_BY_NAME.get("sale_comps")!;
+    expect(t.description + JSON.stringify(t.inputSchema)).toBeTruthy();
+    expect(MCP_TOOLS_BY_NAME.has("comp_benchmark")).toBe(true);
+  });
+});
+
 describe("lease-precedent tool", () => {
   it("is registered and required for the review use case", () => {
     const t = MCP_TOOLS_BY_NAME.get("brand_lease_terms");

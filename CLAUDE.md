@@ -95,6 +95,18 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   transport per request), built on `@modelcontextprotocol/sdk`. Mounted in `routes/index.ts`
   BEFORE the session/2FA gate because it carries its OWN auth; the key-admin routes
   (`mcpAdminRouter`) are mounted AFTER it, so minting still needs a 2FA'd admin.
+- **ACCESS IS BOUND TO A KPR ACCOUNT (Eric, 9/10/26: "Only KPR employees can ever access this,
+  and they need to use their credentials to do so").** Keys are NOT handed out by an admin —
+  a signed-in member mints one for THEMSELVES (`POST /mcp-keys`, requireAuth), having just
+  passed password + 2FA. `mcp_api_keys.user_id` is the OWNER, and **`verifyMcpKey` re-checks
+  that account on EVERY request** (`status === 'approved'`), so rejecting / un-approving /
+  deleting a user kills all their keys instantly — offboarding a person offboards their MCP
+  access as a side effect, which is the only way it reliably happens. An unowned (legacy)
+  key FAILS CLOSED. Members manage their own keys; admins see and revoke everyone's
+  (`GET /mcp-keys?all=1`, `mayManage()` guards revoke/delete). The Header "Claude access"
+  button is now visible to ALL members, not just admins. Verified live across the whole
+  lifecycle: approved→200, rejected→401, pending→401, restored→200, deleted→401,
+  recreated→200, unowned→401.
 - **Auth = minted API keys** (`lib/mcpKeys.ts`, table `mcp_api_keys`, schema declared in
   `lib/db/src/schema/mcpKeys.ts`). 32 bytes of CSPRNG, stored as sha256 ONLY, shown once.
   Accepted as `Authorization: Bearer`, `X-API-Key`, `/api/mcp/k/<key>`, or `?key=`. Revoke
@@ -111,6 +123,17 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
 - **Admin UI:** `McpAccess.tsx` ("Claude access" button in Header, admin-only) — mint with a
   label, copy-once key, ready-to-paste config per client (desktop / Claude Code / claude.ai),
   turn-off list. Verified desktop 1440px + mobile 390px by screenshot, no h-overflow.
+- **`comp_benchmark`** exposes `computeBenchmark` (compBenchmark.ts) — the engine the cardinal
+  comp rule refers to ("the APP computes, Claude NARRATES"). Derives the subject signals from
+  the deal (market/state/type/SF/cap/PSF/occupancy/anchor+IG) and returns tier, n, dateRange,
+  sourceMix, medians+p25/p75, and subject-vs-set deltas. **CRITICAL: when `insufficient`, the
+  statistics are SUPPRESSED (nulled) rather than returned with a warning** — the engine will
+  otherwise emit a "median" off n=1 (it returned an 11.1% median cap from ONE trade on the
+  real corpus), which reads as authoritative precision and is exactly the fabricated-looking
+  figure the rule exists to prevent; a warning attached to a number is the part that gets
+  dropped in the retelling. NOTE: the comps index is thin (72 rows), so `insufficient` is the
+  COMMON case today — that is correct behaviour, not a bug. `sale_comps` now points callers
+  at this tool for any verdict.
 - **`brand_lease_terms`** is the lease-review tool Eric asked for: hand it a brand and it
   returns EVERY lease in the library for it + median/p25–p75 on rent PSF, SF, term years,
   sales PSF + `leverPrevalence` (how many locations carry co-tenancy / kickout / go-dark /

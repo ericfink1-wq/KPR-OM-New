@@ -21,26 +21,36 @@ does through it can change, delete or re-analyze a deal, and it can't spend AI c
 
 ## How access is protected
 
-The library's normal login is a browser session, which an outside app can't hold. So
-this connection has its own door: a long random **access key** that you create.
+**Only KPR members can connect, using their own credentials.**
 
-- No key, no access. The address alone is useless.
-- Each person gets their own key, so you can switch one off without affecting anyone else.
+The library's normal login is a browser session, which an outside app can't hold. So this
+connection has its own door: a long random **access key**. But the key isn't handed out —
+it's tied to a person's KPR account:
+
+- **You create your own key**, from inside the app, after signing in with your password and
+  authenticator code. There is no way to get one without a live, approved KPR account, and
+  no way to create one on someone else's behalf.
+- **Every request re-checks the account behind the key.** If that account is suspended,
+  un-approved or deleted, the key stops working on the very next request — nothing to
+  remember, nothing to clean up. **Removing someone's login removes their Claude access
+  with it.**
+- A key is **personal**. Passing it to a colleague isn't sharing access, it's lending them
+  your identity — and they can make their own in ten seconds.
 - Keys are stored scrambled (hashed) — even the database never holds the readable key.
 - A key is shown **once**, at creation. Lose it and you make a new one.
 - "Turn off" takes effect on the very next request, permanently.
-- Only an admin (you) can create or revoke keys.
+- Admins can see and revoke **everyone's** keys, for oversight.
 
-## Giving someone access
+## Connecting (each person does this themselves)
 
-1. Sign in to the app as an admin.
+1. Sign in to the app.
 2. Click **Claude access** in the top bar.
-3. Type who it's for (e.g. "Eric — laptop"), click **Create key**.
+3. Name it for the device (e.g. "My laptop"), click **Create key**.
 4. Copy the key straight away — it won't be shown again.
-5. Pick the tab for how they use Claude and follow the one-step instructions there.
-   The panel gives them a ready-to-paste config with the key already filled in.
+5. Pick the tab for how you use Claude and follow the one-step instructions. The panel
+   gives you a ready-to-paste config with your key already filled in.
 
-Send the key the way you'd send a password — not in a shared doc, not in a group email.
+Never send your key to anyone. They make their own.
 
 ### The three ways to connect
 
@@ -53,8 +63,16 @@ Send the key the way you'd send a password — not in a shared doc, not in a gro
 
 ## Taking access away
 
-**Claude access → Turn off** next to their key. It stops working immediately. The record
-stays in the "Switched off" list so you can see who had access and when it ended.
+Two ways, and the first is usually automatic:
+
+- **Remove or suspend their KPR account** (Members screen). Every key that account owns
+  stops working on the next request. This is the one that matters — offboarding someone
+  removes their Claude access without anyone having to remember this feature exists.
+- **Claude access → Turn off** next to a specific key, to kill one device without touching
+  the person's account. Admins see everyone's keys; members see their own.
+
+Either way the record stays in the "Switched off" list, so you can see who had access and
+when it ended.
 
 ## What Claude can see
 
@@ -67,6 +85,7 @@ Ten read-only tools:
 | `search_deals` | Find centers by name, market, anchor, size, occupancy, cap rate |
 | `get_deal` | One center in full, including the rent roll and its integrity flags |
 | `search_tenants` | Every location of a brand, with rent, SF, dates, sales |
+| `comp_benchmark` | The deterministic pricing benchmark for a deal — medians, quartiles, sample size, source mix (and it withholds the figure when the sample is too thin) |
 | `brand_lease_terms` | Every lease we hold for a brand + medians/ranges + how often each clause appears — the "does this lease look off?" tool |
 | `tenant_benchmarks` | Library medians for rent PSF, sales PSF and store size, by brand |
 | `portfolio_analytics` | Lease rollover waterfall, concentration, anchor share, credit mix |

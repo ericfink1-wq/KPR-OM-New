@@ -17,9 +17,9 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { MCP_TOOLS, MCP_TOOLS_BY_NAME, MCP_SERVER_INSTRUCTIONS } from "../lib/mcpTools";
 import {
   createMcpKey, listMcpKeys, revokeMcpKey, deleteMcpKey,
-  verifyMcpKey, extractKeyFromRequest, ensureMcpKeysTable, type VerifiedKey,
+  verifyMcpKey, extractKeyFromRequest, ensureMcpKeysTable, keyOwner, type VerifiedKey,
 } from "../lib/mcpKeys";
-import { requireAdmin } from "../middleware/auth";
+import { requireAdmin, requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
 
 // Two routers, deliberately: `router` (the MCP protocol endpoint) is mounted BEFORE
@@ -157,24 +157,35 @@ router.all("/mcp", requireMcpKey, handleMcp);
 router.all("/mcp/k/:key", requireMcpKey, handleMcp);
 
 // ─── admin: key management (session-authenticated, admin only) ──────────────
-// Ordinary site routes guarded by requireAdmin — only a signed-in KPR admin can mint
-// or revoke access. They live here so the whole MCP feature reads as one file, but
-// they hang off mcpAdminRouter, which is mounted behind the 2FA gate.
-mcpAdminRouter.get("/mcp-keys", requireAdmin, async (_req, res) => {
+// Ordinary site routes behind the session + 2FA gate. Access is SELF-SERVICE and tied to
+// the signed-in account: a member mints a key for THEMSELVES, having just proved who they
+// are with a password and an authenticator code. Nobody can obtain a key without a live
+// KPR account, and nobody can mint one on someone else's behalf. Admins get oversight —
+// they can see and revoke every key — but handing keys out is not the model, because a
+// handed-out key says nothing about who is holding it.
+mcpAdminRouter.get("/mcp-keys", requireAuth, async (req, res) => {
   try {
-    res.json({ keys: await listMcpKeys() });
+    // A member sees their own keys. An admin can ask for everyone's, for oversight.
+    const wantsAll = req.session.isAdmin && String(req.query.all ?? "") === "1";
+    const keys = await listMcpKeys(wantsAll ? null : req.session.userId);
+    res.json({ keys, scope: wantsAll ? "all" : "mine", isAdmin: !!req.session.isAdmin });
   } catch (err) {
     logger.error({ err }, "Failed to list MCP keys");
     res.status(500).json({ error: "Failed to load access keys" });
   }
 });
 
-mcpAdminRouter.post("/mcp-keys", requireAdmin, async (req, res) => {
+mcpAdminRouter.post("/mcp-keys", requireAuth, async (req, res) => {
   try {
+    const userId = req.session.userId;
+    if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
     const body = req.body as { name?: string; expiresInDays?: number };
+    // Always minted for the CALLER. There is deliberately no way to mint for someone
+    // else: a key must correspond to an account whose owner passed 2FA to create it.
     const created = await createMcpKey({
+      userId,
       name: String(body?.name ?? "").trim() || "Unnamed key",
-      createdBy: req.session.userId ?? null,
+      createdBy: userId,
       createdByEmail: req.session.userEmail ?? null,
       expiresInDays: typeof body?.expiresInDays === "number" ? body.expiresInDays : null,
     });
@@ -188,8 +199,16 @@ mcpAdminRouter.post("/mcp-keys", requireAdmin, async (req, res) => {
   }
 });
 
-mcpAdminRouter.post("/mcp-keys/:id/revoke", requireAdmin, async (req, res) => {
+// A member may revoke their OWN keys; an admin may revoke anyone's.
+async function mayManage(req: Parameters<typeof requireAuth>[0], id: string): Promise<boolean> {
+  if (req.session.isAdmin) return true;
+  const owner = await keyOwner(id);
+  return !!owner && owner === req.session.userId;
+}
+
+mcpAdminRouter.post("/mcp-keys/:id/revoke", requireAuth, async (req, res) => {
   try {
+    if (!(await mayManage(req, String(req.params.id)))) { res.status(403).json({ error: "That key belongs to someone else." }); return; }
     const ok = await revokeMcpKey(String(req.params.id), req.session.userEmail ?? null);
     logger.info({ keyId: req.params.id, by: req.session.userEmail, ok }, "MCP access key revoked");
     res.json({ ok });
@@ -199,8 +218,9 @@ mcpAdminRouter.post("/mcp-keys/:id/revoke", requireAdmin, async (req, res) => {
   }
 });
 
-mcpAdminRouter.delete("/mcp-keys/:id", requireAdmin, async (req, res) => {
+mcpAdminRouter.delete("/mcp-keys/:id", requireAuth, async (req, res) => {
   try {
+    if (!(await mayManage(req, String(req.params.id)))) { res.status(403).json({ error: "That key belongs to someone else." }); return; }
     res.json({ ok: await deleteMcpKey(String(req.params.id)) });
   } catch (err) {
     logger.error({ err }, "Failed to delete MCP key");
@@ -210,7 +230,7 @@ mcpAdminRouter.delete("/mcp-keys/:id", requireAdmin, async (req, res) => {
 
 // What the admin screen shows as the connection details, so the UI never has to
 // guess the public origin (Replit sits behind a proxy).
-mcpAdminRouter.get("/mcp-info", requireAdmin, async (req, res) => {
+mcpAdminRouter.get("/mcp-info", requireAuth, async (req, res) => {
   await ensureMcpKeysTable().catch(() => {});
   const proto = (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0] || req.protocol || "https";
   const host = (req.headers["x-forwarded-host"] as string | undefined)?.split(",")[0] || req.get("host") || "";

@@ -854,6 +854,11 @@ const saleComps: McpToolDef = {
         capRate: c.capRate ?? null, occupancy: c.occupancy ?? null, anchor: c.anchor ?? null,
         propertyType: c.propertyType ?? null, sourceTier: tier(c), sourceDealId: c.dealId ?? null,
       })),
+      useCompBenchmarkInstead:
+        "For a verdict on what a specific deal should trade at, call comp_benchmark with its " +
+        "dealId — it runs the app's deterministic engine (validity filters, tiered relaxation, " +
+        "minimum sample, medians with quartiles). These raw rows are for browsing what exists, " +
+        "not for deriving a number.",
       caution:
         "Never eyeball these rows into a verdict. Report medians (not means) with n and the date " +
         "range, and weight owned > broker/manual > OM-sourced.",
@@ -1365,6 +1370,112 @@ const dataCoverage: McpToolDef = {
   },
 };
 
+
+// ─── 13. comp_benchmark ─────────────────────────────────────────────────────
+// The cardinal comp rule in CLAUDE.md: "the APP computes all comp stats in code; Claude
+// only NARRATES the structured output." sale_comps hands over raw rows, which quietly
+// invites exactly the eyeballing that rule forbids. computeBenchmark is the engine that
+// rule refers to — validity filters, tiered relaxation, a minimum sample, medians with
+// quartiles — and it was sitting unexposed. This wires it up so the arithmetic happens
+// in code and the caller is left with nothing to derive.
+const compBenchmarkTool: McpToolDef = {
+  name: "comp_benchmark",
+  title: "Deterministic sale-comp benchmark for a deal",
+  description:
+    "THE way to answer \"what does this trade at\" — never eyeball sale_comps rows instead. " +
+    "Runs the app's own comp engine for one deal: validity filters, tiered relaxation until " +
+    "it finds a usable sample, then MEDIANS with p25/p75 for cap rate and price PSF, the " +
+    "sample size, the date range, and the source mix (owned > broker > OM-sourced). Also " +
+    "returns how far the subject's own cap rate and PSF sit from the set. When the sample is " +
+    "too thin it says so — report that, never a substitute number.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      dealId: { type: "string", description: "Deal to benchmark. Preferred." },
+      propertyName: { type: "string", description: "Property name, if you don't have the id." },
+      excludeOmComps: { type: "boolean", description: "Drop seller-supplied OM comps (the weakest tier). Default false." },
+      includeCompRows: { type: "boolean", description: "Return the matched comps themselves. Default false — the statistics are the answer." },
+    },
+  },
+  handler: async (a) => {
+    const deals = await loadActiveDeals();
+    const id = str(a.dealId), name = str(a.propertyName);
+    let found: DealRecord | undefined;
+    if (id) found = deals.find(r => r.id === id);
+    if (!found && name) {
+      const lower = name.toLowerCase();
+      const hits = deals.filter(r => nameOf(r.data).toLowerCase().includes(lower));
+      if (hits.length === 1) found = hits[0];
+      else if (hits.length > 1) {
+        return { error: "ambiguous_property_name", message: `"${name}" matches ${hits.length} deals — pass a dealId.`, candidates: hits.slice(0, 20).map(dealSummary) };
+      }
+    }
+    if (!found) return { error: "not_found", message: "Pass a dealId from search_deals, or an unambiguous propertyName." };
+
+    const d = found.data;
+    const anchors = (Array.isArray(d.tenants) ? (d.tenants as DealData[]) : [])
+      .filter(t => t.isAnchor).map(t => String(t.name ?? "")).filter(Boolean);
+    const sf = num(d.totalSF);
+    const price = num(d.askingPrice);
+    const { computeBenchmark } = await import("./compBenchmark");
+    const r = await computeBenchmark({
+      dealId: found.id,
+      market: str(d.market), state: str(d.state),
+      propertyType: str(d.centerType) || str(d.assetType),
+      sf, capRate: num(d.capRate),
+      pricePerSf: price != null && sf ? Math.round((price / sf) * 100) / 100 : null,
+      occupancy: num(d.occupancy),
+      anchor: anchors.length ? anchors.join(", ") : null,
+      anchorIG: (Array.isArray(d.tenants) ? (d.tenants as DealData[]) : [])
+        .some(t => t.isAnchor && t.creditRating === "Investment Grade"),
+      excludeOmComps: bool(a.excludeOmComps),
+      excludeCompIds: [], includeCompIds: [], starCompIds: [], manual: null,
+    });
+
+    const out: Record<string, unknown> = {
+      deal: { dealId: found.id, propertyName: nameOf(d), state: d.state ?? null, market: d.market ?? null, centerType: d.centerType ?? d.assetType ?? null, totalSF: sf },
+      subject: r.subject,
+      insufficient: r.insufficient,
+      n: r.n,
+      tier: r.tierLabel,
+      relaxedBy: r.relaxed,
+      dateRange: r.dateRange,
+      sourceMix: r.sourceMix,
+      excludedAsInvalid: r.excludedInvalid,
+      // SUPPRESS THE STATISTICS WHEN THE SAMPLE IS TOO THIN. The engine still computes a
+      // "median" from one or two comps — on the real corpus it returned a median cap rate
+      // of 11.1% off a single trade. A figure like that reads as authoritative precision
+      // and is exactly the fabricated-looking number the cardinal comp rule exists to
+      // prevent. Below the minimum sample the honest output is nothing, not a number with
+      // a warning attached to it, because the warning is what gets dropped in the retelling.
+      capRate: r.insufficient ? null : r.capRate,
+      pricePerSf: r.insufficient ? null : r.pricePerSf,
+      last12Months: r.insufficient ? null : r.last12,
+      subjectVsSet: r.insufficient ? null : { capDeltaBps: r.capDeltaBps, psfDeltaPct: r.psfDeltaPct },
+      ...(r.insufficient ? {
+        suppressed:
+          `Cap-rate and price-PSF statistics are withheld: ${r.n} comp${r.n === 1 ? "" : "s"} is ` +
+          "below the minimum sample this engine will report on. A median over one or two trades " +
+          "is an anecdote wearing the clothes of a benchmark.",
+      } : {}),
+      ...(bool(a.includeCompRows) ? { comps: r.comps } : { compRowCount: r.comps.length }),
+      howToReport: r.insufficient
+        ? `INSUFFICIENT SAMPLE — only ${r.n} valid comp${r.n === 1 ? "" : "s"} could be assembled, ` +
+          "even after relaxing the filters, so the statistics are withheld above. Say plainly " +
+          "that the library cannot benchmark this deal yet, and say how many comps it found. Do " +
+          "NOT substitute a figure from sale_comps, from the OM's own comp page, or from general " +
+          "market knowledge and present it as this library's benchmark. If the caller needs a " +
+          "number, the answer is that more comps have to go into the database first."
+        : "Report the MEDIAN with n and the date range, every time — never a mean, never a " +
+          "figure you derived yourself. Name the tier and anything it relaxed to reach the " +
+          "sample, and weight the source mix: owned (KPR's verified trades) > broker/manual > " +
+          "OM-sourced (seller-selected, the weakest). capDeltaBps and psfDeltaPct are the " +
+          "subject against the set — a wide gap is the finding worth explaining.",
+    };
+    return out;
+  },
+};
+
 export const MCP_TOOLS: McpToolDef[] = [
   libraryOverview,
   getKnowledge,
@@ -1375,6 +1486,7 @@ export const MCP_TOOLS: McpToolDef[] = [
   tenantBenchmarks,
   portfolioAnalytics,
   saleComps,
+  compBenchmarkTool,
   leaseAbstracts,
   dataQuality,
   dataCoverage,

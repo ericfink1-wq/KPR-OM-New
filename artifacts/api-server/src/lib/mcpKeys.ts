@@ -1,12 +1,20 @@
 // MCP access keys — mint / list / revoke / verify.
 //
-// These are the passwords that gate the Model Context Protocol endpoint (/api/mcp),
-// which is how an outside Claude client reads this deal library. The site's normal
-// login is a session COOKIE, which an MCP client can't hold, so MCP gets its own
-// credential: a long random bearer token, stored only as a SHA-256 hash, mintable
-// and revocable by an admin. No key = no access; a revoked key stops working on the
-// next request. Read-only by design — nothing here can write to the library.
-import { db, mcpKeysTable } from "@workspace/db";
+// These gate the Model Context Protocol endpoint (/api/mcp), which is how a Claude
+// client reads this deal library. The site's normal login is a session COOKIE, which an
+// MCP client cannot hold, so MCP gets its own credential: a long random bearer token,
+// stored only as a SHA-256 hash.
+//
+// ACCESS IS TIED TO A KPR ACCOUNT (Eric's requirement, 9/10/26: only KPR employees, using
+// their own credentials). Two things enforce that:
+//   1. A key is minted only by a signed-in user FOR THEMSELVES — you cannot obtain one
+//      without first passing password + 2FA as an approved member.
+//   2. Every request re-checks the OWNING ACCOUNT, not just the key. The moment that
+//      account stops being approved — rejected, reset to pending, or deleted — the key
+//      stops working, with nothing further to remember. Offboarding a person offboards
+//      their MCP access as a side effect, which is the only way it reliably happens.
+// Read-only by design — nothing here can write to the library.
+import { db, mcpKeysTable, usersTable } from "@workspace/db";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { randomBytes, createHash, timingSafeEqual } from "crypto";
 
@@ -24,6 +32,7 @@ export function ensureMcpKeysTable(): Promise<void> {
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS mcp_api_keys (
           id text PRIMARY KEY,
+          user_id text,
           name text NOT NULL,
           key_hash text NOT NULL,
           key_prefix text NOT NULL,
@@ -38,7 +47,9 @@ export function ensureMcpKeysTable(): Promise<void> {
           revoked_by text
         )
       `);
+      await db.execute(sql`ALTER TABLE mcp_api_keys ADD COLUMN IF NOT EXISTS user_id text`);
       await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS mcp_api_keys_hash_idx ON mcp_api_keys (key_hash)`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS mcp_api_keys_user_idx ON mcp_api_keys (user_id)`);
     })().catch((err) => { tableReady = null; throw err; });
   }
   return tableReady;
@@ -46,6 +57,8 @@ export function ensureMcpKeysTable(): Promise<void> {
 
 export interface McpKeySummary {
   id: string;
+  userId: string | null;
+  ownerEmail: string | null;
   name: string;
   keyPrefix: string;
   scope: string;
@@ -64,6 +77,8 @@ export function summarize(row: typeof mcpKeysTable.$inferSelect): McpKeySummary 
   const expired = !!row.expiresAt && new Date(row.expiresAt).getTime() <= Date.now();
   return {
     id: row.id,
+    userId: (row as { userId?: string | null }).userId ?? null,
+    ownerEmail: row.createdByEmail ?? null,
     name: row.name,
     keyPrefix: row.keyPrefix,
     scope: row.scope,
@@ -80,11 +95,15 @@ export function summarize(row: typeof mcpKeysTable.$inferSelect): McpKeySummary 
 // Mint a new key. The RAW key is returned once and never persisted — the caller
 // must show it to the admin immediately; it can never be recovered afterwards.
 export async function createMcpKey(opts: {
+  /** The account this key acts as. Required — an unowned key cannot be tied to an
+   *  employee, so there is no way to mint one. */
+  userId: string;
   name: string;
   createdBy?: string | null;
   createdByEmail?: string | null;
   expiresInDays?: number | null;
 }): Promise<{ key: string; summary: McpKeySummary }> {
+  if (!opts.userId) throw new Error("createMcpKey requires the owning userId");
   await ensureMcpKeysTable();
   const name = (opts.name || "").trim().slice(0, 120) || "Unnamed key";
   // 32 bytes of entropy, base64url — long enough that guessing is hopeless.
@@ -95,6 +114,7 @@ export async function createMcpKey(opts: {
     : null;
   const row = {
     id,
+    userId: opts.userId,
     name,
     keyHash: hashKey(raw),
     keyPrefix: raw.slice(0, KEY_PREFIX.length + 6),
@@ -108,10 +128,20 @@ export async function createMcpKey(opts: {
   return { key: raw, summary: summarize(saved!) };
 }
 
-export async function listMcpKeys(): Promise<McpKeySummary[]> {
+export async function listMcpKeys(userId?: string | null): Promise<McpKeySummary[]> {
   await ensureMcpKeysTable();
-  const rows = await db.select().from(mcpKeysTable).orderBy(desc(mcpKeysTable.createdAt));
+  const q = db.select().from(mcpKeysTable);
+  const rows = userId
+    ? await q.where(eq(mcpKeysTable.userId, userId)).orderBy(desc(mcpKeysTable.createdAt))
+    : await q.orderBy(desc(mcpKeysTable.createdAt));
   return rows.map(summarize);
+}
+
+/** The owner of a key, for authorising a revoke/delete by a non-admin. */
+export async function keyOwner(id: string): Promise<string | null> {
+  await ensureMcpKeysTable();
+  const [row] = await db.select({ userId: mcpKeysTable.userId }).from(mcpKeysTable).where(eq(mcpKeysTable.id, id)).limit(1);
+  return row?.userId ?? null;
 }
 
 // Revocation is a timestamp, never a delete — the record of who had access (and
@@ -131,7 +161,7 @@ export async function deleteMcpKey(id: string): Promise<boolean> {
   return res.length > 0;
 }
 
-export interface VerifiedKey { id: string; name: string; scope: string }
+export interface VerifiedKey { id: string; name: string; scope: string; userId: string; email: string }
 
 // Constant-time hash comparison. The lookup is by hash (indexed), so the DB does
 // the matching; this guards the final confirmation against a timing oracle.
@@ -153,12 +183,22 @@ export async function verifyMcpKey(raw: string | null | undefined): Promise<Veri
   if (!row || !sameHash(row.keyHash, hash)) return null;
   if (row.revokedAt) return null;
   if (row.expiresAt && new Date(row.expiresAt).getTime() <= Date.now()) return null;
+
+  // THE ACCOUNT CHECK. A valid key is not enough — the person behind it must still be an
+  // approved member. This is what makes "only KPR employees" true on an ongoing basis
+  // rather than only at the moment the key was handed over: rejecting, un-approving or
+  // deleting the account kills every key it owns on the very next request.
+  if (!row.userId) return null;   // legacy/unowned key — fail closed, it ties to nobody
+  const [owner] = await db
+    .select({ id: usersTable.id, email: usersTable.email, status: usersTable.status })
+    .from(usersTable).where(eq(usersTable.id, row.userId)).limit(1);
+  if (!owner || owner.status !== "approved") return null;
   // Usage stamp is fire-and-forget so it never delays or fails the request.
   void db.update(mcpKeysTable)
     .set({ lastUsedAt: new Date(), useCount: sql`${mcpKeysTable.useCount} + 1` })
     .where(eq(mcpKeysTable.id, row.id))
     .catch(() => {});
-  return { id: row.id, name: row.name, scope: row.scope };
+  return { id: row.id, name: row.name, scope: row.scope, userId: owner.id, email: owner.email };
 }
 
 // Pull the key out of a request. Four shapes are accepted because different Claude

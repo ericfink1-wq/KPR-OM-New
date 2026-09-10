@@ -230,6 +230,8 @@ export async function apiResetMember2fa(id: string): Promise<void> { await apiFe
 
 export interface McpKeySummary {
   id: string;
+  userId: string | null;
+  ownerEmail: string | null;
   name: string;
   keyPrefix: string;
   scope: string;
@@ -256,12 +258,14 @@ export async function apiMcpInfo(): Promise<McpInfo> {
   return r.json() as Promise<McpInfo>;
 }
 
-export async function apiListMcpKeys(): Promise<McpKeySummary[]> {
-  const r = await apiFetch("/mcp-keys");
+// Own keys by default; admins may request every member's for oversight.
+export async function apiListMcpKeys(all = false): Promise<{ keys: McpKeySummary[]; scope: string; isAdmin: boolean }> {
+  const r = await apiFetch(`/mcp-keys${all ? "?all=1" : ""}`);
   if (!r.ok) throw new Error("Couldn't load access keys");
-  return ((await r.json()) as { keys: McpKeySummary[] }).keys;
+  return (await r.json()) as { keys: McpKeySummary[]; scope: string; isAdmin: boolean };
 }
 
+// Always mints for the SIGNED-IN user — there is no way to mint on someone else's behalf.
 export async function apiCreateMcpKey(name: string, expiresInDays?: number | null): Promise<{ key: string; summary: McpKeySummary }> {
   const r = await apiFetch("/mcp-keys", { method: "POST", body: JSON.stringify({ name, expiresInDays: expiresInDays ?? null }) });
   if (!r.ok) throw new Error("Couldn't create the access key");

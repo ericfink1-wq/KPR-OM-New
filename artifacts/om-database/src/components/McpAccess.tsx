@@ -68,8 +68,9 @@ function CopyBox({ value, label }: { value: string; label?: string }) {
   );
 }
 
-export default function McpAccess({ onClose }: { onClose: () => void }) {
+export default function McpAccess({ onClose, isAdmin = false }: { onClose: () => void; isAdmin?: boolean }) {
   const isMobile = useIsMobile();
+  const [showAll, setShowAll] = useState(false);   // admin oversight: everyone's keys
   const [info, setInfo] = useState<McpInfo | null>(null);
   const [keys, setKeys] = useState<McpKeySummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,8 +83,8 @@ export default function McpAccess({ onClose }: { onClose: () => void }) {
   const load = useCallback(() => {
     setError(null);
     apiMcpInfo().then(setInfo).catch(() => setError("Couldn't load the connection details."));
-    apiListMcpKeys().then(setKeys).catch(() => setError("Couldn't load the access keys."));
-  }, []);
+    apiListMcpKeys(showAll).then(r => setKeys(r.keys)).catch(() => setError("Couldn't load the access keys."));
+  }, [showAll]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -104,7 +105,7 @@ export default function McpAccess({ onClose }: { onClose: () => void }) {
   };
 
   const revoke = async (k: McpKeySummary) => {
-    if (!window.confirm(`Turn off access for "${k.name}"?\n\nWhoever has this key loses access to the deal library immediately. This can't be undone — you'd have to create a new key and send it to them.`)) return;
+    if (!window.confirm(`Turn off access for "${k.name}"?\n\nThat connection stops working immediately. This can't be undone — a new key would have to be created.`)) return;
     setBusy(true); setError(null);
     try { await apiRevokeMcpKey(k.id); load(); }
     catch { setError("Couldn't revoke that key — try again."); }
@@ -160,11 +161,17 @@ export default function McpAccess({ onClose }: { onClose: () => void }) {
         </div>
 
         <div style={{ padding: isMobile ? "14px 13px" : "16px 18px", overflowY: "auto" }}>
-          <p style={{ margin: "0 0 14px", fontSize: 12.5, lineHeight: 1.55, color: "#52554e" }}>
-            This connects Claude directly to your deal library, so you can ask it about your
-            centers, tenants, rents and lease rollover in any Claude chat — no exporting, no
-            pasting. Claude can only <strong>read</strong> the library; it can't change or delete anything.
-            Access requires a key you create below, so nobody gets in without one.
+          <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.55, color: "#52554e" }}>
+            This connects Claude directly to the deal library, so you can ask about centers,
+            tenants, rents, lease terms and comps in any Claude chat — no exporting, no pasting.
+            Claude can only <strong>read</strong> the library; it can't change or delete anything.
+          </p>
+          <p style={{ margin: "0 0 14px", fontSize: 12, lineHeight: 1.55, color: "#6f6a5f", background: "#f4f1e8", border: "1px solid #e3dccd", borderRadius: 8, padding: "10px 12px" }}>
+            Keys are tied to <strong>your KPR account</strong>. You create your own below — you've
+            already proved who you are by signing in — and it works only while your account is
+            active. If your account is removed or suspended, the key stops working straight away.
+            That also means a key is <strong>personal</strong>: don't pass it to anyone, including
+            colleagues. They can make their own in ten seconds.
           </p>
 
           {error && <div style={{ color: "#c0392b", fontSize: 12.5, marginBottom: 12 }}>⚠ {error}</div>}
@@ -222,13 +229,13 @@ export default function McpAccess({ onClose }: { onClose: () => void }) {
 
           {/* Create */}
           <div style={{ marginBottom: 18 }}>
-            {sectionTitle("Give someone access")}
+            {sectionTitle("Create a key for yourself")}
             <div style={{ display: "flex", gap: 8, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center" }}>
               <input
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") void create(); }}
-                placeholder="Who is this for? e.g. “Eric — laptop”"
+                placeholder="What's it for? e.g. “My laptop”, “Claude desktop app”"
                 style={{ flex: "1 1 auto", minWidth: 0, background: "#fff", border: "1px solid #e3dccd", borderRadius: 7, padding: "9px 11px", fontSize: 12.5, color: "#26281f", fontFamily: "'Inter',sans-serif", minHeight: 38 }}
               />
               <button onClick={create} disabled={busy} style={{
@@ -238,17 +245,25 @@ export default function McpAccess({ onClose }: { onClose: () => void }) {
               }}>{busy ? "…" : "Create key"}</button>
             </div>
             <div style={{ fontSize: 11, color: "#a69e91", marginTop: 6, lineHeight: 1.5 }}>
-              Give each person their own key, so you can switch one off without affecting anyone else.
+              Make a separate key per device, so losing one laptop doesn't mean re-doing the rest.
             </div>
           </div>
 
           {/* Active keys */}
           <div style={{ marginBottom: 16 }}>
-            {sectionTitle(`Active keys · ${active.length}`)}
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              {sectionTitle(showAll ? `Active keys — everyone · ${active.length}` : `Your active keys · ${active.length}`)}
+              {isAdmin && (
+                <button onClick={() => setShowAll(v => !v)}
+                  style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginBottom: 8 }}>
+                  {showAll ? "Show only mine" : "Show everyone's"}
+                </button>
+              )}
+            </div>
             {!keys && <div style={{ color: "#a69e91", fontSize: 12.5 }}>Loading…</div>}
             {keys && active.length === 0 && (
               <div style={{ color: "#a69e91", fontSize: 12.5 }}>
-                No keys yet — nobody can connect to the library from Claude until you create one.
+                {showAll ? "Nobody has an active key yet." : "You don't have a key yet — create one above to connect Claude."}
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -260,7 +275,7 @@ export default function McpAccess({ onClose }: { onClose: () => void }) {
                       <code style={{ fontFamily: "ui-monospace, Menlo, monospace" }}>{k.keyPrefix}…</code>
                       {" · "}
                       {k.lastUsedAt ? `used ${relTime(k.lastUsedAt)} (${k.useCount})` : "never used"}
-                      {k.createdByEmail ? ` · added by ${k.createdByEmail}` : ""}
+                      {showAll && k.ownerEmail ? ` · ${k.ownerEmail}` : ""}
                     </div>
                   </div>
                   <button onClick={() => revoke(k)} disabled={busy} style={{

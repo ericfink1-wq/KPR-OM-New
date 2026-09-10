@@ -44,6 +44,7 @@ Then work the specific question:
 | Where else do we have this tenant? What rolls when? | `search_tenants` |
 | Is this rent above or below market? | `tenant_benchmarks` |
 | Rollover waterfall, concentration, credit mix | `portfolio_analytics` |
+| What should this deal trade at? | `comp_benchmark` |
 | What has traded, at what cap? | `sale_comps` |
 | Lease terms, options, co-tenancy, kickouts | `lease_abstracts` |
 | Is this lease off-market? | `brand_lease_terms` |
@@ -205,6 +206,19 @@ the deal is priced as though that upside were capturable.
 going dark trips it. "X of N" means you need (N − X + 1) dark — never model that as a
 per-anchor trigger; doing so has overstated exposure by roughly 15x here before. An
 occupancy-threshold clause has no anchor dependency at all.
+
+**For a pricing verdict, use `comp_benchmark`, never `sale_comps`.** `comp_benchmark` runs
+the app's own engine on a dealId — validity filters, tiered relaxation, a minimum sample,
+medians with quartiles — and hands back a figure with nothing left for you to derive.
+`sale_comps` returns raw rows for browsing what exists; deriving a number from them is the
+exact eyeballing the rule below forbids.
+
+**A thin comp set returns nothing, and nothing is the answer.** When the sample is below the
+minimum, `comp_benchmark` withholds the statistics entirely and sets `suppressed`. Report
+that the library cannot benchmark the deal yet and say how many comps it found. Do not
+substitute a figure from `sale_comps`, from the OM's own comp page, or from general market
+knowledge — the honest answer is that more comps have to go into the database first. (The
+comp database is still thin, so expect this often.)
 
 **Comps and benchmarks: narrate, don't re-derive.** Report medians (never means) and
 always state the sample size and date range. Weight owned transactions over
