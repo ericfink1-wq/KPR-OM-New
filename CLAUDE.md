@@ -411,6 +411,17 @@ have recurred on EVERY publish. All runtime tables are in the script now.
   A NOT NULL the runtime can't enforce (`ADD COLUMN IF NOT EXISTS` can't backfill NOT NULL)
   belongs in **code, failing closed** — `verifyMcpKey` rejects a key with a null `userId` —
   never in a declaration the database doesn't back.
+- **Do NOT rely on the pull hook alone — it does not fire on every path.** The DROP kept
+  recurring across three publishes even after the table was on the mirror list, because the
+  hook wasn't running for Eric's pull/publish flow. The mirror now ALSO runs from the root
+  `postinstall`, so any install syncs the dev DB. Guaranteed manual fallback: booting the
+  app in the Replit WORKSPACE creates the table in dev (`ensureMcpKeysTable` at startup) —
+  "press Run once, then publish" is the instruction that always works.
+- **The mirror must FAIL FAST on an unreachable DB.** It runs from `postinstall` now, and
+  the first cut had no connect probe: each of ~30 statements opened its own connection and
+  waited out the full timeout, so an unreachable host hung `pnpm install` past 120s (found
+  by testing that path, not by reading it). A single `pool.connect()` probe up front exits 0
+  in ~5s. Keep the probe.
 - **The pull hook is TIME-BUDGETED (`.replit [postMerge] timeoutMs`), so ORDER MATTERS.**
   The dev-DB mirror originally ran LAST, behind `pnpm install` and a slow `drizzle push`,
   inside 20s — so it could be starved and silently never run, which is why the DROP kept
