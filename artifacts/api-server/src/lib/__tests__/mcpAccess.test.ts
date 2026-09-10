@@ -104,6 +104,20 @@ describe("lease-precedent tool", () => {
   });
 });
 
+describe("coverage guardrail", () => {
+  // A median over three records is an anecdote. The library has to be able to say how
+  // thin a field is, or a client will confidently generalize from almost nothing.
+  it("exposes a coverage tool that warns about thin data", () => {
+    const t = MCP_TOOLS_BY_NAME.get("data_coverage");
+    expect(t).toBeDefined();
+    expect(t!.description).toMatch(/BEFORE MAKING A PORTFOLIO-WIDE CLAIM/);
+  });
+  it("frames absent pricing as expected rather than as a defect", () => {
+    const t = MCP_TOOLS_BY_NAME.get("data_coverage")!;
+    expect(t.description).toMatch(/genuinely absent|not a bug/i);
+  });
+});
+
 describe("knowledge pack", () => {
   it("carries the doctrine that most often gets analysis wrong", () => {
     // These are the rules Eric taught after real misreads — a playbook missing them

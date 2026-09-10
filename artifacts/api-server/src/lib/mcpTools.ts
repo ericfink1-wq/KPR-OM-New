@@ -944,6 +944,125 @@ const brandLeaseTerms: McpToolDef = {
   },
 };
 
+
+// ─── 12. data_coverage ──────────────────────────────────────────────────────
+// How much of the library actually HAS each field. This is the guardrail against the
+// most seductive failure mode of a database this size: building a confident argument
+// on a field that only a handful of deals carry. A median is not a benchmark when
+// n=3, and a "portfolio trend" over 8% coverage is an anecdote. Rather than leave a
+// client to discover that by accident, the library states its own density.
+const dataCoverage: McpToolDef = {
+  name: "data_coverage",
+  title: "How complete is the data?",
+  description:
+    "CALL THIS BEFORE MAKING A PORTFOLIO-WIDE CLAIM. Reports what share of deals and " +
+    "tenants actually carry each field — pricing, financials, sales, demographics, lease " +
+    "structure, abstracts — so you know whether an analysis is well-supported or resting on " +
+    "a handful of records. Sparse coverage is usually a fact about how retail is marketed, " +
+    "not a bug: cap rate and price are genuinely absent on most offering memoranda.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      status: { type: "string", description: "Restrict to one pipeline status, e.g. \"Owned\" or \"Passed\"." },
+    },
+  },
+  handler: async (a) => {
+    const wanted = str(a.status)?.toLowerCase();
+    const all = await loadActiveDeals();
+    const deals = wanted ? all.filter(r => String(r.data.status ?? "").toLowerCase() === wanted) : all;
+    if (!deals.length) return { error: "no_deals", message: wanted ? `No active deals with status "${str(a.status)}".` : "The library has no active deals." };
+
+    const has = (d: DealData, k: string) => {
+      const v = d[k];
+      if (v === null || v === undefined || v === "") return false;
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === "number") return Number.isFinite(v);
+      if (typeof v === "object") return Object.keys(v as object).length > 0;
+      return true;
+    };
+    const pctOf = (n: number, total: number) => Math.round((n / total) * 1000) / 10;
+    const dealField = (label: string, key: string) => {
+      const n = deals.filter(r => has(r.data, key)).length;
+      return { field: label, deals: n, pct: pctOf(n, deals.length) };
+    };
+
+    // Tenant-level density is measured against tenant ROWS, not deals — a brand-level
+    // claim lives or dies on how many individual leases carry the field.
+    const tenantRows: DealData[] = [];
+    for (const r of deals) {
+      const ts = Array.isArray(r.data.tenants) ? (r.data.tenants as DealData[]) : [];
+      for (const t of ts) if (!/^vacant/i.test(String(t?.name ?? ""))) tenantRows.push(t);
+    }
+    const tenantField = (label: string, key: string) => {
+      const n = tenantRows.filter(t => has(t, key)).length;
+      return { field: label, tenants: n, pct: tenantRows.length ? pctOf(n, tenantRows.length) : 0 };
+    };
+
+    const abstractRows = await db.select({ dealId: leaseAbstractsTable.dealId, tenantName: leaseAbstractsTable.tenantName }).from(leaseAbstractsTable);
+    const abstractedDeals = new Set(abstractRows.map(r => r.dealId).filter(id => deals.some(d => d.id === id)));
+    const leaseRiskDeals = deals.filter(r => {
+      const lr = r.data.leaseRisk as DealData | undefined;
+      return !!lr && Array.isArray(lr.tenants) && (lr.tenants as unknown[]).length > 0;
+    }).length;
+
+    const thin = (pct: number) => pct < 25;
+    const coverage = {
+      headlineMetrics: [
+        dealField("Total GLA", "totalSF"), dealField("Occupancy", "occupancy"),
+        dealField("WALT", "walt"), dealField("Weighted-avg rent PSF", "weightedAvgRentPSF"),
+        dealField("Tenant roster", "tenants"),
+      ],
+      pricing: [
+        dealField("Cap rate", "capRate"), dealField("Asking price", "askingPrice"),
+        dealField("NOI", "noi"), dealField("Gross potential rent", "grossPotentialRent"),
+        dealField("Effective gross income", "effectiveGrossIncome"), dealField("Operating expenses", "operatingExpenses"),
+        dealField("Cash-flow projection", "cashFlowProjection"),
+      ],
+      tradeArea: [
+        dealField("Population (3mi)", "population3mi"), dealField("Avg HH income (3mi)", "avgHHIncome3mi"),
+        dealField("Traffic count", "trafficCountVPD"),
+      ],
+      analysis: [
+        dealField("Underwriting narrative", "notes"), dealField("Deal score", "dealScore"),
+        dealField("Red flags", "redFlags"), dealField("Upside items", "upsideItems"),
+        dealField("Key assumptions", "keyAssumptions"), dealField("OM comparable sales", "comparableSales"),
+        dealField("Tenant sales history", "tenantSalesHistory"),
+      ],
+      leaseStructure: [
+        { field: "Structured lease-risk capture (co-tenancy / kickout from the OM)", deals: leaseRiskDeals, pct: pctOf(leaseRiskDeals, deals.length) },
+        { field: "Executed lease abstracts", deals: abstractedDeals.size, pct: pctOf(abstractedDeals.size, deals.length) },
+      ],
+      tenantLevel: [
+        tenantField("SF", "sf"), tenantField("Rent PSF", "rentPerSF"), tenantField("Annual base rent", "annualRent"),
+        tenantField("Lease expiry", "leaseExpiry"), tenantField("Lease start", "leaseStart"),
+        tenantField("Renewal options", "renewalOptions"), tenantField("Rent bumps", "rentBumps"),
+        tenantField("Sales PSF", "salesPSF"), tenantField("Occupancy cost", "occupancyCost"),
+        tenantField("Credit rating", "creditRating"), tenantField("Reimbursement method", "reimbursementMethod"),
+        tenantField("Expense reimbursements ($)", "expenseReimbursements"),
+      ],
+    };
+
+    const sparse = [
+      ...coverage.pricing, ...coverage.tradeArea, ...coverage.leaseStructure,
+    ].filter(f => thin(f.pct)).map(f => f.field);
+
+    return {
+      scope: wanted ? { status: str(a.status) } : { status: "all active deals" },
+      dealsScanned: deals.length,
+      tenantRowsScanned: tenantRows.length,
+      abstractsInLibrary: abstractRows.length,
+      coverage,
+      thinlyCovered: sparse,
+      howToUse:
+        "Treat anything under ~25% coverage as ANECDOTAL: quote it per-deal, never as a " +
+        "portfolio finding, and say how many records it rests on. Missing pricing is expected " +
+        "(retail is often marketed unpriced) and is not a data-quality problem. Sparse sales " +
+        "coverage is the one that most often misleads — without sales you cannot judge whether " +
+        "an above-market rent is supported, so flag it to verify rather than assuming either way.",
+    };
+  },
+};
+
 export const MCP_TOOLS: McpToolDef[] = [
   libraryOverview,
   getKnowledge,
@@ -956,6 +1075,7 @@ export const MCP_TOOLS: McpToolDef[] = [
   saleComps,
   leaseAbstracts,
   dataQuality,
+  dataCoverage,
 ];
 
 export const MCP_TOOLS_BY_NAME: Map<string, McpToolDef> = new Map(MCP_TOOLS.map(t => [t.name, t]));
