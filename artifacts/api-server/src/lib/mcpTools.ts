@@ -1385,6 +1385,42 @@ const brandLeaseTerms: McpToolDef = {
     // document. A 2010 lease inside a 2026 offering memorandum is a 2010 rent. Fall back
     // to the capture date only where commencement was never recorded.
     const vintageOf = (l: Loc): number | null => yearOf(str(l.leaseStart)) ?? yearOf(l.capturedAsOf);
+    // FORMAT DISPERSION. A brand can span radically different products under one name:
+    // Bank of America appears as 4,000 SF branches AND as 60 SF ATMs, and rent PSF is only
+    // comparable within a format. Unfiltered, the ATMs pushed the p75 to $94.33 and the max
+    // to $550/SF — figures that describe no branch anyone will ever lease. So when the sizes
+    // span an order of magnitude, say so and offer a like-for-like median computed on the
+    // locations that actually sit near this brand's typical footprint.
+    const sfVals = locations.map(l => l.sf).filter((v): v is number => typeof v === "number" && v > 0);
+    const medSf = quantile(sfVals, 0.5);
+    let formatWarning: Record<string, unknown> | null = null;
+    if (medSf && sfVals.length >= 5) {
+      const lo = Math.min(...sfVals), hi = Math.max(...sfVals);
+      if (hi / lo >= 10) {
+        const band = locations.filter(l => typeof l.sf === "number" && l.sf >= medSf * 0.5 && l.sf <= medSf * 2);
+        const bandRents = band.map(l => l.rentPerSF).filter((v): v is number => typeof v === "number" && v > 0);
+        formatWarning = {
+          sizeRange: [lo, hi],
+          medianSize: medSf,
+          note:
+            `This brand spans ${lo.toLocaleString()}–${hi.toLocaleString()} SF, an order of magnitude or more. ` +
+            "Those are DIFFERENT PRODUCTS under one name — an ATM or kiosk is not a branch, a pad is not " +
+            "an inline suite — and rent PSF is only comparable within a format. The headline median, band " +
+            "and range below mix them all.",
+          likeForLike: bandRents.length >= 3
+            ? {
+                basis: `locations between ${Math.round(medSf * 0.5).toLocaleString()} and ${Math.round(medSf * 2).toLocaleString()} SF`,
+                n: bandRents.length,
+                median: quantile(bandRents, 0.5),
+                p25: quantile(bandRents, 0.25),
+                p75: quantile(bandRents, 0.75),
+              }
+            : null,
+          advice: "Quote likeForLike when the question is about a typical store of this brand. Quote the full range only when you also say what sizes it spans.",
+        };
+      }
+    }
+
     const withYear = (pick: (l: Loc) => number | null | undefined) =>
       locations
         .map(l => ({ value: num(pick(l)) as number, year: vintageOf(l) }))
@@ -1426,6 +1462,7 @@ const brandLeaseTerms: McpToolDef = {
     };
 
     if (mixedBrands) head.mixedBrandWarning = mixedBrands;
+    if (formatWarning) head.formatWarning = formatWarning;
     return capRows(head, "locations", locations.slice(0, limit),
       "Lower `limit`, or filter to the deals you care about with search_tenants({name, dealId}).");
   },

@@ -89,3 +89,32 @@ describe("key cap", () => {
     expect(MAX_ACTIVE_KEYS_PER_USER).toBeLessThanOrEqual(50);
   });
 });
+
+// ── format dispersion ───────────────────────────────────────────────────────
+// A brand can span radically different products under one name. Bank of America appears
+// in the corpus as 4,000 SF branches AND as 60 SF ATMs, and rent PSF is only comparable
+// within a format. Unfiltered, the ATMs pushed the p75 to $94.33 and the max to $550/SF —
+// figures describing no branch anyone will ever lease. On Truist the effect moves the
+// median itself by 23% ($32.89 headline vs $25.30 like-for-like).
+describe("format dispersion detection", () => {
+  const spans = (sizes: number[]) => Math.max(...sizes) / Math.min(...sizes) >= 10;
+  it("treats an order of magnitude of size as different products", () => {
+    expect(spans([60, 216, 3500, 4000, 6197])).toBe(true);   // ATMs among branches
+    expect(spans([200, 4704, 10575])).toBe(true);            // kiosk among branches
+  });
+  it("leaves a single-format brand alone", () => {
+    expect(spans([9054, 10000, 11251, 12000, 20228])).toBe(false);  // Dollar Tree
+    expect(spans([14007, 19089, 20177, 23500])).toBe(false);        // PetSmart
+  });
+  it("bands like-for-like around the median footprint", () => {
+    // Half to double the median is wide enough to keep a real sample and narrow enough
+    // to exclude a different product entirely.
+    const med = 4000;
+    const inBand = (sf: number) => sf >= med * 0.5 && sf <= med * 2;
+    expect(inBand(4000)).toBe(true);
+    expect(inBand(3500)).toBe(true);
+    expect(inBand(6197)).toBe(true);
+    expect(inBand(60)).toBe(false);     // ATM
+    expect(inBand(216)).toBe(false);    // ATM
+  });
+});

@@ -205,6 +205,23 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
+- **ONE BRAND CAN BE SEVERAL PRODUCTS — `formatWarning` (9/10/26).** Found by scanning the
+  real corpus: Bank of America appears as 4,000 SF BRANCHES and as 60 SF ATMs, and rent PSF is
+  only comparable within a format. Unfiltered the ATMs pushed BoA's p75 to $94.33 and its max
+  to **$550/SF** — figures describing no branch anyone will ever lease; on **Truist the median
+  itself moves 23%** ($32.89 headline vs $25.30 like-for-like). `brand_lease_terms` now flags
+  when a brand's sizes span ≥10× and emits `likeForLike` (median/p25/p75 over locations within
+  0.5×–2× the brand's median SF). Fires ONLY where formats genuinely mix — Dollar Tree,
+  PetSmart, Five Below, Starbucks stay quiet. Skill updated to quote `likeForLike` for
+  "a typical store" questions.
+  **CORPUS SCAN — the data is otherwise remarkably clean** and the existing audit catches what
+  isn't: of 7,334 tenant rows only 6 have rentPerSF disagreeing with annualRent÷sf by >20%
+  (worst: Mezeh @ Cascades, $65/SF stated vs $780/SF implied — **the audit names it exactly**),
+  9 exact duplicate rows (Markland Mall — audit catches via roster-SF-over-GLA at 152%
+  occupancy), and 2 size outliers (McDonald's at 1 SF — caught via the avg-rent tie-out).
+  Apple at $9,232/SF sales is NOT flagged, correctly: Apple really does that.
+  Sub-1,000 SF rows are only 2.9% of priced rows and, because everything is a MEDIAN, they
+  barely move the headline — the format warning is about the BAND and the max, not the median.
 - **MULTI-USER AUTHORIZATION VERIFIED (9/10/26).** Two real accounts (admin + non-admin
   member), full matrix: key lists are isolated (member sees only their own; `?all=1` does NOT
   escalate for a non-admin); a member CANNOT revoke or delete another member's key (403) while
