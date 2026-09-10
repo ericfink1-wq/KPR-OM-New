@@ -31,6 +31,12 @@ app.set("query parser", "extended");
 app.set("trust proxy", 1);
 
 
+// The MCP endpoint accepts a key in the URL path (/api/mcp/k/<key>) for clients that
+// take only a bare address. That path must NEVER reach the logs verbatim, or a live
+// access key ends up sitting in plaintext in the request log.
+const redactUrl = (url: string | undefined): string | undefined =>
+  url?.split("?")[0].replace(/(\/api\/mcp\/k\/)[^/]+/, "$1<redacted>");
+
 app.use(
   pinoHttp({
     logger,
@@ -39,7 +45,7 @@ app.use(
         return {
           id: req.id,
           method: req.method,
-          url: req.url?.split("?")[0],
+          url: redactUrl(req.url),
         };
       },
       res(res) {

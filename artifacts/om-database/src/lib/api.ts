@@ -223,6 +223,61 @@ export async function apiDeleteMember(id: string): Promise<void> { await apiFetc
 export async function apiResetMember2fa(id: string): Promise<void> { await apiFetch(`/auth/users/${id}/reset-2fa`, { method: "POST" }); }
 // Admin resets a member's password (email-independent). Returns the new temporary
 // password ONCE so the admin can pass it to the user. Optionally set a specific one.
+// --- MCP (Claude) access keys — admin only ---
+// These gate /api/mcp, the endpoint an outside Claude client reads the library
+// through. The RAW key comes back exactly once, from apiCreateMcpKey — it is never
+// stored in readable form and can never be shown again.
+
+export interface McpKeySummary {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scope: string;
+  createdAt: string;
+  createdByEmail: string | null;
+  lastUsedAt: string | null;
+  useCount: number;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  active: boolean;
+}
+
+export interface McpInfo {
+  serverName: string;
+  version: string;
+  url: string;
+  urlWithKeyTemplate: string;
+  tools: { name: string; title: string }[];
+}
+
+export async function apiMcpInfo(): Promise<McpInfo> {
+  const r = await apiFetch("/mcp-info");
+  if (!r.ok) throw new Error("Couldn't load the Claude connection details");
+  return r.json() as Promise<McpInfo>;
+}
+
+export async function apiListMcpKeys(): Promise<McpKeySummary[]> {
+  const r = await apiFetch("/mcp-keys");
+  if (!r.ok) throw new Error("Couldn't load access keys");
+  return ((await r.json()) as { keys: McpKeySummary[] }).keys;
+}
+
+export async function apiCreateMcpKey(name: string, expiresInDays?: number | null): Promise<{ key: string; summary: McpKeySummary }> {
+  const r = await apiFetch("/mcp-keys", { method: "POST", body: JSON.stringify({ name, expiresInDays: expiresInDays ?? null }) });
+  if (!r.ok) throw new Error("Couldn't create the access key");
+  return r.json() as Promise<{ key: string; summary: McpKeySummary }>;
+}
+
+export async function apiRevokeMcpKey(id: string): Promise<void> {
+  const r = await apiFetch(`/mcp-keys/${id}/revoke`, { method: "POST" });
+  if (!r.ok) throw new Error("Couldn't revoke the access key");
+}
+
+export async function apiDeleteMcpKey(id: string): Promise<void> {
+  const r = await apiFetch(`/mcp-keys/${id}`, { method: "DELETE" });
+  if (!r.ok) throw new Error("Couldn't delete the access key");
+}
+
 export async function apiResetMemberPassword(id: string, newPassword?: string): Promise<{ email: string; password: string; twoFactorEnabled: boolean }> {
   const r = await apiFetch(`/auth/users/${id}/reset-password`, { method: "POST", body: JSON.stringify(newPassword ? { newPassword } : {}) });
   const j = await r.json().catch(() => ({})) as { error?: string; email?: string; password?: string; twoFactorEnabled?: boolean };

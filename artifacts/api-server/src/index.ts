@@ -10,6 +10,7 @@ import { ensureLeaseAbstractsTable } from "./routes/leaseAbstracts";
 import { ensureSiteAgreementsTable } from "./routes/siteAgreements";
 import { ensureTraceTables } from "./lib/traceTables";
 import { ensureHouseViewTable } from "./lib/houseView";
+import { ensureMcpKeysTable } from "./lib/mcpKeys";
 import { startSelfImproveScheduler } from "./lib/selfImprove";
 
 const rawPort = process.env["PORT"];
@@ -98,6 +99,13 @@ ensureTraceTables()
 ensureHouseViewTable()
   .then(() => logger.info("analyst_house_view table ensured on startup"))
   .catch((err) => logger.error({ err }, "ensureHouseViewTable failed on startup (will retry on first use)"));
+
+// Provision the MCP access-key table on startup, so DEV matches PROD and Replit's
+// publish diff stays clean for this runtime-created table. Best-effort. Keep in sync
+// with lib/mcpKeys.ts and schema/mcpKeys.ts.
+ensureMcpKeysTable()
+  .then(() => logger.info("mcp_api_keys table ensured on startup"))
+  .catch((err) => logger.error({ err }, "ensureMcpKeysTable failed on startup (will retry on first use)"));
 
 // Clear ZOMBIE database connections on every boot. A stuck/idle-in-transaction
 // connection (left by an earlier hung request, and kept alive across app restarts

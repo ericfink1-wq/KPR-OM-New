@@ -11,6 +11,7 @@
     "test": "pnpm dlx vitest@3.2.6 run"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express-session": "^1.19.0",
     "@workspace/api-zod": "workspace:*",

@@ -5,6 +5,7 @@ import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
+import McpAccess from "./McpAccess";
 import TwoFactorModal from "./TwoFactorModal";
 import ChangePassword from "./ChangePassword";
 import HouseViewModal from "./HouseViewModal";
@@ -54,6 +55,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [ratesOpen, setRatesOpen] = useState(false);
   const [houseViewOpen, setHouseViewOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);   // "Claude access" — MCP key management (admin)
   const [twoFAOpen, setTwoFAOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
@@ -730,6 +732,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           </div>
         )}
         {membersOpen && <Members onClose={() => setMembersOpen(false)} />}
+
+        {/* Claude access (MCP keys) — admin only. Lets Eric hand a key to someone so
+            their Claude can read the library live, and switch it off again. */}
+        {isAdmin && (
+          <button onClick={() => setMcpOpen(true)} title="Let Claude read this deal library — create or switch off access keys"
+            style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+            Claude access
+          </button>
+        )}
+        {mcpOpen && <McpAccess onClose={() => setMcpOpen(false)} />}
 
         {/* Backup menu — admin only */}
         {isAdmin && <div ref={backupTriggerRef} style={{ position: "relative" }}>

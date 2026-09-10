@@ -88,6 +88,33 @@ All on `main`, typecheck-clean, tested (118 web + 48 API). Keep it:
 - **Access:** Eric is flipping the environment **network policy to full access** then starting a NEW session so Claude can run the app locally + screenshot the UI itself (harness: `scripts/ui-screenshots.mjs` → `npx playwright install chromium` once allowed). He's tired of sending screenshots. NEVER take prod DB creds — local seeded copy only. On the new session: confirm browser access works (`npx playwright install chromium`), run the screenshot harness, THEN build the deal-page consolidation verifying visually as you go.
 
 
+## Claude access / MCP connector (built 9/10/26 — the library as a live Claude tool)
+Eric asked for "the site's knowledge as an MCP so Claude can access it, password protected."
+Shipped end-to-end and smoke-tested against a real Postgres + the real MCP handshake:
+- **Endpoint:** `POST /api/mcp` — MCP Streamable HTTP, **stateless** (a fresh `Server` +
+  transport per request), built on `@modelcontextprotocol/sdk`. Mounted in `routes/index.ts`
+  BEFORE the session/2FA gate because it carries its OWN auth; the key-admin routes
+  (`mcpAdminRouter`) are mounted AFTER it, so minting still needs a 2FA'd admin.
+- **Auth = minted API keys** (`lib/mcpKeys.ts`, table `mcp_api_keys`, schema declared in
+  `lib/db/src/schema/mcpKeys.ts`). 32 bytes of CSPRNG, stored as sha256 ONLY, shown once.
+  Accepted as `Authorization: Bearer`, `X-API-Key`, `/api/mcp/k/<key>`, or `?key=`. Revoke
+  is a timestamp (never a delete) so the audit trail survives; 120 req/min per key.
+- **Ten READ-ONLY tools** (`lib/mcpTools.ts`): library_overview, get_knowledge, search_deals,
+  get_deal, search_tenants, tenant_benchmarks, portfolio_analytics, sale_comps,
+  lease_abstracts, data_quality. A test asserts no tool name implies a mutation — **if a
+  write tool is ever added, that has to be a deliberate decision, not a slip.**
+- **The KNOWLEDGE half** is `lib/mcpKnowledge.ts` (`KPR_PLAYBOOK`) — the analytical
+  heuristics from this file distilled for an outside client, combined at request time with
+  the LIVE House View + operator-taught extraction lessons. **Keep it in sync: when Eric
+  teaches a new market heuristic, mirror it into KPR_PLAYBOOK too, or outside clients keep
+  making the mistake the site already learned.**
+- **Admin UI:** `McpAccess.tsx` ("Claude access" button in Header, admin-only) — mint with a
+  label, copy-once key, ready-to-paste config per client (desktop / Claude Code / claude.ai),
+  turn-off list. Verified desktop 1440px + mobile 390px by screenshot, no h-overflow.
+- **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
+  the tools (which tool for which question + the non-negotiables). Plain-English setup doc
+  for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.
