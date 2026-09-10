@@ -71,19 +71,39 @@ describe("MCP tool registry", () => {
   });
 });
 
-describe("source-of-truth precedence", () => {
-  // KPR has a second, more authoritative connector for OWNED assets. That rule has to
-  // travel WITH the data — a client that never read a briefing must still get it — so
-  // it is asserted in the initialize instructions AND the playbook, not just the docs.
-  it("tells a client the internal owned-asset system outranks this library", () => {
-    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/internal system of record/i);
-    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/OUTRANKS/);
-    expect(KPR_PLAYBOOK).toMatch(/internal system of record/i);
-  });
-  it("also tells it where THIS library is the only source", () => {
+describe("what this library is", () => {
+  // The single most consequential framing error: reading this as KPR's PORTFOLIO. It is a
+  // market corpus — mostly deals KPR looked at and declined — so a corpus roll-up presented
+  // as KPR's holdings is not a wording slip, it is a false statement about the business.
+  it("tells a client it is a market corpus, not KPR's portfolio", () => {
     for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
-      expect(text).toMatch(/passed on/i);      // deals we looked at and declined
-      expect(text).toMatch(/sale-comp/i);
+      expect(text).toMatch(/NOT KPR's portfolio|not KPR's portfolio/);
+      expect(text).toMatch(/corpus/i);
+      expect(text).toMatch(/did NOT buy|declined|passed/i);
+    }
+  });
+  it("forbids presenting a corpus roll-up as KPR's own exposure", () => {
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/never.{0,60}(exposure|holdings|concentration)/is);
+    }
+  });
+});
+
+describe("Datex precedence", () => {
+  // The rule has to travel WITH the data — a client that never read a briefing must still
+  // get it — so it is asserted in the initialize instructions AND the playbook.
+  it("names Datex as authoritative for KPR-owned properties", () => {
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/Datex/);
+      expect(text).toMatch(/system of record/i);
+    }
+  });
+  it("splits by QUESTION, not only by property, so market questions keep the corpus", () => {
+    // Reaching for Datex on a market question shrinks the sample to KPR's own holdings —
+    // the exact opposite of why the corpus was built.
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/market question/i);
+      expect(text).toMatch(/sample/i);
     }
   });
   it("forbids averaging the two sources on a disagreement", () => {

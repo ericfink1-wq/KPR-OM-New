@@ -117,16 +117,31 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   exclusive / ROFR / early-term). Clause detail prefers the EXECUTED abstract over the OM
   lease-risk read, and each row says which. **`unknown` ≠ absent** — the tool and the skill
   both forbid reading silence as "no such clause."
-- **TWO SOURCES OF TRUTH (Eric, 9/10/26).** KPR has a SEPARATE internal MCP for
-  CURRENTLY-OWNED assets (live rent roll + accounting) that is more current than this site.
-  Precedence is baked in THREE places so it survives a fresh chat: `MCP_SERVER_INSTRUCTIONS`
-  (sent on every initialize), `KPR_PLAYBOOK` (get_knowledge), and an `authority` field
-  attached to every `status === "Owned"` record returned by search_deals / get_deal /
-  brand_lease_terms. Rule: internal system WINS on live owned-asset facts (rent, SF, suite,
-  dates, options exercised, occupancy, NOI, opex); THIS library wins and is the ONLY source
-  for passed deals, prospects, under-contract, sold, OM-marketed figures, sale comps, lease
-  abstracts, cross-deal benchmarks and the doctrine. Never average; name the source; flag
-  the gap. **Claude does NOT infer this — if the boundary shifts, update all three places.**
+- **THE SITE IS A MARKET CORPUS, NOT KPR'S PORTFOLIO (Eric, 9/10/26 — I had this wrong).**
+  Eric records essentially EVERY deal KPR looks at — bought, passed, evaluating, sold — to
+  accumulate enough data points to see averages/trends across tenants, brands, anchors,
+  markets, pricing and sales. **Most records are deals KPR did NOT buy, and that is the
+  point: they are the comparable set.** Never describe a deal here as "ours" unless
+  `status === "Owned"`, and never present a corpus roll-up (top tenants, median cap) as
+  KPR's exposure/holdings. The site's value is BREADTH (n) — it is the right sample for any
+  "is this normal / market / off-market" question.
+- **DATEX IS THE SECOND SOURCE, AND IT WINS ON OWNED ASSETS (Eric, 9/10/26).** Datex is
+  KPR's property-management system of record, live as its own MCP (`describe_entities`,
+  `read_records`, `aggregate_records` — no tool-name collision with ours). It holds
+  Buildings, Tenants (94 fields), TenantsMetrics (rent/NNN/TTM sales/sales PSF/delinquency/
+  rankings), **TenantOptions (option AND notice dates)**, SalesHistory, Occupancy (monthly),
+  Loans, Breakpoints, CommercialFinancials/FinancialGroups (budget vs actual), LeaseApp*
+  (the live leasing pipeline), VacantSuites, Spaces (incl. market rental rate).
+  **Split by QUESTION, not just by property:** a fact about a KPR property → Datex; a market
+  question ("is that rent normal?") → the site, which has the sample. Going to Datex for a
+  market question shrinks n to KPR's own holdings and defeats the corpus. On a disagreement
+  about an owned asset Datex wins — name the source, flag the gap, NEVER average.
+  Baked in THREE places so it survives a fresh chat: `MCP_SERVER_INSTRUCTIONS` (every
+  initialize), `KPR_PLAYBOOK` (get_knowledge), and an `authority` field on every
+  `status === "Owned"` record. **Claude does NOT infer this — if the boundary shifts, update
+  all three.** COROLLARY: do NOT build site tools for things Datex owns (critical dates /
+  option notices, mark-to-market on owned, portfolio stress test on owned) — build the
+  MARKET-INTELLIGENCE engines the site is uniquely able to serve.
 - **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
   the tools (which tool for which question + the non-negotiables). Plain-English setup doc
   for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).

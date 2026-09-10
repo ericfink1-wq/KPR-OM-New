@@ -1,13 +1,26 @@
 ---
 name: kpr-deal-library
-description: Query the KPR Centers deal library — the live offering-memorandum database of retail shopping centers — through its MCP connector. Use whenever a question touches KPR's own deals, centers, tenants, rents, lease rollover, sale comps, lease abstracts or portfolio analytics; whenever someone asks "what do we pay X elsewhere", "which of our centers…", "what rolls in 202X", "how does this rent compare to our library"; and before answering any retail-underwriting question that KPR's own data could ground. Also use when asked to write an IC memo, a deal screen, or a tenant/rollover analysis for a KPR center.
+description: Query the KPR Centers deal library — a broad MARKET CORPUS of retail shopping-center deals KPR has evaluated (mostly deals it looked at and did NOT buy), used to establish averages and trends across tenants, brands, anchors, markets, pricing and tenant sales. Use whenever a question is about what is NORMAL, TYPICAL, MARKET or OFF-MARKET in retail: "is this rent high for this brand", "what do these centers usually trade at", "how does this lease compare", "what have we seen for this anchor". Also use for any deal KPR does not own — passed deals, prospects, deals under contract, sold assets — and for sale comps, lease abstracts and KPR's underwriting doctrine. For facts about a property KPR OWNS, use Datex instead; this library holds only the acquisition-era snapshot of those.
 ---
 
 # KPR deal library
 
-The KPR Centers deal library is a live database of retail shopping centers — offering
-memoranda, rent rolls, tenant sales, lease abstracts and KPR's own underwriting. This
-skill tells you how to read it well.
+## What this actually is
+
+A **market corpus**, not a portfolio. KPR records essentially every retail deal it looks
+at — bought, passed, still evaluating, long since sold — specifically to accumulate enough
+data points to see averages and trends across tenants, brands, anchors, markets, pricing
+and sales.
+
+Most records here are deals KPR **looked at and did not buy**. That is the point: they are
+the comparable set. Its value is **breadth** — n — and it is the right sample whenever the
+question is what's normal, typical, market or off-market.
+
+Two things follow, and both matter:
+- **Never call a deal here "ours"** unless its status says Owned. Never present a
+  corpus-wide roll-up (top tenants by rent, state mix, median cap rate) as KPR's own
+  exposure, concentration or holdings — it describes the market KPR shops in.
+- **For KPR's actual properties, this is not the source.** See below.
 
 The tools arrive from the `kpr-deal-library` MCP connector. If they aren't available,
 say so plainly — the connector needs an access key from Eric — and don't answer from
@@ -40,27 +53,37 @@ Then work the specific question:
 Every tool is read-only. You cannot change the library through this connector — if
 someone asks you to fix a deal, tell them to do it in the app.
 
-## Which source wins (there is more than one)
+## Datex vs. this library
 
-KPR runs a **separate internal system of record for currently-owned assets** — the live
-rent roll and accounting. Where that connector is available to you as well:
+KPR runs **Datex**, its property-management system of record, as a separate connector.
+Datex holds the live picture of the properties KPR **owns**: current rents and NNN, budget
+vs actual, occupancy history, tenant sales, option and notice dates, loans, percentage-rent
+breakpoints, vacant suites, and the active leasing pipeline.
 
-- **For an owned asset, the internal system wins** on live facts: current rent, SF,
-  suite, commencement and expiry, options already exercised, current occupancy, NOI,
-  opex. This library's copy of an owned center is an acquisition-era snapshot and may be
-  stale. Owned records returned here carry an `authority` field saying so — read it.
-- **This library wins, and is the only source, for everything that system never sees:**
-  deals KPR evaluated and passed on, live prospects, deals under contract, sold assets,
-  the seller-marketed OM figures, the sale-comp database, the lease abstracts stored
-  here, the cross-deal benchmarks, and KPR's underwriting doctrine.
-- A **benchmark spans the whole library**, so it stays the right comparison set even when
-  a specific owned location's current rent should come from the internal system.
-- **On a disagreement**, use the internal system's figure for the owned asset, say which
-  source each number came from, and flag the gap. Never average them. Never silently
-  pick one.
+**Split by question, not just by property:**
 
-If the internal system isn't connected, use this library and say that owned-asset figures
-are as-of the documents behind them, not today's rent roll.
+| Question | Source |
+|---|---|
+| "What does our Ulta at Northgate pay?" | **Datex** — a fact about a KPR property |
+| "Is that rent normal for Ulta?" | **This library** — a market question, and it has the sample |
+| "When is their option notice due?" | **Datex** — it tracks option and notice dates |
+| "What have Ulta boxes traded at?" | **This library** — sale comps across the corpus |
+| "What's the co-tenancy trigger structure?" | **This library** — it holds the parsed clause trees and abstracts |
+
+The strongest pattern is the two together: **take the subject property's own figure from
+Datex, then benchmark it against this corpus.** That's what the corpus is for, and Datex
+structurally cannot do it — it only knows KPR's own buildings.
+
+**Rules:**
+- For any live fact about a KPR-owned property, go to Datex first. This library's copy is
+  the acquisition-era snapshot and doesn't track what happened since. Owned records here
+  carry an `authority` field saying exactly that — read it.
+- **Don't reach for Datex on a market question.** It shrinks the sample to KPR's own
+  holdings, which defeats the reason this corpus exists.
+- **On a disagreement about an owned property, Datex wins.** Say which source each figure
+  came from and flag the gap. Never average them. Never silently pick one.
+- If Datex isn't connected, use this library and say plainly that owned-asset figures are
+  as-of the documents behind them, not today's rent roll.
 
 ## Reviewing a lease against precedent
 

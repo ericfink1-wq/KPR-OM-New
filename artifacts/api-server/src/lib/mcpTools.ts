@@ -108,11 +108,14 @@ function spread(values: number[]) {
 // that returns an owned deal says so inline, so the precedence travels WITH the data
 // instead of depending on the reader having remembered a rule from somewhere else.
 const OWNED_AUTHORITY_NOTE =
-  "OWNED ASSET. If KPR's internal system of record (the owned-asset rent-roll/accounting " +
-  "connector) is available to you, IT OVERRIDES this record for live roster and financial " +
-  "facts — current rent, SF, suite, commencement/expiry, options exercised, current " +
-  "occupancy, NOI and opex. What you have here is the acquisition-era snapshot and may be " +
-  "stale. Say which source you used, and flag a disagreement rather than splitting it.";
+  "KPR-OWNED ASSET — DATEX IS AUTHORITATIVE, NOT THIS RECORD. Datex is KPR's " +
+  "property-management system of record and holds the live picture of this property: " +
+  "current rents and NNN, budget vs actual, occupancy history, tenant sales, option and " +
+  "notice dates, loans, percentage-rent breakpoints, vacant suites and the active leasing " +
+  "pipeline. What you have here is the ACQUISITION-ERA SNAPSHOT taken from the offering " +
+  "documents at the time of the deal — it does not track anything that has happened since. " +
+  "Take every live fact from Datex. Use this record only for what Datex has no reason to " +
+  "hold: the original marketed underwriting, and this deal's place in the market corpus.";
 
 function authorityFor(d: DealData): string | undefined {
   return String(d.status ?? "") === "Owned" ? OWNED_AUTHORITY_NOTE : undefined;
@@ -167,10 +170,11 @@ const libraryOverview: McpToolDef = {
   name: "library_overview",
   title: "Library overview",
   description:
-    "START HERE. What is in the KPR deal library right now: how many shopping-center deals, " +
-    "the states and center types covered, portfolio totals (GLA, NOI, occupancy), the biggest " +
-    "tenants by rent, and a glossary of the field names used everywhere else. Call this first " +
-    "when you don't yet know what the library contains.",
+    "START HERE. What is in the KPR MARKET CORPUS right now: how many retail deals have been " +
+    "recorded, the states and center types covered, aggregate size and the spread of headline " +
+    "metrics, which tenant brands recur most often across the deals seen, and a glossary of " +
+    "the field names used everywhere else. These are deals KPR LOOKED AT — mostly not deals it " +
+    "owns — so read the roll-ups as market frequency, never as KPR's holdings.",
   inputSchema: { type: "object", properties: {} },
   handler: async () => {
     const deals = await loadActiveDeals();
@@ -216,12 +220,17 @@ const libraryOverview: McpToolDef = {
         dealsWithCapRate: caps.length,
       },
       note:
-        "Cap rate and asking price are absent on most deals — retail centers are often marketed " +
-        "unpriced. That is expected, not a data gap.",
+        "This is a MARKET CORPUS, not KPR's portfolio: most of these are deals KPR evaluated and " +
+        "did not buy. Read every roll-up below as what the market looks like across the deals " +
+        "seen, never as KPR's own exposure. For KPR's actual properties, use Datex. Also: cap " +
+        "rate and asking price are absent on most deals because retail is often marketed " +
+        "unpriced — expected, not a data gap.",
       byState: [...byState.entries()].sort((a, b) => b[1] - a[1]).map(([state, count]) => ({ state, count })),
       byCenterType: [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([type, count]) => ({ type, count })),
       byStatus: [...byStatus.entries()].sort((a, b) => b[1] - a[1]).map(([status, count]) => ({ status, count })),
-      topTenantsByRent: topTenants,
+      // Frequency and rent WEIGHT across the corpus — how often a brand shows up in the
+      // deals KPR sees. This is a market-presence signal, NOT KPR's tenant concentration.
+      mostRecurringTenantsAcrossDeals: topTenants,
       fieldGlossary: {
         deal: "propertyName, address, city, state, centerType, totalSF (GLA), occupancy (%), walt (yrs), weightedAvgRentPSF, capRate (%), noi ($), askingPrice ($), grossPotentialRent ($), dealScore, redFlags, upsideItems, keyAssumptions, notes (underwriting narrative), tenants[]",
         tenant: "name (brand only), sf, rentPerSF, annualRent (BASE RENT ONLY), leaseStart, leaseExpiry, remainingTermYears, leaseType, rentBumps, rentSchedule, renewalOptions, salesPSF, salesYear, occupancyCost, expenseReimbursements, percentageRent, otherRent, creditRating, isAnchor, isNAP, isDark, parentCompany",
@@ -1088,22 +1097,32 @@ Before analyzing anything, call **get_knowledge** once: it returns KPR's standin
 
 Call **library_overview** to see what's in the library, then **search_deals** → **get_deal** to work a specific center.
 
-**Which source wins.** KPR runs a SEPARATE internal system of record for the assets it
-owns today (live rent roll and accounting). If that connector is also available to you,
-it OUTRANKS this library on live facts for an OWNED asset — current rent, SF, suite,
-commencement and expiry, options already exercised, current occupancy, NOI and opex.
-This library's copy of an owned center is an acquisition-era snapshot and can be stale;
-every owned record returned here says so in an \`authority\` field.
+**What this library is.** It is NOT KPR's portfolio. It is a deliberately broad MARKET
+CORPUS: KPR records essentially every retail deal it looks at — bought, passed, still
+evaluating, sold — to build up enough data points to see averages and trends across
+tenants, brands, anchors, markets, pricing and sales. Most records here are deals KPR
+looked at and did NOT buy, and that is the point: they are the comparable set. Never
+describe a deal here as "ours" or "our portfolio" unless its status says Owned, and never
+present a corpus-wide roll-up as KPR's own exposure or holdings.
 
-This library is the ONLY source for everything the internal system never sees, and it
-wins there: deals KPR looked at and passed on, prospects and deals under evaluation,
-sold assets, the seller-marketed figures from each OM, the sale-comp database, the lease
-abstracts stored here, the cross-deal benchmarks (they span the whole library, owned and
-not), and KPR's underwriting doctrine.
+**Which source wins.** KPR also runs Datex, its property-management system of record, as a
+separate connector. Datex holds the live, detailed picture of the properties KPR actually
+OWNS — current rents and NNN, budgets, occupancy history, tenant sales, option and notice
+dates, loans, leasing pipeline. For any fact about a KPR-owned property, go to Datex
+first; it is more current and more complete than this library will ever be. Owned records
+here carry an \`authority\` field saying so.
 
-When the two disagree on an owned asset: take the internal system's number, say which
-source each figure came from, and flag the disagreement. Never average them, and never
-quietly pick one.
+But the split is by QUESTION, not only by property. Datex knows KPR's buildings; it does
+NOT know the hundreds of deals KPR evaluated and declined, which is where the market
+signal lives. So:
+- A fact about a KPR property ("what does our Ulta pay?") → Datex.
+- A market question ("is that rent normal for Ulta?") → THIS library, which has the sample.
+  Take the subject figure from Datex, then benchmark it against this corpus.
+Going to Datex for a market question shrinks the sample to KPR's own holdings, which
+defeats the reason this corpus exists.
+
+On a disagreement about an owned property, Datex wins. Name the source of each figure and
+flag the gap — never average them, never silently pick one.
 
 Ground rules for every answer:
 - Accuracy over speed. If a figure isn't in the data, say it isn't captured — never invent a precise-looking number.
