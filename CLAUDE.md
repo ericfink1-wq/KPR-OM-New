@@ -393,6 +393,21 @@ cd ../api-server && npx tsc --noEmit | grep -v TS6305 | grep "error TS"
 - The api-server has **pre-existing** `TS7006 implicit any` errors in compBenchmark.ts / analytics.ts / comps.ts / deals.ts(list handler) / tenantIndex.ts. Those are not yours — the runtime build tolerates them. Only worry about NEW errors your change introduces.
 - A clean change adds **zero** new errors.
 
+## DB tables: the runtime DDL and the drizzle declaration MUST match (learned 9/10/26 — it deleted live data)
+Most tables here are provisioned TWICE: at runtime by an `ensure*Table()` helper
+(`CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`), and again as a
+drizzle declaration in `lib/db/src/schema/` so Replit's publish diff knows the table belongs.
+**If the two disagree, the diff can't ALTER across the gap and proposes `DROP TABLE "<t>" CASCADE`
+— every row gone on publish.** That is not hypothetical: `mcp_api_keys` was declared `user_id NOT NULL`
+while the runtime created it nullable (an `ADD COLUMN IF NOT EXISTS` can't be NOT NULL over existing
+rows), and declared neither of the two indexes the runtime creates. Eric saw the warning, approved it,
+and his live MCP access key was destroyed.
+- Adding a table or column means updating **BOTH** sides, matching **nullability and indexes**, not just names.
+- A NOT NULL invariant that the runtime can't enforce is enforced in **code, failing closed** (e.g.
+  `verifyMcpKey` rejects a key with a null `userId`), never by declaring NOT NULL the database doesn't have.
+- `schemaRuntimeDrift.test.ts` (api-server) parses the real runtime DDL and holds every declaration to it,
+  table by table. If it fails, do NOT "fix" the test — a red test here means a publish would drop data.
+
 ## Cardinal rules
 1. **Every UI/site change must work on desktop AND mobile** — by default, unprompted. Layouts reflow for narrow screens (grids/strips/tables collapse sensibly, not just shrink), finger-friendly tap targets, compact formatting, working touch interactions (modals, dropdowns, toggles). Wide tables (comps/tenants) break most easily on phones — test them.
 2. **Verify field names against `artifacts/om-database/src/lib/idb.ts`** before writing or reading any Deal/Tenant JSON. Wrong field names = silent import failure. Never rely on memory for field names.
