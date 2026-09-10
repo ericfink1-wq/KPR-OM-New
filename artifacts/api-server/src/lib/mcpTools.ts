@@ -1026,15 +1026,45 @@ const dataQuality: McpToolDef = {
       const row = rows.find(r => r.id === dealId);
       if (!row) return { error: "not_found", message: `No deal with id "${dealId}".` };
       const d = row.data as DealData;
-      const flags = auditExtraction(d);
-      return {
-        dealId, propertyName: nameOf(d),
-        issueCount: flags.length,
-        high: flags.filter(f => f.severity === "high").length,
-        issues: flags.map(f => ({
+
+      // Mirror the portfolio summary exactly. Previously this ran only the fresh
+      // deterministic audit, so the two modes of the same tool disagreed: the portfolio
+      // view named a deal as having an open issue and then asking about that deal returned
+      // "0 issues". Airport Square had two unresolved captures — a WALT and an address
+      // conflict from a re-uploaded OM — and the per-deal view showed a clean bill.
+      const stored = Array.isArray(d.reviewQuestions) ? (d.reviewQuestions as DealData[]) : [];
+      const resolvedIds = new Set(stored.filter(q => q?.resolvedAt).map(q => String(q?.id ?? "")));
+      const fresh = auditExtraction(d).filter(q => !resolvedIds.has(q.id));
+      const captures = stored.filter(q => {
+        if (q?.resolvedAt || !q?.question) return false;
+        const id = String(q?.id ?? "");
+        // audit-* are recomputed fresh above; anomaly-* are a client-side computation.
+        return !id.startsWith("audit-") && !id.startsWith("src-") && !id.startsWith("anomaly-");
+      });
+      const sevOf = (v: unknown) => (v === "high" || v === "medium" || v === "low" ? v : "medium");
+      const all = [
+        ...fresh.map(f => ({
+          source: "deterministic tie-out (recomputed now)",
           check: AUDIT_CHECK_LABELS[auditCheckKey(f.id)] || f.field,
           severity: f.severity, field: f.field, detail: f.question,
         })),
+        ...captures.map(q => ({
+          source: "stored capture awaiting review",
+          check: String(q.field ?? "Captured value"),
+          severity: sevOf(q.severity), field: String(q.field ?? ""), detail: String(q.question ?? ""),
+        })),
+      ];
+      return {
+        dealId, propertyName: nameOf(d),
+        issueCount: all.length,
+        high: all.filter(f => f.severity === "high").length,
+        breakdown: { deterministicTieOuts: fresh.length, storedCaptures: captures.length },
+        issues: all,
+        note: all.length === 0
+          ? "No open issues: the arithmetic tie-outs pass and nothing is awaiting review."
+          : "Two kinds of finding here. A DETERMINISTIC TIE-OUT is arithmetic that contradicts " +
+            "itself and is recomputed on every call — treat it as fact. A STORED CAPTURE is a " +
+            "question raised at import that nobody has answered yet, so it may already be stale.",
       };
     }
     const summary = summarizePortfolioIssues(rows.map(r => ({ id: r.id, data: r.data as DealData })));
