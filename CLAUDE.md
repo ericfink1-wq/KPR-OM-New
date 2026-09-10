@@ -205,6 +205,20 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
+- **WHY THE COMP DATABASE IS EMPTY — DIAGNOSED (9/10/26).** `comp_benchmark` returned
+  `insufficient` for **0 of 36 sampled deals — none can be benchmarked at all.** Root cause is
+  TWO things, both in extraction, neither in the import gate: (1) `comparableSales` is
+  populated on only **6 of 301 deals (2%)** — the sale-comp page is simply not being captured;
+  (2) **all 29 captured rows are the OM's COMPETITION SET, not sale comps** — every one carries
+  name/market/address/occupancy/sf and **ZERO carry salePrice, saleDate or capRate**, so the
+  gate rejects 29/29, correctly. The prompt had a schema line for the field and NO RULE saying
+  what belongs in it. Added as **rent-roll lesson 12** in `EXTRACTION_PROMPT`: a comp must have
+  actually TRADED (price and/or date), never the "Competitive Set"/"Nearby Centers"/trade-area
+  map, and a row with neither price nor date is OMITTED rather than emitted as a shell.
+  **This only fixes FUTURE uploads** — the existing 72 comps (43 owned, 29 OM-sourced) stay as
+  they are, and 18 of them carry no state at all, which is why geographic matching finds
+  nothing. NOTE: the rule was first inserted into ROSTER_ANALYSIS_PROMPT by mistake; the test
+  caught it. Always confirm which template literal a prompt edit lands in.
 - **ONE BRAND CAN BE SEVERAL PRODUCTS — `formatWarning` (9/10/26).** Found by scanning the
   real corpus: Bank of America appears as 4,000 SF BRANCHES and as 60 SF ATMs, and rent PSF is
   only comparable within a format. Unfiltered the ATMs pushed BoA's p75 to $94.33 and its max

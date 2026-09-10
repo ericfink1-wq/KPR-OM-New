@@ -118,3 +118,27 @@ describe("format dispersion detection", () => {
     expect(inBand(216)).toBe(false);    // ATM
   });
 });
+
+// ── sale-comp extraction guardrail ──────────────────────────────────────────
+// The comp database held 72 rows and could not benchmark a single deal. Two causes,
+// found by scanning the corpus: comparableSales was captured on only 2% of OMs, and all
+// 29 captured rows were the OM's COMPETITION set — neighbouring centres with SF and
+// occupancy but no price, date or cap rate. The import gate rejected every one, correctly.
+// The prompt had a schema line for the field and no rule telling the model what belongs in it.
+import { EXTRACTION_PROMPT } from "../extract";
+
+describe("sale-comp extraction rule", () => {
+  it("tells the model a comp must have actually traded", () => {
+    expect(EXTRACTION_PROMPT).toMatch(/SALE COMPARABLES/);
+    expect(EXTRACTION_PROMPT).toMatch(/SALE PRICE and\/or a SALE DATE/i);
+  });
+  it("names the competition sections that must NOT go there", () => {
+    for (const s of ["Competitive Set", "Nearby Centers", "Competition"]) {
+      expect(EXTRACTION_PROMPT).toContain(s);
+    }
+  });
+  it("says to omit a row with neither price nor date rather than emit a shell", () => {
+    expect(EXTRACTION_PROMPT).toMatch(/OMIT IT ENTIRELY/);
+    expect(EXTRACTION_PROMPT).toMatch(/empty comparableSales array is the correct answer/i);
+  });
+});
