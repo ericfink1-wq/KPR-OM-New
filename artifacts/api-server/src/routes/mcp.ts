@@ -1,12 +1,14 @@
 // MCP (Model Context Protocol) endpoint — how an outside Claude client reads this
 // deal library as a live tool, instead of Eric pasting exports into a chat.
 //
-// AUTH: this route deliberately does NOT use the site's session cookie. An MCP
-// client can't hold a browser session, so access is gated by a minted API key
-// (lib/mcpKeys.ts) that an admin creates and can revoke at any time. No key, no
-// access — the endpoint is useless to anyone who hasn't been given one. Because of
-// that it is mounted BEFORE the session/2FA gate in routes/index.ts; it has its own,
-// stricter door.
+// AUTH: this route deliberately does NOT use the site's session cookie — an MCP client
+// cannot hold a browser session. Access is gated by a minted API key (lib/mcpKeys.ts)
+// that a member creates FOR THEMSELVES after passing password + 2FA, and that is bound
+// to their account: every request re-checks that the owning account is still approved, so
+// removing someone's login removes their MCP access with it. Nobody can mint a key for
+// anyone else. Because it carries its own, stricter door, this router is mounted BEFORE
+// the session/2FA gate in routes/index.ts; key MANAGEMENT (mcpAdminRouter) is mounted
+// after it, so it still requires a signed-in, 2FA-verified member.
 //
 // SCOPE: every tool is read-only (see lib/mcpTools.ts). A key can read the library;
 // it can never write to it, delete anything, or trigger a token-spending AI call.
@@ -217,6 +219,11 @@ mcpAdminRouter.post("/mcp-keys", requireAuth, async (req, res) => {
     // shown again. The UI must make the admin copy it now.
     res.json({ key: created.key, summary: created.summary });
   } catch (err) {
+    // A hit limit is the caller's to fix, not a server fault — say what to do about it.
+    if ((err as { code?: string })?.code === "key_limit_reached") {
+      res.status(409).json({ error: (err as Error).message, code: "key_limit_reached" });
+      return;
+    }
     logger.error({ err }, "Failed to create MCP key");
     res.status(500).json({ error: "Failed to create access key" });
   }

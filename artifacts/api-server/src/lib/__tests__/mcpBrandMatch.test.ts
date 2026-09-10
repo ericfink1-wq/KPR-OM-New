@@ -75,3 +75,17 @@ describe("vacancy is not a brand", () => {
     expect(isVacantName("Available (Adjacent to Anthropologie)")).toBe(true);
   });
 });
+
+// ── per-user key cap ────────────────────────────────────────────────────────
+import { MAX_ACTIVE_KEYS_PER_USER } from "../mcpKeys";
+
+describe("key cap", () => {
+  // A person has a laptop, a desktop, maybe a phone. The cap stops both the accidental
+  // case — re-minting instead of reusing, leaving live credentials nobody tracks — and an
+  // authenticated user filling the table. Verified live: minting stops at exactly the cap
+  // with an actionable message, revoking frees a slot, and other accounts are unaffected.
+  it("is generous enough for real use and low enough to stay accountable", () => {
+    expect(MAX_ACTIVE_KEYS_PER_USER).toBeGreaterThanOrEqual(5);
+    expect(MAX_ACTIVE_KEYS_PER_USER).toBeLessThanOrEqual(50);
+  });
+});

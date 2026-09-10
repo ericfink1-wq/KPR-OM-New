@@ -268,7 +268,12 @@ export async function apiListMcpKeys(all = false): Promise<{ keys: McpKeySummary
 // Always mints for the SIGNED-IN user — there is no way to mint on someone else's behalf.
 export async function apiCreateMcpKey(name: string, expiresInDays?: number | null): Promise<{ key: string; summary: McpKeySummary }> {
   const r = await apiFetch("/mcp-keys", { method: "POST", body: JSON.stringify({ name, expiresInDays: expiresInDays ?? null }) });
-  if (!r.ok) throw new Error("Couldn't create the access key");
+  if (!r.ok) {
+    // The server explains a hit key limit in terms the person can act on — pass that
+    // through rather than replacing it with a generic failure they can do nothing about.
+    const body = await r.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error || "Couldn't create the access key");
+  }
   return r.json() as Promise<{ key: string; summary: McpKeySummary }>;
 }
 

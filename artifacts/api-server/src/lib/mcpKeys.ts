@@ -20,6 +20,13 @@ import { randomBytes, createHash, timingSafeEqual } from "crypto";
 
 export const KEY_PREFIX = "kpr_mcp_";
 
+// A person has a laptop, a desktop, maybe a phone — not twenty. Capping active keys per
+// account stops both the accidental case (someone re-minting instead of reusing, leaving a
+// trail of live credentials nobody tracks) and the deliberate one (an authenticated user
+// filling the table). Generous enough that nobody legitimate will hit it; low enough that
+// the admin's list stays readable and every live key is one somebody can account for.
+export const MAX_ACTIVE_KEYS_PER_USER = 20;
+
 // SHA-256 is the right primitive here (not scrypt, which guards low-entropy human
 // passwords): the key is 32 bytes of CSPRNG randomness, so there is nothing to
 // brute-force, and the hash has to be cheap enough to run on every MCP request.
@@ -104,6 +111,15 @@ export async function createMcpKey(opts: {
   expiresInDays?: number | null;
 }): Promise<{ key: string; summary: McpKeySummary }> {
   if (!opts.userId) throw new Error("createMcpKey requires the owning userId");
+  await ensureMcpKeysTable();
+  const live = await db.select({ id: mcpKeysTable.id }).from(mcpKeysTable)
+    .where(and(eq(mcpKeysTable.userId, opts.userId), isNull(mcpKeysTable.revokedAt)));
+  if (live.length >= MAX_ACTIVE_KEYS_PER_USER) {
+    throw Object.assign(
+      new Error(`You already have ${live.length} active keys (the limit is ${MAX_ACTIVE_KEYS_PER_USER}). Turn off one you no longer use before creating another.`),
+      { code: "key_limit_reached" },
+    );
+  }
   await ensureMcpKeysTable();
   const name = (opts.name || "").trim().slice(0, 120) || "Unnamed key";
   // 32 bytes of entropy, base64url — long enough that guessing is hopeless.

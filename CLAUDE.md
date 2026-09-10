@@ -205,6 +205,18 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
+- **MULTI-USER AUTHORIZATION VERIFIED (9/10/26).** Two real accounts (admin + non-admin
+  member), full matrix: key lists are isolated (member sees only their own; `?all=1` does NOT
+  escalate for a non-admin); a member CANNOT revoke or delete another member's key (403) while
+  an admin can revoke anyone's; a member CAN revoke their own; **an impersonation attempt
+  (passing `userId` in the POST body) is ignored — the key binds to the SESSION's user**; the
+  2FA gate blocks key minting entirely (403, zero keys created) for an approved member who
+  hasn't enrolled; and an MCP key correctly SURVIVES a browser logout (it is not a session)
+  while the cookie-authed routes go 401. **NEW: `MAX_ACTIVE_KEYS_PER_USER = 20`** — nothing
+  previously stopped one account minting unlimited live credentials; minting now stops at the
+  cap with an actionable message, revoking frees a slot, and other accounts are unaffected.
+  UI re-verified by screenshot for BOTH roles at 1440px and 390px: admin sees the
+  "Show everyone's" toggle and per-key owner emails, a member sees neither; no h-overflow.
 - **`GET /api/mcp` HUNG FOREVER — fixed (9/10/26).** `router.all` sent GET into the
   Streamable-HTTP transport, which opens a server→client notification stream. This server is
   STATELESS and never sends unsolicited notifications, so that stream just sat there holding
