@@ -221,3 +221,51 @@ describe("knowledge pack", () => {
     expect(renderKnowledgePack(pack)).not.toContain("The House View");
   });
 });
+
+// ── response budget ─────────────────────────────────────────────────────────
+// Measured against the real 301-deal corpus: search_deals once returned 174 KB (~45k
+// tokens) by default and 1.2 MB (~318k tokens) at its old max — more than a whole
+// context window from a single call. Every list-shaped result is now capped.
+import { capRows, emittedSize, RESPONSE_BUDGET_BYTES } from "../mcpTools";
+
+describe("response budget", () => {
+  const advice = "narrow the query";
+  it("passes a small result through untouched", () => {
+    const rows = [{ a: 1 }, { a: 2 }];
+    const out = capRows({ matched: 2 }, "rows", rows, advice);
+    expect(out.rows).toEqual(rows);
+    expect(out.truncated).toBeUndefined();
+  });
+  it("trims an oversized result to fit and says so", () => {
+    const rows = Array.from({ length: 2000 }, (_, i) => ({ i, blob: "x".repeat(200) }));
+    const out = capRows({ matched: rows.length }, "rows", rows, advice);
+    const kept = out.rows as unknown[];
+    expect(kept.length).toBeLessThan(rows.length);
+    expect(emittedSize(out)).toBeLessThanOrEqual(RESPONSE_BUDGET_BYTES);
+    const t = out.truncated as Record<string, unknown>;
+    expect(t.of).toBe(2000);
+    expect(t.returned).toBe(kept.length);
+    expect(t.advice).toBe(advice);
+  });
+  it("keeps the summary fields when it trims, so totals survive truncation", () => {
+    // A truncated response must still carry the true portfolio-wide totals — otherwise a
+    // caller sums the visible rows and reports a number that is quietly wrong.
+    const rows = Array.from({ length: 5000 }, (_, i) => ({ i, blob: "y".repeat(120) }));
+    const out = capRows({ matched: 5000, totalAnnualBaseRent: 12345678 }, "rows", rows, advice);
+    expect(out.matched).toBe(5000);
+    expect(out.totalAnnualBaseRent).toBe(12345678);
+  });
+  it("budgets against the EMITTED shape, not compact JSON", () => {
+    // The handler emits indented JSON, ~17% larger than compact. Budgeting against the
+    // compact form silently overshoots by that much on every capped response.
+    const v = { a: [1, 2, 3], b: { c: "d" } };
+    expect(emittedSize(v)).toBe(JSON.stringify(v, null, 2).length);
+    expect(emittedSize(v)).toBeGreaterThan(JSON.stringify(v).length);
+  });
+  it("degrades honestly when the summary alone busts the budget", () => {
+    const huge = { note: "z".repeat(RESPONSE_BUDGET_BYTES + 1000) };
+    const out = capRows(huge, "rows", [{ a: 1 }], advice);
+    expect((out.rows as unknown[]).length).toBe(0);
+    expect((out.truncated as Record<string, unknown>).returned).toBe(0);
+  });
+});

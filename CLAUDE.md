@@ -182,6 +182,29 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
+- **RESPONSE BUDGET — measured against the REAL 301-deal corpus (9/10/26).** Everything had
+  only ever been tested on 5 synthetic deals; against the real export it was unusable.
+  `search_deals` returned **174 KB (~45k tokens) BY DEFAULT** and **1.24 MB (~318k tokens)**
+  at its old max — more than a whole context window from one call. Root cause: `dealScore` is
+  a rich object (grade + rationale + strengths + risks; median 5.5 KB, max 15 KB), and
+  `dealSummary` carried the whole thing on EVERY row. Fixes: list rows now return `grade`
+  only; `capRows()` trims any list-shaped result to `RESPONSE_BUDGET_BYTES` (60 KB ≈ 15k tok)
+  and reports `truncated {returned, of, advice}`; **summary/total fields are computed over ALL
+  matches and survive truncation** so a trimmed response never yields a wrong total; `get_deal`
+  gained `tenantDetail` (compact = 19 of ~44 fields, default) and bounds the WHOLE response.
+  Limits cut: search_deals 25/200→20/60, search_tenants 50/500→50/150, brand_lease_terms
+  40/200→15/60, sale_comps 40/300→40/120. **Budget with `emittedSize()`** — the handler emits
+  `JSON.stringify(x,null,2)`, ~17% larger than compact, so budgeting against compact JSON
+  silently overshoots. RESULT: worst case now 52 KB (~13k tok), everything ≤250ms except
+  tenant_benchmarks (~850ms, 5-min cached). **Re-measure after adding any tool.**
+- **VACANCY IS LABELLED INCONSISTENTLY (found in the real corpus).** 513 rows begin "Vacant"
+  but a further **141 begin "Available" — none carrying rent, avg 4,801 SF** — plainly empty
+  suites. The old `/^vacant/i` filter counted all 141 as operating tenants and inflated every
+  roster denominator. Now `isVacantName()` (mcpTools.ts) matches vacant/vacancy/available/
+  avail/white box/dark space **with a trailing `\b`** — without it "Vacanti Salon" and
+  "Availa Bank" (real tenants) get written off as vacancy; a test pins both directions.
+  `search_tenants` also flags `isVacantSuite` so vacancy is visible rather than silently
+  filtered. NOTE for Eric: 3 "Vacant*" rows DO carry rent — likely mislabeled, worth a look.
 - **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
   the tools (which tool for which question + the non-negotiables). Plain-English setup doc
   for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).

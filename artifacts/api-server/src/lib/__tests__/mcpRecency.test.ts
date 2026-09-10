@@ -93,3 +93,30 @@ describe("weighted spread", () => {
     expect(weightedSpread([], now)).toBeNull();
   });
 });
+
+// ── vacancy labelling ───────────────────────────────────────────────────────
+// Measured on the real 301-deal corpus: 513 rows begin "Vacant" and a further 141 begin
+// "Available", none of which carry rent. Matching only /^vacant/ counted those 141 as
+// operating tenants and inflated every denominator built on the roster.
+import { isVacantName } from "../mcpTools";
+
+describe("vacancy name matching", () => {
+  it("catches the labels the corpus actually uses", () => {
+    for (const n of ["Vacant", "VACANT", "vacant suite 12", "Available", "AVAILABLE",
+                     "available - 2,400 SF", "Vacancy", "White Box", "Dark Space"]) {
+      expect(isVacantName(n), `${n} should read as vacant`).toBe(true);
+    }
+  });
+  it("does not swallow real tenants whose names merely start similarly", () => {
+    for (const n of ["Availity Health", "Vacanti Salon", "Availa Bank", "Darkhorse Tavern",
+                     "Starbucks", "PetSmart", "Five Below"]) {
+      expect(isVacantName(n), `${n} is a real tenant`).toBe(false);
+    }
+  });
+  it("handles leading whitespace and empty values", () => {
+    expect(isVacantName("   Vacant")).toBe(true);
+    expect(isVacantName(null)).toBe(false);
+    expect(isVacantName(undefined)).toBe(false);
+    expect(isVacantName("")).toBe(false);
+  });
+});

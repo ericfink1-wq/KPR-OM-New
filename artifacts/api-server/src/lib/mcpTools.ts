@@ -43,6 +43,53 @@ const clampLimit = (v: unknown, dflt: number, max: number): number => {
   return Math.max(1, Math.min(max, Math.round(n)));
 };
 
+// ─── response budget ────────────────────────────────────────────────────────
+// Measured against the real 301-deal corpus: search_deals at its old default
+// returned 174 KB (~45k tokens) and at limit 200 returned 1.2 MB (~318k tokens) — more
+// than a whole context window, from one call. A tool that floods the caller is worse
+// than no tool, so every list-shaped result is capped and says so when it trims.
+// ~60 KB ≈ 15k tokens: big enough for a real answer, small enough to leave room to think.
+export const RESPONSE_BUDGET_BYTES = 60_000;
+
+// Measure exactly what goes on the wire. The tool handler emits JSON.stringify(x, null, 2)
+// for readability, which runs ~17% larger than the compact form — so budgeting against
+// compact JSON silently overshoots by that much. Always measure the emitted shape.
+export const emittedSize = (v: unknown): number => JSON.stringify(v, null, 2).length;
+
+// Trim `rows` until the whole payload fits the budget, then explain the trim in-band so
+// the caller knows it is looking at a slice and how to narrow the question instead.
+export function capRows<T>(
+  payload: Record<string, unknown>,
+  rowsKey: string,
+  rows: T[],
+  advice: string,
+  budget = RESPONSE_BUDGET_BYTES,
+): Record<string, unknown> {
+  const size = emittedSize;
+  let kept = rows;
+  const base = { ...payload, [rowsKey]: [] as T[] };
+  const overhead = size(base);
+  if (overhead >= budget) {
+    // Even with no rows the wrapper is over budget — return an honest, tiny result
+    // rather than something the caller cannot use.
+    return { ...base, truncated: { returned: 0, of: rows.length, reason: "summary alone exceeds the response budget", advice } };
+  }
+  while (kept.length > 0 && overhead + size(kept) > budget) {
+    // Halve first for speed on very large sets, then step down to land close to the cap.
+    kept = kept.length > 20 ? kept.slice(0, Math.floor(kept.length * 0.6)) : kept.slice(0, kept.length - 1);
+  }
+  const out: Record<string, unknown> = { ...payload, [rowsKey]: kept };
+  if (kept.length < rows.length) {
+    out.truncated = {
+      returned: kept.length,
+      of: rows.length,
+      reason: `the full set exceeded this tool's ${Math.round(budget / 1024)} KB response budget`,
+      advice,
+    };
+  }
+  return out;
+}
+
 type DealData = Record<string, unknown>;
 interface DealRecord { id: string; data: DealData; updatedAt: Date }
 
@@ -72,6 +119,27 @@ const OPT_IN_FIELDS: Record<string, string> = {
   comparableSales: "includeComps",
 };
 
+// A real tenant row carries 44 fields and ~1.3 KB. On a 126-tenant centre that is 160 KB
+// of roster in one response. Every field is meaningful, so nothing is dropped on
+// principle — but a caller asking "tell me about this deal" needs the shape of the
+// roster, not every clause of it. The compact projection keeps what answers most
+// questions; the full row is one explicit flag away, and search_tenants({dealId}) always
+// returns everything.
+const COMPACT_TENANT_FIELDS = [
+  "name", "suite", "sf", "rentPerSF", "annualRent", "leaseStart", "leaseExpiry",
+  "remainingTermYears", "leaseType", "isAnchor", "isNAP", "isDark", "creditRating",
+  "salesPSF", "salesYear", "occupancyCost", "renewalOptions", "rentBumps", "screens",
+] as const;
+
+function compactTenant(t: DealData): DealData {
+  const out: DealData = {};
+  for (const k of COMPACT_TENANT_FIELDS) {
+    const v = t[k];
+    if (v !== null && v !== undefined && v !== "") out[k] = v;
+  }
+  return out;
+}
+
 function trimDeal(d: DealData, opts: Record<string, boolean>): DealData {
   const out: DealData = {};
   for (const [k, v] of Object.entries(d)) {
@@ -85,6 +153,16 @@ function trimDeal(d: DealData, opts: Record<string, boolean>): DealData {
 }
 
 const nameOf = (d: DealData) => String(d.propertyName || d.fileName || "Untitled");
+
+// Vacancy is labelled inconsistently across the corpus. On the real 301-deal set:
+// 513 rows begin "Vacant", 141 begin "Available" (and none of those 141 carry rent, at an
+// average 4,800 SF — unmistakably empty suites). Matching only /^vacant/ silently counted
+// those 141 as operating tenants, inflating tenant counts and the denominators built on
+// them. Match the whole family.
+// The trailing \b matters: without it "Vacanti Salon" and "Availa Bank" — real tenants —
+// would be written off as empty suites.
+const VACANT_NAME = /^\s*(vacant|vacancy|available|avail|white\s*box|dark\s*space)\b/i;
+export const isVacantName = (name: unknown): boolean => VACANT_NAME.test(String(name ?? ""));
 
 // WHEN was this record true? This corpus is STATIC: a deal is captured from an offering
 // memorandum or rent roll and then essentially never updated. So every figure here is
@@ -216,7 +294,16 @@ function dealSummary(r: DealRecord) {
     askingPrice: d.askingPrice ?? null,
     walt: d.walt ?? null,
     weightedAvgRentPSF: d.weightedAvgRentPSF ?? null,
-    dealScore: d.dealScore ?? null,
+    // dealScore is a rich object (grade + rationale + strengths + risks; median 5.5 KB,
+    // max 15 KB on the real corpus). Carrying it on every list row is what made
+    // search_deals return 45k tokens by default. The grade is the scannable part; the
+    // reasoning belongs in get_deal, where the caller asked for one deal.
+    grade: (() => {
+      const ds = d.dealScore;
+      if (ds == null) return null;
+      if (typeof ds === "object") return (ds as DealData).grade ?? null;
+      return ds;
+    })(),
     tenantCount: tenants.length,
     anchors: anchors.slice(0, 6),
     updatedAt: r.updatedAt.toISOString(),
@@ -345,7 +432,7 @@ const searchDeals: McpToolDef = {
       maxCapRate: { type: "number" },
       minNOI: { type: "number" },
       sortBy: { type: "string", enum: ["name", "totalSF", "noi", "capRate", "occupancy", "dealScore", "updatedAt"], description: "Default: name." },
-      limit: { type: "number", description: "Default 25, max 200." },
+      limit: { type: "number", description: "Default 20, max 60. Narrow with filters rather than raising this." },
     },
   },
   handler: async (a) => {
@@ -400,13 +487,13 @@ const searchDeals: McpToolDef = {
       return kx - ky;
     });
 
-    const limit = clampLimit(a.limit, 25, 200);
-    return {
-      matched: hit.length,
-      returned: Math.min(limit, hit.length),
-      totalInLibrary: deals.length,
-      deals: hit.slice(0, limit).map(dealSummary),
-    };
+    const limit = clampLimit(a.limit, 20, 60);
+    return capRows(
+      { matched: hit.length, totalInLibrary: deals.length },
+      "deals",
+      hit.slice(0, limit).map(dealSummary),
+      "Narrow with state, centerType, anchor, status or a size/occupancy range, then call get_deal on the ones that matter.",
+    );
   },
 };
 
@@ -429,6 +516,10 @@ const getDeal: McpToolDef = {
       includeCashFlow: { type: "boolean", description: "Cash-flow projection. Default false." },
       includeLeaseRisk: { type: "boolean", description: "Co-tenancy / kickout trigger tree. Default false." },
       includeComps: { type: "boolean", description: "OM-supplied comparable sales. Default false." },
+      tenantDetail: {
+        type: "string", enum: ["compact", "full"],
+        description: "Roster detail. \"compact\" (default) returns the ~19 fields that answer most questions; \"full\" returns all 44 per tenant and can be very large on a big centre. For the full detail of specific tenants, prefer search_tenants with this dealId.",
+      },
     },
   },
   handler: async (a) => {
@@ -461,6 +552,18 @@ const getDeal: McpToolDef = {
       includeComps: bool(a.includeComps, false),
     };
     const deal = trimDeal(found.data, opts);
+    // Project the roster unless the caller explicitly asked for every field.
+    if (opts.includeTenants && Array.isArray(deal.tenants)) {
+      const roster = deal.tenants as DealData[];
+      if (str(a.tenantDetail) !== "full") {
+        deal.tenants = roster.map(compactTenant);
+        deal.rosterDetail =
+          `compact (${COMPACT_TENANT_FIELDS.length} of ~44 fields per tenant). For every field on a ` +
+          `tenant, call search_tenants with this dealId, or re-call with tenantDetail:"full".`;
+      } else {
+        deal.rosterDetail = "full — every captured field per tenant";
+      }
+    }
     deal.dealId = found.id;
     deal.updatedAt = found.updatedAt.toISOString();
     const cap = capturedAt(found.data, found.updatedAt);
@@ -469,7 +572,7 @@ const getDeal: McpToolDef = {
     // The live deterministic tie-out audit, so the caller sees data-integrity
     // contradictions on this deal instead of quoting a number that doesn't add up.
     const audit = auditExtraction(found.data);
-    return {
+    const response: Record<string, unknown> = {
       deal,
       ...(authorityFor(found.data) ? { authority: OWNED_AUTHORITY_NOTE } : {}),
       integrityFlags: audit.map(qq => ({
@@ -485,6 +588,30 @@ const getDeal: McpToolDef = {
         "captured from the source document and rarely updated after. Say the as-of date when you " +
         "quote a figure, and never present it as today's rent, occupancy or value.",
     };
+
+    // Bound the WHOLE response, not just the deal object — the audit flags, vintage note
+    // and reminders are part of what the caller receives. On the real corpus the biggest
+    // centre carries 126 tenants; trimming here keeps even an explicit tenantDetail:"full"
+    // from flooding the context, and says exactly how to page the rest.
+    if (Array.isArray(deal.tenants)) {
+      const roster = deal.tenants as DealData[];
+      const overhead = emittedSize({ ...response, deal: { ...deal, tenants: [] } });
+      let kept = roster;
+      while (kept.length > 0 && overhead + emittedSize(kept) > RESPONSE_BUDGET_BYTES) {
+        kept = kept.length > 20 ? kept.slice(0, Math.floor(kept.length * 0.6)) : kept.slice(0, kept.length - 1);
+      }
+      if (kept.length < roster.length) {
+        deal.tenants = kept;
+        deal.rosterTruncated = {
+          returned: kept.length,
+          of: roster.length,
+          advice: `This roster exceeded the ${Math.round(RESPONSE_BUDGET_BYTES / 1024)} KB response budget. ` +
+            `Use search_tenants({ dealId: "${found.id}" }) to page the full roster, or filter it by name, ` +
+            "anchorsOnly or an expiry window. Do NOT total the rows below and present it as the centre's rent.",
+        };
+      }
+    }
+    return response;
   },
 };
 
@@ -506,7 +633,7 @@ const searchTenants: McpToolDef = {
       expiringBefore: { type: "string", description: "ISO date — leases expiring on or before this." },
       expiringAfter: { type: "string", description: "ISO date — leases expiring on or after this." },
       withSalesOnly: { type: "boolean", description: "Only tenants that reported sales PSF." },
-      limit: { type: "number", description: "Default 50, max 500." },
+      limit: { type: "number", description: "Default 50, max 150." },
     },
   },
   handler: async (a) => {
@@ -533,13 +660,15 @@ const searchTenants: McpToolDef = {
       return true;
     });
     hit.sort((x, y) => (y.annualRent ?? 0) - (x.annualRent ?? 0));
-    const limit = clampLimit(a.limit, 50, 500);
-    return {
+    const limit = clampLimit(a.limit, 50, 150);
+    // Totals are computed over EVERY match, not just the rows returned, so a truncated
+    // response still reports the true portfolio-wide figure rather than a partial sum.
+    return capRows({
       matched: hit.length,
-      returned: Math.min(limit, hit.length),
       totalAnnualBaseRent: Math.round(hit.reduce((s, t) => s + (t.annualRent ?? 0), 0)),
       totalSF: Math.round(hit.reduce((s, t) => s + (t.sf ?? 0), 0)),
-      tenants: hit.slice(0, limit).map(t => ({
+      note: "annualBaseRent is BASE RENT ONLY — recoveries are the separate fields on each row. Totals above cover ALL matches, including any rows trimmed below.",
+    }, "tenants", hit.slice(0, limit).map(t => ({
         dealId: t.dealId, deal: t.dealName, dealStatus: t.dealStatus,
         tenant: t.canonicalName || t.rawName, asWritten: t.rawName,
         sf: t.sf, rentPerSF: t.rentPerSf, annualBaseRent: t.annualRent,
@@ -547,11 +676,11 @@ const searchTenants: McpToolDef = {
         leaseExpiry: t.leaseExpiryDate ? String(t.leaseExpiryDate).slice(0, 10) : t.leaseExpiry,
         leaseType: t.leaseType, creditRating: t.creditRating,
         isAnchor: t.isAnchor, isNAP: t.isNap,
+        isVacantSuite: isVacantName(t.canonicalName || t.rawName) || undefined,
         salesPSF: t.salesPsf, salesYear: t.salesYear,
         expenseReimbursements: t.expenseReimbursements, percentageRent: t.percentageRent, otherRent: t.otherRent,
       })),
-      note: "annualBaseRent is BASE RENT ONLY — recoveries are the separate fields on each row.",
-    };
+      "Filter by dealId, name, anchorsOnly or an expiry window to narrow the set.");
   },
 };
 
@@ -612,7 +741,7 @@ const portfolioAnalytics: McpToolDef = {
     const rows = await db.select().from(tenantIndexTable);
     const scoped = ids && ids.length ? rows.filter(r => ids.includes(r.dealId)) : rows;
     // Vacant suites carry no rent and no roll — they'd distort every share below.
-    const tenants = scoped.filter(r => r.rawName && !/^vacant/i.test(r.rawName.trim()));
+    const tenants = scoped.filter(r => r.rawName && !isVacantName(r.rawName));
     const withRent = tenants.filter(r => (r.annualRent ?? 0) > 0);
     const totalRent = withRent.reduce((s, r) => s + (r.annualRent ?? 0), 0);
     const pct = (part: number) => (totalRent > 0 ? Math.round((part / totalRent) * 1000) / 10 : 0);
@@ -687,7 +816,7 @@ const saleComps: McpToolDef = {
       minSalePrice: { type: "number" }, maxCapRate: { type: "number" }, minCapRate: { type: "number" },
       sinceDate: { type: "string", description: "ISO date — only comps that traded on or after this." },
       ownedOnly: { type: "boolean", description: "KPR's own verified transactions only." },
-      limit: { type: "number", description: "Default 40, max 300." },
+      limit: { type: "number", description: "Default 40, max 120." },
     },
   },
   handler: async (a) => {
@@ -713,7 +842,7 @@ const saleComps: McpToolDef = {
       return true;
     });
     hit.sort((x, y) => String(y.saleDate ?? "").localeCompare(String(x.saleDate ?? "")));
-    const limit = clampLimit(a.limit, 40, 300);
+    const limit = clampLimit(a.limit, 40, 120);
     const tier = (c: Record<string, unknown>) => c.isOwnTransaction ? "owned" : c.isManual ? "broker/manual" : "OM-sourced";
     return {
       matched: hit.length,
@@ -887,7 +1016,7 @@ const brandLeaseTerms: McpToolDef = {
     properties: {
       brand: { type: "string", description: "Tenant/brand name, e.g. \"PetSmart\". Partial match." },
       includeAbstracts: { type: "boolean", description: "Include the full executed-document lease abstracts. Default true." },
-      limit: { type: "number", description: "Max locations returned. Default 40, max 200." },
+      limit: { type: "number", description: "Max locations returned. Default 15, max 60. The medians always cover EVERY match regardless of this." },
     },
     required: ["brand"],
   },
@@ -896,7 +1025,7 @@ const brandLeaseTerms: McpToolDef = {
     if (!brand) return { error: "brand_required", message: "Pass a brand name, e.g. { brand: \"PetSmart\" }." };
     const needle = brand.toLowerCase();
     const withAbstracts = bool(a.includeAbstracts, true);
-    const limit = clampLimit(a.limit, 40, 200);
+    const limit = clampLimit(a.limit, 15, 60);
 
     const [deals, abstractRows] = await Promise.all([
       loadActiveDeals(),
@@ -1044,10 +1173,9 @@ const brandLeaseTerms: McpToolDef = {
         .map(l => ({ value: num(pick(l)) as number, year: yearOf(l.capturedAsOf) }))
         .filter(e => e.value != null && Number.isFinite(e.value) && e.value > 0);
 
-    return {
+    const head = {
       brand,
       matched: locations.length,
-      returned: Math.min(limit, locations.length),
       vintage,
       comparison: {
         rentPerSF: weightedSpread(withYear(l => l.rentPerSF), nowYear),
@@ -1056,7 +1184,6 @@ const brandLeaseTerms: McpToolDef = {
         salesPSF: weightedSpread(withYear(l => num(l.salesPSF)), nowYear),
       },
       leverPrevalence,
-      locations: locations.slice(0, limit),
       alsoCheckDatex:
         "If KPR OWNS any location of this brand, run the same question against Datex and CITE " +
         "BOTH, separately labelled: what KPR achieves as a landlord on its own properties " +
@@ -1064,6 +1191,10 @@ const brandLeaseTerms: McpToolDef = {
         "corpus, as-of each capture date). They answer different questions, and the GAP between " +
         "them is itself the finding — whether KPR is outperforming or paying up. Do not merge " +
         "them into one number.",
+      statsCoverAllMatches:
+        "The medians, bands and leverPrevalence above are computed over ALL " +
+        "matching locations. Only the per-location rows below can be trimmed for size, so " +
+        "a truncated response still carries a true benchmark.",
       howToUse:
         "Compare the lease in front of you to the recency-weighted MEDIAN and the p25–p75 band, " +
         "and say how many locations the band is built from AND how many of those fall inside the " +
@@ -1076,6 +1207,9 @@ const brandLeaseTerms: McpToolDef = {
         "way — never report `unknown` as 'no such clause'. Where a lever comes from an OM read " +
         "rather than an executed abstract, say it is unverified.",
     };
+
+    return capRows(head, "locations", locations.slice(0, limit),
+      "Lower `limit`, or filter to the deals you care about with search_tenants({name, dealId}).");
   },
 };
 
@@ -1126,7 +1260,7 @@ const dataCoverage: McpToolDef = {
     const tenantRows: DealData[] = [];
     for (const r of deals) {
       const ts = Array.isArray(r.data.tenants) ? (r.data.tenants as DealData[]) : [];
-      for (const t of ts) if (!/^vacant/i.test(String(t?.name ?? ""))) tenantRows.push(t);
+      for (const t of ts) if (!isVacantName(t?.name)) tenantRows.push(t);
     }
     const tenantField = (label: string, key: string) => {
       const n = tenantRows.filter(t => has(t, key)).length;
