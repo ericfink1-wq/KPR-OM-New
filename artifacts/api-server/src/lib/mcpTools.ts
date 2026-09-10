@@ -37,6 +37,25 @@ const bool = (v: unknown, dflt = false): boolean => {
   if (typeof v === "string") return /^(true|yes|1)$/i.test(v.trim());
   return dflt;
 };
+// Date filters must REJECT a bad value, never silently ignore it. An unparseable date used
+// to fall through to a string comparison, which quietly turned "expiring before <garbage>"
+// into "has any expiry date at all" and returned 6,543 confident matches to a query that
+// meant nothing. A filter that silently stops filtering is worse than an error.
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+export function isoDateOrNull(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!ISO_DATE.test(t)) return null;
+  const d = new Date(`${t}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== t ? null : t;
+}
+const badDate = (field: string, got: unknown) => ({
+  error: "invalid_date",
+  message: `${field} must be an ISO date like "2027-06-30" — received ${JSON.stringify(got)}. ` +
+    "Rejecting rather than ignoring it, because a filter that silently stops filtering returns " +
+    "a confident answer to a question you did not ask.",
+});
+
 const clampLimit = (v: unknown, dflt: number, max: number): number => {
   const n = num(v);
   if (n == null) return dflt;
@@ -163,6 +182,36 @@ const nameOf = (d: DealData) => String(d.propertyName || d.fileName || "Untitled
 // would be written off as empty suites.
 const VACANT_NAME = /^\s*(vacant|vacancy|available|avail|white\s*box|dark\s*space)\b/i;
 export const isVacantName = (name: unknown): boolean => VACANT_NAME.test(String(name ?? ""));
+
+// ─── brand matching ─────────────────────────────────────────────────────────
+// Tenant names are matched on WORD BOUNDARIES, not raw substrings. A plain substring
+// match is catastrophic on real roster data: searching "Ross" also matches "American Red
+// CROSS", "CROSS Country Package", "Lacrosse Unlimited" and — worst of all — the rent
+// notations "(Modified GROSS)" and "(GROSS)" that sit inside dozens of unrelated tenant
+// names. On this corpus that turned a perfectly reasonable "what do we pay Ross?" into a
+// median contaminated by 22 different tenants. A word-boundary match still does the job it
+// is meant to do, folding "Starbucks", "STARBUCKS", "Starbucks Coffee" and "Starbucks
+// Corporation" together, because the brand appears there as a whole word.
+const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export function brandMatcher(query: string): (name: unknown) => boolean {
+  const q = query.trim();
+  if (!q) return () => false;
+  const re = new RegExp(`\\b${escapeRe(q)}\\b`, "i");
+  return (name: unknown) => re.test(String(name ?? ""));
+}
+
+// Collapse a roster name to the brand underneath it, so "Dollar Tree #3654",
+// "Dollar Tree (LOI)" and "Dollar Tree Stores" are recognised as one tenant rather than
+// three. Used only to judge whether a match set is coherent — never to rewrite data.
+export function brandBaseName(name: unknown): string {
+  return String(name ?? "")
+    .replace(/\([^)]*\)/g, " ")        // drop "(LOI)", "(Modified Gross)", "(NAP)"
+    .replace(/#\s*\w+/g, " ")          // drop store numbers
+    .replace(/\b(stores?|inc|llc|corp(oration)?|company|co|the)\b/gi, " ")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim().toLowerCase();
+}
 
 // WHEN was this record true? This corpus is STATIC: a deal is captured from an offering
 // memorandum or rent roll and then essentially never updated. So every figure here is
@@ -483,7 +532,8 @@ const searchDeals: McpToolDef = {
       if (status && !String(d.status ?? "").toLowerCase().includes(status.toLowerCase())) return false;
       if (anchor) {
         const ts = Array.isArray(d.tenants) ? (d.tenants as DealData[]) : [];
-        if (!ts.some(t => String(t?.name ?? "").toLowerCase().includes(anchor.toLowerCase()))) return false;
+        const m = brandMatcher(anchor);
+        if (!ts.some(t => m(t?.name))) return false;
       }
       const sf = num(d.totalSF);
       if (minSF != null && (sf == null || sf < minSF)) return false;
@@ -664,23 +714,28 @@ const searchTenants: McpToolDef = {
       expiringBefore: { type: "string", description: "ISO date — leases expiring on or before this." },
       expiringAfter: { type: "string", description: "ISO date — leases expiring on or after this." },
       withSalesOnly: { type: "boolean", description: "Only tenants that reported sales PSF." },
+      includeVacant: { type: "boolean", description: "Include vacant/available suites. Default false — they are empty space, not tenants, and counting them inflates roster figures." },
       limit: { type: "number", description: "Default 50, max 150." },
     },
   },
   handler: async (a) => {
     const rows = await db.select().from(tenantIndexTable);
-    const name = str(a.name)?.toLowerCase();
+    const name = str(a.name);
+    const nameMatch = name ? brandMatcher(name) : null;
     const dealId = str(a.dealId);
     const minSF = num(a.minSF), maxSF = num(a.maxSF);
-    const before = str(a.expiringBefore), after = str(a.expiringAfter);
+    const before = isoDateOrNull(a.expiringBefore), after = isoDateOrNull(a.expiringAfter);
+    if (a.expiringBefore != null && before === null) return badDate("expiringBefore", a.expiringBefore);
+    if (a.expiringAfter != null && after === null) return badDate("expiringAfter", a.expiringAfter);
     const anchorsOnly = bool(a.anchorsOnly), withSalesOnly = bool(a.withSalesOnly);
+    const includeVacant = bool(a.includeVacant);
 
     const hit = rows.filter(t => {
       if (dealId && t.dealId !== dealId) return false;
-      if (name) {
-        const n = `${t.canonicalName ?? ""} ${t.rawName ?? ""}`.toLowerCase();
-        if (!n.includes(name)) return false;
-      }
+      // Vacant suites are not tenants. Counting them inflates every roster figure built on
+      // this tool, so they are out unless the caller explicitly wants the vacancy list.
+      if (!includeVacant && isVacantName(t.canonicalName || t.rawName)) return false;
+      if (nameMatch && !(nameMatch(t.canonicalName) || nameMatch(t.rawName))) return false;
       if (anchorsOnly && t.isAnchor !== true) return false;
       if (withSalesOnly && !t.salesPsf) return false;
       if (minSF != null && (t.sf ?? 0) < minSF) return false;
@@ -854,7 +909,9 @@ const saleComps: McpToolDef = {
     const rows = await db.select().from(compsIndexTable);
     const state = str(a.state)?.toUpperCase(), market = str(a.market)?.toLowerCase(), q = str(a.query)?.toLowerCase();
     const minPrice = num(a.minSalePrice), minCap = num(a.minCapRate), maxCap = num(a.maxCapRate);
-    const since = str(a.sinceDate), ownedOnly = bool(a.ownedOnly);
+    const since = isoDateOrNull(a.sinceDate);
+    if (a.sinceDate != null && since === null) return badDate("sinceDate", a.sinceDate);
+    const ownedOnly = bool(a.ownedOnly);
     const r2 = rows as unknown as Array<Record<string, unknown>>;
     const hit = r2.filter(c => {
       if (state && String(c.state ?? "").toUpperCase() !== state) return false;
@@ -1059,7 +1116,16 @@ const brandLeaseTerms: McpToolDef = {
   handler: async (a) => {
     const brand = str(a.brand);
     if (!brand) return { error: "brand_required", message: "Pass a brand name, e.g. { brand: \"PetSmart\" }." };
-    const needle = brand.toLowerCase();
+    // A one- or two-character "brand" is a typo or a fragment, not a tenant. Left
+    // unguarded it matched thousands of unrelated rows and returned a confident median
+    // across all of them.
+    if (brand.replace(/[^a-z0-9]/gi, "").length < 3) {
+      return { error: "brand_too_short", message: `"${brand}" is too short to identify a tenant. Pass the brand as you'd say it — "Ross", "Five Below", "Dollar Tree".` };
+    }
+    if (isVacantName(brand)) {
+      return { error: "not_a_brand", message: `"${brand}" describes EMPTY SPACE, not a tenant, so a rent benchmark over it is meaningless. For vacancy use search_tenants with includeVacant:true, or read occupancy off the deal.` };
+    }
+    const matches = brandMatcher(brand);
     const withAbstracts = bool(a.includeAbstracts, true);
     const limit = clampLimit(a.limit, 15, 60);
 
@@ -1073,7 +1139,7 @@ const brandLeaseTerms: McpToolDef = {
     // is reconciled from the signed documents.
     const absByDeal = new Map<string, Array<{ tenantName: string; data: DealData }>>();
     for (const r of abstractRows) {
-      if (!r.tenantName.toLowerCase().includes(needle)) continue;
+      if (!matches(r.tenantName)) continue;
       const list = absByDeal.get(r.dealId) ?? [];
       list.push({ tenantName: r.tenantName, data: r.data as DealData });
       absByDeal.set(r.dealId, list);
@@ -1104,13 +1170,15 @@ const brandLeaseTerms: McpToolDef = {
       })();
       for (const t of tenants) {
         const tname = String(t?.name ?? "");
-        if (!tname.toLowerCase().includes(needle)) continue;
+        if (!matches(tname)) continue;
+        if (isVacantName(tname)) continue;   // an empty suite is not a lease comparable
         const start = str(t.leaseStart), end = str(t.leaseExpiry);
         const termYears = start && end
           ? Math.round(((Date.parse(end) - Date.parse(start)) / 31557600000) * 10) / 10
           : null;
         const risk = riskRows.find(rr => String(rr?.tenant ?? "").toLowerCase() === tname.toLowerCase());
-        const abs = (absByDeal.get(r.id) ?? []).find(x => x.tenantName.toLowerCase().includes(tname.toLowerCase()) || tname.toLowerCase().includes(x.tenantName.toLowerCase()));
+        const abs = (absByDeal.get(r.id) ?? []).find(x => brandBaseName(x.tenantName) === brandBaseName(tname)
+          || brandMatcher(x.tenantName)(tname) || matches(x.tenantName));
 
         // Levers, preferring the executed abstract over the OM read. A value of
         // "unknown" is NOT "none" — it means nothing in this library says either way,
@@ -1163,6 +1231,40 @@ const brandLeaseTerms: McpToolDef = {
         message: `No leases for "${brand}" in this library. Check the spelling, or use search_tenants to see what brands are present.`,
       };
     }
+
+    // Is this actually ONE tenant? "Dollar" legitimately matches Dollar Tree, Dollar General
+    // AND Family Dollar — three brands with different rent profiles — so a single median
+    // across them describes nothing real.
+    //
+    // Counting distinct names is too crude: "Starbucks", "Starbucks Coffee" and
+    // "Starbucks - NAP" are three names for one tenant and flagging them as mixed cries
+    // wolf. So names are first collapsed into FAMILIES by prefix — where one base name
+    // begins with another, they are the same tenant written differently. What survives is
+    // genuinely distinct: "dollar tree" and "dollar general" share no prefix relationship.
+    const bases = new Map<string, number>();
+    for (const l of locations) {
+      const b = brandBaseName(l.tenant);
+      if (b) bases.set(b, (bases.get(b) ?? 0) + 1);
+    }
+    const sortedBases = [...bases.entries()].sort((x, y) => x[0].length - y[0].length);
+    const families = new Map<string, number>();
+    for (const [nm, count] of sortedBases) {
+      const parent = [...families.keys()].find(f => nm === f || nm.startsWith(`${f} `));
+      const key = parent ?? nm;
+      families.set(key, (families.get(key) ?? 0) + count);
+    }
+    const fam = [...families.entries()].sort((x, y) => y[1] - x[1]);
+    const mixedBrands = fam.length > 1
+      ? {
+          distinctTenants: fam.length,
+          breakdown: fam.slice(0, 8).map(([n, c]) => ({ tenant: n, locations: c })),
+          warning:
+            `"${brand}" matched ${fam.length} DIFFERENT tenants, not one — see breakdown. The ` +
+            "medians below blend all of them, so they describe no single brand. Re-run with the " +
+            "full brand name (the largest group is usually what you meant), or read this as a " +
+            "list rather than a benchmark.",
+        }
+      : null;
 
     locations.sort((x, y) => String(y.leaseStart ?? "").localeCompare(String(x.leaseStart ?? "")));
 
@@ -1219,7 +1321,7 @@ const brandLeaseTerms: McpToolDef = {
         .map(l => ({ value: num(pick(l)) as number, year: vintageOf(l) }))
         .filter(e => e.value != null && Number.isFinite(e.value) && e.value > 0);
 
-    const head = {
+    const head: Record<string, unknown> = {
       brand,
       matched: locations.length,
       vintage,
@@ -1254,6 +1356,7 @@ const brandLeaseTerms: McpToolDef = {
         "rather than an executed abstract, say it is unverified.",
     };
 
+    if (mixedBrands) head.mixedBrandWarning = mixedBrands;
     return capRows(head, "locations", locations.slice(0, limit),
       "Lower `limit`, or filter to the deals you care about with search_tenants({name, dealId}).");
   },

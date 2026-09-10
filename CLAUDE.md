@@ -263,6 +263,27 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   papered over: amendments and exercised options RESET the economics, so an old lease with
   recent rent steps may be fresher than its commencement implies, and the roster doesn't
   reliably record when that happened.
+- **STRESS TEST vs THE REAL CORPUS (9/10/26) — three silent-wrong-answer bugs found.** All
+  were graceful-looking failures that returned a confident number, which is the dangerous kind.
+  (1) **SUBSTRING BRAND MATCHING WAS CATASTROPHIC.** `brand_lease_terms`/`search_tenants.name`/
+  `search_deals.anchor` matched raw substrings, so **`"Ross"` matched "American Red CROSS",
+  "CROSS Country Package", "Lacrosse Unlimited" and the rent notations "(Modified GROSS)" /
+  "(GROSS)"** that appear inside dozens of unrelated tenant names — 62 matches across 22
+  tenants, returning a contaminated $12.51 median for a completely reasonable question. Now
+  `brandMatcher()` matches on WORD BOUNDARIES (Ross → 47 clean matches, $12.00) while still
+  folding "Starbucks"/"STARBUCKS"/"Starbucks Coffee"/"Starbucks Corporation" together.
+  (2) **A malformed date SILENTLY STOPPED FILTERING** — `expiringBefore:"garbage"` fell
+  through to a string compare and returned 6,543 confident matches; `isoDateOrNull()` now
+  REJECTS instead. (3) `search_tenants` counted 654 vacant/available suites as tenants
+  (7,334 vs the real 6,680); vacancy is now excluded unless `includeVacant:true`.
+  ALSO ADDED: `brand_lease_terms` refuses a <3-char brand and refuses vacancy-as-a-brand, and
+  emits `mixedBrandWarning` when the match spans multiple tenants — name variants are collapsed
+  into FAMILIES by prefix first, so "Starbucks Coffee" doesn't false-flag but
+  **`"Dollar"` correctly reports 3 tenants (dollar tree 83 / family dollar 7 / dollar general 5)**.
+  Also fixed: forward-dated deals produced a NEGATIVE age that matched no vintage bucket, so
+  46 of 301 silently vanished from `data_coverage`'s breakdown. Tests: `mcpBrandMatch.test.ts`.
+  **Adversarial sweep otherwise clean** — SQL-injection strings inert (jsonb, no string-built
+  SQL), limits clamp, unknown params ignored, unicode/5k-char queries safe, no crashes.
 - **Companion skill (RESCOPED 9/10/26): `.claude/skills/kpr-retail-analysis/SKILL.md`** — was
   `kpr-deal-library`, now governs **BOTH** systems because Eric's team has Datex access too and
   the connector's own `instructions` only reach Claude when it calls THIS library. The skill is
