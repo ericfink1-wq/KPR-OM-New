@@ -71,6 +71,39 @@ describe("MCP tool registry", () => {
   });
 });
 
+describe("source-of-truth precedence", () => {
+  // KPR has a second, more authoritative connector for OWNED assets. That rule has to
+  // travel WITH the data — a client that never read a briefing must still get it — so
+  // it is asserted in the initialize instructions AND the playbook, not just the docs.
+  it("tells a client the internal owned-asset system outranks this library", () => {
+    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/internal system of record/i);
+    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/OUTRANKS/);
+    expect(KPR_PLAYBOOK).toMatch(/internal system of record/i);
+  });
+  it("also tells it where THIS library is the only source", () => {
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/passed on/i);      // deals we looked at and declined
+      expect(text).toMatch(/sale-comp/i);
+    }
+  });
+  it("forbids averaging the two sources on a disagreement", () => {
+    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/[Nn]ever average/);
+    expect(KPR_PLAYBOOK).toMatch(/[Nn]ever average/);
+  });
+});
+
+describe("lease-precedent tool", () => {
+  it("is registered and required for the review use case", () => {
+    const t = MCP_TOOLS_BY_NAME.get("brand_lease_terms");
+    expect(t).toBeDefined();
+    expect(t!.inputSchema.required).toContain("brand");
+    // The description is what makes a client REACH for it unprompted when someone
+    // pastes a lease, so it has to name that situation.
+    expect(t!.description).toMatch(/lease/i);
+    expect(t!.description).toMatch(/off-market|looks off|unusual/i);
+  });
+});
+
 describe("knowledge pack", () => {
   it("carries the doctrine that most often gets analysis wrong", () => {
     // These are the rules Eric taught after real misreads — a playbook missing them

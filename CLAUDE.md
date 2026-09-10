@@ -111,6 +111,22 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
 - **Admin UI:** `McpAccess.tsx` ("Claude access" button in Header, admin-only) — mint with a
   label, copy-once key, ready-to-paste config per client (desktop / Claude Code / claude.ai),
   turn-off list. Verified desktop 1440px + mobile 390px by screenshot, no h-overflow.
+- **`brand_lease_terms`** is the lease-review tool Eric asked for: hand it a brand and it
+  returns EVERY lease in the library for it + median/p25–p75 on rent PSF, SF, term years,
+  sales PSF + `leverPrevalence` (how many locations carry co-tenancy / kickout / go-dark /
+  exclusive / ROFR / early-term). Clause detail prefers the EXECUTED abstract over the OM
+  lease-risk read, and each row says which. **`unknown` ≠ absent** — the tool and the skill
+  both forbid reading silence as "no such clause."
+- **TWO SOURCES OF TRUTH (Eric, 9/10/26).** KPR has a SEPARATE internal MCP for
+  CURRENTLY-OWNED assets (live rent roll + accounting) that is more current than this site.
+  Precedence is baked in THREE places so it survives a fresh chat: `MCP_SERVER_INSTRUCTIONS`
+  (sent on every initialize), `KPR_PLAYBOOK` (get_knowledge), and an `authority` field
+  attached to every `status === "Owned"` record returned by search_deals / get_deal /
+  brand_lease_terms. Rule: internal system WINS on live owned-asset facts (rent, SF, suite,
+  dates, options exercised, occupancy, NOI, opex); THIS library wins and is the ONLY source
+  for passed deals, prospects, under-contract, sold, OM-marketed figures, sale comps, lease
+  abstracts, cross-deal benchmarks and the doctrine. Never average; name the source; flag
+  the gap. **Claude does NOT infer this — if the boundary shifts, update all three places.**
 - **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
   the tools (which tool for which question + the non-negotiables). Plain-English setup doc
   for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).

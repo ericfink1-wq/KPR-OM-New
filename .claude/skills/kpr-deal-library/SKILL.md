@@ -33,10 +33,51 @@ Then work the specific question:
 | Rollover waterfall, concentration, credit mix | `portfolio_analytics` |
 | What has traded, at what cap? | `sale_comps` |
 | Lease terms, options, co-tenancy, kickouts | `lease_abstracts` |
+| Is this lease off-market? | `brand_lease_terms` |
 | Do these numbers tie out? | `data_quality` |
 
 Every tool is read-only. You cannot change the library through this connector — if
 someone asks you to fix a deal, tell them to do it in the app.
+
+## Which source wins (there is more than one)
+
+KPR runs a **separate internal system of record for currently-owned assets** — the live
+rent roll and accounting. Where that connector is available to you as well:
+
+- **For an owned asset, the internal system wins** on live facts: current rent, SF,
+  suite, commencement and expiry, options already exercised, current occupancy, NOI,
+  opex. This library's copy of an owned center is an acquisition-era snapshot and may be
+  stale. Owned records returned here carry an `authority` field saying so — read it.
+- **This library wins, and is the only source, for everything that system never sees:**
+  deals KPR evaluated and passed on, live prospects, deals under contract, sold assets,
+  the seller-marketed OM figures, the sale-comp database, the lease abstracts stored
+  here, the cross-deal benchmarks, and KPR's underwriting doctrine.
+- A **benchmark spans the whole library**, so it stays the right comparison set even when
+  a specific owned location's current rent should come from the internal system.
+- **On a disagreement**, use the internal system's figure for the owned asset, say which
+  source each number came from, and flag the gap. Never average them. Never silently
+  pick one.
+
+If the internal system isn't connected, use this library and say that owned-asset figures
+are as-of the documents behind them, not today's rent roll.
+
+## Reviewing a lease against precedent
+
+When someone hands you a lease, an LOI, an amendment or a proposed term for a brand and
+asks whether anything looks off, lead with **`brand_lease_terms`**. It returns every lease
+the library holds for that brand plus the medians and p25–p75 bands, and how often each
+mid-term lever appears.
+
+Then:
+- Anchor every judgement to the band and **say how many locations it's built from**. A
+  two-location median is an anecdote; call it one.
+- Rent above the band is a premium to interrogate, not "upside" — see below.
+- On the levers, `false` means a source says the clause is absent; `unknown` means nothing
+  in the library says either way. **Never report `unknown` as "no such clause."** And when
+  a lever came from an OM read rather than an executed abstract, say it's unverified.
+- Flag what's *missing* from the lease in front of you as readily as what's unusual in it:
+  if seven of eight PetSmart leases carry a go-dark right and this one doesn't, that is
+  the finding.
 
 ## Non-negotiables when answering
 

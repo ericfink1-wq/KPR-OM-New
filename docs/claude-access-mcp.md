@@ -67,11 +67,32 @@ Ten read-only tools:
 | `search_deals` | Find centers by name, market, anchor, size, occupancy, cap rate |
 | `get_deal` | One center in full, including the rent roll and its integrity flags |
 | `search_tenants` | Every location of a brand, with rent, SF, dates, sales |
+| `brand_lease_terms` | Every lease we hold for a brand + medians/ranges + how often each clause appears — the "does this lease look off?" tool |
 | `tenant_benchmarks` | Library medians for rent PSF, sales PSF and store size, by brand |
 | `portfolio_analytics` | Lease rollover waterfall, concentration, anchor share, credit mix |
 | `sale_comps` | The sale-comp database, tagged by source quality |
 | `lease_abstracts` | Reconciled lease terms, options, co-tenancy, kickouts |
 | `data_quality` | The deterministic tie-out audit, per deal or portfolio-wide |
+
+## Two sources of truth
+
+KPR also runs an internal system of record for **currently-owned** assets — the live rent
+roll and accounting. That system is more current than this website for those centers, so
+the rule baked into this connector is:
+
+- **Owned asset → the internal system wins** on live facts (current rent, SF, suite,
+  dates, options exercised, occupancy, NOI, opex). Every owned record this connector
+  returns carries an `authority` note saying exactly that.
+- **This library wins, and is the only source, for everything that system never sees** —
+  deals we looked at and passed, live prospects, deals under contract, sold assets, the
+  seller-marketed OM figures, the sale comps, the lease abstracts, the cross-deal
+  benchmarks, and the underwriting doctrine.
+- **On a disagreement**, Claude uses the internal system's number for the owned asset,
+  says where each figure came from, and flags the gap — it never averages the two.
+
+Claude does not infer this on its own. The rule is sent to the client on every
+connection, repeated in the playbook, and attached to each owned record — so it holds
+even in a fresh chat where nobody explained it.
 
 ## Also in the repo: a matching skill
 

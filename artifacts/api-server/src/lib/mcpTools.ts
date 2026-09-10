@@ -86,6 +86,38 @@ function trimDeal(d: DealData, opts: Record<string, boolean>): DealData {
 
 const nameOf = (d: DealData) => String(d.propertyName || d.fileName || "Untitled");
 
+// Median / quartiles — the only summary statistics this library reports. Means are
+// never used: one outlier lease would drag a mean somewhere no real deal sits.
+function quantile(values: number[], q: number): number | null {
+  if (!values.length) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const pos = (s.length - 1) * q;
+  const lo = Math.floor(pos), hi = Math.ceil(pos);
+  const v = lo === hi ? s[lo]! : s[lo]! + (s[hi]! - s[lo]!) * (pos - lo);
+  return Math.round(v * 100) / 100;
+}
+function spread(values: number[]) {
+  const clean = values.filter(v => Number.isFinite(v));
+  if (!clean.length) return null;
+  return { n: clean.length, median: quantile(clean, 0.5), p25: quantile(clean, 0.25), p75: quantile(clean, 0.75), min: quantile(clean, 0), max: quantile(clean, 1) };
+}
+
+// KPR runs a SEPARATE internal system of record for assets it owns today. Where that
+// system is connected, it outranks this library on live roster and financial facts —
+// this library's copy of an owned asset is an acquisition-era snapshot. Every tool
+// that returns an owned deal says so inline, so the precedence travels WITH the data
+// instead of depending on the reader having remembered a rule from somewhere else.
+const OWNED_AUTHORITY_NOTE =
+  "OWNED ASSET. If KPR's internal system of record (the owned-asset rent-roll/accounting " +
+  "connector) is available to you, IT OVERRIDES this record for live roster and financial " +
+  "facts — current rent, SF, suite, commencement/expiry, options exercised, current " +
+  "occupancy, NOI and opex. What you have here is the acquisition-era snapshot and may be " +
+  "stale. Say which source you used, and flag a disagreement rather than splitting it.";
+
+function authorityFor(d: DealData): string | undefined {
+  return String(d.status ?? "") === "Owned" ? OWNED_AUTHORITY_NOTE : undefined;
+}
+
 // One compact row per deal — the shape every list/search tool returns. Enough to
 // decide which deal to open, small enough that 50 of them cost little context.
 function dealSummary(r: DealRecord) {
@@ -111,6 +143,7 @@ function dealSummary(r: DealRecord) {
     tenantCount: tenants.length,
     anchors: anchors.slice(0, 6),
     updatedAt: r.updatedAt.toISOString(),
+    ...(authorityFor(d) ? { authority: OWNED_AUTHORITY_NOTE } : {}),
   };
 }
 
@@ -351,6 +384,7 @@ const getDeal: McpToolDef = {
     const audit = auditExtraction(found.data);
     return {
       deal,
+      ...(authorityFor(found.data) ? { authority: OWNED_AUTHORITY_NOTE } : {}),
       integrityFlags: audit.map(qq => ({
         check: AUDIT_CHECK_LABELS[auditCheckKey(qq.id)] || qq.field,
         severity: qq.severity,
@@ -738,12 +772,185 @@ const getKnowledge: McpToolDef = {
   },
 };
 
+
+// ─── 11. brand_lease_terms ──────────────────────────────────────────────────
+// The "does this lease look off?" tool. Someone is holding ONE lease for a brand and
+// wants to know how its terms sit against every other lease this library holds for
+// that same brand — rent, size, term length, option structure, and the mid-term
+// levers (co-tenancy, kickout, go-dark, exclusive, ROFR). Answering that from
+// search_tenants + lease_abstracts separately means the caller has to do the
+// gathering and the arithmetic; this does both and returns the comparison set.
+const brandLeaseTerms: McpToolDef = {
+  name: "brand_lease_terms",
+  title: "Compare a brand's lease terms across the library",
+  description:
+    "THE TOOL FOR REVIEWING ONE LEASE AGAINST PRECEDENT. Given a brand (\"PetSmart\", " +
+    "\"Ulta\", \"Five Below\"), returns every lease this library holds for that brand — rent " +
+    "PSF, size, term dates and length, option structure, reimbursement method, sales — plus " +
+    "the medians and quartiles across those locations, and how often each mid-term tenant " +
+    "lever appears (co-tenancy, sales kickout, go-dark, exclusive use, ROFR/ROFO, early " +
+    "termination). Use it whenever someone hands you a lease, an LOI or a proposed term and " +
+    "asks whether anything looks off, unusual, aggressive or off-market.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      brand: { type: "string", description: "Tenant/brand name, e.g. \"PetSmart\". Partial match." },
+      includeAbstracts: { type: "boolean", description: "Include the full executed-document lease abstracts. Default true." },
+      limit: { type: "number", description: "Max locations returned. Default 40, max 200." },
+    },
+    required: ["brand"],
+  },
+  handler: async (a) => {
+    const brand = str(a.brand);
+    if (!brand) return { error: "brand_required", message: "Pass a brand name, e.g. { brand: \"PetSmart\" }." };
+    const needle = brand.toLowerCase();
+    const withAbstracts = bool(a.includeAbstracts, true);
+    const limit = clampLimit(a.limit, 40, 200);
+
+    const [deals, abstractRows] = await Promise.all([
+      loadActiveDeals(),
+      db.select().from(leaseAbstractsTable),
+    ]);
+
+    // Executed-document abstracts, keyed by deal + tenant. These OUTRANK the roster
+    // for clause detail — the roster's lease-risk block is an OM read, the abstract
+    // is reconciled from the signed documents.
+    const absByDeal = new Map<string, Array<{ tenantName: string; data: DealData }>>();
+    for (const r of abstractRows) {
+      if (!r.tenantName.toLowerCase().includes(needle)) continue;
+      const list = absByDeal.get(r.dealId) ?? [];
+      list.push({ tenantName: r.tenantName, data: r.data as DealData });
+      absByDeal.set(r.dealId, list);
+    }
+
+    interface Loc {
+      dealId: string; deal: string; city: unknown; state: unknown; centerType: unknown; dealStatus: unknown;
+      tenant: string; sf: number | null; rentPerSF: number | null; annualBaseRent: number | null;
+      leaseStart: unknown; leaseExpiry: unknown; termYears: number | null; remainingTermYears: unknown;
+      leaseType: unknown; reimbursementMethod: unknown; rentBumps: unknown; rentSchedule: unknown;
+      renewalOptions: unknown; salesPSF: unknown; salesYear: unknown; occupancyCost: unknown;
+      creditRating: unknown; isAnchor: unknown; isDark: unknown;
+      levers: Record<string, string | boolean>;
+      abstract?: DealData; abstractTenantName?: string;
+      authority?: string;
+    }
+    const locations: Loc[] = [];
+
+    for (const r of deals) {
+      const d = r.data;
+      const tenants = Array.isArray(d.tenants) ? (d.tenants as DealData[]) : [];
+      // Deal-level lease-risk block (OM-sourced), indexed by tenant name.
+      const riskRows = (() => {
+        const lr = d.leaseRisk as DealData | undefined;
+        const rows = lr && Array.isArray(lr.tenants) ? (lr.tenants as DealData[]) : [];
+        return rows;
+      })();
+      for (const t of tenants) {
+        const tname = String(t?.name ?? "");
+        if (!tname.toLowerCase().includes(needle)) continue;
+        const start = str(t.leaseStart), end = str(t.leaseExpiry);
+        const termYears = start && end
+          ? Math.round(((Date.parse(end) - Date.parse(start)) / 31557600000) * 10) / 10
+          : null;
+        const risk = riskRows.find(rr => String(rr?.tenant ?? "").toLowerCase() === tname.toLowerCase());
+        const abs = (absByDeal.get(r.id) ?? []).find(x => x.tenantName.toLowerCase().includes(tname.toLowerCase()) || tname.toLowerCase().includes(x.tenantName.toLowerCase()));
+
+        // Levers, preferring the executed abstract over the OM read. A value of
+        // "unknown" is NOT "none" — it means nothing in this library says either way,
+        // and the caller must not read silence as an absent clause.
+        const other = (abs?.data.otherRiskClauses ?? risk?.otherRiskClauses) as DealData | undefined;
+        const coTen = (abs?.data.coTenancy ?? risk?.coTenancy) as unknown[] | undefined;
+        const kick = (abs?.data.salesKickout ?? risk?.salesKickout) as unknown[] | undefined;
+        const hasClause = (v: unknown): string | boolean => {
+          if (v === undefined || v === null) return "unknown";
+          if (Array.isArray(v)) return v.length > 0;
+          const note = v as DealData;
+          if (note.present === true) return true;
+          if (note.present === false) return false;
+          return "unknown";
+        };
+        const levers: Record<string, string | boolean> = {
+          coTenancy: hasClause(coTen),
+          salesKickout: hasClause(kick),
+          goDark: hasClause(other?.goDarkRight),
+          exclusiveUse: hasClause(other?.exclusiveUse ?? (Array.isArray(abs?.data.exclusives) ? abs?.data.exclusives : undefined)),
+          rofrRofo: hasClause(other?.rofrRofo),
+          earlyTermination: hasClause(other?.earlyTerminationOption),
+          continuousOperation: hasClause(other?.continuousOperationCovenant),
+          source: abs ? "executed lease abstract" : risk ? "OM read (unverified)" : "not captured",
+        };
+
+        locations.push({
+          dealId: r.id, deal: nameOf(d), city: d.city ?? null, state: d.state ?? null,
+          centerType: d.centerType ?? d.assetType ?? null, dealStatus: d.status ?? null,
+          tenant: tname, sf: num(t.sf), rentPerSF: num(t.rentPerSF), annualBaseRent: num(t.annualRent),
+          leaseStart: start, leaseExpiry: end, termYears,
+          remainingTermYears: t.remainingTermYears ?? null,
+          leaseType: t.leaseType ?? null, reimbursementMethod: t.reimbursementMethod ?? null,
+          rentBumps: t.rentBumps ?? null, rentSchedule: t.rentSchedule ?? null,
+          renewalOptions: t.renewalOptions ?? null,
+          salesPSF: t.salesPSF ?? null, salesYear: t.salesYear ?? null, occupancyCost: t.occupancyCost ?? null,
+          creditRating: t.creditRating ?? null, isAnchor: t.isAnchor ?? null, isDark: t.isDark ?? null,
+          levers,
+          ...(withAbstracts && abs ? { abstract: abs.data, abstractTenantName: abs.tenantName } : {}),
+          ...(authorityFor(d) ? { authority: OWNED_AUTHORITY_NOTE } : {}),
+        });
+      }
+    }
+
+    if (!locations.length) {
+      return {
+        brand,
+        matched: 0,
+        message: `No leases for "${brand}" in this library. Check the spelling, or use search_tenants to see what brands are present.`,
+      };
+    }
+
+    locations.sort((x, y) => String(y.leaseStart ?? "").localeCompare(String(x.leaseStart ?? "")));
+
+    const leverKeys = ["coTenancy", "salesKickout", "goDark", "exclusiveUse", "rofrRofo", "earlyTermination", "continuousOperation"] as const;
+    const leverPrevalence: Record<string, { present: number; absent: number; unknown: number }> = {};
+    for (const k of leverKeys) {
+      const vals = locations.map(l => l.levers[k]);
+      leverPrevalence[k] = {
+        present: vals.filter(v => v === true).length,
+        absent: vals.filter(v => v === false).length,
+        unknown: vals.filter(v => v === "unknown").length,
+      };
+    }
+
+    return {
+      brand,
+      matched: locations.length,
+      returned: Math.min(limit, locations.length),
+      comparison: {
+        rentPerSF: spread(locations.map(l => l.rentPerSF!).filter(v => v != null && v > 0)),
+        sf: spread(locations.map(l => l.sf!).filter(v => v != null && v > 0)),
+        originalTermYears: spread(locations.map(l => l.termYears!).filter(v => v != null && v > 0)),
+        salesPSF: spread(locations.map(l => num(l.salesPSF)!).filter(v => v != null && v > 0)),
+      },
+      leverPrevalence,
+      locations: locations.slice(0, limit),
+      howToUse:
+        "Compare the lease in front of you to the MEDIAN and the p25–p75 band, and say how " +
+        "many locations the band is built from — a two-location median is an anecdote, not a " +
+        "benchmark. A rent above the band is a premium to interrogate (mark-to-market DOWNSIDE " +
+        "unless the store's sales or a low occupancy cost support it), never 'upside'. Below the " +
+        "band with locked options is secure, sticky income, not a risk. On the levers: `false` " +
+        "means the source says the clause is absent, `unknown` means nothing here says either " +
+        "way — never report `unknown` as 'no such clause'. Where a lever comes from an OM read " +
+        "rather than an executed abstract, say it is unverified.",
+    };
+  },
+};
+
 export const MCP_TOOLS: McpToolDef[] = [
   libraryOverview,
   getKnowledge,
   searchDeals,
   getDeal,
   searchTenants,
+  brandLeaseTerms,
   tenantBenchmarks,
   portfolioAnalytics,
   saleComps,
@@ -760,6 +967,23 @@ export const MCP_SERVER_INSTRUCTIONS = `This is the KPR Centers deal library —
 Before analyzing anything, call **get_knowledge** once: it returns KPR's standing underwriting doctrine (how to treat above- and below-market rent, co-tenancy triggers, cinema sales, comps discipline) plus live operator-taught rules. Analysis that ignores it will be wrong in ways this team cares about.
 
 Call **library_overview** to see what's in the library, then **search_deals** → **get_deal** to work a specific center.
+
+**Which source wins.** KPR runs a SEPARATE internal system of record for the assets it
+owns today (live rent roll and accounting). If that connector is also available to you,
+it OUTRANKS this library on live facts for an OWNED asset — current rent, SF, suite,
+commencement and expiry, options already exercised, current occupancy, NOI and opex.
+This library's copy of an owned center is an acquisition-era snapshot and can be stale;
+every owned record returned here says so in an \`authority\` field.
+
+This library is the ONLY source for everything the internal system never sees, and it
+wins there: deals KPR looked at and passed on, prospects and deals under evaluation,
+sold assets, the seller-marketed figures from each OM, the sale-comp database, the lease
+abstracts stored here, the cross-deal benchmarks (they span the whole library, owned and
+not), and KPR's underwriting doctrine.
+
+When the two disagree on an owned asset: take the internal system's number, say which
+source each figure came from, and flag the disagreement. Never average them, and never
+quietly pick one.
 
 Ground rules for every answer:
 - Accuracy over speed. If a figure isn't in the data, say it isn't captured — never invent a precise-looking number.
