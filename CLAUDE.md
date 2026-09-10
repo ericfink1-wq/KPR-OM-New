@@ -205,6 +205,20 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
+- **BUDGET RE-CALIBRATED TO WHAT CLIENTS ACCEPT (9/10/26).** The 60 KB budget was set from
+  curl measurements, which enforce nothing. Calling the DEPLOYED server through a real MCP
+  client had `lease_abstracts` **REJECTED at 56,925 characters — the response never reached
+  the model at all.** A rejected response returns NOTHING, which is strictly worse than a
+  trimmed one, so `RESPONSE_BUDGET_BYTES` is now **40_000** (~10k tok) with real headroom.
+  **ALWAYS validate through a real client, not curl.** Three tools were also entirely
+  uncapped and only surfaced in that sweep: `lease_abstracts` (all three modes),
+  `tenant_benchmarks` (**134 KB / 34k tok at its old max of 400** — max now 150), and
+  `data_quality` portfolio mode (57 KB). `get_deal` additionally SHEDS opt-in blocks
+  (comparableSales → leaseRisk → cashFlowProjection, reporting `blocksDropped`) when those
+  alone bust the budget, since trimming the roster cannot help then. Its trim also now
+  measures the WHOLE response each pass instead of summing two serialisations, which
+  understated the total. VERIFIED: every tool × worst-case args ≤ 39.2 KB, all ≤200ms
+  (tenant_benchmarks 854ms cold, 17ms cached).
 - **RESPONSE BUDGET — measured against the REAL 301-deal corpus (9/10/26).** Everything had
   only ever been tested on 5 synthetic deals; against the real export it was unusable.
   `search_deals` returned **174 KB (~45k tokens) BY DEFAULT** and **1.24 MB (~318k tokens)**

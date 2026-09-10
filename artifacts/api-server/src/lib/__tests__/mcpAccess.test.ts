@@ -289,6 +289,13 @@ describe("response budget", () => {
     expect(emittedSize(v)).toBe(JSON.stringify(v, null, 2).length);
     expect(emittedSize(v)).toBeGreaterThan(JSON.stringify(v).length);
   });
+  it("sits well under what MCP clients actually accept", () => {
+    // Calling the deployed server through a real client had a 56,925-character response
+    // REJECTED outright — it never reached the model. A rejected response returns nothing,
+    // which is strictly worse than a trimmed one, so the budget keeps real headroom.
+    expect(RESPONSE_BUDGET_BYTES).toBeLessThanOrEqual(45_000);
+    expect(RESPONSE_BUDGET_BYTES).toBeGreaterThanOrEqual(20_000);  // still useful
+  });
   it("degrades honestly when the summary alone busts the budget", () => {
     const huge = { note: "z".repeat(RESPONSE_BUDGET_BYTES + 1000) };
     const out = capRows(huge, "rows", [{ a: 1 }], advice);

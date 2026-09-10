@@ -67,8 +67,14 @@ const clampLimit = (v: unknown, dflt: number, max: number): number => {
 // returned 174 KB (~45k tokens) and at limit 200 returned 1.2 MB (~318k tokens) — more
 // than a whole context window, from one call. A tool that floods the caller is worse
 // than no tool, so every list-shaped result is capped and says so when it trims.
-// ~60 KB ≈ 15k tokens: big enough for a real answer, small enough to leave room to think.
-export const RESPONSE_BUDGET_BYTES = 60_000;
+// The ceiling is set by what MCP CLIENTS accept, which is tighter than it first appeared.
+// Calling the deployed server through a real client (rather than curl, which enforces
+// nothing) had lease_abstracts rejected outright at 56,925 characters — the response never
+// reached the model at all. So the budget sits well under that with headroom to spare:
+// ~40 KB ≈ 10k tokens, comfortably useful and comfortably inside what a client will take.
+// Anything approaching the client's own limit is worse than a trimmed answer, because a
+// rejected response returns NOTHING.
+export const RESPONSE_BUDGET_BYTES = 40_000;
 
 // Measure exactly what goes on the wire. The tool handler emits JSON.stringify(x, null, 2)
 // for readability, which runs ~17% larger than the compact form — so budgeting against
@@ -676,9 +682,28 @@ const getDeal: McpToolDef = {
     // from flooding the context, and says exactly how to page the rest.
     if (Array.isArray(deal.tenants)) {
       const roster = deal.tenants as DealData[];
-      const overhead = emittedSize({ ...response, deal: { ...deal, tenants: [] } });
+      // Measure the WHOLE response each pass rather than adding two separate
+      // serialisations together: the sum understates the combined size (nesting,
+      // separators) and left the biggest deal a shade over budget.
+      const fits = (rows: DealData[]) => emittedSize({ ...response, deal: { ...deal, tenants: rows } }) <= RESPONSE_BUDGET_BYTES;
       let kept = roster;
-      while (kept.length > 0 && overhead + emittedSize(kept) > RESPONSE_BUDGET_BYTES) {
+      while (kept.length > 0 && !fits(kept)) {
+        kept = kept.length > 20 ? kept.slice(0, Math.floor(kept.length * 0.6)) : kept.slice(0, kept.length - 1);
+      }
+      // If even an empty roster leaves the response over budget, the weight is in the
+      // opt-in blocks the caller asked for. Shed them in order of how easily they can be
+      // fetched separately, rather than returning something a client will reject outright.
+      if (kept.length === 0 && !fits([])) {
+        const dropped: string[] = [];
+        for (const [field, gate] of [["comparableSales", "includeComps"], ["leaseRisk", "includeLeaseRisk"], ["cashFlowProjection", "includeCashFlow"]] as const) {
+          if (deal[field] !== undefined) { delete deal[field]; dropped.push(`${field} (re-request alone with ${gate}:true)`); }
+          if (fits([])) break;
+        }
+        if (dropped.length) deal.blocksDropped = { dropped, reason: "the requested optional blocks together exceeded the response budget" };
+      }
+      // Re-fill the roster now that the optional blocks are gone.
+      kept = roster;
+      while (kept.length > 0 && !fits(kept)) {
         kept = kept.length > 20 ? kept.slice(0, Math.floor(kept.length * 0.6)) : kept.slice(0, kept.length - 1);
       }
       if (kept.length < roster.length) {
@@ -784,7 +809,7 @@ const tenantBenchmarks: McpToolDef = {
     properties: {
       brand: { type: "string", description: "Filter to brands matching this text." },
       minLocations: { type: "number", description: "Only brands with at least this many locations." },
-      limit: { type: "number", description: "Default 60, max 400." },
+      limit: { type: "number", description: "Default 60, max 150. Filter by brand or minLocations rather than raising this." },
     },
   },
   handler: async (a) => {
@@ -794,16 +819,16 @@ const tenantBenchmarks: McpToolDef = {
     const hit = all.filter(b =>
       (!brand || b.brand.toLowerCase().includes(brand)) &&
       (minLoc == null || b.locations >= minLoc));
-    const limit = clampLimit(a.limit, 60, 400);
-    return {
+    const limit = clampLimit(a.limit, 60, 150);
+    return capRows({
       matched: hit.length,
-      benchmarks: hit.slice(0, limit),
       howToRead:
         "Compare a tenant's rentPerSF to medianRentPerSf for its brand. ABOVE the median is a " +
         "premium that may reset down at renewal (downside, unless the tenant's sales/occupancy " +
         "cost support it). BELOW the median and locked by options is sticky, secure income — " +
         "not a risk. Always state the sample size (locations) alongside any verdict.",
-    };
+    }, "benchmarks", hit.slice(0, limit),
+      "Filter with `brand`, or raise `minLocations`, to narrow to the brands you care about.");
   },
 };
 
@@ -978,28 +1003,37 @@ const leaseAbstracts: McpToolDef = {
         id: leaseAbstractsTable.id, dealId: leaseAbstractsTable.dealId,
         tenantName: leaseAbstractsTable.tenantName, updatedAt: leaseAbstractsTable.updatedAt,
       }).from(leaseAbstractsTable).orderBy(desc(leaseAbstractsTable.updatedAt)).limit(500);
-      return { count: rows.length, abstracts: rows.map(r => ({ ...r, updatedAt: r.updatedAt.toISOString() })) };
+      return capRows(
+        { count: rows.length },
+        "abstracts",
+        rows.map(r => ({ ...r, updatedAt: r.updatedAt.toISOString() })),
+        "Pass a dealId to list one deal's abstracts, or a tenantName to read a specific one.",
+      );
     }
     const rows = await db.select().from(leaseAbstractsTable)
       .where(dealId ? eq(leaseAbstractsTable.dealId, dealId) : isNotNull(leaseAbstractsTable.id));
     if (!tenantName) {
-      return {
-        dealId,
-        count: rows.length,
-        abstracts: rows.map(r => ({ id: r.id, tenantName: r.tenantName, version: r.version, updatedAt: r.updatedAt.toISOString() })),
-      };
+      return capRows(
+        { dealId, count: rows.length },
+        "abstracts",
+        rows.map(r => ({ id: r.id, tenantName: r.tenantName, version: r.version, updatedAt: r.updatedAt.toISOString() })),
+        "Pass a tenantName to read one abstract in full.",
+      );
     }
     const lower = tenantName.toLowerCase();
     const match = rows.filter(r => r.tenantName.toLowerCase().includes(lower));
     if (!match.length) return { error: "not_found", message: `No abstract for "${tenantName}"${dealId ? ` on deal ${dealId}` : ""}.` };
-    return {
+    // A single reconciled abstract is large — ~30 lease-note sections, an options table,
+    // co-tenancy trees. Several at once will not fit, so they are capped like everything else.
+    return capRows({
       count: match.length,
-      abstracts: match.map(r => ({ id: r.id, dealId: r.dealId, tenantName: r.tenantName, version: r.version, updatedAt: r.updatedAt.toISOString(), abstract: r.data })),
       reminder:
         "Executed documents govern. The rent roll and any draft abstract are cross-checks, never " +
         "sources. Surface every mid-term tenant lever (co-tenancy, kickout, go-dark, early " +
         "termination, ROFR/ROFO) prominently — with its exact trigger, remedy and notice window.",
-    };
+    }, "abstracts",
+      match.map(r => ({ id: r.id, dealId: r.dealId, tenantName: r.tenantName, version: r.version, updatedAt: r.updatedAt.toISOString(), abstract: r.data })),
+      "Name a single tenant exactly to read one abstract at a time.");
   },
 };
 
@@ -1069,17 +1103,22 @@ const dataQuality: McpToolDef = {
     }
     const summary = summarizePortfolioIssues(rows.map(r => ({ id: r.id, data: r.data as DealData })));
     const limit = clampLimit(a.limit, 25, 100);
-    return {
-      scanned: summary.scanned,
-      dealsWithIssues: summary.dealsWithIssues,
-      totalOpen: summary.totalOpen,
-      groups: summary.groups.slice(0, limit).map(g => ({
+    return capRows(
+      {
+        scanned: summary.scanned,
+        dealsWithIssues: summary.dealsWithIssues,
+        totalOpen: summary.totalOpen,
+        note: "Counts above cover the WHOLE portfolio even if the group list below is trimmed.",
+      },
+      "groups",
+      summary.groups.slice(0, limit).map(g => ({
         issue: g.label, key: g.key, kind: g.kind, severity: g.severity,
         occurrences: g.count, dealsAffected: g.dealCount,
-        example: g.sample,
-        deals: g.deals.slice(0, 10),
+        example: g.sample.slice(0, 400),
+        deals: g.deals.slice(0, 6),
       })),
-    };
+      "Lower `limit`, or pass a dealId to inspect one deal's issues in full.",
+    );
   },
 };
 
