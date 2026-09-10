@@ -124,6 +124,21 @@ Two more alignment traps:
   `salesPSF` is what a document disclosed as of its capture date. Both are sales PSF; one is
   current and one is historical. Label which is which.
 
+### Datex row traps — each one silently produces a wrong number
+
+Verified against the live data. Before aggregating anything out of `TenantsMetrics`:
+
+1. **Filter to one `Period`.** It's monthly history — without a period filter you count the
+   same tenant dozens of times. "Current" is the latest period.
+2. **Every tenant appears more than once per period, and the extra rows carry rent of 0.**
+   Averaging the rows as returned **halves the rent.** Drop `AnnualRentPSF = 0` first.
+3. **`Rolling12SalesPSF: 0` with `LastSalesPeriod: "190001"` means never reported, not zero
+   sales.** That sentinel is January 1900. Treating it as real says a healthy chain does
+   $0/SF — and averaging it produces a plausible-looking figure that is completely false.
+   Exclude them and say how many locations actually reported.
+4. **Datex names carry store numbers** ("Dollar Tree #4516"); this corpus stores the brand
+   alone. Match on brand, not the raw string.
+
 ### On tenants and brands, cite BOTH
 
 Don't pick one. They answer different questions, and the best answer carries both:

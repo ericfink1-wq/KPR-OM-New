@@ -150,6 +150,16 @@ describe("Datex precedence", () => {
       expect(text).toMatch(/BASE\s+to\s+BASE/i);
     }
   });
+  it("warns about the Datex row traps that silently produce wrong numbers", () => {
+    // Each of these was found by querying the live data, and each one yields a
+    // plausible-looking figure that is simply false — the worst kind of error.
+    for (const text of [MCP_SERVER_INSTRUCTIONS, KPR_PLAYBOOK]) {
+      expect(text).toMatch(/190001/);            // the never-reported sales sentinel
+      expect(text).toMatch(/HALVES the rent/);   // duplicate zero-rent rows
+      expect(text).toMatch(/Period/);            // monthly history needs a period filter
+      expect(text).toMatch(/store numbers/i);    // name matching
+    }
+  });
   it("forbids averaging the two sources on a disagreement", () => {
     expect(MCP_SERVER_INSTRUCTIONS).toMatch(/[Nn]ever average/);
     expect(KPR_PLAYBOOK).toMatch(/[Nn]ever average/);

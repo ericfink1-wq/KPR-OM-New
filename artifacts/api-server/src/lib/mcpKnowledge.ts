@@ -96,6 +96,20 @@ Two more alignment notes for Datex: \`TenantsMetrics\` is MONTHLY history keyed 
 figure a document disclosed as of its capture date. Both are sales PSF, but one is current
 and one is historical — label which is which.
 
+**Datex row-level traps — verified against the live data, and each one silently produces a
+wrong number.** Before aggregating anything out of \`TenantsMetrics\`:
+1. **Filter to one \`Period\`.** It is monthly history. Without a period filter you aggregate
+   the same tenant dozens of times. "Current" is the latest period.
+2. **Every tenant appears more than once per period, and the extra rows carry rent of 0.**
+   Averaging the rows as they come back HALVES the rent. Drop rows where \`AnnualRentPSF\` is
+   0 before you compute anything.
+3. **\`Rolling12SalesPSF: 0\` with \`LastSalesPeriod: "190001"\` means NEVER REPORTED, not zero
+   sales.** That sentinel date is January 1900. Treating those zeros as real sales says a
+   healthy chain does $0/SF, and averaging them produces a plausible-looking figure that is
+   completely false. Exclude them; report how many locations actually reported.
+4. **Datex tenant names carry store numbers** ("Dollar Tree #4516"); this corpus stores the
+   brand alone. Match on the brand, not the raw string.
+
 **On tenants and brands, use BOTH sources and cite BOTH.** They answer different questions:
   *"Across KPR's own properties we see rents of X (Datex, current). Across the broader set of
   deals we've reviewed, the market shows Y (corpus, captures spanning 20NN–20NN)."*

@@ -228,6 +228,26 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   "Availa Bank" (real tenants) get written off as vacancy; a test pins both directions.
   `search_tenants` also flags `isVacantSuite` so vacancy is visible rather than silently
   filtered. NOTE for Eric: 3 "Vacant*" rows DO carry rent — likely mislabeled, worth a look.
+- **END-TO-END TEST RUN AGAINST LIVE DATEX + THE REAL CORPUS (9/10/26).** Question: "what do
+  we pay Dollar Tree, and is it market?" **Result: KPR's own median base rent $10.88/SF (Datex,
+  20 owned locations, current) vs the corpus median $11.00/SF (83 leases reviewed, p25–p75
+  $9.00–$13.00) — i.e. KPR pays essentially AT market.** Neither system can produce that alone;
+  the composition works. Four DATEX ROW TRAPS found by actually querying it, now documented in
+  MCP_SERVER_INSTRUCTIONS + KPR_PLAYBOOK + SKILL.md because each silently yields a wrong number:
+  (1) `TenantsMetrics` is MONTHLY — filter to one `Period` or you count each tenant dozens of
+  times; (2) **every tenant appears MORE THAN ONCE per period with the extra rows at
+  `AnnualRentPSF: 0` — averaging as returned HALVES the rent**; (3) **`Rolling12SalesPSF: 0`
+  with `LastSalesPeriod: "190001"` (a Jan-1900 sentinel) means NEVER REPORTED, not zero sales**
+  — only 2 of 20 Dollar Trees actually reported, so averaging the zeros claims a healthy chain
+  does ~$18/SF when the real median is ~$180; (4) Datex names carry store numbers ("Dollar Tree
+  #4516") vs brand-only here — match on brand. Also confirmed the base-vs-gross guard matters:
+  Dollar Tree NNN averages ~$5.40/SF, so a gross comparison would have shown ~$16.28 vs an
+  $11.00 base median and manufactured a 48% "above market" finding.
+- **52 of 301 DEALS ARE FORWARD-DATED** (`tenantsAsOf: 2027-01-01`, all the same date — looks
+  like a pro-forma/forward rent-roll convention). A future as-of date makes a record look
+  maximally fresh to the recency weighting, so `capturedAt` now labels it "FORWARD-DATED …
+  a projection, not an observation" rather than letting it pass as captured today. Worth Eric
+  confirming whether that date is deliberate.
 - **Companion skill:** `.claude/skills/kpr-deal-library/SKILL.md` teaches a client HOW to use
   the tools (which tool for which question + the non-negotiables). Plain-English setup doc
   for Eric: `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts` (18).

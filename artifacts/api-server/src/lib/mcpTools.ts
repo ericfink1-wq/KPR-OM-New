@@ -172,7 +172,18 @@ export const isVacantName = (name: unknown): boolean => VACANT_NAME.test(String(
 function capturedAt(d: DealData, fallback: Date): { asOf: string; basis: string } {
   const rosterAsOf = str(d.tenantsAsOf);
   const uploaded = str(d.uploadedAt);
-  if (rosterAsOf) return { asOf: rosterAsOf.slice(0, 10), basis: `roster as-of date${d.tenantsSource ? ` (${String(d.tenantsSource)})` : ""}` };
+  if (rosterAsOf) {
+    const iso = rosterAsOf.slice(0, 10);
+    // A rent roll dated in the FUTURE is a real convention — a forward/pro-forma roll — but
+    // it also makes the record look maximally fresh to the recency weighting. On the real
+    // corpus 52 of 301 deals carry the same forward date, so say so rather than let it pass
+    // as "captured today".
+    const forward = iso > new Date().toISOString().slice(0, 10);
+    return {
+      asOf: iso,
+      basis: `roster as-of date${d.tenantsSource ? ` (${String(d.tenantsSource)})` : ""}${forward ? " — FORWARD-DATED: this roll is dated in the future, so it is a projection, not an observation" : ""}`,
+    };
+  }
   if (uploaded) return { asOf: uploaded.slice(0, 10), basis: "document upload date" };
   return { asOf: fallback.toISOString().slice(0, 10), basis: "last record change (no capture date stored)" };
 }
@@ -1548,6 +1559,20 @@ into the Datex side inflates it by the entire recovery load — often $8–15/SF
 ordinary rent into a phantom above-market finding. Also: Datex \`TenantsMetrics\` is monthly
 history keyed by \`Period\` (YYYYMM), so "current" is the LATEST period; and Datex sales are
 trailing-twelve-month and live, while this corpus's salesPSF is as-of its capture date.
+
+**Datex row-level traps — verified against the live data, and each one silently produces a
+wrong number.** Before aggregating anything out of \`TenantsMetrics\`:
+1. **Filter to one \`Period\`.** It is monthly history. Without a period filter you aggregate
+   the same tenant dozens of times. "Current" is the latest period.
+2. **Every tenant appears more than once per period, and the extra rows carry rent of 0.**
+   Averaging the rows as they come back HALVES the rent. Drop rows where \`AnnualRentPSF\` is
+   0 before you compute anything.
+3. **\`Rolling12SalesPSF: 0\` with \`LastSalesPeriod: "190001"\` means NEVER REPORTED, not zero
+   sales.** That sentinel date is January 1900. Treating those zeros as real sales says a
+   healthy chain does $0/SF, and averaging them produces a plausible-looking figure that is
+   completely false. Exclude them; report how many locations actually reported.
+4. **Datex tenant names carry store numbers** ("Dollar Tree #4516"); this corpus stores the
+   brand alone. Match on the brand, not the raw string.
 
 **On tenants and brands, use BOTH and cite BOTH.** These sources answer different questions,
 so the best answer carries them separately rather than picking one:
