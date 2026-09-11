@@ -169,6 +169,45 @@ total GLA; occupied ÷ total = stated occupancy; Σ occupied base rent = gross p
 rent; EGI − OpEx = NOI; NOI ÷ cap = price. A contradiction is a real finding worth
 raising. An absent value is just absent — not a contradiction.
 
+## Ground every document in the actual property — this is the whole point
+
+Neither this library nor Datex holds PSAs, loan documents or leases as documents. But
+those documents are FULL of tenant- and property-level facts that both systems know
+cold, and a review that does not reach for them is generic commentary dressed up as
+analysis. Whenever a document in front of you names a tenant, a square footage, a rent, a
+date, an anchor, a percentage of GLA or a dollar threshold, LOOK IT UP before you comment
+on the clause.
+
+Worked examples of the reflex:
+- A PSA conditions closing on estoppels from "Major Tenants" over 10,000 SF. Pull the
+  roster, list exactly who qualifies, and say what share of base rent sits behind that
+  condition. "Estoppels required from majors" is a restatement; "the condition covers six
+  tenants and 61 percent of base rent, including both anchors" is an answer.
+- A casualty clause lets either party terminate above a damage threshold. Compare that
+  threshold to the centre's actual GLA and replacement scale — a number that sounds large
+  can be a single inline unit.
+- A PSA allocates delinquent rent after closing. Check the roll for who is actually
+  delinquent and for percentage-rent tenants whose true-up lands post-closing.
+- A lease consent or ROFR could block a pad sale. The executed abstracts hold those
+  rights; check before anyone markets the pad.
+- Debt is being assumed. Datex holds the live loan; the document holds the terms. Tie the
+  balance and rate to each other and say which came from where.
+- A tax proration clause meets a jurisdiction that reassesses on sale. That is not a
+  proration detail, it is a forward NOI item — size it.
+- A covenant, exclusive or co-tenancy clause names an anchor. Check whether that anchor is
+  currently open, what it pays, when it expires, and whether a sale or a going-dark event
+  trips anything.
+
+Which system to ask: a fact about a property KPR OWNS goes to Datex first, because it is
+live. A market question — is this rent, this threshold, this term normal — belongs here,
+because this is the sample. When you have both, cite both separately and let the gap be
+part of the finding.
+
+Two disciplines carry over unchanged. If the document and the data disagree, that is a
+FINDING, not something to reconcile silently — name both figures and which source each
+came from. And if the data does not cover it, say so; an unverified clause read out with
+confidence is exactly the failure mode this playbook exists to prevent.
+
 ## Doctrine topics — call get_knowledge again with the topic you need
 
 What you have just read is the CORE: what this library is, which source wins, field
@@ -190,7 +229,8 @@ moment the conversation touches that ground — do not reason from the tripwire 
 - \`waterfall_and_returns\` — investor-book arithmetic audit, pref and promote structure, exits.
   TRIPWIRE: never quote an IRR you have not tied back to the cash-flow line.
 - \`psa_and_legal\` — purchase and sale agreements, conditions, prorations, risk allocation.
-  TRIPWIRE: never state a deadline without its clause and whether days are business or calendar.
+  TRIPWIRE: never state a deadline without its clause and whether days are business or calendar —
+  and never read a clause without looking up the tenants and figures it actually turns on.
 - \`taxes_and_closing\` — reassessment on sale, closing costs, transfer taxes.
   TRIPWIRE: commercial treatment always; cliff taxes are never modelled as marginal.
 - \`investor_materials\` — investor letter format, IC memos, internal consistency.
@@ -438,6 +478,16 @@ NOTE ON PROVENANCE: unlike the lease, underwriting and tax doctrine here, this s
 is a standard institutional review framework rather than a set of rules Eric has taught
 from a specific KPR deal. Treat it as scaffolding to be corrected — when he rules on
 something, that ruling wins and should be recorded as an operator-taught rule.
+
+### Read every clause against the real roster, never in the abstract
+A PSA is mostly a set of triggers pointed at tenants, dates and dollar thresholds — and
+you have the roster, the rents, the expiries, the abstracts and, for an owned asset, the
+live Datex record. Resolve each trigger against that data before commenting: who the
+named or qualifying tenants actually are, what share of rent and GLA they represent,
+which leases the consent or estoppel provisions actually capture, whether a threshold is
+large or trivial for a centre this size. See "Ground every document in the actual
+property" in the core doctrine for the full reflex. A clause summarised without its
+subjects is not a review.
 
 ### Never state a deadline without its clause and its day-count basis
 Business days and calendar days are different deals. Say which the document uses, name

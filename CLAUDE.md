@@ -376,6 +376,16 @@ tools to have an always-on real estate brain working side by side with me."
 - **`psa_and_legal` is SCAFFOLDING, not taught doctrine** — it says so in its own text, and a
   test enforces that admission. Everything else is grounded in CLAUDE.md. **Eric's rulings on
   PSA review should be captured and folded in**; same for anything he corrects on waterfalls.
+- **LEAN ON THE PROPERTY DATA INSIDE A LEGAL DOC (Eric, 9/11/26):** "datex and KPR site dont
+  have direct insight on things like PSAs, legal docs, at least directly, but there are always
+  lingering tenant and property level items that make their way into these docs, and where
+  applicable, always lean on that knowledge." So the CORE carries **"Ground every document in
+  the actual property"** — whenever a document names a tenant, SF, rent, date, anchor, % of GLA
+  or a dollar threshold, LOOK IT UP before commenting. Worked examples (estoppel "Major
+  Tenants" → who qualifies + % of base rent; casualty threshold vs real GLA; delinquent-rent
+  proration vs the roll; ROFR blocking a pad sale; assumed debt → Datex; tax proration in a
+  reassess-on-sale state). It is in CORE, not just psa_and_legal, because it applies to ANY
+  document. A document-vs-data disagreement is a FINDING, never reconciled silently.
 - Still MISSING from the brain (candidates, in value order): the closing-cost estimator and
   tax-reassessment forecaster exist as real engines in `om-database/src/lib/` but are NOT
   exposed as MCP tools, so an outside chat can only read the doctrine, not compute a number.

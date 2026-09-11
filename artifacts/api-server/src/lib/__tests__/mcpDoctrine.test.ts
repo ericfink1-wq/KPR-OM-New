@@ -104,3 +104,39 @@ describe("the hard-won rules survived the restructure", () => {
     expect(DOCTRINE_TOPICS.psa_and_legal).toMatch(/PROVENANCE/);
   });
 });
+
+// Eric, 9/11/26: "datex and KPR site dont have direct insight on things like PSAs, legal
+// docs, at least directly, but there are always lingering tenant and property level items
+// that make their way into these docs, and where applicable, always lean on that
+// knowledge." This is the reflex that separates a review from generic commentary, so it
+// belongs in the CORE — it applies to any document, not only a PSA — and it has to name
+// concrete lookups rather than just instructing the model to "use the data".
+describe("grounding documents in the real property", () => {
+  it("lives in the core, so it reaches every conversation", () => {
+    expect(KPR_CORE).toMatch(/Ground every document in the actual property/);
+  });
+
+  it("survives into any topic fetch, since topics ship with the core framing", () => {
+    for (const t of ["psa_and_legal", "debt", "leases"]) {
+      expect(doctrineForTopic(t)!.markdown, `${t} lost the grounding rule`)
+        .toMatch(/Ground every document in the actual property/);
+    }
+  });
+
+  it("gives concrete lookups, not just an instruction to use the data", () => {
+    const core = KPR_CORE.toLowerCase();
+    for (const cue of ["estoppel", "casualty", "delinquent rent", "rofr", "co-tenancy"]) {
+      expect(core, `no worked example mentioning ${cue}`).toContain(cue);
+    }
+  });
+
+  it("keeps the disagreement rule: a mismatch is a finding, not something to reconcile away", () => {
+    expect(KPR_CORE).toMatch(/FINDING, not something to reconcile silently/);
+  });
+
+  it("the PSA topic points back at the reflex rather than restating it loosely", () => {
+    expect(DOCTRINE_TOPICS.psa_and_legal).toMatch(/Read every clause against the real roster/);
+    // The cross-reference wraps across lines in the source, so tolerate the break.
+    expect(DOCTRINE_TOPICS.psa_and_legal).toMatch(/Ground every document in the actual\s+property/);
+  });
+});
