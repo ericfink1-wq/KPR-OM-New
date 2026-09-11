@@ -175,6 +175,48 @@ function methodNotAllowed(_req: Request, res: Response): void {
 // exists for clients that accept only a bare URL (some claude.ai custom-connector
 // setups) — same key, same revocation, but the secret rides in the path, so the admin UI
 // labels it as the less-private option.
+// PUBLIC health/diagnostic for the MCP endpoint. Deliberately unauthenticated, because
+// its whole job is to explain a 401 — requiring a working key to ask why the key doesn't
+// work is useless. It therefore exposes ONLY booleans and counts: never a key, never a
+// fingerprint, never an email. "Is a key configured, does its owner exist and is that
+// owner approved" is enough to tell a misconfigured secret from a stale deployment from
+// a wrong email, which previously took a round-trip of guesses each time.
+router.get("/mcp/health", async (_req, res) => {
+  const st = staticKeyStatus();
+  let ownerFound: boolean | null = null;
+  let ownerApproved: boolean | null = null;
+  if (st.email) {
+    try {
+      const owner = await findUserByEmail(st.email);
+      ownerFound = !!owner;
+      ownerApproved = owner ? owner.status === "approved" : false;
+    } catch { /* database unreachable — leave null rather than asserting */ }
+  }
+  let storedKeys: number | null = null;
+  try {
+    await ensureMcpKeysTable();
+    storedKeys = (await listMcpKeys(null)).filter(k => k.active).length;
+  } catch { /* table missing or unreadable — null says "couldn't tell", not "zero" */ }
+  res.json({
+    ok: true,
+    server: SERVER_NAME,
+    version: SERVER_VERSION,
+    // Proves WHICH build is live: absent on any deployment older than this endpoint.
+    features: { staticKey: true, oauth: false },
+    staticKey: {
+      secretSet: !!process.env.MCP_STATIC_KEY,
+      emailSet: !!process.env.MCP_STATIC_KEY_EMAIL,
+      wellFormed: st.configured,
+      problem: st.reason,
+      ownerFound,
+      ownerApproved,
+      usable: st.configured && ownerApproved === true,
+    },
+    storedActiveKeys: storedKeys,
+    howToAuthenticate: "Authorization: Bearer <key>, X-API-Key: <key>, or POST to /api/mcp/k/<key>",
+  });
+});
+
 router.post("/mcp", requireMcpKey, handleMcp);
 router.post("/mcp/k/:key", requireMcpKey, handleMcp);
 router.get("/mcp", methodNotAllowed);
