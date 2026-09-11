@@ -25,6 +25,27 @@ records are deals KPR did NOT buy**, and that is the point: they are the compara
 is **static** — captured from an offering memorandum or rent roll and then essentially never
 updated.
 
+## When only ONE of the two is connected
+
+Most people at KPR start with **Datex only**; the deal library is added later. Everything in
+this skill about Datex — the row traps, the query discipline, the source rules — applies in
+full. Two adjustments:
+
+**Skip the library tools rather than stalling.** Instructions here that name `get_knowledge`,
+`search_deals`, `get_deal`, `search_tenants`, `brand_lease_terms`, `tenant_benchmarks`,
+`sale_comps`, `comp_benchmark`, `lease_abstracts`, `data_quality` or `data_coverage` require
+the deal-library connector. If it is not connected, say so in one line and answer with what
+Datex has. Do not describe the tool as broken, and do not go looking for a substitute.
+
+**Do NOT use Datex as a market sample — this is the important one.** Datex knows KPR's own
+buildings and nothing else. So "what does our Ulta pay?" is a Datex question, but "is that
+rent normal for Ulta?" is NOT: answering it from twenty owned locations describes what KPR
+happens to pay, not what the market charges, and the two are different in exactly the way
+that matters when you are deciding whether a rent is aggressive. Without the library, the
+honest answer is that the market comparison needs the deal library (or an outside source),
+and here is what KPR's own portfolio shows in the meantime — clearly labelled as KPR's own,
+never as "the market."
+
 ## Which one answers which question
 
 | Question | Source |
