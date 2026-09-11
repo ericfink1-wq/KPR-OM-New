@@ -258,11 +258,15 @@ export async function apiMcpInfo(): Promise<McpInfo> {
   return r.json() as Promise<McpInfo>;
 }
 
+// The environment-held key: configured in deploy secrets rather than the database, so
+// it survives a dropped table. It is never in the `keys` list, hence reported alongside.
+export interface StaticKeyStatus { configured: boolean; reason: string | null; email: string | null }
+
 // Own keys by default; admins may request every member's for oversight.
-export async function apiListMcpKeys(all = false): Promise<{ keys: McpKeySummary[]; scope: string; isAdmin: boolean }> {
+export async function apiListMcpKeys(all = false): Promise<{ keys: McpKeySummary[]; scope: string; isAdmin: boolean; staticKey?: StaticKeyStatus }> {
   const r = await apiFetch(`/mcp-keys${all ? "?all=1" : ""}`);
   if (!r.ok) throw new Error("Couldn't load access keys");
-  return (await r.json()) as { keys: McpKeySummary[]; scope: string; isAdmin: boolean };
+  return (await r.json()) as { keys: McpKeySummary[]; scope: string; isAdmin: boolean; staticKey?: StaticKeyStatus };
 }
 
 // Always mints for the SIGNED-IN user — there is no way to mint on someone else's behalf.

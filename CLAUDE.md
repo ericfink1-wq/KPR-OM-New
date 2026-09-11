@@ -411,6 +411,16 @@ have recurred on EVERY publish. All runtime tables are in the script now.
   A NOT NULL the runtime can't enforce (`ADD COLUMN IF NOT EXISTS` can't backfill NOT NULL)
   belongs in **code, failing closed** — `verifyMcpKey` rejects a key with a null `userId` —
   never in a declaration the database doesn't back.
+- **THE DURABLE FIX IS THE ENVIRONMENT KEY, NOT THE MIRROR (9/11/26).** Three code fixes
+  failed to stop the DROP because it depends on Replit state I can't see, and there is NO
+  "turn off migrations" toggle in Publish → Adjust settings (only a DESTRUCTIVE "copy dev
+  database to production" checkbox — NEVER tell Eric to tick that; it overwrites all 301
+  live deals). So MCP access no longer depends on the table surviving: `MCP_STATIC_KEY` +
+  `MCP_STATIC_KEY_EMAIL` (deploy secrets) are checked in `verifyMcpKey` BEFORE any DB
+  read. Still not a bypass — the named owner must exist and be `approved`, both vars are
+  required, and the key must meet the same length/prefix bar. `staticKeyStatus()` surfaces
+  it in `GET /mcp-keys` → a banner in `McpAccess.tsx`, so a misconfigured secret says so
+  instead of failing silently. Tests: `mcpStaticKey.test.ts`.
 - **Do NOT rely on the pull hook alone — it does not fire on every path.** The DROP kept
   recurring across three publishes even after the table was on the mirror list, because the
   hook wasn't running for Eric's pull/publish flow. The mirror now ALSO runs from the root

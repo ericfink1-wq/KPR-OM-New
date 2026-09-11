@@ -187,12 +187,63 @@ function sameHash(a: string, b: string): boolean {
   return ba.length === bb.length && timingSafeEqual(ba, bb);
 }
 
+// ── THE BREAK-GLASS KEY, HELD OUTSIDE THE DATABASE ───────────────────────────────
+// Every key above lives in mcp_api_keys, which means it dies with that table. On this
+// deployment that is not hypothetical: the publish step compares the development
+// database against production, decides a table it can only see in production must have
+// been deleted, and proposes DROP TABLE — which has destroyed the live key more than
+// once, breaking the connector each time with no way to recover the secret (only its
+// hash was ever stored).
+//
+// So one key may be supplied by the environment instead. It is never written to the
+// database, so nothing the publish step does can remove it, and the connector survives.
+// Deliberately NOT a bypass of the "KPR employees, using their credentials" rule:
+//   • It names an OWNER by email, and that account must still exist and be approved —
+//     same check every stored key passes, on every request.
+//   • Both variables are required. One without the other disables it, rather than
+//     silently falling back to something weaker.
+//   • It must meet the same length bar as a minted key, so a short secret can't become
+//     a credential to the whole library.
+// Rotate by changing the secret; revoke by deleting it or un-approving the owner.
+const STATIC_KEY = () => (process.env.MCP_STATIC_KEY ?? "").trim();
+const STATIC_KEY_EMAIL = () => (process.env.MCP_STATIC_KEY_EMAIL ?? "").trim().toLowerCase();
+const MIN_KEY_BODY = 20;
+
+/** Is the environment-held key configured well enough to be usable at all? */
+export function staticKeyStatus(): { configured: boolean; reason: string | null; email: string | null } {
+  const k = STATIC_KEY(), e = STATIC_KEY_EMAIL();
+  if (!k && !e) return { configured: false, reason: null, email: null };
+  if (!k) return { configured: false, reason: "MCP_STATIC_KEY_EMAIL is set but MCP_STATIC_KEY is missing", email: e };
+  if (!e) return { configured: false, reason: "MCP_STATIC_KEY is set but MCP_STATIC_KEY_EMAIL is missing — a key with no named owner is not accepted", email: null };
+  if (!k.startsWith(KEY_PREFIX) || k.length < KEY_PREFIX.length + MIN_KEY_BODY) {
+    return { configured: false, reason: `MCP_STATIC_KEY must start with ${KEY_PREFIX} and carry at least ${MIN_KEY_BODY} more characters`, email: e };
+  }
+  return { configured: true, reason: null, email: e };
+}
+
+async function verifyStaticKey(key: string): Promise<VerifiedKey | null> {
+  const st = staticKeyStatus();
+  if (!st.configured || !st.email) return null;
+  // Compare the SHA-256 digests rather than the raw strings: equal-length buffers are
+  // required for a constant-time compare, and hashing normalises that for free.
+  if (!sameHash(hashKey(key), hashKey(STATIC_KEY()))) return null;
+  const [owner] = await db
+    .select({ id: usersTable.id, email: usersTable.email, status: usersTable.status })
+    .from(usersTable).where(eq(sql`lower(${usersTable.email})`, st.email)).limit(1);
+  if (!owner || owner.status !== "approved") return null;
+  return { id: "env-static", name: "Environment key (MCP_STATIC_KEY)", scope: "read", userId: owner.id, email: owner.email };
+}
+
 // Verify a raw key. Returns null for anything that isn't a live, unexpired,
 // unrevoked key — callers must treat null as a hard 401, never as a soft failure.
 export async function verifyMcpKey(raw: string | null | undefined): Promise<VerifiedKey | null> {
   if (typeof raw !== "string") return null;
   const key = raw.trim();
   if (!key.startsWith(KEY_PREFIX) || key.length < KEY_PREFIX.length + 20) return null;
+  // Checked FIRST, and without touching mcp_api_keys — this is the path that has to keep
+  // working when that table has just been dropped and recreated empty.
+  const viaEnv = await verifyStaticKey(key);
+  if (viaEnv) return viaEnv;
   await ensureMcpKeysTable();
   const hash = hashKey(key);
   const [row] = await db.select().from(mcpKeysTable).where(eq(mcpKeysTable.keyHash, hash)).limit(1);

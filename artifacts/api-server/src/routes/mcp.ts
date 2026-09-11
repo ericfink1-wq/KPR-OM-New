@@ -20,6 +20,7 @@ import { MCP_TOOLS, MCP_TOOLS_BY_NAME, MCP_SERVER_INSTRUCTIONS } from "../lib/mc
 import {
   createMcpKey, listMcpKeys, revokeMcpKey, deleteMcpKey,
   verifyMcpKey, extractKeyFromRequest, ensureMcpKeysTable, keyOwner, type VerifiedKey,
+  staticKeyStatus,
 } from "../lib/mcpKeys";
 import { requireAdmin, requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
@@ -193,7 +194,12 @@ mcpAdminRouter.get("/mcp-keys", requireAuth, async (req, res) => {
     // A member sees their own keys. An admin can ask for everyone's, for oversight.
     const wantsAll = req.session.isAdmin && String(req.query.all ?? "") === "1";
     const keys = await listMcpKeys(wantsAll ? null : req.session.userId);
-    res.json({ keys, scope: wantsAll ? "all" : "mine", isAdmin: !!req.session.isAdmin });
+    // Report the environment-held key too. It lives in deploy secrets rather than the
+    // database (so a dropped table can't destroy it), which also means it appears
+    // nowhere in the list above — without this the UI would show "no keys" while a
+    // perfectly good one is working, and a misconfigured secret would fail silently.
+    const staticKey = staticKeyStatus();
+    res.json({ keys, scope: wantsAll ? "all" : "mine", isAdmin: !!req.session.isAdmin, staticKey });
   } catch (err) {
     logger.error({ err }, "Failed to list MCP keys");
     res.status(500).json({ error: "Failed to load access keys" });

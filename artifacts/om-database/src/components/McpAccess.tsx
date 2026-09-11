@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   apiMcpInfo, apiListMcpKeys, apiCreateMcpKey, apiRevokeMcpKey, apiDeleteMcpKey,
-  type McpKeySummary, type McpInfo,
-} from "../lib/api";
+  type McpKeySummary, type McpInfo, type StaticKeyStatus } from "../lib/api";
 import { useIsMobile } from "../hooks/use-mobile";
 
 // Admin-only screen for "Claude access": mint and revoke the keys that let an outside
@@ -73,6 +72,8 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
   const [showAll, setShowAll] = useState(false);   // admin oversight: everyone's keys
   const [info, setInfo] = useState<McpInfo | null>(null);
   const [keys, setKeys] = useState<McpKeySummary[] | null>(null);
+  // Environment-held key (deploy secret). Not in `keys` — it never touches the DB.
+  const [staticKey, setStaticKey] = useState<StaticKeyStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -83,7 +84,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
   const load = useCallback(() => {
     setError(null);
     apiMcpInfo().then(setInfo).catch(() => setError("Couldn't load the connection details."));
-    apiListMcpKeys(showAll).then(r => setKeys(r.keys)).catch(() => setError("Couldn't load the access keys."));
+    apiListMcpKeys(showAll).then(r => { setKeys(r.keys); setStaticKey(r.staticKey ?? null); }).catch(() => setError("Couldn't load the access keys."));
   }, [showAll]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -248,6 +249,36 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
               Make a separate key per device, so losing one laptop doesn't mean re-doing the rest.
             </div>
           </div>
+
+          {/* The environment-held key. Shown ABOVE the list because it is not in the
+              list: it lives in deploy secrets, so it survives the database being
+              rebuilt — which is exactly when someone will be looking here, wondering
+              why their connector died. A broken secret says so rather than failing
+              silently. */}
+          {staticKey && (staticKey.configured || staticKey.reason) && (
+            <div style={{
+              display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap",
+              border: `1px solid ${staticKey.configured ? "#cfe0cb" : "#f0d9a8"}`,
+              background: staticKey.configured ? "#f4f8f2" : "#fdf6e7",
+              borderRadius: 10, padding: "10px 12px", marginBottom: 14, fontSize: 12.5, lineHeight: 1.45,
+            }}>
+              <span style={{ fontSize: 15, lineHeight: 1.2 }}>{staticKey.configured ? "🔒" : "⚠️"}</span>
+              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                {staticKey.configured ? (
+                  <>
+                    <strong>Backup key active</strong> — set in the deployment secrets and owned by{" "}
+                    <span style={{ wordBreak: "break-all" }}>{staticKey.email}</span>. It isn't stored in the
+                    database, so republishing can't wipe it. Change or remove the <code>MCP_STATIC_KEY</code>{" "}
+                    secret to rotate or switch it off.
+                  </>
+                ) : (
+                  <>
+                    <strong>Backup key not active.</strong> {staticKey.reason}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Active keys */}
           <div style={{ marginBottom: 16 }}>
