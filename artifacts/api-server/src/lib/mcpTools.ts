@@ -1928,6 +1928,26 @@ wrong number.** Before aggregating anything out of \`TenantsMetrics\`:
 4. **Datex tenant names carry store numbers** ("Dollar Tree #4516"); this corpus stores the
    brand alone. Match on the brand, not the raw string.
 
+**QUERY DATEX NARROW — a broad read is what turns a simple question slow and expensive.**
+Measured: \`TenantsMetrics\` holds ~2,100 rows PER MONTH at ~37 fields each, as monthly history
+going back years, and \`read_records\` returns at most 100 rows per call. Unfiltered, ONE month
+is roughly 1.9 MB of rows and 21 round trips. In order, before any read:
+1. **Pin ONE \`Period\`.** Find the latest with a single \`aggregate_records\` grouped by
+   \`Period\`, ordered descending, \`first: 1\`. Read across periods only for an explicit trend.
+2. **Filter to the subject BEFORE reading** (\`Tenant contains\`, \`BuildingName eq\`) — never
+   pull the portfolio and sift it afterwards.
+3. **\`select\` only the fields you need**; never \`allFields: true\` on \`Tenants\` (94 fields)
+   without a reason.
+4. **If the answer is a NUMBER, use \`aggregate_records\`** (count/avg/sum/min/max with
+   \`groupBy\`) rather than paging rows to total them yourself.
+Adding \`AnnualRentPSF gt 0\` also removes the duplicate zero-rent rows at the source, fixing
+the correctness trap and the cost in one filter. Worked example: "what do we pay Dollar Tree
+across the portfolio" is ONE call — latest Period + \`Tenant contains\` + rent > 0 + a 7-field
+\`select\` — returning all 20 owned locations in ~2,700 characters, some 700x smaller than the
+unfiltered path. **Stop when the question is answered**; \`hasMore: true\` is not an instruction
+to keep paging. Match the effort to the question: a single property's rent is one filtered
+read, and only a real portfolio sweep or trend justifies many calls.
+
 **A lease ages from when it was STRUCK, not from when we read it.** A 2010 lease sitting
 inside a 2026 offering memorandum is a 2010 rent — reading it recently does not make it a
 current market signal. Benchmarks here are therefore weighted by LEASE COMMENCEMENT, with

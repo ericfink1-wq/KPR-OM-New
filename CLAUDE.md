@@ -401,6 +401,19 @@ tools to have an always-on real estate brain working side by side with me."
   (tenant_benchmarks / portfolio_analytics / comp_benchmark): owned deals are legitimate data
   points in a corpus median, and flagging a median as "Datex authoritative" would be misleading.
   Tests: `mcpDatexPrecedence.test.ts`. **When adding any list-shaped tool, check this.**
+- **DATEX QUERY COST — DIAGNOSED 9/11/26 (Eric: one question took 15 min and ~10% of his
+  usage).** Root cause MEASURED, not guessed: `TenantsMetrics` is **2,101 rows PER MONTH** at
+  ~37 fields / ~900 chars each, as monthly history going back years, and `read_records` caps at
+  **100 rows per call** with a cursor. So an unfiltered read of ONE month is ~1.9 MB and 21
+  round trips; across history it is a multiple of that. Fix is query DISCIPLINE, now in BOTH
+  `MCP_SERVER_INSTRUCTIONS` and the skill: (1) pin ONE `Period` (find the latest via a single
+  `aggregate_records` groupBy Period, desc, first 1); (2) filter to the subject BEFORE reading;
+  (3) `select` only needed fields, never `allFields:true` on Tenants (94 fields); (4) if the
+  answer is a NUMBER use `aggregate_records` (count/avg/sum/min/max + groupBy), not paged rows.
+  **`AnnualRentPSF gt 0` as a FILTER** kills the duplicate-zero-row trap at the source — fixes
+  correctness and cost in one. **PROVEN:** "what do we pay Dollar Tree across the portfolio" =
+  ONE call, 20 owned locations, **~2,700 chars (~700x smaller)**. Also: "stop when the question
+  is answered — `hasMore:true` is not an instruction to keep paging."
 - Still MISSING from the brain (candidates, in value order): the closing-cost estimator and
   tax-reassessment forecaster exist as real engines in `om-database/src/lib/` but are NOT
   exposed as MCP tools, so an outside chat can only read the doctrine, not compute a number.

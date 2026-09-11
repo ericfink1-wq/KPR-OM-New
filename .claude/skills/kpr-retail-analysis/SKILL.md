@@ -123,6 +123,48 @@ Folding NNN into the Datex side inflates it by the entire recovery load — ofte
 retail — and manufactures an above-market finding out of an ordinary rent. If you quote a
 gross number, say it's gross and compare it only to another gross number.
 
+## Query Datex NARROW — it is large, and a broad read is what makes a simple question slow
+
+Measured on the live data: `TenantsMetrics` holds **2,101 rows per month**, about 37 fields
+and ~900 characters each, as **monthly history going back years**. `read_records` returns at
+most 100 rows per call and pages with a cursor. So an unfiltered read of a single month is
+roughly 1.9 MB of rows and 21 round trips — and reading across history is a multiple of that.
+That is how an ordinary question turns into fifteen minutes and a large slice of a usage
+budget, with no better answer at the end of it.
+
+**Four rules, applied in this order, before any read:**
+
+1. **Pin ONE `Period` first.** It is monthly history; the current picture is the latest period
+   only. Find it with a single cheap aggregate — `aggregate_records` on `TenantsMetrics`,
+   grouped by `Period`, ordered descending, `first: 1` — then filter `Period eq` that value.
+   Read across periods ONLY when the question is explicitly about a trend.
+2. **Filter to the subject before reading, not after.** `Tenant contains "Dollar Tree"`,
+   `BuildingName eq "Academy Plaza"`. Never pull the portfolio and sift it in your head.
+3. **`select` only the fields you need.** Six named fields instead of all 37 is a ~6×
+   reduction on every row. **Never `allFields: true`** on `Tenants` (94 fields) unless the
+   question genuinely needs the whole record.
+4. **If the answer is a NUMBER, use `aggregate_records`, not `read_records`.** count, avg,
+   sum, min and max compute server-side with `groupBy`, returning one small result instead of
+   pages of rows you then add up yourself.
+
+**Filter the duplicate-row trap out at the source.** Adding `AnnualRentPSF gt 0` as a filter
+removes the duplicate zero-rent rows in the same call, rather than pulling them and
+discarding them afterwards. It fixes the correctness trap and the cost at once.
+
+**Worked example — "what do we pay Dollar Tree across the portfolio?"**
+One call: `Period eq <latest>` + `Tenant contains "Dollar Tree"` + `AnnualRentPSF gt 0`,
+`select` of BuildingName / Tenant / SuiteSQFT / AnnualRentPSF / AnnualNNNPSF /
+Rolling12SalesPSF / LastSalesPeriod, `first: 30`. Returns all 20 owned locations in about
+2,700 characters — a complete answer, roughly 700× smaller than the unfiltered path.
+
+**Stop when the question is answered.** Continuing to page with `after` past the point you
+can answer is the most common way a simple question becomes an expensive one. `hasMore: true`
+is not an instruction to keep going.
+
+**Match the effort to the question.** "What does our Ulta at Northgate pay?" is one filtered
+read. Only a genuine portfolio sweep or a trend justifies many calls — and if a question truly
+needs that, say so up front rather than discovering it 40 calls in.
+
 ## Datex row traps — each one silently produces a wrong number
 
 Verified against the live data. Before aggregating anything out of `TenantsMetrics`:
