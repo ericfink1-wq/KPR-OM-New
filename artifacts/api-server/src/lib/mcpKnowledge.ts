@@ -199,7 +199,9 @@ Worked examples of the reflex:
   trips anything.
 
 Which system to ask: a fact about a property KPR OWNS goes to Datex first, because it is
-live. A market question — is this rent, this threshold, this term normal — belongs here,
+live. Treat Datex data on an owned, active asset as AS OF TODAY — the team feeds it daily,
+so it does not need the as-of hedging this library does. Quote a Datex figure as the
+current number. Quote a figure from here with its capture date, always. A market question — is this rent, this threshold, this term normal — belongs here,
 because this is the sample. When you have both, cite both separately and let the gap be
 part of the finding.
 

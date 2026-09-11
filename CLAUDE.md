@@ -386,6 +386,21 @@ tools to have an always-on real estate brain working side by side with me."
   proration vs the roll; ROFR blocking a pad sale; assumed debt → Datex; tax proration in a
   reassess-on-sale state). It is in CORE, not just psa_and_legal, because it applies to ANY
   document. A document-vs-data disagreement is a FINDING, never reconciled silently.
+- **DATEX IS AS-OF TODAY for owned ACTIVE assets (Eric, 9/11/26):** "my coworkers feed it live
+  data daily." So a Datex figure is quoted as the CURRENT number with no as-of hedging; a figure
+  from this library ALWAYS carries its capture date. Stated in three places: KPR_CORE grounding
+  section, `MCP_SERVER_INSTRUCTIONS`, and the owned-row notice.
+- **AUDITED THE PRECEDENCE AND FOUND A REAL HOLE (9/11/26):** the doctrine was fine but
+  `search_tenants` returned KPR-OWNED rows SILENTLY — Acme at Academy Plaza came back as
+  "$7.79/SF" with no marker and no as-of date, which reads as current rent. Fixed: owned rows
+  carry a compact `datexAuthoritative: true` and the response carries `ownedAssetNote` ONCE
+  (the full note on 150 rows would exceed the whole 40 KB budget). `lease_abstracts` now states
+  the SPLIT rather than a blanket "Datex wins" — an executed lease GOVERNS its terms and Datex
+  does not override a signed document, but Datex holds what happened since (options exercised,
+  later amendments, billed rent, notice dates). **Deliberately NOT applied to market aggregates**
+  (tenant_benchmarks / portfolio_analytics / comp_benchmark): owned deals are legitimate data
+  points in a corpus median, and flagging a median as "Datex authoritative" would be misleading.
+  Tests: `mcpDatexPrecedence.test.ts`. **When adding any list-shaped tool, check this.**
 - Still MISSING from the brain (candidates, in value order): the closing-cost estimator and
   tax-reassessment forecaster exist as real engines in `om-database/src/lib/` but are NOT
   exposed as MCP tools, so an outside chat can only read the doctrine, not compute a number.

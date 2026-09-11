@@ -359,6 +359,32 @@ function authorityFor(d: DealData): string | undefined {
   return String(d.status ?? "") === "Owned" ? OWNED_AUTHORITY_NOTE : undefined;
 }
 
+export const isOwnedStatus = (status: unknown): boolean => String(status ?? "") === "Owned";
+
+/** Attach the Datex-precedence note ONCE for a list response that contains owned rows.
+ *
+ *  Row-level lists cannot carry the full note per row — at 150 rows it would cost more
+ *  than the entire response budget — but they must not stay silent either: a row from a
+ *  KPR-owned centre is an acquisition-era snapshot, and quoting its rent as current is
+ *  exactly the mistake the whole source-precedence rule exists to prevent. So each owned
+ *  row carries a compact `datexAuthoritative: true` flag, and the response carries the
+ *  reasoning once, with a count so the caller can see how much of the set is affected. */
+function ownedAssetNotice(rows: Array<{ dealStatus?: unknown }>): Record<string, unknown> {
+  const owned = rows.filter(r => isOwnedStatus(r.dealStatus)).length;
+  if (!owned) return {};
+  return {
+    ownedAssetsInResult: owned,
+    ownedAssetNote:
+      `${owned} of these ${rows.length} rows belong to KPR-OWNED properties (flagged ` +
+      `datexAuthoritative). For those, DATEX IS THE SOURCE OF TRUTH, not this record — ` +
+      `what you have here is the acquisition-era snapshot from the offering documents and ` +
+      `it does not track anything since. Take current rent, occupancy, sales, options and ` +
+      `notice dates from Datex, and treat those as AS OF TODAY — it is fed daily. These rows ` +
+      `remain valid as MARKET data points; they are not valid as a statement of what KPR ` +
+      `collects today.`,
+  };
+}
+
 // One compact row per deal — the shape every list/search tool returns. Enough to
 // decide which deal to open, small enough that 50 of them cost little context.
 function dealSummary(r: DealRecord) {
@@ -779,8 +805,12 @@ const searchTenants: McpToolDef = {
       totalAnnualBaseRent: Math.round(hit.reduce((s, t) => s + (t.annualRent ?? 0), 0)),
       totalSF: Math.round(hit.reduce((s, t) => s + (t.sf ?? 0), 0)),
       note: "annualBaseRent is BASE RENT ONLY — recoveries are the separate fields on each row. Totals above cover ALL matches, including any rows trimmed below.",
+      // Computed over the rows actually returned, so the count matches what is visible.
+      ...ownedAssetNotice(hit.slice(0, clampLimit(a.limit, 50, 150)).map(t => ({ dealStatus: t.dealStatus }))),
     }, "tenants", hit.slice(0, limit).map(t => ({
         dealId: t.dealId, deal: t.dealName, dealStatus: t.dealStatus,
+        // Compact per-row marker; the response-level ownedAssetNote carries the reasoning.
+        ...(isOwnedStatus(t.dealStatus) ? { datexAuthoritative: true } : {}),
         tenant: t.canonicalName || t.rawName, asWritten: t.rawName,
         sf: t.sf, rentPerSF: t.rentPerSf, annualBaseRent: t.annualRent,
         leaseStart: t.leaseStartDate ? String(t.leaseStartDate).slice(0, 10) : t.leaseStart,
@@ -987,7 +1017,11 @@ const leaseAbstracts: McpToolDef = {
     "Reconciled lease abstracts drawn from executed documents: term dates, rent schedule, renewal " +
     "options, co-tenancy, exclusives, kickout/termination rights, guaranties. Omit tenantName to " +
     "list what's abstracted for a deal; pass it to read one abstract in full. Any field marked " +
-    "verifiedAgainstExecutedDoc:false is UNVERIFIED — say so rather than stating it as fact.",
+    "verifiedAgainstExecutedDoc:false is UNVERIFIED — say so rather than stating it as fact. " +
+    "NOTE THE SOURCE SPLIT ON A KPR-OWNED PROPERTY: the executed documents here GOVERN the lease " +
+    "terms — Datex does not override a signed lease — but Datex is where you learn what has " +
+    "HAPPENED since (an option exercised, a later amendment, current billed rent, notice dates). " +
+    "Use both: terms from the abstract, current state from Datex.",
   inputSchema: {
     type: "object",
     properties: {
@@ -1026,6 +1060,13 @@ const leaseAbstracts: McpToolDef = {
     // A single reconciled abstract is large — ~30 lease-note sections, an options table,
     // co-tenancy trees. Several at once will not fit, so they are capped like everything else.
     return capRows({
+      sourceSplit:
+        "The abstract GOVERNS the lease terms — it is built from the executed lease and its " +
+        "amendments, and neither a rent roll nor Datex overrides a signed document. But on a " +
+        "KPR-OWNED property Datex holds what has happened SINCE: options exercised, later " +
+        "amendments, currently billed rent, upcoming notice dates. Terms from here, current " +
+        "state from Datex — and if the two disagree, that is a finding to raise, not a " +
+        "discrepancy to reconcile silently.",
       count: match.length,
       reminder:
         "Executed documents govern. The rent roll and any draft abstract are cross-checks, never " +
@@ -1835,7 +1876,9 @@ present a corpus-wide roll-up as KPR's own exposure or holdings.
 **Which source wins.** KPR also runs Datex, its property-management system of record, as a
 separate connector. Datex holds the live, detailed picture of the properties KPR actually
 OWNS — current rents and NNN, budgets, occupancy history, tenant sales, option and notice
-dates, loans, leasing pipeline. For any fact about a KPR-owned property, go to Datex
+dates, loans, leasing pipeline. It is fed daily by the team, so for an owned, ACTIVE
+asset treat Datex as AS OF TODAY — quote it as the current figure, with none of the
+as-of hedging this library requires. For any fact about a KPR-owned property, go to Datex
 first; it is more current and more complete than this library will ever be. Owned records
 here carry an \`authority\` field saying so.
 
