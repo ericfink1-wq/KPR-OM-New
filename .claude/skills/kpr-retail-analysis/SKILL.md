@@ -1,6 +1,6 @@
 ---
 name: kpr-retail-analysis
-description: How KPR Centers analyses retail shopping centers, and which of its two data sources to use. KPR runs Datex (its property-management system of record — live rents, budgets, occupancy, tenant sales, option dates, loans, leasing pipeline for the properties it OWNS) and the KPR deal library (a broad market corpus of deals it has EVALUATED, mostly ones it did not buy, used to establish what is normal across tenants, brands, anchors, markets and pricing). Use this skill for any question about a KPR property, deal, tenant, lease, rent, comp or market read — it says which source answers which question, how to combine them, the row-level traps in each that silently produce wrong numbers, and the underwriting doctrine KPR applies. Load it before answering, not after.
+description: How KPR Centers analyses retail shopping centers, and which of its two data sources to use. KPR runs Datex (its property-management system of record — live rents, budgets, occupancy, tenant sales, option dates, loans, leasing pipeline for the properties it OWNS) and the KPR deal library (a broad market corpus of deals it has EVALUATED, mostly ones it did not buy, used to establish what is normal across tenants, brands, anchors, markets and pricing). Use this skill for ANY commercial real estate work involving KPR — reviewing a deal or offering memorandum, a lease, LOI or amendment, a purchase and sale agreement, estoppel or other legal document, a loan document or debt terms, an operating statement or rent roll, underwriting assumptions, a waterfall, promote, pref or IRR, an investor book or IC memo, property tax and closing costs, sale comps, or any question about a KPR property, tenant, rent or market read. It says which source answers which question, how to combine them, the row-level traps in each that silently produce wrong numbers, and the underwriting doctrine KPR applies. Load it before answering, not after.
 ---
 
 # KPR retail analysis
@@ -40,7 +40,12 @@ updated.
 
 **Datex leads for anything about a property KPR owns.** The library's copy of an owned asset
 is an acquisition-era snapshot and does not track what happened since; owned records carry an
-`authority` field saying exactly that.
+`authority` field saying exactly that, and individual owned rows are flagged
+`datexAuthoritative`.
+
+**Datex is AS OF TODAY.** The team feeds it live, daily, so a figure for an owned, active
+asset is the current number — quote it without as-of hedging. A figure from the library is
+the opposite: always state its capture date.
 
 **Don't reach for Datex on a market question.** It only knows KPR's own buildings, so using
 it to judge what is normal shrinks the sample to KPR's holdings — the opposite of why the
@@ -48,6 +53,53 @@ corpus exists.
 
 **On a disagreement about an owned property, Datex wins.** Say which source each figure came
 from and flag the gap. Never average them. Never silently pick one.
+
+## Documents: get the doctrine for the work in front of you
+
+KPR's doctrine spans the whole deal lifecycle, and it lives in the deal-library connector
+rather than in this file — so it stays in one place and cannot drift. Call `get_knowledge`
+once for the core, then AGAIN with the `topic` that matches what you are actually doing:
+
+| In front of you | `get_knowledge` topic |
+|---|---|
+| A lease, LOI, amendment or clause | `leases` (plus `brand_lease_terms` for precedent) |
+| Rent, sales or trade-area questions | `rent_and_tenants` |
+| A PSA, estoppel or transaction document | `psa_and_legal` |
+| An operating statement, rent roll, owned asset | `underwriting` |
+| A loan document or debt terms | `debt` |
+| A promote, pref, waterfall, IRR, investor book | `waterfall_and_returns` |
+| A reassessment or closing-cost estimate | `taxes_and_closing` |
+| Drafting an investor letter or IC memo | `investor_materials` |
+| Sale comps | `comps` |
+| A figure that looks wrong | `data_integrity` |
+
+The core response lists each topic with a one-line tripwire. **A tripwire is a warning, not
+the rule** — fetch the topic before reasoning, don't work from the summary.
+
+## Lean on the property data inside a legal document
+
+Neither system holds PSAs, loan documents or leases as documents. But those documents are
+full of tenant- and property-level facts that both systems know cold, and a review that does
+not reach for them is generic commentary dressed up as analysis.
+
+**Whenever a document names a tenant, a square footage, a rent, a date, an anchor, a share of
+GLA or a dollar threshold — look it up before commenting on the clause.**
+
+- Estoppels required from "Major Tenants over 10,000 SF" → name who actually qualifies and
+  what share of base rent sits behind the condition. The clause restated is not an answer.
+- A casualty or condemnation threshold → compare it to the centre's real scale.
+- Delinquent-rent proration → check who is actually delinquent, and which percentage-rent
+  true-ups land after closing.
+- A ROFR or consent that could block a pad sale → the executed abstracts hold it. Check
+  before anyone markets the pad.
+- Assumed debt → Datex holds the live loan, the document holds the terms. Tie them together
+  and say which figure came from where.
+- A tax proration clause in a reassess-on-sale jurisdiction → that is a forward NOI item.
+- A covenant, exclusive or co-tenancy clause naming an anchor → is that anchor open, what
+  does it pay, when does it expire, and does a sale or a go-dark event trip anything?
+
+If the document and the data disagree, that is a **finding** — name both figures and their
+sources. Never reconcile it silently.
 
 ## Cite both, separately, on tenant and brand questions
 
@@ -224,3 +276,10 @@ by `dealId` rather than assuming.
 This library is **retail shopping centers** — not residential, not office, not land.
 Read every deal through that lens: anchor quality and sales, inline health, rollover,
 trade area, co-tenancy exposure.
+
+The scope is the whole deal lifecycle, not lease review alone: new deals and offering
+memoranda, leases and amendments, purchase and sale agreements and other legal documents,
+loan documents, operating statements, underwriting assumptions, waterfalls and returns,
+investor materials, tax and closing costs. These two connectors are meant to work as a
+standing analyst alongside the work, so if a document touches any of that, load the
+matching doctrine before reasoning about it.

@@ -65,6 +65,22 @@ describe("audit-expiry-in-past — fires on a roll that contradicts itself", () 
     expect(q[0].detail).toContain("and 2 more");
   });
 
+  it("reads as English for one lease and for many — Eric reads these verbatim", () => {
+    // Caught in live output: "One lease ... show an expiry". Small, but it is the first
+    // thing a person sees on the deal page, and sloppiness there reads as sloppiness in
+    // the analysis behind it.
+    const one = fire(base({}, [{ name: "Stale Inline", sf: 2_000, leaseExpiry: "2026-02-28" }]));
+    expect(one[0].question).toContain("One lease");
+    expect(one[0].question).toMatch(/One lease \([^)]*\) shows an expiry/);
+    expect(one[0].question).not.toMatch(/One lease[^.]*\bshow an expiry/);
+
+    const many = fire(base({}, [
+      { name: "Stale A", sf: 2_000, leaseExpiry: "2026-02-28" },
+      { name: "Stale B", sf: 1_000, leaseExpiry: "2026-01-31" },
+    ]));
+    expect(many[0].question).toMatch(/2 leases \([^)]*\) show an expiry/);
+  });
+
   it("targets the tenant field when exactly one row is wrong, so it is one-click fixable", () => {
     const q = fire(base({}, [{ name: "Stale Inline", sf: 2_000, leaseExpiry: "2026-02-28" }]));
     expect(q[0].target).toEqual({ kind: "tenant", fieldKey: "leaseExpiry", tenantName: "Stale Inline", valueType: "text" });
