@@ -360,6 +360,27 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   — changing it would break every existing client config. Plain-English setup doc:
   `docs/claude-access-mcp.md`. Tests: `__tests__/mcpAccess.test.ts`, `mcpRecency.test.ts`.
 
+## The connector is an ALWAYS-ON REAL-ESTATE BRAIN, not a lease lookup (Eric, 9/11/26)
+"I want this knowledge to be all encompassing when discussing real estate — reviewing new
+deals, PSAs, legal docs, underwriting assumptions, waterfalls, etc. I want to use these two
+tools to have an always-on real estate brain working side by side with me."
+- `mcpKnowledge.ts` is now **KPR_CORE + DOCTRINE_TOPICS** (`doctrineForTopic`), and
+  `get_knowledge` takes a `topic`. Ten topics: rent_and_tenants, leases, underwriting, debt,
+  waterfall_and_returns, psa_and_legal, taxes_and_closing, investor_materials, comps,
+  data_integrity. CORE (framing, Datex precedence, field conventions, tie-outs) is always
+  returned, each topic advertised with a **one-line TRIPWIRE** so the core alone still warns.
+  **Why split:** all of it at once busts the 40 KB budget and buries the rule that applies.
+- **When Eric teaches a rule, put it in the MATCHING TOPIC** — not just CLAUDE.md, or outside
+  chats keep making the mistake. Tests (`mcpDoctrine.test.ts`) fail if the index advertises a
+  topic that doesn't resolve, if a topic lacks a tripwire, or if core+topic busts the budget.
+- **`psa_and_legal` is SCAFFOLDING, not taught doctrine** — it says so in its own text, and a
+  test enforces that admission. Everything else is grounded in CLAUDE.md. **Eric's rulings on
+  PSA review should be captured and folded in**; same for anything he corrects on waterfalls.
+- Still MISSING from the brain (candidates, in value order): the closing-cost estimator and
+  tax-reassessment forecaster exist as real engines in `om-database/src/lib/` but are NOT
+  exposed as MCP tools, so an outside chat can only read the doctrine, not compute a number.
+  Exposing them needs those libs reachable from the api-server package.
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.

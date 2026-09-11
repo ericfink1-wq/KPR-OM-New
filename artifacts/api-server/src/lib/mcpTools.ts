@@ -13,7 +13,7 @@ import { summarizePortfolioIssues } from "./portfolioIssues";
 import { getAllTenantBenchmarks } from "./tenantBenchmarks";
 import { getHouseView } from "./houseView";
 import { getActiveLessons } from "./extractionLessons";
-import { buildKnowledgePack, renderKnowledgePack, KPR_PLAYBOOK } from "./mcpKnowledge";
+import { buildKnowledgePack, renderKnowledgePack, KPR_PLAYBOOK, doctrineForTopic, TOPIC_NAMES} from "./mcpKnowledge";
 
 export interface McpToolDef {
   name: string;
@@ -1127,20 +1127,48 @@ const getKnowledge: McpToolDef = {
   name: "get_knowledge",
   title: "KPR analyst playbook & house view",
   description:
-    "READ THIS BEFORE ANALYZING ANYTHING. The standing rules that make an analysis KPR's " +
-    "analysis: field conventions, the above-market/below-market rent doctrine, demographics ↔ " +
-    "cap-rate logic, cinema per-screen math, co-tenancy trigger fidelity, comp discipline — plus " +
-    "the live House View distilled from KPR's own deal reviews and the operator-taught rules Eric " +
-    "has recorded from real corrections.",
+    "READ THIS BEFORE ANALYZING ANYTHING — and read it again with a `topic` whenever the " +
+    "conversation moves to a new part of a deal. KPR's doctrine covers the whole lifecycle, " +
+    "not just leases: new-deal review, rent and tenant analysis, lease abstracting, owned-asset " +
+    "underwriting, debt, waterfalls and investor returns, purchase and sale agreements, property " +
+    "tax and closing costs, investor materials, comps and the deterministic audit. Calling it " +
+    "with no topic returns the CORE (what this library is, which source wins, field conventions, " +
+    "tie-outs) plus an index of topics, each with the one-line tripwire that most often gets " +
+    "analysis wrong. Fetch the matching topic before reasoning — the tripwire is a warning, not " +
+    "the rule. Also carries the live House View distilled from KPR's own deal reviews and the " +
+    "operator-taught rules Eric has recorded from real corrections, which override everything else.",
   inputSchema: {
     type: "object",
     properties: {
+      topic: {
+        type: "string",
+        enum: ["core", "rent_and_tenants", "leases", "underwriting", "debt", "waterfall_and_returns",
+               "psa_and_legal", "taxes_and_closing", "investor_materials", "comps", "data_integrity", "all"],
+        description:
+          "Which body of doctrine to return. Omit for the core plus the topic index. Pick the topic " +
+          "that matches what is actually being worked on — a PSA question needs psa_and_legal, a " +
+          "promote calculation needs waterfall_and_returns. \"all\" is long; prefer a topic.",
+      },
       section: { type: "string", enum: ["all", "playbook", "house_view", "operator_lessons"], description: "Default: all." },
     },
   },
   handler: async (a) => {
     const section = str(a.section) ?? "all";
     if (section === "playbook") return { markdown: KPR_PLAYBOOK };
+
+    const requested = str(a.topic);
+    const doctrine = doctrineForTopic(requested);
+    if (!doctrine) {
+      // An unknown topic must NOT silently fall back to the core: that reads as "there is
+      // no doctrine on this", which is the opposite of the truth and exactly the kind of
+      // confident silence this playbook exists to prevent.
+      return {
+        error: `No doctrine topic named "${requested}".`,
+        availableTopics: TOPIC_NAMES,
+        hint: "Call get_knowledge with no topic for the core plus an index of what each topic covers.",
+      };
+    }
+
     const pack = await buildKnowledgePack({
       getHouseView: async () => {
         const hv = await getHouseView();
@@ -1150,7 +1178,34 @@ const getKnowledge: McpToolDef = {
     });
     if (section === "house_view") return { houseView: pack.houseView };
     if (section === "operator_lessons") return { operatorLessons: pack.operatorLessons };
-    return { markdown: renderKnowledgePack(pack), operatorLessonCount: pack.operatorLessons.length };
+
+    // The live sources (House View + operator lessons) ride along with whichever doctrine
+    // was asked for, because they OVERRIDE it — sending doctrine without the corrections
+    // that supersede it would be worse than sending nothing.
+    const live = renderKnowledgePack({ ...pack, playbook: "" }).trim();
+    let markdown = live ? `${doctrine.markdown}\n\n${live}` : doctrine.markdown;
+
+    // "all" plus a long House View can exceed what a client will accept, and a rejected
+    // response delivers NOTHING — strictly worse than a scoped one. Fall back to the core
+    // and say which topic to ask for rather than truncating doctrine mid-rule.
+    if (emittedSize({ markdown }) > RESPONSE_BUDGET_BYTES && doctrine.topic === "all") {
+      const core = doctrineForTopic("core")!.markdown;
+      markdown = live ? `${core}\n\n${live}` : core;
+      return {
+        markdown,
+        topic: "core",
+        note: "The full doctrine plus the live House View exceeded the response budget, so this is " +
+              "the core and the topic index. Call get_knowledge again with the single topic you need.",
+        availableTopics: TOPIC_NAMES,
+        operatorLessonCount: pack.operatorLessons.length,
+      };
+    }
+    return {
+      markdown,
+      topic: doctrine.topic,
+      availableTopics: TOPIC_NAMES,
+      operatorLessonCount: pack.operatorLessons.length,
+    };
   },
 };
 
@@ -1752,7 +1807,20 @@ export const MCP_TOOLS_BY_NAME: Map<string, McpToolDef> = new Map(MCP_TOOLS.map(
 // that has never seen the library before, so it leads with the two must-call tools.
 export const MCP_SERVER_INSTRUCTIONS = `This is the KPR Centers deal library — an offering-memorandum database for RETAIL SHOPPING CENTERS (not residential, not office, not land).
 
-Before analyzing anything, call **get_knowledge** once: it returns KPR's standing underwriting doctrine (how to treat above- and below-market rent, co-tenancy triggers, cinema sales, comps discipline) plus live operator-taught rules. Analysis that ignores it will be wrong in ways this team cares about.
+Before analyzing anything, call **get_knowledge**: it returns KPR's standing underwriting doctrine plus live operator-taught rules. Analysis that ignores it will be wrong in ways this team cares about.
+
+**Call it again, with a \`topic\`, whenever the work moves to a different part of a deal.** KPR's doctrine spans the whole lifecycle, and the first call returns only the core plus an index of one-line tripwires — the tripwire is a warning, not the rule. Fetch the topic that matches what is actually in front of you:
+- a lease, LOI or clause → \`leases\` (and \`brand_lease_terms\` for the precedent set)
+- rent, sales or trade-area questions → \`rent_and_tenants\`
+- a purchase and sale agreement, estoppel or transaction document → \`psa_and_legal\`
+- an operating statement, rent roll or owned asset → \`underwriting\`
+- a loan document or debt terms → \`debt\`
+- a promote, pref, waterfall, IRR or investor book → \`waterfall_and_returns\`
+- a reassessment or closing-cost estimate → \`taxes_and_closing\`
+- drafting an investor letter or IC memo → \`investor_materials\`
+- sale comps → \`comps\`; a figure that looks wrong → \`data_integrity\`
+
+This connector is meant to work as a standing real-estate analyst alongside Datex, not only as a lease lookup. If someone puts a document in front of you and it touches any of the above, load that doctrine before reasoning about it.
 
 Call **library_overview** to see what's in the library, then **search_deals** → **get_deal** to work a specific center.
 
