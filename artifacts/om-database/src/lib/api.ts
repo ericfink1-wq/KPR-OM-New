@@ -260,7 +260,7 @@ export async function apiMcpInfo(): Promise<McpInfo> {
 
 // The environment-held key: configured in deploy secrets rather than the database, so
 // it survives a dropped table. It is never in the `keys` list, hence reported alongside.
-export interface StaticKeyStatus { configured: boolean; reason: string | null; email: string | null }
+export interface StaticKeyStatus { configured: boolean; reason: string | null; email: string | null; fingerprint?: string | null; length?: number | null }
 
 // Own keys by default; admins may request every member's for oversight.
 export async function apiListMcpKeys(all = false): Promise<{ keys: McpKeySummary[]; scope: string; isAdmin: boolean; staticKey?: StaticKeyStatus }> {

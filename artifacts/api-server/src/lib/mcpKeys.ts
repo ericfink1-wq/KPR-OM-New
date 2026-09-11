@@ -209,16 +209,38 @@ const STATIC_KEY = () => (process.env.MCP_STATIC_KEY ?? "").trim();
 const STATIC_KEY_EMAIL = () => (process.env.MCP_STATIC_KEY_EMAIL ?? "").trim().toLowerCase();
 const MIN_KEY_BODY = 20;
 
+export interface StaticKeyStatus {
+  configured: boolean;
+  reason: string | null;
+  email: string | null;
+  /** Enough of the key to CONFIRM WHICH ONE is set, without disclosing it. A green
+   *  "configured" only proves that SOME well-formed key is present — if the secret was
+   *  truncated on paste, or a different key was pasted, the banner still reads healthy
+   *  while every request 401s. The fingerprint is what makes that visible: compare it to
+   *  the key in your connector. Safe to display: the middle, which carries the entropy,
+   *  is never shown. */
+  fingerprint: string | null;
+  /** Character count of the secret as set — catches a paste that dropped characters. */
+  length: number | null;
+}
+
+/** A recognisable, non-secret abbreviation: the fixed prefix plus a few characters each
+ *  side. Never widen this — the point is identification, not reconstruction. */
+function fingerprintKey(k: string): string {
+  return `${k.slice(0, KEY_PREFIX.length + 4)}…${k.slice(-4)}`;
+}
+
 /** Is the environment-held key configured well enough to be usable at all? */
-export function staticKeyStatus(): { configured: boolean; reason: string | null; email: string | null } {
+export function staticKeyStatus(): StaticKeyStatus {
   const k = STATIC_KEY(), e = STATIC_KEY_EMAIL();
-  if (!k && !e) return { configured: false, reason: null, email: null };
-  if (!k) return { configured: false, reason: "MCP_STATIC_KEY_EMAIL is set but MCP_STATIC_KEY is missing", email: e };
-  if (!e) return { configured: false, reason: "MCP_STATIC_KEY is set but MCP_STATIC_KEY_EMAIL is missing — a key with no named owner is not accepted", email: null };
+  const none = { fingerprint: null, length: null };
+  if (!k && !e) return { configured: false, reason: null, email: null, ...none };
+  if (!k) return { configured: false, reason: "MCP_STATIC_KEY_EMAIL is set but MCP_STATIC_KEY is missing", email: e, ...none };
+  if (!e) return { configured: false, reason: "MCP_STATIC_KEY is set but MCP_STATIC_KEY_EMAIL is missing — a key with no named owner is not accepted", email: null, fingerprint: fingerprintKey(k), length: k.length };
   if (!k.startsWith(KEY_PREFIX) || k.length < KEY_PREFIX.length + MIN_KEY_BODY) {
-    return { configured: false, reason: `MCP_STATIC_KEY must start with ${KEY_PREFIX} and carry at least ${MIN_KEY_BODY} more characters`, email: e };
+    return { configured: false, reason: `MCP_STATIC_KEY must start with ${KEY_PREFIX} and carry at least ${MIN_KEY_BODY} more characters`, email: e, fingerprint: fingerprintKey(k), length: k.length };
   }
-  return { configured: true, reason: null, email: e };
+  return { configured: true, reason: null, email: e, fingerprint: fingerprintKey(k), length: k.length };
 }
 
 /** Look up an account by email, case-insensitively. Used to resolve the env key's owner

@@ -207,7 +207,7 @@ mcpAdminRouter.get("/mcp-keys", requireAuth, async (req, res) => {
     // approved account matching MCP_STATIC_KEY_EMAIL, and the commonest mistake is
     // naming an address that isn't the one the person signs in with. So resolve the
     // owner here and say precisely which half is wrong, rather than "not working".
-    const staticKey: { configured: boolean; reason: string | null; email: string | null } = staticKeyStatus();
+    const staticKey = staticKeyStatus();
     if (staticKey.configured && staticKey.email) {
       const owner = await findUserByEmail(staticKey.email);
       if (!owner) {

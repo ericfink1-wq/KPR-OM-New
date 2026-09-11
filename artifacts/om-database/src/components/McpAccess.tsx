@@ -270,10 +270,24 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
                     <span style={{ wordBreak: "break-all" }}>{staticKey.email}</span>. It isn't stored in the
                     database, so republishing can't wipe it. Change or remove the <code>MCP_STATIC_KEY</code>{" "}
                     secret to rotate or switch it off.
+                    {staticKey.fingerprint && (
+                      <div style={{ marginTop: 6, color: "#5c6b57" }}>
+                        Key in use: <code style={{ wordBreak: "break-all" }}>{staticKey.fingerprint}</code>
+                        {staticKey.length != null && <> · {staticKey.length} characters</>}
+                        {" — "}this must match the key in your Claude connector. If it doesn't, the secret
+                        holds a different key (or lost characters when pasted).
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
                     <strong>Backup key not active.</strong> {staticKey.reason}
+                    {staticKey.fingerprint && (
+                      <div style={{ marginTop: 6, color: "#7a6a4a" }}>
+                        Key in use: <code style={{ wordBreak: "break-all" }}>{staticKey.fingerprint}</code>
+                        {staticKey.length != null && <> · {staticKey.length} characters</>}
+                      </div>
+                    )}
                   </>
                 )}
               </div>

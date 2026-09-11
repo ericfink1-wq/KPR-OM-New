@@ -24,7 +24,7 @@ afterEach(() => set(saved.k, saved.e));
 
 describe("environment key — off unless deliberately and completely configured", () => {
   it("is off when neither variable is set, and says nothing is wrong", () => {
-    expect(staticKeyStatus()).toEqual({ configured: false, reason: null, email: null });
+    expect(staticKeyStatus()).toEqual({ configured: false, reason: null, email: null, fingerprint: null, length: null });
   });
 
   it("REFUSES a key with no named owner — an unowned credential is what we already fail closed on", () => {
@@ -57,7 +57,9 @@ describe("environment key — off unless deliberately and completely configured"
 
   it("accepts a properly formed key with an owner, and reports the owner lower-cased", () => {
     set(GOOD, "  Eric@Example.COM ");
-    expect(staticKeyStatus()).toEqual({ configured: true, reason: null, email: "eric@example.com" });
+    const st = staticKeyStatus();
+    expect(st.configured).toBe(true);
+    expect(st.email).toBe("eric@example.com");
   });
 
   it("ignores surrounding whitespace, which a pasted secret often carries", () => {
@@ -68,5 +70,36 @@ describe("environment key — off unless deliberately and completely configured"
   it("treats an empty or whitespace-only secret as unset, not as a valid empty key", () => {
     set("   ", "eric@example.com");
     expect(staticKeyStatus().configured).toBe(false);
+  });
+});
+
+describe("fingerprint — identifies WHICH key is set, without disclosing it", () => {
+  it("shows the prefix and last four, and never the middle", () => {
+    set(GOOD, "eric@example.com");
+    const st = staticKeyStatus();
+    expect(st.fingerprint).toBe(`${KEY_PREFIX}aaaa…aaaa`);
+    expect(st.length).toBe(GOOD.length);
+    // The entropy must not be reconstructable from what we display.
+    expect(st.fingerprint!.length).toBeLessThan(GOOD.length);
+    expect(GOOD.includes(st.fingerprint!)).toBe(false);
+  });
+
+  it("distinguishes two different keys — the whole point of showing it", () => {
+    set(`${KEY_PREFIX}${"a".repeat(28)}ZZZZ`, "eric@example.com");
+    const a = staticKeyStatus().fingerprint;
+    set(`${KEY_PREFIX}${"a".repeat(28)}QQQQ`, "eric@example.com");
+    expect(staticKeyStatus().fingerprint).not.toBe(a);
+  });
+
+  it("reports the length, so a paste that dropped characters is visible", () => {
+    set(`${KEY_PREFIX}${"a".repeat(24)}`, "eric@example.com");
+    expect(staticKeyStatus().length).toBe(KEY_PREFIX.length + 24);
+  });
+
+  it("still fingerprints a REJECTED key, so you can see what's wrong in there", () => {
+    set(`${KEY_PREFIX}tooshort`, "eric@example.com");
+    const st = staticKeyStatus();
+    expect(st.configured).toBe(false);
+    expect(st.fingerprint).toBeTruthy();
   });
 });
