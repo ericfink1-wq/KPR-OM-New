@@ -19,6 +19,7 @@ import { runAutofixSweep } from "../lib/autofixSweep";
 import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
+import { triageAiQuestions, summarizeTriage, TRIAGE_MARK, type TriageOutcome } from "../lib/aiQuestionTriage";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
 // imported deal and merge the result back. The JSON's self-contained grade is
@@ -1480,6 +1481,68 @@ router.post("/deals/reaudit", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to re-audit deals");
     res.status(500).json({ error: "Failed to re-audit deals" });
+  }
+});
+
+// POST /api/deals/triage-questions — clear the stored AI-capture questions that the
+// data can now ANSWER. Token-free and human-triggered (it mutates), and it defaults to a
+// DRY RUN so the effect can be inspected before anything is written.
+//
+// Why it exists: audit questions self-heal, AI questions never did. They are raised once
+// when a document is first read and then accumulate, because answering one means opening
+// that deal by hand. The real library reached 1,469 open items across 231 of 301 deals
+// with only ~60 genuine contradictions among them — the findings were buried in the
+// backlog. The largest single group, 42 deals asking which WALT to keep after a merge,
+// is answerable outright from the rent roll.
+//
+// It never deletes: a cleared question keeps its original text and gains resolvedAt plus
+// the reasoning, so every clearance is auditable. And it resolves ONLY where a
+// recomputation genuinely answers the question — a disagreement stays open, because that
+// is precisely the finding worth surfacing.
+router.post("/deals/triage-questions", requireAuth, async (req, res) => {
+  try {
+    const apply = req.body?.apply === true;   // default: dry run
+    const rows = await db.select().from(dealsTable);
+    const outcomes: TriageOutcome[] = [];
+    const samples: Array<{ dealId: string; deal: string; resolved: number; example: string }> = [];
+    let scanned = 0;
+    for (const r of rows) {
+      const data = r.data as Record<string, unknown>;
+      if (data.trashedAt || data._processing || data._processingError) continue;
+      scanned++;
+      const out = triageAiQuestions(data);
+      if (!out.resolved) continue;
+      outcomes.push(out);
+      if (samples.length < 10) {
+        const first = out.questions.find(q => (q as Record<string, unknown>)?.resolvedBy === TRIAGE_MARK);
+        samples.push({
+          dealId: r.id,
+          deal: String(data.propertyName ?? ""),
+          resolved: out.resolved,
+          example: String((first as Record<string, unknown>)?.resolution ?? ""),
+        });
+      }
+      if (apply) {
+        await db.update(dealsTable)
+          .set({ data: { ...data, reviewQuestions: out.questions }, updatedAt: new Date() })
+          .where(eq(dealsTable.id, r.id));
+      }
+    }
+    const summary = summarizeTriage(outcomes);
+    req.log.info({ apply, scanned, ...summary }, "AI question triage complete");
+    res.json({
+      ok: true,
+      applied: apply,
+      scanned,
+      ...summary,
+      samples,
+      note: apply
+        ? "Resolved questions keep their original text and carry the reasoning that cleared them."
+        : "DRY RUN — nothing was written. Re-send with { apply: true } to record these resolutions.",
+    });
+  } catch (err) {
+    req.log.error({ err }, "Question triage failed");
+    res.status(500).json({ error: "Failed to triage review questions" });
   }
 });
 

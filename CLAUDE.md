@@ -622,6 +622,26 @@ The site export (`lib/abstractExcel.ts`) is built to mirror Eric's own abstract 
   - **An unquoted clause is the remaining silent hole, so it is flagged.** The whole check reconciles a clause against its OWN `verbatimQuote`; a multi-anchor per-anchor trigger with NO quote cannot be checked at all, so `check-cotenancy-unquoted` (extraction) and `audit-cotenancy-unquoted` (library sweep) surface it rather than let it read as verified-by-omission. Genuine single-anchor and "ANY of the following" clauses are not flagged.
 - **KEEP EXTENDING this suite (Eric's standing instruction: "there should be lots of checks like these when reading an OM/data").** Any time the OM gives two figures that must agree (subtotals, sums, ratios, sign conventions, cross-page repeats), add a deterministic check here rather than trusting the model. Same discipline as the investor-book arithmetic audit below.
 
+## Review-queue triage — AI questions never self-healed (built 9/11/26)
+The deterministic audit self-heals; **stored AI-capture questions never did**, so they
+accumulate forever — the live library hit **1,469 open items on 231 of 301 deals with only
+~60 genuine contradictions**, burying the real findings. Biggest single group: **42 deals
+asking which WALT to keep after a merge**, which the rent roll answers outright.
+- `artifacts/api-server/src/lib/aiQuestionTriage.ts` (`triageAiQuestions`) resolves ONLY the
+  classes the data can now ANSWER: WALT confirmed against a roster recompute (requires ≥80%
+  expiry coverage and agreement within max(0.3yr, 5%)), a rent-roll as-of date now recorded,
+  and roster SF that ties to GLA within 2%. **A disagreement stays OPEN — that is the finding.**
+- **Never deletes.** Sets `resolvedAt` + `resolvedBy: "auto-triage"` + a `resolution` string
+  explaining what cleared it, so every clearance is auditable. Never touches `audit-*`,
+  `check-*`, `calc-*` or `src-*`.
+- Route `POST /deals/triage-questions` — **DRY RUN by default**; `{apply:true}` writes. UI:
+  Portfolio Analytics → maintenance menu → "✅ Clear answered questions", which dry-runs,
+  shows the real count broken down by reason, then asks before writing.
+- It MUTATES, so per house rule it is human-triggered and NOT in the daily self-improve loop.
+- **Extending it is the way to keep shrinking the queue** — add a class only when a
+  recomputation genuinely answers that question. Tests: `aiQuestionTriage.test.ts` (most of
+  them pin what it must REFUSE to clear).
+
 ## Operator-taught learning loop (Eric's standing instruction: "teach the analyst every time I use it")
 - `extraction_lessons` table (`lib/extractionLessons.ts`, route `routes/extractionLessons.ts`): plain-English rules Eric records; `lessonGuidance(scope)` injects active lessons into the extraction prompt as **HIGHEST-PRIORITY operator-taught rules** (extract.ts appends `lessonGuidance("om")`).
 - **Import Review feeds it.** Every confirm / fix / dismiss in `ImportReview.tsx` pops a "📚 Teach a rule" box pre-filled with a field/check-aware draft (`draftLesson`); saving posts it via `apiAddExtractionLesson("om", …)` so the correction guides ALL future OM reads. A FIX (model was wrong, we know the right answer) is the strongest signal and auto-opens the box. Keep this loop intact and keep widening what a correction can teach.

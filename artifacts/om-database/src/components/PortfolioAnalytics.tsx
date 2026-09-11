@@ -386,6 +386,51 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   };
   useEffect(() => { loadAuditStats(); }, []);
 
+  // Clear the stored AI-capture questions the data can now ANSWER. Audit questions
+  // self-heal; these never did, so they pile up until the real contradictions are buried
+  // (1,469 open across 231 of 301 deals, only ~60 of them genuine). It runs a DRY RUN
+  // first and shows the real count before writing anything, because "this will clear
+  // some questions" is not something to approve blind. Nothing is deleted: a cleared
+  // question keeps its text and gains the reasoning that resolved it.
+  const handleTriageQuestions = async () => {
+    setMaintaining(true); setMaintainMsg("Checking what can be answered…");
+    try {
+      const post = (apply: boolean) => fetch("/api/deals/triage-questions", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apply }),
+      }).then(r => r.json() as Promise<{ ok: boolean; resolved?: number; dealsTouched?: number; byReason?: Record<string, number>; error?: string }>);
+
+      const dry = await post(false);
+      if (!dry.ok) throw new Error(dry.error || "Triage failed");
+      if (!dry.resolved) { setMaintainMsg("Nothing to clear — every open question still needs a person."); return; }
+
+      const reasons = Object.entries(dry.byReason || {})
+        .map(([k, v]) => `  • ${({
+          "walt-matches-roster": "WALT confirmed against the rent roll",
+          "asof-now-recorded": "rent-roll as-of date now recorded",
+          "roster-sf-ties": "roster SF reconciles to building GLA",
+        } as Record<string, string>)[k] || k}: ${v}`)
+        .join("\n");
+      const ok = window.confirm(
+        `Clear ${dry.resolved} question${dry.resolved === 1 ? "" : "s"} across ${dry.dealsTouched} deal${dry.dealsTouched === 1 ? "" : "s"}?\n\n${reasons}\n\n` +
+        `These are questions the data now answers on its own. Each one keeps its original ` +
+        `text and records why it was cleared, so nothing is lost — and anything the data ` +
+        `can't settle is left open for you.`,
+      );
+      if (!ok) { setMaintainMsg(""); return; }
+
+      setMaintainMsg("Clearing…");
+      const applied = await post(true);
+      if (!applied.ok) throw new Error(applied.error || "Triage failed");
+      setMaintainMsg(`Cleared ${applied.resolved} answered question${applied.resolved === 1 ? "" : "s"} across ${applied.dealsTouched} deals.`);
+    } catch (e) {
+      setMaintainMsg(e instanceof Error ? e.message : "Triage failed");
+    } finally {
+      setMaintaining(false);
+    }
+  };
+
   // One sweep over the whole library: auto-fix the safe issues, THEN re-audit every
   // deal. Going forward each write self-maintains, so this is the one-click catch-up for
   // existing deals (and a manual "clean everything now"). Token-free; snapshots first
@@ -651,6 +696,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                     <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 9001, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden", padding: "4px 0", fontFamily: "'Inter',sans-serif" }}>
                       {([
                         ["🧹 Clean & re-audit all", () => { setMaintMenuOpen(false); handleCleanAndReaudit(); }, "#383a37", maintaining, "Auto-fix the unambiguous issues across every deal, then re-check all the numbers. Token-free, snapshots first (reversible)."],
+                        ["✅ Clear answered questions", () => { setMaintMenuOpen(false); handleTriageQuestions(); }, "#383a37", maintaining, "Close the import questions the data now answers by itself (e.g. a WALT the rent roll confirms), so the real contradictions aren't buried. Shows you the count first; nothing is deleted."],
                         ["↺ Rebuild comps index", () => { setMaintMenuOpen(false); handleRebuildComps(); }, "#383a37", rebuildingComps, "Rebuild the comparable-sales index from every deal's owned/manual/OM comps."],
                         ["↺ Rebuild tenant index", () => { setMaintMenuOpen(false); handleRebuild(); }, "#383a37", rebuilding, "Rebuild the tenant search index across all deals."],
                         ...(isAdmin ? [["💲 Import transactions (JSON)", () => { setMaintMenuOpen(false); txnFileRef.current?.click(); }, "#383a37", maintaining, "Bulk-set purchase price/date, seller, NOI-at-close and going-in cap on existing deals from a JSON file (matched by property name). ONLY those fields change — roster, financials and notes are untouched."] as const] : []),
