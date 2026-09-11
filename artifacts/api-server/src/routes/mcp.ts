@@ -20,7 +20,7 @@ import { MCP_TOOLS, MCP_TOOLS_BY_NAME, MCP_SERVER_INSTRUCTIONS } from "../lib/mc
 import {
   createMcpKey, listMcpKeys, revokeMcpKey, deleteMcpKey,
   verifyMcpKey, extractKeyFromRequest, ensureMcpKeysTable, keyOwner, type VerifiedKey,
-  staticKeyStatus,
+  staticKeyStatus, findUserByEmail,
 } from "../lib/mcpKeys";
 import { requireAdmin, requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
@@ -198,7 +198,26 @@ mcpAdminRouter.get("/mcp-keys", requireAuth, async (req, res) => {
     // database (so a dropped table can't destroy it), which also means it appears
     // nowhere in the list above — without this the UI would show "no keys" while a
     // perfectly good one is working, and a misconfigured secret would fail silently.
-    const staticKey = staticKeyStatus();
+    // Report the environment-held key too. It lives in deploy secrets rather than the
+    // database (so a dropped table can't destroy it), which also means it appears
+    // nowhere in the list above — without this the UI would show "no keys" while a
+    // perfectly good one is working, and a misconfigured secret would fail silently.
+    //
+    // The format check alone isn't enough to explain a 401: the key ALSO requires an
+    // approved account matching MCP_STATIC_KEY_EMAIL, and the commonest mistake is
+    // naming an address that isn't the one the person signs in with. So resolve the
+    // owner here and say precisely which half is wrong, rather than "not working".
+    const staticKey: { configured: boolean; reason: string | null; email: string | null } = staticKeyStatus();
+    if (staticKey.configured && staticKey.email) {
+      const owner = await findUserByEmail(staticKey.email);
+      if (!owner) {
+        staticKey.configured = false;
+        staticKey.reason = `No account here uses ${staticKey.email}. Set MCP_STATIC_KEY_EMAIL to the email address you sign in with.`;
+      } else if (owner.status !== "approved") {
+        staticKey.configured = false;
+        staticKey.reason = `The account ${staticKey.email} is "${owner.status}", not approved, so the key is refused.`;
+      }
+    }
     res.json({ keys, scope: wantsAll ? "all" : "mine", isAdmin: !!req.session.isAdmin, staticKey });
   } catch (err) {
     logger.error({ err }, "Failed to list MCP keys");

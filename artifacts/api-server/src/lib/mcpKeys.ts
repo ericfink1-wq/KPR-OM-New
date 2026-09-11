@@ -221,15 +221,22 @@ export function staticKeyStatus(): { configured: boolean; reason: string | null;
   return { configured: true, reason: null, email: e };
 }
 
+/** Look up an account by email, case-insensitively. Used to resolve the env key's owner
+ *  and to explain, in the UI, exactly why a configured key is still being refused. */
+export async function findUserByEmail(email: string): Promise<{ id: string; email: string; status: string } | null> {
+  const [row] = await db
+    .select({ id: usersTable.id, email: usersTable.email, status: usersTable.status })
+    .from(usersTable).where(eq(sql`lower(${usersTable.email})`, email.trim().toLowerCase())).limit(1);
+  return row ?? null;
+}
+
 async function verifyStaticKey(key: string): Promise<VerifiedKey | null> {
   const st = staticKeyStatus();
   if (!st.configured || !st.email) return null;
   // Compare the SHA-256 digests rather than the raw strings: equal-length buffers are
   // required for a constant-time compare, and hashing normalises that for free.
   if (!sameHash(hashKey(key), hashKey(STATIC_KEY()))) return null;
-  const [owner] = await db
-    .select({ id: usersTable.id, email: usersTable.email, status: usersTable.status })
-    .from(usersTable).where(eq(sql`lower(${usersTable.email})`, st.email)).limit(1);
+  const owner = await findUserByEmail(st.email);
   if (!owner || owner.status !== "approved") return null;
   return { id: "env-static", name: "Environment key (MCP_STATIC_KEY)", scope: "read", userId: owner.id, email: owner.email };
 }
