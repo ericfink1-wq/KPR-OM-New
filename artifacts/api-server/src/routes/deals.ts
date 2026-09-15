@@ -20,6 +20,7 @@ import { createSnapshot } from "./snapshots";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
 import { triageAiQuestions, summarizeTriage, TRIAGE_MARK, type TriageOutcome } from "../lib/aiQuestionTriage";
+import { planDatexImport, applyLiveBlock, datexDivergence, DATEX_BLOCK_KEY, type DatexPayload } from "../lib/datexImport";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
 // imported deal and merge the result back. The JSON's self-contained grade is
@@ -196,6 +197,10 @@ const router = Router();
 
 // Fields entered by humans — preserved across re-analysis so user data is never overwritten
 const USER_PRESERVED_KEYS = new Set([
+  // The Datex live block is imported separately from the OM and has nothing to do with the
+  // uploaded document, so a re-import must not carry it away. Without this line the block
+  // disappears silently the next time anyone re-uploads an OM for an owned deal.
+  "datexLive",
   "status", "statusSince", "autoPassed",
   "userNotes", "dealThesis", "dealReview",
   "txnPurchasePrice", "txnSeller", "txnLoiDate", "txnCloseDate",
@@ -1543,6 +1548,64 @@ router.post("/deals/triage-questions", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Question triage failed");
     res.status(500).json({ error: "Failed to triage review questions" });
+  }
+});
+
+// POST /api/deals/datex-import — ingest a Datex snapshot produced by a Claude session.
+//
+// Datex's authorization server offers no machine-to-machine grant, so this server cannot
+// pull from it; a person authenticated to Datex generates the JSON and posts it here. The
+// payload is therefore UNTRUSTED, and every rule is enforced on arrival rather than assumed
+// of the generator — see lib/datexImport.ts. It writes ONLY the live block, so the frozen
+// acquisition-era figures cannot be touched by construction.
+//
+// DRY RUN by default: it reports exactly what would change, per deal, and writes nothing
+// until called again with { apply: true }. Snapshots first, so a bad import is reversible.
+router.post("/deals/datex-import", requireAuth, async (req, res) => {
+  try {
+    const apply = req.body?.apply === true;
+    const payload = req.body?.payload ?? req.body;
+    const rows = await db.select().from(dealsTable);
+    const active = rows.filter(r => {
+      const d = r.data as Record<string, unknown>;
+      return !d.trashedAt && !d._processing;
+    });
+
+    const plan = planDatexImport(payload as DatexPayload, active.map(r => ({ id: r.id, data: r.data as Record<string, unknown> })));
+
+    if (apply && plan.applied.length) {
+      await createSnapshot("before-datex-import");
+      for (const a of plan.applied) {
+        const row = active.find(r => r.id === a.dealId);
+        if (!row) continue;
+        const updated = applyLiveBlock(row.data as Record<string, unknown>, a.block);
+        await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, a.dealId));
+      }
+    }
+
+    // Report the spread against the acquisition snapshot — the reason for holding both.
+    const divergences = plan.applied.map(a => {
+      const row = active.find(r => r.id === a.dealId);
+      const merged = row ? applyLiveBlock(row.data as Record<string, unknown>, a.block) : { [DATEX_BLOCK_KEY]: a.block };
+      return { dealId: a.dealId, propertyName: a.propertyName, rows: datexDivergence(merged) };
+    }).filter(d => d.rows.length);
+
+    req.log.info({ apply, applied: plan.applied.length, skipped: plan.skipped.length, rejected: plan.rejected.length }, "Datex import");
+    res.json({
+      ok: true,
+      applied: apply,
+      counts: { wouldUpdate: plan.applied.length, skipped: plan.skipped.length, rejected: plan.rejected.length },
+      deals: plan.applied.map(a => ({ dealId: a.dealId, propertyName: a.propertyName, block: a.block, hadPrevious: !!a.changedFrom })),
+      skipped: plan.skipped,
+      rejected: plan.rejected,
+      divergences,
+      note: apply
+        ? "Live blocks written. Acquisition-era fields were not touched — only the datexLive block changed."
+        : "DRY RUN — nothing was written. Re-send with { apply: true } to store these.",
+    });
+  } catch (err) {
+    req.log.error({ err }, "Datex import failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Datex import failed" });
   }
 });
 
