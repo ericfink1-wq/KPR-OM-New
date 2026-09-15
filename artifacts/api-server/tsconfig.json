@@ -4,7 +4,11 @@
     "outDir": "dist",
     "rootDir": "src",
     "types": ["node"],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    // The Datex building map is IMPORTED rather than read from disk, so esbuild inlines it
+    // into the bundle. Reading it at runtime broke in production: __dirname is dist/ there,
+    // not src/lib/, and the JSON was never copied into the build output.
+    "resolveJsonModule": true
   },
   "include": ["src"],
   "exclude": ["**/*.test.ts"],

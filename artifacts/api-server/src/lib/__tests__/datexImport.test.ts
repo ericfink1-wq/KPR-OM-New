@@ -208,3 +208,20 @@ describe("buildLiveBlock stamps provenance", () => {
     expect(b.importedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });
+
+// The map must come from the BUNDLE, not the filesystem. The first cut resolved a path from
+// __dirname, which is src/lib/ under test and dist/ in the built server — and the JSON was
+// never copied into the build output. Every unit test passed while production failed with
+// ENOENT on the first real import. This pins the loaded map to the real one.
+describe("the building map is bundled, not read from disk", () => {
+  it("loads the real map with no filesystem access", async () => {
+    __setDatexMap(null);                       // drop the test override
+    const { loadDatexMap } = await import("../datexImport");
+    const m = loadDatexMap();
+    expect(m.mappings.length).toBe(38);
+    expect(m.unmapped.length).toBe(1);
+    expect(m.mappings.find(x => x.dealId === "mqiun949_0_gixfg")?.bldgIds).toEqual(["brunswic"]);
+    expect(m.mappings.find(x => x.propertyName === "Rockaway Centers")?.bldgIds).toHaveLength(3);
+    __setDatexMap(MAP);                        // restore for any later test
+  });
+});

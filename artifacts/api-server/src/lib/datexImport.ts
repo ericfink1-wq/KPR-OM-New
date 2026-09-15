@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import datexMapJson from "../data/datex-deal-map.json";
 
 // DATEX LIVE IMPORT — the guardrail layer.
 //
@@ -112,13 +111,17 @@ export interface DatexMap {
   unmapped: Array<{ dealId: string; propertyName: string; reason?: string }>;
 }
 
-let cachedMap: DatexMap | null = null;
-export function loadDatexMap(dir = join(__dirname, "..", "data")): DatexMap {
-  if (!cachedMap) cachedMap = JSON.parse(readFileSync(join(dir, "datex-deal-map.json"), "utf8")) as DatexMap;
-  return cachedMap;
+// IMPORTED, not read from disk. The first cut resolved the path from __dirname, which is
+// src/lib/ in the source tree but dist/ in the built server — and the JSON was never copied
+// into the build output, so production failed with ENOENT the moment anyone ran an import.
+// Bundling it removes the runtime filesystem dependency altogether; the map is a few KB and
+// changes only when a building is added, which is a deploy anyway.
+let overrideMap: DatexMap | null = null;
+export function loadDatexMap(): DatexMap {
+  return overrideMap ?? (datexMapJson as DatexMap);
 }
-/** Test seam — lets a test supply a map without touching the filesystem. */
-export function __setDatexMap(m: DatexMap | null): void { cachedMap = m; }
+/** Test seam — lets a test supply a map in place of the bundled one. */
+export function __setDatexMap(m: DatexMap | null): void { overrideMap = m; }
 
 const sameIds = (a: string[], b: string[]) =>
   a.length === b.length && [...a].map(s => s.trim().toLowerCase()).sort().join("|") === [...b].map(s => s.trim().toLowerCase()).sort().join("|");
