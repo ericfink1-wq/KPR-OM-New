@@ -1176,6 +1176,39 @@ export interface Deal {
   // KPR ownership / cap table — members of the purchasing entity and their
   // capital balances. Ownership % is derived (capital ÷ total), never stored.
   ownershipStructure?: OwnerStake[] | null;
+  // LIVE data from Datex, KPR's property-management system, for OWNED assets only.
+  // Deliberately a SEPARATE block: every other field on this record is the acquisition-era
+  // snapshot taken from the offering documents, and its value is that it stays frozen. The
+  // two are meant to be read against each other, not merged — the gap between what was
+  // marketed and what the asset does today is the finding. Written only by the Datex import,
+  // which never touches the fields above.
+  datexLive?: DatexLiveBlock | null;
+}
+
+export interface DatexLiveBlock {
+  source?: "datex";
+  asOf?: string | null;               // the date this snapshot represents
+  importedAt?: string | null;
+  period?: string | null;             // Datex period, YYYYMM
+  bldgIds?: string[] | null;
+  totalGLA?: number | null;
+  occupiedGLA?: number | null;
+  vacantGLA?: number | null;
+  occupancyPct?: number | null;
+  totalUnits?: number | null;
+  occupiedUnits?: number | null;
+  vacantUnits?: number | null;
+  /** Shop / major / pad / ground-lease split as Datex reports it. A segment at zero
+   *  occupancy is a real finding that a headline occupancy figure hides. */
+  segments?: Record<string, { gla?: number | null; occupiedGLA?: number | null; units?: number | null; occupiedUnits?: number | null }> | null;
+  tenants?: Array<{
+    tenantId?: string | null; name?: string | null; suite?: string | null;
+    sf?: number | null; annualRent?: number | null; rentPerSF?: number | null;
+    nnnPerSF?: number | null; leaseExpiry?: string | null;
+    salesPSF?: number | null; salesPeriod?: string | null;
+  }> | null;
+  vacantSuites?: Array<{ suite?: string | null; sf?: number | null }> | null;
+  notes?: string | null;
 }
 
 // One member/owner of the purchasing entity. Ownership % is computed from the

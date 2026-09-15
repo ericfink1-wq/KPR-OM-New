@@ -42,6 +42,7 @@ import { useWatchlist } from "../lib/useWatchlist";
 import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { runWithProgress, startAiTask, finishAiTask } from "../lib/aiProgress";
 import ClosingCostsCard from "./ClosingCostsCard";
+import DatexLiveCard from "./DatexLiveCard";
 import TaxReassessmentCard from "./TaxReassessmentCard";
 import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
@@ -3747,6 +3748,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         );
       })()}
 
+      <DatexLiveCard deal={d} />
       {showUnderwriting && <ClosingCostsCard deal={d} />}
       <PortfolioBenchmarksCard deal={d} allDeals={allDeals} />
       {showUnderwriting && <TaxReassessmentCard deal={d} allDeals={allDeals} />}

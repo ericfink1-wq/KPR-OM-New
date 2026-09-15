@@ -489,6 +489,69 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
     }
   };
 
+  // Import a Datex snapshot produced by a Claude session. Datex's auth server has no
+  // machine-to-machine grant, so the site cannot pull for itself — a person authenticated to
+  // Datex generates the JSON and it lands here.
+  //
+  // It DRY RUNS first and shows exactly what would change, because the file is generated
+  // rather than typed: a payload built against the wrong building looks entirely plausible
+  // in its own output. Nothing is written until that summary is accepted. The acquisition-era
+  // figures are never touched either way — the server only ever writes the live block.
+  const datexFileRef = useRef<HTMLInputElement>(null);
+  const handleDatexImport = async (file: File) => {
+    setMaintaining(true); setMaintainMsg("Checking the Datex file…");
+    try {
+      const text = await file.text();
+      let payload: unknown;
+      try { payload = JSON.parse(text); } catch { throw new Error("That file isn't valid JSON"); }
+
+      type Row = { dealId: string; propertyName: string; problem?: string; reason?: string };
+      type Div = { propertyName: string; rows: Array<{ field: string; acquisition: number; live: number; deltaPct: number | null; note?: string }> };
+      type Resp = { ok: boolean; counts?: { wouldUpdate: number; skipped: number; rejected: number }; rejected?: Row[]; skipped?: Row[]; divergences?: Div[]; error?: string };
+      const post = (apply: boolean) => fetch("/api/deals/datex-import", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apply, payload }),
+      }).then(r => r.json() as Promise<Resp>);
+
+      const dry = await post(false);
+      if (!dry.ok) throw new Error(dry.error || "Datex import failed");
+      const c = dry.counts ?? { wouldUpdate: 0, skipped: 0, rejected: 0 };
+      if (!c.wouldUpdate) {
+        const why = (dry.rejected ?? []).slice(0, 4).map(r => `  • ${r.propertyName || r.dealId}: ${r.problem}`).join("\n");
+        throw new Error(`Nothing to import.${why ? `\n\n${why}` : ""}`);
+      }
+
+      // Lead with the divergences: the gap between the frozen acquisition figure and what
+      // the asset does today is the reason for holding both, so it belongs in the decision.
+      const moves = (dry.divergences ?? []).flatMap(d =>
+        d.rows.filter(r => r.note || (r.deltaPct != null && Math.abs(r.deltaPct) >= 2))
+          .map(r => `  • ${d.propertyName} — ${r.note ? r.note : `${r.field}: ${r.acquisition} → ${r.live} (${r.deltaPct}%)`}`),
+      ).slice(0, 12);
+      const rejected = (dry.rejected ?? []).slice(0, 5).map(r => `  • ${r.propertyName || r.dealId}: ${r.problem}`);
+
+      const ok = window.confirm(
+        `Import live Datex data for ${c.wouldUpdate} deal${c.wouldUpdate === 1 ? "" : "s"}?\n` +
+        `${c.skipped ? `${c.skipped} skipped (not in Datex yet). ` : ""}${c.rejected ? `${c.rejected} REJECTED.` : ""}\n` +
+        (moves.length ? `\nNotable differences vs the acquisition snapshot:\n${moves.join("\n")}\n` : "") +
+        (rejected.length ? `\nRejected:\n${rejected.join("\n")}\n` : "") +
+        `\nThis writes a separate live block. Your original OM figures are not touched, and the ` +
+        `library is snapshotted first, so it's reversible from Backup.`,
+      );
+      if (!ok) { setMaintainMsg(""); return; }
+
+      setMaintainMsg("Importing…");
+      const done = await post(true);
+      if (!done.ok) throw new Error(done.error || "Datex import failed");
+      setMaintainMsg(`✓ Live Datex data on ${done.counts?.wouldUpdate ?? 0} deals — reloading…`);
+      setTimeout(() => window.location.reload(), 2400);
+    } catch (e) {
+      setMaintainMsg(`⚠ ${e instanceof Error ? e.message : "failed"}`);
+    } finally {
+      setMaintaining(false);
+    }
+  };
+
   // Admin: permanently remove soft-deleted (trashed) deals whose data lingers in the
   // DB. Snapshots first on the server, so a mistaken purge is restorable from Backup.
   const handlePurgeTrashed = async () => {
@@ -699,6 +762,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                         ["✅ Clear answered questions", () => { setMaintMenuOpen(false); handleTriageQuestions(); }, "#383a37", maintaining, "Close the import questions the data now answers by itself (e.g. a WALT the rent roll confirms), so the real contradictions aren't buried. Shows you the count first; nothing is deleted."],
                         ["↺ Rebuild comps index", () => { setMaintMenuOpen(false); handleRebuildComps(); }, "#383a37", rebuildingComps, "Rebuild the comparable-sales index from every deal's owned/manual/OM comps."],
                         ["↺ Rebuild tenant index", () => { setMaintMenuOpen(false); handleRebuild(); }, "#383a37", rebuilding, "Rebuild the tenant search index across all deals."],
+                        ["📡 Import Datex snapshot (JSON)", () => { setMaintMenuOpen(false); datexFileRef.current?.click(); }, "#383a37", maintaining, "Load live occupancy, rent and tenant data exported from Datex by Claude. Shows you what would change before writing, never touches the original OM figures, and snapshots first."],
                         ...(isAdmin ? [["💲 Import transactions (JSON)", () => { setMaintMenuOpen(false); txnFileRef.current?.click(); }, "#383a37", maintaining, "Bulk-set purchase price/date, seller, NOI-at-close and going-in cap on existing deals from a JSON file (matched by property name). ONLY those fields change — roster, financials and notes are untouched."] as const] : []),
                         ...(isAdmin ? [["🗑 Remove deleted deals", () => { setMaintMenuOpen(false); handlePurgeTrashed(); }, "#b06a4e", maintaining, "Permanently remove trashed deals whose data still sits in the DB. Snapshots first."] as const] : []),
                       ] as [string, () => void, string, boolean, string][]).map(([label, fn, color, busy, tip]) => (
@@ -712,6 +776,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                     </div>
                   </>
                 )}
+                <input ref={datexFileRef} type="file" accept=".json,application/json" style={{ display: "none" }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleDatexImport(f); e.currentTarget.value = ""; }} />
                 <input ref={txnFileRef} type="file" accept=".json,application/json" style={{ display: "none" }}
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleImportTransactions(f); e.currentTarget.value = ""; }} />
               </div>
