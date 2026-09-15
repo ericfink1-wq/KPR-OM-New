@@ -8,6 +8,7 @@ import { db, dealsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { auditExtraction, AUDIT_ID_PREFIX } from "./extractionAudit";
 import { createSnapshot } from "../routes/snapshots";
+import { updateDealSafely } from "./dealWrite";
 import { normalizeDate, deriveRents, occCostCorroboratedBySales } from "./importFixes";
 import { repairCoTenancyTrigger, type CoTenancyLike } from "./coTenancyStructure";
 import { logger } from "./logger";
@@ -180,7 +181,18 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
     const next = [...kept, ...fresh.filter(q => !keptIds.has(q.id))];
     const clearedHere = existing.length - kept.length;
     if (clearedHere || next.length !== existing.length) { updated.reviewQuestions = next; cleared += clearedHere; changed = changed || clearedHere > 0; }
-    if (changed) { changedDeals++; await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id)); }
+    if (changed) {
+      changedDeals++;
+      // Write ONLY the keys this sweep actually altered, onto a freshly re-read record.
+      // `updated` was built from a copy read minutes ago at the top of the loop; writing it
+      // wholesale reverts anything another process changed in the meantime — that is how a
+      // Datex import's live blocks were silently lost on five deals.
+      const touched: Record<string, unknown> = {};
+      for (const k of Object.keys(updated)) {
+        if (JSON.stringify(updated[k]) !== JSON.stringify((data as Record<string, unknown>)[k])) touched[k] = updated[k];
+      }
+      if (Object.keys(touched).length) await updateDealSafely(r.id, () => touched);
+    }
   }
   log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, changedDeals, cleared }, "Auto-fix sweep complete");
   return { scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, changedDeals, cleared, snapshot: snap };

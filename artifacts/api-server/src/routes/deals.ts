@@ -21,6 +21,7 @@ import { requireAuth, requireAdmin } from "../middleware/auth";
 import type { Logger } from "pino";
 import { triageAiQuestions, summarizeTriage, TRIAGE_MARK, type TriageOutcome } from "../lib/aiQuestionTriage";
 import { planDatexImport, applyLiveBlock, datexDivergence, DATEX_BLOCK_KEY, type DatexPayload } from "../lib/datexImport";
+import { updateDealSafely } from "../lib/dealWrite";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
 // imported deal and merge the result back. The JSON's self-contained grade is
@@ -1475,8 +1476,9 @@ router.post("/deals/reaudit", requireAuth, async (req, res) => {
         added += newOnes.length;
         cleared += clearedHere;
         changedDeals++;
-        const updated = { ...data, reviewQuestions: next };
-        await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, r.id));
+        // Only reviewQuestions is this pass's business. Writing the whole record from the
+        // copy read at the start of the sweep is what silently reverted five Datex blocks.
+        await updateDealSafely(r.id, () => ({ reviewQuestions: next }));
       }
       const openAudit = next.filter(q => { const r = q as Record<string, unknown>; const id = String(r?.id || ""); return id.startsWith(AUDIT_ID_PREFIX) && !r?.resolvedAt; });
       if (openAudit.length) flagged++;
@@ -1528,9 +1530,7 @@ router.post("/deals/triage-questions", requireAuth, async (req, res) => {
         });
       }
       if (apply) {
-        await db.update(dealsTable)
-          .set({ data: { ...data, reviewQuestions: out.questions }, updatedAt: new Date() })
-          .where(eq(dealsTable.id, r.id));
+        await updateDealSafely(r.id, () => ({ reviewQuestions: out.questions }));
       }
     }
     const summary = summarizeTriage(outcomes);
@@ -1576,10 +1576,9 @@ router.post("/deals/datex-import", requireAuth, async (req, res) => {
     if (apply && plan.applied.length) {
       await createSnapshot("before-datex-import");
       for (const a of plan.applied) {
-        const row = active.find(r => r.id === a.dealId);
-        if (!row) continue;
-        const updated = applyLiveBlock(row.data as Record<string, unknown>, a.block);
-        await db.update(dealsTable).set({ data: updated, updatedAt: new Date() }).where(eq(dealsTable.id, a.dealId));
+        // Re-read before writing: this loop runs for a while, and writing the copy read at
+        // the start would revert anything another process changed in between.
+        await updateDealSafely(a.dealId, () => ({ [DATEX_BLOCK_KEY]: a.block }));
       }
     }
 

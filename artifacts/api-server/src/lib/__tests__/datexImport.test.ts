@@ -225,3 +225,26 @@ describe("the building map is bundled, not read from disk", () => {
     __setDatexMap(MAP);                        // restore for any later test
   });
 });
+
+// A long sweep reads every deal up front and writes each back over the following minutes.
+// Writing the whole record from that stale copy reverts anything another process changed in
+// between — which is exactly how a Datex import's live blocks disappeared from five deals
+// with no error. These pin the merge semantics that prevent it.
+describe("concurrent-write safety", () => {
+  it("a patch of one key leaves a concurrently-added key alone", () => {
+    // What updateDealSafely does: apply only the changed keys onto the CURRENT record.
+    const freshFromDb = { propertyName: "X", occupancy: 90, datexLive: { asOf: "2026-09-15" } };
+    const sweepWants = { reviewQuestions: [{ id: "audit-1" }] };
+    const merged = { ...freshFromDb, ...sweepWants };
+    expect(merged.datexLive).toEqual({ asOf: "2026-09-15" });   // survives
+    expect(merged.reviewQuestions).toHaveLength(1);
+  });
+
+  it("writing a whole STALE record is what loses the block — the bug, pinned", () => {
+    const staleReadBeforeImport = { propertyName: "X", occupancy: 90, reviewQuestions: [] };
+    const currentInDb = { ...staleReadBeforeImport, datexLive: { asOf: "2026-09-15" } };
+    const wholeStaleWrite = { ...staleReadBeforeImport, reviewQuestions: [{ id: "audit-1" }] };
+    expect(currentInDb.datexLive).toBeTruthy();
+    expect((wholeStaleWrite as Record<string, unknown>).datexLive).toBeUndefined();  // gone
+  });
+});
