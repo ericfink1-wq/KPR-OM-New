@@ -11,6 +11,7 @@ import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, 
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { gradeOccupancyCost, type OccGrade } from "../lib/retailCategory";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
+import type { DatexLiveBlock } from "../lib/idb";
 import { stickyFirstCol } from "../lib/stickyCol";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -22,6 +23,11 @@ interface Props {
   tenantsAsOf?: string | null;
   tenantsSource?: string | null;
   omDate?: string | null;
+  // Live occupancy pulled from Datex (KPR-owned assets only). The roster itself is the
+  // frozen acquisition-era record and is deliberately never overwritten by the import —
+  // so without this the header shows only the capture date and reads as stale. Showing
+  // both side by side is the point: the gap between them IS the finding.
+  datexLive?: DatexLiveBlock | null;
   // Estimated per-tenant recoveries (by tenantKey) — used as a fallback for the
   // occupancy-cost calc when the OM didn't disclose a tenant's recoveries.
   estimatedRecoveries?: Map<string, { value: number; estimated: boolean }>;
@@ -305,7 +311,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, datexLive, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant }: Props) {
   const watchMap = useWatchlist();
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [q, setQ] = useState("");
@@ -434,6 +440,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           {asOfDate && (
             <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color: tenantsSource==="rent-roll" ? "#0d9488" : "#a89f8f", background: tenantsSource==="rent-roll" ? "#f0fdfa" : "#f6f2ea", border:`1px solid ${tenantsSource==="rent-roll" ? "#99f6e4" : "#e3dccd"}`, borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
               AS OF {fmtAsOf(asOfDate)} · {asOfLabel}
+            </span>
+          )}
+          {datexLive?.asOf && (
+            <span title={`Live from Datex — KPR's property-management system of record — for period ${datexLive.period ?? "?"}. The roster above is the acquisition-era rent roll and is deliberately left untouched by the Datex import; this chip is the CURRENT occupancy. Where the two disagree, Datex governs on an owned asset.`}
+              style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color:"#1d4ed8", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+              📡 DATEX {fmtAsOf(datexLive.asOf)}
+              {datexLive.occupancyPct != null && ` · ${fmtPct(datexLive.occupancyPct)} OCC`}
+              {datexLive.totalUnits != null && ` · ${datexLive.totalUnits} UNITS`}
             </span>
           )}
         </div>

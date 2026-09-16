@@ -3198,6 +3198,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             onUpdate(d.id, { tenants: newTenants });
           }}
           tenantsAsOf={d.tenantsAsOf}
+          datexLive={d.datexLive}
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}
           estimatedRecoveries={estimateRecoveries(dWithRecoveries).byName}
