@@ -102,6 +102,25 @@ export async function api2faReverify(code: string): Promise<{ ok: boolean; error
   } catch { return { ok: false, error: "Couldn't reach the server. Try again in a moment." }; }
 }
 
+// --- What's new ---
+
+// How far back to summarise shipped changes for this reader. Returns null when the
+// server can't say (brand-new account, or the lookup failed) — the modal then stays
+// shut rather than dumping the whole history on someone.
+export async function apiWhatsNewCutoff(): Promise<{ cutoff: string | null; basis: "seen" | "previous-login" | "none" }> {
+  try {
+    const resp = await apiFetch("/auth/whats-new");
+    if (!resp.ok) return { cutoff: null, basis: "none" };
+    return await resp.json() as { cutoff: string | null; basis: "seen" | "previous-login" | "none" };
+  } catch { return { cutoff: null, basis: "none" }; }
+}
+
+// Mark the list as read up to now. Fire-and-forget: failing to record this just
+// means the reader sees the same entries again, which is not worth an error toast.
+export async function apiWhatsNewSeen(): Promise<void> {
+  try { await apiFetch("/auth/whats-new/seen", { method: "POST" }); } catch { /* non-critical */ }
+}
+
 export async function apiRegister(name: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const resp = await apiFetch("/auth/register", {

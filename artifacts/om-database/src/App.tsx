@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
-import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot } from "./lib/api";
+import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot, apiWhatsNewCutoff, apiWhatsNewSeen } from "./lib/api";
 import { PROSPECT_STALE_DAYS } from "./lib/constants";
 import { ensureUploadAllowed } from "./lib/uploadAuth";
 import Header from "./components/Header";
@@ -14,6 +14,8 @@ import Login from "./components/Login";
 import TwoFactorModal from "./components/TwoFactorModal";
 import Reverify2FAModal from "./components/Reverify2FAModal";
 import HelpModal from "./components/HelpModal";
+import WhatsNewModal from "./components/WhatsNewModal";
+import { entriesSince } from "./lib/changelog";
 import ClosingCostEstimator from "./components/ClosingCostEstimator";
 import AiProgressBar from "./components/AiProgressBar";
 import SaveStatusIndicator from "./components/SaveStatusIndicator";
@@ -208,6 +210,16 @@ function AppInner() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadPanelH, setUploadPanelH] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
+  // "What's new" — the changes shipped since this person was last caught up. The
+  // cutoff comes from the server (their account, not this browser) so reading the
+  // list on a laptop doesn't make the phone replay it.
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [whatsNew, setWhatsNew] = useState<{ cutoff: string | null; basis: "seen" | "previous-login" | "none" }>({ cutoff: null, basis: "none" });
+  // Null until the lookup lands, so the auto-open effect can tell "no unread yet"
+  // from "haven't asked yet" and doesn't flash the modal shut on first paint.
+  const [whatsNewUnread, setWhatsNewUnread] = useState<number | null>(null);
+  // A manual open shows the whole archive; the automatic one shows only what is new.
+  const [whatsNewOpenedManually, setWhatsNewOpenedManually] = useState(false);
   const [closingCalcOpen, setClosingCalcOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
@@ -248,6 +260,27 @@ function AppInner() {
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // Fetch this reader's "caught up to" mark once they are fully through the gate
+  // (a 2FA step-up is owed on the auth routes too, so asking earlier just 403s).
+  useEffect(() => {
+    if (auth !== "authenticated" || needs2fa || needsReverify) return;
+    let cancelled = false;
+    apiWhatsNewCutoff().then(r => {
+      if (cancelled) return;
+      setWhatsNew(r);
+      setWhatsNewUnread(entriesSince(r.cutoff).length);
+    });
+    return () => { cancelled = true; };
+  }, [auth, needs2fa, needsReverify]);
+
+  // Auto-open once, and only when there is genuinely something to say. Deliberately
+  // waits for `loaded`: popping a dialog over the loading splash reads as an error,
+  // and the reader can't act on it yet anyway.
+  useEffect(() => {
+    if (!loaded || whatsNewUnread == null || whatsNewUnread === 0) return;
+    setWhatsNewOpen(true);
+  }, [loaded, whatsNewUnread]);
 
   useEffect(() => {
     // Don't fetch data while a 2FA enrollment or step-up is owed — those routes 403.
@@ -485,6 +518,8 @@ function AppInner() {
         onLogout={handleLogout}
         onFiles={handleFiles}
         onHelpOpen={() => setHelpOpen(true)}
+        onWhatsNew={() => { setWhatsNewOpenedManually(true); setWhatsNewOpen(true); }}
+        whatsNewCount={whatsNewUnread ?? 0}
         onClosingCalc={() => setClosingCalcOpen(true)}
         onDealsAdded={handleDealsAdded}
         isAdmin={isAdmin}
@@ -493,6 +528,21 @@ function AppInner() {
         onOpenSearch={() => setSearchOpen(true)}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} isAdmin={isAdmin} />
+      <WhatsNewModal
+        open={whatsNewOpen}
+        cutoff={whatsNewOpenedManually ? null : whatsNew.cutoff}
+        basis={whatsNew.basis}
+        onClose={() => {
+          setWhatsNewOpen(false);
+          setWhatsNewOpenedManually(false);
+          // Closing IS the acknowledgement — there is no separate "mark as read", so
+          // record it and clear the badge. Fire-and-forget: a failed write only means
+          // they see the same entries next time, which isn't worth interrupting them.
+          setWhatsNewUnread(0);
+          setWhatsNew(w => ({ ...w, cutoff: new Date().toISOString(), basis: "seen" }));
+          apiWhatsNewSeen();
+        }}
+      />
       {closingCalcOpen && <ClosingCostEstimator deals={deals} onClose={() => setClosingCalcOpen(false)} />}
       {/* The deal page is crowded top (fixed action bar + title) and the toast
           would cover them at scroll-top — anchor it to the bottom there, clear of

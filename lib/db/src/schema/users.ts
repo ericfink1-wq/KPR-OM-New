@@ -18,6 +18,13 @@ export const usersTable = pgTable("users", {
   // lastLoginAt, which only moves on an explicit sign-in. Powers the admin's
   // "last seen" / most-recent-activity view.
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  // Last time this person was shown the "What's new" summary. The modal lists
+  // everything shipped since this instant, so it is per-ACCOUNT rather than
+  // per-browser: reading the changes on a laptop means the phone does not
+  // replay them. Null for anyone who has never seen it — the endpoint then
+  // falls back to their previous sign-in, which is the question Eric actually
+  // asked ("what changed since I was last here").
+  whatsNewSeenAt: timestamp("whats_new_seen_at", { withTimezone: true }),
   resetTokenHash: text("reset_token_hash"),
   resetTokenExpires: timestamp("reset_token_expires", { withTimezone: true }),
   // Email verification — proves the registrant controls the address before an

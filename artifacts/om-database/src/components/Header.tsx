@@ -30,6 +30,9 @@ const ANALYTICS_GROUPS: Record<"portfolio" | "tenant", [string, string][]> = {
 interface Props {
   tab: string;
   onHelpOpen?: () => void;
+  onWhatsNew?: () => void;
+  /** Unread entries — drives the dot on the button. 0 hides it. */
+  whatsNewCount?: number;
   onTab: (t: string) => void;
   deals: Deal[];
   queueLen: number;
@@ -43,7 +46,7 @@ interface Props {
   onOpenSearch?: () => void;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onWhatsNew, whatsNewCount = 0, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -788,6 +791,24 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             </div>
           </>,
           document.body
+        )}
+
+        {onWhatsNew && (
+          <button
+            type="button"
+            onClick={onWhatsNew}
+            aria-label={whatsNewCount > 0 ? `What's new — ${whatsNewCount} unread` : "What's new"}
+            title="What's changed in the app recently"
+            style={{ position:"relative", background:"#fff", border:"1px solid #d9d2c4", color:"#5c5047", padding:"8px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap", flexShrink:0 }}
+          >
+            ✨ What's new
+            {whatsNewCount > 0 && (
+              <span
+                aria-hidden="true"
+                style={{ position:"absolute", top:-5, right:-5, minWidth:17, height:17, padding:"0 4px", borderRadius:9, background:"#3f7a1f", color:"#fff", fontSize:10, fontWeight:700, lineHeight:"17px", textAlign:"center", boxShadow:"0 0 0 2px #f6f2ea" }}
+              >{whatsNewCount > 9 ? "9+" : whatsNewCount}</span>
+            )}
+          </button>
         )}
 
         <button

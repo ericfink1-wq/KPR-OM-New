@@ -9,6 +9,7 @@ import { logger } from "../lib/logger";
 import QRCode from "qrcode";
 import { generateSecret, verifyTotp, otpauthUri } from "../lib/totp";
 import { needs2faReverify } from "../lib/twoFactorPolicy";
+import { whatsNewCutoff } from "../lib/whatsNew";
 
 const router = Router();
 
@@ -91,6 +92,7 @@ export function ensureUsersTable(): Promise<void> {
         )
       `);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at timestamptz`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS whats_new_seen_at timestamptz`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash text`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires timestamptz`);
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false`);
@@ -502,6 +504,59 @@ router.get("/auth/me", async (req, res) => {
     // Periodic step-up: re-enter a code when the verification window has lapsed.
     needs2faReverify: !!req.session.authenticated && needs2faReverify(req.session),
   });
+});
+
+// GET /api/auth/whats-new — how far back to summarise shipped changes for THIS reader.
+//
+// The changelog itself lives in the frontend (om-database/src/lib/changelog.ts) and
+// is not duplicated here: the server's only job is to say where this person got to,
+// so there is exactly one copy of the entries to keep current.
+router.get("/auth/whats-new", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    if (!req.session.userId) { res.json({ cutoff: null, basis: "none" }); return; }
+    const user = (await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)))[0];
+    if (!user) { res.json({ cutoff: null, basis: "none" }); return; }
+
+    // Their PREVIOUS sign-in: the most recent successful login strictly older than the
+    // one that opened this session. users.lastLoginAt is no use here — the current
+    // login already moved it to now, which would make every reader see nothing.
+    let previousLoginAt: Date | null = null;
+    if (!user.whatsNewSeenAt) {
+      const before = new Date(req.session.loginAt ?? Date.now());
+      const prior = await db.select().from(loginEventsTable)
+        .where(and(
+          eq(loginEventsTable.userId, user.id),
+          eq(loginEventsTable.success, true),
+          sql`${loginEventsTable.createdAt} < ${before}`,
+        ))
+        .orderBy(desc(loginEventsTable.createdAt))
+        .limit(1);
+      previousLoginAt = prior[0]?.createdAt ?? null;
+    }
+
+    res.json(whatsNewCutoff({ seenAt: user.whatsNewSeenAt, previousLoginAt }));
+  } catch (err) {
+    // Never block the app on this — it is a nicety, not a gate. Saying "nothing new"
+    // is the safe failure: the header button still opens the full list on demand.
+    req.log.error({ err }, "whats-new cutoff lookup failed");
+    res.json({ cutoff: null, basis: "none" });
+  }
+});
+
+// POST /api/auth/whats-new/seen — this reader has now been shown the list.
+router.post("/auth/whats-new/seen", requireAuth, async (req, res) => {
+  try {
+    await ensureUsersTable();
+    if (!req.session.userId) { res.json({ ok: true }); return; }
+    await db.update(usersTable)
+      .set({ whatsNewSeenAt: new Date() })
+      .where(eq(usersTable.id, req.session.userId));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "whats-new seen update failed");
+    res.status(500).json({ error: "Could not save." });
+  }
 });
 
 // POST /api/auth/change-password — the signed-in user changes their own password
