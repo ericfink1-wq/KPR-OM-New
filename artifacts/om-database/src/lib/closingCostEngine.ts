@@ -118,6 +118,8 @@ export interface UnverifiedLayer {
   candidates: LocalEntry[];
   /** true when "no local tax" is one of the possible outcomes (so the range floor is $0). */
   canBeNone: boolean;
+  /** Came from a knownGaps entry (its own range) rather than an unresolved lookup. */
+  fromGap?: boolean;
 }
 
 export interface LocalResolution {
@@ -137,10 +139,13 @@ function hasMuniLayer(j: JurisdictionRates): boolean {
   return !!j.local?.entries.some((e) => e.kind === "municipal") || j.localLevel === "municipality" || j.localLevel === "municipality+school" || j.localLevel === "county+municipality";
 }
 
-const sameCounty = (a?: string | null, b?: string | null) => {
+// County names: "Baltimore County" and "Baltimore city" are DIFFERENT jurisdictions
+// (as are VA's county/independent-city pairs), so only county-type words are dropped.
+const COUNTY_WORD = / (county|parish|borough|census area|planning region)$/;
+export const sameCounty = (a?: string | null, b?: string | null) => {
   const x = normName(a), y = normName(b);
   if (!x || !y) return false;
-  return x === y || stripType(x.replace(/ (county|parish|borough|census area|municipality|planning region)$/, "")) === stripType(y.replace(/ (county|parish|borough|census area|municipality|planning region)$/, ""));
+  return x === y || x.replace(COUNTY_WORD, "") === y.replace(COUNTY_WORD, "");
 };
 
 /** Candidate municipal entries for a geocoded location (before school-district disambiguation). */
@@ -175,7 +180,7 @@ function findGap(j: JurisdictionRates, table: LocalTaxTable, geo: ResolvedJurisd
       id: `gap-${normName(g.name)}`, kind, name: g.name, county: g.county,
       lines: [{ name: `${g.name} local transfer tax (unconfirmed)`, rate: g.maxRate, base: "price", party: g.party, source: j.localLevelSource.source, asOf: j.localLevelSource.asOf }],
     };
-    return { layer: kind, reason: `${g.name}: ${g.reason}`, candidates: [synthetic], canBeNone: true };
+    return { layer: kind, reason: `${g.name}: ${g.reason}`, candidates: [synthetic], canBeNone: true, fromGap: true };
   }
   return null;
 }
@@ -317,7 +322,7 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
         name: "Title Insurance (Owner's Policy)", scope: "title",
         rate: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
         rateMin: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
-        rateMax: sched.brackets[0].per1000 / 1000,
+        rateMax: Math.max(...sched.brackets.map((b) => b.per1000)) / 1000,
         base: "price", party: j.titleInsuranceParty, verify: !sched.promulgated,
         source: sched.source, asOf: sched.asOf,
         amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
@@ -346,7 +351,13 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
   for (const e of local.applied) for (const tx of e.lines) pushTax(tx, "local");
 
   // Unverified local layers → a RANGE line, never a single default number.
-  for (const u of local.unverified) {
+  for (const u0 of local.unverified) {
+    const hint = j.local?.unverifiedRange?.[u0.layer];
+    const u: UnverifiedLayer = hint && !u0.fromGap ? {
+      ...u0, canBeNone: hint.minRate === 0,
+      candidates: [hint.minRate, hint.maxRate].map((r, i) => ({ id: `range-${i}`, kind: u0.layer, name: hint.note,
+        lines: [{ name: hint.note, rate: r, base: "price" as const, party: hint.party, source: j.localLevelSource.source, asOf: j.localLevelSource.asOf }] })),
+    } : u0;
     const costs = u.candidates.map((e) => entryCost(e, price, loan, opts));
     if (u.canBeNone || !costs.length) costs.push({ buyer: 0, seller: 0 });
     const r = {
@@ -365,7 +376,11 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
       base: "price", party: "split", range: r,
       source: j.localLevelSource.source, sourceUrl: j.localLevelSource.sourceUrl, asOf: j.localLevelSource.asOf,
       amount: 0, buyer: 0, seller: 0,
-      notes: `Local rate not verified: ${u.reason}. Shown as the range across ${u.candidates.length} ${j.stateName} ${u.layer === "county" ? "counties" : "localities"} in our table${u.canBeNone ? " (or none)" : ""}. Confirm the exact local rate with title.`,
+      notes: u.fromGap
+        ? `Local rate not verified: ${u.reason}. Shown from $0 up to the highest rate it could be. Confirm the exact local rate with title.`
+        : hint && u !== u0
+        ? `Local rate not verified: ${u.reason}. ${hint.note}. Confirm the exact local rate with title.`
+        : `Local rate not verified: ${u.reason}. Shown as the range across ${u.candidates.length} ${j.stateName} ${u.layer === "county" ? "counties" : "localities"} in our table${u.canBeNone ? " (or none)" : ""}. Confirm the exact local rate with title.`,
     });
   }
 

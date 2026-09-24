@@ -2672,8 +2672,8 @@ export const PA_LOCAL: LocalTaxTable = {
       id: `pa-${slug(county)}-${slug(muni)}-${slug(sd)}`,
       kind: "municipal", name: muni, county: `${county} County`, schoolDistrict: sd || undefined,
       lines: [
-        { name: "Local RTT", rate: mr, base: "price", party: "split", source: DCED_SOURCE, sourceUrl: DCED_URL, asOf: ma },
-        { name: "School District RTT", rate: sr, base: "price", party: "split", source: DCED_SOURCE, sourceUrl: DCED_URL, asOf: sa },
+        { name: `Local RTT — ${muni}`, rate: mr, base: "price", party: "split", source: DCED_SOURCE, sourceUrl: DCED_URL, asOf: ma },
+        { name: `School District RTT — ${sd || "school district"}`, rate: sr, base: "price", party: "split", source: DCED_SOURCE, sourceUrl: DCED_URL, asOf: sa },
       ],
     })),
     ...SPECIAL,

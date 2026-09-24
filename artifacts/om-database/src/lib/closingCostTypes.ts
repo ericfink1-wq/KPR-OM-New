@@ -92,6 +92,12 @@ export interface LocalTaxTable {
    * source. A property there is always UNVERIFIED, shown as a 0–maxRate range — so a
    * gap in our research can never read as "no tax".
    */
+  /**
+   * When a layer can't be resolved and the listed entries don't span every possibility
+   * (e.g. WV: only some counties' add-on is officially confirmed), the honest range for
+   * that layer. Replaces the range computed from the listed candidates.
+   */
+  unverifiedRange?: Partial<Record<"county" | "municipal", { minRate: number; maxRate: number; party: Party; note: string }>>;
   knownGaps?: Array<{ name: string; county?: string; kind?: "county" | "municipal"; reason: string; maxRate: number; party: Party }>;
   entries: LocalEntry[];
 }

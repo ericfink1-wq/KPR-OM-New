@@ -6,6 +6,7 @@ import {
   DEFAULT_LTV, SPLITS_SOURCE, FIDELITY_SOURCE_URL,
 } from "../lib/closingCosts";
 import { hasLocalTable, loadLocalTable } from "../lib/transferTaxLocal";
+import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props { deal: Deal; }
 
@@ -29,6 +30,9 @@ function commaFmt(v: string): string {
 }
 
 export default function ClosingCostsCard({ deal }: Props) {
+  const isMobile = useIsMobile();
+  const [openNotes, setOpenNotes] = useState<Set<number>>(new Set());
+  const toggleNotes = (i: number) => setOpenNotes((prev) => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
   const defaultPrice = Number(deal.txnPurchasePrice ?? deal.askingPrice ?? 0) || 0;
   const knownLoan = Number(deal.loanBalance ?? 0) || 0;
   const defaultLoan = knownLoan || (defaultPrice ? Math.round(defaultPrice * DEFAULT_LTV) : 0);
@@ -157,6 +161,9 @@ export default function ClosingCostsCard({ deal }: Props) {
   const labelStyle: React.CSSProperties = { display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
   const selectStyle: React.CSSProperties = { ...inputStyle, minHeight: 36 };
 
+  const whereLabel = local.basis === "unresolved" || !local.where || local.where === "an unresolved location"
+    ? `${[deal.city, effectiveState].filter(Boolean).join(", ") || "this property"} (mailing address — county/town not resolved)`
+    : local.where;
   const appliedLocalNames = local.applied.map((e) => e.name + (e.schoolDistrict ? ` · ${e.schoolDistrict}` : ""));
 
   return (
@@ -187,7 +194,7 @@ export default function ClosingCostsCard({ deal }: Props) {
         <div style={{ fontSize: 12, color: "#8a1f14", background: "#fde9e6", border: "2px solid #d9695a", borderRadius: 8, padding: "11px 13px", marginBottom: 14, lineHeight: 1.5 }}>
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, display: "flex", alignItems: "flex-start", gap: 6 }}>
             <span style={{ fontSize: 15, lineHeight: 1.2 }}>⛔</span>
-            <span>Local rate not verified for {local.where} — confirm with title</span>
+            <span>Local rate not verified for {whereLabel} — confirm with title</span>
           </div>
           <div style={{ color: "#9a3a2c" }}>
             {tableLoading
@@ -275,7 +282,7 @@ export default function ClosingCostsCard({ deal }: Props) {
             <span style={{ fontSize: 12.5, color: "#383a37", lineHeight: 1.4 }}>
               {local.status === "verified" && <span style={{ color: "#3f7a1f", marginRight: 5 }}>✓</span>}
               {local.status === "unverified" && <span style={{ color: "#b3261e", marginRight: 5 }}>⛔</span>}
-              {appliedLocalNames.length ? appliedLocalNames.join(" + ") : local.where}
+              {appliedLocalNames.length ? appliedLocalNames.join(" + ") : (local.status === "unverified" ? `Not resolved — ${whereLabel}` : local.where)}
               {local.confirmedNone.length > 0 && <span style={{ color: "#7d766a" }}> · no {local.confirmedNone.join("/")} tax here</span>}
             </span>
             <button type="button" onClick={() => setPickerOpen((v) => !v)}
@@ -346,66 +353,100 @@ export default function ClosingCostsCard({ deal }: Props) {
         </div>
       )}
 
-      {/* Rate table — ALWAYS visible */}
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, minWidth: 420 }}>
-          <thead>
-            <tr style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Item</th>
-              <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ece5d7", whiteSpace: "nowrap" }}>Rate</th>
-              <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Buyer</th>
-              <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Seller</th>
-            </tr>
-          </thead>
-          <tbody>
-            {breakdown.lines.map((l, i) => {
-              const dormant = !!l.inactive;
-              const needsVerify = !!l.verify && !dormant;
-              const baseAmt = l.base === "loan" ? loan : price;
-              const isFlat = l.rate === 0 && l.rateMin == null;
-              const r = l.range;
-              const cell = (amt: number, lo: number | undefined, hi: number | undefined, color: string) => {
-                if (!hasPrice) return <span style={{ color: "#c9c2b3" }}>—</span>;
-                if (r) return (hi ?? 0) > 0 ? <span style={{ color: "#b3261e", fontWeight: 600 }}>{fmtRange(lo ?? 0, hi ?? 0)}</span> : <span style={{ color: "#c9c2b3" }}>—</span>;
-                if (dormant || amt <= 0) return <span style={{ color: "#c9c2b3" }}>—</span>;
-                const p = isFlat ? null : effPct(amt, baseAmt);
-                return <span style={{ color, fontWeight: 500 }}>{fmt(amt)}{p && <div style={{ fontSize: 9.5, color: "#a69e91", fontWeight: 400, marginTop: 1 }}>({p})</div>}</span>;
-              };
-              return (
-                <tr key={i} style={{ borderBottom: "1px solid #f5efe2", opacity: dormant ? 0.45 : 1, background: l.unverified ? "#fdf1ef" : undefined }}>
-                  <td style={{ padding: "8px 8px", color: l.unverified ? "#8a1f14" : "#383a37", verticalAlign: "top", fontWeight: l.unverified ? 600 : 400 }}>
-                    <div>
-                      {l.name}
-                      {dormant ? <span style={{ fontSize: 9, color: "#a69e91", fontWeight: 600 }}> · not applied</span> : null}
-                      {needsVerify ? <span style={{ fontSize: 9, color: "#b04a2e", fontWeight: 700, marginLeft: 5, whiteSpace: "nowrap" }}>🚩 confirm w/ title</span> : null}
-                    </div>
-                    {l.notes && <div style={{ fontSize: 9.5, color: l.unverified ? "#9a3a2c" : "#a69e91", marginTop: 2, lineHeight: 1.4, fontWeight: 400 }}>{l.notes}</div>}
-                    {l.source && (
-                      <div style={{ fontSize: 9, color: "#b3ab9c", marginTop: 2, lineHeight: 1.35, fontWeight: 400 }}>
-                        Source:{" "}
-                        {l.sourceUrl ? <a href={l.sourceUrl} target="_blank" rel="noreferrer" style={{ color: "#7d8fa8" }}>{l.source}</a> : l.source}
-                        {l.asOf ? <> · as of {l.asOf}</> : null}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ padding: "8px 8px", textAlign: "left", color: l.unverified ? "#b3261e" : "#52554e", whiteSpace: "nowrap", verticalAlign: "top", fontVariantNumeric: "tabular-nums" }}>
-                    {isFlat && !l.unverified ? (dormant ? "—" : `flat ${fmt(l.amount)}`) : formatRate(l)}
-                  </td>
-                  <td style={{ padding: "8px 8px", textAlign: "right", verticalAlign: "top" }}>{cell(l.buyer, r?.buyerMin, r?.buyerMax, "#3f7a1f")}</td>
-                  <td style={{ padding: "8px 8px", textAlign: "right", verticalAlign: "top" }}>{cell(l.seller, r?.sellerMin, r?.sellerMax, "#8a5a14")}</td>
-                </tr>
-              );
-            })}
+      {/* Rate lines — ALWAYS visible. Desktop: a table. Phone: stacked cards (a 4-column
+          table can't fit 390px without hiding the Buyer/Seller columns). Long notes sit
+          behind a tap-to-expand "details" link; the source + as-of date always show. */}
+      {(() => {
+        const rows = breakdown.lines.map((l, i) => {
+          const dormant = !!l.inactive;
+          const needsVerify = !!l.verify && !dormant;
+          const baseAmt = l.base === "loan" ? loan : price;
+          const isFlat = l.rate === 0 && l.rateMin == null && !l.flatAmount;
+          const r = l.range;
+          const amtCell = (amt: number, lo: number | undefined, hi: number | undefined, color: string) => {
+            if (!hasPrice) return <span style={{ color: "#c9c2b3" }}>—</span>;
+            if (r) return (hi ?? 0) > 0 ? <span style={{ color: "#b3261e", fontWeight: 600 }}>{fmtRange(lo ?? 0, hi ?? 0)}</span> : <span style={{ color: "#c9c2b3" }}>—</span>;
+            if (dormant || amt <= 0) return <span style={{ color: "#c9c2b3" }}>—</span>;
+            const p = isFlat || l.flatAmount != null ? null : effPct(amt, baseAmt);
+            return <span style={{ color, fontWeight: 500 }}>{fmt(amt)}{p && <span style={{ display: "block", fontSize: 9.5, color: "#a69e91", fontWeight: 400, marginTop: 1 }}>({p})</span>}</span>;
+          };
+          const rateText = l.flatAmount != null ? `flat ${fmt(l.flatAmount)}` : isFlat && !l.unverified ? (dormant ? "—" : `flat ${fmt(l.amount)}`) : formatRate(l);
+          const open = openNotes.has(i) || !!l.unverified;
+          const title = (
+            <>
+              <div style={{ color: l.unverified ? "#8a1f14" : "#383a37", fontWeight: l.unverified ? 600 : 500 }}>
+                {l.unverified ? l.name.replace(local.where, whereLabel) : l.name}
+                {dormant ? <span style={{ fontSize: 9, color: "#a69e91", fontWeight: 600 }}> · not applied</span> : null}
+                {needsVerify ? <span style={{ fontSize: 9, color: "#b04a2e", fontWeight: 700, marginLeft: 5, whiteSpace: "nowrap" }}>🚩 confirm w/ title</span> : null}
+              </div>
+              {l.notes && open && <div style={{ fontSize: 10, color: l.unverified ? "#9a3a2c" : "#7d766a", marginTop: 3, lineHeight: 1.45, fontWeight: 400 }}>{l.notes}</div>}
+              <div style={{ fontSize: 9.5, color: "#b3ab9c", marginTop: 3, lineHeight: 1.4, fontWeight: 400 }}>
+                {l.source && <>Source: {l.sourceUrl ? <a href={l.sourceUrl} target="_blank" rel="noreferrer" style={{ color: "#7d8fa8" }}>{l.source}</a> : l.source}{l.asOf ? <> · as of {l.asOf}</> : null}</>}
+                {l.notes && !l.unverified && (
+                  <button type="button" onClick={() => toggleNotes(i)}
+                    style={{ background: "none", border: "none", color: "#4f8a2b", fontSize: 10, fontWeight: 600, cursor: "pointer", padding: "4px 0 4px 6px", fontFamily: "'Inter',sans-serif" }}>
+                    {openNotes.has(i) ? "hide details" : "details"}
+                  </button>
+                )}
+              </div>
+            </>
+          );
+          return { l, i, dormant, rateText, title, buyer: amtCell(l.buyer, r?.buyerMin, r?.buyerMax, "#3f7a1f"), seller: amtCell(l.seller, r?.sellerMin, r?.sellerMax, "#8a5a14") };
+        });
+        const totalLabel = `Total${hasRange ? " (range — local rate unverified)" : ""}`;
+        if (isMobile) return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {rows.map(({ l, i, dormant, rateText, title, buyer, seller }) => (
+              <div key={i} style={{ border: `1px solid ${l.unverified ? "#e9b3aa" : "#f0e9da"}`, background: l.unverified ? "#fdf1ef" : "#fff", borderRadius: 8, padding: "10px 12px", opacity: dormant ? 0.5 : 1, fontSize: 12.5 }}>
+                {title}
+                <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 8, marginTop: 8, fontVariantNumeric: "tabular-nums" }}>
+                  <div><div style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Rate</div><div style={{ fontSize: 11.5, color: l.unverified ? "#b3261e" : "#52554e" }}>{rateText}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Buyer</div><div style={{ fontSize: 12.5 }}>{buyer}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Seller</div><div style={{ fontSize: 12.5 }}>{seller}</div></div>
+                </div>
+              </div>
+            ))}
             {hasPrice && (
-              <tr style={{ background: "#faf7f0" }}>
-                <td style={{ padding: "10px 8px", color: "#26281f", fontWeight: 700 }} colSpan={2}>Total{hasRange ? " (range — local rate unverified)" : ""}</td>
-                <td style={{ padding: "10px 8px", textAlign: "right", color: "#3f7a1f", fontWeight: 700 }}>{fmtRange(breakdown.totals.buyer, breakdown.totalsMax.buyer)}</td>
-                <td style={{ padding: "10px 8px", textAlign: "right", color: "#8a5a14", fontWeight: 700 }}>{fmtRange(breakdown.totals.seller, breakdown.totalsMax.seller)}</td>
-              </tr>
+              <div style={{ background: "#faf7f0", borderRadius: 8, padding: "10px 12px", display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 8, fontSize: 12.5, fontWeight: 700 }}>
+                <div style={{ color: "#26281f" }}>{totalLabel}</div>
+                <div style={{ color: "#3f7a1f" }}>{fmtRange(breakdown.totals.buyer, breakdown.totalsMax.buyer)}</div>
+                <div style={{ color: "#8a5a14" }}>{fmtRange(breakdown.totals.seller, breakdown.totalsMax.seller)}</div>
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        );
+        return (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+              <thead>
+                <tr style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Item</th>
+                  <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ece5d7", whiteSpace: "nowrap" }}>Rate</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Buyer</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Seller</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(({ l, i, dormant, rateText, title, buyer, seller }) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f5efe2", opacity: dormant ? 0.45 : 1, background: l.unverified ? "#fdf1ef" : undefined }}>
+                    <td style={{ padding: "8px 8px", verticalAlign: "top" }}>{title}</td>
+                    <td style={{ padding: "8px 8px", color: l.unverified ? "#b3261e" : "#52554e", whiteSpace: "nowrap", verticalAlign: "top", fontVariantNumeric: "tabular-nums" }}>{rateText}</td>
+                    <td style={{ padding: "8px 8px", textAlign: "right", verticalAlign: "top", whiteSpace: "nowrap" }}>{buyer}</td>
+                    <td style={{ padding: "8px 8px", textAlign: "right", verticalAlign: "top", whiteSpace: "nowrap" }}>{seller}</td>
+                  </tr>
+                ))}
+                {hasPrice && (
+                  <tr style={{ background: "#faf7f0" }}>
+                    <td style={{ padding: "10px 8px", color: "#26281f", fontWeight: 700 }} colSpan={2}>{totalLabel}</td>
+                    <td style={{ padding: "10px 8px", textAlign: "right", color: "#3f7a1f", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtRange(breakdown.totals.buyer, breakdown.totalsMax.buyer)}</td>
+                    <td style={{ padding: "10px 8px", textAlign: "right", color: "#8a5a14", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtRange(breakdown.totals.seller, breakdown.totalsMax.seller)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {jurisdiction.notes && (
         <div style={{ fontSize: 10, color: "#7d766a", lineHeight: 1.5, marginTop: 12, padding: "8px 10px", background: "#faf7f0", borderRadius: 6, border: "1px solid #f0e8d6" }}>
