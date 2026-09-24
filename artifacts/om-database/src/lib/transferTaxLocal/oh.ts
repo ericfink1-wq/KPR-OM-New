@@ -190,7 +190,7 @@ export const OH_LOCAL: LocalTaxTable = {
   { id: "oh-montgomery-county", kind: "county", name: "Montgomery County", county: "Montgomery County", lines: [
       F0(0.003, "Mandatory $1.00/$1,000 (R.C. 319.54(G)(3)) + county permissive $2.00/$1,000 (R.C. 322.02) = $3.00/$1,000. Both are county fees (all revenue to the county general fund). Paid by the grantor (seller) at transfer; plus $0.50/parcel transfer fee (not modeled).")
     ] },
-  { id: "oh-morgan-county", kind: "county", name: "Morgan County", county: "Morgan County", lines: [
+  { id: "oh-morgan-county", kind: "county", verify: "Ohio's CY2024 table lists a $2 permissive rate for Morgan but reports only $1 collected — a data anomaly. Confirm with the Morgan County auditor.", name: "Morgan County", county: "Morgan County", lines: [
       { name: "Real Property Conveyance Fee (county)", rate: 0.003, base: "price", party: "seller", verify: true, source: S0, sourceUrl: S1, asOf: "2025-07-10", notes: "Mandatory $1.00/$1,000 (R.C. 319.54(G)(3)) + county permissive $2.00/$1,000 (R.C. 322.02) = $3.00/$1,000. Both are county fees (all revenue to the county general fund). Paid by the grantor (seller) at transfer; plus $0.50/parcel transfer fee (not modeled). CY2024 table lists a $2 permissive rate but reports only $1 of permissive collections (data anomaly) — rate from the table used; verify with the Morgan County Auditor." }
     ] },
   { id: "oh-morrow-county", kind: "county", name: "Morrow County", county: "Morrow County", lines: [

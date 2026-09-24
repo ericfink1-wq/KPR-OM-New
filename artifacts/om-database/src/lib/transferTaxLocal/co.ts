@@ -51,31 +51,31 @@ export const CO_LOCAL: LocalTaxTable = {
   { id: "co-pitkin-county-snowmass-village-town", kind: "municipal", name: "Snowmass Village town", county: "Pitkin County", lines: [
       { name: "Snowmass Village RETT", rate: 0.01, base: "price", party: "buyer", source: S2, sourceUrl: S3, asOf: "2026-09-24", notes: "1% of purchase price; 'The purchaser is responsible for the tax'." }
     ] },
-  { id: "co-eagle-county-vail-town", kind: "municipal", name: "Vail town", county: "Eagle County", lines: [
+  { id: "co-eagle-county-vail-town", kind: "municipal", verify: "Rate read from a search-engine copy of the town's official page (direct fetch failed), and the ordinance doesn't clearly name who pays. Confirm with the town/title.", name: "Vail town", county: "Eagle County", lines: [
       { name: "Vail RETT", rate: 0.01, base: "price", party: "split", source: S4, sourceUrl: S5, asOf: "2026-09-24", notes: "1% (created 1980). Parties jointly responsible; commonly allocated by contract. Page content obtained via search index — direct fetch 403." }
     ] },
-  { id: "co-eagle-county-avon-town", kind: "municipal", name: "Avon town", county: "Eagle County", lines: [
+  { id: "co-eagle-county-avon-town", kind: "municipal", verify: "The town's ordinance doesn't clearly say who pays — 'buyer' is an assumption; commercial exemptions not reviewed. Confirm with the town/title.", name: "Avon town", county: "Eagle County", lines: [
       { name: "Avon RETT", rate: 0.02, base: "price", party: "buyer", source: S6, sourceUrl: S7, asOf: "2026-09-24", notes: "2% on all transfers of real estate in the Town. Primary-residence exemption (first $500K) does not apply to commercial. Payer not stated on the page — confirm." }
     ] },
-  { id: "co-eagle-county-gypsum-town", kind: "municipal", name: "Gypsum town", county: "Eagle County", lines: [
+  { id: "co-eagle-county-gypsum-town", kind: "municipal", verify: "Rate read from a search-engine copy of the town's official page (direct fetch failed), and the ordinance doesn't clearly name who pays. Confirm with the town/title.", name: "Gypsum town", county: "Eagle County", lines: [
       { name: "Gypsum RETT", rate: 0.01, base: "price", party: "buyer", source: S8, sourceUrl: S9, asOf: "2026-09-24", notes: "1% on sale of property; transfer info due to Town 5 business days before closing. Page content via search index (direct fetch 404). Payer not confirmed." }
     ] },
-  { id: "co-eagle-county-minturn-town", kind: "municipal", name: "Minturn town", county: "Eagle County", lines: [
+  { id: "co-eagle-county-minturn-town", kind: "municipal", verify: "The town's ordinance doesn't clearly say who pays — 'buyer' is an assumption; commercial exemptions not reviewed. Confirm with the town/title.", name: "Minturn town", county: "Eagle County", lines: [
       { name: "Minturn RETT", rate: 0.01, base: "price", party: "buyer", source: S10, sourceUrl: S11, asOf: "2025-01-01", notes: "'Real Estate Transfer Tax per sale due at time of sale 1%'. Payer not stated." }
     ] },
   { id: "co-summit-county-breckenridge-town", kind: "municipal", name: "Breckenridge town", county: "Summit County", lines: [
       { name: "Breckenridge RETT", rate: 0.01, base: "price", party: "buyer", source: S12, sourceUrl: S13, asOf: "2026-07-28", notes: "1% of consideration (§3-3-5B). Purchaser/grantee liable and remits (§3-3-3). §3-3-6 exemptions contain NO commercial-property exemption." }
     ] },
-  { id: "co-summit-county-frisco-town", kind: "municipal", name: "Frisco town", county: "Summit County", lines: [
+  { id: "co-summit-county-frisco-town", kind: "municipal", verify: "The town's ordinance doesn't clearly say who pays — 'buyer' is an assumption; commercial exemptions not reviewed. Confirm with the town/title.", name: "Frisco town", county: "Summit County", lines: [
       { name: "Frisco Real Estate Investment Fee (REIF)", rate: 0.01, base: "price", party: "buyer", source: S14, sourceUrl: S15, asOf: "2026-09-24", notes: "1% on transfer of all real property within municipal limits, on total consideration, due at closing. Town Code does not specify grantor vs grantee — allocate in PSA." }
     ] },
-  { id: "co-grand-county-winter-park-town", kind: "municipal", name: "Winter Park town", county: "Grand County", lines: [
+  { id: "co-grand-county-winter-park-town", kind: "municipal", verify: "The town's ordinance doesn't clearly say who pays — 'buyer' is an assumption; commercial exemptions not reviewed. Confirm with the town/title.", name: "Winter Park town", county: "Grand County", lines: [
       { name: "Winter Park RETT", rate: 0.01, base: "price", party: "buyer", source: S16, sourceUrl: S17, asOf: "2026-09-24", notes: "1% on any real estate transfer in Town. An ADDITIONAL Real Estate Transfer Assessment (RETA) applies in certain developments (see Town map) — check the parcel. Payer not stated." }
     ] },
-  { id: "co-san-miguel-county-telluride-town", kind: "municipal", name: "Telluride town", county: "San Miguel County", lines: [
+  { id: "co-san-miguel-county-telluride-town", kind: "municipal", verify: "Rate read from a search-engine copy of the town's official page (direct fetch failed), and the ordinance doesn't clearly name who pays. Confirm with the town/title.", name: "Telluride town", county: "San Miguel County", lines: [
       { name: "Telluride RETT", rate: 0.03, base: "price", party: "buyer", source: S18, sourceUrl: S19, asOf: "2026-09-24", notes: "3% of gross consideration paid to grantor by grantee, within Town limits and Sunset Ridge. Content via search index (direct fetch blocked). Payer by custom — confirm." }
     ] },
-  { id: "co-gunnison-county-crested-butte-town", kind: "municipal", name: "Crested Butte town", county: "Gunnison County", lines: [
+  { id: "co-gunnison-county-crested-butte-town", kind: "municipal", verify: "The town's ordinance doesn't clearly say who pays — 'buyer' is an assumption; commercial exemptions not reviewed. Confirm with the town/title.", name: "Crested Butte town", county: "Gunnison County", lines: [
       { name: "Crested Butte Land Transfer Excise Tax", rate: 0.03, base: "price", party: "buyer", source: S20, sourceUrl: S21, asOf: "2026-09-24", notes: "'A 3% land transfer excise tax is imposed on the sale of all real property within the Town limits.' Exemptions in Muni Code Ch. 4 Art. 5 (not reviewed). Payer not stated." }
     ] },
   ],

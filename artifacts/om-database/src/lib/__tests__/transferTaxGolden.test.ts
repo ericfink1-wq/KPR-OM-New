@@ -138,6 +138,27 @@ describe("never a silent default", () => {
   });
 });
 
+describe("uncertain localities are flagged — never taken as gospel", () => {
+  const flagged = (b: { lines: Array<{ verify?: boolean; inactive?: boolean; scope?: string; notes?: string }> }) =>
+    b.lines.some((l) => l.verify && !l.inactive && l.scope === "local" && /CHECK INDEPENDENTLY/.test(l.notes ?? ""));
+  it("Groton CT (council agenda, vote not found) is flagged", async () => {
+    expect(flagged((await pct("CT", geo("CT", "Southeastern Connecticut Planning Region", "Groton town"), 25e6)).b)).toBe(true);
+  });
+  it("Pittsburgh (register vs county conflict) is flagged; a clean suburb is not", async () => {
+    expect(flagged((await pct("PA", geo("PA", "Allegheny County", "Pittsburgh city", "Pittsburgh city", "Pittsburgh School District"), 25e6)).b)).toBe(true);
+    expect(flagged((await pct("PA", geo("PA", "Montgomery County", "Whitpain township", null, "Wissahickon School District"), 25e6)).b)).toBe(false);
+  });
+  it("an Illinois town sourced from the title-underwriter database is flagged; Chicago (city's own page) is not", async () => {
+    expect(flagged((await pct("IL", geo("IL", "Cook County", "Niles township", "Niles village"), 25e6)).b)).toBe(true);
+    expect(flagged((await pct("IL", geo("IL", "Cook County", "Chicago city", "Chicago city"), 25e6)).b)).toBe(false);
+  });
+  it("an UNCONFIRMED 'no local tax' still shows a flagged line", async () => {
+    const r = await pct("IL", geo("IL", "Cook County", "Northfield township", "Glenview village"), 25e6);
+    expect(r.b.local.status).toBe("verified");
+    expect(flagged(r.b)).toBe(true);
+  });
+});
+
 describe("annual refresh", () => {
   it("flags rates older than 12 months as stale", () => {
     expect(isStale("2025-08-01", new Date("2026-09-24"))).toBe(true);

@@ -348,7 +348,17 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
   };
 
   for (const tx of j.transferTaxes) pushTax(tx, "state");
-  for (const e of local.applied) for (const tx of e.lines) pushTax(tx, "local");
+  for (const e of local.applied) {
+    for (const tx of e.lines) {
+      pushTax(e.verify ? { ...tx, verify: true, notes: `CHECK INDEPENDENTLY — ${e.verify}${tx.notes ? ` ${tx.notes}` : ""}` } : tx, "local");
+    }
+    // An UNCONFIRMED "no local tax" still has to be visible, or $0 reads as fact.
+    if (e.verify && !e.lines.length) {
+      lines.push({ name: `${e.name}: no local transfer tax (unconfirmed)`, scope: "local", rate: 0, rateMin: 0, rateMax: 0, base: "price", party: "seller", verify: true,
+        source: j.localLevelSource.source, sourceUrl: j.localLevelSource.sourceUrl, asOf: j.localLevelSource.asOf,
+        notes: `CHECK INDEPENDENTLY — ${e.verify}`, amount: 0, buyer: 0, seller: 0 });
+    }
+  }
 
   // Unverified local layers → a RANGE line, never a single default number.
   for (const u0 of local.unverified) {

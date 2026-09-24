@@ -620,6 +620,29 @@ The site export (`lib/abstractExcel.ts`) is built to mirror Eric's own abstract 
 - **Locality is pick-one, not additive:** lines sharing an `altGroup` are alternatives; only the selected one applies (UI dropdown). `residentialOnly` lines are excluded (this is a commercial tool). These prevent the old stacking bug.
 - All deals are commercial — use commercial treatments (e.g., CT conveyance is a flat 1.25% commercial, not the residential graduated scale).
 
+## Transfer-tax accuracy overhaul (9/24/26) — "right for the exact locality, or loudly unverified"
+- **Engine** `om-database/src/lib/closingCostEngine.ts` (pure), **types** `closingCostTypes.ts`, **state data**
+  `closingCosts.ts` (GENERATED — every line has `source` + `asOf`), **local tables** `transferTaxLocal/<st>.ts`
+  (lazy-loaded chunks; PA = every municipality × school district from the DCED register, WA by DOR location
+  code, CA/IL/NY/CT/OH/MN/MD/DE/VA/NV/CO/NC/MA/FL/OR/LA/WV/AK).
+- Each state declares `localLevel` (none / county / municipality / municipality+school / county+municipality)
+  with a cited `localLevelSource`. The locality comes ONLY from the Census geocode (`/api/closing/resolve`,
+  now `layers=all` so place + school district resolve) or a manual pick — **never the mailing city**. A
+  county/town not in the table → UNVERIFIED: red banner + dollar RANGE, never a default. "No local tax" only
+  where positively confirmed (listed entry with `lines: []`, or a table flag like `muniAbsentMeansNone`).
+- `knownGaps` = places we know have an unconfirmed tax (Hermitage PA, Ophir/Silverthorne CO) → always unverified.
+  Entry-level `verify: "<reason>"` = rate we're not fully sure of → "CHECK INDEPENDENTLY" flag on the card
+  (Eric, 9/24/26: "flag it so I don't take your number as gospel"). ~245 entries carry one (most IL towns —
+  sourced from ATG, not the town). Keep adding flags whenever a source is secondary or conflicting.
+- Scheduled changes use `effectiveFrom`/`effectiveUntil` + the card's Expected Closing date (WA 2027 REET
+  thresholds, NE LB1067, MN Hennepin/Ramsey surcharge to 1/1/2036).
+- **Tests (build gate):** `transferTaxAnswerKey.test.ts` (KPR Transfer Tax Answer Key v01 — 49 rows,
+  ±0.001 pts, fixtures/transfer-tax-answer-key.csv + .geo.json), `transferTaxGolden.test.ts`,
+  `transferTaxSources.test.ts` (no source/as-of ⇒ fail; no stacked alternatives).
+- **Annual refresh:** the card warns when a state's `ratesAsOf` is >12 months old (all set 2026-09-24). Re-pull
+  at least: WA DOR 84-0013 (quarterly), PA DCED register, LA ULA thresholds (each July 1), Berkeley/San Jose
+  indexed thresholds, OH county PC-1 table, NY Hudson Valley CPF medians, MD DLS county table.
+
 ## Property-tax reassessment forecaster (`lib/taxReassessment.ts`, `taxForecast.ts`, `TaxReassessmentCard.tsx`)
 - Per-state reset rules + `COUNTY_TAX_OVERRIDES` (cycle / ratio / `nextReassessmentYear` / `phaseInYears` / CLR). The estimator grounds the dollar step-up in the property's REAL bill (taxes ÷ assessed), so county data only refines TIMING (when the step lands) and the RATIO — it is NOT a correctness fix for the dollar math. Highest value in **PA** (stale base years + annual Common Level Ratios — verify the current-year CLR, they republish each July) and **OH** (staggered reappraisal/update years). Lowest where already annual-to-market (TX/FL/most of the West).
 - Forward triggers (`assessTaxTriggers`): exemption loss / non-profit seller, ag/greenbelt rollback, renovation/new-construction, abatement un-abating, scheduled law changes. Abatement burn-off + a pro-forma cross-check + a portfolio effective-rate cross-check are built in.

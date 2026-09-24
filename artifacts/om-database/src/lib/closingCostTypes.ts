@@ -70,6 +70,12 @@ export interface LocalEntry {
   match?: string[];          // extra normalized names (Census subdivision/place spellings) that mean this jurisdiction
   schoolDistrict?: string;   // PA: the school district half of a muni+SD pair
   replaces?: string[];       // ids of STATE lines this locality supersedes (e.g. Miami-Dade doc stamps)
+  /**
+   * Set when this locality's rate is NOT fully confirmed from an official source
+   * (secondary source, conflicting data, pending change). Every line is then flagged
+   * "confirm with title" on the card with this reason, so it is never taken as gospel.
+   */
+  verify?: string;
   lines: TaxLineItem[];      // [] = positively confirmed: no local tax here
 }
 

@@ -195,7 +195,7 @@ export const CT_LOCAL: LocalTaxTable = {
   { id: "ct-southeastern-connecticut-planning-region-griswold-town", kind: "municipal", name: "Griswold town", county: "Southeastern Connecticut Planning Region", lines: [
       F0(0.0025, "0.25% base municipal tax (all 169 towns). Griswold is not among the 19 municipalities eligible for the additional local-option tax under CGS §12-494(b). Seller pays.")
     ] },
-  { id: "ct-southeastern-connecticut-planning-region-groton-town", kind: "municipal", name: "Groton town", county: "Southeastern Connecticut Planning Region", lines: [
+  { id: "ct-southeastern-connecticut-planning-region-groton-town", kind: "municipal", verify: "Groton's extra 0.25% (0.50% total) rests on a 2021 Town Council agenda item proposing it; the adopted minutes weren't found. Confirm with the Groton town clerk.", name: "Groton town", county: "Southeastern Connecticut Planning Region", lines: [
       { name: "Municipal Conveyance Tax", rate: 0.005, base: "price", party: "seller", verify: true, source: S0, sourceUrl: S1, asOf: "2021-11-01", notes: "0.25% base + 0.25% additional (Groton re-entered the Distressed Municipalities list in 2021; the Council agenda proposed adopting the additional 0.25% effective 11/1/2021, staff-recommended). OLR 2020-R-0020 (July 2020) predates this and shows 0.25%. The adopted minutes were not retrieved — CONFIRM with the Groton town clerk. Seller pays." }
     ] },
   { id: "ct-south-central-connecticut-planning-region-guilford-town", kind: "municipal", name: "Guilford town", county: "South Central Connecticut Planning Region", lines: [
@@ -423,7 +423,7 @@ export const CT_LOCAL: LocalTaxTable = {
   { id: "ct-capitol-planning-region-stafford-town", kind: "municipal", name: "Stafford town", county: "Capitol Planning Region", lines: [
       F0(0.0025, "0.25% base municipal tax (all 169 towns). Stafford is not among the 19 municipalities eligible for the additional local-option tax under CGS §12-494(b). Seller pays.")
     ] },
-  { id: "ct-western-connecticut-planning-region-stamford-town", kind: "municipal", name: "Stamford town", county: "Western Connecticut Planning Region", lines: [
+  { id: "ct-western-connecticut-planning-region-stamford-town", kind: "municipal", verify: "Stamford's extra tax is modeled as graduated (0.35% to $1M, 0.50% above) from practitioner sources; the ordinance text wasn't retrieved — if it is whole-price, a >$1M deal pays up to ~$1,500 more.", name: "Stamford town", county: "Western Connecticut Planning Region", lines: [
       { name: "Municipal Conveyance Tax", rate: 0.005, marginalTiers: [{ over: 0, rate: 0.0035 }, { over: 1000000, rate: 0.005 }], base: "price", party: "seller", source: S2, sourceUrl: S3, asOf: "2020-07-09", notes: "0.25% base + Stamford additional tax of 0.10% on properties sold for up to $1M and 0.25% on all other properties (OLR 2020-R-0020). Practitioner sources describe it as 0.35% on the price up to $1,000,000 with the balance at 0.50% (i.e. marginal) — modeled as marginal. Stamford ordinance text (Code ch. 220) not retrieved; if it is actually a cliff, a >$1M deal would owe 0.50% on the whole price (max difference $1,500). Seller pays." }
     ] },
   { id: "ct-northeastern-connecticut-planning-region-sterling-town", kind: "municipal", name: "Sterling town", county: "Northeastern Connecticut Planning Region", lines: [
@@ -438,7 +438,7 @@ export const CT_LOCAL: LocalTaxTable = {
   { id: "ct-capitol-planning-region-suffield-town", kind: "municipal", name: "Suffield town", county: "Capitol Planning Region", lines: [
       F0(0.0025, "0.25% base municipal tax (all 169 towns). Suffield is not among the 19 municipalities eligible for the additional local-option tax under CGS §12-494(b). Seller pays.")
     ] },
-  { id: "ct-naugatuck-valley-planning-region-thomaston-town", kind: "municipal", name: "Thomaston town", county: "Naugatuck Valley Planning Region", lines: [
+  { id: "ct-naugatuck-valley-planning-region-thomaston-town", kind: "municipal", verify: "Sources conflict on whether Thomaston imposes the extra 0.25% (OLR 2020 says no; older reports say yes). Confirm with the town clerk.", name: "Thomaston town", county: "Naugatuck Valley Planning Region", lines: [
       F0(0.0025, "0.25% base municipal tax only. Thomaston is ELIGIBLE for the additional 0.25% under CGS §12-494(b) but per OLR 2020-R-0020 does not impose it. Verify with the Thomaston town clerk (some non-official web sources list Thomaston at 0.50%). Seller pays.")
     ] },
   { id: "ct-northeastern-connecticut-planning-region-thompson-town", kind: "municipal", name: "Thompson town", county: "Northeastern Connecticut Planning Region", lines: [

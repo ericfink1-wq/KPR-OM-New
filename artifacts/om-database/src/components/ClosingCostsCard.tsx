@@ -206,7 +206,8 @@ export default function ClosingCostsCard({ deal }: Props) {
 
       {verifyLines.length > 0 && (
         <div style={{ fontSize: 12, color: "#8a2b14", background: "#fdf3ee", border: "1px solid #e8b9a6", borderRadius: 8, padding: "10px 12px", marginBottom: 14, lineHeight: 1.5 }}>
-          <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 4 }}>🚩 Confirm with title before relying on these lines</div>
+          <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 4 }}>🚩 Check these yourself — don't take our number as gospel</div>
+          <div style={{ color: "#9a4a32", marginBottom: 5 }}>We couldn't fully confirm {verifyLines.length === 1 ? "this line" : "these lines"} from an official source (secondary source, conflicting data, a pending change, or an assumed payer). Confirm with the title company or the town before relying on {verifyLines.length === 1 ? "it" : "them"}:</div>
           <ul style={{ margin: 0, paddingLeft: 18 }}>
             {verifyLines.map((l, i) => (
               <li key={i} style={{ marginBottom: 2 }}><span style={{ fontWeight: 600 }}>{l.name}</span>{l.notes ? <span style={{ color: "#9a4a32" }}> — {l.notes}</span> : null}</li>

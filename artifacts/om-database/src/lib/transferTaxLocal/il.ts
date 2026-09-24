@@ -473,262 +473,262 @@ export const IL_LOCAL: LocalTaxTable = {
   { id: "il-woodford-county", kind: "county", name: "Woodford County", county: "Woodford County", lines: [
       F0(0.0005, "$0.25 per $500 of net consideration (or fraction) = 0.05%. Sold as combined state+county stamps ($0.75/$500) by the county recorder. Either party liable; seller customary. Existing-mortgage balance excluded from base only if deed so states.")
     ] },
-  { id: "il-dupage-county-addison-village", kind: "municipal", name: "Addison village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-addison-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Addison village", county: "DuPage County", lines: [
       { name: "Addison Real Estate Transfer Tax", rate: 0.0025, base: "price", party: "buyer", source: S2, sourceUrl: S3, asOf: "2017-03-14", notes: "ATG: '$2.50/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-cook-county-alsip-village", kind: "municipal", name: "Alsip village", county: "Cook County", lines: [
+  { id: "il-cook-county-alsip-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Alsip village", county: "Cook County", lines: [
       { name: "Alsip Real Estate Transfer Tax", rate: 0.0035, base: "price", party: "seller", source: S4, sourceUrl: S5, asOf: "2017-03-14", notes: "ATG: '$3.50/$1,000 ($100 minimum; no rounding)', party 'Seller'. $100 minimum." }
     ] },
-  { id: "il-kane-county-aurora-city", kind: "municipal", name: "Aurora city", county: "Kane County", lines: [
+  { id: "il-kane-county-aurora-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Aurora city", county: "Kane County", lines: [
       F1(0.003, "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'. Aurora Code Sec. 44-211. Some 'Naperville' mailing addresses are inside Aurora.")
     ] },
-  { id: "il-dupage-county-aurora-city", kind: "municipal", name: "Aurora city", county: "DuPage County", lines: [
+  { id: "il-dupage-county-aurora-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Aurora city", county: "DuPage County", lines: [
       F1(0.003, "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'. Aurora Code Sec. 44-211. Some 'Naperville' mailing addresses are inside Aurora.")
     ] },
-  { id: "il-will-county-aurora-city", kind: "municipal", name: "Aurora city", county: "Will County", lines: [
+  { id: "il-will-county-aurora-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Aurora city", county: "Will County", lines: [
       F1(0.003, "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'. Aurora Code Sec. 44-211. Some 'Naperville' mailing addresses are inside Aurora.")
     ] },
-  { id: "il-kendall-county-aurora-city", kind: "municipal", name: "Aurora city", county: "Kendall County", lines: [
+  { id: "il-kendall-county-aurora-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Aurora city", county: "Kendall County", lines: [
       F1(0.003, "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'. Aurora Code Sec. 44-211. Some 'Naperville' mailing addresses are inside Aurora.")
     ] },
-  { id: "il-cook-county-bartlett-village", kind: "municipal", name: "Bartlett village", county: "Cook County", lines: [
+  { id: "il-cook-county-bartlett-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Bartlett village", county: "Cook County", lines: [
       { name: "Bartlett Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S6, sourceUrl: S7, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (no rounding)', party 'Seller'." }
     ] },
-  { id: "il-dupage-county-bartlett-village", kind: "municipal", name: "Bartlett village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-bartlett-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Bartlett village", county: "DuPage County", lines: [
       { name: "Bartlett Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S6, sourceUrl: S7, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (no rounding)', party 'Seller'." }
     ] },
-  { id: "il-kane-county-bartlett-village", kind: "municipal", name: "Bartlett village", county: "Kane County", lines: [
+  { id: "il-kane-county-bartlett-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Bartlett village", county: "Kane County", lines: [
       { name: "Bartlett Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S6, sourceUrl: S7, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (no rounding)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-bedford-park-village", kind: "municipal", name: "Bedford Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-bedford-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Bedford Park village", county: "Cook County", lines: [
       { name: "Bedford Park Real Estate Transfer Tax", rate: 0, base: "price", party: "seller", flatAmount: 50, source: S8, sourceUrl: S9, asOf: "2017-03-20", notes: "ATG: '$50.00', party 'Seller'. FLAT $50 per transfer (not a % tax)." }
     ] },
-  { id: "il-cook-county-bellwood-village", kind: "municipal", name: "Bellwood village", county: "Cook County", lines: [
+  { id: "il-cook-county-bellwood-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Bellwood village", county: "Cook County", lines: [
       { name: "Bellwood Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S10, sourceUrl: S11, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (no rounding)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-berwyn-city", kind: "municipal", name: "Berwyn city", county: "Cook County", lines: [
+  { id: "il-cook-county-berwyn-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Berwyn city", county: "Cook County", lines: [
       { name: "Berwyn Real Estate Transfer Tax", rate: 0.01, base: "price", party: "seller", source: S12, sourceUrl: S13, asOf: "2025-03-04", notes: "ATG: '$10.000/1,000', party 'Seller'. Berwyn Code Sec. 888.001." }
     ] },
-  { id: "il-will-county-bolingbrook-village", kind: "municipal", name: "Bolingbrook village", county: "Will County", lines: [
+  { id: "il-will-county-bolingbrook-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Bolingbrook village", county: "Will County", lines: [
       { name: "Bolingbrook Real Estate Transfer Tax", rate: 0.0075, base: "price", party: "split", source: S14, sourceUrl: S15, asOf: "2011-02-07", notes: "ATG: '$$7.50/$1,000 (round to nearest $500)', party 'Buyer/Seller split 50/50'. Bolingbrook Ord. 91-025; 50/50 buyer/seller; rounded to nearest $500." }
     ] },
-  { id: "il-dupage-county-bolingbrook-village", kind: "municipal", name: "Bolingbrook village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-bolingbrook-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Bolingbrook village", county: "DuPage County", lines: [
       { name: "Bolingbrook Real Estate Transfer Tax", rate: 0.0075, base: "price", party: "split", source: S14, sourceUrl: S15, asOf: "2011-02-07", notes: "ATG: '$$7.50/$1,000 (round to nearest $500)', party 'Buyer/Seller split 50/50'. Bolingbrook Ord. 91-025; 50/50 buyer/seller; rounded to nearest $500." }
     ] },
-  { id: "il-lake-county-buffalo-grove-village", kind: "municipal", name: "Buffalo Grove village", county: "Lake County", lines: [
+  { id: "il-lake-county-buffalo-grove-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Buffalo Grove village", county: "Lake County", lines: [
       { name: "Buffalo Grove Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S16, sourceUrl: S17, asOf: "2017-03-13", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-buffalo-grove-village", kind: "municipal", name: "Buffalo Grove village", county: "Cook County", lines: [
+  { id: "il-cook-county-buffalo-grove-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Buffalo Grove village", county: "Cook County", lines: [
       { name: "Buffalo Grove Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S16, sourceUrl: S17, asOf: "2017-03-13", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-burbank-city", kind: "municipal", name: "Burbank city", county: "Cook County", lines: [
+  { id: "il-cook-county-burbank-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Burbank city", county: "Cook County", lines: [
       { name: "Burbank Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S18, sourceUrl: S19, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (no rounding) No less than $100', party 'Seller'. $100 minimum." }
     ] },
-  { id: "il-cook-county-burnham-village", kind: "municipal", name: "Burnham village", county: "Cook County", lines: [
+  { id: "il-cook-county-burnham-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Burnham village", county: "Cook County", lines: [
       { name: "Burnham Real Estate Transfer Tax", rate: 0.005, base: "price", party: "buyer", source: S20, sourceUrl: S21, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (no rounding)', party 'Buyer'." }
     ] },
-  { id: "il-cook-county-calumet-park-village", kind: "municipal", name: "Calumet Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-calumet-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Calumet Park village", county: "Cook County", lines: [
       { name: "Calumet Park Real Estate Transfer Tax", rate: 0.005, base: "price", party: "buyer", source: S22, sourceUrl: S23, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000)', party 'Buyer'. ATG: buyer; First American 2024 list: 'Either'." }
     ] },
-  { id: "il-dupage-county-carol-stream-village", kind: "municipal", name: "Carol Stream village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-carol-stream-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Carol Stream village", county: "DuPage County", lines: [
       { name: "Carol Stream Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S24, sourceUrl: S25, asOf: "2011-02-07", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-will-county-channahon-village", kind: "municipal", name: "Channahon village", county: "Will County", lines: [
+  { id: "il-will-county-channahon-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Channahon village", county: "Will County", lines: [
       { name: "Channahon Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S26, sourceUrl: S27, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-grundy-county-channahon-village", kind: "municipal", name: "Channahon village", county: "Grundy County", lines: [
+  { id: "il-grundy-county-channahon-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Channahon village", county: "Grundy County", lines: [
       { name: "Channahon Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S26, sourceUrl: S27, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-cook-county-chicago-heights-city", kind: "municipal", name: "Chicago Heights city", county: "Cook County", lines: [
+  { id: "il-cook-county-chicago-heights-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Chicago Heights city", county: "Cook County", lines: [
       { name: "Chicago Heights Real Estate Transfer Tax", rate: 0.004, base: "price", party: "seller", source: S28, sourceUrl: S29, asOf: "2025-03-04", notes: "ATG: '$4.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-cicero-town", kind: "municipal", name: "Cicero town", county: "Cook County", lines: [
+  { id: "il-cook-county-cicero-town", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Cicero town", county: "Cook County", lines: [
       { name: "Cicero Real Estate Transfer Tax", rate: 0.01, base: "price", party: "seller", source: S30, sourceUrl: S31, asOf: "2018-12-06", notes: "ATG: '$10.00/$1,000 (round to nearest $1,000)', party 'Seller. In HUD deals, Buyer pays the transfer tax. HUD is not exempt.'. Cicero Code Sec. 90-221. Compliance inspection required before all transfers." }
     ] },
-  { id: "il-cook-county-country-club-hills-city", kind: "municipal", name: "Country Club Hills city", county: "Cook County", lines: [
+  { id: "il-cook-county-country-club-hills-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Country Club Hills city", county: "Cook County", lines: [
       { name: "Country Club Hills Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S32, sourceUrl: S33, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (minimum: $50) (round to nearest $5)', party 'Seller'. $50 minimum." }
     ] },
-  { id: "il-cook-county-countryside-city", kind: "municipal", name: "Countryside city", county: "Cook County", lines: [
+  { id: "il-cook-county-countryside-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Countryside city", county: "Cook County", lines: [
       { name: "Countryside Real Estate Transfer Tax", rate: 0, base: "price", party: "seller", flatAmount: 50, source: S34, sourceUrl: S35, asOf: "2017-03-20", notes: "ATG: '$50', party 'Seller'. FLAT $50 per transfer (not a % tax)." }
     ] },
-  { id: "il-cook-county-des-plaines-city", kind: "municipal", name: "Des Plaines city", county: "Cook County", lines: [
+  { id: "il-cook-county-des-plaines-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Des Plaines city", county: "Cook County", lines: [
       { name: "Des Plaines Real Estate Transfer Tax", rate: 0.002, base: "price", party: "seller", source: S36, sourceUrl: S37, asOf: "2025-03-04", notes: "ATG: '$2.00/$1,000', party 'Seller'." }
     ] },
-  { id: "il-cook-county-dolton-village", kind: "municipal", name: "Dolton village", county: "Cook County", lines: [
+  { id: "il-cook-county-dolton-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Dolton village", county: "Cook County", lines: [
       { name: "Dolton Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S38, sourceUrl: S39, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000', party 'Seller'. Was $10/property in the 2018 Realtors list; now $5.00/$1,000 per ATG (3/2025) and First American (11/2024)." }
     ] },
-  { id: "il-cook-county-east-hazel-crest-village", kind: "municipal", name: "East Hazel Crest village", county: "Cook County", lines: [
+  { id: "il-cook-county-east-hazel-crest-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "East Hazel Crest village", county: "Cook County", lines: [
       { name: "East Hazel Crest Real Estate Transfer Tax", rate: 0, base: "price", party: "buyer", flatAmount: 25, source: S40, sourceUrl: S41, asOf: "2025-03-04", notes: "ATG: '$25', party 'Buyer'. FLAT $25 per transfer (not a % tax)." }
     ] },
-  { id: "il-cook-county-elk-grove-village-village", kind: "municipal", name: "Elk Grove Village village", county: "Cook County", lines: [
+  { id: "il-cook-county-elk-grove-village-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Elk Grove Village village", county: "Cook County", lines: [
       { name: "Elk Grove Village Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S42, sourceUrl: S43, asOf: "2017-03-20", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-dupage-county-elk-grove-village-village", kind: "municipal", name: "Elk Grove Village village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-elk-grove-village-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Elk Grove Village village", county: "DuPage County", lines: [
       { name: "Elk Grove Village Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S42, sourceUrl: S43, asOf: "2017-03-20", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-dupage-county-elmhurst-city", kind: "municipal", name: "Elmhurst city", county: "DuPage County", lines: [
+  { id: "il-dupage-county-elmhurst-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Elmhurst city", county: "DuPage County", lines: [
       { name: "Elmhurst Real Estate Transfer Tax", rate: 0.0015, base: "price", party: "seller", source: S44, sourceUrl: S45, asOf: "2026-03-17", notes: "ATG: '$1.50/$1,000 (round to nearest $1,000)', party 'Seller'. Elmhurst City Code Sec. 11.01; follows state exemptions." }
     ] },
-  { id: "il-cook-county-elmhurst-city", kind: "municipal", name: "Elmhurst city", county: "Cook County", lines: [
+  { id: "il-cook-county-elmhurst-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Elmhurst city", county: "Cook County", lines: [
       { name: "Elmhurst Real Estate Transfer Tax", rate: 0.0015, base: "price", party: "seller", source: S44, sourceUrl: S45, asOf: "2026-03-17", notes: "ATG: '$1.50/$1,000 (round to nearest $1,000)', party 'Seller'. Elmhurst City Code Sec. 11.01; follows state exemptions." }
     ] },
-  { id: "il-cook-county-elmwood-park-village", kind: "municipal", name: "Elmwood Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-elmwood-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Elmwood Park village", county: "Cook County", lines: [
       { name: "Elmwood Park Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S46, sourceUrl: S47, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000) No less than $35', party 'Seller'. $35 minimum." }
     ] },
-  { id: "il-cook-county-evergreen-park-village", kind: "municipal", name: "Evergreen Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-evergreen-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Evergreen Park village", county: "Cook County", lines: [
       { name: "Evergreen Park Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S48, sourceUrl: S49, asOf: "2017-03-20", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000) Minimum: $100', party 'Seller'. $100 minimum." }
     ] },
-  { id: "il-stephenson-county-freeport-city", kind: "municipal", name: "Freeport city", county: "Stephenson County", lines: [
+  { id: "il-stephenson-county-freeport-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Freeport city", county: "Stephenson County", lines: [
       { name: "Freeport Real Estate Transfer Tax", rate: 0.004, base: "price", party: "seller", source: S50, sourceUrl: S51, asOf: "2025-03-04", notes: "ATG: '$2.00/$500 (or part thereof)', party 'Seller'. $2.00 per $500 (or part) = 0.40%. Freeport Ord. 92-21. Downstate." }
     ] },
-  { id: "il-dupage-county-glen-ellyn-village", kind: "municipal", name: "Glen Ellyn village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-glen-ellyn-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Glen Ellyn village", county: "DuPage County", lines: [
       { name: "Glen Ellyn Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S52, sourceUrl: S53, asOf: "2025-03-04", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-dupage-county-glendale-heights-village", kind: "municipal", name: "Glendale Heights village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-glendale-heights-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Glendale Heights village", county: "DuPage County", lines: [
       { name: "Glendale Heights Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S54, sourceUrl: S55, asOf: "2017-11-14", notes: "ATG: 'The greater of $25 or $3.00/$1,000 or fraction thereof', party 'Seller'. Greater of $25 or $3.00/$1,000." }
     ] },
-  { id: "il-cook-county-glenwood-village", kind: "municipal", name: "Glenwood village", county: "Cook County", lines: [
+  { id: "il-cook-county-glenwood-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Glenwood village", county: "Cook County", lines: [
       { name: "Glenwood Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S56, sourceUrl: S57, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-hanover-park-village", kind: "municipal", name: "Hanover Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-hanover-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Hanover Park village", county: "Cook County", lines: [
       { name: "Hanover Park Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S58, sourceUrl: S59, asOf: "2025-03-04", notes: "ATG: '$1.50/$500 of value or fraction thereof stated.', party 'Seller'. $1.50 per $500." }
     ] },
-  { id: "il-dupage-county-hanover-park-village", kind: "municipal", name: "Hanover Park village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-hanover-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Hanover Park village", county: "DuPage County", lines: [
       { name: "Hanover Park Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S58, sourceUrl: S59, asOf: "2025-03-04", notes: "ATG: '$1.50/$500 of value or fraction thereof stated.', party 'Seller'. $1.50 per $500." }
     ] },
-  { id: "il-cook-county-harvey-city", kind: "municipal", name: "Harvey city", county: "Cook County", lines: [
+  { id: "il-cook-county-harvey-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Harvey city", county: "Cook County", lines: [
       { name: "Harvey Real Estate Transfer Tax", rate: 0.005, base: "price", party: "split", source: S60, sourceUrl: S61, asOf: "2011-02-07", notes: "ATG: '$5.00/$1,000 (Buyer also responsible for $60 administrative fee)', party 'Buyer/Seller split 50/50'. Harvey Ord. 2963; 50/50; buyer also pays $60 admin fee; $300 commercial inspection." }
     ] },
-  { id: "il-cook-county-harwood-heights-village", kind: "municipal", name: "Harwood Heights village", county: "Cook County", lines: [
+  { id: "il-cook-county-harwood-heights-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Harwood Heights village", county: "Cook County", lines: [
       { name: "Harwood Heights Real Estate Transfer Tax", rate: 0.01, base: "price", party: "buyer", source: S62, sourceUrl: S63, asOf: "2011-02-07", notes: "ATG: '$10.00/$1,000', party 'Buyer'." }
     ] },
-  { id: "il-lake-county-highland-park-city", kind: "municipal", name: "Highland Park city", county: "Lake County", lines: [
+  { id: "il-lake-county-highland-park-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Highland Park city", county: "Lake County", lines: [
       { name: "Highland Park Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S64, sourceUrl: S65, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-hillside-village", kind: "municipal", name: "Hillside village", county: "Cook County", lines: [
+  { id: "il-cook-county-hillside-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Hillside village", county: "Cook County", lines: [
       { name: "Hillside Real Estate Transfer Tax", rate: 0.0075, base: "price", party: "buyer", source: S66, sourceUrl: S67, asOf: "2017-03-20", notes: "ATG: '$3.75/$500 (no rounding)', party 'Buyer'. $3.75 per $500." }
     ] },
-  { id: "il-cook-county-hoffman-estates-village", kind: "municipal", name: "Hoffman Estates village", county: "Cook County", lines: [
+  { id: "il-cook-county-hoffman-estates-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Hoffman Estates village", county: "Cook County", lines: [
       { name: "Hoffman Estates Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S68, sourceUrl: S69, asOf: "2025-03-04", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-kane-county-hoffman-estates-village", kind: "municipal", name: "Hoffman Estates village", county: "Kane County", lines: [
+  { id: "il-kane-county-hoffman-estates-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Hoffman Estates village", county: "Kane County", lines: [
       { name: "Hoffman Estates Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S68, sourceUrl: S69, asOf: "2025-03-04", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-will-county-joliet-city", kind: "municipal", name: "Joliet city", county: "Will County", lines: [
+  { id: "il-will-county-joliet-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Joliet city", county: "Will County", lines: [
       { name: "Joliet Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S70, sourceUrl: S71, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-kendall-county-joliet-city", kind: "municipal", name: "Joliet city", county: "Kendall County", lines: [
+  { id: "il-kendall-county-joliet-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Joliet city", county: "Kendall County", lines: [
       { name: "Joliet Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S70, sourceUrl: S71, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-lake-county-lake-forest-city", kind: "municipal", name: "Lake Forest city", county: "Lake County", lines: [
+  { id: "il-lake-county-lake-forest-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Lake Forest city", county: "Lake County", lines: [
       { name: "Lake Forest Real Estate Transfer Tax", rate: 0.004, base: "price", party: "buyer", source: S72, sourceUrl: S73, asOf: "2017-02-10", notes: "ATG: '$4.00/1000 (round to the next $5)', party 'Buyer'. Resident move-within-city rebate (residential only; n/a commercial)." }
     ] },
-  { id: "il-lake-county-lincolnshire-village", kind: "municipal", name: "Lincolnshire village", county: "Lake County", lines: [
+  { id: "il-lake-county-lincolnshire-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Lincolnshire village", county: "Lake County", lines: [
       { name: "Lincolnshire Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S74, sourceUrl: S75, asOf: "2025-03-04", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-cook-county-maywood-village", kind: "municipal", name: "Maywood village", county: "Cook County", lines: [
+  { id: "il-cook-county-maywood-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Maywood village", county: "Cook County", lines: [
       { name: "Maywood Real Estate Transfer Tax", rate: 0.004, base: "price", party: "seller", source: S76, sourceUrl: S77, asOf: "2025-03-04", notes: "ATG: '$4.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-mccook-village", kind: "municipal", name: "McCook village", county: "Cook County", lines: [
+  { id: "il-cook-county-mccook-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "McCook village", county: "Cook County", lines: [
       { name: "McCook Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S78, sourceUrl: S79, asOf: "2017-03-08", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000) No less than $100', party 'Seller'. $100 minimum." }
     ] },
-  { id: "il-lake-county-mettawa-village", kind: "municipal", name: "Mettawa village", county: "Lake County", lines: [
+  { id: "il-lake-county-mettawa-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Mettawa village", county: "Lake County", lines: [
       { name: "Mettawa Real Estate Transfer Tax", rate: 0.005, base: "price", party: "buyer", source: S80, sourceUrl: S81, asOf: "2017-03-08", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-cook-county-morton-grove-village", kind: "municipal", name: "Morton Grove village", county: "Cook County", lines: [
+  { id: "il-cook-county-morton-grove-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Morton Grove village", county: "Cook County", lines: [
       { name: "Morton Grove Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S82, sourceUrl: S83, asOf: "2025-03-04", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-mount-prospect-village", kind: "municipal", name: "Mount Prospect village", county: "Cook County", lines: [
+  { id: "il-cook-county-mount-prospect-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Mount Prospect village", county: "Cook County", lines: [
       { name: "Mount Prospect Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S84, sourceUrl: S85, asOf: "2017-03-20", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-dupage-county-naperville-city", kind: "municipal", name: "Naperville city", county: "DuPage County", lines: [
+  { id: "il-dupage-county-naperville-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Naperville city", county: "DuPage County", lines: [
       { name: "Naperville Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S86, sourceUrl: S87, asOf: "2021-05-17", notes: "ATG: '$1.50/$500 (round to nearest $500)', party 'Buyer'. $1.50 per $500 (rounded to nearest $500). Some Naperville mailing addresses are in Aurora (Aurora tax applies instead)." }
     ] },
-  { id: "il-will-county-naperville-city", kind: "municipal", name: "Naperville city", county: "Will County", lines: [
+  { id: "il-will-county-naperville-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Naperville city", county: "Will County", lines: [
       { name: "Naperville Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S86, sourceUrl: S87, asOf: "2021-05-17", notes: "ATG: '$1.50/$500 (round to nearest $500)', party 'Buyer'. $1.50 per $500 (rounded to nearest $500). Some Naperville mailing addresses are in Aurora (Aurora tax applies instead)." }
     ] },
-  { id: "il-cook-county-niles-village", kind: "municipal", name: "Niles village", county: "Cook County", lines: [
+  { id: "il-cook-county-niles-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Niles village", county: "Cook County", lines: [
       { name: "Niles Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S88, sourceUrl: S89, asOf: "2025-03-04", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-lake-county-north-chicago-city", kind: "municipal", name: "North Chicago city", county: "Lake County", lines: [
+  { id: "il-lake-county-north-chicago-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "North Chicago city", county: "Lake County", lines: [
       { name: "North Chicago Real Estate Transfer Tax", rate: 0.005, base: "price", party: "buyer", source: S90, sourceUrl: S91, asOf: "2011-02-08", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-cook-county-oak-lawn-village", kind: "municipal", name: "Oak Lawn village", county: "Cook County", lines: [
+  { id: "il-cook-county-oak-lawn-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Oak Lawn village", county: "Cook County", lines: [
       { name: "Oak Lawn Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S92, sourceUrl: S93, asOf: "2021-04-01", notes: "ATG: '$5.00/$1,000 (or fraction thereof)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-oak-park-village", kind: "municipal", name: "Oak Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-oak-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Oak Park village", county: "Cook County", lines: [
       { name: "Oak Park Real Estate Transfer Tax", rate: 0.008, base: "price", party: "seller", source: S94, sourceUrl: S95, asOf: "2017-02-14", notes: "ATG: '$8.00/$1,000 (round to nearest $1,000)', party 'Seller'. Oak Park Ord. 1983-0-77; $8.00/$1,000 rounded to nearest $1,000." }
     ] },
-  { id: "il-kendall-county-oswego-village", kind: "municipal", name: "Oswego village", county: "Kendall County", lines: [
+  { id: "il-kendall-county-oswego-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Oswego village", county: "Kendall County", lines: [
       { name: "Oswego Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S96, sourceUrl: S97, asOf: "2023-03-06", notes: "ATG: '$3 per $1000 of purchase price (0.3%)', party 'Buyer'. Voter-approved 6/28/2022 (Ord. 22-54); new since the 2018 Realtors list." }
     ] },
-  { id: "il-will-county-oswego-village", kind: "municipal", name: "Oswego village", county: "Will County", lines: [
+  { id: "il-will-county-oswego-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Oswego village", county: "Will County", lines: [
       { name: "Oswego Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S96, sourceUrl: S97, asOf: "2023-03-06", notes: "ATG: '$3 per $1000 of purchase price (0.3%)', party 'Buyer'. Voter-approved 6/28/2022 (Ord. 22-54); new since the 2018 Realtors list." }
     ] },
-  { id: "il-cook-county-park-forest-village", kind: "municipal", name: "Park Forest village", county: "Cook County", lines: [
+  { id: "il-cook-county-park-forest-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Park Forest village", county: "Cook County", lines: [
       { name: "Park Forest Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S98, sourceUrl: S99, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-will-county-park-forest-village", kind: "municipal", name: "Park Forest village", county: "Will County", lines: [
+  { id: "il-will-county-park-forest-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Park Forest village", county: "Will County", lines: [
       { name: "Park Forest Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S98, sourceUrl: S99, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-park-ridge-city", kind: "municipal", name: "Park Ridge city", county: "Cook County", lines: [
+  { id: "il-cook-county-park-ridge-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Park Ridge city", county: "Cook County", lines: [
       { name: "Park Ridge Real Estate Transfer Tax", rate: 0.002, base: "price", party: "seller", source: S100, sourceUrl: S101, asOf: "2025-03-04", notes: "ATG: '$2.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-peoria-county-peoria-city", kind: "municipal", name: "Peoria city", county: "Peoria County", lines: [
+  { id: "il-peoria-county-peoria-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Peoria city", county: "Peoria County", lines: [
       { name: "Peoria Real Estate Transfer Tax", rate: 0.0025, base: "price", party: "seller", source: S102, sourceUrl: S103, asOf: "2025-03-04", notes: "ATG: '$2.50/$1,000 (round to nearest $1,000)', party 'Seller'. Peoria Code Art. X, Sec. 27-226. Downstate." }
     ] },
-  { id: "il-cook-county-river-forest-village", kind: "municipal", name: "River Forest village", county: "Cook County", lines: [
+  { id: "il-cook-county-river-forest-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "River Forest village", county: "Cook County", lines: [
       { name: "River Forest Real Estate Transfer Tax", rate: 0.001, base: "price", party: "seller", source: S104, sourceUrl: S105, asOf: "2025-03-04", notes: "ATG: '$1.00/$1,000 (round up by $1)', party 'Seller'. Rate is $1.00/$1,000 per ATG (3/2025) and First American (11/2024); the 2018 Realtors list showed $0.50." }
     ] },
-  { id: "il-cook-county-robbins-village", kind: "municipal", name: "Robbins village", county: "Cook County", lines: [
+  { id: "il-cook-county-robbins-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Robbins village", county: "Cook County", lines: [
       { name: "Robbins Real Estate Transfer Tax", rate: 0, base: "price", party: "seller", flatAmount: 100, source: S106, sourceUrl: S107, asOf: "2017-03-08", notes: "ATG: '$100', party 'Seller'. FLAT $100 stamp per PIN (not a % tax)." }
     ] },
-  { id: "il-cook-county-rolling-meadows-city", kind: "municipal", name: "Rolling Meadows city", county: "Cook County", lines: [
+  { id: "il-cook-county-rolling-meadows-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Rolling Meadows city", county: "Cook County", lines: [
       { name: "Rolling Meadows Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S108, sourceUrl: S109, asOf: "2025-03-04", notes: "ATG: '$3.00/$1,000 (round to next highest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-will-county-romeoville-village", kind: "municipal", name: "Romeoville village", county: "Will County", lines: [
+  { id: "il-will-county-romeoville-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Romeoville village", county: "Will County", lines: [
       { name: "Romeoville Real Estate Transfer Tax", rate: 0.0035, base: "price", party: "buyer", source: S110, sourceUrl: S111, asOf: "2025-03-04", notes: "ATG: '$1.75/$500', party 'Buyer'. $1.75 per $500." }
     ] },
-  { id: "il-cook-county-schaumburg-village", kind: "municipal", name: "Schaumburg village", county: "Cook County", lines: [
+  { id: "il-cook-county-schaumburg-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Schaumburg village", county: "Cook County", lines: [
       { name: "Schaumburg Real Estate Transfer Tax", rate: 0.001, base: "price", party: "seller", source: S112, sourceUrl: S113, asOf: "2026-04-10", notes: "ATG: '$1.00/$1,000 (round to nearest $1)', party 'Seller'. Village Code Title 3, Ch. 36." }
     ] },
-  { id: "il-dupage-county-schaumburg-village", kind: "municipal", name: "Schaumburg village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-schaumburg-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Schaumburg village", county: "DuPage County", lines: [
       { name: "Schaumburg Real Estate Transfer Tax", rate: 0.001, base: "price", party: "seller", source: S112, sourceUrl: S113, asOf: "2026-04-10", notes: "ATG: '$1.00/$1,000 (round to nearest $1)', party 'Seller'. Village Code Title 3, Ch. 36." }
     ] },
-  { id: "il-cook-county-skokie-village", kind: "municipal", name: "Skokie village", county: "Cook County", lines: [
+  { id: "il-cook-county-skokie-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Skokie village", county: "Cook County", lines: [
       { name: "Skokie Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S114, sourceUrl: S115, asOf: "2026-09-04", notes: "ATG: '$3.00/$1,000 (or fraction thereof)', party 'Seller'. Village Code Sec. 98-75." }
     ] },
-  { id: "il-cook-county-stickney-village", kind: "municipal", name: "Stickney village", county: "Cook County", lines: [
+  { id: "il-cook-county-stickney-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Stickney village", county: "Cook County", lines: [
       { name: "Stickney Real Estate Transfer Tax", rate: 0.005, base: "price", party: "seller", source: S116, sourceUrl: S117, asOf: "2025-03-04", notes: "ATG: '$5.00/$1,000 (round to nearest $1)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-stone-park-village", kind: "municipal", name: "Stone Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-stone-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Stone Park village", county: "Cook County", lines: [
       { name: "Stone Park Real Estate Transfer Tax", rate: 0.004, base: "price", party: "seller", source: S118, sourceUrl: S119, asOf: "2025-03-04", notes: "ATG: '$2/$500', party 'Seller'. $2 per $500." }
     ] },
-  { id: "il-cook-county-streamwood-village", kind: "municipal", name: "Streamwood village", county: "Cook County", lines: [
+  { id: "il-cook-county-streamwood-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Streamwood village", county: "Cook County", lines: [
       { name: "Streamwood Real Estate Transfer Tax", rate: 0.003, base: "price", party: "seller", source: S120, sourceUrl: S121, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
   { id: "il-dekalb-county-sycamore-city", kind: "municipal", name: "Sycamore city", county: "DeKalb County", lines: [
       { name: "Sycamore Real Estate Transfer Tax", rate: 0.005, base: "price", party: "buyer", source: S122, sourceUrl: S123, asOf: "2017-03-14", notes: "ATG: '$5.00/$1,000 (no rounding)', party 'Buyer'. Resident exemption is residential only. Confirmed on cityofsycamore.com. Downstate." }
     ] },
-  { id: "il-will-county-university-park-village", kind: "municipal", name: "University Park village", county: "Will County", lines: [
+  { id: "il-will-county-university-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "University Park village", county: "Will County", lines: [
       { name: "University Park Real Estate Transfer Tax", rate: 0.001, base: "price", party: "seller", source: S124, sourceUrl: S125, asOf: "2011-02-08", notes: "ATG: '$1.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-university-park-village", kind: "municipal", name: "University Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-university-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "University Park village", county: "Cook County", lines: [
       { name: "University Park Real Estate Transfer Tax", rate: 0.001, base: "price", party: "seller", source: S124, sourceUrl: S125, asOf: "2011-02-08", notes: "ATG: '$1.00/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-dupage-county-wheaton-city", kind: "municipal", name: "Wheaton city", county: "DuPage County", lines: [
+  { id: "il-dupage-county-wheaton-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Wheaton city", county: "DuPage County", lines: [
       { name: "Wheaton Real Estate Transfer Tax", rate: 0.0025, base: "price", party: "buyer", source: S126, sourceUrl: S127, asOf: "2019-12-17", notes: "ATG: '$2.50/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-cook-county-wilmette-village", kind: "municipal", name: "Wilmette village", county: "Cook County", lines: [
+  { id: "il-cook-county-wilmette-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Wilmette village", county: "Cook County", lines: [
       { name: "Wilmette Real Estate Transfer Tax", rate: 0.003, base: "price", party: "buyer", source: S128, sourceUrl: S129, asOf: "2017-03-14", notes: "ATG: '$3.00/$1,000 (round to nearest $1,000)', party 'Buyer'." }
     ] },
-  { id: "il-dupage-county-woodridge-village", kind: "municipal", name: "Woodridge village", county: "DuPage County", lines: [
+  { id: "il-dupage-county-woodridge-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Woodridge village", county: "DuPage County", lines: [
       { name: "Woodridge Real Estate Transfer Tax", rate: 0.0025, base: "price", party: "seller", source: S130, sourceUrl: S131, asOf: "2017-02-14", notes: "ATG: '$2.50/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-will-county-woodridge-village", kind: "municipal", name: "Woodridge village", county: "Will County", lines: [
+  { id: "il-will-county-woodridge-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Woodridge village", county: "Will County", lines: [
       { name: "Woodridge Real Estate Transfer Tax", rate: 0.0025, base: "price", party: "seller", source: S130, sourceUrl: S131, asOf: "2017-02-14", notes: "ATG: '$2.50/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
-  { id: "il-cook-county-woodridge-village", kind: "municipal", name: "Woodridge village", county: "Cook County", lines: [
+  { id: "il-cook-county-woodridge-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Woodridge village", county: "Cook County", lines: [
       { name: "Woodridge Real Estate Transfer Tax", rate: 0.0025, base: "price", party: "seller", source: S130, sourceUrl: S131, asOf: "2017-02-14", notes: "ATG: '$2.50/$1,000 (round to nearest $1,000)', party 'Seller'." }
     ] },
   { id: "il-cook-county-chicago-city", kind: "municipal", name: "Chicago city", county: "Cook County", lines: [
@@ -739,131 +739,131 @@ export const IL_LOCAL: LocalTaxTable = {
       { name: "Chicago Real Property Transfer Tax — City portion", rate: 0.0075, base: "price", party: "buyer", source: S132, sourceUrl: S133, asOf: "2026-09-24", notes: "$3.75 per $500 (or fraction) = 0.75%, FLAT (no tiers). Buyer/transferee liable (shifts to seller only if buyer exempt by state law). Commercial-relevant exemptions (Sec. 3-33-060): enterprise-zone property used primarily for commercial/industrial purposes; parent/subsidiary mergers; foreclosure/deed-in-lieu to lender. Transfers of controlling interests / 30+yr ground leases are taxable." },
       { name: "Chicago Real Property Transfer Tax — CTA portion", rate: 0.003, base: "price", party: "seller", source: S134, sourceUrl: S133, asOf: "2026-09-24", notes: "Supplemental $1.50 per $500 = 0.30% (transfers on/after 4/1/2008), seller/transferor liable. Total Chicago = $5.25/$500 = 1.05%. 2024 'Bring Chicago Home' tiered referendum FAILED (3/19/2024, ~54% no); flat rate remains per the official DOF page." }
     ] },
-  { id: "il-cook-county-evanston-city", kind: "municipal", name: "Evanston city", county: "Cook County", lines: [
+  { id: "il-cook-county-evanston-city", kind: "municipal", verify: "Evanston's tiers are modeled as whole-price (0.9% of the full price above $5M) from the city's range table; the code text wasn't retrieved.", name: "Evanston city", county: "Cook County", lines: [
       { name: "Evanston Real Estate Transfer Tax", rate: 0.009, tiers: [{ over: 0, rate: 0.005 }, { over: 1500000, rate: 0.007 }, { over: 5000000, rate: 0.009 }], base: "price", party: "seller", source: S135, sourceUrl: S136, asOf: "2019-01-01", notes: "Sale price up to $1,500,000: $5/$1,000; $1,500,000.01–$5,000,000: $7/$1,000; over $5,000,000: $9/$1,000. Rate is selected by SALE PRICE RANGE and applied to the whole price (cliff) — the official table is keyed to the price range and published examples apply $7 to the full $1.5M; the code text itself (municode) could not be fetched to confirm verbatim. Seller pays. $100 exempt-stamp fee." }
     ] },
-  { id: "il-cook-county-calumet-city-city", kind: "municipal", name: "Calumet City city", county: "Cook County", lines: [
+  { id: "il-cook-county-calumet-city-city", kind: "municipal", verify: "Bands above $2M come only from a 2011 title-underwriter record, and whole-price vs slice isn't confirmed (another list shows a flat $8/$1,000).", name: "Calumet City city", county: "Cook County", lines: [
       { name: "Calumet City Real Estate Transfer Tax", rate: 0.016, tiers: [{ over: 0, rate: 0.008 }, { over: 2000000, rate: 0.01 }, { over: 5000000, rate: 0.012 }, { over: 10000000, rate: 0.014 }, { over: 20000000, rate: 0.016 }], base: "price", party: "split", verify: true, source: S137, sourceUrl: S138, asOf: "2011-02-07", notes: "ATG: 'Transfers less than $2M: $8.00/1,000; $2M-$5M: $10/1,000; $5M-$10M: $12/1,000; $10M-$20M: $14/1,000; Over $20M: $16.00/1,000 (round to nearest $1,000)'; 50/50 split. First American 11/2024 list shows only $8.00/$1,000 (residential-focused). Cliff vs marginal NOT verified against the ordinance text — treat >$2M bands as UNVERIFIED; confirm with Calumet City clerk. UNCONFIRMED: bands above $2M come only from ATG (last updated 2011) and whole-price vs slice is not confirmed; First American shows a flat $8/$1,000. Confirm with title." }
     ] },
-  { id: "il-lake-county-highwood-city", kind: "municipal", name: "Highwood city", county: "Lake County", lines: [
+  { id: "il-lake-county-highwood-city", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Highwood city", county: "Lake County", lines: [
       { name: "Highwood Real Estate Transfer Tax (Fort Sheridan area ONLY)", rate: 0.005, base: "price", party: "seller", source: S139, sourceUrl: S140, asOf: "2011-02-07", notes: "Applies ONLY within the Fort Sheridan annexation area of Highwood; rest of Highwood has no transfer tax (pre-transfer inspection only; $120 commercial). ATG entry last updated 2011 — confirm." }
     ] },
-  { id: "il-cook-county-franklin-park-village", kind: "municipal", name: "Franklin Park village", county: "Cook County", lines: [
+  { id: "il-cook-county-franklin-park-village", kind: "municipal", verify: "Rate from the ATG title-underwriter ordinance database (cross-checked against First American's 11/2024 list), not the village/city's own website. Confirm with the municipality or title.", name: "Franklin Park village", county: "Cook County", lines: [
       { name: "Franklin Park transfer stamp (fee schedule)", rate: 0, base: "price", party: "seller", source: S141, sourceUrl: S142, asOf: "2017-02-07", notes: "Not a %-of-price tax: flat fee by property type (ATG: '$40 minimum, depending on property type'; First American: '$80 flat fee - single dwelling'). Commercial fee NOT verified — confirm with village." }
     ] },
-  { id: "il-algonquin", kind: "municipal", name: "Algonquin", lines: [] },
-  { id: "il-arlington-heights", kind: "municipal", name: "Arlington Heights", lines: [] },
-  { id: "il-barrington", kind: "municipal", name: "Barrington", lines: [] },
-  { id: "il-batavia", kind: "municipal", name: "Batavia", lines: [] },
-  { id: "il-bensenville", kind: "municipal", name: "Bensenville", lines: [] },
-  { id: "il-bloomingdale", kind: "municipal", name: "Bloomingdale", lines: [] },
-  { id: "il-broadview", kind: "municipal", name: "Broadview", lines: [] },
-  { id: "il-brookfield", kind: "municipal", name: "Brookfield", lines: [] },
-  { id: "il-carpentersville", kind: "municipal", name: "Carpentersville", lines: [] },
-  { id: "il-clarendon-hills", kind: "municipal", name: "Clarendon Hills", lines: [] },
-  { id: "il-crystal-lake", kind: "municipal", name: "Crystal Lake", lines: [] },
-  { id: "il-darien", kind: "municipal", name: "Darien", lines: [] },
-  { id: "il-deerfield", kind: "municipal", name: "Deerfield", lines: [] },
-  { id: "il-dekalb", kind: "municipal", name: "DeKalb", lines: [] },
-  { id: "il-downers-grove", kind: "municipal", name: "Downers Grove", lines: [] },
-  { id: "il-elgin", kind: "municipal", name: "Elgin", lines: [] },
-  { id: "il-flossmoor", kind: "municipal", name: "Flossmoor", lines: [] },
-  { id: "il-fox-river-grove", kind: "municipal", name: "Fox River Grove", lines: [] },
-  { id: "il-frankfort", kind: "municipal", name: "Frankfort", lines: [] },
-  { id: "il-glencoe", kind: "municipal", name: "Glencoe", lines: [] },
-  { id: "il-glenview", kind: "municipal", name: "Glenview", lines: [] },
-  { id: "il-golf", kind: "municipal", name: "Golf", lines: [] },
-  { id: "il-green-oaks", kind: "municipal", name: "Green Oaks", lines: [] },
-  { id: "il-gurnee", kind: "municipal", name: "Gurnee", lines: [] },
-  { id: "il-hainesville", kind: "municipal", name: "Hainesville", lines: [] },
-  { id: "il-hampshire", kind: "municipal", name: "Hampshire", lines: [] },
-  { id: "il-harvard", kind: "municipal", name: "Harvard", lines: [] },
-  { id: "il-hazel-crest", kind: "municipal", name: "Hazel Crest", lines: [] },
-  { id: "il-hickory-hills", kind: "municipal", name: "Hickory Hills", lines: [] },
-  { id: "il-hinsdale", kind: "municipal", name: "Hinsdale", lines: [] },
-  { id: "il-hometown", kind: "municipal", name: "Hometown", lines: [] },
-  { id: "il-homewood", kind: "municipal", name: "Homewood", lines: [] },
-  { id: "il-huntley", kind: "municipal", name: "Huntley", lines: [] },
-  { id: "il-indian-head-park", kind: "municipal", name: "Indian Head Park", lines: [] },
-  { id: "il-island-lake", kind: "municipal", name: "Island Lake", lines: [] },
-  { id: "il-itasca", kind: "municipal", name: "Itasca", lines: [] },
-  { id: "il-johnsburg", kind: "municipal", name: "Johnsburg", lines: [] },
-  { id: "il-justice", kind: "municipal", name: "Justice", lines: [] },
-  { id: "il-la-grange-park", kind: "municipal", name: "La Grange Park", lines: [] },
-  { id: "il-lake-bluff", kind: "municipal", name: "Lake Bluff", lines: [] },
-  { id: "il-lake-in-the-hills", kind: "municipal", name: "Lake in the Hills", lines: [] },
-  { id: "il-lake-villa", kind: "municipal", name: "Lake Villa", lines: [] },
-  { id: "il-lake-zurich", kind: "municipal", name: "Lake Zurich", lines: [] },
-  { id: "il-lakemoor", kind: "municipal", name: "Lakemoor", lines: [] },
-  { id: "il-lansing", kind: "municipal", name: "Lansing", lines: [] },
-  { id: "il-lemont", kind: "municipal", name: "Lemont", lines: [] },
-  { id: "il-leyden-township", kind: "municipal", name: "Leyden Township", lines: [] },
-  { id: "il-libertyville", kind: "municipal", name: "Libertyville", lines: [] },
-  { id: "il-lincolnwood", kind: "municipal", name: "Lincolnwood", lines: [] },
-  { id: "il-lisle", kind: "municipal", name: "Lisle", lines: [] },
-  { id: "il-lockport", kind: "municipal", name: "Lockport", lines: [] },
-  { id: "il-lombard", kind: "municipal", name: "Lombard", lines: [] },
-  { id: "il-lynwood", kind: "municipal", name: "Lynwood", lines: [] },
-  { id: "il-lyons", kind: "municipal", name: "Lyons", lines: [] },
-  { id: "il-manteno", kind: "municipal", name: "Manteno", lines: [] },
-  { id: "il-matteson", kind: "municipal", name: "Matteson", lines: [] },
-  { id: "il-melrose-park", kind: "municipal", name: "Melrose Park", lines: [] },
-  { id: "il-midlothian", kind: "municipal", name: "Midlothian", lines: [] },
-  { id: "il-mokena", kind: "municipal", name: "Mokena", lines: [] },
-  { id: "il-monee", kind: "municipal", name: "Monee", lines: [] },
-  { id: "il-mundelein", kind: "municipal", name: "Mundelein", lines: [] },
-  { id: "il-new-lenox", kind: "municipal", name: "New Lenox", lines: [] },
-  { id: "il-north-aurora", kind: "municipal", name: "North Aurora", lines: [] },
-  { id: "il-north-riverside", kind: "municipal", name: "North Riverside", lines: [] },
-  { id: "il-northbrook", kind: "municipal", name: "Northbrook", lines: [] },
-  { id: "il-northfield", kind: "municipal", name: "Northfield", lines: [] },
-  { id: "il-oak-brook", kind: "municipal", name: "Oak Brook", lines: [] },
-  { id: "il-oak-forest", kind: "municipal", name: "Oak Forest", lines: [] },
-  { id: "il-oakbrook-terrace", kind: "municipal", name: "Oakbrook Terrace", lines: [] },
-  { id: "il-olympia-fields", kind: "municipal", name: "Olympia Fields", lines: [] },
-  { id: "il-orland-park", kind: "municipal", name: "Orland Park", lines: [] },
-  { id: "il-palatine", kind: "municipal", name: "Palatine", lines: [] },
-  { id: "il-palos-heights", kind: "municipal", name: "Palos Heights", lines: [] },
-  { id: "il-palos-hills", kind: "municipal", name: "Palos Hills", lines: [] },
-  { id: "il-phoenix", kind: "municipal", name: "Phoenix", lines: [] },
-  { id: "il-plainfield", kind: "municipal", name: "Plainfield", lines: [] },
-  { id: "il-posen", kind: "municipal", name: "Posen", lines: [] },
-  { id: "il-richton-park", kind: "municipal", name: "Richton Park", lines: [] },
-  { id: "il-river-grove", kind: "municipal", name: "River Grove", lines: [] },
-  { id: "il-riverdale", kind: "municipal", name: "Riverdale", lines: [] },
-  { id: "il-riverside", kind: "municipal", name: "Riverside", lines: [] },
-  { id: "il-roselle", kind: "municipal", name: "Roselle", lines: [] },
-  { id: "il-rosemont", kind: "municipal", name: "Rosemont", lines: [] },
-  { id: "il-round-lake-beach", kind: "municipal", name: "Round Lake Beach", lines: [] },
-  { id: "il-round-lake-heights", kind: "municipal", name: "Round Lake Heights", lines: [] },
-  { id: "il-round-lake-park", kind: "municipal", name: "Round Lake Park", lines: [] },
-  { id: "il-sauk-village", kind: "municipal", name: "Sauk Village", lines: [] },
-  { id: "il-schiller-park", kind: "municipal", name: "Schiller Park", lines: [] },
-  { id: "il-shorewood", kind: "municipal", name: "Shorewood", lines: [] },
-  { id: "il-sleepy-hollow", kind: "municipal", name: "Sleepy Hollow", lines: [] },
-  { id: "il-south-chicago-heights", kind: "municipal", name: "South Chicago Heights", lines: [] },
-  { id: "il-south-elgin", kind: "municipal", name: "South Elgin", lines: [] },
-  { id: "il-south-holland", kind: "municipal", name: "South Holland", lines: [] },
-  { id: "il-st-charles", kind: "municipal", name: "St. Charles", lines: [] },
-  { id: "il-steger", kind: "municipal", name: "Steger", lines: [] },
-  { id: "il-sugar-grove", kind: "municipal", name: "Sugar Grove", lines: [] },
-  { id: "il-summit", kind: "municipal", name: "Summit", lines: [] },
-  { id: "il-thornton", kind: "municipal", name: "Thornton", lines: [] },
-  { id: "il-tinley-park", kind: "municipal", name: "Tinley Park", lines: [] },
-  { id: "il-villa-park", kind: "municipal", name: "Villa Park", lines: [] },
-  { id: "il-wauconda", kind: "municipal", name: "Wauconda", lines: [] },
-  { id: "il-waukegan", kind: "municipal", name: "Waukegan", lines: [] },
-  { id: "il-west-chicago", kind: "municipal", name: "West Chicago", lines: [] },
-  { id: "il-west-dundee", kind: "municipal", name: "West Dundee", lines: [] },
-  { id: "il-western-springs", kind: "municipal", name: "Western Springs", lines: [] },
-  { id: "il-wheeling", kind: "municipal", name: "Wheeling", lines: [] },
-  { id: "il-willowbrook", kind: "municipal", name: "Willowbrook", lines: [] },
-  { id: "il-winfield", kind: "municipal", name: "Winfield", lines: [] },
-  { id: "il-winnetka", kind: "municipal", name: "Winnetka", lines: [] },
-  { id: "il-winthrop-harbor", kind: "municipal", name: "Winthrop Harbor", lines: [] },
-  { id: "il-woodstock", kind: "municipal", name: "Woodstock", lines: [] },
-  { id: "il-worth", kind: "municipal", name: "Worth", lines: [] },
-  { id: "il-yorkville", kind: "municipal", name: "Yorkville", lines: [] },
-  { id: "il-zion", kind: "municipal", name: "Zion", lines: [] },
+  { id: "il-algonquin", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Algonquin", lines: [] },
+  { id: "il-arlington-heights", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Arlington Heights", lines: [] },
+  { id: "il-barrington", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Barrington", lines: [] },
+  { id: "il-batavia", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Batavia", lines: [] },
+  { id: "il-bensenville", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Bensenville", lines: [] },
+  { id: "il-bloomingdale", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Bloomingdale", lines: [] },
+  { id: "il-broadview", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Broadview", lines: [] },
+  { id: "il-brookfield", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Brookfield", lines: [] },
+  { id: "il-carpentersville", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Carpentersville", lines: [] },
+  { id: "il-clarendon-hills", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Clarendon Hills", lines: [] },
+  { id: "il-crystal-lake", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Crystal Lake", lines: [] },
+  { id: "il-darien", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Darien", lines: [] },
+  { id: "il-deerfield", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Deerfield", lines: [] },
+  { id: "il-dekalb", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "DeKalb", lines: [] },
+  { id: "il-downers-grove", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Downers Grove", lines: [] },
+  { id: "il-elgin", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Elgin", lines: [] },
+  { id: "il-flossmoor", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Flossmoor", lines: [] },
+  { id: "il-fox-river-grove", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Fox River Grove", lines: [] },
+  { id: "il-frankfort", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Frankfort", lines: [] },
+  { id: "il-glencoe", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Glencoe", lines: [] },
+  { id: "il-glenview", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Glenview", lines: [] },
+  { id: "il-golf", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Golf", lines: [] },
+  { id: "il-green-oaks", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Green Oaks", lines: [] },
+  { id: "il-gurnee", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Gurnee", lines: [] },
+  { id: "il-hainesville", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Hainesville", lines: [] },
+  { id: "il-hampshire", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Hampshire", lines: [] },
+  { id: "il-harvard", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Harvard", lines: [] },
+  { id: "il-hazel-crest", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Hazel Crest", lines: [] },
+  { id: "il-hickory-hills", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Hickory Hills", lines: [] },
+  { id: "il-hinsdale", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Hinsdale", lines: [] },
+  { id: "il-hometown", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Hometown", lines: [] },
+  { id: "il-homewood", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Homewood", lines: [] },
+  { id: "il-huntley", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Huntley", lines: [] },
+  { id: "il-indian-head-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Indian Head Park", lines: [] },
+  { id: "il-island-lake", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Island Lake", lines: [] },
+  { id: "il-itasca", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Itasca", lines: [] },
+  { id: "il-johnsburg", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Johnsburg", lines: [] },
+  { id: "il-justice", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Justice", lines: [] },
+  { id: "il-la-grange-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "La Grange Park", lines: [] },
+  { id: "il-lake-bluff", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lake Bluff", lines: [] },
+  { id: "il-lake-in-the-hills", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lake in the Hills", lines: [] },
+  { id: "il-lake-villa", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lake Villa", lines: [] },
+  { id: "il-lake-zurich", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lake Zurich", lines: [] },
+  { id: "il-lakemoor", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lakemoor", lines: [] },
+  { id: "il-lansing", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lansing", lines: [] },
+  { id: "il-lemont", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lemont", lines: [] },
+  { id: "il-leyden-township", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Leyden Township", lines: [] },
+  { id: "il-libertyville", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Libertyville", lines: [] },
+  { id: "il-lincolnwood", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lincolnwood", lines: [] },
+  { id: "il-lisle", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lisle", lines: [] },
+  { id: "il-lockport", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lockport", lines: [] },
+  { id: "il-lombard", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lombard", lines: [] },
+  { id: "il-lynwood", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lynwood", lines: [] },
+  { id: "il-lyons", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Lyons", lines: [] },
+  { id: "il-manteno", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Manteno", lines: [] },
+  { id: "il-matteson", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Matteson", lines: [] },
+  { id: "il-melrose-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Melrose Park", lines: [] },
+  { id: "il-midlothian", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Midlothian", lines: [] },
+  { id: "il-mokena", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Mokena", lines: [] },
+  { id: "il-monee", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Monee", lines: [] },
+  { id: "il-mundelein", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Mundelein", lines: [] },
+  { id: "il-new-lenox", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "New Lenox", lines: [] },
+  { id: "il-north-aurora", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "North Aurora", lines: [] },
+  { id: "il-north-riverside", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "North Riverside", lines: [] },
+  { id: "il-northbrook", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Northbrook", lines: [] },
+  { id: "il-northfield", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Northfield", lines: [] },
+  { id: "il-oak-brook", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Oak Brook", lines: [] },
+  { id: "il-oak-forest", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Oak Forest", lines: [] },
+  { id: "il-oakbrook-terrace", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Oakbrook Terrace", lines: [] },
+  { id: "il-olympia-fields", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Olympia Fields", lines: [] },
+  { id: "il-orland-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Orland Park", lines: [] },
+  { id: "il-palatine", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Palatine", lines: [] },
+  { id: "il-palos-heights", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Palos Heights", lines: [] },
+  { id: "il-palos-hills", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Palos Hills", lines: [] },
+  { id: "il-phoenix", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Phoenix", lines: [] },
+  { id: "il-plainfield", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Plainfield", lines: [] },
+  { id: "il-posen", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Posen", lines: [] },
+  { id: "il-richton-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Richton Park", lines: [] },
+  { id: "il-river-grove", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "River Grove", lines: [] },
+  { id: "il-riverdale", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Riverdale", lines: [] },
+  { id: "il-riverside", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Riverside", lines: [] },
+  { id: "il-roselle", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Roselle", lines: [] },
+  { id: "il-rosemont", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Rosemont", lines: [] },
+  { id: "il-round-lake-beach", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Round Lake Beach", lines: [] },
+  { id: "il-round-lake-heights", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Round Lake Heights", lines: [] },
+  { id: "il-round-lake-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Round Lake Park", lines: [] },
+  { id: "il-sauk-village", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Sauk Village", lines: [] },
+  { id: "il-schiller-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Schiller Park", lines: [] },
+  { id: "il-shorewood", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Shorewood", lines: [] },
+  { id: "il-sleepy-hollow", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Sleepy Hollow", lines: [] },
+  { id: "il-south-chicago-heights", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "South Chicago Heights", lines: [] },
+  { id: "il-south-elgin", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "South Elgin", lines: [] },
+  { id: "il-south-holland", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "South Holland", lines: [] },
+  { id: "il-st-charles", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "St. Charles", lines: [] },
+  { id: "il-steger", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Steger", lines: [] },
+  { id: "il-sugar-grove", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Sugar Grove", lines: [] },
+  { id: "il-summit", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Summit", lines: [] },
+  { id: "il-thornton", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Thornton", lines: [] },
+  { id: "il-tinley-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Tinley Park", lines: [] },
+  { id: "il-villa-park", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Villa Park", lines: [] },
+  { id: "il-wauconda", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Wauconda", lines: [] },
+  { id: "il-waukegan", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Waukegan", lines: [] },
+  { id: "il-west-chicago", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "West Chicago", lines: [] },
+  { id: "il-west-dundee", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "West Dundee", lines: [] },
+  { id: "il-western-springs", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Western Springs", lines: [] },
+  { id: "il-wheeling", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Wheeling", lines: [] },
+  { id: "il-willowbrook", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Willowbrook", lines: [] },
+  { id: "il-winfield", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Winfield", lines: [] },
+  { id: "il-winnetka", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Winnetka", lines: [] },
+  { id: "il-winthrop-harbor", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Winthrop Harbor", lines: [] },
+  { id: "il-woodstock", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Woodstock", lines: [] },
+  { id: "il-worth", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Worth", lines: [] },
+  { id: "il-yorkville", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Yorkville", lines: [] },
+  { id: "il-zion", kind: "municipal", verify: "'No municipal transfer tax' is per the ATG title-underwriter database, not the municipality itself (some still charge flat compliance/inspection stamp fees). Confirm with title.", name: "Zion", lines: [] },
   ],
 };

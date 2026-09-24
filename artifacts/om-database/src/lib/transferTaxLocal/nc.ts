@@ -21,25 +21,25 @@ export const NC_LOCAL: LocalTaxTable = {
   countyAbsentMeansNone: true,
   muniAbsentMeansNone: false,
   entries: [
-  { id: "nc-camden-county", kind: "county", name: "Camden County", county: "Camden County", lines: [
+  { id: "nc-camden-county", kind: "county", verify: "Who pays this county's 1% local land transfer tax (seller assumed) was not verified from the local act. Confirm the allocation with title.", name: "Camden County", county: "Camden County", lines: [
       F0(0.01, "$1.00 per $100 (1%). Perquimans: 'one of only seven counties ... The other counties that levy a land transfer tax are: Camden, Chowan, Currituck, Dare, Pasquotank and Washington.' Also applies to leases >10 yrs incl. options. Payer customarily grantor — confirm local act.")
     ] },
-  { id: "nc-chowan-county", kind: "county", name: "Chowan County", county: "Chowan County", lines: [
+  { id: "nc-chowan-county", kind: "county", verify: "Who pays this county's 1% local land transfer tax (seller assumed) was not verified from the local act. Confirm the allocation with title.", name: "Chowan County", county: "Chowan County", lines: [
       F0(0.01, "$1.00 per $100 (1%). Perquimans: 'one of only seven counties ... The other counties that levy a land transfer tax are: Camden, Chowan, Currituck, Dare, Pasquotank and Washington.' Also applies to leases >10 yrs incl. options. Payer customarily grantor — confirm local act.")
     ] },
-  { id: "nc-currituck-county", kind: "county", name: "Currituck County", county: "Currituck County", lines: [
+  { id: "nc-currituck-county", kind: "county", verify: "Who pays this county's 1% local land transfer tax (seller assumed) was not verified from the local act. Confirm the allocation with title.", name: "Currituck County", county: "Currituck County", lines: [
       F0(0.01, "$1.00 per $100 (1%). Perquimans: 'one of only seven counties ... The other counties that levy a land transfer tax are: Camden, Chowan, Currituck, Dare, Pasquotank and Washington.' Also applies to leases >10 yrs incl. options. Payer customarily grantor — confirm local act.")
     ] },
-  { id: "nc-dare-county", kind: "county", name: "Dare County", county: "Dare County", lines: [
+  { id: "nc-dare-county", kind: "county", verify: "Who pays this county's 1% local land transfer tax (seller assumed) was not verified from the local act. Confirm the allocation with title.", name: "Dare County", county: "Dare County", lines: [
       { name: "Local Land Transfer Tax (local act)", rate: 0.01, base: "price", party: "seller", source: S0, sourceUrl: S1, asOf: "2026-09-24", notes: "$1.00 per $100 (1%). Perquimans: 'one of only seven counties ... The other counties that levy a land transfer tax are: Camden, Chowan, Currituck, Dare, Pasquotank and Washington.' Also applies to leases >10 yrs incl. options. Payer customarily grantor — confirm local act." }
     ] },
-  { id: "nc-pasquotank-county", kind: "county", name: "Pasquotank County", county: "Pasquotank County", lines: [
+  { id: "nc-pasquotank-county", kind: "county", verify: "Who pays this county's 1% local land transfer tax (seller assumed) was not verified from the local act. Confirm the allocation with title.", name: "Pasquotank County", county: "Pasquotank County", lines: [
       F0(0.01, "$1.00 per $100 (1%). Perquimans: 'one of only seven counties ... The other counties that levy a land transfer tax are: Camden, Chowan, Currituck, Dare, Pasquotank and Washington.' Also applies to leases >10 yrs incl. options. Payer customarily grantor — confirm local act.")
     ] },
-  { id: "nc-perquimans-county", kind: "county", name: "Perquimans County", county: "Perquimans County", lines: [
+  { id: "nc-perquimans-county", kind: "county", verify: "Who pays this county's 1% local land transfer tax (seller assumed) was not verified from the local act. Confirm the allocation with title.", name: "Perquimans County", county: "Perquimans County", lines: [
       F0(0.01, "$1.00 per $100 (1%). Perquimans: 'one of only seven counties ... The other counties that levy a land transfer tax are: Camden, Chowan, Currituck, Dare, Pasquotank and Washington.' Also applies to leases >10 yrs incl. options. Payer customarily grantor — confirm local act.")
     ] },
-  { id: "nc-washington-county", kind: "county", name: "Washington County", county: "Washington County", lines: [
+  { id: "nc-washington-county", kind: "county", verify: "Who pays this county's 1% local land transfer tax (seller assumed) was not verified from the local act. Confirm the allocation with title.", name: "Washington County", county: "Washington County", lines: [
       F0(0.01, "$1.00 per $100 (1%). Perquimans: 'one of only seven counties ... The other counties that levy a land transfer tax are: Camden, Chowan, Currituck, Dare, Pasquotank and Washington.' Also applies to leases >10 yrs incl. options. Payer customarily grantor — confirm local act.")
     ] },
   ],
