@@ -87,6 +87,12 @@ export interface LocalTaxTable {
   placeBased?: boolean;
   /** Only with placeBased: a location outside every incorporated place positively owes no municipal tax. */
   unincorporatedMeansNone?: boolean;
+  /**
+   * Localities we KNOW levy (or may levy) a tax we could not confirm from an official
+   * source. A property there is always UNVERIFIED, shown as a 0–maxRate range — so a
+   * gap in our research can never read as "no tax".
+   */
+  knownGaps?: Array<{ name: string; county?: string; kind?: "county" | "municipal"; reason: string; maxRate: number; party: Party }>;
   entries: LocalEntry[];
 }
 

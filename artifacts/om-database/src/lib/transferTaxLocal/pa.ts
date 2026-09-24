@@ -2664,6 +2664,9 @@ export const PA_LOCAL_LEVEL_SOURCE: SourceRef & { statement: string } = {
 export const PA_LOCAL: LocalTaxTable = {
   countyAbsentMeansNone: true,  // PA has no county-level RTT
   muniAbsentMeansNone: false,   // every municipality has a row — absent means UNVERIFIED
+  knownGaps: [
+    { name: "Hermitage city", county: "Mercer County", reason: "the DCED register's two Hermitage rows contradict each other (4.0% + 1.0% vs 5.0% + 0%, eff. 2026-01-01) and no official Hermitage source was found", maxRate: 0.05, party: "split" },
+  ],
   entries: [
     ...ROWS.map(([county, muni, sd, mr, sr, ma, sa]): LocalEntry => ({
       id: `pa-${slug(county)}-${slug(muni)}-${slug(sd)}`,

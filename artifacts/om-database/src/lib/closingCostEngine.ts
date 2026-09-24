@@ -162,6 +162,24 @@ function matchMunicipal(table: LocalTaxTable, geo: ResolvedJurisdiction): LocalE
   return distinct.size === 1 && distinctFull.size === 1 ? hits : [];
 }
 
+/** A known-but-unconfirmed local tax at this location → an UNVERIFIED layer (range 0–maxRate). */
+function findGap(j: JurisdictionRates, table: LocalTaxTable, geo: ResolvedJurisdiction, kind: "county" | "municipal"): UnverifiedLayer | null {
+  for (const g of table.knownGaps ?? []) {
+    if ((g.kind ?? "municipal") !== kind) continue;
+    const hit = kind === "county"
+      ? sameCounty(g.county ?? g.name, geo.county)
+      : (!g.county || !geo.county || sameCounty(g.county, geo.county)) &&
+        [geo.place, geo.municipality].filter(Boolean).some((n) => normName(n) === normName(g.name) || stripType(normName(n)) === stripType(normName(g.name)));
+    if (!hit) continue;
+    const synthetic: LocalEntry = {
+      id: `gap-${normName(g.name)}`, kind, name: g.name, county: g.county,
+      lines: [{ name: `${g.name} local transfer tax (unconfirmed)`, rate: g.maxRate, base: "price", party: g.party, source: j.localLevelSource.source, asOf: j.localLevelSource.asOf }],
+    };
+    return { layer: kind, reason: `${g.name}: ${g.reason}`, candidates: [synthetic], canBeNone: true };
+  }
+  return null;
+}
+
 export function resolveLocal(
   j: JurisdictionRates,
   geo: ResolvedJurisdiction | null | undefined,
@@ -184,7 +202,9 @@ export function resolveLocal(
     if (pick) { out.applied.push(pick); countyName = pick.county ?? pick.name; }
     else if (located && geo?.county) {
       const hit = countyEntries.find((e) => sameCounty(e.county ?? e.name, geo.county));
+      const gap = hit ? null : findGap(j, table, geo, "county");
       if (hit) out.applied.push(hit);
+      else if (gap) out.unverified.push(gap);
       else if (table.countyAbsentMeansNone) out.confirmedNone.push("county");
       else out.unverified.push({ layer: "county", reason: `${geo.county} is not in our ${j.stateName} county table`, candidates: countyEntries, canBeNone: false });
     } else {
@@ -205,7 +225,9 @@ export function resolveLocal(
         if (narrowed.length) hits = narrowed;
       }
       const town = geo?.place || geo?.municipality || "this location";
-      if (!hits.length && table.placeBased && table.unincorporatedMeansNone && !geo?.place) {
+      const gap = !hits.length ? findGap(j, table, geo!, "municipal") : null;
+      if (gap) out.unverified.push(gap);
+      else if (!hits.length && table.placeBased && table.unincorporatedMeansNone && !geo?.place) {
         out.confirmedNone.push("municipal"); // outside every incorporated place — no municipal tax
       } else if (hits.length === 1) out.applied.push(hits[0]);
       else if (hits.length > 1) {
