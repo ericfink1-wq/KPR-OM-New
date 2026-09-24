@@ -1,0 +1,443 @@
+{
+ "Academy Plaza": {
+  "matched": true,
+  "state": "PA",
+  "county": "Philadelphia County",
+  "municipality": "Philadelphia city",
+  "place": "Philadelphia city",
+  "schoolDistrict": "Philadelphia City School District",
+  "basis": "US Census geocoder (layers=all) \u2014 3250 Red Lion Road, Philadelphia, PA 19114"
+ },
+ "Girard Plaza": {
+  "matched": true,
+  "state": "PA",
+  "county": "Philadelphia County",
+  "municipality": "Philadelphia city",
+  "place": "Philadelphia city",
+  "schoolDistrict": "Philadelphia City School District",
+  "basis": "US Census geocoder (layers=all) \u2014 2201 W Oregon Avenue, Philadelphia, PA 19145"
+ },
+ "Lawndale Plaza": {
+  "matched": true,
+  "state": "PA",
+  "county": "Philadelphia County",
+  "municipality": "Philadelphia city",
+  "place": "Philadelphia city",
+  "schoolDistrict": "Philadelphia City School District",
+  "basis": "US Census geocoder (layers=all) \u2014 6301 Oxford Avenue, Philadelphia, PA 19111"
+ },
+ "Quartermaster Plaza": {
+  "matched": true,
+  "state": "PA",
+  "county": "Philadelphia County",
+  "municipality": "Philadelphia city",
+  "place": "Philadelphia city",
+  "schoolDistrict": "Philadelphia City School District",
+  "basis": "US Census geocoder (layers=all) \u2014 2280 W Oregon Avenue, Philadelphia, PA 19145"
+ },
+ "Red Lion Plaza": {
+  "matched": true,
+  "state": "PA",
+  "county": "Philadelphia County",
+  "municipality": "Philadelphia city",
+  "place": "Philadelphia city",
+  "schoolDistrict": "Philadelphia City School District",
+  "basis": "US Census geocoder (layers=all) \u2014 9950 Roosevelt Blvd, Philadelphia, PA 19115"
+ },
+ "Plaza at Bensalem": {
+  "matched": true,
+  "state": "PA",
+  "county": "Bucks County",
+  "municipality": "Bensalem township",
+  "place": null,
+  "schoolDistrict": "Bensalem Township School District",
+  "basis": "US Census geocoder (layers=all) \u2014 1837 Street Road, Bensalem, PA 19020"
+ },
+ "The Shops at Blue Bell": {
+  "matched": true,
+  "state": "PA",
+  "county": "Montgomery County",
+  "municipality": "Whitpain township",
+  "place": null,
+  "schoolDistrict": "Wissahickon School District",
+  "basis": "US Census geocoder (layers=all) \u2014 1760 Dekalb Pike, Blue Bell, PA 19422"
+ },
+ "Kenhorst Plaza": {
+  "matched": true,
+  "state": "PA",
+  "county": "Berks County",
+  "municipality": "Kenhorst borough",
+  "place": "Kenhorst borough",
+  "schoolDistrict": "Governor Mifflin School District",
+  "basis": "US Census geocoder (layers=all) \u2014 1895 New Holland Road, Reading, PA 19607"
+ },
+ "The Point": {
+  "matched": true,
+  "state": "PA",
+  "county": "Dauphin County",
+  "municipality": "Lower Paxton township",
+  "place": null,
+  "schoolDistrict": "Central Dauphin School District",
+  "basis": "US Census geocoder (layers=all) \u2014 4203 Union Deposit Rd, Harrisburg, PA 17111"
+ },
+ "Trexlertown Plaza": {
+  "matched": true,
+  "state": "PA",
+  "county": "Lehigh County",
+  "municipality": "Upper Macungie township",
+  "place": null,
+  "schoolDistrict": "Parkland School District",
+  "basis": "US Census geocoder (layers=all) \u2014 7150 Hamilton Blvd, Trexlertown, PA 18087"
+ },
+ "Providence Town Center": {
+  "matched": true,
+  "state": "PA",
+  "county": "Montgomery County",
+  "municipality": "Upper Providence township",
+  "place": null,
+  "schoolDistrict": "Spring-Ford Area School District",
+  "basis": "US Census geocoder \u2014 10 Town Center Dr, Collegeville, PA 19426"
+ },
+ "Freshwater Stateline Plaza": {
+  "matched": true,
+  "state": "CT",
+  "county": "Capitol Planning Region",
+  "municipality": "Enfield town",
+  "place": null,
+  "schoolDistrict": "Enfield School District",
+  "basis": "US Census geocoder (layers=all) \u2014 130 Elm Street, Enfield, CT 06082"
+ },
+ "Somerset Square": {
+  "matched": true,
+  "state": "CT",
+  "county": "Capitol Planning Region",
+  "municipality": "Glastonbury town",
+  "place": null,
+  "schoolDistrict": "Glastonbury School District",
+  "basis": "US Census geocoder (layers=all) \u2014 175 Glastonbury Blvd, Glastonbury, CT 06033"
+ },
+ "Groton Shopping Center": {
+  "matched": true,
+  "state": "CT",
+  "county": "Southeastern Connecticut Planning Region",
+  "municipality": "Groton town",
+  "place": null,
+  "schoolDistrict": "Groton School District",
+  "basis": "US Census geocoder (layers=all) \u2014 680 Long Hill Rd, Groton, CT 06340"
+ },
+ "Jordan Lane": {
+  "matched": true,
+  "state": "CT",
+  "county": "Capitol Planning Region",
+  "municipality": "Wethersfield town",
+  "place": null,
+  "schoolDistrict": "Wethersfield School District",
+  "basis": "US Census geocoder (layers=all) \u2014 1380 Berlin Tpke, Wethersfield, CT 06109"
+ },
+ "New London Mall": {
+  "matched": true,
+  "state": "CT",
+  "county": "Southeastern Connecticut Planning Region",
+  "municipality": "New London town",
+  "place": "New London city",
+  "schoolDistrict": "New London School District",
+  "basis": "US Census geocoder (layers=all) \u2014 351 N Frontage Rd, New London, CT 06320"
+ },
+ "Mattatuck Commons": {
+  "matched": true,
+  "state": "CT",
+  "county": "Naugatuck Valley Planning Region",
+  "municipality": "Waterbury town",
+  "place": "Waterbury city",
+  "schoolDistrict": "Waterbury School District",
+  "basis": "US Census geocoder (layers=all) \u2014 921 Wolcott Street, Waterbury, CT 06705"
+ },
+ "Franklin Village": {
+  "matched": true,
+  "state": "MA",
+  "county": "Norfolk County",
+  "municipality": "Franklin Town city",
+  "place": "Franklin Town city",
+  "schoolDistrict": "Franklin School District",
+  "basis": "US Census geocoder (layers=all) \u2014 250 Franklin Village Dr, Franklin, MA 02038"
+ },
+ "Norwood Shopping Center": {
+  "matched": true,
+  "state": "MA",
+  "county": "Norfolk County",
+  "municipality": "Norwood town",
+  "place": null,
+  "schoolDistrict": "Norwood School District",
+  "basis": "US Census geocoder (layers=all) \u2014 418 Walpole St, Norwood, MA 02062"
+ },
+ "Shops at Suffolk Downs": {
+  "matched": true,
+  "state": "MA",
+  "county": "Suffolk County",
+  "municipality": "Revere city",
+  "place": "Revere city",
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "Monadnock Marketplace": {
+  "matched": true,
+  "state": "NH",
+  "county": "Cheshire County",
+  "municipality": "Keene city",
+  "place": "Keene city",
+  "schoolDistrict": "Keene School District",
+  "basis": "US Census geocoder (layers=all) \u2014 30 Ash Brook Road, Keene, NH 03431"
+ },
+ "Cooks Corner": {
+  "matched": true,
+  "state": "ME",
+  "county": "Cumberland County",
+  "municipality": "Brunswick town",
+  "place": null,
+  "schoolDistrict": "Brunswick",
+  "basis": "US Census geocoder (layers=all) \u2014 172 Bath Road, Brunswick, ME 04011"
+ },
+ "Chili Square": {
+  "matched": true,
+  "state": "NY",
+  "county": "Monroe County",
+  "municipality": "Chili town",
+  "place": null,
+  "schoolDistrict": "Churchville-Chili Central School District",
+  "basis": "US Census geocoder (layers=all) \u2014 800 Paul Road, Rochester, NY 14624"
+ },
+ "Shops at Bloomfield Station": {
+  "matched": true,
+  "state": "NJ",
+  "county": "Essex County",
+  "municipality": "Bloomfield township",
+  "place": null,
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "Concordia Shopping Center": {
+  "matched": true,
+  "state": "NJ",
+  "county": "Middlesex County",
+  "municipality": "Monroe township",
+  "place": null,
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "Rockaway Commons / Town Court / Town Plaza": {
+  "matched": true,
+  "state": "NJ",
+  "county": "Morris County",
+  "municipality": "Rockaway township",
+  "place": null,
+  "schoolDistrict": "Rockaway Township School District",
+  "basis": "US Census geocoder (layers=all) \u2014 343 Mt Hope Ave, Rockaway, NJ 07866"
+ },
+ "Eagle Plaza": {
+  "matched": true,
+  "state": "NJ",
+  "county": "Camden County",
+  "municipality": "Voorhees township",
+  "place": null,
+  "schoolDistrict": "Voorhees Township School District",
+  "basis": "US Census geocoder (layers=all) \u2014 700 Haddonfield-Berlin Road, Voorhees, NJ 08043"
+ },
+ "Golden Ring Plaza": {
+  "matched": true,
+  "state": "MD",
+  "county": "Baltimore County",
+  "municipality": "District 15",
+  "place": null,
+  "schoolDistrict": "Baltimore County Public Schools",
+  "basis": "US Census geocoder (layers=all) \u2014 8665 Philadelphia Road, Rosedale, MD 21237"
+ },
+ "Security Square": {
+  "matched": true,
+  "state": "MD",
+  "county": "Baltimore County",
+  "municipality": "District 2",
+  "place": null,
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "Tri-State Mall": {
+  "matched": true,
+  "state": "DE",
+  "county": "New Castle County",
+  "municipality": "Brandywine CCD",
+  "place": null,
+  "schoolDistrict": "Brandywine School District",
+  "basis": "US Census geocoder (layers=all) \u2014 333 Naamans Rd, Claymont, DE 19703"
+ },
+ "Town Center @ Twin Hickory": {
+  "matched": true,
+  "state": "VA",
+  "county": "Henrico County",
+  "municipality": "Three Chopt district",
+  "place": null,
+  "schoolDistrict": "Henrico County Public Schools",
+  "basis": "US Census geocoder (layers=all) \u2014 11321 Nuckols Road, Glen Allen, VA 23059"
+ },
+ "Amberly Place": {
+  "matched": true,
+  "state": "NC",
+  "county": "Wake County",
+  "municipality": "Cedar Fork township",
+  "place": "Cary town",
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "Oakleaf Town Center": {
+  "matched": true,
+  "state": "FL",
+  "county": "Duval County",
+  "municipality": "Jacksonville West CCD",
+  "place": "Jacksonville city",
+  "schoolDistrict": "Duval County School District",
+  "basis": "US Census geocoder (layers=all) \u2014 9525 Crosshill Blvd, Jacksonville, FL 32222"
+ },
+ "Lakeland Park": {
+  "matched": true,
+  "state": "FL",
+  "county": "Polk County",
+  "municipality": "Lakeland CCD",
+  "place": "Lakeland city",
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "Shoppes of Lakeland": {
+  "matched": true,
+  "state": "FL",
+  "county": "Polk County",
+  "municipality": "Lakeland CCD",
+  "place": "Lakeland city",
+  "schoolDistrict": "Polk County School District",
+  "basis": "US Census geocoder (layers=all) \u2014 4005 US Highway 98 N, Lakeland, FL 33809"
+ },
+ "Pointe Plaza": {
+  "matched": true,
+  "state": "IL",
+  "county": "Cook County",
+  "municipality": "Niles township",
+  "place": "Niles village",
+  "schoolDistrict": "Skokie-Fairview School District 72",
+  "basis": "US Census geocoder (layers=all) \u2014 5660 W Touhy Ave, Niles, IL 60714"
+ },
+ "Schaumburg Corners": {
+  "matched": true,
+  "state": "IL",
+  "county": "Cook County",
+  "municipality": "Schaumburg township",
+  "place": "Schaumburg village",
+  "schoolDistrict": "Schaumburg Community Consolidated School District 54",
+  "basis": "US Census geocoder (layers=all) \u2014 16 E Golf Road, Schaumburg, IL 60173"
+ },
+ "Markland Mall/Plaza": {
+  "matched": true,
+  "state": "IN",
+  "county": "Howard County",
+  "municipality": "Center township",
+  "place": "Kokomo city",
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "Shoppes at Knollwood": {
+  "matched": true,
+  "state": "MN",
+  "county": "Hennepin County",
+  "municipality": "St. Louis Park city",
+  "place": "St. Louis Park city",
+  "schoolDistrict": "St. Louis Park Public School District",
+  "basis": "US Census geocoder (layers=all) \u2014 8332 Highway 7, St. Louis Park, MN 55426"
+ },
+ "Central Plaza": {
+  "matched": true,
+  "state": "MO",
+  "county": "St. Louis County",
+  "municipality": "Lafayette township",
+  "place": "Ballwin city",
+  "schoolDistrict": "Rockwood R-VI School District",
+  "basis": "US Census geocoder (layers=all) \u2014 15287 Manchester Road, Ballwin, MO 63011"
+ },
+ "Deer Creek Shopping Center": {
+  "matched": true,
+  "state": "MO",
+  "county": "St. Louis County",
+  "municipality": "Hadley township",
+  "place": "Maplewood city",
+  "schoolDistrict": "Maplewood-Richmond Heights School District",
+  "basis": "US Census geocoder (layers=all) \u2014 3200 Laclede Station Road, Maplewood, MO 63143"
+ },
+ "Overland Plaza": {
+  "matched": true,
+  "state": "MO",
+  "county": "St. Louis County",
+  "municipality": "Midland township",
+  "place": "Overland city",
+  "schoolDistrict": "Ritenour School District",
+  "basis": "US Census geocoder (layers=all) \u2014 9002 Overland Plaza, Overland, MO 63114"
+ },
+ "Westwood Town Center": {
+  "matched": true,
+  "state": "OH",
+  "county": "Cuyahoga County",
+  "municipality": "Rocky River city",
+  "place": "Rocky River city",
+  "schoolDistrict": "Rocky River City School District",
+  "basis": "US Census geocoder (layers=all) \u2014 21653 Center Ridge Rd, Rocky River, OH 44116"
+ },
+ "University Hills": {
+  "matched": true,
+  "state": "CO",
+  "county": "Denver County",
+  "municipality": "Denver CCD",
+  "place": "Denver city",
+  "schoolDistrict": "Denver County School District 1",
+  "basis": "US Census geocoder (layers=all) \u2014 2703 South Colorado Blvd, Denver, CO 80222"
+ },
+ "Fred Meyer Bend": {
+  "matched": true,
+  "state": "OR",
+  "county": "Deschutes County",
+  "municipality": "Bend CCD",
+  "place": "Bend city",
+  "schoolDistrict": null,
+  "basis": "US Census geocoder \u2014 61535 US Hwy 97 Bus, Bend, OR"
+ },
+ "Hamilton County OH (Cincinnati)": {
+  "matched": true,
+  "state": "OH",
+  "county": "Hamilton County",
+  "municipality": "Cincinnati city",
+  "place": "Cincinnati city",
+  "schoolDistrict": "Cincinnati City School District",
+  "basis": "US Census geocoder \u2014 138 E Court St, Cincinnati, OH"
+ },
+ "Stark County OH (Canton)": {
+  "matched": true,
+  "state": "OH",
+  "county": "Stark County",
+  "municipality": "Canton city",
+  "place": "Canton city",
+  "schoolDistrict": "Canton City School District",
+  "basis": "US Census geocoder \u2014 201 3rd St NW, Canton, OH"
+ },
+ "Any Tennessee deal": {
+  "matched": true,
+  "state": "TN",
+  "county": "Davidson County",
+  "municipality": "Nashville-Davidson metropolitan government (balance)",
+  "place": "Nashville-Davidson metropolitan government (balance)",
+  "schoolDistrict": null,
+  "basis": "hand-assigned (Census geocoder had no match for this address; jurisdiction from the county/municipal record)"
+ },
+ "City of Reading PA": {
+  "matched": true,
+  "state": "PA",
+  "county": "Berks County",
+  "municipality": "Reading city",
+  "place": "Reading city",
+  "schoolDistrict": "Reading School District",
+  "basis": "US Census geocoder \u2014 815 Washington St, Reading, PA"
+ }
+}

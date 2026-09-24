@@ -70,7 +70,7 @@ export async function resolveJurisdiction(address: string): Promise<ResolvedJuri
   const enc = encodeURIComponent(addr);
 
   // 1) One-shot: geographies from the address directly.
-  const j1 = await fetchJson(`${BASE}/geographies/onelineaddress?address=${enc}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`);
+  const j1 = await fetchJson(`${BASE}/geographies/onelineaddress?address=${enc}&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=json`);
   const m1 = (j1 as { result?: { addressMatches?: Array<{ matchedAddress?: string; coordinates?: { x: number; y: number }; geographies?: Geographies }> } })
     ?.result?.addressMatches?.[0];
   if (m1?.geographies) return buildResult(m1.geographies, m1.matchedAddress ?? null, m1.coordinates ?? null);
@@ -81,7 +81,7 @@ export async function resolveJurisdiction(address: string): Promise<ResolvedJuri
     ?.result?.addressMatches?.[0];
   if (m2?.coordinates) {
     const { x, y } = m2.coordinates;
-    const j3 = await fetchJson(`${BASE}/geographies/coordinates?x=${x}&y=${y}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`);
+    const j3 = await fetchJson(`${BASE}/geographies/coordinates?x=${x}&y=${y}&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=json`);
     const g3 = (j3 as { result?: { geographies?: Geographies } })?.result?.geographies;
     if (g3) return buildResult(g3, m2.matchedAddress ?? null, m2.coordinates);
   }

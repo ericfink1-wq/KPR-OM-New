@@ -1,0 +1,50 @@
+property,address,state,taxing_jurisdiction,seller_pct,buyer_pct,confidence,source,notes
+Academy Plaza,"3250 Red Lion Rd, Philadelphia",PA,City of Philadelphia,2.289,2.289,High,https://www.phila.gov/services/payments-assistance-taxes/taxes/property-and-real-estate-taxes/realty-transfer-tax/,"4.578% total (city 3.578% + state 1%), split 50/50 by custom."
+Girard Plaza,"2201 W Oregon Ave, Philadelphia",PA,City of Philadelphia,2.289,2.289,High,https://www.phila.gov/services/payments-assistance-taxes/taxes/property-and-real-estate-taxes/realty-transfer-tax/,
+Lawndale Plaza,"6301 Oxford Ave, Philadelphia",PA,City of Philadelphia,2.289,2.289,High,https://www.phila.gov/services/payments-assistance-taxes/taxes/property-and-real-estate-taxes/realty-transfer-tax/,
+Quartermaster Plaza,"2280 W Oregon Ave, Philadelphia",PA,City of Philadelphia,2.289,2.289,High,https://www.phila.gov/services/payments-assistance-taxes/taxes/property-and-real-estate-taxes/realty-transfer-tax/,
+Red Lion Plaza,"9950 Roosevelt Blvd, Philadelphia",PA,City of Philadelphia,2.289,2.289,High,https://www.phila.gov/services/payments-assistance-taxes/taxes/property-and-real-estate-taxes/realty-transfer-tax/,
+Plaza at Bensalem,"1837 Street Rd, Bensalem",PA,Bensalem Twp / Bensalem SD (Bucks),1.0,1.0,Medium,https://www.buckscounty.gov/613/Transfer-Tax,"2% total, split 50/50."
+The Shops at Blue Bell,"1760 Dekalb Pike, Blue Bell",PA,Whitpain Twp / Wissahickon SD (Montgomery),1.0,1.0,Med-High,https://ecode360.com/10513395,"2% total, split 50/50."
+Kenhorst Plaza,"1895 New Holland Rd, Kenhorst",PA,Kenhorst Boro / Governor Mifflin SD (Berks),1.0,1.0,Medium,https://www.closingcostspa.com/RealtyTransferTaxes2006-2016.pdf,"Marketed as 'Reading, PA' - the City of Reading is ~5% total but this property isn't in the city."
+The Point,"4203 Union Deposit Rd, Harrisburg",PA,Lower Paxton Twp / Central Dauphin SD (Dauphin),1.0,1.0,Med-High,https://ecode360.com/34208118,Mailing city 'Harrisburg' makes KPR-OM pick the Harrisburg rate even though the property is in Lower Paxton Twp.
+Trexlertown Plaza,"7150 Hamilton Blvd, Trexlertown",PA,Lower/Upper Macungie Twp (Lehigh),1.0,1.0,Medium,https://ecode360.com/14515439,2% total either township.
+Providence Town Center,Collegeville,PA,Upper Providence Twp (Montgomery) / Spring-Ford SD,1.0,1.0,Medium,https://en.wikipedia.org/wiki/Providence_Town_Center,Don't confuse with Upper Providence Twp in Delaware County (3%).
+Freshwater Stateline Plaza,"130 Elm St, Enfield",CT,Town of Enfield,1.5,0,High,https://www.cga.ct.gov/2020/rpt/pdf/2020-R-0020.pdf,"1.25% state + 0.25% town, seller pays."
+Somerset Square,"175-215 Glastonbury Blvd, Glastonbury",CT,Town of Glastonbury,1.5,0,High,https://www.cga.ct.gov/2020/rpt/pdf/2020-R-0020.pdf,
+Groton Shopping Center,"646-720 Long Hill Rd, Groton",CT,Town of Groton,1.75,0,Medium,https://easternctrealtors.com/selling/conveyance-tax-rates/,Groton appears to have adopted the extra 0.25% in 2021. Confirm with Groton town clerk.
+Jordan Lane,"1380-1430 Berlin Tpke, Wethersfield",CT,Town of Wethersfield,1.5,0,High,https://www.cga.ct.gov/2020/rpt/pdf/2020-R-0020.pdf,
+New London Mall,"351 N Frontage Rd, New London",CT,City of New London,1.75,0,Med-High,https://www.cga.ct.gov/2020/rpt/pdf/2020-R-0020.pdf,Targeted town that charges the extra 0.25%.
+Mattatuck Commons,"921 Wolcott St, Waterbury",CT,City of Waterbury,1.75,0,Med-High,https://www.cga.ct.gov/2020/rpt/pdf/2020-R-0020.pdf,Targeted town that charges the extra 0.25%.
+Franklin Village,"250 Franklin Village Dr, Franklin",MA,Norfolk County,0.456,0,High,https://malegislature.gov/Laws/GeneralLaws/PartI/TitleIX/Chapter64D/Section1,
+Norwood Shopping Center,"418-44 Walpole St, Norwood",MA,Norfolk County,0.456,0,High,https://malegislature.gov/Laws/GeneralLaws/PartI/TitleIX/Chapter64D/Section1,
+Shops at Suffolk Downs,"40 Furlong Dr, Revere",MA,Suffolk County,0.456,0,High,https://malegislature.gov/Laws/GeneralLaws/PartI/TitleIX/Chapter64D/Section1,
+Monadnock Marketplace,"30 Ash Brook Rd, Keene",NH,State only,0.75,0.75,High,https://www.revenue.nh.gov/taxes-glance/real-estate-transfer-tax,
+Cooks Corner,"172 Bath Rd, Brunswick",ME,State only,0.585,0.585,High,https://www.mainelegislature.org/legis/statutes/36/title36sec4641-A.html,"New since 11/1/25: extra 0.76% on value over $1M, split 50/50. 0.585% each side is at $25M (varies slightly with price)."
+Chili Square,"800-810 Paul Rd, Chili",NY,Town of Chili (Monroe),0.4,0,High,https://www.tax.ny.gov/bus/transfer/rptidx.htm,
+Shops at Bloomfield Station,"300 Glenwood Ave, Bloomfield",NJ,Bloomfield Twp (Essex),4.7,0,High,https://www.nj.gov/treasury/taxation/realty.shtml,"~1.2% RTF + 3.5% graduated fee over $3.5M, both seller since 7/10/25."
+Concordia Shopping Center,"1600 Perrineville Rd, Monroe Twp",NJ,Monroe Twp (Middlesex),4.7,0,High,https://www.nj.gov/treasury/taxation/realty.shtml,
+Rockaway Commons / Town Court / Town Plaza,"327-367 Mt Hope Ave, Rockaway",NJ,Rockaway Twp (Morris),4.7,0,High,https://www.nj.gov/treasury/taxation/realty.shtml,
+Eagle Plaza,"700 Haddonfield-Berlin Rd, Voorhees",NJ,Voorhees Twp (Camden),4.7,0,High,https://www.nj.gov/treasury/taxation/realty.shtml,
+Golden Ring Plaza,"8665 Philadelphia Rd, Rosedale",MD,Baltimore County,1.25,1.25,High,https://www.baltimorecountymd.gov/departments/budfin/taxpayer-services/deed-transfer-recordation,"2.5% total (state 0.5% + county 1.5% + recordation 0.5%), split 50/50. KPR-OM defaults unknown MD towns to Montgomery County."
+Security Square,"7005 Security Blvd, Windsor Mill",MD,Baltimore County,1.25,1.25,High,https://www.baltimorecountymd.gov/departments/budfin/taxpayer-services/deed-transfer-recordation,Same as above.
+Tri-State Mall,"333 Naamans Rd, Claymont",DE,New Castle County (unincorporated),2.0,2.0,High,https://www.newcastlede.gov/138/Transfer-Tax,"4% total, split 50/50."
+Town Center @ Twin Hickory,"11321-11391 Nuckols Rd, Glen Allen",VA,Henrico County,0.1,0.333,High,https://law.lis.virginia.gov/vacodefull/title58.1/chapter8/,Seller grantor tax; buyer state + county recordation.
+Amberly Place,"10225 Green Level Church Rd, Cary",NC,Wake County,0.2,0,High,https://www.ncleg.net/enactedlegislation/statutes/html/bysection/chapter_105/gs_105-228.30.html,
+Oakleaf Town Center,"9525 Crosshill Blvd, Jacksonville",FL,Duval County,0.7,0,High,https://floridarevenue.com/Forms_library/current/gt800014.pdf,Deed doc stamps. Loan stamps/intangible tax separate (buyer).
+Lakeland Park,"919 Lakeland Park Center Dr, Lakeland",FL,Polk County,0.7,0,High,https://floridarevenue.com/Forms_library/current/gt800014.pdf,
+Shoppes of Lakeland,"4005-4163 US Hwy 98 N, Lakeland",FL,Polk County,0.7,0,High,https://floridarevenue.com/Forms_library/current/gt800014.pdf,
+Pointe Plaza,"5660 W Touhy Ave, Niles",IL,Village of Niles (Cook),0.15,0.3,High,https://www.vniles.com/284/Municipal-Real-Estate-Transfer-Tax,"Niles charges $3/$1,000, paid by buyer. KPR-OM has no Niles option."
+Schaumburg Corners,"16 E Golf Rd, Schaumburg",IL,Village of Schaumburg (Cook),0.25,0,High,https://www.villageofschaumburg.com/government/finance/real-estate-transfer-stamp,"Schaumburg charges $1/$1,000, seller. KPR-OM notes say Schaumburg has none."
+Markland Mall/Plaza,"1400 S Reed Rd, Kokomo",IN,Howard County,0,0,High,https://www.in.gov/dlgf/files/Sales-Disclosure-Form-Instructions.pdf,No transfer tax.
+Shoppes at Knollwood,"8332 Hwy 7, St. Louis Park",MN,Hennepin County,0.34,0,High,https://www.revenue.state.mn.us/deed-tax-rate,0.33% state + 0.01% Hennepin surcharge (expires 1/1/28).
+Central Plaza,"15287-15367 Manchester Rd, Ballwin",MO,St. Louis County,0,0,High,https://revisor.mo.gov/main/OneSection.aspx?section=X++++26&bid=36205&constit=y,No transfer tax in MO.
+Deer Creek Shopping Center,"3200-3256 Laclede Station Rd, Maplewood",MO,St. Louis County,0,0,High,https://revisor.mo.gov/main/OneSection.aspx?section=X++++26&bid=36205&constit=y,
+Overland Plaza,"9002-9166 Overland Plaza, Overland",MO,St. Louis County,0,0,High,https://revisor.mo.gov/main/OneSection.aspx?section=X++++26&bid=36205&constit=y,
+Westwood Town Center,"21653 Center Ridge Rd, Rocky River",OH,Cuyahoga County,0.4,0,High,https://cuyahogacounty.gov/fiscal-officer/departments/real-property/procedures-for-transferring-ownership,
+University Hills,"2703 S Colorado Blvd, Denver",CO,City/County of Denver,0,0.01,High,https://colorado.public.law/statutes/crs_39-13-102,State doc fee only.
+Fred Meyer Bend,"61535 S Hwy 97, Bend",OR,Deschutes County,0,0,High,https://oregon.public.law/statutes/ors_306.815,No transfer tax (only Washington County has one).
+Hamilton County OH (Cincinnati),,OH,Hamilton County,0.3,0,High,https://www.hamiltoncountyauditor.org/transfercalc/,"County is $2/$1,000, not the $3 max KPR-OM uses for every county."
+Stark County OH (Canton),,OH,Stark County,0.4,0,Med-High,https://www.starkcountyohio.gov/government/offices/auditor/property_and_assessment/property_transfer.php,
+Any Tennessee deal,,TN,State,0,0.37,High,https://law.justia.com/codes/tennessee/title-67/chapter-4/part-4/section-67-4-409/,0.37% paid by buyer (plus 0.115% mortgage tax on the loan). KPR-OM says TN has no tax.
+City of Reading PA,,PA,City of Reading,2.5,2.5,Medium,https://alttitle.com/pa-realty-transfer-tax-deviations/,"~5% total. KPR-OM has no Reading option, falls back to 2%."
