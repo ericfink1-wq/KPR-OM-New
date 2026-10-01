@@ -225,7 +225,11 @@
      "isNAP": false,
      "isDark": false,
      "assumptionNote": "One (1), five-year option remaining.",
-     "salesNotes": "Sales report lists this tenant but no complete 12-month year is available (partial/seasonal reporting) - not used.",
+     "salesPSF": 157.39,
+     "salesYear": 2024,
+     "priorSalesPSF": 153.14,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $293k / $157 PSF; CY2023 $285k / $153 PSF. Base rent = 8.9% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
      "percentageRentRate": 7.0,
      "percentageRentBreakpoint": 451714.0,
      "percentageRentBreakpointType": "fixed"
@@ -1168,7 +1172,7 @@
     "Occupancy: 268,865 SF leased / 274,460 SF = 98.0% (OM p.42 says 98%; portfolio table p.1 rounds to 97%).",
     "Giant Eagle sales: OM states $38,748,481 / $439 PSF (p.42); the Gumberg report shows CY2024 $39,036,561 and CY2023 $38,187,959 (12 full months each) - consistent.",
     "Giant Eagle percentage-rent breakpoint per the sales report: $78,010,104 at 1% - far above sales, so no overage rent.",
-    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run, pages 1-80 of 'All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
+    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run; both files 'Pages 1-80' and 'Pages 81-138 from All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
    ],
    "notes": "**Eastgate Shopping Center** is a **274,460 SF Giant Eagle-anchored neighborhood center** on Route 30 (20,000+ VPD) in Greensburg, the Westmoreland County seat, with **$96,415 AHHI within 3 miles** and 2.8M annual visits (#1 neighborhood center within 10 miles). It is **98.0% leased** with **$2,555,775 of Year-1 NOI**. Giant Eagle (88,147 SF, $9.35/SF, 29% of base rent) has the **longest anchor term in the portfolio - to 12/31/2035** with a step to $10.06 in 2031 and two options - and does **$38.75M ($440/SF, 2.1% rent-to-sales)**, lower volume than the Pittsburgh stores but stable (CY2024 $39.0M). The second-largest rent line is unusual: **Biscotti Brothers bakery in 62,061 SF at $4.95/SF (11%)** to 10/2030, plus **Smail Auto Group on 23,494 SF at $1.11/SF** - low-value space that dilutes the average rent ($10.56). The pad ring is high quality - Chick-fil-A, Starbucks, PNC, 1st Summit Bank, Sleep Number, Tropical Bungalow - and the OM pitches **pad spin-offs**. Rollover is granular (11% in 2027, led by Dollar General with one option), recoveries are low (53% of opex), and growth is modest (JLL Yr1-6 NOI CAGR 2.3%). Thesis: a long-term grocer with nine years of term and a sellable pad ring - steady cash flow rather than a value-add story. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
    "dealScore": {
@@ -1271,6 +1275,13 @@
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 256 lease 000577 suite 0330; full 12-month (or annual) reporting year."
       },
       {
+       "name": "Tropical Sunsation",
+       "annualSales": 267198,
+       "sf": 1860,
+       "salesPSF": 143.65,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 256 lease 000062 suite 0125; full 12-month (or annual) reporting year."
+      },
+      {
        "name": "Model Cleaners",
        "annualSales": 227830,
        "sf": 1529,
@@ -1327,6 +1338,13 @@
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 256 lease 000391 suite 9997; full 12-month (or annual) reporting year."
       },
       {
+       "name": "Tropical Sunsation",
+       "annualSales": 284840,
+       "sf": 1860,
+       "salesPSF": 153.14,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 256 lease 000062 suite 0125; full 12-month (or annual) reporting year."
+      },
+      {
        "name": "Model Cleaners",
        "annualSales": 257020,
        "sf": 1529,
@@ -1374,6 +1392,13 @@
        "sf": 805,
        "salesPSF": 384.44,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 256 lease 000391 suite 9997; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Tropical Sunsation",
+       "annualSales": 292750,
+       "sf": 1860,
+       "salesPSF": 157.39,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 256 lease 000062 suite 0125; full 12-month (or annual) reporting year."
       },
       {
        "name": "Model Cleaners",

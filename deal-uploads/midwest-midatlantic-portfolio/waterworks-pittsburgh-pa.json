@@ -1144,7 +1144,12 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "LL & tenant are finalizing a 10- year extension that is estimated to commence in 2026. JLL assumes tenant extends for the 10-year term and is in-place at the analysis start at the new terms."
+     "assumptionNote": "LL & tenant are finalizing a 10- year extension that is estimated to commence in 2026. JLL assumes tenant extends for the 10-year term and is in-place at the analysis start at the new terms.",
+     "salesPSF": 220.72,
+     "salesYear": 2024,
+     "priorSalesPSF": 220.48,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $1.8M / $221 PSF; CY2023 $1.8M / $220 PSF. Base rent = 11.1% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
     },
     {
      "name": "Marshalls",
@@ -1164,7 +1169,15 @@
      "isAnchor": true,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "One (1), five-year option remaining."
+     "assumptionNote": "One (1), five-year option remaining.",
+     "salesPSF": 322.35,
+     "salesYear": 2024,
+     "priorSalesPSF": 309.71,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $8.7M / $322 PSF; CY2023 $8.4M / $310 PSF. Base rent = 4.0% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 2.0,
+     "percentageRentBreakpoint": 17550000.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Blume Nails",
@@ -1184,7 +1197,12 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration.",
+     "salesPSF": 55.93,
+     "salesYear": 2024,
+     "priorSalesPSF": 58.93,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $224k / $56 PSF; CY2023 $236k / $59 PSF. Base rent = 37.7% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
     },
     {
      "name": "Bath & Body Works",
@@ -1205,7 +1223,12 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables."
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables.",
+     "salesPSF": 685.16,
+     "salesYear": 2024,
+     "priorSalesPSF": 663.05,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $1.7M / $685 PSF; CY2023 $1.7M / $663 PSF. Base rent = 4.6% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
     },
     {
      "name": "Shoe Dept",
@@ -1226,7 +1249,13 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "One (1), five-year option remaining. 2% cap on CAM controllables."
+     "assumptionNote": "One (1), five-year option remaining. 2% cap on CAM controllables.",
+     "salesPSF": 87.96,
+     "salesYear": 2024,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $706k / $88 PSF. Base rent = 12.3% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 4.5,
+     "percentageRentBreakpoint": 1783333.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Allegheny Health",
@@ -1306,7 +1335,15 @@
      "isAnchor": true,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration.",
+     "salesPSF": 97.06,
+     "salesYear": 2023,
+     "priorSalesPSF": 81.28,
+     "priorSalesYear": 2022,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2023 $3.2M / $97 PSF; CY2022 $2.7M / $81 PSF. Base rent = 20.8% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 10.0,
+     "percentageRentBreakpoint": 4000000.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Chili's",
@@ -1944,9 +1981,9 @@
     "Other income: St. Margaret's easement $45,000/yr (rising to $50,000 in 2030).",
     "Ground rent $494,434 sits in operating expenses above NOI (JLL proforma); management fee 3% of EGR; capital reserves $0.20/SF below NOI.",
     "Giant Eagle sales: OM states $92,960,678 (p.6); the Gumberg sales report's CY2024 figure ($142.5M) includes catch-up postings for months missing from CY2023 and was NOT used; the last clean year is CY2022 at $89.6M ($828/SF).",
-    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run, pages 1-80 of 'All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
+    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run; both files 'Pages 1-80' and 'Pages 81-138 from All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
    ],
-   "notes": "**Waterworks** is a **625,453 SF Giant Eagle Market District-anchored power center** on Freeport Road at the edge of Fox Chapel/Aspinwall, inside Pittsburgh city limits - the dominant center in its trade area (#1 most-visited within 15 miles, **6.1M visits** L12M) with **$108,916 AHHI and 85,018 people within 3 miles**. Giant Eagle (108,151 SF, $13.34/SF) does **$92.96M ($860/SF)** for a 1.6% rent-to-sales ratio, and the box lineup is deep credit: Dick's (55,000 SF, new 2025 lease to 2036), HomeGoods, T.J. Maxx, Marshalls, Ross, Barnes & Noble, Ulta, Five Below and Petco, plus a 33,168 SF cinema and 10 bank/QSR pads paying $30-$105/SF. JLL's Year-1 NOI is **$10,579,968**, but it counts a 24,671 SF **'Speculative Tenant' with no lease** at $12.00/SF as occupied - carried here as vacant, **true occupancy is 92.0% (not 96%)** and in-place NOI is ~$10.29M. The defining risk is the **2028 rollover: $3.52M of base rent (30%) and 228,451 SF expire in calendar 2028** - Giant Eagle (8/2028), T.J. Maxx, Marshalls, Ross and Barnes & Noble (all 1/2028) - although nearly all carry fixed-rate options and the sales support them (T.J. Maxx $343/SF at 3.8% rent-to-sales). The landlord also pays **$494,434/yr of ground rent to Kroger** for a parcel under the center (stepping to $531,517 in 2032), a leasehold component that must be diligenced. Thesis: an irreplaceable, high-income infill power center bought for durable cash flow and modest growth (JLL Yr1-6 NOI CAGR 2.2%), with real upside in leasing the 49,871 SF of Phase II/III vacancy; the price has to reflect the 2028 renewal wall and the Walmart-era co-tenancy clauses in Phase I. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
+   "notes": "**Waterworks** is a **625,453 SF Giant Eagle Market District-anchored power center** on Freeport Road at the edge of Fox Chapel/Aspinwall, inside Pittsburgh city limits - the dominant center in its trade area (#1 most-visited within 15 miles, **6.1M visits** L12M) with **$108,916 AHHI and 85,018 people within 3 miles**. Giant Eagle (108,151 SF, $13.34/SF) does **$92.96M ($860/SF)** for a 1.6% rent-to-sales ratio, and the box lineup is deep credit: Dick's (55,000 SF, new 2025 lease to 2036), HomeGoods, T.J. Maxx, Marshalls, Ross, Barnes & Noble, Ulta, Five Below and Petco, plus a 33,168 SF cinema (rent ~21% of its 2023 sales, and 2024 sales slipping) and 10 bank/QSR pads paying $30-$105/SF. JLL's Year-1 NOI is **$10,579,968**, but it counts a 24,671 SF **'Speculative Tenant' with no lease** at $12.00/SF as occupied - carried here as vacant, **true occupancy is 92.0% (not 96%)** and in-place NOI is ~$10.29M. The defining risk is the **2028 rollover: $3.52M of base rent (30%) and 228,451 SF expire in calendar 2028** - Giant Eagle (8/2028), T.J. Maxx, Marshalls, Ross and Barnes & Noble (all 1/2028) - although nearly all carry fixed-rate options and the sales support them (T.J. Maxx $343/SF at 3.8% rent-to-sales). The landlord also pays **$494,434/yr of ground rent to Kroger** for a parcel under the center (stepping to $531,517 in 2032), a leasehold component that must be diligenced. Thesis: an irreplaceable, high-income infill power center bought for durable cash flow and modest growth (JLL Yr1-6 NOI CAGR 2.2%), with real upside in leasing the 49,871 SF of Phase II/III vacancy; the price has to reflect the 2028 renewal wall and the Walmart-era co-tenancy clauses in Phase I. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
    "dealScore": {
     "grade": "B+",
     "rationale": "An **irreplaceable Fox Chapel-edge power center** with a **$92.96M Giant Eagle** and deep credit boxes, held back by **30% of base rent rolling in 2028**, a **Kroger ground lease** and an OM occupancy that **counts a speculative tenant** (true occupancy 92.0%).",
@@ -1954,7 +1991,7 @@
      "Giant Eagle Market District does $92.96M ($860/SF) - 1.6% rent-to-sales - and is the #1-visited grocer within 5 miles; renewal at $14.67/SF in 2028 is highly likely.",
      "Affluent infill trade area: $108,916 AHHI and 85,018 people within 3 miles, 267,492 within 5; 6.1M annual visits (95th percentile nationally).",
      "Deep national box lineup (Dick's to 2036, HomeGoods, T.J. Maxx, Marshalls, Ross, Ulta, Five Below, Barnes & Noble, Petco) plus 10 bank/QSR pads.",
-     "Strong in-line sales where reported: Chipotle $1,455/SF, Mad Mex $719, Five Guys $660, Aladdin's $552, Pearle $548, Ichiban $515 - most at 4-9% rent-to-sales.",
+     "Strong sales where reported: Marshalls $322/SF and T.J. Maxx $343/SF (~4% rent-to-sales), Bath & Body Works $685, Chipotle $1,455, Mad Mex $719, Five Guys $660, Aladdin's $552, Pearle $548, Ichiban $515 - most in-line tenants at 4-9% rent-to-sales.",
      "All 9 OM figures tie out: roster SF 625,453 = GLA, base rent $12,174,463 = roll total, 16 tax parcels sum to the $1,637,685 cash-flow tax line."
     ],
     "risks": [
@@ -1962,7 +1999,8 @@
      "OM's 96% occupancy and $10.58M NOI include a 24,671 SF 'Speculative Tenant' with no lease ($296,052 of rent); true occupancy 92.0%.",
      "$494,434/yr ground rent to Kroger (rising to $531,517 in 2032) - a leasehold position under part of the center.",
      "Phase I co-tenancy clauses (Anytime Fitness, Hallmark, Sally Beauty) are keyed to a Walmart that is no longer on the roll - status must be confirmed.",
-     "Weak occupancy-cost tenants: GNC (21.6% base rent-to-sales), Cold Stone (17.1%), Petco (14.9%, no options, 1/2031), Barnes & Noble (13.9% on 2022 sales)."
+     "Weak occupancy-cost tenants: GNC (21.6% base rent-to-sales), Cold Stone (17.1%), Petco (14.9%, no options, 1/2031), Barnes & Noble (13.9% on 2022 sales), Blume Nails ($56/SF reported).",
+     "Waterworks Cinemas: $669,220 of rent (no options, to 12/2035) against $3.22M of 2023 sales (20.8%), with Jan-Oct 2024 down ~23% year over year."
     ]
    },
    "upsideItems": [
@@ -1998,6 +2036,10 @@
     {
      "severity": "medium",
      "description": "WALMART-KEYED CO-TENANCY IN PHASE I - Anytime Fitness (50% rent or termination), Hallmark (12%-of-sales substitute rent / termination) and Sally Beauty (termination) all name Walmart, which is not on the current roll. Whether those prongs were satisfied by replacement tenants or are already failing is not stated in the seller's summary - confirm via estoppels."
+    },
+    {
+     "severity": "medium",
+     "description": "CINEMA RENT BURDEN - Waterworks Cinemas (33,168 SF, $669,220 = 6% of base rent, $20.18/SF stepping to $21.56 in 11/2027 and $23.22 in 11/2032, NO options, lease to 12/31/2035) reported $3,219,211 of sales in CY2023 - base rent is 20.8% of sales before recoveries - and Jan-Oct 2024 sales ran $2.11M vs $2.72M for the same months of 2023 (-23%). Screen count is not disclosed, so sales per screen can't be computed. Rent at this level is a rent-relief / go-dark candidate; get the operator's full-year 2024-25 sales."
     },
     {
      "severity": "medium",
@@ -2043,6 +2085,13 @@
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000453 suite 0108; full 12-month (or annual) reporting year."
       },
       {
+       "name": "Marshalls",
+       "annualSales": 8050217,
+       "sf": 27000,
+       "salesPSF": 298.16,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000454 suite 0119; full 12-month (or annual) reporting year."
+      },
+      {
        "name": "Ichiban Steakhouse",
        "annualSales": 4219739,
        "sf": 7948,
@@ -2055,6 +2104,13 @@
        "sf": 24035,
        "salesPSF": 135.73,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000468 suite 0107; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Waterworks Cinemas",
+       "annualSales": 2695964,
+       "sf": 33168,
+       "salesPSF": 81.28,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000168 suite 9990; full 12-month (or annual) reporting year."
       },
       {
        "name": "Mad Mex",
@@ -2104,6 +2160,20 @@
        "sf": 6504,
        "salesPSF": 294.59,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000158 suite 0114; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Bath & Body Works",
+       "annualSales": 1707810,
+       "sf": 2500,
+       "salesPSF": 683.12,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000430 suite 0121; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Five Below",
+       "annualSales": 1697067,
+       "sf": 8096,
+       "salesPSF": 209.62,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000479 suite 0117; full 12-month (or annual) reporting year."
       },
       {
        "name": "Five Guys",
@@ -2204,11 +2274,25 @@
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000453 suite 0108; full 12-month (or annual) reporting year."
       },
       {
+       "name": "Marshalls",
+       "annualSales": 8362233,
+       "sf": 27000,
+       "salesPSF": 309.71,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000454 suite 0119; full 12-month (or annual) reporting year."
+      },
+      {
        "name": "Ichiban Steakhouse",
        "annualSales": 4187265,
        "sf": 7948,
        "salesPSF": 526.83,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 506 lease 000533 suite 0017; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Waterworks Cinemas",
+       "annualSales": 3219211,
+       "sf": 33168,
+       "salesPSF": 97.06,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000168 suite 9990; full 12-month (or annual) reporting year."
       },
       {
        "name": "Chipotle",
@@ -2251,6 +2335,20 @@
        "sf": 6504,
        "salesPSF": 294.85,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000158 suite 0114; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Five Below",
+       "annualSales": 1785045,
+       "sf": 8096,
+       "salesPSF": 220.48,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000479 suite 0117; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Bath & Body Works",
+       "annualSales": 1657616,
+       "sf": 2500,
+       "salesPSF": 663.05,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000430 suite 0121; full 12-month (or annual) reporting year."
       },
       {
        "name": "Wendy's",
@@ -2349,6 +2447,13 @@
        "sf": 1000,
        "salesPSF": 285.34,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000398 suite 0116; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Blume Nails",
+       "annualSales": 235704,
+       "sf": 4000,
+       "salesPSF": 58.93,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000379 suite 0120; full 12-month (or annual) reporting year."
       }
      ]
     },
@@ -2357,6 +2462,13 @@
      "uploadedAt": "2026-10-01T00:00:00.000Z",
      "source": "upload",
      "tenants": [
+      {
+       "name": "Marshalls",
+       "annualSales": 8703572,
+       "sf": 27000,
+       "salesPSF": 322.35,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000454 suite 0119; full 12-month (or annual) reporting year."
+      },
       {
        "name": "T.J. Maxx",
        "annualSales": 8624056,
@@ -2414,6 +2526,20 @@
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000373 suite 0109; full 12-month (or annual) reporting year."
       },
       {
+       "name": "Five Below",
+       "annualSales": 1786973,
+       "sf": 8096,
+       "salesPSF": 220.72,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000479 suite 0117; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Bath & Body Works",
+       "annualSales": 1712903,
+       "sf": 2500,
+       "salesPSF": 685.16,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000430 suite 0121; full 12-month (or annual) reporting year."
+      },
+      {
        "name": "Five Guys",
        "annualSales": 1319500,
        "sf": 2000,
@@ -2454,6 +2580,13 @@
        "sf": 2852,
        "salesPSF": 295.94,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 506 lease 000446 suite 0016; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Shoe Dept",
+       "annualSales": 705846,
+       "sf": 8025,
+       "salesPSF": 87.96,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000405 suite 0122; full 12-month (or annual) reporting year."
       },
       {
        "name": "Top Hat Tuxedo",
@@ -2503,6 +2636,13 @@
        "sf": 1196,
        "salesPSF": 262.5,
        "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 506 lease 000140 suite 0026B; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Blume Nails",
+       "annualSales": 223726,
+       "sf": 4000,
+       "salesPSF": 55.93,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 508 lease 000379 suite 0120; full 12-month (or annual) reporting year."
       }
      ]
     }

@@ -135,7 +135,13 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "One (1), five-year option remaining."
+     "assumptionNote": "One (1), five-year option remaining.",
+     "salesPSF": 127.7,
+     "salesYear": 2024,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $511k / $128 PSF. Base rent = 19.6% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 5.0,
+     "percentageRentBreakpoint": 2000000.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Michaels",
@@ -156,7 +162,15 @@
      "isAnchor": true,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "Two (2), five-year options remaining. 7.5% cap on CAM controllables."
+     "assumptionNote": "Two (2), five-year options remaining. 7.5% cap on CAM controllables.",
+     "salesPSF": 135.27,
+     "salesYear": 2024,
+     "priorSalesPSF": 139.42,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $2.8M / $135 PSF; CY2023 $2.9M / $139 PSF. Base rent = 9.9% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 3.0,
+     "percentageRentBreakpoint": 9305888.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Kuhn's",
@@ -238,7 +252,15 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant rolls to market upon expiration. 5% cap on CAM controllables."
+     "assumptionNote": "No options remaining; Assumes tenant rolls to market upon expiration. 5% cap on CAM controllables.",
+     "salesPSF": 169.93,
+     "salesYear": 2024,
+     "priorSalesPSF": 165.26,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $3.3M / $170 PSF; CY2023 $3.2M / $165 PSF. Base rent = 11.2% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 3.0,
+     "percentageRentBreakpoint": 12204800.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Kohl's",
@@ -339,7 +361,15 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration."
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration.",
+     "salesPSF": 248.68,
+     "salesYear": 2024,
+     "priorSalesPSF": 336.37,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $561k / $249 PSF; CY2023 $758k / $336 PSF. Base rent = 11.7% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 5.0,
+     "percentageRentBreakpoint": 500000.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Five Below",
@@ -360,7 +390,12 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables."
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables.",
+     "salesPSF": 225.69,
+     "salesYear": 2024,
+     "priorSalesPSF": 230.52,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $2.1M / $226 PSF; CY2023 $2.2M / $231 PSF. Base rent = 7.5% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
     },
     {
      "name": "Gamestop",
@@ -400,7 +435,15 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "One (1), five-year option remaining."
+     "assumptionNote": "One (1), five-year option remaining.",
+     "salesPSF": 312.54,
+     "salesYear": 2024,
+     "priorSalesPSF": 305.88,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $767k / $313 PSF; CY2023 $751k / $306 PSF. Base rent = 11.3% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 4.0,
+     "percentageRentBreakpoint": 1428835.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Premier Imaging",
@@ -420,7 +463,15 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "LXD is Aug-27 but tenant is assumed in-place through Yr. 1 of the analysis. No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+     "assumptionNote": "LXD is Aug-27 but tenant is assumed in-place through Yr. 1 of the analysis. No options remaining; Assumes tenant renews at a 10% escalation upon expiration.",
+     "salesPSF": 85.29,
+     "salesYear": 2024,
+     "priorSalesPSF": 82.89,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $414k / $85 PSF; CY2023 $402k / $83 PSF. Base rent = 6.3% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 3.0,
+     "percentageRentBreakpoint": 600000.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Vacant",
@@ -479,7 +530,12 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration.",
+     "salesPSF": 125.88,
+     "salesYear": 2022,
+     "priorSalesPSF": 170.65,
+     "priorSalesYear": 2021,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2022 $1.3M / $126 PSF; CY2021 $1.7M / $171 PSF. Base rent = 9.9% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
     },
     {
      "name": "Applebee's",
@@ -499,7 +555,15 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration.",
+     "salesPSF": 732.54,
+     "salesYear": 2024,
+     "priorSalesPSF": 807.66,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $3.2M / $733 PSF; CY2023 $3.5M / $808 PSF. Base rent = 6.9% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 2.0,
+     "percentageRentBreakpoint": 2424242.0,
+     "percentageRentBreakpointType": "fixed"
     }
    ],
    "leaseRisk": {
@@ -922,14 +986,14 @@
     "Target pays $3.43/SF on 127,466 SF to 1/31/2042 with three 15-yr options ($3.80, $4.18) - economically a ground lease.",
     "Kuhn's lease tenant of record appears to be UNFI Wholesale, Inc. (seller clause workbook) - the UNFI row's ROFR on the Michaels space and its food/medical/office exclusive were mapped to Kuhn's; confirm.",
     "UNFI/Kuhn's exclusive bars doctor/dentist/medical and business-office uses within 500 feet of its premises - check BioLife Plasma (13,357 SF) and Premier Imaging against it.",
-    "No tenant sales for this property were in the sales-report pages provided (pages 1-80 of 'All Property Sales.pdf')."
+    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run; both files 'Pages 1-80' and 'Pages 81-138 from All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
    ],
    "notes": "**North Hills Village** is a **548,500 SF power center** on the McKnight Road/Route 19 corridor in Ross Township - the same node as Ross Park Mall - with the strongest demographics in the portfolio (**$116,817 AHHI within 3 miles**) and **5.0M annual visits (99th percentile)**. It is effectively **99.9% leased** (one 677 SF suite vacant) and throws off **$5,506,396 of Year-1 NOI**, but the OM's 'grocery anchor' is thin: **Kuhn's (53,000 SF, $11.00/SF) expires 3/31/2029 with NO options**, and Kuhn's lease is held by UNFI Wholesale per the seller's summary. The income is really the boxes - **Kohl's (93,000 SF, 18% of base rent) to 2/2029 with four flat $11.50 options, Best Buy (46,855 SF, $15.00) to 3/2028 with no options**, Michaels, Petco, Staples - plus **Target (127,466 SF) on a quasi-ground lease at $3.43/SF to 2042** with 15-year options. **Wayfair (94,847 SF, $853,623 = 14% of base rent) is a new lease that only starts 1/1/2027** with the seller paying the costs, so the largest single income line is not yet open. **2028-29 is the risk window: $3.03M (50%) of base rent rolls**, including two boxes (Best Buy, Kuhn's) with no options - genuine mark-to-market or vacancy events. JLL's tax line ($904,796) is also ~$210k below the 2024-25 actuals, which flatters expenses. Thesis: best-in-portfolio location and near-full occupancy, but a near-term re-tenanting story rather than a long-WALT grocery deal. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
    "dealScore": {
     "grade": "B+",
     "rationale": "**Best demographics in the portfolio ($116,817 AHHI)** and **99.9% leased**, offset by a **Kuhn's grocer with no options expiring 3/2029**, **Wayfair's $854k not yet open**, and **50% of base rent rolling in 2028-29**.",
     "strengths": [
-     "Highest-income trade area in the portfolio: $116,817 AHHI / 73,723 people within 3 miles; 206,394 within 5.",
+     "Highest-income trade area in the portfolio: $116,817 AHHI / 73,723 people within 3 miles; 206,394 within 5. Applebee's does $733/SF, Sally Beauty $313, Five Below $226, Petco $170 (11% rent-to-sales).",
      "99.9% leased; 5.0M visits L12M - 99th percentile among U.S. shopping centers.",
      "Credit box lineup: Target, Kohl's, Best Buy, Wayfair, Michaels, Petco, Staples, Five Below.",
      "Target (127,466 SF) at $3.43/SF to 2042 + three 15-yr options - long, sticky, below-market income that anchors traffic.",
@@ -940,7 +1004,7 @@
      "Wayfair ($853,623, 14% of base rent) commences 1/1/2027 with seller-paid costs - not yet open and a newer big-box concept.",
      "2028-29 rollover: Best Buy (no options), Kuhn's (no options), Kohl's, Michaels, Rally House, DXL, La Belle, GameStop - $3.03M (50% of base).",
      "JLL proforma RE taxes $904,796 vs $1,099,125 (2024) and $1,115,167 (2025) actuals.",
-     "No tenant sales were provided for North Hills (the sales report covers other centers)."
+     "Sales are reported only for the smaller tenants (no Kohl's, Best Buy, Kuhn's, Target or Staples figures); Rally House runs 19.6% base rent-to-sales and Hong BBQ's last full year (2022) was $126/SF."
     ]
    },
    "upsideItems": [
@@ -996,7 +1060,191 @@
     "tenants": "pp.28-30 rent roll; cross-checked to p.24 site-plan roster",
     "leaseRisk": "seller clause workbook (Exclusives, Co-Tenancy, Restrictions) - summary, unverified",
     "trafficCountVPD": "p.23 - investment highlights"
-   }
+   },
+   "tenantSalesHistory": [
+    {
+     "year": 2022,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Applebee's",
+       "annualSales": 3439518,
+       "sf": 4340,
+       "salesPSF": 792.52,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000194 suite 9992; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Petco Supplies",
+       "annualSales": 3298072,
+       "sf": 19200,
+       "salesPSF": 171.77,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000183 suite 0080; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Michaels",
+       "annualSales": 3142657,
+       "sf": 20860,
+       "salesPSF": 150.65,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000555 suite 0014; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Five Below",
+       "annualSales": 2273485,
+       "sf": 9500,
+       "salesPSF": 239.31,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000186 suite 0106; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Hong BBQ & Hot Pot",
+       "annualSales": 1258849,
+       "sf": 10000,
+       "salesPSF": 125.88,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000541 suite 9991; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "La Belle Salon",
+       "annualSales": 829427,
+       "sf": 2254,
+       "salesPSF": 367.98,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000441 suite 0105; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Sally Beauty Supply",
+       "annualSales": 736051,
+       "sf": 2455,
+       "salesPSF": 299.82,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000188 suite 0109; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Premier Imaging",
+       "annualSales": 446302,
+       "sf": 4851,
+       "salesPSF": 92.0,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000609 suite 0201; full 12-month (or annual) reporting year."
+      }
+     ]
+    },
+    {
+     "year": 2023,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Applebee's",
+       "annualSales": 3505251,
+       "sf": 4340,
+       "salesPSF": 807.66,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000194 suite 9992; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Petco Supplies",
+       "annualSales": 3173079,
+       "sf": 19200,
+       "salesPSF": 165.26,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000183 suite 0080; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Michaels",
+       "annualSales": 2908302,
+       "sf": 20860,
+       "salesPSF": 139.42,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000555 suite 0014; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Five Below",
+       "annualSales": 2189933,
+       "sf": 9500,
+       "salesPSF": 230.52,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000186 suite 0106; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "La Belle Salon",
+       "annualSales": 758189,
+       "sf": 2254,
+       "salesPSF": 336.37,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000441 suite 0105; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Sally Beauty Supply",
+       "annualSales": 750927,
+       "sf": 2455,
+       "salesPSF": 305.88,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000188 suite 0109; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Premier Imaging",
+       "annualSales": 402111,
+       "sf": 4851,
+       "salesPSF": 82.89,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000609 suite 0201; full 12-month (or annual) reporting year."
+      }
+     ]
+    },
+    {
+     "year": 2024,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Petco Supplies",
+       "annualSales": 3262621,
+       "sf": 19200,
+       "salesPSF": 169.93,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000183 suite 0080; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Applebee's",
+       "annualSales": 3179206,
+       "sf": 4340,
+       "salesPSF": 732.54,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000194 suite 9992; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Michaels",
+       "annualSales": 2821821,
+       "sf": 20860,
+       "salesPSF": 135.27,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000555 suite 0014; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Five Below",
+       "annualSales": 2144102,
+       "sf": 9500,
+       "salesPSF": 225.69,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000186 suite 0106; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Sally Beauty Supply",
+       "annualSales": 767282,
+       "sf": 2455,
+       "salesPSF": 312.54,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000188 suite 0109; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "La Belle Salon",
+       "annualSales": 560527,
+       "sf": 2254,
+       "salesPSF": 248.68,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000441 suite 0105; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Rally House",
+       "annualSales": 510809,
+       "sf": 4000,
+       "salesPSF": 127.7,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000503 suite 0013; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Premier Imaging",
+       "annualSales": 413719,
+       "sf": 4851,
+       "salesPSF": 85.29,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 511 lease 000609 suite 0201; full 12-month (or annual) reporting year."
+      }
+     ]
+    }
+   ]
   }
  ]
 }

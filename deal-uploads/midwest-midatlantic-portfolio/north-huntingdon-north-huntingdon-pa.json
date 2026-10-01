@@ -120,7 +120,12 @@
      "assumptionNote": "Four (4), five-year options remaining.",
      "salesPSF": 749.01,
      "salesYear": null,
-     "salesNotes": "OM-stated annual sales $77.6M / $749 PSF (OM p.3; period not stated - likely TTM 2025). Base rent = 1.4% of sales."
+     "salesNotes": "OM-stated annual sales $77.6M / $749 PSF (OM p.3; period not stated - likely TTM 2025). Base rent = 1.4% of sales. Gumberg sales report: CY2023 $76.4M ($738 PSF).",
+     "priorSalesPSF": 738.13,
+     "priorSalesYear": 2023,
+     "percentageRentRate": 1.0,
+     "percentageRentBreakpoint": 95179029.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Panera Cafe",
@@ -162,7 +167,15 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables."
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables.",
+     "salesPSF": 216.52,
+     "salesYear": 2024,
+     "priorSalesPSF": 209.95,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $1.3M / $217 PSF; CY2023 $1.3M / $210 PSF. Base rent = 9.7% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 3.0,
+     "percentageRentBreakpoint": 3819000.0,
+     "percentageRentBreakpointType": "fixed"
     },
     {
      "name": "Firepit",
@@ -182,7 +195,12 @@
      "isAnchor": false,
      "isNAP": false,
      "isDark": false,
-     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration.",
+     "salesPSF": 518.74,
+     "salesYear": 2023,
+     "priorSalesPSF": 512.75,
+     "priorSalesYear": 2022,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2023 $2.8M / $519 PSF; CY2022 $2.8M / $513 PSF. Base rent = 2.6% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
     },
     {
      "name": "Bob Evans",
@@ -467,7 +485,9 @@
     "Rent roll as-of: OM cash flow starts 1/1/2027; tenantsAsOf set to that date by convention.",
     "Address: OM p.33 property summary shows 8901 US-30; the portfolio map (p.2) shows 8931 US-30 - used the property-summary address.",
     "Target row on the rent roll is a NAP (non-owned) parcel contributing to CAM (agreement 1/1/2026 - 1/19/2055); carried as isNAP with 0 SF, so it does not affect GLA or occupancy.",
-    "Giant Eagle sales: OM states $77,553,436 / $749 PSF (p.3, p.33). North Huntingdon was not in the sales-report pages provided."
+    "Giant Eagle sales: OM states $77,553,436 / $749 PSF (p.3, p.33); the Gumberg report shows CY2023 $76,425,930 ($738/SF) and Jan-Sep 2024 running ~2.6% ahead of Jan-Sep 2023. Percentage-rent breakpoint $95,179,029 at 1% - not in overage.",
+    "Other sales (Gumberg report, bldg 523): Firepit $519/SF (CY2023, 2.6% rent-to-sales), Famous Footwear $217/SF (CY2024, 9.7%).",
+    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run; both files 'Pages 1-80' and 'Pages 81-138 from All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
    ],
    "notes": "**North Huntingdon Square** is a **134,974 SF, 100%-leased Giant Eagle-anchored center** on Route 30 (+25,000 VPD) directly adjacent to the PA Turnpike (I-76, +50,000 VPD) in Westmoreland County, with **$111,741 AHHI within 3 miles** and 4.5M annual visits. It is essentially a **Giant Eagle net-lease investment**: the 103,541 SF store pays **$1,054,047 (66% of base rent)** at $10.18/SF and does an exceptional **$77.55M ($749/SF) - a 1.4% rent-to-sales ratio**, with four 5-year options at $10.68-$12.18. Target (A) owns its own parcel next door (NAP, contributes to CAM) and Kohl's is a shadow anchor, so the center captures traffic it doesn't pay for. The balance is pads and small boxes - Panera, Famous Footwear, Bob Evans, Eat'n Park, Firepit, Valvoline, GetGo - most separately parcelled, giving a **pad spin-off option**. Year-1 NOI is **$1,499,083** with a 4.2-year WALT, and growth is minimal (JLL Yr1-6 NOI CAGR 1.4%). The one real risk is concentration: **72% of base rent expires in 2030** (Giant Eagle 11/2030, Firepit, GetGo), but with $749/SF sales and below-market fixed options the Giant Eagle renewal is about as safe as grocery income gets. Thesis: bond-like, grocer-dominated cash flow with pad-sale optionality. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
    "dealScore": {
@@ -527,7 +547,79 @@
     "tenants": "pp.38-39 rent roll; cross-checked to p.34 site-plan roster",
     "leaseRisk": "seller clause workbook (Exclusives, Co-Tenancy, Restrictions) - summary, unverified",
     "trafficCountVPD": "p.33 - investment highlights"
-   }
+   },
+   "tenantSalesHistory": [
+    {
+     "year": 2022,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Giant Eagle",
+       "annualSales": 74380478,
+       "sf": 103541,
+       "salesPSF": 718.37,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 523 lease 000195 suite 0001; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Firepit",
+       "annualSales": 2755013,
+       "sf": 5373,
+       "salesPSF": 512.75,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 523 lease 000198 suite 0004; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Famous Footwear",
+       "annualSales": 1313349,
+       "sf": 6030,
+       "salesPSF": 217.8,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 523 lease 000359 suite 0002A; full 12-month (or annual) reporting year."
+      }
+     ]
+    },
+    {
+     "year": 2023,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Giant Eagle",
+       "annualSales": 76426930,
+       "sf": 103541,
+       "salesPSF": 738.13,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 523 lease 000195 suite 0001; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Firepit",
+       "annualSales": 2787168,
+       "sf": 5373,
+       "salesPSF": 518.74,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 523 lease 000198 suite 0004; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Famous Footwear",
+       "annualSales": 1265982,
+       "sf": 6030,
+       "salesPSF": 209.95,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 523 lease 000359 suite 0002A; full 12-month (or annual) reporting year."
+      }
+     ]
+    },
+    {
+     "year": 2024,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Famous Footwear",
+       "annualSales": 1305590,
+       "sf": 6030,
+       "salesPSF": 216.52,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 523 lease 000359 suite 0002A; full 12-month (or annual) reporting year."
+      }
+     ]
+    }
+   ]
   }
  ]
 }
