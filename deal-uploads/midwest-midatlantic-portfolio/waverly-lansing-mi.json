@@ -1,0 +1,492 @@
+{
+ "deals": [
+  {
+   "propertyName": "Waverly Plaza",
+   "address": "820 S. Waverly Road",
+   "city": "Lansing",
+   "state": "MI",
+   "zip": "48917",
+   "market": "Lansing-East Lansing MSA",
+   "submarket": "Delta Charter Township (Waverly Road / St. Joe Hwy)",
+   "assetType": "Retail",
+   "centerType": "Power Center",
+   "omDate": null,
+   "broker": "JLL (Jones Lang LaSalle Americas, Inc.) - Midwest & Mid-Atlantic Grocery-Anchored Portfolio (9 properties)",
+   "fileName": "JLL - Midwest & Mid-Atlantic Grocery-Anchored Portfolio - OM.pdf",
+   "pdfPages": 99,
+   "totalSF": 219629,
+   "occupancy": 85.0,
+   "walt": 5.3,
+   "weightedAvgRentPSF": 7.15,
+   "yearBuilt": 1974,
+   "renovationYear": 2004,
+   "lotSizeAcres": 18.68,
+   "parkingRatio": 4.4,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 1165644,
+   "grossPotentialRent": 1335386,
+   "effectiveGrossIncome": 1500772,
+   "operatingExpenses": 335128,
+   "nnnRecoveries": 165386,
+   "currentAnnualTaxes": 91426,
+   "currentAssessedValue": 1486166,
+   "taxParcels": [
+    {
+     "parcelId": "040-024-200-042-00",
+     "label": null,
+     "assessedValue": 247900,
+     "annualTaxes": 15250,
+     "year": 2026
+    },
+    {
+     "parcelId": "040-024-200-041-00",
+     "label": null,
+     "assessedValue": 1238266,
+     "annualTaxes": 76176,
+     "year": 2026
+    }
+   ],
+   "trafficCountVPD": null,
+   "population3mi": 71478,
+   "avgHHIncome3mi": 73228,
+   "medianHHIncome3mi": null,
+   "proximityHighways": "S. Waverly Road at St. Joe Highway in Delta Township, close to I-496 (+50,000 VPD). Lansing Mall and GM Lansing Delta Township Assembly nearby.",
+   "retailCotenants": "Lansing Mall and the Saginaw Highway commercial spine in Delta Township; GM Lansing Delta Township Assembly (~3,000 jobs).",
+   "tenantsAsOf": "2027-01-01",
+   "tenantsSource": "om",
+   "tenants": [
+    {
+     "name": "Home Depot",
+     "suite": "1",
+     "sf": 113260,
+     "annualRent": 844920,
+     "rentPerSF": 7.46,
+     "leaseStart": "1997-02-01",
+     "leaseExpiry": "2033-01-31",
+     "remainingTermYears": 6.1,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: excluded; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$7.46/SF ($844,920/yr) in place; $8.21/SF ($929,865/yr) from Feb 2033 [Option 1 begins]; $9.03/SF ($1,022,738/yr) from Feb 2038 [Option 2 begins]. Lease expiry Jan 2033.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $8.21/SF, $9.03/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining. 5% cap on CAM controllables."
+    },
+    {
+     "name": "Ollie's Bargain Outlet",
+     "suite": "11",
+     "sf": 37000,
+     "annualRent": 222370,
+     "rentPerSF": 6.01,
+     "leaseStart": "2014-01-16",
+     "leaseExpiry": "2031-01-15",
+     "remainingTermYears": 4.0,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$6.01/SF ($222,370/yr) in place; $6.31/SF ($233,470/yr) from Jan 2031 [Option 1 begins]. Lease expiry Jan 2031.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $6.31/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining.",
+     "salesPSF": 129.28,
+     "salesYear": 2023,
+     "priorSalesPSF": 125.05,
+     "priorSalesYear": 2022,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2023 $4.8M / $129 PSF; CY2022 $4.6M / $125 PSF. Base rent = 4.6% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
+    },
+    {
+     "name": "Vacant",
+     "suite": "12",
+     "sf": 32811,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2029-01-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite is available for lease up."
+    },
+    {
+     "name": "Defy Extreme Air",
+     "suite": "13",
+     "sf": 33350,
+     "annualRent": 220110,
+     "rentPerSF": 6.6,
+     "leaseStart": "2021-05-01",
+     "leaseExpiry": "2031-04-30",
+     "remainingTermYears": 4.3,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $6.60/SF ($220,110/yr) through Apr 2031; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration."
+    },
+    {
+     "name": "Tim Horton's Restaurant",
+     "suite": "16",
+     "sf": 3080,
+     "annualRent": 47986,
+     "rentPerSF": 15.58,
+     "leaseStart": "1985-01-01",
+     "leaseExpiry": "2027-12-31",
+     "remainingTermYears": 1.0,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$15.58/SF ($47,986/yr) in place; $16.56/SF ($51,005/yr) from Jan 2028 [Option 1 begins]; $19.48/SF ($59,998/yr) from Jan 2033 [Option 2 begins]; $21.43/SF ($66,004/yr) from Jan 2038 [Option 3 begins]. Lease expiry Dec 2027.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "3 x 5-yr options remaining at $16.56/SF, $19.48/SF, $21.43/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Three (3), five-year options remaining."
+    },
+    {
+     "name": "Vacant",
+     "suite": "ATM",
+     "sf": 128,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place.",
+     "assumptionNote": "OM rent roll label: 'Static vacancy'. Assumed as static vacancy throughout the hold period."
+    }
+   ],
+   "leaseRisk": {
+    "source": "OM",
+    "coTenancyDisclosed": true,
+    "tenants": [
+     {
+      "tenant": "Home Depot",
+      "suite": "1",
+      "baseRentAnnual": 844920,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Except as disclosed on attached·Exhibit \"E,\" Landlord hereby covenants, warrants and represents to Tenant that Landlord has not leased or sold, and will not after the Effective Date and during the term hereof enter into any lease or sell, any space in the Shopping Center or within one mile of the perimeter of the Shopping Center to an occupant whose business is that of a home improvement center.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Home Depot U.S.A., Inc.'",
+        "verbatimQuote": "Except as disclosed on attached·Exhibit \"E,\" Landlord hereby covenants, warrants and represents to Tenant that Landlord has not leased or sold, and will not after the Effective Date and during the term hereof enter into any lease or sell, any space in the Shopping Center or within one mile of the perimeter of the Shopping Center to an occupant whose business is that of a home improvement center.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Ollie's Bargain Outlet",
+      "suite": "11",
+      "baseRentAnnual": 222370,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": {
+         "type": "named_anchor_dark",
+         "anchor": "Home Depot",
+         "note": "plus Ollie's sales must fall >=10% vs the same 6-month period a year earlier"
+        },
+        "remedy": {
+         "mechanism": "percent_rent_reduction",
+         "value": 40,
+         "cap": null,
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": 6,
+        "terminationNoticeDays": null,
+        "currentlyInEffect": false,
+        "currentStatusNote": "Not triggered - Home Depot open (to 1/31/2033, 2 options). Remedy: Fixed minimum rent reduced 40% until Home Depot (or replacement) reopens.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Ollie's Bargain Outlet Inc. / Ollie's Bargain Outlet'",
+        "verbatimQuote": "If (i) Home Depot, its successor or replacement ceases to operate a business in the Shopping Center for a continuous period of 6 months, and (ii) Tenant's sales from the Premises during said 6 month period decrease by 10% or more compared to the sales for the same 6 month period one year prior, then Tenant's fixed minimum rent will be reduced by 40% until such date that Home Depot, its successor or a replacement, is open for business.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ],
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Provided Tenant is not in uncured default of any term, provision or condition of this Lease, Landlord agrees that during the Initial or any Renewal term it shall not lease any space in the Shopping Center to Big Lots or Tuesday Morning. This restriction shall not apply with respect to any existing tenant whose lease may permit such premises to be used as a Big Lots or Tuesday Morning.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Ollie's Bargain Outlet Inc. / Ollie's Bargain Outlet'",
+        "verbatimQuote": "Provided Tenant is not in uncured default of any term, provision or condition of this Lease, Landlord agrees that during the Initial or any Renewal term it shall not lease any space in the Shopping Center to Big Lots or Tuesday Morning. This restriction shall not apply with respect to any existing tenant whose lease may permit such premises to be used as a Big Lots or Tuesday Morning.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Tim Horton's Restaurant",
+      "suite": "16",
+      "baseRentAnnual": 47986,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Lessor covenants and agrees, for itself, its successors and assigns, that it will not cause or permit to be operated within the Lessor's Larger Tract (excepting the Real Property) as depicted on the attached Exhibit B-1 any business or undertaking whose primary business is the sale of coffee and donuts.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Tim Donut U.S Limited, Inc. / Tim Hortons'",
+        "verbatimQuote": "Lessor covenants and agrees, for itself, its successors and assigns, that it will not cause or permit to be operated within the Lessor's Larger Tract (excepting the Real Property) as depicted on the attached Exhibit B-1 any business or undertaking whose primary business is the sale of coffee and donuts.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     }
+    ]
+   },
+   "anchorStatus": [
+    {
+     "anchor": "Home Depot",
+     "status": "in_place",
+     "termExpiration": "2033-01-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Ollie's Bargain Outlet",
+     "status": "in_place",
+     "termExpiration": "2031-01-15",
+     "relocating": false
+    },
+    {
+     "anchor": "Defy Extreme Air",
+     "status": "in_place",
+     "termExpiration": "2031-04-30",
+     "relocating": false
+    }
+   ],
+   "cashFlowProjection": [
+    {
+     "label": "Year 1 (Dec 2027) - JLL Year-1 / in-place basis",
+     "totalBaseRent": 1335386,
+     "reimbursements": 165386,
+     "egr": 1500772,
+     "operatingExpenses": 335128,
+     "noi": 1165644
+    },
+    {
+     "label": "Year 2 (Dec 2028)",
+     "totalBaseRent": 1338404,
+     "reimbursements": 170347,
+     "egr": 1508752,
+     "operatingExpenses": 344070,
+     "noi": 1164682
+    },
+    {
+     "label": "Year 3 (Dec 2029)",
+     "totalBaseRent": 1686496,
+     "reimbursements": 230967,
+     "egr": 1872338,
+     "operatingExpenses": 363942,
+     "noi": 1508396
+    },
+    {
+     "label": "Year 4 (Dec 2030)",
+     "totalBaseRent": 1686496,
+     "reimbursements": 237896,
+     "egr": 1879099,
+     "operatingExpenses": 373378,
+     "noi": 1505721
+    },
+    {
+     "label": "Year 5 (Dec 2031)",
+     "totalBaseRent": 1800647,
+     "reimbursements": 245033,
+     "egr": 1994506,
+     "operatingExpenses": 386350,
+     "noi": 1608156
+    },
+    {
+     "label": "Year 6 (Dec 2032)",
+     "totalBaseRent": 1852843,
+     "reimbursements": 252384,
+     "egr": 2051266,
+     "operatingExpenses": 397848,
+     "noi": 1653417
+    },
+    {
+     "label": "Year 7 (Dec 2033)",
+     "totalBaseRent": 1939703,
+     "reimbursements": 259955,
+     "egr": 2145514,
+     "operatingExpenses": 410765,
+     "noi": 1734749
+    },
+    {
+     "label": "Year 8 (Dec 2034)",
+     "totalBaseRent": 1981591,
+     "reimbursements": 267754,
+     "egr": 2193271,
+     "operatingExpenses": 422590,
+     "noi": 1770681
+    },
+    {
+     "label": "Year 9 (Dec 2035)",
+     "totalBaseRent": 1981591,
+     "reimbursements": 275787,
+     "egr": 2201109,
+     "operatingExpenses": 433529,
+     "noi": 1767580
+    },
+    {
+     "label": "Year 10 (Dec 2036)",
+     "totalBaseRent": 2028985,
+     "reimbursements": 284060,
+     "egr": 2254206,
+     "operatingExpenses": 446147,
+     "noi": 1808060
+    }
+   ],
+   "incomeBreakdown": {
+    "Potential Base Rent": 1663496,
+    "Absorption & Turnover Vacancy": -328110,
+    "Scheduled Base Rent": 1335386,
+    "Total Expense Recoveries": 165386,
+    "Potential Gross Revenue": 1500772,
+    "Vacancy Allowance": 0,
+    "Effective Gross Revenue": 1500772
+   },
+   "expenseBreakdown": {
+    "CAM": 139620,
+    "Insurance": 42353,
+    "Utilities": 6706,
+    "Real Estate Taxes": 91426,
+    "Management Fee": 45023,
+    "Non Reimbursable": 10000,
+    "Total Operating Expenses": 335128,
+    "Capital Reserves (below the line)": 43926,
+    "Year-2 TI + LC (below the line)": 0
+   },
+   "keyAssumptions": [
+    "Source: JLL Offering Memorandum 'Midwest & Mid-Atlantic Grocery-Anchored Portfolio' (99 pp., undated; cash flow 1/1/2027-12/31/2037). This property: overview PDF p.94, site plan p.95, trade area p.96, assumptions/opex p.97, RE taxes p.97, rent roll pp.98, cash flow p.99.",
+    "TIE-OUT (verified by script): roster SF 219,629 = OM GLA 219,629; occupied 186,690 SF + vacant 32,939 SF; occupancy 85.0%.",
+    "TIE-OUT: in-place base rent on the roster $1,335,386 vs OM rent-roll total $1,335,386; JLL Year-1 EGR $1,500,772 - OpEx $335,128 = NOI $1,165,644 (matches the portfolio summary, p.1).",
+    "TIE-OUT: 2 tax parcel(s) on the OM tax page sum to $91,426 vs the cash-flow RE tax line $91,426 (2026 assessment x millage grown 3%, net of 2% discount where shown).",
+    "WALT 5.3 yrs computed SF-weighted from lease expiries as of 1/1/2027 (OM states 5.3); weighted-avg base rent $7.15/SF over rent-paying occupied SF.",
+    "NO asking price or cap rate is disclosed (portfolio is marketed unpriced) - both left null.",
+    "JLL leasing assumptions: 75% renewal probability, 12 months downtime, $30/SF TI new / $0 renewal, 6%/3% LCs, 5% general vacancy (excluding credit/anchor tenants), 3% management fee, $0.20/SF reserves.",
+    "Lease-clause detail (co-tenancy, exclusives, termination/go-dark, ROFR) comes from the seller's summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' - a summary, NOT the executed leases; every clause is marked unverified.",
+    "Rent roll as-of: OM cash flow starts 1/1/2027; tenantsAsOf set to that date by convention.",
+    "Occupancy: 186,690 SF leased / 219,629 SF = 85.0%; includes a 128 SF 'static vacancy' ATM space JLL holds vacant all hold.",
+    "Ollie's sales from the Gumberg report (bldg 274): CY2023 $4,783,279 ($129/SF); CY2024 $4,577,343.",
+    "Defy Extreme Air's lease summary appears in the seller workbook under 'I Jump Lansing, LLC / Get Air Lansing' (a prior name for the trampoline operator) - mapping assumed; confirm.",
+    "The seller workbook also lists 'AF Licensee By, LLC' with a one-time termination option - that tenant is not on the current rent roll, so it was not mapped.",
+    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run, pages 1-80 of 'All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
+   ],
+   "notes": "**Waverly Plaza** is a **219,629 SF Home Depot-anchored center** at S. Waverly Road and St. Joe Highway in Delta Township (Lansing, MI), near I-496 (+50,000 VPD), with a 10-mile population of 315,267 but the **lowest 3-mile income in the portfolio ($73,228 AHHI)**. It is **85.0% leased** with **$1,165,644 of Year-1 NOI**. **Home Depot (113,260 SF at $7.46/SF) is 63% of base rent to 1/31/2033** with two options (to $9.03) and a 1-mile home-improvement exclusive; the rest is **Ollie's (37,000 SF, $6.01, $129/SF sales, one option)**, **Defy (trampoline park, 33,350 SF at $6.60, no options, 4/2031)** and a Tim Hortons pad that has been there since 1985. The value-add is the **32,811 SF vacant box (suite 12)**, which JLL leases from 1/2029 at $10.00/SF - that one box is most of JLL's 7.2% NOI CAGR. The key tax issue is Michigan-specific: **property taxes are only $91,426** because taxable value is capped, and **a sale 'uncaps' taxable value to 50% of market value** - a near-certain step-up that this OM does not model, and Home Depot's recovery code shows taxes EXCLUDED. Thesis: low-basis Home Depot income with one big lease-up, priced net of a post-sale tax reset. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
+   "dealScore": {
+    "grade": "B",
+    "rationale": "**Home Depot (63% of rent) to 2033** at a **$7.15/SF** average with a **32,811 SF box to lease**, offset by **85% occupancy**, the **portfolio's lowest 3-mile income ($73,228)** and a **Michigan tax uncapping on sale** the OM doesn't model.",
+    "strengths": [
+     "Home Depot to 1/31/2033 + two options; #1 Home Depot within 30 miles (1.2M center visits); 1-mile home-improvement exclusive.",
+     "Low rent basis ($7.15/SF average on occupied space).",
+     "I-496 / Lansing MSA location with 315,267 people within 10 miles; Lansing Mall and GM Delta Township Assembly nearby.",
+     "Ollie's sales steady ($4.6-4.8M, ~$129/SF) at 4.6% rent-to-sales.",
+     "Roster and rent ($1,335,386) tie exactly; occupancy and WALT match the OM."
+    ],
+    "risks": [
+     "15% vacancy: 32,811 SF box (suite 12) plus a 128 SF static ATM vacancy.",
+     "Michigan uncapping: taxable value resets toward 50% of market on transfer; current taxes only $91,426.",
+     "2031 rollover: Ollie's (1/2031, one option) and Defy (4/2031, no options) = 33% of base rent.",
+     "Lowest 3-mile AHHI in the portfolio ($73,228)."
+    ]
+   },
+   "upsideItems": [
+    {
+     "priority": "high",
+     "item": "Lease the 32,811 SF box (suite 12)",
+     "detail": "At JLL's $10.00/SF in-line market rent, ~$328k of base rent - ~28% on top of in-place NOI. JLL's Year-1 absorption deduction ($328,110) is exactly this box."
+    },
+    {
+     "priority": "low",
+     "item": "Tim Hortons pad",
+     "detail": "Tenant since 1985 with three options; a pad sale or renewal at the $16.56-$21.43 option rents."
+    }
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "MICHIGAN TAX UNCAPPING ON SALE - taxes are only $91,426 on 219,629 SF ($0.42/SF). In Michigan a transfer of ownership uncaps taxable value to the State Equalized Value (50% of true cash value), so the post-sale bill is likely to step up materially. JLL grows the current bill at 3%. Home Depot's reimbursement code shows RE taxes EXCLUDED - confirm whether Home Depot pays its own parcel's taxes directly before sizing the hit."
+    },
+    {
+     "severity": "medium",
+     "description": "VACANT BOX - 32,811 SF (14.9% of GLA) is vacant; JLL assumes a 1/2029 lease at $10.00/SF (no TI shown). Lease-up is most of JLL's 7.2% NOI growth."
+    },
+    {
+     "severity": "medium",
+     "description": "DEFY NO OPTIONS / 2031 ROLL - Defy Extreme Air (trampoline park, 33,350 SF, $220,110) expires 4/30/2031 with no options; Ollie's ($222,370) expires 1/15/2031 with one option - 33% of base rent in one year."
+    }
+   ],
+   "shadowAnchors": null,
+   "fieldCitations": {
+    "noi": "p.99 - Cash Flow Year 1; p.1 portfolio table",
+    "effectiveGrossIncome": "p.99 - Cash Flow Year 1 EGR",
+    "operatingExpenses": "p.99 - Cash Flow Year 1; detail p.97",
+    "totalSF": "p.95 site-plan roster total; p.98 rent-roll footer",
+    "occupancy": "computed from rent roll (pp.98)",
+    "walt": "computed from rent roll (pp.98)",
+    "grossPotentialRent": "computed - roster base-rent roll-up (pp.98)",
+    "weightedAvgRentPSF": "computed from rent roll (pp.98)",
+    "currentAnnualTaxes": "p.99 Cash Flow RE taxes; parcels p.97",
+    "population3mi": "p.96 - ESRI 3-mile ring",
+    "avgHHIncome3mi": "p.96 - ESRI 3-mile ring",
+    "yearBuilt": "p.94 - Property Summary",
+    "lotSizeAcres": "p.94 - Property Summary",
+    "tenants": "pp.98 rent roll; cross-checked to p.95 site-plan roster",
+    "leaseRisk": "seller clause workbook (Exclusives, Co-Tenancy, Restrictions) - summary, unverified"
+   },
+   "tenantSalesHistory": [
+    {
+     "year": 2022,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Ollie's Bargain Outlet",
+       "annualSales": 4626915,
+       "sf": 37000,
+       "salesPSF": 125.05,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 274 lease 000349 suite 0011; full 12-month (or annual) reporting year."
+      }
+     ]
+    },
+    {
+     "year": 2023,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "Ollie's Bargain Outlet",
+       "annualSales": 4783279,
+       "sf": 37000,
+       "salesPSF": 129.28,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 274 lease 000349 suite 0011; full 12-month (or annual) reporting year."
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

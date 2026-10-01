@@ -1,0 +1,533 @@
+{
+ "deals": [
+  {
+   "propertyName": "North Huntingdon Square",
+   "address": "8901 Route 30",
+   "city": "North Huntingdon",
+   "state": "PA",
+   "zip": "15642",
+   "market": "Pittsburgh MSA",
+   "submarket": "North Huntingdon Township (Route 30 / I-76)",
+   "assetType": "Retail",
+   "centerType": "Grocery-Anchored",
+   "omDate": null,
+   "broker": "JLL (Jones Lang LaSalle Americas, Inc.) - Midwest & Mid-Atlantic Grocery-Anchored Portfolio (9 properties)",
+   "fileName": "JLL - Midwest & Mid-Atlantic Grocery-Anchored Portfolio - OM.pdf",
+   "pdfPages": 99,
+   "totalSF": 134974,
+   "occupancy": 100.0,
+   "walt": 4.2,
+   "weightedAvgRentPSF": 11.76,
+   "yearBuilt": 1995,
+   "renovationYear": null,
+   "lotSizeAcres": 20.0,
+   "parkingRatio": 4.8,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 1499083,
+   "grossPotentialRent": 1586815,
+   "effectiveGrossIncome": 2054463,
+   "operatingExpenses": 555380,
+   "nnnRecoveries": 480102,
+   "currentAnnualTaxes": 264724,
+   "currentAssessedValue": 1824660,
+   "taxParcels": [
+    {
+     "parcelId": "5412000084",
+     "label": null,
+     "assessedValue": 88380,
+     "annualTaxes": 12822,
+     "year": 2026
+    },
+    {
+     "parcelId": "541200008760001",
+     "label": null,
+     "assessedValue": 158310,
+     "annualTaxes": 22968,
+     "year": 2026
+    },
+    {
+     "parcelId": "541200008760002",
+     "label": null,
+     "assessedValue": 53910,
+     "annualTaxes": 7821,
+     "year": 2026
+    },
+    {
+     "parcelId": "5412000088",
+     "label": null,
+     "assessedValue": 29480,
+     "annualTaxes": 4277,
+     "year": 2026
+    },
+    {
+     "parcelId": "5412000087",
+     "label": null,
+     "assessedValue": 1374160,
+     "annualTaxes": 199365,
+     "year": 2026
+    },
+    {
+     "parcelId": "5408000032",
+     "label": null,
+     "assessedValue": 2810,
+     "annualTaxes": 408,
+     "year": 2026
+    },
+    {
+     "parcelId": "5412000094",
+     "label": null,
+     "assessedValue": 2140,
+     "annualTaxes": 310,
+     "year": 2026
+    },
+    {
+     "parcelId": "5412000086",
+     "label": null,
+     "assessedValue": 115470,
+     "annualTaxes": 16753,
+     "year": 2026
+    }
+   ],
+   "trafficCountVPD": 25000,
+   "population3mi": 36119,
+   "avgHHIncome3mi": 111741,
+   "medianHHIncome3mi": null,
+   "proximityHighways": "Direct frontage on Route 30 / Lincoln Highway (+25,000 VPD); directly adjacent to I-76 / PA Turnpike (+50,000 VPD); four points of ingress/egress. ~20 miles SE of Pittsburgh.",
+   "retailCotenants": "Target and Kohl's adjacent; I-76 / Route 30 interchange.",
+   "tenantsAsOf": "2027-01-01",
+   "tenantsSource": "om",
+   "tenants": [
+    {
+     "name": "Giant Eagle",
+     "suite": "1",
+     "sf": 103541,
+     "annualRent": 1054047,
+     "rentPerSF": 10.18,
+     "leaseStart": "1995-09-17",
+     "leaseExpiry": "2030-11-30",
+     "remainingTermYears": 3.9,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$10.18/SF ($1,054,047/yr) in place; $10.68/SF ($1,105,818/yr) from Dec 2030 [Option 1 begins]; $11.18/SF ($1,157,588/yr) from Dec 2035 [Option 2 begins]; $11.68/SF ($1,209,359/yr) from Dec 2040 [Option 3 begins]; $12.18/SF ($1,261,129/yr) from Dec 2045 [Option 4 begins]. Lease expiry Nov 2030.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "4 x 5-yr options remaining at $10.68/SF, $11.18/SF, $11.68/SF, $12.18/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Four (4), five-year options remaining.",
+     "salesPSF": 749.01,
+     "salesYear": null,
+     "salesNotes": "OM-stated annual sales $77.6M / $749 PSF (OM p.3; period not stated - likely TTM 2025). Base rent = 1.4% of sales."
+    },
+    {
+     "name": "Panera Cafe",
+     "suite": "2",
+     "sf": 5250,
+     "annualRent": 99750,
+     "rentPerSF": 19.0,
+     "leaseStart": "2006-06-01",
+     "leaseExpiry": "2036-05-31",
+     "remainingTermYears": 9.4,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$19.00/SF ($99,750/yr) in place; $20.90/SF ($109,725/yr) from Jun 2031; $22.99/SF ($120,697/yr) from Jun 2036 [Option 1 begins]; $25.29/SF ($132,772/yr) from Jun 2041 [Option 2 begins]. Lease expiry May 2036.",
+     "rentBumps": "Contractual steps: Jun 2031 to $20.90/SF (+10.0%)",
+     "renewalOptions": "2 x 5-yr options remaining at $22.99/SF, $25.29/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining. 5% cap on CAM controllables."
+    },
+    {
+     "name": "Famous Footwear",
+     "suite": "02A",
+     "sf": 6030,
+     "annualRent": 126027,
+     "rentPerSF": 20.9,
+     "leaseStart": "2006-07-01",
+     "leaseExpiry": "2031-06-30",
+     "remainingTermYears": 4.5,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $20.90/SF ($126,027/yr) through Jun 2031; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables."
+    },
+    {
+     "name": "Firepit",
+     "suite": "4",
+     "sf": 5373,
+     "annualRent": 73664,
+     "rentPerSF": 13.71,
+     "leaseStart": "2015-11-17",
+     "leaseExpiry": "2030-11-30",
+     "remainingTermYears": 3.9,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $13.71/SF ($73,664/yr) through Nov 2030; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "Bob Evans",
+     "suite": "6",
+     "sf": 5300,
+     "annualRent": 63494,
+     "rentPerSF": 11.98,
+     "leaseStart": "1981-10-01",
+     "leaseExpiry": "2029-09-30",
+     "remainingTermYears": 2.7,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$11.98/SF ($63,494/yr) in place; $14.37/SF ($76,161/yr) from Oct 2029 [Option 1 begins]; $17.25/SF ($91,425/yr) from Oct 2034 [Option 2 begins]; $20.70/SF ($109,710/yr) from Oct 2039 [Option 3 begins]. Lease expiry Sep 2029.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "3 x 5-yr options remaining at $14.37/SF, $17.25/SF, $20.70/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Three (3), five-year options remaining."
+    },
+    {
+     "name": "Eat' N Park",
+     "suite": "9990",
+     "sf": 5895,
+     "annualRent": 100333,
+     "rentPerSF": 17.02,
+     "leaseStart": "1998-04-25",
+     "leaseExpiry": "2031-04-30",
+     "remainingTermYears": 4.3,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$17.02/SF ($100,333/yr) in place; $17.02/SF ($100,333/yr) from May 2031 [Option 1 begins]. Lease expiry Apr 2031.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $17.02/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining."
+    },
+    {
+     "name": "Get Go",
+     "suite": "9991",
+     "sf": 1895,
+     "annualRent": 20000,
+     "rentPerSF": 10.55,
+     "leaseStart": "1997-09-17",
+     "leaseExpiry": "2030-11-30",
+     "remainingTermYears": 3.9,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $10.55/SF ($20,000/yr) through Nov 2030; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "Valvoline Instant Oil Change",
+     "suite": "9992",
+     "sf": 1690,
+     "annualRent": 49500,
+     "rentPerSF": 29.29,
+     "leaseStart": "2020-05-18",
+     "leaseExpiry": "2036-05-17",
+     "remainingTermYears": 9.4,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$29.29/SF ($49,500/yr) in place; $32.22/SF ($54,452/yr) from May 2031; $35.45/SF ($59,911/yr) from May 2036 [Option 1 begins]; $39.00/SF ($65,910/yr) from May 2041 [Option 2 begins]; $42.90/SF ($72,501/yr) from May 2046 [Option 3 begins]. Lease expiry May 2036.",
+     "rentBumps": "Contractual steps: May 2031 to $32.22/SF (+10.0%)",
+     "renewalOptions": "3 x 5-yr options remaining at $35.45/SF, $39.00/SF, $42.90/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Three (3), five-year options remaining."
+    },
+    {
+     "name": "Target",
+     "suite": "NAP",
+     "sf": 0,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": "2026-01-01",
+     "leaseExpiry": "2055-01-19",
+     "remainingTermYears": null,
+     "leaseType": "NAP (owner-occupied parcel; CAM contribution only)",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "rentSchedule": "No base rent - non-owned (NAP) parcel that contributes to CAM only.",
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": true,
+     "isNAP": true,
+     "isDark": false,
+     "assumptionNote": "OM rent roll: Tenant is NAP but contributes to CAM. Agreement term 1/1/2026 - 1/19/2055."
+    }
+   ],
+   "leaseRisk": {
+    "source": "OM",
+    "coTenancyDisclosed": false,
+    "tenants": [
+     {
+      "tenant": "Giant Eagle",
+      "suite": "1",
+      "baseRentAnnual": 1054047,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "So long as Giant Eagle, Inc. or its assigns is operating as a food supermarket-or pharmacy, as the case may be, or has not ceased to operate as such for a period in excess of two hundred ten (210) consecutive days (in the event Tenant does not recommence operating as such within two hundred ten (210) consecutive days for reason of force majeure, then the two hundred ten (210) days may be extended up to, but not exceeding, an additional three hundred sixty-five (365) days, so long as Tenant continues to be unable to recommence operating as such for reason of force majeure), then (i) no other st",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Giant Eagle, Inc./ Giant Eagle'",
+        "verbatimQuote": "So long as Giant Eagle, Inc. or its assigns is operating as a food supermarket-or pharmacy, as the case may be, or has not ceased to operate as such for a period in excess of two hundred ten (210) consecutive days (in the event Tenant does not recommence operating as such within two hundred ten (210) consecutive days for reason of force majeure, then the two hundred ten (210) days may be extended up to, but not exceeding, an additional three hundred sixty-five (365) days, so long as Tenant continues to be unable to recommence operating as such for reason of force majeure), then (i) no other store within the Shopping Center shall be developed or used for a food supermarket or a pharmacy, as the case may be, (ii) no portion of Lots 1, 2, 5, 6 or 7 (as such are defined in the \"REA\", which REA is referred to in Section 2 of this Article XXXVII) shall be developed or used for a store or department for the sale of meat, produce, seafood, deli products, dairy products, baked goods and grocery items, except for incidental use of any premises in connection with the operation of a restaurant business and (iii) Lot 4 (as same is defined in the aforementioned REA) shall not be used for a store or department for the sale of meat, produce, seafood, deli products, dairy products, baked goods and grocery ~terns, except that. an area of Lot 4 not to exceed two thousand, eight hundred (2,800) square feet (including one-half (1/2) the aisle width adjacent to such area) may be used for the sale, display and storage . of non-perishable, non-frozen food and grocery products.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Famous Footwear",
+      "suite": "02A",
+      "baseRentAnnual": 126027,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord agrees that it will not lease space in the Shopping Center which is within Landlord's exclusive control in the area outlined in green on Exhibit A to another tenant whose primary business is the retail sale of shoes. It is understood that this exclusive does not apply to (i) tenants that exist in the Shopping Center as of the date of this Lease which are identified on Exhibit A, or their assignees or sublessees provided same have the right to use their premises as such without Landlord's consent to a change in use, (ii) any anchor tenant in excess of 25,000 square feet, provided, howe",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'BG Retail, LLC / Famous Footwear'",
+        "verbatimQuote": "Landlord agrees that it will not lease space in the Shopping Center which is within Landlord's exclusive control in the area outlined in green on Exhibit A to another tenant whose primary business is the retail sale of shoes. It is understood that this exclusive does not apply to (i) tenants that exist in the Shopping Center as of the date of this Lease which are identified on Exhibit A, or their assignees or sublessees provided same have the right to use their premises as such without Landlord's consent to a change in use, (ii) any anchor tenant in excess of 25,000 square feet, provided, however, Landlord shall not permit a 25,000 square foot Shoe Carnival, Rack Room, Shoe Department or Shoe Pavillion within any portion of the Shopping Center over which Landlord has exclusive control, unless any such store is permitted under an agreement entered into prior to the execution date of this Lease, (iii) tenants that sell shoes as a primary business for the operation of men's only footwear stores, women's only footwear stores or children's only footwear stores, or (iv) stores similar in nature to Payless Shoesource or Finish Line.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Valvoline Instant Oil Change",
+      "suite": "9992",
+      "baseRentAnnual": 49500,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Unless permitted pursuant to an already existing agreement, during the Term of this Lease, Lessor shall not permit the operation of a quick lube service center, or any similar business offering motor vehicle oil changes, on any property in which Lessor holds an ownership or leasehold interest that is located within a one-mile radius from the Premises.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Valvoline LLC / Valvoline Instant Oil Change'",
+        "verbatimQuote": "Unless permitted pursuant to an already existing agreement, during the Term of this Lease, Lessor shall not permit the operation of a quick lube service center, or any similar business offering motor vehicle oil changes, on any property in which Lessor holds an ownership or leasehold interest that is located within a one-mile radius from the Premises.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     }
+    ]
+   },
+   "anchorStatus": [
+    {
+     "anchor": "Giant Eagle",
+     "status": "in_place",
+     "termExpiration": "2030-11-30",
+     "relocating": false
+    },
+    {
+     "anchor": "Target",
+     "status": "NAP",
+     "termExpiration": "2055-01-19",
+     "relocating": false
+    },
+    {
+     "anchor": "Kohl's",
+     "status": "shadow",
+     "termExpiration": null,
+     "relocating": false
+    }
+   ],
+   "cashFlowProjection": [
+    {
+     "label": "Year 1 (Dec 2027) - JLL Year-1 / in-place basis",
+     "totalBaseRent": 1586815,
+     "reimbursements": 480102,
+     "egr": 2054463,
+     "operatingExpenses": 555380,
+     "noi": 1499083
+    },
+    {
+     "label": "Year 2 (Dec 2028)",
+     "totalBaseRent": 1586815,
+     "reimbursements": 494490,
+     "egr": 2068775,
+     "operatingExpenses": 570622,
+     "noi": 1498153
+    },
+    {
+     "label": "Year 3 (Dec 2029)",
+     "totalBaseRent": 1589982,
+     "reimbursements": 509313,
+     "egr": 2086686,
+     "operatingExpenses": 586416,
+     "noi": 1500270
+    },
+    {
+     "label": "Year 4 (Dec 2030)",
+     "totalBaseRent": 1604581,
+     "reimbursements": 524583,
+     "egr": 2116436,
+     "operatingExpenses": 603023,
+     "noi": 1513413
+    },
+    {
+     "label": "Year 5 (Dec 2031)",
+     "totalBaseRent": 1684543,
+     "reimbursements": 540299,
+     "egr": 2211432,
+     "operatingExpenses": 622059,
+     "noi": 1589373
+    },
+    {
+     "label": "Year 6 (Dec 2032)",
+     "totalBaseRent": 1703888,
+     "reimbursements": 556487,
+     "egr": 2246795,
+     "operatingExpenses": 639791,
+     "noi": 1607004
+    },
+    {
+     "label": "Year 7 (Dec 2033)",
+     "totalBaseRent": 1703888,
+     "reimbursements": 573181,
+     "egr": 2263401,
+     "operatingExpenses": 657461,
+     "noi": 1605940
+    },
+    {
+     "label": "Year 8 (Dec 2034)",
+     "totalBaseRent": 1707704,
+     "reimbursements": 590381,
+     "egr": 2284326,
+     "operatingExpenses": 675776,
+     "noi": 1608550
+    },
+    {
+     "label": "Year 9 (Dec 2035)",
+     "totalBaseRent": 1724142,
+     "reimbursements": 608100,
+     "egr": 2318357,
+     "operatingExpenses": 695014,
+     "noi": 1623343
+    },
+    {
+     "label": "Year 10 (Dec 2036)",
+     "totalBaseRent": 1803326,
+     "reimbursements": 627066,
+     "egr": 2415703,
+     "operatingExpenses": 716698,
+     "noi": 1699005
+    }
+   ],
+   "incomeBreakdown": {
+    "Potential Base Rent": 1586815,
+    "Scheduled Base Rent": 1586815,
+    "Total Expense Recoveries": 480102,
+    "Potential Gross Revenue": 2066917,
+    "Vacancy Allowance": -12454,
+    "Effective Gross Revenue": 2054463
+   },
+   "expenseBreakdown": {
+    "CAM": 165320,
+    "Insurance": 38781,
+    "Utilities": 14922,
+    "Real Estate Taxes": 264724,
+    "Management Fee": 61634,
+    "Non Reimbursable": 10000,
+    "Total Operating Expenses": 555380,
+    "Capital Reserves (below the line)": 26995
+   },
+   "keyAssumptions": [
+    "Source: JLL Offering Memorandum 'Midwest & Mid-Atlantic Grocery-Anchored Portfolio' (99 pp., undated; cash flow 1/1/2027-12/31/2037). This property: overview PDF p.33, site plan p.34, trade area p.35, assumptions/opex p.36, RE taxes p.37, rent roll pp.38-39, cash flow p.40.",
+    "TIE-OUT (verified by script): roster SF 134,974 = OM GLA 134,974; occupied 134,974 SF + vacant 0 SF; occupancy 100.0%.",
+    "TIE-OUT: in-place base rent on the roster $1,586,815 vs OM rent-roll total $1,586,815; JLL Year-1 EGR $2,054,463 - OpEx $555,380 = NOI $1,499,083 (matches the portfolio summary, p.1).",
+    "TIE-OUT: 8 tax parcel(s) on the OM tax page sum to $264,724 vs the cash-flow RE tax line $264,724 (2026 assessment x millage grown 3%, net of 2% discount where shown).",
+    "WALT 4.2 yrs computed SF-weighted from lease expiries as of 1/1/2027 (OM states 4.2); weighted-avg base rent $11.76/SF over rent-paying occupied SF.",
+    "NO asking price or cap rate is disclosed (portfolio is marketed unpriced) - both left null.",
+    "JLL leasing assumptions: 75% renewal probability, 12 months downtime, $30/SF TI new / $0 renewal, 6%/3% LCs, 5% general vacancy (excluding credit/anchor tenants), 3% management fee, $0.20/SF reserves.",
+    "Lease-clause detail (co-tenancy, exclusives, termination/go-dark, ROFR) comes from the seller's summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' - a summary, NOT the executed leases; every clause is marked unverified.",
+    "Rent roll as-of: OM cash flow starts 1/1/2027; tenantsAsOf set to that date by convention.",
+    "Address: OM p.33 property summary shows 8901 US-30; the portfolio map (p.2) shows 8931 US-30 - used the property-summary address.",
+    "Target row on the rent roll is a NAP (non-owned) parcel contributing to CAM (agreement 1/1/2026 - 1/19/2055); carried as isNAP with 0 SF, so it does not affect GLA or occupancy.",
+    "Giant Eagle sales: OM states $77,553,436 / $749 PSF (p.3, p.33). North Huntingdon was not in the sales-report pages provided."
+   ],
+   "notes": "**North Huntingdon Square** is a **134,974 SF, 100%-leased Giant Eagle-anchored center** on Route 30 (+25,000 VPD) directly adjacent to the PA Turnpike (I-76, +50,000 VPD) in Westmoreland County, with **$111,741 AHHI within 3 miles** and 4.5M annual visits. It is essentially a **Giant Eagle net-lease investment**: the 103,541 SF store pays **$1,054,047 (66% of base rent)** at $10.18/SF and does an exceptional **$77.55M ($749/SF) - a 1.4% rent-to-sales ratio**, with four 5-year options at $10.68-$12.18. Target (A) owns its own parcel next door (NAP, contributes to CAM) and Kohl's is a shadow anchor, so the center captures traffic it doesn't pay for. The balance is pads and small boxes - Panera, Famous Footwear, Bob Evans, Eat'n Park, Firepit, Valvoline, GetGo - most separately parcelled, giving a **pad spin-off option**. Year-1 NOI is **$1,499,083** with a 4.2-year WALT, and growth is minimal (JLL Yr1-6 NOI CAGR 1.4%). The one real risk is concentration: **72% of base rent expires in 2030** (Giant Eagle 11/2030, Firepit, GetGo), but with $749/SF sales and below-market fixed options the Giant Eagle renewal is about as safe as grocery income gets. Thesis: bond-like, grocer-dominated cash flow with pad-sale optionality. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
+   "dealScore": {
+    "grade": "B+",
+    "rationale": "A **100%-leased Giant Eagle doing $77.55M ($749/SF, 1.4% rent-to-sales)** with Target/Kohl's shadow traffic - bond-like income whose only real risk is **72% of base rent expiring in 2030** behind a near-certain Giant Eagle renewal.",
+    "strengths": [
+     "Giant Eagle sales of $77,553,436 ($749/SF) at 1.4% rent-to-sales - one of the healthiest grocer ratios in the database; four fixed options to 2050.",
+     "100% leased; Target (S&P A, NAP parcel, contributes to CAM) and Kohl's shadow-anchor the site.",
+     "I-76 / Route 30 adjacency with four points of ingress/egress; $111,741 AHHI within 3 miles.",
+     "Separately parcelled pads (Bob Evans, Eat'n Park, Valvoline, Panera) support a pad-sale program.",
+     "Clean tie-out: roster 134,974 SF = GLA; base $1,586,815 = roll; 8 tax parcels sum to the $264,724 tax line."
+    ],
+    "risks": [
+     "Giant Eagle = 66% of base rent; 72% of base rent expires in 2030 (Giant Eagle 11/2030, Firepit, GetGo).",
+     "Flat growth: JLL Yr1-6 NOI CAGR 1.4%; Giant Eagle's option bumps are ~5% per 5 years.",
+     "Famous Footwear (8% of base rent) and Firepit have no options; Eat'n Park's only option is flat at $17.02.",
+     "No co-tenancy/clause detail for Giant Eagle beyond its go-dark recapture right; no sales for the in-line/pad tenants."
+    ]
+   },
+   "upsideItems": [
+    {
+     "priority": "medium",
+     "item": "Pad spin-off",
+     "detail": "Bob Evans (S&P B+, 2.7 yrs), Valvoline (9.4 yrs), Eat'n Park and Panera sit on separate tax parcels; selling 2-3 pads at STNL cap rates could return a meaningful slice of basis (OM p.33 calls this out)."
+    },
+    {
+     "priority": "low",
+     "item": "Famous Footwear / Firepit mark-to-market",
+     "detail": "Both have no options (6/2031 and 11/2030); JLL in-line market rent is $22.00/SF vs $20.90 and $13.71 in place - Firepit is the real gap (~$45k)."
+    }
+   ],
+   "redFlags": [
+    {
+     "severity": "medium",
+     "description": "SINGLE-TENANT CONCENTRATION - Giant Eagle is 103,541 SF (76.7% of GLA) and $1,054,047 (66%) of base rent, expiring 11/30/2030. Its sales ($749/SF) make renewal very likely, but this is credit/renewal concentration that should be priced like a net-lease grocer."
+    },
+    {
+     "severity": "low",
+     "description": "2030-31 ROLLOVER - Giant Eagle, Firepit and GetGo (11/2030) plus Famous Footwear and Eat'n Park (2031) = 86% of base rent inside ~5 years; Famous Footwear and Firepit have no options."
+    }
+   ],
+   "shadowAnchors": "Target (127,000+ SF, owner-occupied NAP parcel that contributes to CAM; ~1.2M visits L12M, S&P A) and Kohl's (shadow anchor, ~572,600 visits L12M).",
+   "fieldCitations": {
+    "noi": "p.40 - Cash Flow Year 1; p.1 portfolio table",
+    "effectiveGrossIncome": "p.40 - Cash Flow Year 1 EGR",
+    "operatingExpenses": "p.40 - Cash Flow Year 1; detail p.36",
+    "totalSF": "p.34 site-plan roster total; p.39 rent-roll footer",
+    "occupancy": "computed from rent roll (pp.38-39)",
+    "walt": "computed from rent roll (pp.38-39)",
+    "grossPotentialRent": "computed - roster base-rent roll-up (pp.38-39)",
+    "weightedAvgRentPSF": "computed from rent roll (pp.38-39)",
+    "currentAnnualTaxes": "p.40 Cash Flow RE taxes; parcels p.37",
+    "population3mi": "p.35 - ESRI 3-mile ring",
+    "avgHHIncome3mi": "p.35 - ESRI 3-mile ring",
+    "yearBuilt": "p.33 - Property Summary",
+    "lotSizeAcres": "p.33 - Property Summary",
+    "tenants": "pp.38-39 rent roll; cross-checked to p.34 site-plan roster",
+    "leaseRisk": "seller clause workbook (Exclusives, Co-Tenancy, Restrictions) - summary, unverified",
+    "trafficCountVPD": "p.33 - investment highlights"
+   }
+  }
+ ]
+}

@@ -1,0 +1,372 @@
+{
+ "deals": [
+  {
+   "propertyName": "West Towne Center",
+   "address": "6300 Glenway Avenue",
+   "city": "Cincinnati",
+   "state": "OH",
+   "zip": "45211",
+   "market": "Cincinnati MSA",
+   "submarket": "Western Hills / Glenway Avenue",
+   "assetType": "Retail",
+   "centerType": "Power Center",
+   "omDate": null,
+   "broker": "JLL (Jones Lang LaSalle Americas, Inc.) - Midwest & Mid-Atlantic Grocery-Anchored Portfolio (9 properties)",
+   "fileName": "JLL - Midwest & Mid-Atlantic Grocery-Anchored Portfolio - OM.pdf",
+   "pdfPages": 99,
+   "totalSF": 152180,
+   "occupancy": 88.5,
+   "walt": 6.5,
+   "weightedAvgRentPSF": 7.16,
+   "yearBuilt": 1967,
+   "renovationYear": null,
+   "lotSizeAcres": 27.0,
+   "parkingRatio": 4.3,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 805149,
+   "grossPotentialRent": 964380,
+   "effectiveGrossIncome": 1317163,
+   "operatingExpenses": 512013,
+   "nnnRecoveries": 352783,
+   "currentAnnualTaxes": 261065,
+   "currentAssessedValue": 3501750,
+   "taxParcels": [
+    {
+     "parcelId": "212-0063-0153-00",
+     "label": null,
+     "assessedValue": 1097770,
+     "annualTaxes": 93669,
+     "year": 2026
+    },
+    {
+     "parcelId": "550-0132-0004-00",
+     "label": null,
+     "assessedValue": 2403980,
+     "annualTaxes": 167397,
+     "year": 2026
+    }
+   ],
+   "trafficCountVPD": null,
+   "population3mi": 96162,
+   "avgHHIncome3mi": 91202,
+   "medianHHIncome3mi": null,
+   "proximityHighways": "Glenway Avenue retail corridor in the Western Hills submarket, 6.4 miles from downtown Cincinnati (OM does not state a traffic count).",
+   "retailCotenants": "Glenway Avenue / Western Hills retail corridor; Dillard's on an adjacent NAP parcel.",
+   "tenantsAsOf": "2027-01-01",
+   "tenantsSource": "om",
+   "tenants": [
+    {
+     "name": "Home Depot",
+     "suite": "1",
+     "sf": 112000,
+     "annualRent": 775040,
+     "rentPerSF": 6.92,
+     "leaseStart": "1997-11-11",
+     "leaseExpiry": "2034-01-31",
+     "remainingTermYears": 7.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$6.92/SF ($775,040/yr) in place; $7.81/SF ($874,720/yr) from Feb 2034 [Option 1 begins]. Lease expiry Jan 2034.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $7.81/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining."
+    },
+    {
+     "name": "Fisher Auto Parts",
+     "suite": "19A",
+     "sf": 16684,
+     "annualRent": 116788,
+     "rentPerSF": 7.0,
+     "leaseStart": "2025-09-01",
+     "leaseExpiry": "2030-08-31",
+     "remainingTermYears": 3.7,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$7.00/SF ($116,788/yr) in place; $7.70/SF ($128,467/yr) from Sep 2030 [Option 1 begins]; $8.47/SF ($141,313/yr) from Sep 2035 [Option 2 begins]. Lease expiry Aug 2030.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $7.70/SF, $8.47/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining."
+    },
+    {
+     "name": "Vacant",
+     "suite": "19B",
+     "sf": 17500,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2028-07-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite is available for lease up."
+    },
+    {
+     "name": "Dillard's (parcel)",
+     "suite": "9991",
+     "sf": 0,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": "1998-09-11",
+     "leaseExpiry": "2048-09-10",
+     "remainingTermYears": null,
+     "leaseType": "NAP (owner-occupied parcel; CAM contribution only)",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "rentSchedule": "No base rent - non-owned (NAP) parcel that contributes to CAM only.",
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": true,
+     "isNAP": true,
+     "isDark": false,
+     "assumptionNote": "OM rent roll: Tenant is NAP but contributes to CAM. Agreement term 9/11/1998 - 9/10/2048."
+    },
+    {
+     "name": "Bob Evans",
+     "suite": "9992",
+     "sf": 5996,
+     "annualRent": 72552,
+     "rentPerSF": 12.1,
+     "leaseStart": "1998-06-04",
+     "leaseExpiry": "2028-12-31",
+     "remainingTermYears": 2.0,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$12.10/SF ($72,552/yr) in place; $13.32/SF ($79,867/yr) from Jan 2029 [Option 1 begins]; $14.65/SF ($87,841/yr) from Jan 2034 [Option 2 begins]. Lease expiry Dec 2028.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $13.32/SF, $14.65/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining."
+    }
+   ],
+   "leaseRisk": {
+    "source": "OM",
+    "coTenancyDisclosed": false,
+    "tenants": [
+     {
+      "tenant": "Home Depot",
+      "suite": "1",
+      "baseRentAnnual": 775040,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord hereby covenants, warrants and represents to Tenant that Landlord has not leased or sold and will not during the term hereof lease or sell any space within the Shopping Center or within one mile of the perimeter of the Shopping Center to an occupant whose business is that of a home improvement center. Landlord has not leased and during the term hereof will not lease any space within the Shopping Center or within one mile of the perimeter of the Shopping Center to, or allow the use of any such space by, anyone whose principal business is the sale of (a) paint; (b) wallpaper and/or othe",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Home Depot U.S.A., Inc'",
+        "verbatimQuote": "Landlord hereby covenants, warrants and represents to Tenant that Landlord has not leased or sold and will not during the term hereof lease or sell any space within the Shopping Center or within one mile of the perimeter of the Shopping Center to an occupant whose business is that of a home improvement center. Landlord has not leased and during the term hereof will not lease any space within the Shopping Center or within one mile of the perimeter of the Shopping Center to, or allow the use of any such space by, anyone whose principal business is the sale of (a) paint; (b) wallpaper and/or other wall covering; (c) carpeting; (d) floor coverings; (e) cabinets; (f) lighting fixtures; (g) plumbing fixtures; (h) plumbing supplies; (i) Christmas trees; U) lumber; (k) hardware items; (1) siding; (m) gardening supplies; (n) nursery products; (o) garden and patio furniture; (p) pool supplies; (q) electrical supplies; (r) tile (including ceramic tile); (s) ceiling fans; or (t) artificial and/or natural plants. Landlord shall not, during the Term of this Lease and during any extensions thereof, grant any exclusives to any tenant or other party occupying space in the Shopping Center which will apply to the Premises.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     }
+    ]
+   },
+   "anchorStatus": [
+    {
+     "anchor": "Home Depot",
+     "status": "in_place",
+     "termExpiration": "2034-01-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Dillard's (parcel)",
+     "status": "NAP",
+     "termExpiration": "2048-09-10",
+     "relocating": false
+    }
+   ],
+   "cashFlowProjection": [
+    {
+     "label": "Year 1 (Dec 2027) - JLL Year-1 / in-place basis",
+     "totalBaseRent": 964380,
+     "reimbursements": 352783,
+     "egr": 1317163,
+     "operatingExpenses": 512013,
+     "noi": 805149
+    },
+    {
+     "label": "Year 2 (Dec 2028)",
+     "totalBaseRent": 1045492,
+     "reimbursements": 390753,
+     "egr": 1427876,
+     "operatingExpenses": 529510,
+     "noi": 898366
+    },
+    {
+     "label": "Year 3 (Dec 2029)",
+     "totalBaseRent": 1133920,
+     "reimbursements": 430699,
+     "egr": 1547796,
+     "operatingExpenses": 547708,
+     "noi": 1000089
+    },
+    {
+     "label": "Year 4 (Dec 2030)",
+     "totalBaseRent": 1137813,
+     "reimbursements": 443127,
+     "egr": 1563836,
+     "operatingExpenses": 563227,
+     "noi": 1000609
+    },
+    {
+     "label": "Year 5 (Dec 2031)",
+     "totalBaseRent": 1145599,
+     "reimbursements": 455928,
+     "egr": 1583945,
+     "operatingExpenses": 579320,
+     "noi": 1004625
+    },
+    {
+     "label": "Year 6 (Dec 2032)",
+     "totalBaseRent": 1145599,
+     "reimbursements": 469112,
+     "egr": 1597038,
+     "operatingExpenses": 595667,
+     "noi": 1001372
+    },
+    {
+     "label": "Year 7 (Dec 2033)",
+     "totalBaseRent": 1153710,
+     "reimbursements": 482693,
+     "egr": 1618230,
+     "operatingExpenses": 612735,
+     "noi": 1005495
+    },
+    {
+     "label": "Year 8 (Dec 2034)",
+     "totalBaseRent": 1261169,
+     "reimbursements": 496680,
+     "egr": 1739175,
+     "operatingExpenses": 633289,
+     "noi": 1105886
+    },
+    {
+     "label": "Year 9 (Dec 2035)",
+     "totalBaseRent": 1273758,
+     "reimbursements": 511088,
+     "egr": 1765857,
+     "operatingExpenses": 651523,
+     "noi": 1114334
+    },
+    {
+     "label": "Year 10 (Dec 2036)",
+     "totalBaseRent": 1282322,
+     "reimbursements": 525927,
+     "egr": 1788730,
+     "operatingExpenses": 670165,
+     "noi": 1118564
+    }
+   ],
+   "incomeBreakdown": {
+    "Potential Base Rent": 1121880,
+    "Absorption & Turnover Vacancy": -157500,
+    "Scheduled Base Rent": 964380,
+    "Total Expense Recoveries": 352783,
+    "Potential Gross Revenue": 1317163,
+    "Vacancy Allowance": 0,
+    "Effective Gross Revenue": 1317163
+   },
+   "expenseBreakdown": {
+    "CAM": 137310,
+    "Insurance": 35294,
+    "Utilities": 28828,
+    "Real Estate Taxes": 261065,
+    "Management Fee": 39515,
+    "Non Reimbursable": 10000,
+    "Total Operating Expenses": 512013,
+    "Capital Reserves (below the line)": 30436,
+    "Year-2 TI + LC (below the line)": 627202
+   },
+   "keyAssumptions": [
+    "Source: JLL Offering Memorandum 'Midwest & Mid-Atlantic Grocery-Anchored Portfolio' (99 pp., undated; cash flow 1/1/2027-12/31/2037). This property: overview PDF p.87, site plan p.88, trade area p.89, assumptions/opex p.90, RE taxes p.90, rent roll pp.91, cash flow p.92.",
+    "TIE-OUT (verified by script): roster SF 152,180 = OM GLA 152,180; occupied 134,680 SF + vacant 17,500 SF; occupancy 88.5%.",
+    "TIE-OUT: in-place base rent on the roster $964,380 vs OM rent-roll total $964,380; JLL Year-1 EGR $1,317,163 - OpEx $512,013 = NOI $805,149 (matches the portfolio summary, p.1).",
+    "TIE-OUT: 2 tax parcel(s) on the OM tax page sum to $261,066 vs the cash-flow RE tax line $261,065 (2026 assessment x millage grown 3%, net of 2% discount where shown).",
+    "WALT 6.5 yrs computed SF-weighted from lease expiries as of 1/1/2027 (OM states 6.4); weighted-avg base rent $7.16/SF over rent-paying occupied SF.",
+    "NO asking price or cap rate is disclosed (portfolio is marketed unpriced) - both left null.",
+    "JLL leasing assumptions: 75% renewal probability, 12 months downtime, $30/SF TI new / $0 renewal, 6%/3% LCs, 5% general vacancy (excluding credit/anchor tenants), 3% management fee, $0.20/SF reserves.",
+    "Lease-clause detail (co-tenancy, exclusives, termination/go-dark, ROFR) comes from the seller's summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' - a summary, NOT the executed leases; every clause is marked unverified.",
+    "Rent roll as-of: OM cash flow starts 1/1/2027; tenantsAsOf set to that date by convention.",
+    "Occupancy: 134,680 SF leased / 152,180 SF = 88.5% (OM 89%). Dillard's parcel is NAP (0 SF) and excluded from GLA.",
+    "Demographics table on OM p.89 is unlabeled; values read in the 3/5/10-mile order used on every other property page (3-mi: 96,162 pop, $91,202 AHHI).",
+    "OM spells the name both 'West Towne Center' and 'West Towne Centre'.",
+    "No tenant sales were provided for West Towne (the sales report pages only show a prior tenant of suite 19B).",
+    "No tenant sales for this property were in the sales-report pages provided (pages 1-80 of 'All Property Sales.pdf')."
+   ],
+   "notes": "**West Towne Center** is a **152,180 SF Home Depot-anchored center** on the Glenway Avenue corridor in Cincinnati's infill Western Hills submarket, 6.4 miles from downtown, with **96,162 people and $91,202 AHHI within 3 miles** (683,343 within 10). It is **88.5% leased** with **$805,149 of Year-1 NOI**, and is functionally a **Home Depot net-lease investment: Home Depot (S&P A) occupies 112,000 SF at $6.92/SF, $775,040 = 80% of base rent, to 1/31/2034** with one option at $7.81 and a 1-mile home-improvement exclusive. The balance is Fisher Auto Parts (16,684 SF, new 9/2025 lease at $7.00), a Bob Evans pad (12/2028, two options) and a Dillard's NAP parcel that contributes to CAM. The value-add is **the 17,500 SF vacant box (19B)** - formerly Cincinnati Open Box Outlet - which JLL leases from 7/2028 at $9.25/SF after $525k of TI. Real estate taxes are heavy (**$261,065, 32% of NOI**) and Ohio school boards routinely challenge values after a sale. Thesis: long-dated A-credit Home Depot income at a low rent basis, with modest box lease-up upside. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
+   "dealScore": {
+    "grade": "B",
+    "rationale": "**Home Depot (S&P A) = 80% of income to 1/2034** at a **$6.92/SF** basis in an infill Cincinnati trade area, with a **17,500 SF vacant box** to lease and **taxes at 32% of NOI**.",
+    "strengths": [
+     "Home Depot (S&P A) to 1/31/2034 + option; 29-year tenure at the site; 1-mile home-improvement exclusive.",
+     "Infill trade area: 96,162 people within 3 miles, 683,343 within 10.",
+     "Low rent basis ($7.16/SF average) - replaceable if ever needed.",
+     "Fisher Auto Parts newly signed (9/2025) with two options.",
+     "Roster and rent ($964,380) tie exactly; WALT 6.5 yrs (OM 6.4)."
+    ],
+    "risks": [
+     "Single-tenant concentration: Home Depot = 80% of base rent and 73.6% of GLA.",
+     "17,500 SF vacant (11.5%); JLL lease-up at 7/2028 with $525,000 TI.",
+     "RE taxes $261,065 = 32% of NOI; Ohio sale-price-based value challenges.",
+     "No sales or clause detail beyond Home Depot's exclusive/use restrictions; Bob Evans expires 12/2028."
+    ]
+   },
+   "upsideItems": [
+    {
+     "priority": "medium",
+     "item": "Lease the 17,500 SF box",
+     "detail": "At JLL's $9.25/SF anchor market rent, ~$162k of base rent - ~20% on top of in-place NOI - after ~$525k of TI and ~$102k of LC."
+    },
+    {
+     "priority": "low",
+     "item": "Bob Evans pad",
+     "detail": "Bob Evans (S&P B+) pad on its own parcel; renew at its $13.32 option or sell the pad."
+    }
+   ],
+   "redFlags": [
+    {
+     "severity": "medium",
+     "description": "ANCHOR CONCENTRATION - Home Depot is 112,000 SF and $775,040 (80%) of base rent, expiring 1/31/2034 with a single 5-yr option ($7.81/SF). Value is essentially a net-lease Home Depot plus a vacant box."
+    },
+    {
+     "severity": "medium",
+     "description": "VACANT BOX - 17,500 SF (suite 19B, formerly Cincinnati Open Box Outlet, whose sales fell from $1.15M in 2021 to $178k in 2023) is vacant; JLL assumes a 7/2028 lease at $9.25/SF with $525,000 TI in Year 2."
+    }
+   ],
+   "shadowAnchors": "Dillard's (owner-occupied NAP parcel, contributes to CAM via a fixed contribution; agreement 9/11/1998 - 9/10/2048).",
+   "fieldCitations": {
+    "noi": "p.92 - Cash Flow Year 1; p.1 portfolio table",
+    "effectiveGrossIncome": "p.92 - Cash Flow Year 1 EGR",
+    "operatingExpenses": "p.92 - Cash Flow Year 1; detail p.90",
+    "totalSF": "p.88 site-plan roster total; p.91 rent-roll footer",
+    "occupancy": "computed from rent roll (pp.91)",
+    "walt": "computed from rent roll (pp.91)",
+    "grossPotentialRent": "computed - roster base-rent roll-up (pp.91)",
+    "weightedAvgRentPSF": "computed from rent roll (pp.91)",
+    "currentAnnualTaxes": "p.92 Cash Flow RE taxes; parcels p.90",
+    "population3mi": "p.89 - ESRI 3-mile ring",
+    "avgHHIncome3mi": "p.89 - ESRI 3-mile ring",
+    "yearBuilt": "p.87 - Property Summary",
+    "lotSizeAcres": "p.87 - Property Summary",
+    "tenants": "pp.91 rent roll; cross-checked to p.88 site-plan roster",
+    "leaseRisk": "seller clause workbook (Exclusives, Co-Tenancy, Restrictions) - summary, unverified"
+   }
+  }
+ ]
+}

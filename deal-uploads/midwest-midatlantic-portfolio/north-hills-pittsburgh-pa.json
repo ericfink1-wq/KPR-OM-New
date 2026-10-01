@@ -1,0 +1,1002 @@
+{
+ "deals": [
+  {
+   "propertyName": "North Hills Village",
+   "address": "4801 McKnight Road",
+   "city": "Pittsburgh",
+   "state": "PA",
+   "zip": "15237",
+   "market": "Pittsburgh MSA",
+   "submarket": "Ross Township / McKnight Road corridor",
+   "assetType": "Retail",
+   "centerType": "Power Center",
+   "omDate": null,
+   "broker": "JLL (Jones Lang LaSalle Americas, Inc.) - Midwest & Mid-Atlantic Grocery-Anchored Portfolio (9 properties)",
+   "fileName": "JLL - Midwest & Mid-Atlantic Grocery-Anchored Portfolio - OM.pdf",
+   "pdfPages": 99,
+   "totalSF": 548500,
+   "occupancy": 99.9,
+   "walt": 7.6,
+   "weightedAvgRentPSF": 10.96,
+   "yearBuilt": 1956,
+   "renovationYear": 1998,
+   "lotSizeAcres": 52.53,
+   "parkingRatio": 4.4,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 5506396,
+   "grossPotentialRent": 6006678,
+   "effectiveGrossIncome": 7337085,
+   "operatingExpenses": 1830689,
+   "nnnRecoveries": 1333862,
+   "currentAnnualTaxes": 904796,
+   "currentAssessedValue": 29389200,
+   "taxParcels": [
+    {
+     "parcelId": "0352-C-00265-0000 00",
+     "label": null,
+     "assessedValue": 1010200,
+     "annualTaxes": 31101,
+     "year": 2026
+    },
+    {
+     "parcelId": "0352-G-00078-0000 00",
+     "label": null,
+     "assessedValue": 28379000,
+     "annualTaxes": 873696,
+     "year": 2026
+    }
+   ],
+   "trafficCountVPD": 20000,
+   "population3mi": 73723,
+   "avgHHIncome3mi": 116817,
+   "medianHHIncome3mi": null,
+   "proximityHighways": "Direct frontage and access on McKnight Road / Route 19 (+20,000 VPD); ~2 miles to the Route 19 / I-279 (+40,000 VPD) interchange; ~5 miles from downtown Pittsburgh. Same corridor as Ross Park Mall.",
+   "retailCotenants": "Ross Park Mall on the same McKnight Road corridor; Route 19 retail submarket 97.2% occupied (OM p.23).",
+   "tenantsAsOf": "2027-01-01",
+   "tenantsSource": "om",
+   "tenants": [
+    {
+     "name": "Best Buy",
+     "suite": "1",
+     "sf": 46855,
+     "annualRent": 702825,
+     "rentPerSF": 15.0,
+     "leaseStart": "1997-04-01",
+     "leaseExpiry": "2028-03-31",
+     "remainingTermYears": 1.2,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $15.00/SF ($702,825/yr) through Mar 2028; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at 10% escalations every 5-years upon expiration."
+    },
+    {
+     "name": "PA Wine & Spirits",
+     "suite": "9",
+     "sf": 8049,
+     "annualRent": 84273,
+     "rentPerSF": 10.47,
+     "leaseStart": "2007-06-01",
+     "leaseExpiry": "2030-05-31",
+     "remainingTermYears": 3.4,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $10.47/SF ($84,273/yr) through May 2030; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "BioLife Plasma Services",
+     "suite": "11",
+     "sf": 13357,
+     "annualRent": 220391,
+     "rentPerSF": 16.5,
+     "leaseStart": "2021-08-28",
+     "leaseExpiry": "2031-08-31",
+     "remainingTermYears": 4.7,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$16.50/SF ($220,391/yr) in place; $18.15/SF ($242,430/yr) from Aug 2031 [Option 1 begins]; $19.97/SF ($266,739/yr) from Aug 2036 [Option 2 begins]; $21.96/SF ($293,320/yr) from Aug 2041 [Option 3 begins]. Lease expiry Aug 2031.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "3 x 5-yr options remaining at $18.15/SF, $19.97/SF, $21.96/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Three (3), five-year options remaining."
+    },
+    {
+     "name": "Rally House",
+     "suite": "13",
+     "sf": 4000,
+     "annualRent": 100000,
+     "rentPerSF": 25.0,
+     "leaseStart": "2023-03-03",
+     "leaseExpiry": "2028-01-31",
+     "remainingTermYears": 1.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$25.00/SF ($100,000/yr) in place; $28.75/SF ($115,000/yr) from Feb 2028 [Option 1 begins]. Lease expiry Jan 2028.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $28.75/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining."
+    },
+    {
+     "name": "Michaels",
+     "suite": "14",
+     "sf": 20860,
+     "annualRent": 279107,
+     "rentPerSF": 13.38,
+     "leaseStart": "1997-07-01",
+     "leaseExpiry": "2029-06-30",
+     "remainingTermYears": 2.5,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 7.5% cap on CAM controllables",
+     "camCapPct": 7.5,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$13.38/SF ($279,107/yr) in place; $13.88/SF ($289,537/yr) from Jul 2029 [Option 1 begins]; $14.37/SF ($299,758/yr) from Jul 2034 [Option 2 begins]. Lease expiry Jun 2029.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $13.88/SF, $14.37/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining. 7.5% cap on CAM controllables."
+    },
+    {
+     "name": "Kuhn's",
+     "suite": "25",
+     "sf": 53000,
+     "annualRent": 583000,
+     "rentPerSF": 11.0,
+     "leaseStart": "1999-05-01",
+     "leaseExpiry": "2029-03-31",
+     "remainingTermYears": 2.2,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $11.00/SF ($583,000/yr) through Mar 2029; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration."
+    },
+    {
+     "name": "Wayfair",
+     "suite": "42",
+     "sf": 94847,
+     "annualRent": 853623,
+     "rentPerSF": 9.0,
+     "leaseStart": "2027-01-01",
+     "leaseExpiry": "2041-12-31",
+     "remainingTermYears": 15.0,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$9.00/SF ($853,623/yr) in place; $9.90/SF ($938,985/yr) from Jan 2032; $10.89/SF ($1,032,884/yr) from Jan 2037; $11.98/SF ($1,136,267/yr) from Jan 2042 [Option 1 begins]; $13.18/SF ($1,250,083/yr) from Jan 2047 [Option 2 begins]; $14.49/SF ($1,374,333/yr) from Jan 2052 [Option 3 begins]. Lease expiry Dec 2041.",
+     "rentBumps": "Contractual steps: Jan 2032 to $9.90/SF (+10.0%); Jan 2037 to $10.89/SF (+10.0%)",
+     "renewalOptions": "3 x 5-yr options remaining at $11.98/SF, $13.18/SF, $14.49/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Assumes tenant is in-place at analysis start with costs associated on the seller. Three (3), five-year options remaining. NOTE: lease commences at/after the OM's 1/1/2027 analysis start and the seller is carrying the TI/LC/free-rent costs; the OM does not state whether the lease is fully executed - confirm before crediting this income.",
+     "leaseStatus": "signed-not-open"
+    },
+    {
+     "name": "Target",
+     "suite": "60",
+     "sf": 127466,
+     "annualRent": 436659,
+     "rentPerSF": 3.43,
+     "leaseStart": "2006-10-04",
+     "leaseExpiry": "2042-01-31",
+     "remainingTermYears": 15.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$3.43/SF ($436,659/yr) in place; $3.45/SF ($439,758/yr) from Feb 2027; $3.80/SF ($484,371/yr) from Feb 2042 [Option 1 begins]; $4.18/SF ($532,808/yr) from Feb 2057 [Option 2 begins]. Lease expiry Jan 2042.",
+     "rentBumps": "Contractual steps: Feb 2027 to $3.45/SF (+0.6%)",
+     "renewalOptions": "3 x 15-yr options remaining at $3.80/SF, $4.18/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Three (3), fifteen-year options remaining."
+    },
+    {
+     "name": "Petco Supplies",
+     "suite": "80",
+     "sf": 19200,
+     "annualRent": 366144,
+     "rentPerSF": 19.07,
+     "leaseStart": "2001-08-01",
+     "leaseExpiry": "2031-01-31",
+     "remainingTermYears": 4.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $19.07/SF ($366,144/yr) through Jan 2031; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant rolls to market upon expiration. 5% cap on CAM controllables."
+    },
+    {
+     "name": "Kohl's",
+     "suite": "84",
+     "sf": 93000,
+     "annualRent": 1069500,
+     "rentPerSF": 11.5,
+     "leaseStart": "1998-02-04",
+     "leaseExpiry": "2029-02-03",
+     "remainingTermYears": 2.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$11.50/SF ($1,069,500/yr) in place; $11.50/SF ($1,069,500/yr) from Feb 2029 [Option 1 begins]; $11.50/SF ($1,069,500/yr) from Feb 2034 [Option 2 begins]; $11.50/SF ($1,069,500/yr) from Feb 2039 [Option 3 begins]; $11.50/SF ($1,069,500/yr) from Feb 2044 [Option 4 begins]. Lease expiry Feb 2029.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "4 x 5-yr options remaining at $11.50/SF, $11.50/SF, $11.50/SF, $11.50/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Four (4), five-year options remaining. 5% cap on CAM controllables."
+    },
+    {
+     "name": "Staples",
+     "suite": "91",
+     "sf": 17441,
+     "annualRent": 231965,
+     "rentPerSF": 13.3,
+     "leaseStart": "1998-01-01",
+     "leaseExpiry": "2027-12-31",
+     "remainingTermYears": 1.0,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded; 3% cap on RE tax",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$13.30/SF ($231,965/yr) in place; $14.30/SF ($249,406/yr) from Jan 2028 [Option 1 begins]; $14.80/SF ($258,127/yr) from Jan 2030 [option period]. Lease expiry Dec 2027.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $14.30/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining. 3% cap on RET."
+    },
+    {
+     "name": "Purple Haze Smoke and Vape",
+     "suite": "091A",
+     "sf": 2000,
+     "annualRent": 48000,
+     "rentPerSF": 24.0,
+     "leaseStart": "2025-06-26",
+     "leaseExpiry": "2030-06-30",
+     "remainingTermYears": 3.5,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $24.00/SF ($48,000/yr) through Jun 2030; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant rolls to market upon expiration."
+    },
+    {
+     "name": "Destination XL",
+     "suite": "091B",
+     "sf": 9379,
+     "annualRent": 164133,
+     "rentPerSF": 17.5,
+     "leaseStart": "2014-09-01",
+     "leaseExpiry": "2028-08-31",
+     "remainingTermYears": 1.7,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$17.50/SF ($164,133/yr) in place; $19.00/SF ($178,201/yr) from Sep 2028 [Option 1 begins]; $22.00/SF ($206,338/yr) from Sep 2033 [Option 2 begins]. Lease expiry Aug 2028.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $19.00/SF, $22.00/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining."
+    },
+    {
+     "name": "La Belle Salon",
+     "suite": "105",
+     "sf": 2254,
+     "annualRent": 65366,
+     "rentPerSF": 29.0,
+     "leaseStart": "2016-02-01",
+     "leaseExpiry": "2028-01-31",
+     "remainingTermYears": 1.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $29.00/SF ($65,366/yr) through Jan 2028; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration."
+    },
+    {
+     "name": "Five Below",
+     "suite": "106",
+     "sf": 9500,
+     "annualRent": 161500,
+     "rentPerSF": 17.0,
+     "leaseStart": "2010-03-01",
+     "leaseExpiry": "2031-01-31",
+     "remainingTermYears": 4.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $17.00/SF ($161,500/yr) through Jan 2031; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration. 5% cap on CAM controllables."
+    },
+    {
+     "name": "Gamestop",
+     "suite": "107",
+     "sf": 1769,
+     "annualRent": 63065,
+     "rentPerSF": 35.65,
+     "leaseStart": "2006-07-01",
+     "leaseExpiry": "2029-01-31",
+     "remainingTermYears": 2.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$35.65/SF ($63,065/yr) in place; $36.56/SF ($64,675/yr) from Feb 2028. Lease expiry Jan 2029.",
+     "rentBumps": "Contractual steps: Feb 2028 to $36.56/SF (+2.6%)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "LL and tenant have agreed to a two-year extenstion. No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "Sally Beauty Supply",
+     "suite": "109",
+     "sf": 2455,
+     "annualRent": 86539,
+     "rentPerSF": 35.25,
+     "leaseStart": "1998-11-23",
+     "leaseExpiry": "2031-12-31",
+     "remainingTermYears": 5.0,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$35.25/SF ($86,539/yr) in place; $38.00/SF ($93,290/yr) from Jan 2032 [Option 1 begins]. Lease expiry Dec 2031.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $38.00/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining."
+    },
+    {
+     "name": "Premier Imaging",
+     "suite": "201",
+     "sf": 4851,
+     "annualRent": 26001,
+     "rentPerSF": 5.36,
+     "leaseStart": "2016-09-01",
+     "leaseExpiry": "2027-12-31",
+     "remainingTermYears": 1.0,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $5.36/SF ($26,001/yr) through Dec 2027; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "LXD is Aug-27 but tenant is assumed in-place through Yr. 1 of the analysis. No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "Vacant",
+     "suite": "0",
+     "sf": 677,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite is available for lease up."
+    },
+    {
+     "name": "Taco Bell",
+     "suite": "9990",
+     "sf": 3200,
+     "annualRent": 119592,
+     "rentPerSF": 37.37,
+     "leaseStart": "1993-09-11",
+     "leaseExpiry": "2034-09-30",
+     "remainingTermYears": 7.7,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$37.37/SF ($119,592/yr) in place; $38.76/SF ($124,032/yr) from Oct 2027; $40.70/SF ($130,240/yr) from Oct 2032. Lease expiry Sep 2034.",
+     "rentBumps": "Contractual steps: Oct 2027 to $38.76/SF (+3.7%); Oct 2032 to $40.70/SF (+5.0%)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "Hong BBQ & Hot Pot",
+     "suite": "9991",
+     "sf": 10000,
+     "annualRent": 125000,
+     "rentPerSF": 12.5,
+     "leaseStart": "2020-03-01",
+     "leaseExpiry": "2034-12-31",
+     "remainingTermYears": 8.0,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$12.50/SF ($125,000/yr) in place; $13.75/SF ($137,500/yr) from Jan 2030. Lease expiry Dec 2034.",
+     "rentBumps": "Contractual steps: Jan 2030 to $13.75/SF (+10.0%)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "Applebee's",
+     "suite": "9992",
+     "sf": 4340,
+     "annualRent": 219995,
+     "rentPerSF": 50.69,
+     "leaseStart": "1991-05-28",
+     "leaseExpiry": "2035-05-31",
+     "remainingTermYears": 8.4,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$50.69/SF ($219,995/yr) in place; $53.23/SF ($231,018/yr) from Jun 2030. Lease expiry May 2035.",
+     "rentBumps": "Contractual steps: Jun 2030 to $53.23/SF (+5.0%)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    }
+   ],
+   "leaseRisk": {
+    "source": "OM",
+    "coTenancyDisclosed": true,
+    "tenants": [
+     {
+      "tenant": "Best Buy",
+      "suite": "1",
+      "baseRentAnnual": 702825,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord has represented·to Tenant that in its \"normal course of business\" it does not grant exclusives. In the event that Landlord should complete any transaction which would allow Circuit City to open a store within the Shopping Center, Tenant shall have the absolute right.to.terminate.this Lease by giving written notice to Landlord specifying said lease termination and the date thereof. In the event that this Lease is terminated in accordance with the preceding sentence, Landlord shall reimburse Tenant on demand, for all of its unamortized costs incurred in fixturing the Premises. In no eve",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Best Buy Stores, L.P / Best Buy'",
+        "verbatimQuote": "Landlord has represented·to Tenant that in its \"normal course of business\" it does not grant exclusives. In the event that Landlord should complete any transaction which would allow Circuit City to open a store within the Shopping Center, Tenant shall have the absolute right.to.terminate.this Lease by giving written notice to Landlord specifying said lease termination and the date thereof. In the event that this Lease is terminated in accordance with the preceding sentence, Landlord shall reimburse Tenant on demand, for all of its unamortized costs incurred in fixturing the Premises. In no event shall Landlord grant any exclusive after the date of this Lease which limits the rights of Tenant or its successors or assigns from selling any products from the Premises. In the event that the Shopping Center or any substantial portion thereof is sold to an unaffiliated third party ( \"New Owner\") and the New Owner grants any exclusive rights to any tenant occupying 15,000 square feet or more, then Tenant shall automatically be deemed granted the exclusive right within the Shopping Center to sell the product 22 categories specified above, provided, however, that said exclusive right shall not apply to existing tenants of the Shopping Center at the time Tenant's exclusive right automatically goes into effect.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "BioLife Plasma Services",
+      "suite": "11",
+      "baseRentAnnual": 220391,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord agrees that during the Term of this Lease as it may be extended, Landlord will not enter into any lease ( or consent to the assignment/sublease related thereto) for any demised premises in the Shopping Center that grants the tenant the right to use such space for a plasma or blood donation center (the \"Exclusive Use\"). This restriction does not apply to renewals or extensions of leases which pre-date the date of this Lease; provided, however, that Landlord represents and warrants to Tenant that no existing tenant lease in the Shopping Center restricts Tenant's use of the Premises as a",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'BioLife Plasma Services L.P / BioLife Plasma Services'",
+        "verbatimQuote": "Landlord agrees that during the Term of this Lease as it may be extended, Landlord will not enter into any lease ( or consent to the assignment/sublease related thereto) for any demised premises in the Shopping Center that grants the tenant the right to use such space for a plasma or blood donation center (the \"Exclusive Use\"). This restriction does not apply to renewals or extensions of leases which pre-date the date of this Lease; provided, however, that Landlord represents and warrants to Tenant that no existing tenant lease in the Shopping Center restricts Tenant's use of the Premises as a plasma collection medical facility.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Rally House",
+      "suite": "13",
+      "baseRentAnnual": 100000,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Provided that Tenant is not in default of any term, provision or condition of this Lease, Landlord agrees that during the term of this Lease it shall not lease any space in the Shopping Center to a tenant whose gross annual sales from its leased premises consist of more than fifty percent (50%) attributable to licensed collegiate and pro sports merchandise. This restriction shall not apply to any existing tenant or occupant of the Shopping Center. In the event Landlord violates this restriction, Tenant's exclusive remedy is to terminate this Lease to be exercised by giving written notice to La",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Rally House Stores, Inc. / Rally House Pittsburgh'",
+        "verbatimQuote": "Provided that Tenant is not in default of any term, provision or condition of this Lease, Landlord agrees that during the term of this Lease it shall not lease any space in the Shopping Center to a tenant whose gross annual sales from its leased premises consist of more than fifty percent (50%) attributable to licensed collegiate and pro sports merchandise. This restriction shall not apply to any existing tenant or occupant of the Shopping Center. In the event Landlord violates this restriction, Tenant's exclusive remedy is to terminate this Lease to be exercised by giving written notice to Landlord at any time during the continuation of the occurrence of the violation of the leasing restriction, and in such event the Lease shall terminate sixty (60) days after the Landlord receives Tenant's notice of termination.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Michaels",
+      "suite": "14",
+      "baseRentAnnual": 279107,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": {
+         "type": "occupancy_threshold",
+         "direction": "below",
+         "pct": 62.5,
+         "scope": "center leasable SF excl. Michaels premises (clause is an absolute 330,000 SF of 527,640 SF must be open and operated by retail tenants)",
+         "note": null
+        },
+        "remedy": {
+         "mechanism": "termination_only",
+         "value": null,
+         "cap": null,
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": null,
+        "terminationNoticeDays": 60,
+        "currentlyInEffect": false,
+        "currentStatusNote": "Not triggered - roughly 430k+ SF of retail operating ex-Michaels even before Wayfair opens. Note BioLife (plasma) and Premier Imaging may not count as \"retail tenants\". Remedy: Termination right (60-120 days notice) while the Ongoing Co-Tenancy Requirement is unmet.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Michaels Stores Inc.'",
+        "verbatimQuote": "\"Anchor Tenant\" shall mean the Other Required Lessee or a tenant which (a) on a regional or national basis, operates under the same trade name at least ten (10) high quality retail stores comparably sized to the respective Anchor Premises, in a manner which is consistent with a first class promotional shopping center in the Pittsburgh Metropolitan area, and (b) operates as one of the following: (i) full line department store, (ii) junior department store, (iii) soft good store, (iv) supermarket, (v) sporting good store, (vi) home improvements store, (vii) catalog store, (viii) drug store, (ix) toy superstore, (x) electronic equipment/appliance superstore, (xi) office supply store, or (xii) warehouse department store (e.g., Costco or Sams Club). As used in this Section 16.3, the term \"Ongoing Co-Tenancy Requirement\" shall mean that from and after the satisfaction of the Initial Co-Tenancy Requirement, at least three hundred thirty thousand (330,000) Leasable Square Feet in the Shopping Center (exclusive of the Premises) shall be open and continuously operated by retail tenants. If as of the Compliance Date the Initial Co-Tenancy Requirement is not satisfied, or if at any time thereafter the Ongoing Co-Tenancy Requirement is not satisfied, for so long as such non-satisfaction shall continue, Tenant shall have the right to terminate this Lease by not less than sixty (60) days', and not more than one hundred twenty (120) days', written notice delivered to Landlord prior to the date on which the Initial Co-Tenancy Requirement or the Ongoing Co-Tenancy Requirement, whichever is applicable, is satisfied. Upon said termination, the parties shall have no liability under this Lease for obligations arising after that date.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ],
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Neither Landlord nor any entity controlled by Landlord will use, lease (or permit the use, leasing or subleasing of) or sell any space in or portion of the Shopping Center or any property contiguous to the Shopping Center owned or controlled now or at any time hereafter by Landlord or any affiliate of Landlord, to any \"craft store\", store selling picture frames or picture framing services, store selling artificial flowers, artificial floral arrangements, party goods (except apparel), or any store similar to Tenant in operation or merchandising as Tenant typically operates and merchandises its ",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Michaels Stores Inc.'",
+        "verbatimQuote": "Neither Landlord nor any entity controlled by Landlord will use, lease (or permit the use, leasing or subleasing of) or sell any space in or portion of the Shopping Center or any property contiguous to the Shopping Center owned or controlled now or at any time hereafter by Landlord or any affiliate of Landlord, to any \"craft store\", store selling picture frames or picture framing services, store selling artificial flowers, artificial floral arrangements, party goods (except apparel), or any store similar to Tenant in operation or merchandising as Tenant typically operates and merchandises its stores as of the Effective Date of the Lease.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Kuhn's",
+      "suite": "25",
+      "baseRentAnnual": 583000,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "As a material inducement to Tenant to enter into this Lease, without which inducement Tenant would not have entered into this Lease, Landlord agrees that no portion of the Shopping Center except for the Premises shall be used or operated: Food Exclusive. As a food supermarket or other store, or department within a store, for the sale of food, groceries, fruit, produce, dairy products, vegetables, meats or delicatessen products. Miscellaneous. As a doctor's or dentist's office; medical or dental health facility; business office; post office; or lawn and garden center unless such use is located ",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'UNFI Wholesale, Inc.'",
+        "verbatimQuote": "As a material inducement to Tenant to enter into this Lease, without which inducement Tenant would not have entered into this Lease, Landlord agrees that no portion of the Shopping Center except for the Premises shall be used or operated: Food Exclusive. As a food supermarket or other store, or department within a store, for the sale of food, groceries, fruit, produce, dairy products, vegetables, meats or delicatessen products. Miscellaneous. As a doctor's or dentist's office; medical or dental health facility; business office; post office; or lawn and garden center unless such use is located at least 500 feet from the Premises.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       },
+       "rofrRofo": {
+        "present": true,
+        "summary": "ROFR: If at any time during the term of this Lease Landlord receives from a third party a good-faith offer for the lease of the space adjacent to the Premises identified as Michael's on the Site Plan (the 'Option Space'), or any substantial part thereof, Landlord shall promptly give Tenant written notice of that offer (the 'Notice'). For 30 days after receiving the Notice, Tenant shall have an irrevocable first option to lease the Option Space or the relevant part thereof on the terms and conditions stated in the Notice, which option Tenant may exercise by giving written notice of exercise to ",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'UNFI Wholesale, Inc.'",
+        "verbatimQuote": "ROFR: If at any time during the term of this Lease Landlord receives from a third party a good-faith offer for the lease of the space adjacent to the Premises identified as Michael's on the Site Plan (the 'Option Space'), or any substantial part thereof, Landlord shall promptly give Tenant written notice of that offer (the 'Notice'). For 30 days after receiving the Notice, Tenant shall have an irrevocable first option to lease the Option Space or the relevant part thereof on the terms and conditions stated in the Notice, which option Tenant may exercise by giving written notice of exercise to Landlord.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Wayfair",
+      "suite": "42",
+      "baseRentAnnual": 853623,
+      "otherRiskClauses": {
+       "rofrRofo": {
+        "present": true,
+        "summary": "This Right of First Offer (ROFO) grants Tenant a 90-day exclusive right to lease portions of the Basement Level or Second Floor (but no other Shopping Center areas) during the first 10 years of the Term when Landlord decides to lease such Additional Space to third parties. Landlord must provide a ROFO Notice describing the space and all material lease terms (the \"Proposed Lease\"), and Tenant must deliver a ROFO Exercise Notice by 5:00 p.m. ET on the last day of the 90-day period to accept, after which the parties have 90 days to execute documentation. If Tenant rejects or fails to respond time",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Wayfair LLC'",
+        "verbatimQuote": "This Right of First Offer (ROFO) grants Tenant a 90-day exclusive right to lease portions of the Basement Level or Second Floor (but no other Shopping Center areas) during the first 10 years of the Term when Landlord decides to lease such Additional Space to third parties. Landlord must provide a ROFO Notice describing the space and all material lease terms (the \"Proposed Lease\"), and Tenant must deliver a ROFO Exercise Notice by 5:00 p.m. ET on the last day of the 90-day period to accept, after which the parties have 90 days to execute documentation. If Tenant rejects or fails to respond timely, the ROFO is waived and Landlord has 60 days to lease the space to a third party under the same terms; however, if Landlord doesn't complete that lease within 60 days or materially changes the economic terms or space description, Tenant's ROFO revives and Landlord must issue a new ROFO Notice. Landlord may market the space during Tenant's response period but cannot execute a binding lease with third parties until Tenant declines or the period expires, and Tenant's ROFO continues for any unleased Additional Space even after waiving specific opportunities.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Target",
+      "suite": "60",
+      "baseRentAnnual": 436659,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord represent and warrants that none of the Permitted Exceptions prohibit, restrict, limit or would interfere with the construction and operation of a retail general merchandise department store that may also sell grocery and other food items, except as specifically set forth on Exhibit E attached hereto (the \"Existing Use Exclusives\").",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Target Corporation'",
+        "verbatimQuote": "Landlord represent and warrants that none of the Permitted Exceptions prohibit, restrict, limit or would interfere with the construction and operation of a retail general merchandise department store that may also sell grocery and other food items, except as specifically set forth on Exhibit E attached hereto (the \"Existing Use Exclusives\").",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Petco Supplies",
+      "suite": "80",
+      "baseRentAnnual": 366144,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": null,
+        "remedy": {
+         "mechanism": "alternate_rent_pct_sales",
+         "value": 5,
+         "cap": null,
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": 9,
+        "terminationNoticeDays": 30,
+        "currentlyInEffect": false,
+        "currentStatusNote": "Named Tenants are NOT listed in the summary - pull the Petco lease. Not modelled as a trigger. Note Petco's lease runs to 1/31/2031 with no options. Remedy: 5% of Gross Sales in lieu of Base Rent if 2+ Named Tenants are dark 9 months in any 12; terminate or resume full rent if not cured in a further 180 days.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Petco Animal Supplies, Inc./ Petco Supplies & Fish'",
+        "verbatimQuote": "If, at any time during the term of this Lease, at least two (2) or more Named Tenants are not open and operating for a consecutive period of 9 months in any 1 year consecutive period, Tenant shall have the right to pay 5 % of Gross Sales in lieu of Base Rent. All other charges shall remain due and payable. In the event one of the named Tenants does not re-open for business or is not replaced by a like replacement which opens for business within 180 days from the previously - stated period, Tenant shall either terminate this Lease upon 30 days prior Notice to Landlord, or resume payment of Base Rent.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ],
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Tenant shall have the exclusive right to sell pet food, net supplies, live animals, pet grooming, pet training, and veterinary services in the Shopping Center except for incidental sales.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Petco Animal Supplies, Inc./ Petco Supplies & Fish'",
+        "verbatimQuote": "Tenant shall have the exclusive right to sell pet food, net supplies, live animals, pet grooming, pet training, and veterinary services in the Shopping Center except for incidental sales.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       },
+       "goDarkRight": {
+        "present": true,
+        "summary": "Go Dark: Tenant shall have the right to cease business operations at the Premises (\"Go Dark\"). In the event Tenant shall elect to Go Dark, Tenant shall provide Notice of same to Landlord and Landlord may at any time after the date of such Notice (but prior to such date that Tenant or its permitted transferee shall recommence business operations at the Premises) elect to terminate this Lease by providing Tenant with Notice thereof.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Petco Animal Supplies, Inc./ Petco Supplies & Fish'",
+        "verbatimQuote": "Go Dark: Tenant shall have the right to cease business operations at the Premises (\"Go Dark\"). In the event Tenant shall elect to Go Dark, Tenant shall provide Notice of same to Landlord and Landlord may at any time after the date of such Notice (but prior to such date that Tenant or its permitted transferee shall recommence business operations at the Premises) elect to terminate this Lease by providing Tenant with Notice thereof.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Staples",
+      "suite": "91",
+      "baseRentAnnual": 231965,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Subject to Section 5.3, no part of the Center nor any property within one mile of the Center owned by Landlord or by an entity under common control with Landlord shall be used for the sale or leasing of office equipment (including computers), office furniture or office supplies, or the provision of copying or printing services or any other office services then provided by Tenant.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Office Superstore East LLC'",
+        "verbatimQuote": "Subject to Section 5.3, no part of the Center nor any property within one mile of the Center owned by Landlord or by an entity under common control with Landlord shall be used for the sale or leasing of office equipment (including computers), office furniture or office supplies, or the provision of copying or printing services or any other office services then provided by Tenant.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Destination XL",
+      "suite": "091B",
+      "baseRentAnnual": 164133,
+      "otherRiskClauses": {
+       "goDarkRight": {
+        "present": true,
+        "summary": "Tenant shall have the right to cease business operations at the Premises (\"Go Dark\") at any time after the end of the fifth Lease Year of the term of this Lease. In the event Tenant shall elect to Go Dark, and provided the Premises remains Dark for a period in excess of ninety (90) consecutive days ( except in connection with a casualty, taking or force majeure), Landlord, at Landlord's option, shall have the right to terminate this Lease and recapture the Premises, by giving written notice to Tenant, and in such event this Lease shall expire thirty (30) days after Landlord gives such terminat",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Casual Male Retail Store, LLC/ Destination XL, DXL and or DXL'",
+        "verbatimQuote": "Tenant shall have the right to cease business operations at the Premises (\"Go Dark\") at any time after the end of the fifth Lease Year of the term of this Lease. In the event Tenant shall elect to Go Dark, and provided the Premises remains Dark for a period in excess of ninety (90) consecutive days ( except in connection with a casualty, taking or force majeure), Landlord, at Landlord's option, shall have the right to terminate this Lease and recapture the Premises, by giving written notice to Tenant, and in such event this Lease shall expire thirty (30) days after Landlord gives such termination notice to Tenant, unless the Tenant recommences business operations at the Premises prior to the end of said thirty (30) days.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "La Belle Salon",
+      "suite": "105",
+      "baseRentAnnual": 65366,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord agrees that during the term of this Lease, it shall not enter into a new lease for any space in the Shopping Center with a tenant whose primary business is the operation of a nail salon.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Julie Nguyen / LaBelle Salon'",
+        "verbatimQuote": "Landlord agrees that during the term of this Lease, it shall not enter into a new lease for any space in the Shopping Center with a tenant whose primary business is the operation of a nail salon.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Sally Beauty Supply",
+      "suite": "109",
+      "baseRentAnnual": 86539,
+      "otherRiskClauses": {
+       "goDarkRight": {
+        "present": true,
+        "summary": "Go Dark: Tenant shall have the right to cease operations in the Leased Premises but shall be obligated under all aspects and covenants under the Lease. If Tenant remains closed for business for a period of 90 days or longer, Landlord shall have the right to terminate this Lease. If Tenant fails to open for business within thirty (30) days after the commencement of the term or fails thereafter to keep the Premises open each business day fully fixtured, stocked and staffed for normal business operations during the hours specified herein, then, at Landlord's option, Tenant (in addition to any and",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Sally Beauty Supply LLC / Sally Beauty Supply'",
+        "verbatimQuote": "Go Dark: Tenant shall have the right to cease operations in the Leased Premises but shall be obligated under all aspects and covenants under the Lease. If Tenant remains closed for business for a period of 90 days or longer, Landlord shall have the right to terminate this Lease. If Tenant fails to open for business within thirty (30) days after the commencement of the term or fails thereafter to keep the Premises open each business day fully fixtured, stocked and staffed for normal business operations during the hours specified herein, then, at Landlord's option, Tenant (in addition to any and all other remedies provided herein or by law to Landlord for Tenant's default) shall pay as additional rent in lieu of any percentage rent that might have been earned during that period during each month the Premises are not open or in which such hours are not maintained an amount equal to one-half (½) the fixed minimum rent provided for in Article V of this Lease or an amount equal to percentage rent, plus thirty (30%) percent thereof, shown to have been due in the last sales report from Tenant when the Premises were fully open and all required hours were maintained, whichever is greater.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Taco Bell",
+      "suite": "9990",
+      "baseRentAnnual": 119592,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Same as Radius Restriction.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Charter Foods North, LLC / Taco Bell'",
+        "verbatimQuote": "Same as Radius Restriction.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     }
+    ]
+   },
+   "anchorStatus": [
+    {
+     "anchor": "Best Buy",
+     "status": "in_place",
+     "termExpiration": "2028-03-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Michaels",
+     "status": "in_place",
+     "termExpiration": "2029-06-30",
+     "relocating": false
+    },
+    {
+     "anchor": "Kuhn's",
+     "status": "in_place",
+     "termExpiration": "2029-03-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Wayfair",
+     "status": "in_place",
+     "termExpiration": "2041-12-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Target",
+     "status": "in_place",
+     "termExpiration": "2042-01-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Kohl's",
+     "status": "in_place",
+     "termExpiration": "2029-02-03",
+     "relocating": false
+    }
+   ],
+   "cashFlowProjection": [
+    {
+     "label": "Year 1 (Dec 2027) - JLL Year-1 / in-place basis",
+     "totalBaseRent": 6006677,
+     "reimbursements": 1333862,
+     "egr": 7337085,
+     "operatingExpenses": 1830689,
+     "noi": 5506396
+    },
+    {
+     "label": "Year 2 (Dec 2028)",
+     "totalBaseRent": 6079270,
+     "reimbursements": 1375087,
+     "egr": 7431718,
+     "operatingExpenses": 1881845,
+     "noi": 5549873
+    },
+    {
+     "label": "Year 3 (Dec 2029)",
+     "totalBaseRent": 6170323,
+     "reimbursements": 1424883,
+     "egr": 7573890,
+     "operatingExpenses": 1935877,
+     "noi": 5638013
+    },
+    {
+     "label": "Year 4 (Dec 2030)",
+     "totalBaseRent": 6223982,
+     "reimbursements": 1469559,
+     "egr": 7683504,
+     "operatingExpenses": 1990425,
+     "noi": 5693079
+    },
+    {
+     "label": "Year 5 (Dec 2031)",
+     "totalBaseRent": 6284701,
+     "reimbursements": 1500569,
+     "egr": 7765843,
+     "operatingExpenses": 2045693,
+     "noi": 5720150
+    },
+    {
+     "label": "Year 6 (Dec 2032)",
+     "totalBaseRent": 6512756,
+     "reimbursements": 1561741,
+     "egr": 8056300,
+     "operatingExpenses": 2108788,
+     "noi": 5947512
+    },
+    {
+     "label": "Year 7 (Dec 2033)",
+     "totalBaseRent": 6625071,
+     "reimbursements": 1609002,
+     "egr": 8216863,
+     "operatingExpenses": 2169618,
+     "noi": 6047245
+    },
+    {
+     "label": "Year 8 (Dec 2034)",
+     "totalBaseRent": 6726611,
+     "reimbursements": 1658080,
+     "egr": 8368598,
+     "operatingExpenses": 2231864,
+     "noi": 6136734
+    },
+    {
+     "label": "Year 9 (Dec 2035)",
+     "totalBaseRent": 6788386,
+     "reimbursements": 1708708,
+     "egr": 8483785,
+     "operatingExpenses": 2294743,
+     "noi": 6189041
+    },
+    {
+     "label": "Year 10 (Dec 2036)",
+     "totalBaseRent": 6865259,
+     "reimbursements": 1760900,
+     "egr": 8615489,
+     "operatingExpenses": 2359901,
+     "noi": 6255588
+    }
+   ],
+   "incomeBreakdown": {
+    "Potential Base Rent": 6026987,
+    "Absorption & Turnover Vacancy": -20310,
+    "Scheduled Base Rent": 6006677,
+    "Total Expense Recoveries": 1333862,
+    "Percentage Rent": 15099,
+    "Potential Gross Revenue": 7355638,
+    "Vacancy Allowance": -18553,
+    "Effective Gross Revenue": 7337085
+   },
+   "expenseBreakdown": {
+    "CAM": 501294,
+    "Insurance": 156524,
+    "Utilities": 37962,
+    "Real Estate Taxes": 904796,
+    "Management Fee": 220113,
+    "Non Reimbursable": 10000,
+    "Total Operating Expenses": 1830689,
+    "Capital Reserves (below the line)": 109700,
+    "Year-2 TI + LC (below the line)": 523978
+   },
+   "keyAssumptions": [
+    "Source: JLL Offering Memorandum 'Midwest & Mid-Atlantic Grocery-Anchored Portfolio' (99 pp., undated; cash flow 1/1/2027-12/31/2037). This property: overview PDF p.23, site plan p.24, trade area p.25, assumptions/opex p.26, RE taxes p.27, rent roll pp.28-30, cash flow p.31.",
+    "TIE-OUT (verified by script): roster SF 548,500 = OM GLA 548,500; occupied 547,823 SF + vacant 677 SF; occupancy 99.9%.",
+    "TIE-OUT: in-place base rent on the roster $6,006,678 vs OM rent-roll total $6,006,678; JLL Year-1 EGR $7,337,085 - OpEx $1,830,689 = NOI $5,506,396 (matches the portfolio summary, p.1).",
+    "TIE-OUT: 2 tax parcel(s) on the OM tax page sum to $904,797 vs the cash-flow RE tax line $904,796 (2026 assessment x millage grown 3%, net of 2% discount where shown).",
+    "WALT 7.6 yrs computed SF-weighted from lease expiries as of 1/1/2027 (OM states 7.6); weighted-avg base rent $10.96/SF over rent-paying occupied SF.",
+    "NO asking price or cap rate is disclosed (portfolio is marketed unpriced) - both left null.",
+    "JLL leasing assumptions: 75% renewal probability, 12 months downtime, $30/SF TI new / $0 renewal, 6%/3% LCs, 5% general vacancy (excluding credit/anchor tenants), 3% management fee, $0.20/SF reserves.",
+    "Lease-clause detail (co-tenancy, exclusives, termination/go-dark, ROFR) comes from the seller's summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' - a summary, NOT the executed leases; every clause is marked unverified.",
+    "Rent roll as-of: OM cash flow starts 1/1/2027; tenantsAsOf set to that date by convention.",
+    "Roster: 547,823 SF leased + 677 SF vacant (suite 205) = 548,500 SF GLA; 99.9% occupied matches the OM.",
+    "Wayfair (94,847 SF) and its $853,623 are counted as occupied, matching the OM, but flagged as signed-not-open (lease start 1/1/2027, seller-paid costs).",
+    "Percentage rent: JLL Year-1 $15,099.",
+    "Target pays $3.43/SF on 127,466 SF to 1/31/2042 with three 15-yr options ($3.80, $4.18) - economically a ground lease.",
+    "Kuhn's lease tenant of record appears to be UNFI Wholesale, Inc. (seller clause workbook) - the UNFI row's ROFR on the Michaels space and its food/medical/office exclusive were mapped to Kuhn's; confirm.",
+    "UNFI/Kuhn's exclusive bars doctor/dentist/medical and business-office uses within 500 feet of its premises - check BioLife Plasma (13,357 SF) and Premier Imaging against it.",
+    "No tenant sales for this property were in the sales-report pages provided (pages 1-80 of 'All Property Sales.pdf')."
+   ],
+   "notes": "**North Hills Village** is a **548,500 SF power center** on the McKnight Road/Route 19 corridor in Ross Township - the same node as Ross Park Mall - with the strongest demographics in the portfolio (**$116,817 AHHI within 3 miles**) and **5.0M annual visits (99th percentile)**. It is effectively **99.9% leased** (one 677 SF suite vacant) and throws off **$5,506,396 of Year-1 NOI**, but the OM's 'grocery anchor' is thin: **Kuhn's (53,000 SF, $11.00/SF) expires 3/31/2029 with NO options**, and Kuhn's lease is held by UNFI Wholesale per the seller's summary. The income is really the boxes - **Kohl's (93,000 SF, 18% of base rent) to 2/2029 with four flat $11.50 options, Best Buy (46,855 SF, $15.00) to 3/2028 with no options**, Michaels, Petco, Staples - plus **Target (127,466 SF) on a quasi-ground lease at $3.43/SF to 2042** with 15-year options. **Wayfair (94,847 SF, $853,623 = 14% of base rent) is a new lease that only starts 1/1/2027** with the seller paying the costs, so the largest single income line is not yet open. **2028-29 is the risk window: $3.03M (50%) of base rent rolls**, including two boxes (Best Buy, Kuhn's) with no options - genuine mark-to-market or vacancy events. JLL's tax line ($904,796) is also ~$210k below the 2024-25 actuals, which flatters expenses. Thesis: best-in-portfolio location and near-full occupancy, but a near-term re-tenanting story rather than a long-WALT grocery deal. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
+   "dealScore": {
+    "grade": "B+",
+    "rationale": "**Best demographics in the portfolio ($116,817 AHHI)** and **99.9% leased**, offset by a **Kuhn's grocer with no options expiring 3/2029**, **Wayfair's $854k not yet open**, and **50% of base rent rolling in 2028-29**.",
+    "strengths": [
+     "Highest-income trade area in the portfolio: $116,817 AHHI / 73,723 people within 3 miles; 206,394 within 5.",
+     "99.9% leased; 5.0M visits L12M - 99th percentile among U.S. shopping centers.",
+     "Credit box lineup: Target, Kohl's, Best Buy, Wayfair, Michaels, Petco, Staples, Five Below.",
+     "Target (127,466 SF) at $3.43/SF to 2042 + three 15-yr options - long, sticky, below-market income that anchors traffic.",
+     "Roster, base rent ($6,006,678) and tax parcels tie exactly to the OM; WALT 7.6 yrs matches the OM."
+    ],
+    "risks": [
+     "Kuhn's (the only grocer) expires 3/31/2029 with no options - OM's 'grocery-anchored' framing depends on a renewal that isn't contracted.",
+     "Wayfair ($853,623, 14% of base rent) commences 1/1/2027 with seller-paid costs - not yet open and a newer big-box concept.",
+     "2028-29 rollover: Best Buy (no options), Kuhn's (no options), Kohl's, Michaels, Rally House, DXL, La Belle, GameStop - $3.03M (50% of base).",
+     "JLL proforma RE taxes $904,796 vs $1,099,125 (2024) and $1,115,167 (2025) actuals.",
+     "No tenant sales were provided for North Hills (the sales report covers other centers)."
+    ]
+   },
+   "upsideItems": [
+    {
+     "priority": "high",
+     "item": "Best Buy mark-to-market / re-tenant (2028)",
+     "detail": "Best Buy pays $15.00/SF on 46,855 SF with no options; JLL's 20,001-50,000 SF market rent is $17.00/SF - about $94k of lift if it renews at market, and the box is replaceable if it leaves."
+    },
+    {
+     "priority": "medium",
+     "item": "Kuhn's renewal at market (2029)",
+     "detail": "No options remain; JLL's grocer market rent is $12.00/SF vs $11.00 in place - modest lift (~$53k) but, more importantly, the chance to lock a long-term grocer."
+    },
+    {
+     "priority": "low",
+     "item": "Michaels ROFR space / basement and second-floor space",
+     "detail": "Wayfair holds a ROFO on Basement/Second-Floor space for 10 years, and Kuhn's (UNFI) holds a ROFR on the Michaels space - both constrain but also signal demand for expansion space."
+    }
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "GROCER WITH NO OPTIONS - Kuhn's (53,000 SF, $583,000, 10% of base rent) expires 3/31/2029 with no options remaining; JLL simply 'assumes tenant renews at market'. The seller's summary shows the lease is in UNFI Wholesale's name. No Kuhn's sales were provided. Diligence the operator's intentions and store sales before paying for a grocery-anchored center."
+    },
+    {
+     "severity": "high",
+     "description": "2028-29 BOX ROLLOVER - Best Buy (46,855 SF, $702,825, 3/2028, NO options), Kohl's (93,000 SF, $1,069,500, 2/2029, four flat $11.50 options), Kuhn's (3/2029, NO options) and Michaels (6/2029) - with small-shop rolls, $3,026,996 (50%) of base rent expires in 2028-29."
+    },
+    {
+     "severity": "medium",
+     "description": "WAYFAIR NOT YET OPEN - 94,847 SF at $9.00/SF ($853,623) commencing 1/1/2027 'with costs associated on the seller'. It is the second-largest rent line; confirm the lease is fully executed, the delivery/opening conditions, and that seller credits for TI/free rent are funded at closing."
+    },
+    {
+     "severity": "medium",
+     "description": "TAX LINE BELOW ACTUALS - JLL carries $904,796 of RE taxes vs $1,461,794 (2023), $1,099,125 (2024) and $1,115,167 (2025) actuals (OM p.26). With ~73% recovery the net NOI effect is smaller, but the gross expense line is understated by ~$200k vs the 2025 actual - find out whether a successful appeal supports it."
+    }
+   ],
+   "shadowAnchors": null,
+   "fieldCitations": {
+    "noi": "p.31 - Cash Flow Year 1; p.1 portfolio table",
+    "effectiveGrossIncome": "p.31 - Cash Flow Year 1 EGR",
+    "operatingExpenses": "p.31 - Cash Flow Year 1; detail p.26",
+    "totalSF": "p.24 site-plan roster total; p.30 rent-roll footer",
+    "occupancy": "computed from rent roll (pp.28-30)",
+    "walt": "computed from rent roll (pp.28-30)",
+    "grossPotentialRent": "computed - roster base-rent roll-up (pp.28-30)",
+    "weightedAvgRentPSF": "computed from rent roll (pp.28-30)",
+    "currentAnnualTaxes": "p.31 Cash Flow RE taxes; parcels p.27",
+    "population3mi": "p.25 - ESRI 3-mile ring",
+    "avgHHIncome3mi": "p.25 - ESRI 3-mile ring",
+    "yearBuilt": "p.23 - Property Summary",
+    "lotSizeAcres": "p.23 - Property Summary",
+    "tenants": "pp.28-30 rent roll; cross-checked to p.24 site-plan roster",
+    "leaseRisk": "seller clause workbook (Exclusives, Co-Tenancy, Restrictions) - summary, unverified",
+    "trafficCountVPD": "p.23 - investment highlights"
+   }
+  }
+ ]
+}

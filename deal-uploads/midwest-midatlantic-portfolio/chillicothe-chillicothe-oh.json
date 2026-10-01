@@ -1,0 +1,1341 @@
+{
+ "deals": [
+  {
+   "propertyName": "Chillicothe Shopping Center",
+   "address": "1075 N Bridge Street",
+   "city": "Chillicothe",
+   "state": "OH",
+   "zip": "45601",
+   "market": "Chillicothe, OH (Columbus outer ring)",
+   "submarket": "N Bridge Street / Route 23",
+   "assetType": "Retail",
+   "centerType": "Community Center",
+   "omDate": null,
+   "broker": "JLL (Jones Lang LaSalle Americas, Inc.) - Midwest & Mid-Atlantic Grocery-Anchored Portfolio (9 properties)",
+   "fileName": "JLL - Midwest & Mid-Atlantic Grocery-Anchored Portfolio - OM.pdf",
+   "pdfPages": 99,
+   "totalSF": 305078,
+   "occupancy": 90.4,
+   "walt": 2.9,
+   "weightedAvgRentPSF": 7.49,
+   "yearBuilt": 1965,
+   "renovationYear": 1998,
+   "lotSizeAcres": 34.75,
+   "parkingRatio": 5.5,
+   "askingPrice": null,
+   "capRate": null,
+   "pricePerSF": null,
+   "noi": 1716643,
+   "grossPotentialRent": 2064461,
+   "effectiveGrossIncome": 2392727,
+   "operatingExpenses": 676083,
+   "nnnRecoveries": 259111,
+   "currentAnnualTaxes": 245252,
+   "currentAssessedValue": 5359540,
+   "taxParcels": [
+    {
+     "parcelId": "305459021000",
+     "label": null,
+     "assessedValue": 5359540,
+     "annualTaxes": 245252,
+     "year": 2026
+    }
+   ],
+   "trafficCountVPD": 27500,
+   "population3mi": 26098,
+   "avgHHIncome3mi": 74775,
+   "medianHHIncome3mi": null,
+   "proximityHighways": "Frontage on N Bridge Street / Route 23 (+27,500 VPD); <1 mile from the Route 35 interchange (+13,700 VPD). ~45 miles south of Columbus.",
+   "retailCotenants": "Route 23 / Route 35 retail node; Ohio University Chillicothe campus and Adena Health nearby.",
+   "tenantsAsOf": "2027-01-01",
+   "tenantsSource": "om",
+   "tenants": [
+    {
+     "name": "Harbor Freight Tools",
+     "suite": "10",
+     "sf": 30400,
+     "annualRent": 249888,
+     "rentPerSF": 8.22,
+     "leaseStart": "2018-06-16",
+     "leaseExpiry": "2028-06-30",
+     "remainingTermYears": 1.5,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$8.22/SF ($249,888/yr) in place; $8.63/SF ($262,352/yr) from Jul 2028 [Option 1 begins]; $9.07/SF ($275,728/yr) from Jul 2033 [Option 2 begins]; $9.52/SF ($289,408/yr) from Jul 2038 [Option 3 begins]; $10.00/SF ($304,000/yr) from Jul 2043 [Option 4 begins]; $10.50/SF ($319,200/yr) from Jul 2048 [Option 5 begins]. Lease expiry Jun 2028.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "5 x 5-yr options remaining at $8.63/SF, $9.07/SF, $9.52/SF, $10.00/SF, $10.50/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Five (5), five-year options remaining."
+    },
+    {
+     "name": "Aldi",
+     "suite": "106",
+     "sf": 19923,
+     "annualRent": 166158,
+     "rentPerSF": 8.34,
+     "leaseStart": "2021-10-18",
+     "leaseExpiry": "2036-10-31",
+     "remainingTermYears": 9.8,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$8.34/SF ($166,158/yr) in place; $8.83/SF ($175,920/yr) from Nov 2031; $9.33/SF ($185,882/yr) from Nov 2036 [Option 1 begins]; $9.82/SF ($195,644/yr) from Nov 2041 [Option 2 begins]; $10.31/SF ($205,406/yr) from Nov 2046 [Option 3 begins]; $10.80/SF ($215,168/yr) from Nov 2051 [Option 4 begins]; $11.29/SF ($224,931/yr) from Nov 2056 [Option 5 begins]. Lease expiry Oct 2036.",
+     "rentBumps": "Contractual steps: Nov 2031 to $8.83/SF (+5.9%)",
+     "renewalOptions": "5 x 5-yr options remaining at $9.33/SF, $9.82/SF, $10.31/SF, $10.80/SF, $11.29/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Five (5), five-year options remaining."
+    },
+    {
+     "name": "Dunham's Sports",
+     "suite": "110",
+     "sf": 50386,
+     "annualRent": 258984,
+     "rentPerSF": 5.14,
+     "leaseStart": "2019-04-26",
+     "leaseExpiry": "2030-01-31",
+     "remainingTermYears": 3.1,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$5.14/SF ($258,984/yr) in place; $5.36/SF ($270,069/yr) from Feb 2030 [Option 1 begins]; $5.58/SF ($281,154/yr) from Feb 2035 [Option 2 begins]; $5.81/SF ($292,743/yr) from Feb 2040 [Option 3 begins]; $6.03/SF ($303,828/yr) from Feb 2045 [Option 4 begins]. Lease expiry Jan 2030.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "4 x 5-yr options remaining at $5.36/SF, $5.58/SF, $5.81/SF, $6.03/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Four (4), five-year options remaining.",
+     "salesPSF": 104.69,
+     "salesYear": 2024,
+     "priorSalesPSF": 111.74,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $5.3M / $105 PSF; CY2023 $5.6M / $112 PSF. Base rent = 4.9% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 5.0,
+     "percentageRentBreakpoint": 5175000.0,
+     "percentageRentBreakpointType": "fixed"
+    },
+    {
+     "name": "Southern Ohio Shred",
+     "suite": "114",
+     "sf": 20647,
+     "annualRent": 20441,
+     "rentPerSF": 0.99,
+     "leaseStart": "2023-02-01",
+     "leaseExpiry": "2029-04-30",
+     "remainingTermYears": 2.3,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $0.99/SF ($20,441/yr) through Apr 2029; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration."
+    },
+    {
+     "name": "Vacant",
+     "suite": "118",
+     "sf": 6600,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2028-07-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite available for lease up."
+    },
+    {
+     "name": "Vacant",
+     "suite": "128",
+     "sf": 1800,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2028-01-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite available for lease up."
+    },
+    {
+     "name": "Vacant",
+     "suite": "134",
+     "sf": 4200,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2028-01-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite available for lease up."
+    },
+    {
+     "name": "Boba Tea & Snow Ice House",
+     "suite": "140",
+     "sf": 3600,
+     "annualRent": 46800,
+     "rentPerSF": 13.0,
+     "leaseStart": "2023-12-19",
+     "leaseExpiry": "2028-12-31",
+     "remainingTermYears": 2.0,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$13.00/SF ($46,800/yr) in place; $15.00/SF ($54,000/yr) from Jan 2029 [Option 1 begins]. Lease expiry Dec 2028.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $15.00/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining.",
+     "salesNotes": "Sales report lists this tenant but no complete 12-month year is available (partial/seasonal reporting) - not used."
+    },
+    {
+     "name": "Tan Pro USA",
+     "suite": "146",
+     "sf": 3000,
+     "annualRent": 43500,
+     "rentPerSF": 14.5,
+     "leaseStart": "2013-08-01",
+     "leaseExpiry": "2030-07-31",
+     "remainingTermYears": 3.6,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $14.50/SF ($43,500/yr) through Jul 2030; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at market upon expiration."
+    },
+    {
+     "name": "Maurices",
+     "suite": "148",
+     "sf": 9017,
+     "annualRent": 108024,
+     "rentPerSF": 11.98,
+     "leaseStart": "2012-07-01",
+     "leaseExpiry": "2031-06-30",
+     "remainingTermYears": 4.5,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $11.98/SF ($108,024/yr) through Jun 2031; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration. 5% cap on CAM controllables.",
+     "salesPSF": 116.98,
+     "salesYear": 2024,
+     "priorSalesPSF": 128.33,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $1.1M / $117 PSF; CY2023 $1.2M / $128 PSF. Base rent = 10.2% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 5.0,
+     "percentageRentBreakpoint": 1980000.0,
+     "percentageRentBreakpointType": "fixed"
+    },
+    {
+     "name": "T.J. Maxx",
+     "suite": "160",
+     "sf": 25000,
+     "annualRent": 218750,
+     "rentPerSF": 8.75,
+     "leaseStart": "2011-05-01",
+     "leaseExpiry": "2031-04-30",
+     "remainingTermYears": 4.3,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 3% cap on CAM controllables",
+     "camCapPct": 3.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$8.75/SF ($218,750/yr) in place; $9.25/SF ($231,250/yr) from May 2031 [Option 1 begins]; $9.75/SF ($243,750/yr) from May 2036 [Option 2 begins]. Lease expiry Apr 2031.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $9.25/SF, $9.75/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining. 3% cap on CAM controllables.",
+     "salesPSF": 540.83,
+     "salesYear": 2024,
+     "priorSalesPSF": 499.79,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $13.5M / $541 PSF; CY2023 $12.5M / $500 PSF. Base rent = 1.6% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 2.0,
+     "percentageRentBreakpoint": 10312500.0,
+     "percentageRentBreakpointType": "fixed"
+    },
+    {
+     "name": "Vacant",
+     "suite": "165",
+     "sf": 7550,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2029-01-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite available for lease up."
+    },
+    {
+     "name": "Vacant",
+     "suite": "166",
+     "sf": 800,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2028-01-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite available for lease up."
+    },
+    {
+     "name": "Vacant",
+     "suite": "178",
+     "sf": 8327,
+     "rentPerSF": 0,
+     "annualRent": 0,
+     "leaseStart": null,
+     "leaseExpiry": null,
+     "remainingTermYears": null,
+     "leaseType": "Vacant",
+     "reimbursementMethod": null,
+     "rentBumps": null,
+     "renewalOptions": null,
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "rentSchedule": "Vacant - no lease in place. JLL models lease-up commencing 2028-07-01.",
+     "assumptionNote": "OM rent roll label: 'Available'. Suite available for lease up."
+    },
+    {
+     "name": "Dollar Tree",
+     "suite": "182",
+     "sf": 12600,
+     "annualRent": 105588,
+     "rentPerSF": 8.38,
+     "leaseStart": "2002-10-31",
+     "leaseExpiry": "2028-01-31",
+     "remainingTermYears": 1.1,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$8.38/SF ($105,588/yr) in place; $9.90/SF ($124,740/yr) from Feb 2028 [Option 1 begins]. Lease expiry Jan 2028.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $9.90/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining. 5% cap on CAM controllables."
+    },
+    {
+     "name": "Bath & Body Works",
+     "suite": "188",
+     "sf": 4200,
+     "annualRent": 117600,
+     "rentPerSF": 28.0,
+     "leaseStart": "1998-08-27",
+     "leaseExpiry": "2031-01-31",
+     "remainingTermYears": 4.1,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: excluded; Insurance: pro rata share; 5% cap on CAM controllables",
+     "camCapPct": 5.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $28.00/SF ($117,600/yr) through Jan 2031; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration. 5% cap on CAM controllables.",
+     "salesPSF": 783.07,
+     "salesYear": 2024,
+     "priorSalesPSF": 781.24,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $3.3M / $783 PSF; CY2023 $3.3M / $781 PSF. Base rent = 3.6% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
+    },
+    {
+     "name": "Kay Jewelers",
+     "suite": "194",
+     "sf": 2405,
+     "annualRent": 65007,
+     "rentPerSF": 27.03,
+     "leaseStart": "2012-01-01",
+     "leaseExpiry": "2031-12-31",
+     "remainingTermYears": 5.0,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share; 3% cap on CAM controllables",
+     "camCapPct": 3.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$27.03/SF ($65,007/yr) in place; $27.03/SF ($65,007/yr) from Jan 2027. Lease expiry Dec 2031.",
+     "rentBumps": "Contractual steps: Jan 2027 to $27.03/SF (+0.0%)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration. 3% cap on CAM controllables.",
+     "salesPSF": 648.34,
+     "salesYear": 2024,
+     "priorSalesPSF": 655.46,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $1.6M / $648 PSF; CY2023 $1.6M / $655 PSF. Base rent = 4.2% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 4.0,
+     "percentageRentBreakpoint": 1500000.0,
+     "percentageRentBreakpointType": "fixed"
+    },
+    {
+     "name": "Honeybaked Ham",
+     "suite": "198",
+     "sf": 2400,
+     "annualRent": 35208,
+     "rentPerSF": 14.67,
+     "leaseStart": "2019-04-29",
+     "leaseExpiry": "2028-05-31",
+     "remainingTermYears": 1.4,
+     "leaseType": "Gross (no recoveries billed per OM)",
+     "reimbursementMethod": "CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $14.67/SF ($35,208/yr) through May 2028; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant renews at a 10% escalation upon expiration.",
+     "salesNotes": "Sales report lists this tenant but no complete 12-month year is available (partial/seasonal reporting) - not used.",
+     "percentageRentRate": 12.0,
+     "percentageRentBreakpoint": 233333.0,
+     "percentageRentBreakpointType": "fixed"
+    },
+    {
+     "name": "Crumbl",
+     "suite": "202",
+     "sf": 3600,
+     "annualRent": 39600,
+     "rentPerSF": 11.0,
+     "leaseStart": "2023-10-07",
+     "leaseExpiry": "2028-10-31",
+     "remainingTermYears": 1.8,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$11.00/SF ($39,600/yr) in place; $12.10/SF ($43,560/yr) from Nov 2028 [Option 1 begins]. Lease expiry Oct 2028.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $12.10/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining.",
+     "salesPSF": 502.7,
+     "salesYear": 2024,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $1.8M / $503 PSF. Base rent = 2.2% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
+    },
+    {
+     "name": "Victoria Nails and Spa",
+     "suite": "206",
+     "sf": 3130,
+     "annualRent": 34430,
+     "rentPerSF": 11.0,
+     "leaseStart": "2021-10-23",
+     "leaseExpiry": "2031-10-31",
+     "remainingTermYears": 4.8,
+     "leaseType": "NNN",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "Flat at $11.00/SF ($34,430/yr) through Oct 2031; no future contractual steps or option rents disclosed in the OM.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "None remaining",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "No options remaining; Assumes tenant rolls to market upon expiration.",
+     "salesPSF": 225.38,
+     "salesYear": 2024,
+     "priorSalesPSF": 198.95,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $705k / $225 PSF; CY2023 $623k / $199 PSF. Base rent = 4.9% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed)."
+    },
+    {
+     "name": "J.C. Penney",
+     "suite": "220",
+     "sf": 68787,
+     "annualRent": 240067,
+     "rentPerSF": 3.49,
+     "leaseStart": "1965-10-07",
+     "leaseExpiry": "2027-12-31",
+     "remainingTermYears": 1.0,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: excluded; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$3.49/SF ($240,067/yr) in place; $3.49/SF ($240,067/yr) from Jan 2028 [Option 1 begins]; $3.49/SF ($240,067/yr) from Jan 2033 [Option 2 begins]. Lease expiry Dec 2027.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $3.49/SF, $3.49/SF",
+     "isAnchor": true,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining.",
+     "salesPSF": 75.3,
+     "salesYear": 2024,
+     "priorSalesPSF": 81.88,
+     "priorSalesYear": 2023,
+     "salesNotes": "Gumberg sales report (Dec-2024 run): CY2024 $5.2M / $75 PSF; CY2023 $5.6M / $82 PSF. Base rent = 4.6% of sales (base only - recoveries not disclosed per tenant, so true occupancy cost is not computed).",
+     "percentageRentRate": 2.5,
+     "percentageRentBreakpoint": 9600000.0,
+     "percentageRentBreakpointType": "fixed"
+    },
+    {
+     "name": "Long John Silver's",
+     "suite": "9990",
+     "sf": 1650,
+     "annualRent": 74993,
+     "rentPerSF": 45.45,
+     "leaseStart": "1978-03-01",
+     "leaseExpiry": "2033-02-28",
+     "remainingTermYears": 6.2,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: excluded; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$45.45/SF ($74,993/yr) in place; $51.52/SF ($85,008/yr) from Mar 2033 [Option 1 begins]; $54.55/SF ($90,008/yr) from Mar 2038 [Option 2 begins]. Lease expiry Feb 2033.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $51.52/SF, $54.55/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining."
+    },
+    {
+     "name": "Red Lobster",
+     "suite": "9991",
+     "sf": 5179,
+     "annualRent": 75976,
+     "rentPerSF": 14.67,
+     "leaseStart": "1992-03-04",
+     "leaseExpiry": "2029-03-03",
+     "remainingTermYears": 2.2,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: excluded; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$14.67/SF ($75,976/yr) in place; $15.83/SF ($81,984/yr) from Mar 2029 [Option 1 begins]. Lease expiry Mar 2029.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "1 x 5-yr option remaining at $15.83/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "One (1), five-year option remaining."
+    },
+    {
+     "name": "McDonald's",
+     "suite": "9992",
+     "sf": 4182,
+     "annualRent": 76940,
+     "rentPerSF": 18.4,
+     "leaseStart": "1995-04-07",
+     "leaseExpiry": "2027-04-06",
+     "remainingTermYears": 0.3,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: fixed contribution; Mgmt fee: excluded; RE taxes: excluded; Insurance: pro rata share",
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$18.40/SF ($76,940/yr) in place; $18.79/SF ($78,580/yr) from Apr 2027 [Option 1 begins]; $20.29/SF ($84,853/yr) from Apr 2032 [Option 2 begins]. Lease expiry Apr 2027.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $18.79/SF, $20.29/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining."
+    },
+    {
+     "name": "Longhorn Steakhouse",
+     "suite": "9993",
+     "sf": 5695,
+     "annualRent": 86507,
+     "rentPerSF": 15.19,
+     "leaseStart": "2011-11-01",
+     "leaseExpiry": "2031-10-31",
+     "remainingTermYears": 4.8,
+     "leaseType": "Modified Gross",
+     "reimbursementMethod": "CAM: pro rata share; Mgmt fee: excluded; RE taxes: excluded; Insurance: pro rata share; 3% cap on CAM controllables",
+     "camCapPct": 3.0,
+     "mgmtFeeInCam": false,
+     "rentSchedule": "$15.19/SF ($86,507/yr) in place; $16.71/SF ($95,163/yr) from Nov 2031 [Option 1 begins]; $18.38/SF ($104,674/yr) from Nov 2036 [Option 2 begins]. Lease expiry Oct 2031.",
+     "rentBumps": "Flat through current expiry (no contractual steps disclosed)",
+     "renewalOptions": "2 x 5-yr options remaining at $16.71/SF, $18.38/SF",
+     "isAnchor": false,
+     "isNAP": false,
+     "isDark": false,
+     "assumptionNote": "Two (2), five-year options remaining. 3% cap on CAM controllables."
+    }
+   ],
+   "leaseRisk": {
+    "source": "OM",
+    "coTenancyDisclosed": true,
+    "tenants": [
+     {
+      "tenant": "Harbor Freight Tools",
+      "suite": "10",
+      "baseRentAnnual": 249888,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord agrees that Tenant shall have the exclusive right in the Shopping Center to operate as a general tool and tool accessories merchandise retailer. Landlord agrees and covenants to Tenant that, following the Effective Date, Landlord shall not enter into any leases or other occupancy agreements (and to the extent Landlord has consent rights, it shall not approve a change of use, or a sublease or assignment that provides for a change of use) for any space in the Shopping Center to an occupant whose primary use is a violation of Tenant's Exclusive Use Right.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Harbor Freight Tools USA Inc.'",
+        "verbatimQuote": "Landlord agrees that Tenant shall have the exclusive right in the Shopping Center to operate as a general tool and tool accessories merchandise retailer. Landlord agrees and covenants to Tenant that, following the Effective Date, Landlord shall not enter into any leases or other occupancy agreements (and to the extent Landlord has consent rights, it shall not approve a change of use, or a sublease or assignment that provides for a change of use) for any space in the Shopping Center to an occupant whose primary use is a violation of Tenant's Exclusive Use Right.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       },
+       "goDarkRight": {
+        "present": true,
+        "summary": "Tenant shall be required to open for business to the public (as a Harbor Freight Tools retail store) for at least one (1) day within 180 days from the Rent Commencement Date (\"Outside Opening Date\"). Landlord shall have, as its sole and exclusive remedy for Tenant's failure to open by the Outside Opening Date, the right (by providing Tenant with sixty (60) days written notice) to terminate this Lease at any time after the Outside Opening Date, but prior to the date Tenant opens the Premises for business to the public (provided, further, that Landlord's termination right shall be null and void ",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Harbor Freight Tools USA Inc.'",
+        "verbatimQuote": "Tenant shall be required to open for business to the public (as a Harbor Freight Tools retail store) for at least one (1) day within 180 days from the Rent Commencement Date (\"Outside Opening Date\"). Landlord shall have, as its sole and exclusive remedy for Tenant's failure to open by the Outside Opening Date, the right (by providing Tenant with sixty (60) days written notice) to terminate this Lease at any time after the Outside Opening Date, but prior to the date Tenant opens the Premises for business to the public (provided, further, that Landlord's termination right shall be null and void if Tenant then opens for business to the public during the thirty (30) day period following receipt of the notice). After Tenant satisfies the one (1) day opening obligation set forth herein, Tenant shall have no obligation to continuously operate at the Premises. Notwithstanding the foregoing, in In the event that Tenant shall discontinue the operation of Tenant's business in the Premises for a period of at least 180 consecutive days (unless due to casualty, Condemnation, repair, remodeling, transitioning an assignee or sublessee, Force Majeure, or as otherwise expressly permitted under this Lease), Landlord may, as its sole remedy, upon 60 days written notice to Tenant, terminate this Lease; provided, however, that Tenant may nullify such termination by reopening for business in the Premises within thirty (30) days of receipt of Landlord's termination notice.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Aldi",
+      "suite": "106",
+      "baseRentAnnual": 166158,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord covenants and agrees that until the end of the Term, no portion of the Center (other than the Premises) will be leased, used or occupied for the operation of: (i) a Retail Grocery Store, as defined below in Section 6.1 (b) (the \"Exclusive Use\"); or (ii) any of the uses set forth on Exhibit H attached hereto (collectively, the \"Prohibited uses\"; together with the Exclusive Use, are sometimes collectively referred to herein as the \"Restricted uses\").",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Alidi Inc. (Ohio) / Aldi'",
+        "verbatimQuote": "Landlord covenants and agrees that until the end of the Term, no portion of the Center (other than the Premises) will be leased, used or occupied for the operation of: (i) a Retail Grocery Store, as defined below in Section 6.1 (b) (the \"Exclusive Use\"); or (ii) any of the uses set forth on Exhibit H attached hereto (collectively, the \"Prohibited uses\"; together with the Exclusive Use, are sometimes collectively referred to herein as the \"Restricted uses\").",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Dunham's Sports",
+      "suite": "110",
+      "baseRentAnnual": 258984,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Provided Tenant is not in default of any term, provision, or condition of this Lease beyond any applicable cure period, and as long as Tenant is operating its business in the Premises predominately as a sporting goods store, then Landlord will not (a) enter into any leases for any individual premises in the Shopping Center containing in excess of 5,000 square feet of floor area with a tenant whose lease shall permit the sale of sporting goods and sporting apparel as its primary business nor (b) enter into more than two (2) additional leases (in addition to existing leases as of the date this L",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Dunham's Athleisure Corporation / Dunham's Sports'",
+        "verbatimQuote": "Provided Tenant is not in default of any term, provision, or condition of this Lease beyond any applicable cure period, and as long as Tenant is operating its business in the Premises predominately as a sporting goods store, then Landlord will not (a) enter into any leases for any individual premises in the Shopping Center containing in excess of 5,000 square feet of floor area with a tenant whose lease shall permit the sale of sporting goods and sporting apparel as its primary business nor (b) enter into more than two (2) additional leases (in addition to existing leases as of the date this Lease is executed and renewals thereof) for any individual premises in the Shopping Center containing 5,000 square feet of floor area or less with a tenant whose lease shall permit the sale of sporting goods and sporting apparel as its primary business.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Tan Pro USA",
+      "suite": "146",
+      "baseRentAnnual": 43500,
+      "otherRiskClauses": {
+       "earlyTerminationOption": {
+        "present": true,
+        "summary": "Tenant's termination Right: If any of the following conditions shall occur Tenant shall have the right to terminate this Lease, provided Tenant gives written notice to Landlord: (i) While Tenant is conducting its business in the whole of the Premises and in accordance with the terms of this Lease, Landlord leases space in the Shopping Center to another tenant with more than two (2) tanning beds in its leased premises. In the event Tenant elects to terminate this Lease as a result of this condition occurring, the Lease shall be deemed terminated effective thirty (30) days after Landlord receive",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Tan Pro, Inc. / Tan Pro USA'",
+        "verbatimQuote": "Tenant's termination Right: If any of the following conditions shall occur Tenant shall have the right to terminate this Lease, provided Tenant gives written notice to Landlord: (i) While Tenant is conducting its business in the whole of the Premises and in accordance with the terms of this Lease, Landlord leases space in the Shopping Center to another tenant with more than two (2) tanning beds in its leased premises. In the event Tenant elects to terminate this Lease as a result of this condition occurring, the Lease shall be deemed terminated effective thirty (30) days after Landlord receives Tenant's notice of termination. (ii) In the event that any applicable governmental authority changes the laws regarding indoor tanning which change will materially adversely affect Tenant's ability to operate its business in the Premises. In the event Tenant elects to terminate this Lease as a result of this condition occurring, this Lease shall be deemed terminated effective one hundred eighty (180) days after Tenant's notice of termination is received by Landlord. (iii) JC Penney closes for business in the Shopping Center and remains closed for three hundred sixty (360) consecutive days and no other tenant has opened for business in the JC Penney premises during such time. In the event Tenant elects to terminate this Lease as a result of this condition occurring, this Lease shall be deemed terminated effective one hundred eighty (180) days after Tenant's notice of termination is received by Landlord. Go Dark: Should Tenant fail to remain open for business during the standard hours of operation, as those hours are defined herein or as subsequently modified, Tenant shall pay to Landlord liquidated damages of One Hundred ($100.00) Dollars per day for each day of noncompliance.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Maurices",
+      "suite": "148",
+      "baseRentAnnual": 108024,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": {
+         "type": "named_anchor_dark",
+         "anchor": "J.C. Penney",
+         "note": null
+        },
+        "remedy": {
+         "mechanism": "termination_only",
+         "value": null,
+         "cap": null,
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": 12,
+        "terminationNoticeDays": 30,
+        "currentlyInEffect": false,
+        "currentStatusNote": "Not triggered. JCPenney lease expires 12/31/2027 - if JCP leaves and the box sits 12 months, Maurices (9,017 SF, $108k) can walk. Remedy: Termination right only (no rent reduction) if JCPenney space stays vacant 12 consecutive months; exercise within 30 days.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Maurices Incorporated / Maurices'",
+        "verbatimQuote": "Landlord covenants and agrees that in the event J.C. Penney Co. shall cease doing business in the Shopping Center and if such space shall remain vacant for a period of twelve (12) consecutive months thereafter, at that time, Tenant may, at its option, cancel this Lease. Said termination right must be exercised within thirty (30) days after the expiration of the aforementioned twelve (12) month period and shall take effect thirty (30) days after Landlord's receipt of such notice.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ]
+     },
+     {
+      "tenant": "T.J. Maxx",
+      "suite": "160",
+      "baseRentAnnual": 218750,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": {
+         "type": "named_anchor_dark",
+         "anchor": "J.C. Penney",
+         "note": "Inducement Condition requires BOTH JCPenney (>=68,000 SF) AND Sears (>=101,000 SF) open. Sears is gone - an \"Existing Co-Tenancy Violation\" the tenant waived its termination right for; future remedies revive only after that violation is cured."
+        },
+        "remedy": {
+         "mechanism": "alternate_rent_pct_sales",
+         "value": null,
+         "cap": null,
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": 12,
+        "terminationNoticeDays": null,
+        "currentlyInEffect": false,
+        "currentStatusNote": "DORMANT/IMPAIRED: the Sears prong has been failing for years (waived). The rent roll shows TJ Maxx at full $8.75/SF, so it is not on Alternate Rent today - confirm with the estoppel that no Alternate Rent is being paid and how a JCPenney closure would interact with the existing violation. Remedy: No minimum or % rent for up to one year after a 365-day failure; Alternate Rent instead (% not in summary).",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'The TJX Companies, Inc. / T.J. Maxx'",
+        "verbatimQuote": "The Inducement Condition shall be deemed satisfied when the following two stores are both open for retail business to retail customers in the Shopping Center, each not less than 40 hours per week: (A) a store operating under the tradename \"JC Penney\" and occupying at least 68,000 square feet of floor area, or a Permitted Replacement, and (B) a store operating under the tradename \"Sears\" and occupying at least 101,000 square feet of floor area, or a Permitted Replacement. For purposes hereof, a \"Permitted Replacement\" shall mean up to 3 stores, each of which is part of either a national chain of at least 100 stores or a regional chain of at least 50 stores, and which collectively occupy at least 90% of the floor area of the store being replaced. If for any period of more than 365 consecutive days the Inducement Condition shall not be met, then from such three hundred sixty-fifth ( day until the earlier of the date) Inducement Condition is satisfied and the first anniversary of such 365th day, no minimum rent shall be payable under Section 5.1 and no ) percentage rent shall be payable under Section 7.3 and in lieu thereof Tenant shall pay Alternate Rent to Landlord on or before the 20th day after the end of each calendar month or fraction thereof included in such period. Tenant hereby waives its termination right pursuant to Section 4.7 of the Lease because of the Existing Co-Tenancy Violation. Landlord acknowledges and agrees that Tenant’s agreement to waive its termination right is solely for the Existing Co-Tenancy Violation and not a waiver of any other co-tenancy requirement set forth in this Lease. Furthermore, upon cure of the Existing Co-Tenancy Violation, Tenant may exercise any and all remedies available to it under this Section 4.7 or at law or in equity for an",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ],
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord agrees that, from the date hereof until expiration of the term of this lease, no other individual premises in the Shopping Center shall at any time contain more than (i) 15,000 square feet of floor area therein used or occupied for, or devoted to, the sale or display of off price apparel and related accessories, and/or (ii) 9,500 square feet of floor area therein used or occupied for, or devoted to the sale or display of shoes and footwear, and/or (iii) 15,000 square feet of floor area therein used or occupied for, or devoted to, the sale or display of furnishings for the home includi",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'The TJX Companies, Inc. / T.J. Maxx'",
+        "verbatimQuote": "Landlord agrees that, from the date hereof until expiration of the term of this lease, no other individual premises in the Shopping Center shall at any time contain more than (i) 15,000 square feet of floor area therein used or occupied for, or devoted to, the sale or display of off price apparel and related accessories, and/or (ii) 9,500 square feet of floor area therein used or occupied for, or devoted to the sale or display of shoes and footwear, and/or (iii) 15,000 square feet of floor area therein used or occupied for, or devoted to, the sale or display of furnishings for the home including the following categories of items: linens and domestics, window treatments, bathroom items, wall decor, housewares, table top goods, glassware, flatware, cookware, kitchen utensils, giftware and/or closet, shelving and storage items and home accessories (all of the foregoing hereinafter referred to as a \"Competing Use\" and the merchandise referred to therein as the \"Protected Merchandise\").",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Dollar Tree",
+      "suite": "182",
+      "baseRentAnnual": 105588,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": {
+         "type": "named_anchor_dark",
+         "anchor": "T.J. Maxx",
+         "note": null
+        },
+        "remedy": {
+         "mechanism": "percent_rent_reduction",
+         "value": 50,
+         "cap": null,
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": 9,
+        "terminationNoticeDays": 30,
+        "currentlyInEffect": false,
+        "currentStatusNote": "Not triggered - T.J. Maxx open (lease to 4/30/2031, 2 options). Remedy: Base Rent abates to 50% (Additional Rent continues 100%).",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Dollar Tree Stories, Inc. / Dollar Tree'",
+        "verbatimQuote": "In the event TJ Maxx, or its successors or assigns or replacement tenants, vacates the premises or ceases to operate the premises leased by it, Tenant's Base Rent shall immediately abate and Tenant shall pay only ½ monthly Base Rent plus 100% of Additional Rent for the period that the Co-Tenant Space remains vacant. If the Co-Tenant Space remains unoccupied for a period of 9 months, or is not leased to a tenant with a similar use as the vacated Co-Tenant Space, or another use consistent with a first class shopping center, Tenant shall have the right to terminate this Lease with 30 days' written notice to Landlord at the end of the aforementioned 9 month period, with neither Landlord nor Tenant having any further obligation to the other under this Lease. If the Tenant does not exercise its right to terminate as provided in this Section A.16 then the Tenant will revert back to paying 100% monthly Base Rent plus 100% of Additional Rent.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ],
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Tenant shall have an \"exclusive\" for a single price point variety retail store. Landlord will not permit any other occupant in the Shopping Center to operate a retail Dollar variety store whose Principal Business (hereinafter defined), is sellingmerchandise at a single price point or retail operations with the word \"Dollar'' in their trade name.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Dollar Tree Stories, Inc. / Dollar Tree'",
+        "verbatimQuote": "Tenant shall have an \"exclusive\" for a single price point variety retail store. Landlord will not permit any other occupant in the Shopping Center to operate a retail Dollar variety store whose Principal Business (hereinafter defined), is sellingmerchandise at a single price point or retail operations with the word \"Dollar'' in their trade name.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Bath & Body Works",
+      "suite": "188",
+      "baseRentAnnual": 117600,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": {
+         "operator": "OR",
+         "conditions": [
+          {
+           "type": "named_anchor_dark",
+           "anchor": "J.C. Penney",
+           "note": "JCPenney must be one of the two operating Key Tenants - its closure alone fails prong (a)."
+          },
+          {
+           "operator": "AND",
+           "conditions": [
+            {
+             "type": "named_anchor_dark",
+             "anchor": "T.J. Maxx",
+             "note": null
+            },
+            {
+             "type": "named_anchor_dark",
+             "anchor": "Harbor Freight Tools",
+             "note": null
+            },
+            {
+             "type": "note",
+             "note": "With JCPenney open, prong (a) still needs ONE more of TJ Maxx / Harbor Freight - fails only if BOTH go dark."
+            }
+           ]
+          },
+          {
+           "type": "occupancy_threshold",
+           "direction": "below",
+           "pct": 70,
+           "scope": "Other Space (excl. Premises, affiliates and Key Tenants)",
+           "note": null
+          }
+         ]
+        },
+        "remedy": {
+         "mechanism": "alternate_rent_pct_sales",
+         "value": null,
+         "cap": "minimum_annual_rent",
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": 9,
+        "terminationNoticeDays": 30,
+        "currentlyInEffect": false,
+        "currentStatusNote": "Not currently triggered on the OM roll: JCPenney (lease to 12/31/2027, 2 options at flat $3.49) is open; 70%-of-Other-Space test not computed (definition excludes several spaces). JCPenney's 12/2027 expiry is the live risk. Remedy: Lesser of Alternative Rent (% of Gross Sales; % not stated in summary) or Basic Rent.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Bath & Body Works, LLC / Bath & Body Works'",
+        "verbatimQuote": "Key Tenants: J.C. Penney, TJ Maxx and Harbor Freight. The “Co-Tenancy Requirements” are satisfied only if: (a) at least two Key Tenants, including JCPenney, continuously operate in their current Shopping Center locations in the ordinary course of business, and (b) retail tenants occupy and continuously operate at least 70% of the Other Space in the Shopping Center, excluding the Demised Premises, certain affiliate-leased spaces, and the Key Tenants. If either requirement is not satisfied, Tenant may: (a) terminate the lease if requirement (a) remains unsatisfied for more than 9 months or requirement (b) for more than 120 days, upon 30 days’ notice unless cured before termination, or (b) pay reduced rent equal to the lesser of Alternative Rent based on Gross Sales or 1/12 of annual Basic Rent until the requirements are satisfied.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ]
+     },
+     {
+      "tenant": "Kay Jewelers",
+      "suite": "194",
+      "baseRentAnnual": 65007,
+      "coTenancy": [
+       {
+        "type": "operating",
+        "triggerLogic": {
+         "operator": "AND",
+         "conditions": [
+          {
+           "operator": "OR",
+           "conditions": [
+            {
+             "type": "named_anchor_dark",
+             "anchor": "J.C. Penney",
+             "note": "or a national/regional Retail Store(s) in >=61,000 SF of that space"
+            },
+            {
+             "type": "named_anchor_dark",
+             "anchor": "T.J. Maxx",
+             "note": "or a national/regional Retail Store(s) in >=22,000 SF of that space"
+            }
+           ]
+          },
+          {
+           "type": "occupancy_threshold",
+           "direction": "below",
+           "pct": 75,
+           "scope": "remaining leasable floor area excl. JCPenney and TJ Maxx spaces",
+           "note": null
+          }
+         ]
+        },
+        "remedy": {
+         "mechanism": "alternate_rent_pct_sales",
+         "value": 3,
+         "cap": "50% of Fixed Minimum Rent",
+         "additionalRentTreatment": "unknown"
+        },
+        "reliefPeriodMonthsBeforeTermination": null,
+        "terminationNoticeDays": null,
+        "currentlyInEffect": false,
+        "currentStatusNote": "Requirement is satisfied if EITHER both anchor prongs hold OR >=75% of the remaining floor area is operating; trips only when an anchor goes dark AND that occupancy test also fails. Center is ~90% occupied today but the in-line/mall-shop vacancy (29,277 SF) sits in the denominator - compute the 75% test precisely. Remedy: Lesser of 3% of gross sales or 50% of Fixed Minimum Rent, after 90 consecutive days; no termination right stated.",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Sterling Jewlers Inc. / Kay Jewelers'",
+        "verbatimQuote": "The following is the Ongoing Co-Tenancy Requirement: a) (i)JC Penney must operate a business in the space shown on Exhibit \"A\" as JC Penney, or another national or regional \"Retail Store\" must operate a business in at least 61,000 square feet of floor area within said space; provided, however, the parties agree that this condition will also be satisfied if a total of at least 61,000 square feet of floor area within said space is occupied by two national or regional Retail Stores and (ii)TJ Maxx must operate a business in the space shown on Exhibit \"A\" as TJ Maxx, or another national or regional Retail Store must operate a business in at least 22,000 square feet of floor area within said space; provided, however, the parties agree that this condition will also be satisfied if a total of at least 22,000 square feet of floor area within said space is occupied by two national or regional Retail Stores, or b) seventy-five percent (75%) or more of the remaining leasable floor area of the Shopping Center (excluding the JC Penney and TJ Maxx spaces) is occupied by tenants operating a business. A \"Retail Store\", as defined in this Article XLVIII, shall mean a Bonafide tenant of a character consistent with tenants typically found in regional shopping centers, and shall specifically exclude the following: flea markets, fairs, bingo parlors, gambling establishments, lodging establishments and pornographic shops. If the Ongoing Co-Tenancy Requirement is not met and continues to be unsatisfied for more than ninety (90) consecutive days, then in that event Tenant may elect to pay, in lieu of Fixed Minimum Rent, Percentage Rent and additional rents payable to Landlord pursuant to Articles VII, VIII and XVI, a monthly rent equal to the lesser of (a) three percent (3%) of gross sales of ",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      ],
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "During the term of this Lease, or any extension thereof, Landlord shall not lease any space in the Shopping Center to a tenant whose Primary Use is the sale of fine jewelry other than Tenant. \"Primary Use\" shall be defined as having 10% or more of the sales floor area devoted to the sale of fine jewelry (precious metals, diamonds, colored gemstones and/or timepieces). This restriction shall not apply to any existing tenant or its assignee, sublessee or successor. In the event Landlord violates this restriction, Tenant may immediately commence paying Alternative Rent until such violation is cor",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Sterling Jewlers Inc. / Kay Jewelers'",
+        "verbatimQuote": "During the term of this Lease, or any extension thereof, Landlord shall not lease any space in the Shopping Center to a tenant whose Primary Use is the sale of fine jewelry other than Tenant. \"Primary Use\" shall be defined as having 10% or more of the sales floor area devoted to the sale of fine jewelry (precious metals, diamonds, colored gemstones and/or timepieces). This restriction shall not apply to any existing tenant or its assignee, sublessee or successor. In the event Landlord violates this restriction, Tenant may immediately commence paying Alternative Rent until such violation is corrected. If such violation is not corrected within six (6) months, then Tenant may terminate this Lease by written notice to Landlord, such termination to be effective sixty (60) days after Landlord receives the notice, and Landlord shall reimburse Tenant for the unamortized portion of the cost of Tenant's Work, which cost shall not include any portion of Tenant's Work for which Tenant has received Landlord's Contribution. Tenant acknowledges and agrees that the remedies specified herein this Article XLIX for violation of the exclusive restriction shall be the only remedies available to Tenant.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "McDonald's",
+      "suite": "9992",
+      "baseRentAnnual": 76940,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord covenants and agrees that no property ( other than the Demised Premises) now or hereafter owned, leased or controlled, directly or indirectly, by Landlord or, if Landlord is a corporation, any subsidiary of Landlord, adjacent or contiguous to the Demised Premises or within two (2) miles of the perimeter of the Demised Premises (whether or not such other property is subsequently voluntarily conveyed by Landlord) shall, during the term of this Lease and any extensions, be leased, used or occupied as a fast food hamburger restaurant, so long as Tenant is operating a McDonald's restaurant",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'McDonald's Corporation'",
+        "verbatimQuote": "Landlord covenants and agrees that no property ( other than the Demised Premises) now or hereafter owned, leased or controlled, directly or indirectly, by Landlord or, if Landlord is a corporation, any subsidiary of Landlord, adjacent or contiguous to the Demised Premises or within two (2) miles of the perimeter of the Demised Premises (whether or not such other property is subsequently voluntarily conveyed by Landlord) shall, during the term of this Lease and any extensions, be leased, used or occupied as a fast food hamburger restaurant, so long as Tenant is operating a McDonald's restaurant on the Demised Premises",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     },
+     {
+      "tenant": "Longhorn Steakhouse",
+      "suite": "9993",
+      "baseRentAnnual": 86507,
+      "otherRiskClauses": {
+       "exclusiveUse": {
+        "present": true,
+        "summary": "Landlord will not use, lease, or permit any other store or property on any land within the Shopping Center to be used for the purpose of a steakhouse restaurant similar to Longhorn Steakhouse, including but not limited to such steakhouse restaurants as: \"Chop House\", \"Golden Corral\", \"Logan's Roadhouse\", \"Lone Star Steakhouse\", \"Original Roadhouse Grill\", \"Outback Steakhouse\", \"Roadhouse Grill\", \"Ryan's Steakhouse\", \"Sagebrush\", \"Saltgrass Steak house\", \"Sizzler\", \"Smokey Bones\", \"Steak and Ale\", \"Ted's Montana Grill\", \"Texas Roadhouse\", \"Texas Steakhouse\", \"Trail Dust steakhouse\", \"Tumbleweed",
+        "sourceDocument": "Seller lease-summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' (Eric's Drive, Claude/OMs) - row 'Rare Hospitality International, Inc. / Longhorn Steakhouse'",
+        "verbatimQuote": "Landlord will not use, lease, or permit any other store or property on any land within the Shopping Center to be used for the purpose of a steakhouse restaurant similar to Longhorn Steakhouse, including but not limited to such steakhouse restaurants as: \"Chop House\", \"Golden Corral\", \"Logan's Roadhouse\", \"Lone Star Steakhouse\", \"Original Roadhouse Grill\", \"Outback Steakhouse\", \"Roadhouse Grill\", \"Ryan's Steakhouse\", \"Sagebrush\", \"Saltgrass Steak house\", \"Sizzler\", \"Smokey Bones\", \"Steak and Ale\", \"Ted's Montana Grill\", \"Texas Roadhouse\", \"Texas Steakhouse\", \"Trail Dust steakhouse\", \"Tumbleweed Southwest Grill,\" \"Rocky River Grillhouse\" or such similar restaurant concepts. Landlord warrants that there are no prior agreements or leases in existence on the date hereof which specifically permit or require the tenant or occupant under such agreement to operate as a steakhouse restaurant ( as distinguished from an agreement or lease which permits such tenant or occupant to operate for any lawful use, which Tenant acknowledges may exist in the Shopping Center as of the date of this Lease). If Landlord violates this exclusive, Tenant shall give Landlord written notice of the violation and Landlord shall have thirty (30) days from receipt of the notice within which to cure the violation. If Landlord fails to cure the violation within that time period, Tenant may enjoin the violation and/or sue Landlord for damages. If Landlord violates this exclusive, in addition to the above-stated remedies, Tenant shall also have the right to remain upon the Premises and pay fifty percent (50%) of Rent in lieu of Rent due hereunder for so long as Landlord is in violation of this exclusive.",
+        "provenance": "extracted",
+        "verifiedAgainstExecutedDoc": false
+       }
+      }
+     }
+    ]
+   },
+   "anchorStatus": [
+    {
+     "anchor": "Harbor Freight Tools",
+     "status": "in_place",
+     "termExpiration": "2028-06-30",
+     "relocating": false
+    },
+    {
+     "anchor": "Aldi",
+     "status": "in_place",
+     "termExpiration": "2036-10-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Dunham's Sports",
+     "status": "in_place",
+     "termExpiration": "2030-01-31",
+     "relocating": false
+    },
+    {
+     "anchor": "Southern Ohio Shred",
+     "status": "in_place",
+     "termExpiration": "2029-04-30",
+     "relocating": false
+    },
+    {
+     "anchor": "T.J. Maxx",
+     "status": "in_place",
+     "termExpiration": "2031-04-30",
+     "relocating": false
+    },
+    {
+     "anchor": "J.C. Penney",
+     "status": "in_place",
+     "termExpiration": "2027-12-31",
+     "relocating": false
+    }
+   ],
+   "cashFlowProjection": [
+    {
+     "label": "Year 1 (Dec 2027) - JLL Year-1 / in-place basis",
+     "totalBaseRent": 2064460,
+     "reimbursements": 259111,
+     "egr": 2392727,
+     "operatingExpenses": 676083,
+     "noi": 1716643
+    },
+    {
+     "label": "Year 2 (Dec 2028)",
+     "totalBaseRent": 2327171,
+     "reimbursements": 287818,
+     "egr": 2684145,
+     "operatingExpenses": 702955,
+     "noi": 1981190
+    },
+    {
+     "label": "Year 3 (Dec 2029)",
+     "totalBaseRent": 2573897,
+     "reimbursements": 319167,
+     "egr": 2903149,
+     "operatingExpenses": 728198,
+     "noi": 2174951
+    },
+    {
+     "label": "Year 4 (Dec 2030)",
+     "totalBaseRent": 2589526,
+     "reimbursements": 327470,
+     "egr": 2948845,
+     "operatingExpenses": 748802,
+     "noi": 2200043
+    },
+    {
+     "label": "Year 5 (Dec 2031)",
+     "totalBaseRent": 2617526,
+     "reimbursements": 334640,
+     "egr": 3012608,
+     "operatingExpenses": 770525,
+     "noi": 2242083
+    },
+    {
+     "label": "Year 6 (Dec 2032)",
+     "totalBaseRent": 2679052,
+     "reimbursements": 344557,
+     "egr": 3087052,
+     "operatingExpenses": 793163,
+     "noi": 2293889
+    },
+    {
+     "label": "Year 7 (Dec 2033)",
+     "totalBaseRent": 2734001,
+     "reimbursements": 355132,
+     "egr": 3146424,
+     "operatingExpenses": 815960,
+     "noi": 2330463
+    },
+    {
+     "label": "Year 8 (Dec 2034)",
+     "totalBaseRent": 2790245,
+     "reimbursements": 359953,
+     "egr": 3205876,
+     "operatingExpenses": 839391,
+     "noi": 2366485
+    },
+    {
+     "label": "Year 9 (Dec 2035)",
+     "totalBaseRent": 2808651,
+     "reimbursements": 369316,
+     "egr": 3255616,
+     "operatingExpenses": 863180,
+     "noi": 2392437
+    },
+    {
+     "label": "Year 10 (Dec 2036)",
+     "totalBaseRent": 2845047,
+     "reimbursements": 380184,
+     "egr": 3326248,
+     "operatingExpenses": 888264,
+     "noi": 2437984
+    }
+   ],
+   "incomeBreakdown": {
+    "Potential Base Rent": 2498338,
+    "Absorption & Turnover Vacancy": -433878,
+    "Scheduled Base Rent": 2064460,
+    "Total Expense Recoveries": 259111,
+    "Percentage Rent": 69156,
+    "Potential Gross Revenue": 2392727,
+    "Vacancy Allowance": 0,
+    "Effective Gross Revenue": 2392727
+   },
+   "expenseBreakdown": {
+    "CAM": 267490,
+    "Insurance": 63025,
+    "Utilities": 18536,
+    "Real Estate Taxes": 245252,
+    "Management Fee": 71782,
+    "Non Reimbursable": 10000,
+    "Total Operating Expenses": 676083,
+    "Capital Reserves (below the line)": 61016,
+    "Year-2 TI + LC (below the line)": 864765
+   },
+   "keyAssumptions": [
+    "Source: JLL Offering Memorandum 'Midwest & Mid-Atlantic Grocery-Anchored Portfolio' (99 pp., undated; cash flow 1/1/2027-12/31/2037). This property: overview PDF p.64, site plan p.65, trade area p.66, assumptions/opex p.67, RE taxes p.67, rent roll pp.68-70, cash flow p.71.",
+    "TIE-OUT (verified by script): roster SF 305,078 = OM GLA 305,078; occupied 275,801 SF + vacant 29,277 SF; occupancy 90.4%.",
+    "TIE-OUT: in-place base rent on the roster $2,064,461 vs OM rent-roll total $2,064,461; JLL Year-1 EGR $2,392,727 - OpEx $676,083 = NOI $1,716,643 (matches the portfolio summary, p.1).",
+    "TIE-OUT: 1 tax parcel(s) on the OM tax page sum to $245,252 vs the cash-flow RE tax line $245,252 (2026 assessment x millage grown 3%, net of 2% discount where shown).",
+    "WALT 2.9 yrs computed SF-weighted from lease expiries as of 1/1/2027 (OM states 2.9); weighted-avg base rent $7.49/SF over rent-paying occupied SF.",
+    "NO asking price or cap rate is disclosed (portfolio is marketed unpriced) - both left null.",
+    "JLL leasing assumptions: 75% renewal probability, 12 months downtime, $30/SF TI new / $0 renewal, 6%/3% LCs, 5% general vacancy (excluding credit/anchor tenants), 3% management fee, $0.20/SF reserves.",
+    "Lease-clause detail (co-tenancy, exclusives, termination/go-dark, ROFR) comes from the seller's summary workbook 'Midwest & Midatlantic Portfolio - Exclusives, Co-Tenancy, Restrictions.xlsx' - a summary, NOT the executed leases; every clause is marked unverified.",
+    "Rent roll as-of: OM cash flow starts 1/1/2027; tenantsAsOf set to that date by convention.",
+    "Occupancy: 275,801 SF leased / 305,078 SF = 90.4% (OM 90%).",
+    "Percentage rent: JLL Year-1 $69,156.",
+    "Sales from the Gumberg report (bldg 254, Dec-2024 run); T.J. Maxx, Dunham's report annually (single January posting).",
+    "Dunham's, Southern Ohio Shred and HoneyBaked show a single 'Excl.' recovery code - carried as gross (no recoveries).",
+    "OM lists the anchors as 'Aldi & JC Penny' (p.64); Aldi is 9% of gross income.",
+    "Tenant sales from the Gumberg 'Gross Sales History' report (Dec-2024 run, pages 1-80 of 'All Property Sales.pdf'); only full 12-month (or annual-filer) years are used - partial/catch-up years are skipped. Sales PSF uses the OM rent-roll SF."
+   ],
+   "notes": "**Chillicothe Shopping Center** is a **305,078 SF community center** (a former enclosed mall with JCPenney) on N Bridge Street / Route 23 (+27,500 VPD) in Chillicothe, OH, 45 miles south of Columbus - the #1 most-visited center within 15 miles (3.6M visits) but in a **thin, lower-income trade area ($74,775 AHHI, 26,098 people within 3 miles)**. It is **90.4% leased** with **$1,716,643 of Year-1 NOI** and a **2.9-year WALT - the shortest in the portfolio**. The 'grocery anchor' is **Aldi (19,923 SF, 8% of base rent)** - a good credit with term to 2036, but too small to anchor 305,000 SF. The real anchor is **JCPenney (68,787 SF at $3.49/SF), expiring 12/31/2027 with sales of only $5.18M ($75/SF) and falling** - and JCPenney is written into the co-tenancy of Bath & Body Works, Kay, Maurices and T.J. Maxx. Those in-line tenants are strong (**T.J. Maxx $541/SF, Bath & Body Works $783, Kay $648**), which is the asset's best feature. **38% of base rent rolls in 2027-28** and **29,277 SF of vacancy** sits in six mall-interior suites; JLL's 6.0% NOI CAGR depends on leasing it ($652k of TI in Year 2). Thesis: a value-add/re-tenanting play priced off a short, JCPenney-dependent rent roll, not a stabilized grocery center. Part of JLL's **9-property, 3,027,794 SF Midwest & Mid-Atlantic Grocery-Anchored Portfolio** (portfolio Year-1 NOI $28,370,304), offered **unpriced** - no asking price or cap rate is disclosed for the portfolio or any asset.",
+   "dealScore": {
+    "grade": "C+",
+    "rationale": "**Strong in-line sales (T.J. Maxx $541/SF, BBW $783)** can't offset a **2.9-year WALT**, a **$75/SF JCPenney expiring 12/2027** that four tenants' co-tenancy hangs on, and a **thin trade area ($74,775 AHHI)** behind an Aldi too small to anchor the center.",
+    "strengths": [
+     "Productive national in-line tenants: T.J. Maxx $541/SF (1.6% rent-to-sales), Bath & Body Works $783, Kay $648, Crumbl $503.",
+     "#1 most-visited center within 15 miles; Route 23 frontage (+27,500 VPD).",
+     "Aldi to 10/31/2036 with five options; Harbor Freight with five options; Dunham's with four.",
+     "Roster and rent ($2,064,461) tie exactly; OM 90% occupancy confirmed (90.4%)."
+    ],
+    "risks": [
+     "2.9-year WALT; 38% of base rent expires in 2027-28 (JCPenney, McDonald's, Harbor Freight, Dollar Tree, Crumbl, Boba Tea, HoneyBaked).",
+     "JCPenney: 68,787 SF, $75/SF sales (down from $82), expiring 12/31/2027 with two FLAT options at $3.49.",
+     "JCPenney co-tenancy dependents: Bath & Body Works (termination / alternative rent), Kay (3% of sales), Maurices (termination), T.J. Maxx (alternate rent).",
+     "29,277 SF of vacancy in six interior suites; JLL Year-2 TI $651,810 and LC $212,955.",
+     "Low recoveries (38% of opex)."
+    ]
+   },
+   "upsideItems": [
+    {
+     "priority": "medium",
+     "item": "Lease up 29,277 SF of interior vacancy",
+     "detail": "Six suites (800-8,327 SF) at JLL's $12-$20/SF - roughly $350-450k of rent if fully leased, ~20-25% of NOI; but it is mall-interior space and JLL budgets $652k of TI to get there."
+    },
+    {
+     "priority": "low",
+     "item": "JCPenney box redevelopment",
+     "detail": "If JCPenney leaves in 2027, 68,787 SF at $3.49 is deeply below JLL's $6.00/SF (50k+) market and could be demised for boxes - an exit-value lever, but also the main risk."
+    }
+   ],
+   "redFlags": [
+    {
+     "severity": "high",
+     "description": "JCPENNEY DEPENDENCY - JCPenney (68,787 SF, 22.5% of GLA) expires 12/31/2027 with two flat 5-yr options at $3.49/SF and reported sales of $5.18M ($75/SF) in 2024, down from $5.89M in 2022. Bath & Body Works ($117,600), Kay ($65,007), Maurices ($108,024) and T.J. Maxx ($218,750) all have co-tenancy tied to JCPenney - a JCP closure puts ~$510k of in-line rent at risk on top of JCP's own $240,067."
+    },
+    {
+     "severity": "high",
+     "description": "SHORT WALT / NEAR-TERM ROLLOVER - 2.9-year WALT; 2027 (JCPenney, McDonald's) and 2028 (Harbor Freight, Dollar Tree, Crumbl, Boba Tea, HoneyBaked) together = $794,091 (38%) of base rent."
+    },
+    {
+     "severity": "medium",
+     "description": "THIN TRADE AREA - $74,775 AHHI and 26,098 people within 3 miles (57,451 within 10). Rent growth and backfill rents should be underwritten conservatively."
+    },
+    {
+     "severity": "medium",
+     "description": "T.J. MAXX CO-TENANCY ALREADY IMPAIRED - its Inducement Condition requires JCPenney AND Sears; Sears is gone (an 'Existing Co-Tenancy Violation' whose termination right TJX waived). The rent roll shows full rent today; confirm no Alternate Rent is payable and how a JCPenney closure would interact."
+    }
+   ],
+   "shadowAnchors": null,
+   "fieldCitations": {
+    "noi": "p.71 - Cash Flow Year 1; p.1 portfolio table",
+    "effectiveGrossIncome": "p.71 - Cash Flow Year 1 EGR",
+    "operatingExpenses": "p.71 - Cash Flow Year 1; detail p.67",
+    "totalSF": "p.65 site-plan roster total; p.70 rent-roll footer",
+    "occupancy": "computed from rent roll (pp.68-70)",
+    "walt": "computed from rent roll (pp.68-70)",
+    "grossPotentialRent": "computed - roster base-rent roll-up (pp.68-70)",
+    "weightedAvgRentPSF": "computed from rent roll (pp.68-70)",
+    "currentAnnualTaxes": "p.71 Cash Flow RE taxes; parcels p.67",
+    "population3mi": "p.66 - ESRI 3-mile ring",
+    "avgHHIncome3mi": "p.66 - ESRI 3-mile ring",
+    "yearBuilt": "p.64 - Property Summary",
+    "lotSizeAcres": "p.64 - Property Summary",
+    "tenants": "pp.68-70 rent roll; cross-checked to p.65 site-plan roster",
+    "leaseRisk": "seller clause workbook (Exclusives, Co-Tenancy, Restrictions) - summary, unverified",
+    "trafficCountVPD": "p.64 - investment highlights"
+   },
+   "tenantSalesHistory": [
+    {
+     "year": 2022,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "T.J. Maxx",
+       "annualSales": 12983193,
+       "sf": 25000,
+       "salesPSF": 519.33,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000357 suite 0160; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Dunham's Sports",
+       "annualSales": 6761497,
+       "sf": 50386,
+       "salesPSF": 134.19,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000035 suite 0110; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "J.C. Penney",
+       "annualSales": 5889027,
+       "sf": 68787,
+       "salesPSF": 85.61,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000051 suite 0220; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Bath & Body Works",
+       "annualSales": 3318050,
+       "sf": 4200,
+       "salesPSF": 790.01,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000326 suite 0188; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Kay Jewelers",
+       "annualSales": 1743635,
+       "sf": 2405,
+       "salesPSF": 725.0,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000388 suite 0194; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Maurices",
+       "annualSales": 1525861,
+       "sf": 9017,
+       "salesPSF": 169.22,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000356 suite 0148; full 12-month (or annual) reporting year."
+      }
+     ]
+    },
+    {
+     "year": 2023,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "T.J. Maxx",
+       "annualSales": 12494790,
+       "sf": 25000,
+       "salesPSF": 499.79,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000357 suite 0160; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "J.C. Penney",
+       "annualSales": 5632325,
+       "sf": 68787,
+       "salesPSF": 81.88,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000051 suite 0220; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Dunham's Sports",
+       "annualSales": 5630082,
+       "sf": 50386,
+       "salesPSF": 111.74,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000035 suite 0110; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Bath & Body Works",
+       "annualSales": 3281191,
+       "sf": 4200,
+       "salesPSF": 781.24,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000326 suite 0188; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Kay Jewelers",
+       "annualSales": 1576393,
+       "sf": 2405,
+       "salesPSF": 655.46,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000388 suite 0194; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Maurices",
+       "annualSales": 1157128,
+       "sf": 9017,
+       "salesPSF": 128.33,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000356 suite 0148; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Victoria Nails and Spa",
+       "annualSales": 622704,
+       "sf": 3130,
+       "salesPSF": 198.95,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000375 suite 0206; full 12-month (or annual) reporting year."
+      }
+     ]
+    },
+    {
+     "year": 2024,
+     "uploadedAt": "2026-10-01T00:00:00.000Z",
+     "source": "upload",
+     "tenants": [
+      {
+       "name": "T.J. Maxx",
+       "annualSales": 13520867,
+       "sf": 25000,
+       "salesPSF": 540.83,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000357 suite 0160; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Dunham's Sports",
+       "annualSales": 5274775,
+       "sf": 50386,
+       "salesPSF": 104.69,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000035 suite 0110; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "J.C. Penney",
+       "annualSales": 5179970,
+       "sf": 68787,
+       "salesPSF": 75.3,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000051 suite 0220; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Bath & Body Works",
+       "annualSales": 3288914,
+       "sf": 4200,
+       "salesPSF": 783.07,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000326 suite 0188; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Crumbl",
+       "annualSales": 1809714,
+       "sf": 3600,
+       "salesPSF": 502.7,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000523 suite 0202; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Kay Jewelers",
+       "annualSales": 1559269,
+       "sf": 2405,
+       "salesPSF": 648.34,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000388 suite 0194; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Maurices",
+       "annualSales": 1054828,
+       "sf": 9017,
+       "salesPSF": 116.98,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000356 suite 0148; full 12-month (or annual) reporting year."
+      },
+      {
+       "name": "Victoria Nails and Spa",
+       "annualSales": 705436,
+       "sf": 3130,
+       "salesPSF": 225.38,
+       "salesNote": "Gumberg 'Gross Sales History' report (JJ Gumberg Co., run 9/8/2025), bldg 254 lease 000375 suite 0206; full 12-month (or annual) reporting year."
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
