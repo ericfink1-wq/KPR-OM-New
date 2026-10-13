@@ -274,11 +274,59 @@ const CENTER_FILLER = new Set([
 const distinctiveTokens = (s: string): string[] =>
   s.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length >= 3 && !CENTER_FILLER.has(t));
 
+// Broker tags and document-type labels that brokers wrap around the property name
+// in a file name ("NMRK - Lake Brandon Village - Financial Narrative",
+// "Frederick_County_Square_-_NMRK_OM"). Stripping them leaves the property name.
+const FILE_NAME_NOISE: RegExp[] = [
+  // brokers
+  /\b(nmrk|newmark|cbre|jll|eastdil|colliers|berkadia|northmarq|ngkf|hff|srs|matthews|cushman\s*(&|and)\s*wakefield|c\s*&\s*w|marcus\s*(&|and)\s*millichap|avison\s+young|walker\s*(&|and)\s*dunlop|b\s*\+\s*e)\b/gi,
+  // document types (multi-word first)
+  /\bdetailed\s+tenant\s+underwriting\b/gi, /\btenant\s+underwriting\b/gi,
+  /\bfinancial\s+narrative\b/gi, /\boffering\s+memo(randum)?\b/gi,
+  /\badditional\s+info(rmation)?(\s*\d+)?\b/gi, /\brent\s*roll\b/gi,
+  /\bargus(\s+cash\s*flow)?\b/gi, /\bcash\s*flow\b/gi, /\b(executive|investment)\s+summary\b/gi,
+  /\boperating\s+statement\b/gi, /\bsite\s+plan\b/gi, /\bsales\s+report\b/gi,
+  /\b(financials|historicals?|t-?12|om|dtu|teaser|flyer|brochure|final|draft|copy|v\d+)\b/gi,
+  // copy counters and dates: "(1)", "2026", "10.12.26", "10-12-2026"
+  /\(\s*\d+\s*\)/g, /\b\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}\b/g, /\b(19|20)\d{2}\b/g,
+];
+
+/**
+ * Best-effort property name recovered from an upload's FILE name, for documents
+ * that never print the name themselves (Newmark's Financial Narrative and Detailed
+ * Tenant Underwriting ship as separate files and carry no property name). Without
+ * this such a file extracts with a blank propertyName and can't be matched to the
+ * OM it belongs to, so each piece of the package forks into its own deal.
+ * Returns null when nothing name-like is left.
+ */
+export function nameFromFileName(fileName: string | null | undefined): string | null {
+  if (!fileName) return null;
+  let s = fileName.replace(/\.(pdf|xlsx?|xlsm|xlsb|csv)$/i, "").replace(/_/g, " ");
+  for (const re of FILE_NAME_NOISE) s = s.replace(re, " ");
+  const kept = s.split(/\s+[-–—|]\s+|\s*[-–—|]{2,}\s*/)
+    .map(seg => seg.replace(/^[\s\-–—|,.]+|[\s\-–—|,.]+$/g, "").replace(/\s+/g, " ").trim())
+    .filter(seg => norm(seg).length >= 4);
+  const out = kept.join(" - ").trim();
+  return norm(out).length >= 4 ? out : null;
+}
+
 // Every name a deal answers to: its propertyName plus any "also known as" aliases
 // (borrowing entity, broker's phase name, etc.). Lets a document under a different
-// name still route to the right deal.
-const dealNames = (d: Deal): string[] =>
-  [d.propertyName, ...(Array.isArray(d.aka) ? d.aka : [])].map(s => (s || "").trim()).filter(Boolean);
+// name still route to the right deal. A deal with NO propertyName answers to the
+// name recovered from its file name, so a nameless piece of a broker package that
+// landed first can still be found when the OM arrives.
+const dealNames = (d: Deal): string[] => {
+  const names = [d.propertyName, ...(Array.isArray(d.aka) ? d.aka : [])].map(s => (s || "").trim()).filter(Boolean);
+  if (!(d.propertyName || "").trim()) {
+    const fromFile = nameFromFileName(d.fileName);
+    if (fromFile) names.push(fromFile);
+  }
+  return names;
+};
+
+// The name to match a document by: what it says it is, else what its file is called.
+const hintName = (hint: { propertyName?: string | null; fileName?: string | null }): string =>
+  (hint.propertyName || "").trim() || nameFromFileName(hint.fileName) || "";
 
 /**
  * Match a classified document to an existing deal by property name / address /
@@ -311,7 +359,7 @@ export function matchDeal(
 
   // 2) Property-name match (rejected when the addresses clearly differ) — checks
   // the deal's propertyName AND any "also known as" alias.
-  const np = norm(hint.propertyName || "");
+  const np = norm(hintName(hint));
   if (np.length > 4) {
     const exact = active.find(d => !addrConflict(d) && dealNames(d).some(n => { const p = norm(n); return p.length > 4 && p === np; }));
     if (exact) return { deal: exact, confidence: "high" };
@@ -325,7 +373,7 @@ export function matchDeal(
   // distinctive token of the shorter name to appear in the other, with at least one
   // solid (≥4-char) shared token, so generic single-word overlaps don't false-match.
   // Checked against each of the deal's names (propertyName + aliases).
-  const htoks = distinctiveTokens(hint.propertyName || "");
+  const htoks = distinctiveTokens(hintName(hint));
   if (htoks.length) {
     const tokMatch = active.find(d => {
       if (addrConflict(d)) return false;
@@ -364,9 +412,9 @@ export function hasPossibleMatch(
   existing: Deal[],
 ): boolean {
   const active = existing.filter(d => !d.trashedAt);
-  const np = norm(hint.propertyName || "");
+  const np = norm(hintName(hint));
   const na = norm(hint.address || "");
-  const htoks = distinctiveTokens(hint.propertyName || "");
+  const htoks = distinctiveTokens(hintName(hint));
   for (const d of active) {
     for (const name of dealNames(d)) {                 // check propertyName + aliases
       const p = norm(name);

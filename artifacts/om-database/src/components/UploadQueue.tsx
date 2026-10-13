@@ -5,7 +5,7 @@ import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { playUploadSuccess, playUploadError } from "../lib/sounds";
-import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, type DocType } from "../lib/docClassify";
+import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, nameFromFileName, type DocType } from "../lib/docClassify";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 import type { FlyerResult } from "../lib/flyerExtract";
@@ -1211,6 +1211,15 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         needsSitePlanPick: imgs.needsSitePlanPick || false,
       } : undefined;
 
+      // A broker package often splits into several files, and the supporting ones
+      // (Newmark's Financial Narrative / Detailed Tenant Underwriting) never print
+      // the property name. Recover it from the file name so this piece matches the
+      // OM it belongs to (and the grid doesn't show a raw file name), instead of
+      // forking into its own deal.
+      if (!(resolvedDeal.propertyName || "").trim()) {
+        const fromFile = nameFromFileName(fileName);
+        if (fromFile) resolvedDeal = { ...resolvedDeal, propertyName: fromFile };
+      }
       const extracted = resolvedDeal as unknown as Record<string, unknown>;
       // Include deals created earlier in THIS drop (e.g. a stub made from a rent
       // roll that finished before this OM) so the OM merges into it via the dup
