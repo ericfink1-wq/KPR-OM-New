@@ -44,6 +44,24 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-13-broker-package-combine",
+    date: "2026-10-13",
+    category: "improved",
+    title: "Drop in all the files from a broker package and they become one deal",
+    detail:
+      "Some brokers, Newmark especially, send a deal as several files: the OM, a tenant underwriting sheet and a financial narrative. Upload them together, in any order, and they now land on a single deal instead of three. Each part comes from the file that's best at it: the tenant list from the tenant sheet, NOI and the cash flow from the financials, the description from the OM. The grade and write-up refresh on their own once everything is combined.",
+    where: "Upload → drag in every file from the package at once",
+  },
+  {
+    id: "2026-09-24-transfer-tax-local",
+    date: "2026-09-24",
+    category: "improved",
+    title: "Transfer taxes now include the exact local (county, town and school district) tax",
+    detail:
+      "The closing-cost estimate now looks up the property's actual county, municipality and school district instead of using a state default. Where we can't confirm a local rate, the card says so in red and shows a range rather than guessing, and rates from a secondary source are marked 'check independently' so you know which numbers to confirm.",
+    where: "Closing Costs, and the closing-cost card on each deal",
+  },
+  {
     id: "2026-09-16-datex-asof-on-roster",
     date: "2026-09-16",
     category: "improved",
