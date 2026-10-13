@@ -6,6 +6,7 @@ import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { playUploadSuccess, playUploadError } from "../lib/sounds";
 import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, nameFromFileName, type DocType } from "../lib/docClassify";
+import { detectPackageRole, groupOf, initialPackageSources, planPackageMerge, type PackagePlan } from "../lib/packageMerge";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
 import type { FlyerResult } from "../lib/flyerExtract";
@@ -114,7 +115,7 @@ function findRosterStubMatch(extracted: Record<string, unknown>, existing: Deal[
   return null;
 }
 
-function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): Deal {
+export function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>, pkg: PackagePlan | null = null): Deal {
   const preserved: Partial<Deal> = {
     status: existing.status, userNotes: existing.userNotes, verified: existing.verified,
     propertyGroupId: existing.propertyGroupId, trashedAt: existing.trashedAt,
@@ -155,12 +156,23 @@ function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): D
   for (const [k, v] of Object.entries(nw)) {
     if (isEmptyVal(ex[k]) && !isEmptyVal(v)) merged[k] = v; // gap-fill only
   }
+  // Same broker package: where this file is the more authoritative source for a
+  // part of the deal (e.g. the tenant-detail file for the roster), its values win.
+  if (pkg) {
+    for (const [k, v] of Object.entries(nw)) {
+      if (k === "tenants" || isEmptyVal(v)) continue;          // roster handled below
+      if (pkg.overwrite.has(groupOf(k))) merged[k] = v;
+    }
+    merged.packageSources = pkg.next;
+  }
 
   const verifiedSet = new Set(verifiedFields);
   const stamp = Date.now().toString(36);
   const flags: ReviewQuestion[] = [];
   for (const f of REFRESH_FLAG_FIELDS) {
     if (verifiedSet.has(f.key)) continue;                 // user already verified — leave alone
+    // Same package: the better source for this field already decided it.
+    if (pkg && (pkg.overwrite.has(groupOf(f.key)) || pkg.quiet.has(groupOf(f.key)))) continue;
     const oldV = ex[f.key], newV = nw[f.key];
     if (isEmptyVal(oldV) || isEmptyVal(newV)) continue;    // a gap, not a conflict
     const conflict = f.type === "number"
@@ -183,6 +195,10 @@ function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>): D
   const newTenants = Array.isArray(nw.tenants) ? (nw.tenants as unknown[]) : [];
   if (exTenants.length === 0 && newTenants.length > 0) {
     merged.tenants = newTenants;
+  } else if (pkg?.overwrite.has("roster") && newTenants.length > 0) {
+    merged.tenants = newTenants;                           // the package's tenant-detail file
+  } else if (pkg?.quiet.has("roster")) {
+    // keep the better roster already on the deal — nothing to ask
   } else if (exTenants.length > 0 && newTenants.length > 0 && Math.abs(exTenants.length - newTenants.length) >= 1) {
     flags.push({
       id: `refresh-tenants-${stamp}`, source: "check", severity: "medium", field: "Tenant roster",
@@ -432,6 +448,15 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // edit) over both the server record and client state. By layering only the op's
   // changed fields onto getLatestDeal(), the user's concurrent edits to other fields
   // survive. Falls back to the captured deal if app state doesn't know it yet.
+  // Serialises the "find a duplicate, then save" step across files in flight, so
+  // two files of one package can never both create a deal for the same property.
+  const mergeLockRef = useRef<Promise<unknown>>(Promise.resolve());
+  const withMergeLock = <T,>(fn: () => Promise<T>): Promise<T> => {
+    const run = mergeLockRef.current.then(fn, fn);
+    mergeLockRef.current = run.catch(() => {});
+    return run;
+  };
+
   const commitPatch = async (deal: Deal, patch: Partial<Deal>): Promise<Deal> => {
     const latest = getLatestDeal?.(deal.id) ?? deal;
     const toSave = { ...latest, ...patch } as Deal;
@@ -1221,47 +1246,70 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         if (fromFile) resolvedDeal = { ...resolvedDeal, propertyName: fromFile };
       }
       const extracted = resolvedDeal as unknown as Record<string, unknown>;
-      // Include deals created earlier in THIS drop (e.g. a stub made from a rent
-      // roll that finished before this OM) so the OM merges into it via the dup
-      // flow instead of creating a second deal for the same property.
-      const candidates = [...existingDeals, ...createdDealsRef.current];
-      const dup = findDuplicate(fileName, extracted, candidates) || findRosterStubMatch(extracted, candidates);
+      const role = detectPackageRole(fileName, text);
+      const incomingHasRoster = Array.isArray(extracted.tenants) && (extracted.tenants as unknown[]).length > 0;
 
-      if (dup) {
-        // Auto-merge into the matched deal instead of pausing the queue to ask.
-        // The reconcile is conservative — keeps the existing deal's data, fills
-        // only its blanks from this upload, and flags any genuine conflicts for
-        // review — so a batch never stops and duplicates consolidate on their own.
-        await apiDeleteDeal(dealId).catch(() => {});   // drop the temp deal we were creating
-        // Re-base on the LATEST version of the matched deal: it may have just had a
-        // sales report / roster / swap applied earlier in this SAME drop (which the
-        // slow OM extraction outran). Merging onto a stale snapshot here would
-        // overwrite that data. Mirrors commitPatch's getLatestDeal re-base.
-        const freshDup = getLatestDeal?.(dup.id) ?? dup;
-        const refreshed = reconcileRefresh(freshDup, { ...extracted, imageMeta, fileName, pdfPages: pages });
-        refreshed.lastUploadAt = new Date().toISOString();
-        await apiSaveDeal(refreshed).catch(() => {});
-        await apiSaveSource(refreshed.id, text).catch(() => {});
-        if (imgs) await saveImagesNoting(refreshed.id, imgs, itemId);
-        updateItem(itemId, {
-          status: "done", progress: 100, deal: refreshed, routedType: "om",
-          matchedDealName: refreshed.propertyName || refreshed.fileName,
-          priorDeal: dup, appliedDealId: refreshed.id, createdNew: false,
-          msg: `Merged into existing “${refreshed.propertyName || refreshed.fileName || "deal"}” · review any flagged conflicts`,
-        });
-        onDealUpdated?.(refreshed);
-        await registerCreatedDeal(refreshed);
-        if (imagesDeferred) attachImagesLater(refreshed.id, imgPromise, itemId);
+      // The duplicate check and the save that follows run one file at a time.
+      // Without this, two files of one package finishing in the same moment could
+      // both see "no match yet" and each create its own deal.
+      const outcome = await withMergeLock(async () => {
+        // Include deals created earlier in THIS drop (e.g. a stub made from a rent
+        // roll, or another file of the same broker package, that finished before
+        // this one) so this file merges into it instead of creating a second deal.
+        const candidates = [...existingDeals, ...createdDealsRef.current];
+        const dup = findDuplicate(fileName, extracted, candidates) || findRosterStubMatch(extracted, candidates);
+
+        if (dup) {
+          // Auto-merge into the matched deal instead of pausing the queue to ask.
+          await apiDeleteDeal(dealId).catch(() => {});   // drop the temp deal we were creating
+          // Re-base on the LATEST version of the matched deal: it may have just had a
+          // sales report / roster / swap / another package file applied earlier in
+          // this SAME drop. Merging onto a stale snapshot here would overwrite that.
+          const freshDup = getLatestDeal?.(dup.id) ?? dup;
+          // Another file of the same broker package → each part of the deal comes
+          // from the file that is best at it, whatever order they finished in.
+          // Otherwise (a re-upload / new vintage) → the conservative keep-and-flag merge.
+          const pkg = planPackageMerge(freshDup, role, incomingHasRoster);
+          const refreshed = reconcileRefresh(freshDup, { ...extracted, imageMeta, fileName, pdfPages: pages }, pkg);
+          refreshed.lastUploadAt = new Date().toISOString();
+          await apiSaveDeal(refreshed).catch(() => {});
+          await apiSaveSource(refreshed.id, text).catch(() => {});
+          if (imgs) await saveImagesNoting(refreshed.id, imgs, itemId);
+          const doneMsg = pkg
+            ? `Combined into “${refreshed.propertyName || refreshed.fileName || "deal"}” (same broker package)`
+            : `Merged into existing “${refreshed.propertyName || refreshed.fileName || "deal"}” · review any flagged conflicts`;
+          updateItem(itemId, {
+            status: "done", progress: 100, deal: refreshed, routedType: "om",
+            matchedDealName: refreshed.propertyName || refreshed.fileName,
+            priorDeal: dup, appliedDealId: refreshed.id, createdNew: false,
+            msg: doneMsg,
+          });
+          onDealUpdated?.(refreshed);
+          await registerCreatedDeal(refreshed);
+          return { merged: refreshed, doneMsg };
+        }
+
+        const finalDeal: Deal = {
+          ...resolvedDeal!, imageMeta, lastUploadAt: new Date().toISOString(),
+          packageSources: initialPackageSources(role),
+        };
+        await apiSaveDeal(finalDeal).catch(() => {});
+
+        updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal,
+          routedType: "om", matchedDealName: finalDeal.propertyName || finalDeal.fileName, createdNew: true, priorDeal: null, appliedDealId: finalDeal.id });
+        onDealsAdded([finalDeal]);
+        await registerCreatedDeal(finalDeal);
+        return { merged: null, doneMsg: null };
+      });
+
+      if (outcome.merged) {
+        if (imagesDeferred) attachImagesLater(outcome.merged.id, imgPromise, itemId);
+        // The grade and write-up were written from ONE file; regenerate them from
+        // the combined deal so nobody has to remember to click Refresh Analysis.
+        await refreshAnalysisFor(itemId, getLatestDeal?.(outcome.merged.id) ?? outcome.merged);
+        updateItem(itemId, { msg: `${outcome.doneMsg} · analysis refreshed` });
         return;
       }
-
-      const finalDeal: Deal = { ...resolvedDeal, imageMeta, lastUploadAt: new Date().toISOString() };
-      await apiSaveDeal(finalDeal).catch(() => {});
-
-      updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal,
-        routedType: "om", matchedDealName: finalDeal.propertyName || finalDeal.fileName, createdNew: true, priorDeal: null, appliedDealId: finalDeal.id });
-      onDealsAdded([finalDeal]);
-      await registerCreatedDeal(finalDeal);
       if (imagesDeferred) attachImagesLater(dealId, imgPromise, itemId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Extraction failed";

@@ -1183,6 +1183,11 @@ export interface Deal {
   // marketed and what the asset does today is the finding. Written only by the Datex import,
   // which never touches the fields above.
   datexLive?: DatexLiveBlock | null;
+  // Which file of a multi-file broker package (OM / tenant detail / financials)
+  // supplied each part of this deal, so later files of the same package can win
+  // the parts they are authoritative for regardless of upload order. See
+  // lib/packageMerge.ts. Absent on deals not created from a package upload.
+  packageSources?: import("./packageMerge").PackageSources | null;
 }
 
 export interface DatexLiveBlock {
