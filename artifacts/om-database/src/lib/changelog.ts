@@ -44,6 +44,24 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-14-already-uploaded-warning",
+    date: "2026-10-14",
+    category: "new",
+    title: "A heads-up before you re-upload a property that's already in the library",
+    detail:
+      "If you drop in an OM for a property someone already uploaded, the site now stops before reading it and tells you who uploaded it and when. Choose Continue to update the existing deal, or Skip to save the time and AI credits. Other files from the same broker package you're uploading together don't trigger it.",
+    where: "Upload",
+  },
+  {
+    id: "2026-10-14-rename-members",
+    date: "2026-10-14",
+    category: "improved",
+    title: "Members can be renamed",
+    detail:
+      "Admins can now change the name anyone is shown as, including their own. The new name appears in the header, on the Members screen and in 'uploaded by' on every deal, including ones uploaded before the change.",
+    where: "Members → Rename",
+  },
+  {
     id: "2026-10-13-broker-package-combine",
     date: "2026-10-13",
     category: "improved",

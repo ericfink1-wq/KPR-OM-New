@@ -489,6 +489,8 @@ router.get("/auth/me", async (req, res) => {
       if (u) {
         twoFactorEnabled = !!u.totpEnabled;
         req.session.twoFactorEnabled = twoFactorEnabled;
+        // Pick up a rename made since this session signed in.
+        req.session.userName = u.name ?? null;
       }
     } catch { /* fall back to the session mirror */ }
   }
@@ -738,6 +740,22 @@ router.post("/auth/users/:id/reject", requireAdmin, async (req, res) => {
   if (String(req.params.id) === req.session.userId) { res.status(400).json({ error: "You can't decline your own account." }); return; }
   await db.update(usersTable).set({ status: "rejected" }).where(eq(usersTable.id, String(req.params.id)));
   res.json({ ok: true });
+});
+
+// POST /api/auth/users/:id/rename  { name: string } — change the display name a
+// member is shown as (header, Members, "uploaded by"). Admin-only, like the rest of
+// member management; renaming yourself updates your current session immediately.
+router.post("/auth/users/:id/rename", requireAdmin, async (req, res) => {
+  await ensureUsersTable();
+  const raw = (req.body as Record<string, unknown>).name;
+  const name = typeof raw === "string" ? raw.replace(/\s+/g, " ").trim() : "";
+  if (!name) { res.status(400).json({ error: "Enter a name." }); return; }
+  if (name.length > 80) { res.status(400).json({ error: "Keep the name under 80 characters." }); return; }
+  const [row] = await db.update(usersTable).set({ name })
+    .where(eq(usersTable.id, String(req.params.id))).returning();
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  if (row.id === req.session.userId) req.session.userName = name;
+  res.json({ ok: true, name });
 });
 
 // POST /api/auth/users/:id/set-admin  { isAdmin: boolean }

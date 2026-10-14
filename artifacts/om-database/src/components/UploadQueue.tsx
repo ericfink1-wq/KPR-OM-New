@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import type { Deal, ImageBundle, ReviewQuestion } from "../lib/idb";
-import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload } from "../lib/api";
+import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload, apiDealUploadedBy } from "../lib/api";
 import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
@@ -20,7 +20,7 @@ interface QueueItem {
   id: string;
   name: string;
   file?: File;
-  status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "done" | "error" | "advisory";
+  status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "awaiting_confirm" | "done" | "error" | "advisory";
   msg: string;
   progress: number;
   startedAt?: number;   // ms when ACTIVE processing began (not queue/wait time)
@@ -44,6 +44,7 @@ interface QueueItem {
   pendingRosterPatch?: Partial<Deal>;  // staged roster update awaiting a property choice
   pendingText2?: string;               // extracted text, kept for re-routing after manual pick
   matchHint?: { propertyName: string | null; address: string | null; fileName: string | null }; // for auto-attaching to a same-drop deal
+  confirmDealName?: string;            // awaiting_confirm: the already-uploaded property this file looks like
 }
 
 interface Props {
@@ -73,6 +74,18 @@ function fmtElapsed(ms: number): string {
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60), r = s % 60;
   return `${m}m ${r.toString().padStart(2, "0")}s`;
+}
+
+// "Frederick County Square was uploaded 4 days ago by Eric Fink." Names the uploader
+// only when the upload log actually recorded who it was.
+export function alreadyUploadedMessage(name: string, at: string | null, by: string | null, now: number = Date.now()): string {
+  let when = "";
+  const t = at ? Date.parse(at) : NaN;
+  if (!isNaN(t)) {
+    const days = Math.floor((now - t) / 86_400_000);
+    when = days <= 0 ? " today" : days === 1 ? " yesterday" : days < 60 ? ` ${days} days ago` : ` on ${new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+  }
+  return `“${name}” was already uploaded${when}${by ? ` by ${by}` : ""}. Re-reading it uses AI credits — continue to update it, or skip?`;
 }
 
 function findDuplicate(fileName: string, extracted: Record<string, unknown>, existing: Deal[]): Deal | null {
@@ -278,6 +291,22 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // stops waiting on it and applies none of its results.)
   const cancelledRef = useRef<Set<string>>(new Set());
   const isCancelled = (id: string) => cancelledRef.current.has(id);
+  // Answers to "this property was already uploaded — continue?" keyed by item id.
+  const confirmRef = useRef<Map<string, boolean>>(new Map());
+  const answerConfirm = (itemId: string, go: boolean) => {
+    confirmRef.current.set(itemId, go);
+    updateItem(itemId, { status: "extracting", msg: go ? "Continuing…" : "Skipping…" });
+  };
+  // Waits for the person to answer the already-uploaded prompt. Resolves false if the
+  // file is cancelled or the whole queue is stopped in the meantime.
+  const waitForConfirm = async (itemId: string): Promise<boolean> => {
+    for (;;) {
+      if (isCancelled(itemId)) return false;
+      const a = confirmRef.current.get(itemId);
+      if (a !== undefined) { confirmRef.current.delete(itemId); return a; }
+      await new Promise(r => setTimeout(r, 400));
+    }
+  };
   // Deals created/refreshed by OMs during this session, so a rent roll / sales
   // report dropped alongside a NEW deal can attach to it (it isn't in
   // existingDeals yet). Plus a live mirror of the queue for async resolution.
@@ -1156,6 +1185,34 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
       // Otherwise treat as an OM / deal package (the original flow, unchanged).
 
+      // Before spending a full extraction on it: is this property ALREADY in the
+      // library from an earlier upload (often by a teammate)? Ask first. Deals created
+      // in this same session are excluded, so the other files of a broker package
+      // dropped together never trigger it.
+      {
+        const madeHere = new Set(createdDealsRef.current.map(d => d.id));
+        const prior = matchDeal(
+          { propertyName: cls.propertyName, address: cls.address, fileName: file.name },
+          existingDeals.filter(d => !madeHere.has(d.id)),
+        );
+        if (prior.deal && prior.confidence !== "none") {
+          const name = prior.deal.propertyName || prior.deal.fileName || "This property";
+          const by = await apiDealUploadedBy(prior.deal.id).catch(() => null);
+          if (isCancelled(itemId)) return;
+          updateItem(itemId, {
+            status: "awaiting_confirm", progress: 30, confirmDealName: name,
+            msg: alreadyUploadedMessage(name, prior.deal.lastUploadAt || prior.deal.uploadedAt || by?.at || null,
+              by && !by.inferred ? (by.userName || by.userEmail) : null),
+          });
+          const go = await waitForConfirm(itemId);
+          if (!go) {
+            if (!isCancelled(itemId)) updateItem(itemId, { status: "done", progress: 100, msg: `Skipped — “${name}” is already in the library` });
+            return;
+          }
+          updateItem(itemId, { status: "extracting", msg: `Updating “${name}”…` });
+        }
+      }
+
       if (isCancelled(itemId)) return;
       updateItem(itemId, { msg: "Sending to Claude AI…", progress: 40 });
       await apiIngestDeal({ id: dealId, text, fileName, pageCount: pages, correctionsNote: buildCorrectionsNote(existingDeals) });
@@ -1413,7 +1470,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                   </button>
                 )}
                 {(done > 0 || failed > 0) && (
-                  <button onClick={() => setQueue(q => q.filter(x => x.status === "pending" || x.status === "extracting" || x.status === "awaiting_dup"))}
+                  <button onClick={() => setQueue(q => q.filter(x => x.status === "pending" || x.status === "extracting" || x.status === "awaiting_dup" || x.status === "awaiting_confirm"))}
                     style={{ background: "transparent", border: "1px solid #e3dccd", color: "#837c6e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
                     Clear completed
                   </button>
@@ -1487,12 +1544,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                   <div style={{ padding: "11px 28px", borderBottom: "1px solid #f4f6f7", display: "flex", gap: 14, alignItems: "flex-start" }}>
                     <div style={{
                       width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0,
-                      background: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" ? "#e0a52e" : item.status === "extracting" ? "#6dba43" : "#b3bac1",
+                      background: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" || item.status === "awaiting_confirm" ? "#e0a52e" : item.status === "extracting" ? "#6dba43" : "#b3bac1",
                       animation: item.status === "extracting" ? "pulse 1.2s infinite" : "none",
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: "#383a37", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" ? "#a9700a" : "#a69e91", marginTop: 2, lineHeight: item.status === "advisory" ? 1.5 : undefined }}>{item.status === "advisory" ? "⚠ " : ""}{item.msg}</div>
+                      <div style={{ fontSize: 12, color: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" || item.status === "awaiting_confirm" ? "#a9700a" : "#a69e91", marginTop: 2, lineHeight: item.status === "advisory" || item.status === "awaiting_confirm" ? 1.5 : undefined }}>{item.status === "advisory" || item.status === "awaiting_confirm" ? "⚠ " : ""}{item.msg}</div>
                       {(item.status === "extracting" || item.status === "pending") && (
                         <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ flex: 1, height: 5, background: "#efe8da", borderRadius: 3, overflow: "hidden" }}>
@@ -1507,6 +1564,18 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                         </div>
                       )}
                       {item.error && <div style={{ fontSize: 11, color: "#c0563b", marginTop: 3, lineHeight: 1.4, wordBreak: "break-word" }}>{item.error}</div>}
+                      {item.status === "awaiting_confirm" && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                          <button onClick={() => answerConfirm(item.id, true)}
+                            style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                            Continue & update
+                          </button>
+                          <button onClick={() => answerConfirm(item.id, false)}
+                            style={{ background: "#fff", color: "#6f6a5f", border: "1px solid #d9d2c4", borderRadius: 7, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                            Skip this file
+                          </button>
+                        </div>
+                      )}
                       {item.status === "done" && !item.undone && item.appliedDealId && (
                         <div style={{ display: "flex", gap: 8, marginTop: 7, flexWrap: "wrap", alignItems: "center" }}>
                           <span style={{ fontSize: 11, color: "#7d766a" }}>→ <b style={{ color: "#383a37" }}>{item.matchedDealName || "property"}</b>{item.createdNew ? " (new)" : ""}</span>

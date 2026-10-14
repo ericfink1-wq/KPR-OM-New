@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiResetMemberPassword, apiLoginEvents, apiUploadLog, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
+import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiResetMemberPassword, apiLoginEvents, apiUploadLog, apiRenameMember, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
 
 // Compact "time ago" for the last-seen / last-login line.
 function relTime(iso: string | null | undefined): string | null {
@@ -67,6 +67,16 @@ export default function Members({ onClose }: { onClose: () => void }) {
     setBusy(id);
     try { await fn(); load(); }
     catch { setError("Action failed — try again."); }
+    finally { setBusy(null); }
+  };
+
+  // Change the name this member is shown as everywhere (header, Members, "uploaded by").
+  const rename = async (u: MemberAccount) => {
+    const next = window.prompt(`Name to show for ${u.email}:`, u.name || "");
+    if (next == null || next.trim() === "" || next.trim() === (u.name || "")) return;
+    setBusy(u.id);
+    try { await apiRenameMember(u.id, next.trim()); setNotice(`Renamed to “${next.trim()}”. Their header updates on their next page load.`); load(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Rename failed — try again."); }
     finally { setBusy(null); }
   };
 
@@ -154,6 +164,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
         {u.status === "pending" && u.emailVerified && btn("✓ Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "pending" && btn("Decline", () => act(u.id, () => apiRejectMember(u.id)), "#b3261e", busy === u.id)}
         {u.status === "rejected" && u.emailVerified && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
+        {btn("Rename", () => rename(u), "#5c5047", busy === u.id)}
         {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#5c5047", busy === u.id)}
         {u.status === "approved" && btn("Reset password", () => resetPassword(u), "#2c6e9b", busy === u.id)}
         {u.status === "approved" && btn("Reset 2FA", () => { if (window.confirm(`Reset two-factor for ${u.email}? They'll sign in with just their password next time and set it up again. Use this if they've lost their authenticator and backup codes.`)) act(u.id, () => apiResetMember2fa(u.id)); }, "#9a5b12", busy === u.id)}

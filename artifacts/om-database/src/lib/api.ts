@@ -225,6 +225,15 @@ export async function apiDealUploadedBy(dealId: string): Promise<DealUploader | 
   } catch { return null; }
 }
 
+// Change the name a member is shown as (admin). Throws with the server's message.
+export async function apiRenameMember(id: string, name: string): Promise<void> {
+  const r = await apiFetch(`/auth/users/${id}/rename`, { method: "POST", body: JSON.stringify({ name }) });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({})) as { error?: string };
+    throw new Error(j.error || "Couldn't rename.");
+  }
+}
+
 export interface MemberAccount { id: string; email: string; name: string | null; status: string; isAdmin: boolean; emailVerified?: boolean; createdAt: string; lastLoginAt: string | null; lastSeenAt?: string | null }
 export async function apiListMembers(): Promise<MemberAccount[]> {
   const resp = await apiFetch("/auth/users");

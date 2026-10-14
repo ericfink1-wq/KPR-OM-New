@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { sql, desc, asc, eq } from "drizzle-orm";
-import { db, uploadLogTable } from "@workspace/db";
+import { db, uploadLogTable, usersTable } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
@@ -82,6 +82,15 @@ async function getPrimaryUploader(): Promise<{ userName: string | null; userEmai
   } catch { return null; }
 }
 
+async function currentUserName(userId: string | null | undefined, email: string | null | undefined): Promise<string | null> {
+  try {
+    const u = userId
+      ? (await db.select().from(usersTable).where(eq(usersTable.id, userId)))[0]
+      : email ? (await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())))[0] : undefined;
+    return u?.name ?? null;
+  } catch { return null; }
+}
+
 // GET /api/upload-log/by-deal/:dealId — WHO uploaded this deal. Uses the deal's own
 // earliest successful upload record when it has one; otherwise falls back to the
 // library's primary uploader (marked `inferred`) so EXISTING deals with no record
@@ -95,9 +104,16 @@ router.get("/upload-log/by-deal/:dealId", requireAuth, async (req, res) => {
       .where(eq(uploadLogTable.dealId, dealId))
       .orderBy(asc(uploadLogTable.createdAt));
     const r = rows.find(x => x.status === "success") ?? null;
-    if (r) { res.json({ userName: r.userName ?? null, userEmail: r.userEmail ?? null, at: r.createdAt, inferred: false }); return; }
+    if (r) {
+      // The log stores the name as it was at upload time; show the person's CURRENT
+      // name so a rename (e.g. "KPR Admin" → a real name) carries back to old uploads.
+      const current = await currentUserName(r.userId, r.userEmail);
+      res.json({ userName: current ?? r.userName ?? null, userEmail: r.userEmail ?? null, at: r.createdAt, inferred: false });
+      return;
+    }
     const primary = await getPrimaryUploader();
-    res.json(primary ? { userName: primary.userName, userEmail: primary.userEmail, at: null, inferred: true } : null);
+    const current = primary ? await currentUserName(null, primary.userEmail) : null;
+    res.json(primary ? { userName: current ?? primary.userName, userEmail: primary.userEmail, at: null, inferred: true } : null);
   } catch (err) {
     req.log.error({ err }, "upload-log by-deal lookup failed");
     res.json(null);
