@@ -434,6 +434,7 @@ tools to have an always-on real estate brain working side by side with me."
   - `components/` — DetailView.tsx (deal page), CompsSearch.tsx, TenantAnalytics.tsx, TenantView.tsx, PortfolioAnalytics.tsx, LeaseRollover.tsx, TenantRoster.tsx, DealGrid.tsx, Header.tsx, ClosingCostsCard.tsx, HelpModal.tsx, DealSummaryPDF.tsx
   - `lib/` — idb.ts (**Deal & Tenant interfaces — source of truth for field names**), api.ts, closingCosts.ts, exportExcel.ts
   - `hooks/use-mobile.tsx` (useIsMobile)
+  - **Sortable tables:** use `lib/multiSort.ts` (`useMultiSort`, `chainComparator`) + `components/SortBar.tsx` — multi-level sort with a visible, touch-friendly "Sorted by" bar (Shift-click on headers is only a hidden shortcut; Eric won't remember it, so the bar is the real control). Live on DealGrid + TenantRoster (10/14/26); CompsSearch/TenantView still single-column.
 - API: `artifacts/api-server/src/`
   - `routes/` — deals.ts, comps.ts, analytics.ts, aliases.ts, auth.ts, clientErrors.ts
   - `lib/` — extract.ts (LLM extraction + runRosterAnalysis), compsIndex.ts, compBenchmark.ts, tenantBenchmarks.ts (rescoreDeal)

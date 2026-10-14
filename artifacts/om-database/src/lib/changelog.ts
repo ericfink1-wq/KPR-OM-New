@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-14-multi-column-sort",
+    date: "2026-10-14",
+    category: "new",
+    title: "Sort by several columns at once",
+    detail:
+      "The Deal Library and every tenant roster now show a 'Sorted by' bar above the table, e.g. Status, then Last upload. Use '+ then by…' to add a tiebreaker, tap a level to flip its direction, ↑ to raise its priority, or × to remove it. Rosters can also put anchors first. Your choice is remembered on this device, and 'reset' puts the default back.",
+    where: "Deal Library and the Tenants & Sales tab on any deal",
+  },
+  {
     id: "2026-10-14-library-sort-autopass",
     date: "2026-10-14",
     category: "improved",

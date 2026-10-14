@@ -15,6 +15,8 @@ import { startAiTask, updateAiTask, finishAiTask } from "../lib/aiProgress";
 import RecencyBadge from "./RecencyBadge";
 import PdfDownloadButton from "./PdfDownloadButton";
 import { n0, m0, type ExportCol } from "../lib/tableExport";
+import { useMultiSort, chainComparator, type SortLevel } from "../lib/multiSort";
+import SortBar from "./SortBar";
 
 interface Props {
   deals: Deal[];
@@ -41,6 +43,14 @@ const STATUS_ORDER: Record<string, number> = {
   "Under Contract": 0, "Prospect": 1, "Owned": 2, "Sold": 3, "Passed": 4,
 };
 const NUM_SORT_KEYS = new Set(["capRate", "noi", "askingPrice", "totalSF", "occupancy", "walt"]);
+
+// Columns the Deal Library can sort by (key → label shown in the "Sorted by" bar).
+const DEAL_SORT_LABELS: Record<string, string> = {
+  status: "Status", propertyName: "Property", city: "City", state: "State", market: "MSA",
+  anchor: "Anchor", totalSF: "SF", occupancy: "Occupancy", capRate: "Cap rate", askingPrice: "Price",
+  seller: "Seller", uploadedAt: "First uploaded", lastUploadAt: "Last upload",
+};
+const DEAL_SORT_DEFAULT: SortLevel[] = [{ key: "status", dir: "asc" }, { key: "lastUploadAt", dir: "desc" }];
 
 // Compact price for a narrow column, e.g. "$28.0M", "$930K".
 function fmtPriceShort(v: number | null | undefined): string {
@@ -220,6 +230,22 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
 
 // ── Section-aware merge helpers ──────────────────────────────────────────────
 const _ts = (s?: string | null) => { const t = s ? Date.parse(s) : NaN; return isNaN(t) ? 0 : t; };
+
+// Ascending comparator for one Deal Library column (the sort chain applies direction).
+const _num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? -Infinity : Number(v);
+const _str = (v: unknown) => (v == null ? "" : String(v)).toLowerCase();
+function dealAscending(key: string): ((a: Deal, b: Deal) => number) | null {
+  switch (key) {
+    case "status": return (a, b) => (STATUS_ORDER[a.status || ""] ?? 99) - (STATUS_ORDER[b.status || ""] ?? 99);
+    case "anchor": return (a, b) => leadAnchorName(a).toLowerCase().localeCompare(leadAnchorName(b).toLowerCase());
+    case "lastUploadAt": return (a, b) => (_ts(a.lastUploadAt) || _ts(a.uploadedAt)) - (_ts(b.lastUploadAt) || _ts(b.uploadedAt));
+    case "uploadedAt": return (a, b) => _ts(a.uploadedAt) - _ts(b.uploadedAt);
+    case "propertyName": return (a, b) => _str(a.propertyName || a.fileName).localeCompare(_str(b.propertyName || b.fileName));
+  }
+  if (NUM_SORT_KEYS.has(key)) return (a, b) => _num(a[key as keyof Deal]) - _num(b[key as keyof Deal]);
+  if (key in DEAL_SORT_LABELS) return (a, b) => _str(a[key as keyof Deal]).localeCompare(_str(b[key as keyof Deal]));
+  return null;
+}
 const dealFreshness = (d: Deal) => Math.max(_ts(d.refreshedAt), _ts(d.uploadedAt));
 const demoDate = (d: Deal) => Math.max(_ts(d.demoChecked), _ts((d.marketDemographics as { lookedUpAt?: string } | null)?.lookedUpAt)) || dealFreshness(d);
 
@@ -257,8 +283,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [filterStates, setFilterStates] = useState<string[]>([]);
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
-  const [sortKey, setSortKey] = useState("status");
-  const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
+  // Multi-level sort: Status first, then most recent upload (Eric, 10/14/26). People
+  // add or reorder levels from the "Sorted by" bar or by Shift-clicking a header.
+  const sort = useMultiSort("dealgrid-sort-v1", DEAL_SORT_DEFAULT, { validKeys: Object.keys(DEAL_SORT_LABELS) });
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table"|"grid">("table");
@@ -348,40 +375,10 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       };
       rows = rows.filter(d => hay(d).includes(s));
     }
-    rows.sort((a, b) => {
-      if (sortKey === "status") {
-        const ao = STATUS_ORDER[a.status || ""] ?? 99;
-        const bo = STATUS_ORDER[b.status || ""] ?? 99;
-        if (ao !== bo) return sortDir === "asc" ? ao - bo : bo - ao;
-        // Within a status group: most recently uploaded first, then by name.
-        const at = _ts(a.lastUploadAt) || _ts(a.uploadedAt);
-        const bt = _ts(b.lastUploadAt) || _ts(b.uploadedAt);
-        if (at !== bt) return bt - at;
-        const an = (a.propertyName || a.fileName || "").toLowerCase();
-        const bn = (b.propertyName || b.fileName || "").toLowerCase();
-        return an.localeCompare(bn);
-      }
-      if (sortKey === "anchor") {
-        const av = leadAnchorName(a).toLowerCase();
-        const bv = leadAnchorName(b).toLowerCase();
-        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-      }
-      if (sortKey === "lastUploadAt") {
-        const av = _ts(a.lastUploadAt) || _ts(a.uploadedAt);
-        const bv = _ts(b.lastUploadAt) || _ts(b.uploadedAt);
-        return sortDir === "asc" ? av - bv : bv - av;
-      }
-      if (NUM_SORT_KEYS.has(sortKey)) {
-        const av = n(a[sortKey as keyof Deal]) ?? -Infinity;
-        const bv = n(b[sortKey as keyof Deal]) ?? -Infinity;
-        return sortDir === "asc" ? av - bv : bv - av;
-      }
-      const av = String(a[sortKey as keyof Deal] || "");
-      const bv = String(b[sortKey as keyof Deal] || "");
-      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-    });
+    rows.sort(chainComparator<Deal>(sort.levels, dealAscending, (a, b) =>
+      (a.propertyName || a.fileName || "").toLowerCase().localeCompare((b.propertyName || b.fileName || "").toLowerCase())));
     return rows;
-  }, [deals, filterStatuses, filterStates, filterTypes, q, sortKey, sortDir]);
+  }, [deals, filterStatuses, filterStates, filterTypes, q, sort.levels]);
 
   // Report how many deals are showing vs the total, so the header can read
   // "39 of 94 …" while a search/filter is active.
@@ -421,11 +418,8 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     return () => { cancelled = true; };
   }, [deals]);
 
-  const toggleSort = (k: string) => {
-    if (sortKey === k) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortKey(k); setSortDir("desc"); }
-  };
-  const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+  const toggleSort = (k: string, e?: React.MouseEvent) => sort.onHeaderClick(k, e);
+  const arrow = (k: string) => sort.marker(k);
   const toggleSel = (id: string) => setSelected(s => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const clearSelection = () => { setSelected(new Set()); setConfirmBulkDel(false); setDelConfirmText(""); setBulkEditOpen(false); };
 
@@ -1253,6 +1247,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
         <div style={{ textAlign: "center", padding: "60px 0", color: "#a89f8f", fontSize: 14 }}>No deals match your filters.</div>
       )}
 
+      {rows.length > 0 && (
+        <SortBar levels={sort.levels} setLevels={sort.setLevels} labels={DEAL_SORT_LABELS}
+          isDefault={sort.isDefault} onReset={sort.reset} />
+      )}
+
       {viewMode === "table" && rows.length > 0 && (
         <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ overflowX: "auto" }}>
@@ -1264,56 +1263,56 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       onChange={e => setSelected(e.target.checked ? new Set(rows.map(d => d.id)) : new Set())} />
                   </th>
                   <th style={{ width: 80, padding: "10px 8px" }} />
-                  <th onClick={() => toggleSort("propertyName")}
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "propertyName" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("propertyName", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("propertyName") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Property{arrow("propertyName")}
                   </th>
-                  <th onClick={() => toggleSort("status")}
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "status" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("status", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("status") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Status{arrow("status")}
                   </th>
-                  <th onClick={() => toggleSort("city")}
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "city" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("city", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("city") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     City{arrow("city")}
                   </th>
-                  <th onClick={() => toggleSort("state")}
-                    style={{ width: 70, padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "state" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("state", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ width: 70, padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("state") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     State{arrow("state")}
                   </th>
-                  <th onClick={() => toggleSort("market")} className="hidden lg:table-cell"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "market" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("market", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("market") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     MSA{arrow("market")}
                   </th>
-                  <th onClick={() => toggleSort("anchor")} className="hidden lg:table-cell"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "anchor" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("anchor", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("anchor") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Anchor{arrow("anchor")}
                   </th>
-                  <th onClick={() => toggleSort("totalSF")}
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "totalSF" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("totalSF", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("totalSF") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     SF{arrow("totalSF")}
                   </th>
-                  <th onClick={() => toggleSort("occupancy")} className="hidden lg:table-cell"
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "occupancy" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("occupancy", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("occupancy") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Occ{arrow("occupancy")}
                   </th>
-                  <th onClick={() => toggleSort("capRate")}
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "capRate" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("capRate", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("capRate") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Cap{arrow("capRate")}
                   </th>
-                  <th onClick={() => toggleSort("askingPrice")}
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "askingPrice" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("askingPrice", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("askingPrice") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Price{arrow("askingPrice")}
                   </th>
-                  <th onClick={() => toggleSort("seller")}
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "seller" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("seller", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("seller") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Seller{arrow("seller")}
                   </th>
-                  <th onClick={() => toggleSort("uploadedAt")}
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "uploadedAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("uploadedAt", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("uploadedAt") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Uploaded{arrow("uploadedAt")}
                   </th>
-                  <th onClick={() => toggleSort("lastUploadAt")}
-                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sortKey === "lastUploadAt" ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                  <th onClick={e => toggleSort("lastUploadAt", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("lastUploadAt") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Last Upload{arrow("lastUploadAt")}
                   </th>
                 </tr>

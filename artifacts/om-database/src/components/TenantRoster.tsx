@@ -15,6 +15,17 @@ import type { DatexLiveBlock } from "../lib/idb";
 import { stickyFirstCol } from "../lib/stickyCol";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
 import { useIsMobile } from "../hooks/use-mobile";
+import { useMultiSort, chainComparator, type SortLevel } from "../lib/multiSort";
+import SortBar from "./SortBar";
+
+// Roster columns offered in the "Sorted by" bar. "isAnchor" is a sort-only key:
+// ascending puts anchors first, so "Anchors first, then SF" is two clicks.
+const ROSTER_SORT_LABELS: Record<string, string> = {
+  isAnchor: "Anchors first", name: "Tenant", suite: "Suite", sf: "SF", rentPerSF: "Rent/SF",
+  annualRent: "Annual rent", leaseStart: "Start", leaseExpiry: "Expiry", reimbursementMethod: "Reimbursement",
+  salesPSF: "Sales", occupancyCost: "Occupancy cost", creditRating: "Credit",
+};
+const ROSTER_SORT_DEFAULT: SortLevel[] = [{ key: "sf", dir: "desc" }];
 
 interface Props {
   tenants: Tenant[];
@@ -316,8 +327,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [q, setQ] = useState("");
   const [quick, setQuick] = useState("all");
-  const [sortKey, setSortKey] = useState("sf");
-  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  const sort = useMultiSort("roster-sort-v1", ROSTER_SORT_DEFAULT, { defaultDir: "asc", validKeys: Object.keys(ROSTER_SORT_LABELS) });
   const [expandedRentStep, setExpandedRentStep] = useState<number | null>(null);
   const [expandedOption, setExpandedOption] = useState<number | null>(null);
   const [expandedReimb, setExpandedReimb] = useState<number | null>(null);
@@ -373,25 +383,23 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       if (base != null && reimb != null && sales != null && sales > 0) return ((base + reimb + pctRent + other) / sales) * 100;
       return null;
     };
-    const sortVal = (t: Tenant): number | null =>
-      sortKey === "salesPSF" ? effSalesPSF(t) : sortKey === "occupancyCost" ? effOccCost(t) : n((t as any)[sortKey]);
-    if (sortKey) {
-      rows = rows.slice().sort((a, b) => {
-        if (numKeys.has(sortKey)) {
-          let av = sortVal(a), bv = sortVal(b);
-          av = av==null?-Infinity:av; bv = bv==null?-Infinity:bv;
-          return sortDir==="asc" ? av-bv : bv-av;
-        }
-        const av = ((a as any)[sortKey]==null?"":String((a as any)[sortKey])).toLowerCase();
-        const bv = ((b as any)[sortKey]==null?"":String((b as any)[sortKey])).toLowerCase();
-        return sortDir==="asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-      });
-    }
+    const sortVal = (t: Tenant, key: string): number => {
+      const v = key === "salesPSF" ? effSalesPSF(t) : key === "occupancyCost" ? effOccCost(t) : n((t as any)[key]);
+      return v == null ? -Infinity : v;
+    };
+    const ascending = (key: string): ((a: Tenant, b: Tenant) => number) | null => {
+      if (key === "abstract" || key === "kickout") return null;
+      if (key === "isAnchor") return (a, b) => (a.isAnchor ? 0 : 1) - (b.isAnchor ? 0 : 1);
+      if (numKeys.has(key)) return (a, b) => sortVal(a, key) - sortVal(b, key);
+      return (a, b) => String((a as any)[key] ?? "").toLowerCase().localeCompare(String((b as any)[key] ?? "").toLowerCase());
+    };
+    rows = rows.slice().sort(chainComparator<Tenant>(sort.levels, ascending,
+      (a, b) => String(a.name ?? "").toLowerCase().localeCompare(String(b.name ?? "").toLowerCase())));
     return rows;
-  }, [tenants, quick, q, sortKey, sortDir, latestSales, estimatedRecoveries]);
+  }, [tenants, quick, q, sort.levels, latestSales, estimatedRecoveries]);
 
-  const setSort = (k: string) => { if (sortKey===k) setSortDir(x => x==="asc"?"desc":"asc"); else { setSortKey(k); setSortDir("asc"); } };
-  const arrow = (k: string) => sortKey===k ? (sortDir==="asc"?" ▲":" ▼") : "";
+  const setSort = (k: string, e?: React.MouseEvent) => sort.onHeaderClick(k, e);
+  const arrow = (k: string) => sort.marker(k);
   const chip = (key: string, label: string) => (
     <button key={key} onClick={() => setQuick(key)} style={{ background:quick===key?"#2a2c27":"transparent", color:quick===key?"#f6f2ea":"#7d766a", border:`1px solid ${quick===key?"#2a2c27":"#e3dccd"}`, padding:"4px 11px", borderRadius:20, fontSize:11, cursor:"pointer", fontWeight:500, fontFamily:"'Inter',sans-serif" }}>{label}</button>
   );
@@ -470,12 +478,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           </span>
         </div>
       )}
+      <SortBar levels={sort.levels} setLevels={sort.setLevels} labels={ROSTER_SORT_LABELS}
+        isDefault={sort.isDefault} onReset={sort.reset} defaultDir="asc" />
       <div ref={scrollRef} style={{ overflowX:"auto" }}>
         <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:1180, width:"100%" }}>
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : undefined} onClick={(k === "abstract" || k === "kickout") ? undefined : () => setSort(k)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: (k === "abstract" || k === "kickout") ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{(k === "abstract" || k === "kickout") ? null : arrow(k)}</th>
+                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : (k === "abstract" || k === "kickout") ? undefined : "Click to sort by this column · Shift-click to add it as a tiebreaker"} onClick={(k === "abstract" || k === "kickout") ? undefined : (e) => setSort(k, e)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: (k === "abstract" || k === "kickout") ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{(k === "abstract" || k === "kickout") ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
