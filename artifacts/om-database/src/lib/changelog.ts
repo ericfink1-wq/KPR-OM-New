@@ -8,7 +8,8 @@
 //
 // HOUSE RULE: when you ship something a user would notice, add an entry here in
 // the same change. A feature nobody is told about may as well not exist — and
-// the list is the only record the team reads. Newest FIRST.
+// the list is the only record the team reads. Newest FIRST. Mark a feature only
+// admins can use with adminOnly: true so non-admins aren't told about it.
 
 export type ChangeCategory = "new" | "improved" | "fixed" | "data";
 
@@ -24,6 +25,9 @@ export interface ChangeEntry {
   detail: string;
   /** Where to find it in the app, when that isn't obvious. */
   where?: string;
+  /** Set when the feature is only usable by admins (e.g. the Members screen), so
+   *  it isn't announced to people who can't see or use it. */
+  adminOnly?: boolean;
 }
 
 export const CATEGORY_LABEL: Record<ChangeCategory, string> = {
@@ -60,6 +64,7 @@ export const CHANGELOG: ChangeEntry[] = [
     detail:
       "Admins can now change the name anyone is shown as, including their own. The new name appears in the header, on the Members screen and in 'uploaded by' on every deal, including ones uploaded before the change.",
     where: "Members → Rename",
+    adminOnly: true,
   },
   {
     id: "2026-10-13-broker-package-combine",
@@ -229,9 +234,9 @@ export const CHANGELOG: ChangeEntry[] = [
 ];
 
 /** Newest first, and never a date in the future (a mis-typed entry must not hide everything else). */
-export function visibleChangelog(now: Date = new Date()): ChangeEntry[] {
+export function visibleChangelog(now: Date = new Date(), isAdmin = false): ChangeEntry[] {
   const today = isoDay(now);
-  return CHANGELOG.filter(e => e.date <= today).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return CHANGELOG.filter(e => e.date <= today && (isAdmin || !e.adminOnly)).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
 /**
@@ -248,11 +253,11 @@ export function visibleChangelog(now: Date = new Date()): ChangeEntry[] {
  * A null cutoff means we have no idea when this person was last here — a brand-new
  * account. They get nothing rather than the entire history.
  */
-export function entriesSince(cutoff: string | null | undefined, now: Date = new Date()): ChangeEntry[] {
+export function entriesSince(cutoff: string | null | undefined, now: Date = new Date(), isAdmin = false): ChangeEntry[] {
   if (!cutoff) return [];
   const since = isoDay(new Date(cutoff));
   if (!since) return [];
-  return visibleChangelog(now).filter(e => e.date > since);
+  return visibleChangelog(now, isAdmin).filter(e => e.date > since);
 }
 
 function isoDay(d: Date): string {

@@ -4,6 +4,8 @@ import type { ChangeEntry } from "../lib/changelog";
 import { useIsMobile } from "../hooks/use-mobile";
 
 interface Props {
+  /** Admin-only entries are hidden from everyone else. */
+  isAdmin?: boolean;
   open: boolean;
   onClose: () => void;
   /**
@@ -52,14 +54,14 @@ function Entry({ e, isNew }: { e: ChangeEntry; isNew: boolean }) {
   );
 }
 
-export default function WhatsNewModal({ open, onClose, cutoff, basis }: Props) {
+export default function WhatsNewModal({ open, onClose, cutoff, basis, isAdmin = false }: Props) {
   const isMobile = useIsMobile();
   // When opened manually the reader wants the archive, so show everything and mark
   // which entries are the ones they hadn't seen.
   const [showAll, setShowAll] = useState(false);
 
-  const all = useMemo(() => visibleChangelog(), []);
-  const unseen = useMemo(() => entriesSince(cutoff), [cutoff]);
+  const all = useMemo(() => visibleChangelog(new Date(), isAdmin), [isAdmin]);
+  const unseen = useMemo(() => entriesSince(cutoff, new Date(), isAdmin), [cutoff, isAdmin]);
   const unseenIds = useMemo(() => new Set(unseen.map(e => e.id)), [unseen]);
   const shown = cutoff && !showAll ? unseen : all;
   // The "new to you" badge only carries information when read and unread entries are

@@ -269,10 +269,10 @@ function AppInner() {
     apiWhatsNewCutoff().then(r => {
       if (cancelled) return;
       setWhatsNew(r);
-      setWhatsNewUnread(entriesSince(r.cutoff).length);
+      setWhatsNewUnread(entriesSince(r.cutoff, new Date(), isAdmin).length);
     });
     return () => { cancelled = true; };
-  }, [auth, needs2fa, needsReverify]);
+  }, [auth, needs2fa, needsReverify, isAdmin]);
 
   // Auto-open once, and only when there is genuinely something to say. Deliberately
   // waits for `loaded`: popping a dialog over the loading splash reads as an error,
@@ -532,6 +532,7 @@ function AppInner() {
         open={whatsNewOpen}
         cutoff={whatsNewOpenedManually ? null : whatsNew.cutoff}
         basis={whatsNew.basis}
+        isAdmin={isAdmin}
         onClose={() => {
           setWhatsNewOpen(false);
           setWhatsNewOpenedManually(false);
