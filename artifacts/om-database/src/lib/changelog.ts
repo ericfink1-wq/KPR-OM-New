@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-14-library-sort-autopass",
+    date: "2026-10-14",
+    category: "improved",
+    title: "Deal Library lists the newest uploads first in each status, and prospects auto-pass after 6 weeks",
+    detail:
+      "Within each status group, the most recently uploaded deals now sit at the top instead of being alphabetical. A Prospect now moves to Passed after 6 weeks with no new upload or status change (it was about 2 months from the first upload). Moving a deal back to Prospect, or uploading new material for it, restarts the clock, so it won't be passed again the moment you reopen the site.",
+    where: "Deal Library",
+  },
+  {
     id: "2026-10-14-already-uploaded-warning",
     date: "2026-10-14",
     category: "new",

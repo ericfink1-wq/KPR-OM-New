@@ -2701,7 +2701,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 </span>
               );
             })()}
-            {d.autoPassed && <span title="Auto-passed: prospect for 2+ months without a status change" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
+            {d.autoPassed && <span title="Auto-passed: a Prospect with no new upload or status change for 6+ weeks" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
             {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
           </div>
           <span style={{ fontSize:9, color:"#958d80", textAlign:"right" }}>

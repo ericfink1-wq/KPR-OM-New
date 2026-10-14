@@ -353,7 +353,10 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
         const ao = STATUS_ORDER[a.status || ""] ?? 99;
         const bo = STATUS_ORDER[b.status || ""] ?? 99;
         if (ao !== bo) return sortDir === "asc" ? ao - bo : bo - ao;
-        // Within same status group: alphabetical by property name
+        // Within a status group: most recently uploaded first, then by name.
+        const at = _ts(a.lastUploadAt) || _ts(a.uploadedAt);
+        const bt = _ts(b.lastUploadAt) || _ts(b.uploadedAt);
+        if (at !== bt) return bt - at;
         const an = (a.propertyName || a.fileName || "").toLowerCase();
         const bn = (b.propertyName || b.fileName || "").toLowerCase();
         return an.localeCompare(bn);

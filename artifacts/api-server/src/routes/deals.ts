@@ -1,3 +1,4 @@
+import { stampStatusChange } from "../lib/statusSince";
 import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable, leaseAbstractsTable } from "@workspace/db";
@@ -541,6 +542,7 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     Object.assign(rest, autoMaintainDealData(rest).data);
     // Capture the prior "Our Take" so we only re-learn the House View when it changes.
     const prevRows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    stampStatusChange(prevRows[0]?.data as Record<string, unknown> | undefined, rest);
     const prevReview = typeof (prevRows[0]?.data as Record<string, unknown> | undefined)?.dealReview === "string"
       ? ((prevRows[0]!.data as Record<string, unknown>).dealReview as string).trim() : "";
     await db.insert(dealsTable)

@@ -88,8 +88,23 @@ export const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/di
 // a broker's lease-summary handed out as Word). Browser build; exposes window.mammoth.
 export const MAMMOTH_CDN = "https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js";
 
-// A Prospect sitting untouched this long auto-shifts to Passed (~2 months).
-export const PROSPECT_STALE_DAYS = 61;
+// A Prospect with no activity for this long auto-shifts to Passed (6 weeks — Eric,
+// 10/14/26). "Activity" = the deal's latest upload or its latest status change, so a
+// re-uploaded deal, or one someone moved back to Prospect, starts a fresh clock.
+export const PROSPECT_STALE_DAYS = 42;
+
+/** Should this deal be auto-moved from Prospect to Passed right now? */
+export function shouldAutoPass(
+  deal: { status?: string | null; trashedAt?: string | null; uploadedAt?: string | null; lastUploadAt?: string | null; statusSince?: string | null },
+  now: number = Date.now(),
+): boolean {
+  if (deal.status !== "Prospect" || deal.trashedAt) return false;
+  const times = [deal.uploadedAt, deal.lastUploadAt, deal.statusSince]
+    .map(t => (t ? Date.parse(t) : NaN))
+    .filter(t => !isNaN(t));
+  if (!times.length) return false;            // no date to measure from — never guess
+  return now - Math.max(...times) >= PROSPECT_STALE_DAYS * 86_400_000;
+}
 
 // DORMANT (Phase 2): when true, the lease-abstract modal shows an "Auto-extract
 // from PDFs" tab (admin only) that uploads a document set and has the SERVER

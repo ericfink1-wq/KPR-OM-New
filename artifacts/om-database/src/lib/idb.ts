@@ -1078,6 +1078,7 @@ export interface Deal {
   // View" that teaches the analyst how we think and shapes every future analysis.
   dealReview?: string | null;
   verified?: Record<string, { by?: string; ts?: number }>;
+  statusSince?: string | null;  // server-stamped: when `status` last changed (restarts the auto-pass clock)
   autoPassed?: boolean;
   autoPassedAt?: string;
   propertyGroupId?: string | null;
