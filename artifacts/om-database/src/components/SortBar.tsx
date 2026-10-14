@@ -4,7 +4,7 @@ import { useIsMobile } from "../hooks/use-mobile";
 // Shows the active sort chain above a table ("Sorted by 1 Status ▲ · then 2 Last
 // upload ▼") and lets anyone add, flip, reorder or remove levels with taps — the
 // touch-friendly counterpart to Shift-clicking a column header.
-export default function SortBar({ levels, setLevels, labels, isDefault, onReset, defaultDir = "desc" }: {
+export default function SortBar({ levels, setLevels, labels, isDefault, onReset, defaultDir = "desc", dirFor }: {
   levels: SortLevel[];
   setLevels: (next: SortLevel[]) => void;
   /** Sortable columns, key → label. Only these can be added. */
@@ -12,6 +12,8 @@ export default function SortBar({ levels, setLevels, labels, isDefault, onReset,
   isDefault: boolean;
   onReset: () => void;
   defaultDir?: SortDir;
+  /** Natural first direction per column (e.g. dates newest-first, names A–Z). */
+  dirFor?: (key: string) => SortDir;
 }) {
   const isMobile = useIsMobile();
   const available = Object.keys(labels).filter(k => !levels.some(l => l.key === k));
@@ -42,7 +44,7 @@ export default function SortBar({ levels, setLevels, labels, isDefault, onReset,
         </span>
       ))}
       {levels.length < MAX_SORT_LEVELS && available.length > 0 && (
-        <select value="" onChange={e => { const k = e.target.value; if (k) setLevels([...levels, { key: k, dir: defaultDir }]); }}
+        <select value="" onChange={e => { const k = e.target.value; if (k) setLevels([...levels, { key: k, dir: dirFor?.(k) ?? defaultDir }]); }}
           style={{ fontSize: 11, color: "#5c5047", border: "1px dashed #d9d2c4", borderRadius: 999, padding: isMobile ? "5px 8px" : "2px 6px", background: "transparent", fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
           <option value="">+ then by…</option>
           {available.map(k => <option key={k} value={k}>{labels[k]}</option>)}

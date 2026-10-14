@@ -14,6 +14,19 @@ import { curatedTenantDescription } from "../lib/tenantDescriptions";
 import PortfolioStressTest from "./PortfolioStressTest";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { stickyFirstCol } from "../lib/stickyCol";
+import { useMultiSort, chainComparator, type SortLevel, type SortDir } from "../lib/multiSort";
+import SortBar from "./SortBar";
+
+// Columns a brand's locations can be sorted by ("state" is sort-only — e.g. State,
+// then Rent/SF reads a brand's rents market by market).
+const TV_SORT_LABELS: Record<string, string> = {
+  property: "Property", recorded: "Name as recorded", state: "State", market: "Market", sf: "SF",
+  rentPSF: "Rent/SF", annualRent: "Annual rent", start: "Start", expiry: "Expiry", salesPSF: "Sales/SF",
+  reimbursement: "Reimbursement",
+};
+const TV_SORT_DEFAULT: SortLevel[] = [{ key: "annualRent", dir: "desc" }];
+const TV_ASC_FIRST = new Set(["property", "recorded", "state", "market", "start", "expiry", "reimbursement"]);
+const tvDirFor = (k: string): SortDir => (TV_ASC_FIRST.has(k) ? "asc" : "desc");
 
 interface Props {
   tenantName: string;
@@ -53,9 +66,8 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const salesByDeal = useMemo(() => buildSalesByDeal(deals || []), [deals]);
   const effSales = (r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }) => resolveSalesPSF(salesByDeal, r.deal, r.t);
 
-  type SortKey = "property"|"recorded"|"market"|"sf"|"rentPSF"|"annualRent"|"start"|"expiry"|"salesPSF"|"reimbursement";
-  const [sortKey, setSortKey] = useState<SortKey>("annualRent");
-  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  type SortKey = "property"|"recorded"|"state"|"market"|"sf"|"rentPSF"|"annualRent"|"start"|"expiry"|"salesPSF"|"reimbursement";
+  const msort = useMultiSort("tenantview-sort-v1", TV_SORT_DEFAULT, { dirFor: tvDirFor, validKeys: Object.keys(TV_SORT_LABELS) });
   const [scope, setScope] = useState<"all"|"owned">("all");
 
   // Per-tenant location ignore state — keyed so tenants don't bleed into each other
@@ -100,16 +112,14 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const activeRows = rows.filter(r => !ignoredIds.has(rowId(r)));
   const ignoredCount = rows.length - activeRows.length;
 
-  const setSort = (k: SortKey) => {
-    if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
-    else { setSortKey(k); setSortDir(["property","market","start","expiry","reimbursement"].includes(k) ? "asc" : "desc"); }
-  };
+  const setSort = (k: SortKey, e?: React.MouseEvent) => msort.onHeaderClick(k, e);
 
   const val = (r: typeof rows[number], k: SortKey) => {
     switch (k) {
       case "property":      return norm(r.deal.propertyName);
       case "recorded":      return norm(r.t.name);
       case "market":        return norm(r.deal.market);
+      case "state":         return norm(r.deal.state);
       case "sf":            return num(r.t.sf);
       case "rentPSF":       return num(r.t.rentPerSF);
       case "annualRent":    return num(r.t.annualRent);
@@ -121,19 +131,17 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     }
   };
 
-  const sorted = [...rows].sort((a, b) => {
-    const av = val(a, sortKey), bv = val(b, sortKey);
-    const dir = sortDir === "asc" ? 1 : -1;
-    let cmp = 0;
-    if (av == null && bv == null) cmp = 0;
-    else if (av == null) return 1;
-    else if (bv == null) return -1;
-    else if (typeof av === "number" && typeof bv === "number") cmp = (av - bv) * dir;
-    else cmp = String(av).localeCompare(String(bv)) * dir;
+  const blankVal = (v: string | number | null) => v == null || v === "";
+  const sorted = [...rows].sort(chainComparator<typeof rows[number]>(
+    msort.levels,
+    k => k in TV_SORT_LABELS ? (a, b) => {
+      const av = val(a, k as SortKey), bv = val(b, k as SortKey);
+      return typeof av === "number" && typeof bv === "number" ? av - bv : String(av ?? "").localeCompare(String(bv ?? ""));
+    } : null,
     // Tiebreak by property name (always ascending) so ties are stably ordered.
-    if (cmp === 0 && sortKey !== "property") cmp = norm(a.deal.propertyName).localeCompare(norm(b.deal.propertyName));
-    return cmp;
-  });
+    (a, b) => norm(a.deal.propertyName).localeCompare(norm(b.deal.propertyName)),
+    (k, r) => blankVal(val(r, k as SortKey)),
+  ));
 
   // Averages — derive from ACTIVE rows (excludes ignored locations).
   //
@@ -173,7 +181,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   const anchors = allRows.filter(r => r.t.isAnchor).length;
   const credit  = allRows.map(r => r.t.creditRating).find(Boolean);
 
-  const arrow = (k: string) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+  const arrow = (k: string) => msort.marker(k);
 
   const cols: [SortKey, string, boolean][] = [
     ["property","Property",false], ["recorded","Recorded As",false], ["market","Market",false],
@@ -355,13 +363,15 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
               )}
             </div>
 
+            <SortBar levels={msort.levels} setLevels={msort.setLevels} labels={TV_SORT_LABELS}
+              isDefault={msort.isDefault} onReset={msort.reset} dirFor={tvDirFor} />
             <div ref={scrollRef} style={{ overflowX:"auto" }}>
               <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
                     {cols.map(([k, label, right], idx) => (
-                      <th key={k} onClick={() => setSort(k)} className={idx === 0 ? "freeze-col" : undefined}
-                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
+                      <th key={k} onClick={e => setSort(k, e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className={idx === 0 ? "freeze-col" : undefined}
+                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:msort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
                         {label}{arrow(k)}
                       </th>
                     ))}

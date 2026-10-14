@@ -7,6 +7,8 @@ import { extractCompsFromText } from "../lib/compsImport";
 import { stickyFirstCol } from "../lib/stickyCol";
 import PdfDownloadButton from "./PdfDownloadButton";
 import { n0, m0, m2, type ExportCol } from "../lib/tableExport";
+import { useMultiSort, chainComparator, isBlank, type SortLevel, type SortDir } from "../lib/multiSort";
+import SortBar from "./SortBar";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -187,24 +189,21 @@ function fmtVolume(v: number): string {
 // ---------------------------------------------------------------------------
 // Sort header cell
 // ---------------------------------------------------------------------------
+type MultiSort = ReturnType<typeof useMultiSort>;
 function SortTh({
-  label, sortKey, current, onSort, style, className,
+  label, k, ms, style, className,
 }: {
   label: string;
-  sortKey: SortKey;
-  current: SortKey;
-  onSort: (k: SortKey) => void;
+  k: string;
+  ms: MultiSort;
   style?: React.CSSProperties;
   className?: string;
 }) {
-  const active = current === sortKey;
-  const isDesc = sortKey.endsWith("_desc");
-  const toggle: SortKey = active
-    ? (isDesc ? (sortKey.replace("_desc", "_asc") as SortKey) : (sortKey.replace("_asc", "_desc") as SortKey))
-    : sortKey;
+  const active = ms.isSorted(k);
   return (
     <th
-      onClick={() => onSort(toggle)}
+      onClick={e => ms.onHeaderClick(k, e)}
+      title="Click to sort by this column · Shift-click to add it as a tiebreaker"
       className={className}
       style={{
         padding: "9px 10px",
@@ -220,9 +219,41 @@ function SortTh({
         ...style,
       }}
     >
-      {label}{active ? (isDesc ? " ↓" : " ↑") : ""}
+      {label}{ms.marker(k)}
     </th>
   );
+}
+
+// Columns the comps table can sort by. "source" ranks KPR's own trades, then
+// broker/manual comps, then OM-sourced (the house quality order).
+const COMP_SORT_LABELS: Record<string, string> = {
+  date: "Sale date", name: "Property", market: "City", state: "State", salePrice: "Price",
+  capRate: "Cap rate", pricePerSf: "Price PSF", sf: "SF", occupancy: "Occupancy",
+  source: "Source quality", anchor: "Anchor", propertyType: "Type", buyer: "Buyer", seller: "Seller",
+};
+const COMP_SORT_DEFAULT: SortLevel[] = [{ key: "date", dir: "desc" }];
+const COMP_DESC_FIRST = new Set(["date", "salePrice", "sf", "occupancy", "source"]);
+const compDirFor = (k: string): SortDir => (COMP_DESC_FIRST.has(k) ? "desc" : "asc");
+const compTier = (r: CompRow) => (r.isOwnTransaction ? 2 : r.isManual ? 1 : 0);
+const compTs = (r: CompRow) => { const t = r.saleDate ? Date.parse(r.saleDate) : NaN; return isNaN(t) ? null : t; };
+function compValue(r: CompRow, k: string): string | number | null {
+  switch (k) {
+    case "date": return compTs(r);
+    case "name": return (r.name || r.sourceDealName || "").toLowerCase() || null;
+    case "source": return compTier(r);
+    case "salePrice": case "capRate": case "pricePerSf": case "sf": case "occupancy": {
+      const v = r[k as keyof CompRow]; return v == null || isNaN(Number(v)) ? null : Number(v);
+    }
+    default: { const v = r[k as keyof CompRow]; return isBlank(v) ? null : String(v).toLowerCase(); }
+  }
+}
+function compAscending(k: string): ((a: CompRow, b: CompRow) => number) | null {
+  if (!(k in COMP_SORT_LABELS)) return null;
+  return (a, b) => {
+    const av = compValue(a, k), bv = compValue(b, k);
+    if (typeof av === "number" && typeof bv === "number") return av - bv;
+    return String(av ?? "").localeCompare(String(bv ?? ""));
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -522,7 +553,10 @@ function AddCompModal({
 export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) => void }) {
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<SortKey>("date_desc");
+  // The server returns every matching comp; ordering happens here so people can
+  // sort by several columns (e.g. State, then Sale date, then Cap rate).
+  const sort: SortKey = "date_desc";
+  const msort = useMultiSort("comps-sort-v1", COMP_SORT_DEFAULT, { dirFor: compDirFor, validKeys: Object.keys(COMP_SORT_LABELS) });
   const [rows, setRows] = useState<CompRow[]>([]);
   // Client-side multi-select state filter (the full list is already fetched).
   // State filter — persisted to localStorage so it survives a refresh.
@@ -593,10 +627,6 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     debounceRef.current = setTimeout(() => fetch_(next, sort), 280);
   }, [filters, sort, fetch_]);
 
-  const handleSort = useCallback((s: SortKey) => {
-    setSort(s);
-    fetch_(filters, s);
-  }, [filters, fetch_]);
 
   useEffect(() => { fetch_(filters, sort); }, []); // initial load
 
@@ -764,7 +794,8 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const displayRows = useMemo(() => {
     const stateSet = selectedStates.length ? new Set(selectedStates) : null;
     const stateFilter = (r: CompRow) => !stateSet || stateSet.has((r.state || "").trim().toUpperCase());
-    if (!showDupsOnly) return rows.filter(stateFilter);
+    if (!showDupsOnly) return rows.filter(stateFilter).sort(chainComparator<CompRow>(msort.levels, compAscending,
+      (a, b) => (b.id - a.id), (k, r) => compValue(r, k) == null));
     const tierOf = (r: CompRow) => r.isOwnTransaction ? 2 : r.isManual ? 1 : 0;
     return rows
       .filter(r => dupMap.has(r.id) && stateFilter(r))
@@ -773,7 +804,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
         if (ca !== cb) return ca - cb;
         return tierOf(b) - tierOf(a);
       });
-  }, [rows, dupMap, showDupsOnly, selectedStates]);
+  }, [rows, dupMap, showDupsOnly, selectedStates, msort.levels]);
 
   // Tile stats — derived from displayRows minus hidden rows (client-side, filter-aware)
   const activeTileStats = useMemo(() => {
@@ -1111,6 +1142,11 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
         </div>
       )}
 
+      {!error && !showDupsOnly && rows.length > 0 && (
+        <SortBar levels={msort.levels} setLevels={msort.setLevels} labels={COMP_SORT_LABELS}
+          isDefault={msort.isDefault} onReset={msort.reset} dirFor={compDirFor} />
+      )}
+
       {/* Table — swipeable on all screen sizes */}
       {!error && (
         <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
@@ -1118,19 +1154,19 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead>
                 <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f1eadc" }}>
-                  <SortTh label="Property" sortKey="name_asc"   current={sort} onSort={handleSort} className="freeze-col" style={{ minWidth: 180, ...stickyFirstCol("#faf7f0", true) }} />
-                  <SortTh label="City"     sortKey="market_asc" current={sort} onSort={handleSort} style={{ minWidth: 100 }} />
-                  {hasState   && <SortTh label="State"  sortKey="state_asc"  current={sort} onSort={handleSort} style={{ minWidth: 50 }} />}
-                  <SortTh label="Sale Date"  sortKey="date_desc"          current={sort} onSort={handleSort} />
-                  <SortTh label="Price"      sortKey="sale_price_desc"    current={sort} onSort={handleSort} />
-                  <SortTh label="Cap Rate"   sortKey="cap_rate_asc"       current={sort} onSort={handleSort} />
-                  {hasBuyer   && <SortTh label="Buyer"  sortKey="buyer_asc"  current={sort} onSort={handleSort} style={{ minWidth: 120 }} />}
-                  {hasSeller  && <SortTh label="Seller" sortKey="seller_asc" current={sort} onSort={handleSort} style={{ minWidth: 120 }} />}
-                  <SortTh label="SF"         sortKey="sf_desc"            current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
-                  <SortTh label="Price PSF"  sortKey="price_per_sf_asc"   current={sort} onSort={handleSort} />
-                  <SortTh label="Occupancy"  sortKey="occ_desc"           current={sort} onSort={handleSort} style={{ textAlign: "right" }} />
-                  {hasAnchor  && <SortTh label="Anchor" sortKey="anchor_asc" current={sort} onSort={handleSort} style={{ maxWidth: 220 }} />}
-                  {hasType    && <SortTh label="Type"   sortKey="type_asc"   current={sort} onSort={handleSort} />}
+                  <SortTh label="Property" k="name" ms={msort} className="freeze-col" style={{ minWidth: 180, ...stickyFirstCol("#faf7f0", true) }} />
+                  <SortTh label="City"     k="market" ms={msort} style={{ minWidth: 100 }} />
+                  {hasState   && <SortTh label="State"  k="state" ms={msort} style={{ minWidth: 50 }} />}
+                  <SortTh label="Sale Date"  k="date" ms={msort} />
+                  <SortTh label="Price"      k="salePrice" ms={msort} />
+                  <SortTh label="Cap Rate"   k="capRate" ms={msort} />
+                  {hasBuyer   && <SortTh label="Buyer"  k="buyer" ms={msort} style={{ minWidth: 120 }} />}
+                  {hasSeller  && <SortTh label="Seller" k="seller" ms={msort} style={{ minWidth: 120 }} />}
+                  <SortTh label="SF"         k="sf" ms={msort} style={{ textAlign: "right" }} />
+                  <SortTh label="Price PSF"  k="pricePerSf" ms={msort} />
+                  <SortTh label="Occupancy"  k="occupancy" ms={msort} style={{ textAlign: "right" }} />
+                  {hasAnchor  && <SortTh label="Anchor" k="anchor" ms={msort} style={{ maxWidth: 220 }} />}
+                  {hasType    && <SortTh label="Type"   k="propertyType" ms={msort} />}
                   <th className="freeze-col" style={{
                     padding: "9px 6px", width: 72,
                     position: "sticky", right: 0, zIndex: 3,

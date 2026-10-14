@@ -15,7 +15,7 @@ import { startAiTask, updateAiTask, finishAiTask } from "../lib/aiProgress";
 import RecencyBadge from "./RecencyBadge";
 import PdfDownloadButton from "./PdfDownloadButton";
 import { n0, m0, type ExportCol } from "../lib/tableExport";
-import { useMultiSort, chainComparator, type SortLevel } from "../lib/multiSort";
+import { useMultiSort, chainComparator, isBlank, type SortLevel } from "../lib/multiSort";
 import SortBar from "./SortBar";
 
 interface Props {
@@ -246,6 +246,14 @@ function dealAscending(key: string): ((a: Deal, b: Deal) => number) | null {
   if (key in DEAL_SORT_LABELS) return (a, b) => _str(a[key as keyof Deal]).localeCompare(_str(b[key as keyof Deal]));
   return null;
 }
+// A deal with no value for a column (no stated cap rate, no seller…) sinks to the
+// bottom whichever way that column is sorted.
+function dealMissing(key: string, d: Deal): boolean {
+  if (NUM_SORT_KEYS.has(key)) return _num(d[key as keyof Deal]) === -Infinity;
+  if (key === "status" || key === "lastUploadAt" || key === "uploadedAt" || key === "propertyName") return false;
+  if (key === "anchor") return !leadAnchorName(d);
+  return isBlank(d[key as keyof Deal]);
+}
 const dealFreshness = (d: Deal) => Math.max(_ts(d.refreshedAt), _ts(d.uploadedAt));
 const demoDate = (d: Deal) => Math.max(_ts(d.demoChecked), _ts((d.marketDemographics as { lookedUpAt?: string } | null)?.lookedUpAt)) || dealFreshness(d);
 
@@ -376,7 +384,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       rows = rows.filter(d => hay(d).includes(s));
     }
     rows.sort(chainComparator<Deal>(sort.levels, dealAscending, (a, b) =>
-      (a.propertyName || a.fileName || "").toLowerCase().localeCompare((b.propertyName || b.fileName || "").toLowerCase())));
+      (a.propertyName || a.fileName || "").toLowerCase().localeCompare((b.propertyName || b.fileName || "").toLowerCase()), dealMissing));
     return rows;
   }, [deals, filterStatuses, filterStates, filterTypes, q, sort.levels]);
 

@@ -53,3 +53,24 @@ describe("markers and editing", () => {
     expect(promoteSortLevel(DEFAULT, "status")).toEqual(DEFAULT);
   });
 });
+
+describe("blanks always sink to the bottom", () => {
+  type R = { name: string; cap: number | null };
+  const rows: R[] = [{ name: "A", cap: null }, { name: "B", cap: 7 }, { name: "C", cap: 6 }, { name: "D", cap: null }];
+  const asc = (k: string) => k === "cap" ? (a: R, b: R) => (a.cap ?? 0) - (b.cap ?? 0) : null;
+  const missing = (k: string, r: R) => k === "cap" && r.cap == null;
+  const tb = (a: R, b: R) => a.name.localeCompare(b.name);
+  it("lowest cap first, deals with no cap last", () => {
+    expect(rows.slice().sort(chainComparator([{ key: "cap", dir: "asc" }], asc, tb, missing)).map(r => r.name)).toEqual(["C", "B", "A", "D"]);
+  });
+  it("highest cap first, deals with no cap STILL last", () => {
+    expect(rows.slice().sort(chainComparator([{ key: "cap", dir: "desc" }], asc, tb, missing)).map(r => r.name)).toEqual(["B", "C", "A", "D"]);
+  });
+});
+
+describe("each column's natural first direction", () => {
+  it("a newly clicked column uses the direction it's given", () => {
+    expect(clickSort([{ key: "capRate", dir: "asc" }], "date", false, "desc")).toEqual([{ key: "date", dir: "desc" }]);
+    expect(clickSort([{ key: "date", dir: "desc" }], "capRate", true, "asc")).toEqual([{ key: "date", dir: "desc" }, { key: "capRate", dir: "asc" }]);
+  });
+});

@@ -13,6 +13,18 @@ import { curatedParentDescription } from "../lib/tenantDescriptions";
 import EntityDescription from "./EntityDescription";
 import PortfolioStressTest from "./PortfolioStressTest";
 import { stickyFirstCol } from "../lib/stickyCol";
+import { useMultiSort, chainComparator, type SortLevel, type SortDir } from "../lib/multiSort";
+import SortBar from "./SortBar";
+
+// Columns a parent company's locations can be sorted by ("state" is sort-only —
+// e.g. Brand, then State groups TJX's Marshalls and HomeGoods market by market).
+const PC_SORT_LABELS: Record<string, string> = {
+  property: "Property", brand: "Brand", state: "State", market: "Market", sf: "SF", rentPSF: "Rent/SF",
+  annualRent: "Annual rent", start: "Start", expiry: "Expiry", salesPSF: "Sales/SF",
+};
+const PC_SORT_DEFAULT: SortLevel[] = [{ key: "annualRent", dir: "desc" }];
+const PC_ASC_FIRST = new Set(["property", "brand", "state", "market", "start", "expiry"]);
+const pcDirFor = (k: string): SortDir => (PC_ASC_FIRST.has(k) ? "asc" : "desc");
 
 interface Props {
   parentName: string;
@@ -22,7 +34,7 @@ interface Props {
   onOpenDeal: (d: Deal) => void;
 }
 
-type SortKey = "property" | "brand" | "market" | "sf" | "rentPSF" | "annualRent" | "start" | "expiry" | "salesPSF";
+type SortKey = "property" | "brand" | "state" | "market" | "sf" | "rentPSF" | "annualRent" | "start" | "expiry" | "salesPSF";
 
 export default function ParentCompanyView({ parentName, deals, onBack, onTenantClick, onOpenDeal }: Props) {
   const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
@@ -30,14 +42,9 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
 
   const watchMap = useWatchlist();
   const [scope, setScope] = useState<"all" | "owned">("all");
-  const [sortKey, setSortKey] = useState<SortKey>("annualRent");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  const setSort = (k: SortKey) => {
-    if (sortKey === k) setSortDir(x => x === "asc" ? "desc" : "asc");
-    else { setSortKey(k); setSortDir(["property","brand","market","start","expiry"].includes(k) ? "asc" : "desc"); }
-  };
-  const arrow = (k: SortKey) => sortKey !== k ? "" : sortDir === "desc" ? " ▼" : " ▲";
+  const msort = useMultiSort("parentco-sort-v1", PC_SORT_DEFAULT, { dirFor: pcDirFor, validKeys: Object.keys(PC_SORT_LABELS) });
+  const setSort = (k: SortKey, e?: React.MouseEvent) => msort.onHeaderClick(k, e);
+  const arrow = (k: SortKey) => msort.marker(k);
 
   const allRows: { deal: Deal; t: NonNullable<Deal["tenants"]>[number]; brandLabel: string }[] = useMemo(() => {
     const rows: { deal: Deal; t: NonNullable<Deal["tenants"]>[number]; brandLabel: string }[] = [];
@@ -75,30 +82,33 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
     .sort((a, b) => (WATCH_RANK[b.status] || 0) - (WATCH_RANK[a.status] || 0))[0] || null;
 
   const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      let av: string | number | null, bv: string | number | null;
-      switch (sortKey) {
-        case "property":   av = norm(a.deal.propertyName); bv = norm(b.deal.propertyName); break;
-        case "brand":      av = norm(a.brandLabel); bv = norm(b.brandLabel); break;
-        case "market":     av = norm(a.deal.market || cityState(a.deal)); bv = norm(b.deal.market || cityState(b.deal)); break;
-        case "sf":         av = num(a.t.sf); bv = num(b.t.sf); break;
-        case "rentPSF":    av = num(a.t.rentPerSF); bv = num(b.t.rentPerSF); break;
-        case "annualRent": av = num(a.t.annualRent); bv = num(b.t.annualRent); break;
-        case "start":      av = a.t.leaseStart || ""; bv = b.t.leaseStart || ""; break;
-        case "expiry":     av = a.t.leaseExpiry || ""; bv = b.t.leaseExpiry || ""; break;
-        case "salesPSF":   av = effSales(a); bv = effSales(b); break;
-        default: av = null; bv = null;
+    type Row = typeof rows[number];
+    const val = (r: Row, k: string): string | number | null => {
+      switch (k) {
+        case "property":   return norm(r.deal.propertyName) || null;
+        case "brand":      return norm(r.brandLabel) || null;
+        case "state":      return norm(r.deal.state) || null;
+        case "market":     return norm(r.deal.market || cityState(r.deal)) || null;
+        case "sf":         return num(r.t.sf);
+        case "rentPSF":    return num(r.t.rentPerSF);
+        case "annualRent": return num(r.t.annualRent);
+        case "start":      return r.t.leaseStart || null;
+        case "expiry":     return r.t.leaseExpiry || null;
+        case "salesPSF":   return effSales(r);
+        default:           return null;
       }
-      let cmp = 0;
-      if (av == null && bv == null) cmp = 0;
-      else if (av == null) return 1;
-      else if (bv == null) return -1;
-      else cmp = (typeof av === "string" ? av.localeCompare(bv as string) : (av as number) - (bv as number)) * (sortDir === "asc" ? 1 : -1);
+    };
+    return [...rows].sort(chainComparator<Row>(
+      msort.levels,
+      k => k in PC_SORT_LABELS ? (a, b) => {
+        const av = val(a, k), bv = val(b, k);
+        return typeof av === "number" && typeof bv === "number" ? av - bv : String(av ?? "").localeCompare(String(bv ?? ""));
+      } : null,
       // Tiebreak by property name (always ascending).
-      if (cmp === 0 && sortKey !== "property") cmp = norm(a.deal.propertyName).localeCompare(norm(b.deal.propertyName));
-      return cmp;
-    });
-  }, [rows, sortKey, sortDir]);
+      (a, b) => norm(a.deal.propertyName).localeCompare(norm(b.deal.propertyName)),
+      (k, r) => val(r, k) == null,
+    ));
+  }, [rows, msort.levels]);
 
   // Averages — same methodology as the Tenant page so the two read consistently:
   //  • SF metrics (Avg Size; the SF denominator of Rent/SF) count only rows with
@@ -282,13 +292,15 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
           {/* Locations table */}
           <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:13 }}>Locations — click a row to open the property</div>
+            <SortBar levels={msort.levels} setLevels={msort.setLevels} labels={PC_SORT_LABELS}
+              isDefault={msort.isDefault} onReset={msort.reset} dirFor={pcDirFor} />
             <div style={{ overflowX:"auto" }}>
               <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:900, width:"100%" }}>
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
                     {cols.map(([k, label, right], idx) => (
-                      <th key={k} onClick={() => setSort(k)} className={idx === 0 ? "freeze-col" : undefined}
-                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:sortKey===k?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
+                      <th key={k} onClick={e => setSort(k, e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className={idx === 0 ? "freeze-col" : undefined}
+                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:msort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
                         {label}{arrow(k)}
                       </th>
                     ))}

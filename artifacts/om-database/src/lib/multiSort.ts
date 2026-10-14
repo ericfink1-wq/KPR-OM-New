@@ -60,17 +60,30 @@ export function chainComparator<T>(
   levels: SortLevel[],
   ascending: (key: string) => ((a: T, b: T) => number) | null,
   tiebreak?: (a: T, b: T) => number,
+  /** Rows with no value for a column sink to the BOTTOM in either direction — a
+   *  cap-rate sort shouldn't lead with every deal that never stated one. */
+  missing?: (key: string, row: T) => boolean,
 ): (a: T, b: T) => number {
   const parts = levels
-    .map(l => ({ cmp: ascending(l.key), sign: l.dir === "asc" ? 1 : -1 }))
-    .filter((p): p is { cmp: (a: T, b: T) => number; sign: number } => !!p.cmp);
+    .map(l => ({ key: l.key, cmp: ascending(l.key), sign: l.dir === "asc" ? 1 : -1 }))
+    .filter((p): p is { key: string; cmp: (a: T, b: T) => number; sign: number } => !!p.cmp);
   return (a, b) => {
     for (const p of parts) {
+      if (missing) {
+        const ma = missing(p.key, a), mb = missing(p.key, b);
+        if (ma !== mb) return ma ? 1 : -1;
+        if (ma && mb) continue;
+      }
       const r = p.cmp(a, b);
       if (r !== 0) return r * p.sign;
     }
     return tiebreak ? tiebreak(a, b) : 0;
   };
+}
+
+/** True for null / undefined / blank / non-numeric-when-numeric values. */
+export function isBlank(v: unknown): boolean {
+  return v == null || (typeof v === "string" && v.trim() === "");
 }
 
 /** Header label suffix: "▲" for a single level, "▲1" / "▼2" once there's a chain. */
@@ -102,7 +115,7 @@ function loadLevels(storageKey: string | null, fallback: SortLevel[], validKeys?
  * React state for a multi-column sort. Remembers the person's chain per table in
  * this browser (a convenience only — clearing it just restores the default).
  */
-export function useMultiSort(storageKey: string | null, defaults: SortLevel[], opts: { defaultDir?: SortDir; validKeys?: string[] } = {}) {
+export function useMultiSort(storageKey: string | null, defaults: SortLevel[], opts: { defaultDir?: SortDir; validKeys?: string[]; dirFor?: (key: string) => SortDir } = {}) {
   const [levels, setLevelsRaw] = useState<SortLevel[]>(() => loadLevels(storageKey, defaults, opts.validKeys));
   const setLevels = useCallback((next: SortLevel[]) => {
     const final = next.length ? next : defaults;
@@ -116,8 +129,8 @@ export function useMultiSort(storageKey: string | null, defaults: SortLevel[], o
   }, [storageKey, defaults]);
 
   const onHeaderClick = useCallback((key: string, e?: { shiftKey?: boolean }) => {
-    setLevels(clickSort(levels, key, !!e?.shiftKey, opts.defaultDir ?? "desc"));
-  }, [levels, setLevels, opts.defaultDir]);
+    setLevels(clickSort(levels, key, !!e?.shiftKey, opts.dirFor?.(key) ?? opts.defaultDir ?? "desc"));
+  }, [levels, setLevels, opts.defaultDir, opts.dirFor]);
 
   return {
     levels,

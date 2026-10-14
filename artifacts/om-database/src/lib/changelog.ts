@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-14-multi-sort-everywhere",
+    date: "2026-10-14",
+    category: "improved",
+    title: "Multi-column sorting on Comps, brand pages and parent-company pages",
+    detail:
+      "The 'Sorted by' bar now also sits above the comp sales table and every brand and parent-company location list. Try State, then Sale date on Comps to see the latest trade in each market, or State, then Rent/SF on a brand page to read its rents market by market. Comps can also sort by source quality (KPR's own trades first). Blank values, such as deals with no stated cap rate, now always sort to the bottom instead of the top.",
+    where: "Comps, and any brand or parent-company page",
+  },
+  {
     id: "2026-10-14-multi-column-sort",
     date: "2026-10-14",
     category: "new",

@@ -15,7 +15,7 @@ import type { DatexLiveBlock } from "../lib/idb";
 import { stickyFirstCol } from "../lib/stickyCol";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
 import { useIsMobile } from "../hooks/use-mobile";
-import { useMultiSort, chainComparator, type SortLevel } from "../lib/multiSort";
+import { useMultiSort, chainComparator, isBlank, type SortLevel } from "../lib/multiSort";
 import SortBar from "./SortBar";
 
 // Roster columns offered in the "Sorted by" bar. "isAnchor" is a sort-only key:
@@ -394,7 +394,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       return (a, b) => String((a as any)[key] ?? "").toLowerCase().localeCompare(String((b as any)[key] ?? "").toLowerCase());
     };
     rows = rows.slice().sort(chainComparator<Tenant>(sort.levels, ascending,
-      (a, b) => String(a.name ?? "").toLowerCase().localeCompare(String(b.name ?? "").toLowerCase())));
+      (a, b) => String(a.name ?? "").toLowerCase().localeCompare(String(b.name ?? "").toLowerCase()),
+      (key, t) => key === "isAnchor" ? false : numKeys.has(key) ? sortVal(t, key) === -Infinity : isBlank((t as any)[key])));
     return rows;
   }, [tenants, quick, q, sort.levels, latestSales, estimatedRecoveries]);
 
