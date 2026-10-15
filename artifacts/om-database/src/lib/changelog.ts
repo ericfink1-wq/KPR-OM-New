@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-15-roster-totals-row",
+    date: "2026-10-15",
+    category: "new",
+    title: "Totals row at the bottom of every tenant roster",
+    detail:
+      "The roster now ends with a totals line: total and leased SF with % leased, total base rent, SF-weighted average rent per SF, WALT, and weighted sales per SF where tenants report sales. It totals whatever you're looking at, so filtering to Anchors or searching re-totals just those rows. On a phone the key figures appear right under 'Totals' so you don't have to scroll sideways.",
+    where: "Deal page → Tenants & Sales → Tenant roster",
+  },
+  {
     id: "2026-10-14-multi-sort-everywhere",
     date: "2026-10-14",
     category: "improved",

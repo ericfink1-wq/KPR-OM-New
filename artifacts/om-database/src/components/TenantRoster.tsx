@@ -17,6 +17,7 @@ import { useTopScrollbar } from "../lib/useTopScrollbar";
 import { useIsMobile } from "../hooks/use-mobile";
 import { useMultiSort, chainComparator, isBlank, type SortLevel } from "../lib/multiSort";
 import SortBar from "./SortBar";
+import { rosterTotals } from "../lib/rosterTotals";
 
 // Roster columns offered in the "Sorted by" bar. "isAnchor" is a sort-only key:
 // ascending puts anchors first, so "Anchors first, then SF" is two clicks.
@@ -437,6 +438,14 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
     return { vacantCount, occupiedCount, totalRosterSF, vacantSF, darkSF, pctOccupied, pctVacant, pctVacantInclDark };
   }, [tenants]);
   const fmtPct = (v: number) => `${(Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "")}%`;
+
+  // Totals / weighted averages for the rows currently shown (respects filters).
+  const totals = useMemo(() => rosterTotals(rows,
+    t => (latestSales?.get(tenantKey(t.canonicalName || t.name))?.salesPSF ?? null) ?? n(t.salesPSF)),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [rows, latestSales]);
+  const totalsFiltered = quick !== "all" || q.trim() !== "";
+  const isMobileRoster = useIsMobile();
 
   const asOfDate = tenantsAsOf || omDate;
   const asOfLabel = tenantsSource === "rent-roll" ? "RENT ROLL" : "OM";
@@ -979,6 +988,43 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
               </tr>
             ))}
           </tbody>
+          {rows.length > 0 && (
+            <tfoot>
+              <tr style={{ borderTop:"2px solid #d9d2c4", background:"#faf7f0", fontWeight:700, color:"#26281f" }}>
+                {cols.map(([k, , right], idx) => {
+                  const sub = (v: string) => <div style={{ fontSize:9.5, fontWeight:500, color:"#8b8578", marginTop:2, whiteSpace:"nowrap" }}>{v}</div>;
+                  let cell: React.ReactNode = null;
+                  if (k === "name") cell = (<>
+                    {totalsFiltered ? "Totals (filtered)" : "Totals"}
+                    {sub(`${totals.tenantCount} tenant${totals.tenantCount === 1 ? "" : "s"}${totals.vacantCount ? ` · ${totals.vacantCount} vacant` : ""}`)}
+                    {/* Phones: the figure columns are off-screen to the right, so repeat the
+                        headline numbers here in the pinned column. */}
+                    {isMobileRoster && (
+                      <div style={{ fontSize:11, fontWeight:600, color:"#383a37", marginTop:5, lineHeight:1.5, whiteSpace:"nowrap" }}>
+                        <div>{totals.totalSF.toLocaleString()} SF{totals.pctLeased != null && totals.vacantCount > 0 ? ` · ${fmtPct(totals.pctLeased)} leased` : ""}</div>
+                        <div>${Math.round(totals.annualRent).toLocaleString()} base{totals.rentPSF != null ? ` · $${totals.rentPSF.toFixed(2)}/SF` : ""}</div>
+                        {totals.walt != null && <div>WALT {totals.walt.toFixed(1)} yrs</div>}
+                      </div>
+                    )}
+                  </>);
+                  else if (k === "sf") cell = (<>
+                    {totals.totalSF.toLocaleString()}
+                    {totals.pctLeased != null && totals.vacantCount > 0 && sub(`${totals.occupiedSF.toLocaleString()} leased · ${fmtPct(totals.pctLeased)}`)}
+                  </>);
+                  else if (k === "rentPerSF") cell = totals.rentPSF != null ? (<>${totals.rentPSF.toFixed(2)}{sub("wtd avg")}</>) : "—";
+                  else if (k === "annualRent") cell = (<>${Math.round(totals.annualRent).toLocaleString()}{sub("base rent")}</>);
+                  else if (k === "leaseExpiry") cell = totals.walt != null ? (<>{totals.walt.toFixed(1)} yrs{sub("WALT (by SF)")}</>) : null;
+                  else if (k === "salesPSF") cell = totals.salesPSF != null ? (<>${Math.round(totals.salesPSF).toLocaleString()}{sub(`wtd avg · ${totals.salesReporting} reporting`)}</>) : null;
+                  return (
+                    <td key={k} className={idx === 0 ? "freeze-col" : undefined}
+                      style={{ padding:"9px 10px", textAlign: right ? "right" : "left", whiteSpace:"nowrap", verticalAlign:"top", ...(idx === 0 ? stickyFirstCol("#faf7f0", false) : null) }}>
+                      {cell}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
       <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover the ⓘ icon for tenant notes.</div>
