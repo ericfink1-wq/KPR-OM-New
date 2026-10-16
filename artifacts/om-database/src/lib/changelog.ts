@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-16-claude-options-from-lease",
+    date: "2026-10-16",
+    category: "fixed",
+    title: "Claude now asks for the lease on option and notice dates",
+    detail:
+      "Datex's option records don't come through to Claude, so when Claude found nothing there it could wrongly suggest a tenant had no renewal options. Now Claude knows option and notice dates have to come from the signed lease. It will ask you for the lease instead of guessing, and it never treats a blank in Datex as \"no options.\"",
+    where: "Any Claude chat that uses the deal library",
+  },
+  {
     id: "2026-10-16-claude-kpr-instructions",
     date: "2026-10-16",
     category: "new",
