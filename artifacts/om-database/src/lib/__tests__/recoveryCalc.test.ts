@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseRecoveryTerms, calcTenantRecoveries, expensePoolsFromDeal, resolvePercentRent } from "../recoveryCalc";
-import { estimateRecoveries, computeOccupancyCost } from "../utils";
+import { estimateRecoveries, computeOccupancyCost, statedReimbursementFlag } from "../utils";
 
 // Strings below are VERBATIM reimbursementMethod / leaseType values from the live
 // library — the parser is tested on what OMs actually say, not tidied fixtures.
@@ -133,5 +133,20 @@ describe("estimateRecoveries + occupancy cost — the Northtowne case", () => {
     const est = estimateRecoveries({ totalSF: 100000, nnnRecoveries: 50000, tenants: [{ name: "A", sf: 10000, leaseType: "NNN", annualRent: 1 }, { name: "B", sf: 10000, leaseType: "Modified Gross", annualRent: 1 }] });
     expect(est.byName.get("a")).toMatchObject({ value: 50000, method: "centerSpread" });
     expect(est.byName.has("b")).toBe(false);
+  });
+});
+
+describe("statedReimbursementFlag — the roster badge agrees with the occupancy-cost math", () => {
+  it("every bucket excluded is GROSS even without the word 'gross' (Ollie's at Northtowne)", () => {
+    expect(statedReimbursementFlag("CAM: excluded; Mgmt fee: excluded; RE taxes: excluded; Insurance: excluded", "")?.label).toBe("GROSS");
+  });
+  it("some buckets excluded is PARTIAL, not NNN", () => {
+    const f = statedReimbursementFlag("CAM: excluded; Mgmt fee: excluded; RE taxes: pro rata share; Insurance: excluded", "NNN");
+    expect(f?.label).toBe("PARTIAL");
+    expect(f?.tip).toMatch(/reimburses RE tax/);
+  });
+  it("plain NNN / fixed CAM keep their existing badges", () => {
+    expect(statedReimbursementFlag("CAM: pro rata share; RE taxes: pro rata share; Insurance: pro rata share", "")?.label).toBe("NNN");
+    expect(statedReimbursementFlag("Fixed CAM ($6.01psf with 3% annual increases); NNN RE Taxes; Insurance PRS", "NNN")?.label).toBe("FIXED CAM");
   });
 });

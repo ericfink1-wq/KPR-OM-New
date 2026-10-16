@@ -8,7 +8,7 @@
 // Pure + deterministic (no model); reuses the exact same functions the app uses.
 
 import type { Deal } from "./idb";
-import { reimbursementFlag, isVacant, isNAPTenant } from "./utils";
+import { statedReimbursementFlag, isVacant, isNAPTenant } from "./utils";
 import { reconcileTaxCapture } from "./taxReassessment";
 import { detectDealAnomalies } from "./dealAnomalies";
 
@@ -46,9 +46,9 @@ export function auditReimbursement(deals: Deal[]): { groups: ReimbDealGroup[]; f
       if (isVacant(t.name) || isNAPTenant(t)) continue;
       const text = [t.leaseType, t.reimbursementMethod].filter(Boolean).join(" — ").trim();
       if (!text) continue;
-      const f = reimbursementFlag(text);
+      const f = statedReimbursementFlag(t.reimbursementMethod, t.leaseType);
       if (f?.label === "FIXED CAM") { fixedCam.push({ tenant: t.name || "(unnamed)", text }); fixedCamCount++; }
-      else if (f?.label === "GROSS" || f?.label === "MOD GROSS") { gross.push({ tenant: t.name || "(unnamed)", text }); grossCount++; }
+      else if (f?.label === "GROSS" || f?.label === "MOD GROSS" || f?.label === "PARTIAL") { gross.push({ tenant: t.name || "(unnamed)", text }); grossCount++; }
     }
     if (fixedCam.length || gross.length) groups.push({ dealId: d.id, dealName: dealName(d), fixedCam, gross });
   }

@@ -8,7 +8,7 @@ import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import type { RentFlag } from "../lib/tenantRentBenchmark";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { tjxComboRead } from "../lib/tjxCombo";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag, statedReimbursementFlag, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { gradeOccupancyCost, type OccGrade } from "../lib/retailCategory";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -669,7 +669,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     // prose: NNN (pro-rata, incl. capped controllable CAM), FIXED CAM (net
                     // but CAM is a fixed/escalating amount — landlord bears CAM growth),
                     // or GROSS (genuine). A cap / "gross-up" / "gross sales" never trips it.
-                    const flag = reimbursementFlag(m);
+                    const flag = fromAbstract ? reimbursementFlag(m) : statedReimbursementFlag(t.reimbursementMethod || "", lt);
                     const textColor = flag && flag.warn ? flag.color : "#5c5f57";
                     // Body text shown NEXT TO the badge. Strip the leading classification
                     // prefix from an abstract one-liner ("NNN — …", "Fixed CAM (net) — …")

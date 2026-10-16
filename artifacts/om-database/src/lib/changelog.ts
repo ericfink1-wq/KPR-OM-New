@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-16-recovery-badge-partial",
+    date: "2026-10-16",
+    category: "fixed",
+    title: "Recovery labels on the roster now match the lease terms",
+    detail:
+      "A tenant whose CAM, taxes and insurance are all listed as excluded now shows GROSS, even when the rent roll never uses the word 'gross'. Before, it showed no label at all. A tenant that pays some expenses but not others, such as taxes only, now shows a new PARTIAL label instead of NNN. Hover it to see which expenses are and aren't reimbursed.",
+    where: "Deal page → Tenants & Sales → Reimb. column",
+  },
+  {
     id: "2026-10-16-occupancy-cost-by-expense-bucket",
     date: "2026-10-16",
     category: "improved",

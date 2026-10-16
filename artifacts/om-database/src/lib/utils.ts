@@ -7,7 +7,7 @@ import { isInvestmentGrade } from "./tenantCredit";
 // is safe — neither module touches the other's exports at module-eval time.
 import { resolveTenantRisk, anchorsReferenced, computeExposure } from "./leaseRisk";
 import { reconcileTaxCapture } from "./taxReassessment";
-import { parseRecoveryTerms, calcTenantRecoveries, expensePoolsFromDeal, reconcileRecoveries, resolvePercentRent, BUCKET_LABEL, type RecoveryReconciliation } from "./recoveryCalc";
+import { parseRecoveryTerms, calcTenantRecoveries, expensePoolsFromDeal, reconcileRecoveries, resolvePercentRent, BUCKET_LABEL, BUCKETS, type RecoveryReconciliation } from "./recoveryCalc";
 
 // Occupancy sanity: some OMs express occupancy as a FRACTION (1.0 = 100%,
 // 0.993 = 99.3%) rather than a percent. A real retail-center occupancy is never
@@ -912,7 +912,7 @@ export function reimbursementFromAbstract(a: LeaseAbstract | null | undefined): 
 }
 
 export interface ReimbFlag {
-  label: string;   // badge text shown in the roster: "NNN" | "FIXED CAM" | "MOD GROSS" | "GROSS"
+  label: string;   // badge text shown in the roster: "NNN" | "FIXED CAM" | "MOD GROSS" | "GROSS" | "PARTIAL"
   method: string;  // canonical short method for backfilling reimbursementMethod
   warn: boolean;   // true = landlord-expense-risk (amber/red); false = clean net (green)
   color: string;
@@ -971,6 +971,39 @@ export function reimbursementFlag(text: string | null | undefined): ReimbFlag | 
   if (fixedCam) return { label: "FIXED CAM", method: "Fixed CAM", warn: true, color: "#b45309", bg: "#fbe6cf", tip: "Net lease, but CAM is a FIXED / escalating amount (not pro-rata) — the landlord bears CAM growth above the escalator. Taxes & insurance still pass through; not a gross lease and not the same as pro-rata NNN." };
   if (net) return { label: "NNN", method: "NNN", warn: false, color: "#3f7a1f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata. A cap on controllable CAM does not make it gross or fixed." };
   return null;
+}
+
+/**
+ * The roster's recovery badge for a STATED method (rent roll / OM), read bucket by
+ * bucket with the same parser the occupancy-cost math uses — so the badge and the
+ * number can never disagree (Eric, 10/16/26: Ollie's read "CAM: excluded; Mgmt fee:
+ * excluded; RE taxes: excluded; Insurance: excluded" and showed NO badge, because the
+ * keyword classifier only knows the word "gross"; Chick-fil-A's "CAM: excluded … RE
+ * taxes: pro rata" showed NNN). Abstract PROSE still goes through reimbursementFlag.
+ */
+export function statedReimbursementFlag(stated: string | null | undefined, leaseType?: string | null): ReimbFlag | null {
+  const legacy = reimbursementFlag(stated);
+  if (!(stated || "").trim() && !(leaseType || "").trim()) return null;
+  const terms = parseRecoveryTerms({ reimbursementMethod: stated, leaseType });
+  if (terms.blocker) return legacy;
+  const kinds = BUCKETS.map(b => terms[b].kind);
+  const named = (pred: (k: string) => boolean) => BUCKETS.filter((b, i) => pred(kinds[i])).map(b => BUCKET_LABEL[b]);
+  const list = (xs: string[]) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+  if (kinds.every(k => k === "none")) {
+    return { label: "GROSS", method: "Gross", warn: true, color: "#b91c1c", bg: "#fdecea", tip: "Gross lease — CAM, real estate taxes and insurance are all excluded. The landlord absorbs every expense and its growth; nothing is recovered from this tenant." };
+  }
+  if (kinds.every(k => k === "prorata")) return legacy?.label === "NNN" ? legacy : { label: "NNN", method: "NNN", warn: false, color: "#3f7a1f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata." };
+  if (kinds.some(k => k === "fixedPsf" || k === "fixedAnnual") && !kinds.includes("none")) return legacy?.label === "FIXED CAM" ? legacy : { label: "FIXED CAM", method: "Fixed CAM", warn: true, color: "#b45309", bg: "#fbe6cf", tip: "A fixed / escalating charge replaces the pro-rata share for at least one expense — the landlord bears that expense's growth above the escalator." };
+  if (kinds.includes("none")) {
+    const pays = named(k => k !== "none" && k !== "unknown");
+    const not = named(k => k === "none");
+    const unk = named(k => k === "unknown");
+    return {
+      label: "PARTIAL", method: "Partial recovery", warn: true, color: "#9a6a1e", bg: "#f6ecd6",
+      tip: `Partial recovery — ${pays.length ? `reimburses ${list(pays)}; ` : ""}${list(not)} ${not.length === 1 ? "is" : "are"} NOT reimbursed (the landlord absorbs ${not.length === 1 ? "it" : "them"})${unk.length ? `; ${list(unk)} not stated` : ""}. Not NNN and not fully gross.`,
+    };
+  }
+  return legacy;
 }
 
 // Short reimbursement-method label ("NNN" | "Fixed CAM" | "Gross") derived from an
