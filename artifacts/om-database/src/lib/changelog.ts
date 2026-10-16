@@ -53,7 +53,7 @@ export const CHANGELOG: ChangeEntry[] = [
     category: "improved",
     title: "Step-by-step setup for connecting Claude to the library",
     detail:
-      "The Claude access window is now a guided, numbered setup: create your key, then follow click-by-click instructions to add it to Claude (website, desktop or phone app, or Claude Code), with a Copy button right at the step that needs it. It also lets you download the KPR rules for Claude in one click, gives you a test question to confirm it's working, and has a 'Something not working?' section for the common snags.",
+      "Claude access is now a guided walkthrough, one step at a time with a big Next button. Each step shows a picture of the Claude screen with the exact button to click circled, there are separate tips for Free and paid Claude plans, and you can copy everything you need with one click. It also adds KPR's rules to your Claude, gives you a test question to confirm it works, and has a 'Stuck?' list for the common snags.",
     where: "Top bar → Claude access",
   },
   {

@@ -43,21 +43,23 @@ it's tied to a person's KPR account:
 
 ## Connecting (each person does this themselves)
 
-The **Claude access** button in the top bar opens a guided, numbered setup — about two
-minutes. It walks through:
+The **Claude access** button in the top bar opens a one-step-at-a-time walkthrough (big
+Next button, drawn pictures of Claude's screens with the button to click circled, separate
+tips for Free vs Pro/Max plans; do it on a computer). It walks through:
 
 1. **Create your personal key** (name it for the device, click *Create my key*). It's shown once.
 2. **Add it to Claude** — pick *Claude website, desktop or phone app* (most people) or
    *Claude Code*, then follow the click-by-click steps. Each step that needs something
    pasted has its own Copy button:
-   - claude.ai → Settings → Connectors → **Add custom connector** → Name "KPR Deal Library",
-     paste your connector link into *Remote MCP server URL* → **Add** → in a new chat, switch
-     it on from the + / sliders menu. Adding it on claude.ai also turns it on in the desktop
+   - claude.ai → Settings → Customize → **Connectors** → black **+ Add** (top right) →
+     **Add custom connector** → Name "KPR Deal Library", paste your link into *MCP server URL*
+     → **Continue** → in a new chat, switch it on from the + menu. Free plans allow only a
+     small number of custom connectors. Adding it on claude.ai also turns it on in the desktop
      and phone apps.
    - Claude Code: paste one ready-made `claude mcp add …` command into a terminal, then `/mcp`
      to confirm it's connected.
 3. **Add the KPR rules (recommended)** — one-click download of the `kpr-retail-analysis`
-   skill as a zip, then Settings → Capabilities → Skills → **Upload skill**.
+   skill as a zip, then Settings → Customize → **Skills** → upload it (paid plans; Free may not have Skills).
 4. **Test it** with a ready-to-paste question.
 
 A "Something not working?" section covers the common snags (no *Add custom connector*
