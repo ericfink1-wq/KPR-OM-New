@@ -75,6 +75,7 @@ function CopyBox({ value, label }: { value: string; label?: string }) {
 // upload it to their own Claude — the connector's own instructions only reach Claude
 // when it calls this library, the skill makes the rules apply everywhere.
 import skillMarkdown from "../../../../.claude/skills/kpr-retail-analysis/SKILL.md?raw";
+import teamInstructionsMd from "../../../../.claude/skills/kpr-retail-analysis/team-instructions.md?raw";
 
 const OLIVE = "#26281f";
 const GREEN = "#0f7a3d";
@@ -85,10 +86,13 @@ const TEST_QUESTION = "Using the KPR deal library, what's the typical rent per S
 const CONNECTOR_NAME = "KPR Deal Library";
 
 type Plan = "free" | "paid";
-type StepId = "plan" | "key" | "copy" | "open" | "add" | "fill" | "auth" | "turnon" | "instructions" | "rules" | "test" | "code";
+type StepId = "plan" | "key" | "copy" | "open" | "add" | "fill" | "auth" | "connect" | "turnon" | "rules" | "test" | "code";
 
 function downloadSkill() {
-  const blob = makeZip({ "kpr-retail-analysis/SKILL.md": skillMarkdown });
+  const blob = makeZip({
+    "kpr-retail-analysis/SKILL.md": skillMarkdown,
+    "kpr-retail-analysis/team-instructions.md": teamInstructionsMd,
+  });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "kpr-retail-analysis.zip";
@@ -216,26 +220,6 @@ function MockDialog() {
   );
 }
 
-function MockPreferences() {
-  return (
-    <MockFrame>
-      <div style={{ padding: 14, background: "#fff" }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 8 }}>General</div>
-        <div style={{ fontSize: 12, color: "#333", marginBottom: 4 }}>What personal preferences should Claude consider in responses?</div>
-        <div style={{ border: `2px solid ${HILITE}`, borderRadius: 7, padding: "8px 9px", fontSize: 11.5, color: "#555", background: "#fff", lineHeight: 1.45 }}>
-          <span style={{ color: "#999" }}>(anything you already had stays here)</span><br />
-          I have two KPR Centers data connectors: Datex (KPR's live Yardi property data) and KPR OM Data…
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: HILITE, margin: "3px 0 8px" }}>① Paste here, at the end</div>
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
-          <span style={{ background: "#111", color: "#fff", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 600, ...ring(true), backgroundColor: "#111" }}>Save</span>
-          <span style={{ fontSize: 11, fontWeight: 800, color: HILITE }}>② then Save</span>
-        </div>
-      </div>
-    </MockFrame>
-  );
-}
-
 function MockAuth() {
   const opt = (label: string, sub: string, on: boolean) => (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 6px", marginBottom: 4, ...(on ? ring(true) : { opacity: 0.55 }) }}>
@@ -267,6 +251,58 @@ function MockAuth() {
           <span style={{ background: "#111", color: "#fff", borderRadius: 7, padding: "5px 14px", fontSize: 12, fontWeight: 600, ...ring(true), backgroundColor: "#111" }}>Add</span>
           <span style={{ fontSize: 11, fontWeight: 800, color: HILITE }}>◀ click</span>
         </div>
+      </div>
+    </MockFrame>
+  );
+}
+
+function MockConnectList() {
+  return (
+    <MockFrame>
+      <div style={{ padding: "10px 12px", background: "#fff" }}>
+        <div style={{ display: "flex", fontSize: 10.5, color: "#888", padding: "0 4px 4px", borderBottom: "1px solid #eee" }}>
+          <span style={{ flex: 1 }}>Connector</span><span style={{ width: 120, textAlign: "right" }}>Status</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", padding: "8px 4px", fontSize: 12.5, color: "#111" }}>
+          <span style={{ flex: 1 }}>⊞ {CONNECTOR_NAME} <span style={{ fontSize: 9.5, background: "#eee", borderRadius: 4, padding: "1px 5px", marginLeft: 4, color: "#555" }}>Custom</span></span>
+          <span style={{ border: "1px solid #ccc", borderRadius: 7, padding: "4px 11px", fontSize: 12, ...ring(true) }}>Connect</span>
+          <ClickHere />
+        </div>
+      </div>
+    </MockFrame>
+  );
+}
+
+function MockPermissions() {
+  const row = (t: string) => (
+    <div key={t} style={{ display: "flex", alignItems: "center", padding: "6px 4px", borderTop: "1px solid #f0f0f0", fontSize: 12, color: "#333" }}>
+      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t}</span>
+      <span style={{ display: "inline-flex", border: "1px solid #ddd", borderRadius: 7, overflow: "hidden", fontSize: 11 }}>
+        <span style={{ padding: "2px 6px", background: "#eef5ff", color: "#2f7de1", fontWeight: 800 }}>✓</span>
+        <span style={{ padding: "2px 6px", color: "#aaa" }}>✋</span>
+        <span style={{ padding: "2px 6px", color: "#aaa" }}>⊘</span>
+      </span>
+    </div>
+  );
+  return (
+    <MockFrame>
+      <div style={{ padding: 12, background: "#fff" }}>
+        <div style={{ fontSize: 11, color: "#888", marginBottom: 6 }}>← Your connectors</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: 14.5, fontWeight: 700, color: "#111" }}>⊞ {CONNECTOR_NAME}</span>
+          <span style={{ border: "1px solid #ddd", borderRadius: 7, padding: "3px 9px", fontSize: 11, color: "#555" }}>Disconnect</span>
+        </div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#111" }}>Tool permissions</div>
+        <div style={{ fontSize: 10.5, color: "#999", marginBottom: 8 }}>Choose when Claude is allowed to use these tools.</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+          <span style={{ flex: 1, fontSize: 12.5, color: "#111", minWidth: 110 }}>⌄ Read-only tools <span style={{ fontSize: 10, background: "#eee", borderRadius: 4, padding: "1px 5px" }}>13</span></span>
+          <span style={{ border: "1px solid #ccc", borderRadius: 7, padding: "4px 9px", fontSize: 12, ...ring(true) }}>✓ Always allow ⌄</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: HILITE }}>◀ pick this</span>
+        </div>
+        {row("Compare a brand's lease terms across the library")}
+        {row("Deterministic sale-comp benchmark for a deal")}
+        {row("How complete is the data?")}
+        <div style={{ fontSize: 10.5, color: "#999", padding: "4px 4px 0" }}>…every row shows the ✓ selected</div>
       </div>
     </MockFrame>
   );
@@ -327,7 +363,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
 
   const steps: StepId[] = codePath
     ? ["key", "code", "test"]
-    : ["plan", "key", "copy", "open", "add", "fill", "auth", "turnon", "instructions", "rules", "test"];
+    : ["plan", "key", "copy", "open", "add", "fill", "auth", "connect", "turnon", "rules", "test"];
   const step = steps[Math.min(stepIdx, steps.length - 1)];
 
   const load = useCallback(() => {
@@ -509,8 +545,24 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
         </ol>
         <MockAuth />
         <Note tone="warn">Don't pick <strong>Sign in now</strong> or <strong>Sign in when needed</strong>. The library doesn't use that kind of sign-in, and the connection will fail.</Note>
-        <P><span style={{ display: "block", marginTop: 10 }}><strong>{CONNECTOR_NAME}</strong> now appears in your connectors list with a ✓. You're connected!</span></P>
+        <P><span style={{ display: "block", marginTop: 10 }}><strong>{CONNECTOR_NAME}</strong> now appears in your connectors list. One more thing to do there. Click <strong>Next</strong>.</span></P>
         <Note tone="warn"><strong>Never screenshot or share this screen.</strong> It shows your private link at the top, and anyone with it can read the library as you. If you already did, use "Manage my keys" below to turn that key off, then set up again.</Note>
+      </>);
+
+      case "connect": return (<>
+        <H>Click "Connect", then set "Always allow"</H>
+        <ol style={{ margin: "0 0 6px", paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "#2f3229" }}>
+          <li>In your connectors list, find <strong>{CONNECTOR_NAME}</strong>. If it has a <B>Connect</B> button on the right, <strong>click it</strong>.
+            (Already shows a ✓ instead? It's connected. Go to 2.)</li>
+        </ol>
+        <MockConnectList />
+        <ol start={2} style={{ margin: "10px 0 6px", paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "#2f3229" }}>
+          <li>Click the name <strong>{CONNECTOR_NAME}</strong> to open it.</li>
+          <li>Under <B>Tool permissions</B>, next to <B>Read-only tools</B>, click the dropdown and choose <B>✓ Always allow</B>.</li>
+          <li>Check that every tool in the list now has the <strong>✓</strong> (first icon) selected. That way Claude won't stop and ask permission each time.</li>
+        </ol>
+        <MockPermissions />
+        <Note>This is safe: every one of these tools can only <strong>read</strong> the library. None of them can change or delete anything.</Note>
       </>);
 
       case "turnon": return (<>
@@ -521,41 +573,18 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
         <P><span style={{ display: "block", marginTop: 8 }}>It usually stays on for future chats.</span></P>
       </>);
 
-      case "instructions": return (<>
-        <H>Give Claude the KPR instructions</H>
-        <P>These tell Claude how to use <strong>Datex</strong> and the <strong>deal library</strong> together: which one to trust,
-          Datex's quirks, and to ask you for the lease or loan document instead of guessing. You paste them once and Claude follows them in every chat.</P>
-        <Note>Using Datex in Claude too? Connect it first (same way as the library), then do this step. No Datex yet? Do it anyway, it doesn't hurt.</Note>
-        <ol style={{ margin: "12px 0 6px", paddingLeft: 20, fontSize: 14, lineHeight: 1.75, color: "#2f3229" }}>
-          <li>Click the green button to copy the instructions:
-            <div style={{ margin: "6px 0 4px" }}><BigCopy value={KPR_CLAUDE_INSTRUCTIONS} label="Copy the KPR instructions" /></div>
-          </li>
-          <li>In Claude, click your <B>name</B> in the bottom-left corner → <B>Settings</B> → <B>General</B>.</li>
-          <li>Find the box <strong>"What personal preferences should Claude consider in responses?"</strong> and click inside it.
-            <div style={{ fontSize: 12.5, color: "#7a4a10", marginTop: 2 }}>Already something written there? <strong>Don't delete it.</strong> Click at the very end of it, press <B>Enter</B> twice, then paste.</div>
-          </li>
-          <li><strong>Paste</strong> ({/Mac|iPhone|iPad/.test(navigator.userAgent) ? <><B>⌘ Command</B> + <B>V</B></> : <><B>Ctrl</B> + <B>V</B></>}), then click <B>Save</B>.</li>
-        </ol>
-        <MockSidebar highlight="General" />
-        <MockPreferences />
-        <details style={{ marginTop: 10, fontSize: 12, color: MUTED }}>
-          <summary style={{ cursor: "pointer", padding: "4px 0" }}>Read the instructions first</summary>
-          <div style={{ marginTop: 6, maxHeight: 220, overflowY: "auto", whiteSpace: "pre-wrap", background: "#fff", border: "1px solid #e3dccd", borderRadius: 7, padding: "8px 10px", fontSize: 11.5, lineHeight: 1.5, color: "#3a3d33" }}>{KPR_CLAUDE_INSTRUCTIONS}</div>
-        </details>
-      </>);
-
       case "rules": return (<>
-        <H>Add the KPR rules {plan === "free" ? "(optional)" : "(recommended)"}</H>
-        <P>This teaches Claude how KPR underwrites, so its answers follow our rules — not generic real-estate advice.</P>
-        {plan === "free" && (
-          <Note tone="warn">On a Free plan you may not have <strong>Skills</strong>. If you don't see it in step 3 below, just click <strong>Next</strong> — the library still works without it.</Note>
-        )}
-        <ol style={{ margin: "10px 0 6px", paddingLeft: 20, fontSize: 14, lineHeight: 1.75, color: "#2f3229" }}>
+        <H>Add the KPR rules &amp; instructions</H>
+        <P>One file teaches Claude how KPR underwrites <strong>and</strong> how to use Datex and the deal library together:
+          which one to trust, Datex's quirks, and to ask you for the lease or loan document instead of guessing.
+          Claude reads it automatically whenever you ask a KPR question.</P>
+        <Note>Using Datex in Claude too? Connect it first (same way as the library). No Datex? Do this step anyway.</Note>
+        <ol style={{ margin: "12px 0 6px", paddingLeft: 20, fontSize: 14, lineHeight: 1.75, color: "#2f3229" }}>
           <li>
             <button onClick={downloadSkill} style={{ background: OLIVE, color: "#fff", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer", minHeight: 42 }}>
               ⬇ Download KPR rules
             </button>
-            <div style={{ fontSize: 12.5, color: MUTED }}>It saves a file called <strong>kpr-retail-analysis.zip</strong> to your Downloads.</div>
+            <div style={{ fontSize: 12.5, color: MUTED }}>It saves a file called <strong>kpr-retail-analysis.zip</strong> to your Downloads. Don't open it.</div>
           </li>
           <li>In Claude: <B>Settings</B> → <B>Capabilities</B> → make sure <B>Code execution and file creation</B> is <strong>on</strong>.</li>
           <li>Click <B>Skills</B> on the left (under "Customize") → <B>＋ Add</B> (or <B>Upload skill</B>) → choose the <strong>kpr-retail-analysis.zip</strong> file from Downloads.</li>
@@ -566,6 +595,22 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
           <strong>On a Mac using Safari?</strong> Safari sometimes unzips the file by itself, so you get a <em>folder</em> instead of a .zip and the upload won't take it.
           If that happens, open Downloads, right-click the <strong>kpr-retail-analysis</strong> folder → <strong>Compress</strong>, and upload the new .zip.
         </Note>
+        <details open={plan === "free"} style={{ marginTop: 12, border: "1px solid #e3dccd", borderRadius: 10, background: "#fff", padding: "4px 12px 10px" }}>
+          <summary style={{ cursor: "pointer", padding: "8px 0", fontSize: 14, fontWeight: 700, color: OLIVE }}>No "Skills" in your Claude? (common on Free) Do this instead</summary>
+          <ol style={{ margin: "4px 0 0", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.75, color: "#2f3229" }}>
+            <li>Copy the instructions:
+              <div style={{ margin: "6px 0 4px" }}><BigCopy value={KPR_CLAUDE_INSTRUCTIONS} label="Copy the KPR instructions" /></div>
+            </li>
+            <li>In Claude's left sidebar click <B>Projects</B> → <B>＋ New project</B>. Name it <strong>KPR</strong> and create it.</li>
+            <li>Inside the project, find <B>Instructions</B> (on the right, "Set project instructions") and click it.</li>
+            <li><strong>Paste</strong>, then click <B>Save</B>.</li>
+            <li>From now on, start your KPR chats <strong>from inside the KPR project</strong>. That's what makes Claude follow the instructions.</li>
+          </ol>
+          <details style={{ marginTop: 8, fontSize: 12, color: MUTED }}>
+            <summary style={{ cursor: "pointer", padding: "4px 0" }}>Read the instructions</summary>
+            <div style={{ marginTop: 6, maxHeight: 220, overflowY: "auto", whiteSpace: "pre-wrap", background: "#faf7f0", border: "1px solid #e3dccd", borderRadius: 7, padding: "8px 10px", fontSize: 11.5, lineHeight: 1.5, color: "#3a3d33" }}>{KPR_CLAUDE_INSTRUCTIONS}</div>
+          </details>
+        </details>
       </>);
 
       case "code": return (<>
@@ -582,7 +627,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
         <BigCopy value={TEST_QUESTION} label="Copy the test question" />
         <Note>
           <strong>It's working</strong> if Claude mentions <em>{CONNECTOR_NAME}</em> and answers with a rent per SF and a number of leases.
-          The first time, Claude may ask permission to use it — click <B>Allow always</B>.
+          If Claude still asks permission, click <B>Always allow</B>.
         </Note>
         <Note tone="warn">
           <strong>Claude says it can't access the library?</strong> Go back to the "Turn it on" step and check the switch is on, then try a brand-new chat.
@@ -644,8 +689,9 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
                     ["I can't find “+ Add” or “Add custom connector”.", "Make sure you're on claude.ai on a computer (not the phone app), on Settings → Connectors. The ＋ Add button is black, in the top-right corner."],
                     ["Claude says I've reached the limit for custom connectors.", "Free accounts allow only a small number. Remove a custom connector you don't use (click it in the list → remove), or upgrade to Pro."],
                     ["Claude asks how to sign in (Authentication).", "Keep “No sign-in”, leave Request headers empty, and click Add. The yellow warning is expected."],
+                    ["Claude keeps asking permission before using the library.", "Settings → Connectors → click KPR Deal Library → next to “Read-only tools”, choose “Always allow”."],
                     ["The Continue button stays grey.", "Both boxes need something in them. Type the name, then paste the link into the second box."],
-                    ["I can't find the personal preferences box, or it won't take that much text.", "Instead: in Claude click Projects → New project, name it “KPR”, and paste the instructions into the project's Instructions box. Then start your KPR chats inside that project."],
+                    ["I don't see “Skills” in Claude.", "Use the “No Skills?” option on the KPR rules step instead: make a Claude Project called “KPR” and paste the instructions into its Instructions box. Then start KPR chats inside that project."],
                     ["It connected before, but now shows an error.", "Start this window again from the top to make a new key. Then in Claude's Connectors list, remove the old KPR Deal Library and add it again with the new link."],
                     ["I closed this window before I finished.", "No problem — open Claude access again and start over. It just makes a fresh key."],
                     ["Still stuck?", "Ask Eric — send him a screenshot of what you're seeing."],

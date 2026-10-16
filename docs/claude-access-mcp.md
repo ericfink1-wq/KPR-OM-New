@@ -58,13 +58,13 @@ tips for Free vs Pro/Max plans; do it on a computer). It walks through:
      and phone apps.
    - Claude Code: paste one ready-made `claude mcp add …` command into a terminal, then `/mcp`
      to confirm it's connected.
-3. **Give Claude the KPR instructions** — one button copies Eric's standing instructions
-   (Datex vs library, Datex quirks, ask for the document instead of guessing; source text in
-   `artifacts/om-database/src/lib/claudeInstructions.ts`); paste them into Settings → General →
-   "What personal preferences should Claude consider in responses?" (at the end, keeping
-   anything already there) → Save. Fallback: a "KPR" Project's instructions box.
-4. **Add the KPR rules (recommended)** — one-click download of the `kpr-retail-analysis`
-   skill as a zip, then Settings → Customize → **Skills** → upload it (paid plans; Free may not have Skills).
+3. **Click Connect, set Always allow.** After Add (keep "No sign-in", no headers), click
+   **Connect** next to KPR Deal Library, open it, and set **Read-only tools → Always allow**.
+4. **Add the KPR rules & instructions** — one-click download of the `kpr-retail-analysis`
+   skill zip, which now carries Eric's team instructions (`team-instructions.md`, the single
+   source of truth) alongside SKILL.md → Settings → Customize → **Skills** → upload. No Skills
+   (common on Free)? Make a Claude **Project** "KPR" and paste the instructions into its
+   Instructions box. (Not Memory: it paraphrases, and drops the Datex field-level detail.)
 5. **Test it** with a ready-to-paste question.
 
 A "Something not working?" section covers the common snags (no *Add custom connector*

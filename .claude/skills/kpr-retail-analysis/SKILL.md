@@ -5,6 +5,11 @@ description: How KPR Centers analyses retail shopping centers, and which of its 
 
 # KPR retail analysis
 
+**First read `team-instructions.md` in this skill's folder** — the team's standing rules for
+Datex + KPR OM Data (which source ranks where, Datex quirks, what Datex doesn't cover, and
+asking for the executed document instead of guessing). Follow them in every answer; where
+they are more specific than this file, they win.
+
 KPR Centers acquires and operates **retail shopping centers** — not residential, not
 office, not land. Read everything through that lens: anchor quality and sales, inline
 health, rollover, trade area, co-tenancy exposure.

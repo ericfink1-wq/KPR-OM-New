@@ -62,7 +62,7 @@ export const CHANGELOG: ChangeEntry[] = [
     category: "new",
     title: "KPR instructions for Claude, in the Claude access setup",
     detail:
-      "The Claude access walkthrough has a new step that gives your Claude KPR's standing instructions: when to trust Datex versus the deal library, Datex's quirks, and to ask you for the actual lease or loan document instead of guessing. One button copies them, and the step shows exactly where to paste them in Claude's settings so they apply to every chat.",
+      "The Claude access walkthrough has a new step that gives your Claude KPR's standing instructions: when to trust Datex versus the deal library, Datex's quirks, and to ask you for the actual lease or loan document instead of guessing. They're built into the KPR rules download, so one upload gives Claude both. On a Claude plan without Skills, the step shows how to paste them into a Claude Project instead.",
     where: "Top bar → Claude access",
   },
   {
@@ -71,7 +71,7 @@ export const CHANGELOG: ChangeEntry[] = [
     category: "improved",
     title: "Step-by-step setup for connecting Claude to the library",
     detail:
-      "Claude access is now a guided walkthrough, one step at a time with a big Next button. Each step shows a picture of the Claude screen with the exact button to click circled, it walks you through Claude's sign-in question (keep \"No sign-in\"), there are separate tips for Free and paid Claude plans, and you can copy everything you need with one click. It also adds KPR's rules to your Claude, gives you a test question to confirm it works, and has a 'Stuck?' list for the common snags.",
+      "Claude access is now a guided walkthrough, one step at a time with a big Next button. Each step shows a picture of the Claude screen with the exact button to click circled, it walks you through Claude's sign-in question (keep \"No sign-in\"), the Connect button and setting the tools to \"Always allow\", there are separate tips for Free and paid Claude plans, and you can copy everything you need with one click. It also adds KPR's rules to your Claude, gives you a test question to confirm it works, and has a 'Stuck?' list for the common snags.",
     where: "Top bar → Claude access",
   },
   {
