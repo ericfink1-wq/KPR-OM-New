@@ -1739,6 +1739,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // off the authoritative lease (incl. Fixed CAM vs pro-rata NNN) when the OM was
   // silent. Render-time only; the stored roster is untouched.
   const dWithRecoveries = useMemo(() => withAbstractRecoveries(d, abstractsByTenant), [d, abstractsByTenant]);
+  const recoveryEst = useMemo(() => estimateRecoveries(dWithRecoveries), [dWithRecoveries]);
 
   // Derived roster metrics recomputed live for DISPLAY, so a stale STORED value never
   // shows a wrong number — e.g. an old bulk-imported WALT, or a 0 that never got
@@ -3201,7 +3202,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           datexLive={d.datexLive}
           tenantsSource={d.tenantsSource}
           omDate={d.omDate}
-          estimatedRecoveries={estimateRecoveries(dWithRecoveries).byName}
+          estimatedRecoveries={recoveryEst.byName}
+          recoveryNote={recoveryEst.note}
           latestSales={buildLatestSales(d)}
           sizeFlags={sizeFlags}
           salesFlags={salesFlags}
@@ -3253,7 +3255,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             salesHistory={d.tenantSalesHistory || []}
             omTenants={d.tenants}
             omDate={d.omDate}
-            recoveries={estimateRecoveries(dWithRecoveries).byName}
+            recoveries={recoveryEst.byName}
             onUpload={handleSalesUpload}
             uploadBusy={salesBusy}
             uploadError={salesError}

@@ -1,7 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import RecoveryWorking, { recoveryLabel } from "./RecoveryWorking";
 import { createPortal } from "react-dom";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
-import { tenantKey, stripSuiteCode, isVacant, assessClosureRisk } from "../lib/utils";
+import { tenantKey, stripSuiteCode, isVacant, assessClosureRisk, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
 import { occCostBand, gradeOccupancyCost } from "../lib/retailCategory";
 import { useIsMobile } from "../hooks/use-mobile";
 
@@ -9,7 +10,7 @@ interface Props {
   salesHistory: TenantSalesYear[];
   omTenants?: Tenant[];         // existing roster tenants — used to seed OM sales data
   omDate?: string | null;       // OM date — used to estimate the sales year
-  recoveries?: Map<string, { value: number; estimated: boolean }>; // per-tenant recovery estimate
+  recoveries?: Map<string, RecoveryEntry>; // per-tenant recoveries (disclosed or calculated)
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploadBusy: boolean;
   uploadError: string | null;
@@ -122,9 +123,9 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
   const place = () => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
-    const w = 240;
-    const flip = r.top < 220; // not enough room above → open downward instead
-    setPos({ top: flip ? r.bottom + 8 : r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w, flip });
+    const w = 290;
+    const flip = r.top < 320; // not enough room above → open downward instead
+    setPos({ top: flip ? r.bottom + 8 : r.top - 8, left: Math.max(12, Math.min(r.right, window.innerWidth - 12) - w), flip });
   };
   const show = () => { place(); setOpen(true); };
 
@@ -159,7 +160,7 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
           position: "fixed", top: pos.top, left: pos.left, transform: pos.flip ? "none" : "translateY(-100%)",
           background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
-          zIndex: 10000, width: 240, maxWidth: "calc(100vw - 24px)",
+          zIndex: 10000, width: 290, maxWidth: "calc(100vw - 24px)",
           fontSize: 11, fontFamily: "'Inter',sans-serif",
         }}>
           {breakdown ? (
@@ -168,11 +169,12 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
                 <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>+ Recoveries{breakdown.reimbEstimated ? " (est.)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+                <span style={{ color: "#a89f8f" }}>{recoveryLabel(breakdown)}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
               </div>
+              <RecoveryWorking b={breakdown} />
               {breakdown.percentRent > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                  <span style={{ color: "#a89f8f" }}>+ % Rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
+                  <span style={{ color: "#a89f8f" }}>+ % Rent{breakdown.percentRentFormula ? " (lease formula)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
                 </div>
               )}
               {breakdown.other > 0 && (
@@ -219,7 +221,7 @@ interface MergedRow {
 function deriveSalesRecord(
   t: TenantSalesRecord,
   rosterByKey: Map<string, Tenant>,
-  recByKey: Map<string, { value: number; estimated: boolean }>,
+  recByKey: Map<string, RecoveryEntry>,
 ): TenantSalesRecord {
   const nv = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? null : Number(v);
   const key = tenantKey(stripSuiteCode(t.name));
@@ -234,17 +236,11 @@ function deriveSalesRecord(
   if (occupancyCost != null && occupancyCost <= 0) occupancyCost = null; // stored 0 = no data, not a real 0% health ratio
   let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
   let occBreakdown: OccBreakdown | null = t.occBreakdown ?? null;
-  const base = nv(rt?.annualRent);
-  const disclosedReimb = nv(rt?.expenseReimbursements);
-  const est = recByKey.get(key);
-  const reimb = disclosedReimb ?? (est ? est.value : null);
-  const reimbEstimated = disclosedReimb == null && !!est?.estimated;
-  const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
-  if (base != null && reimb != null && gross != null && gross > 0) {
-    const total = base + reimb + pctRent + other;
-    occupancyCost = Math.round((total / gross) * 1000) / 10;
+  const oc = computeOccupancyCost(rt, recByKey.get(key), gross);
+  if (oc) {
+    occupancyCost = oc.occ;
     occSource = "computed";
-    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
+    occBreakdown = oc.breakdown;
   }
   // Show the clean brand (matched roster name, else suite-stripped) so the panel
   // mirrors the roster instead of "A06 Elite Nutrition".
@@ -255,7 +251,7 @@ function deriveSalesRecord(
 function mergeRows(
   history: TenantSalesYear[],
   rosterByKey: Map<string, Tenant>,
-  recByKey: Map<string, { value: number; estimated: boolean }>,
+  recByKey: Map<string, RecoveryEntry>,
 ): MergedRow[] {
   const map: Record<string, MergedRow> = {};
   for (const snap of history) {

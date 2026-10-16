@@ -700,6 +700,14 @@ export interface OccBreakdown {
   total: number;
   sales: number;
   reimbEstimated?: boolean; // true when recoveries were estimated, not OM-disclosed
+  /** How recoveries were arrived at — drives the tooltip wording. */
+  reimbMethod?: "disclosed" | "calculated" | "gross" | "centerSpread";
+  /** Bucket-by-bucket working for a calculated recovery figure. */
+  reimbLines?: Array<{ label: string; amount: number }>;
+  /** What the tenant would pay as plain pro-rata NNN — the eyeball check. */
+  fullNnn?: number | null;
+  /** % rent came from the lease formula (sales over breakpoint × rate), not the OM. */
+  percentRentFormula?: boolean;
 }
 
 // One row of a loan amortization schedule (generated or lender-provided).

@@ -7,6 +7,7 @@ import { isInvestmentGrade } from "./tenantCredit";
 // is safe — neither module touches the other's exports at module-eval time.
 import { resolveTenantRisk, anchorsReferenced, computeExposure } from "./leaseRisk";
 import { reconcileTaxCapture } from "./taxReassessment";
+import { parseRecoveryTerms, calcTenantRecoveries, expensePoolsFromDeal, reconcileRecoveries, resolvePercentRent, BUCKET_LABEL, type RecoveryReconciliation } from "./recoveryCalc";
 
 // Occupancy sanity: some OMs express occupancy as a FRACTION (1.0 = 100%,
 // 0.993 = 99.3%) rather than a percent. A real retail-center occupancy is never
@@ -1177,73 +1178,166 @@ export function paysRecoveries(t: { reimbursementMethod?: string | null; leaseTy
   return /\bn\s*n\s*n\b|triple\s*net|double\s*net|\bnnn\b|\bnn\b|\bnet\b|\bcam\b|recover/.test(m);
 }
 
+export interface RecoveryEntry {
+  value: number;
+  /** true unless the figure is the OM's own per-tenant number (or a gross lease's $0). */
+  estimated: boolean;
+  method: "disclosed" | "calculated" | "gross" | "centerSpread";
+  /** Bucket-by-bucket working, for the tooltip. */
+  lines?: Array<{ label: string; amount: number }>;
+  /** What the tenant would pay as plain pro-rata NNN — the eyeball check. */
+  fullNnn?: number | null;
+}
+
 interface RecoveryEstimate {
-  /** Per-tenant annual recoveries — disclosed value when present, else estimated. */
-  byName: Map<string, { value: number; estimated: boolean }>;
-  /** Property-level recovery pool used for the estimate, and its source. */
+  /** Per-tenant annual recoveries — disclosed value when present, else calculated. */
+  byName: Map<string, RecoveryEntry>;
+  /** Tenants we deliberately left without a number, and why. */
+  unresolved: Map<string, string>;
+  /** Property-level recovery pool from the OM, and its source. */
   poolTotal: number | null;
   poolSource: string | null;
+  /** Σ(our numbers) vs the OM's total — null when there's nothing to compare. */
+  reconciliation: RecoveryReconciliation | null;
+  /** Plain-English note when calculated figures were withheld or look off. */
+  note: string | null;
 }
 
 /**
- * Estimate per-tenant expense recoveries for a deal. Tenants with an OM-disclosed
- * `expenseReimbursements` keep that exact figure; the remaining property-level
- * recovery pool is spread across the other recovery-paying tenants by SF share.
+ * Per-tenant expense recoveries for a deal (Eric, 10/16/26 — see recoveryCalc.ts):
+ *  1. the OM's own per-tenant figure, when disclosed;
+ *  2. otherwise CALCULATED from the lease's recovery terms bucket by bucket (CAM /
+ *     RE tax / insurance: pro-rata share of the OM's expense budget, a stated fixed
+ *     amount, or nothing) — gross leases are $0, modified gross only when every
+ *     bucket it pays can be read;
+ *  3. for a plain pro-rata NNN tenant on a deal whose OM gives a recovery TOTAL but
+ *     no expense breakdown, a share of that total by SF (labelled as such).
+ * Anything else gets NO number, with the reason kept for the tooltip. Then the
+ * center-level check: if the tenants we calculated would collect more than the OM
+ * says the whole center collects, the calculated figures are withheld as too high.
  */
 export function estimateRecoveries(deal: {
   tenants?: RecoveryTenant[] | null;
   nnnRecoveries?: number | null;
   incomeBreakdown?: Record<string, number | null> | null;
+  expenseBreakdown?: Record<string, number | null> | null;
+  currentAnnualTaxes?: number | null;
+  totalSF?: number | null;
   cashFlowProjection?: Array<{ reimbursements?: number | null }> | null;
   effectiveGrossIncome?: number | null;
   grossPotentialRent?: number | null;
 }): RecoveryEstimate {
   const tenants = (deal.tenants || []).filter(t => !isVacant(t.name) && !isNAPTenant(t));
-  const byName = new Map<string, { value: number; estimated: boolean }>();
+  const byName = new Map<string, RecoveryEntry>();
+  const unresolved = new Map<string, string>();
+  const keyOf = (t: RecoveryTenant) => tenantKey(t.canonicalName ?? t.name);
 
-  // 1) Property-level recovery pool — first available reliable source.
+  // Property-level recovery pool — first available reliable source.
   const ib = deal.incomeBreakdown || {};
+  const ibTotal = Object.entries(ib).find(([k, v]) => /total.*(recover|reimburs)/i.test(k) && _num(v) != null)?.[1];
   const ibSum = (_num(ib.camReimbursements) ?? 0) + (_num(ib.realEstateTaxReimbursements) ?? 0) + (_num(ib.insuranceReimbursements) ?? 0);
   const cfReimb = (Array.isArray(deal.cashFlowProjection) ? deal.cashFlowProjection : []).map(r => _num(r?.reimbursements)).find(v => v != null) ?? null;
   let pool: number | null = null;
   let poolSource: string | null = null;
   if (_num(deal.nnnRecoveries) != null) { pool = _num(deal.nnnRecoveries); poolSource = "OM recovery income"; }
+  else if (_num(ibTotal) != null) { pool = _num(ibTotal); poolSource = "OM income breakdown (total recoveries)"; }
   else if (ibSum > 0) { pool = ibSum; poolSource = "OM income breakdown (CAM+tax+insurance)"; }
   else if (cfReimb != null && cfReimb > 0) { pool = cfReimb; poolSource = "OM cash-flow reimbursements"; }
-  else if (_num(deal.effectiveGrossIncome) != null && _num(deal.grossPotentialRent) != null) {
-    const diff = (_num(deal.effectiveGrossIncome) as number) - (_num(deal.grossPotentialRent) as number);
-    if (diff > 0) { pool = diff; poolSource = "OM EGI − base rent"; }
-  }
 
-  // 2) Disclosed tenants keep their exact figure; subtract from the pool.
-  let remainingPool = pool;
-  let disclosedTotal = 0;
+  const pools = expensePoolsFromDeal({ expenseBreakdown: deal.expenseBreakdown, currentAnnualTaxes: deal.currentAnnualTaxes, totalSF: _num(deal.totalSF) });
+  const spreadCandidates: RecoveryTenant[] = [];
+  const rows: Array<{ sf: number; value: number | null; gross?: boolean }> = [];
+
   for (const t of tenants) {
+    const key = keyOf(t);
+    const sf = _num(t.sf) ?? 0;
     const disc = _num(t.expenseReimbursements);
-    if (disc != null && disc > 0) {
-      byName.set(tenantKey(t.canonicalName ?? t.name), { value: disc, estimated: false });
-      disclosedTotal += disc;
+    if (disc != null && disc >= 0) {
+      byName.set(key, { value: disc, estimated: false, method: "disclosed" });
+      rows.push({ sf, value: disc });
+      continue;
+    }
+    const terms = parseRecoveryTerms(t as Parameters<typeof parseRecoveryTerms>[0]);
+    const calc = calcTenantRecoveries({ ...(t as object), sf } as Parameters<typeof calcTenantRecoveries>[0], pools, terms);
+    if (calc.value != null) {
+      const gross = terms.structure === "gross";
+      byName.set(key, {
+        value: calc.value,
+        estimated: !gross,
+        method: gross ? "gross" : "calculated",
+        lines: calc.lines.map(l => ({ label: `${BUCKET_LABEL[l.bucket]} — ${l.how}`, amount: l.amount })),
+        fullNnn: calc.fullNnn,
+      });
+      rows.push({ sf, value: calc.value, gross });
+    } else {
+      // Plain pro-rata NNN but the OM gives no expense breakdown → share of the total.
+      if (terms.structure === "nnn" && !terms.blocker && pool != null && sf > 0
+        && (pools.cam == null || pools.tax == null || pools.ins == null)) spreadCandidates.push(t);
+      else unresolved.set(key, calc.why ?? "recovery terms not captured");
+      rows.push({ sf, value: null });
     }
   }
-  if (remainingPool != null) remainingPool = Math.max(0, remainingPool - disclosedTotal);
 
-  // 3) Spread the remaining pool across recovery-paying tenants WITHOUT a
-  //    disclosed figure, weighted by SF.
-  if (remainingPool != null && remainingPool > 0) {
-    const eligible = tenants.filter(t => {
-      const key = tenantKey(t.canonicalName ?? t.name);
-      return !byName.has(key) && paysRecoveries(t) && (_num(t.sf) ?? 0) > 0;
-    });
-    const totalSf = eligible.reduce((s, t) => s + (_num(t.sf) ?? 0), 0);
-    if (totalSf > 0) {
-      for (const t of eligible) {
-        const share = (_num(t.sf) as number) / totalSf;
-        byName.set(tenantKey(t.canonicalName ?? t.name), { value: Math.round(remainingPool * share), estimated: true });
+  // 3) Spread what's left of the OM total across plain-NNN tenants with no breakdown.
+  if (spreadCandidates.length && pool != null) {
+    let remaining = pool;
+    for (const e of byName.values()) remaining -= e.value;
+    remaining = Math.max(0, remaining);
+    const totalSf = spreadCandidates.reduce((s, t) => s + (_num(t.sf) ?? 0), 0);
+    if (remaining > 0 && totalSf > 0) {
+      for (const t of spreadCandidates) {
+        const v = Math.round(remaining * ((_num(t.sf) as number) / totalSf));
+        byName.set(keyOf(t), { value: v, estimated: true, method: "centerSpread", lines: [{ label: `share of the OM's $${Math.round(pool).toLocaleString()} recovery total by SF (no expense breakdown in the OM)`, amount: v }] });
       }
-    }
+    } else for (const t of spreadCandidates) unresolved.set(keyOf(t), "the OM's recovery total is already used up by other tenants");
   }
 
-  return { byName, poolTotal: pool, poolSource };
+  // 4) Center-level eyeball check.
+  const reconciliation = pool != null ? reconcileRecoveries(rows, pool) : null;
+  let note: string | null = null;
+  if (reconciliation?.verdict === "high") {
+    let withheld = 0;
+    for (const [k, e] of byName) if (e.method === "calculated") { byName.delete(k); unresolved.set(k, "withheld — calculated recoveries don't tie to the OM"); withheld++; }
+    note = `Calculated recoveries would add up to $${reconciliation.accounted.toLocaleString()}, more than the $${Math.round(pool!).toLocaleString()} the OM says the whole center collects. The leases likely have caps, fixed amounts or carve-outs that aren't captured, so occupancy cost is withheld for ${withheld} tenant${withheld === 1 ? "" : "s"} rather than overstated.`;
+  } else if (reconciliation?.verdict === "low") {
+    note = `Recoveries we can account for ($${reconciliation.accounted.toLocaleString()}) are well below the $${Math.round(pool!).toLocaleString()} the OM says the center collects. A charge may be missing from the calculation, so treat occupancy costs here as a floor.`;
+  }
+  return { byName, unresolved, poolTotal: pool, poolSource, reconciliation, note };
+}
+
+/**
+ * Occupancy cost from its components — the ONE implementation every view uses.
+ * Needs base rent, gross sales and a recovery figure (disclosed or calculated), and
+ * refuses (null) when the tenant has a percentage-rent clause we can't price,
+ * because leaving it out would understate the ratio.
+ */
+export function computeOccupancyCost(
+  rt: (RecoveryTenant & { percentageRentRate?: unknown; percentageRentBreakpoint?: unknown; percentageRentClause?: unknown }) | null | undefined,
+  rec: RecoveryEntry | { value: number; estimated: boolean } | undefined,
+  grossSales: number | null,
+): { occ: number; breakdown: import("./idb").OccBreakdown } | null {
+  if (!rt || grossSales == null || grossSales <= 0) return null;
+  const base = _num(rt.annualRent);
+  if (base == null) return null;
+  const disclosed = _num(rt.expenseReimbursements);
+  const reimb = disclosed ?? (rec ? rec.value : null);
+  if (reimb == null) return null;
+  const pct = resolvePercentRent(rt, grossSales);
+  if (pct === undefined) return null;
+  const other = _num(rt.otherRent) ?? 0;
+  const total = base + reimb + pct.amount + other;
+  const entry = rec && "method" in rec ? rec : undefined;
+  return {
+    occ: Math.round((total / grossSales) * 1000) / 10,
+    breakdown: {
+      base, reimbursements: reimb, percentRent: pct.amount, other, total, sales: grossSales,
+      reimbEstimated: disclosed == null && !!rec?.estimated,
+      reimbMethod: disclosed != null ? "disclosed" : entry?.method,
+      reimbLines: disclosed == null ? entry?.lines : undefined,
+      fullNnn: disclosed == null ? entry?.fullNnn ?? null : null,
+      percentRentFormula: pct.how === "formula" || undefined,
+    },
+  };
 }
 
 export interface LatestSale {
@@ -1314,20 +1408,13 @@ export function buildLatestSales(deal: {
     }
     let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
     let occBreakdown: import("./idb").OccBreakdown | null = null;
-    const base = _num(rt?.annualRent);
-    const disclosed = _num(rt?.expenseReimbursements);
-    const est = rec.get(key);
-    const reimb = disclosed ?? (est ? est.value : null);
-    const reimbEstimated = disclosed == null && !!est?.estimated;
-    const pctRent = _num(rt?.percentageRent) ?? 0, other = _num(rt?.otherRent) ?? 0;
     // Compute occ-cost only when it wasn't stated on the report — a disclosed
-    // figure is authoritative and isn't overwritten by a derived (possibly
-    // estimated-reimbursement) one.
-    if (occupancyCost == null && base != null && reimb != null && gross != null && gross > 0) {
-      const total = base + reimb + pctRent + other;
-      occupancyCost = Math.round((total / gross) * 1000) / 10;
+    // figure is authoritative and isn't overwritten by a derived one.
+    const oc = occupancyCost == null ? computeOccupancyCost(rt, rec.get(key), gross) : null;
+    if (oc) {
+      occupancyCost = oc.occ;
       occSource = "computed";
-      occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
+      occBreakdown = oc.breakdown;
     }
     out.set(key, { salesPSF: psf, grossSales: gross, salesYear: year ?? null, occupancyCost, occSource, occBreakdown, anecdotal, provenance: r.provenance ?? null });
   }

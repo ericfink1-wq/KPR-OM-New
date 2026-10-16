@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import RecoveryWorking, { recoveryLabel } from "./RecoveryWorking";
 import { createPortal } from "react-dom";
 import { Info, Moon } from "lucide-react";
 import type { Tenant, OccBreakdown, LeaseAbstract } from "../lib/idb";
@@ -7,7 +8,7 @@ import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import type { RentFlag } from "../lib/tenantRentBenchmark";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { tjxComboRead } from "../lib/tjxCombo";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { gradeOccupancyCost, type OccGrade } from "../lib/retailCategory";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -42,7 +43,9 @@ interface Props {
   datexLive?: DatexLiveBlock | null;
   // Estimated per-tenant recoveries (by tenantKey) — used as a fallback for the
   // occupancy-cost calc when the OM didn't disclose a tenant's recoveries.
-  estimatedRecoveries?: Map<string, { value: number; estimated: boolean }>;
+  estimatedRecoveries?: Map<string, RecoveryEntry>;
+  /** Center-level note when calculated recoveries were withheld or look off. */
+  recoveryNote?: string | null;
   // Latest sales (by tenantKey) from the Tenant Sales panel — when present, the
   // roster shows these (uploaded report figures) instead of the OM-stated sales.
   latestSales?: Map<string, { salesPSF: number | null; occupancyCost: number | null; occSource?: "stated" | "computed"; occBreakdown?: OccBreakdown | null; anecdotal?: boolean | null; provenance?: string | null }>;
@@ -82,9 +85,9 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
   const place = () => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
-    const w = 240;
-    const flip = r.top < 220; // not enough room above → open downward instead
-    setPos({ top: flip ? r.bottom + 8 : r.top - 8, left: Math.min(r.right, window.innerWidth - 12) - w, flip });
+    const w = 290;
+    const flip = r.top < 320; // not enough room above → open downward instead
+    setPos({ top: flip ? r.bottom + 8 : r.top - 8, left: Math.max(12, Math.min(r.right, window.innerWidth - 12) - w), flip });
   };
   const show = () => { place(); setOpen(true); };
 
@@ -123,7 +126,7 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
           position: "fixed", top: pos.top, left: pos.left, transform: pos.flip ? "none" : "translateY(-100%)",
           background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
-          zIndex: 10000, width: 240, maxWidth: "calc(100vw - 24px)",
+          zIndex: 10000, width: 290, maxWidth: "calc(100vw - 24px)",
           fontSize: 11, fontFamily: "'Inter',sans-serif",
         }}>
           {breakdown ? (
@@ -132,11 +135,12 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
                 <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>+ Recoveries{breakdown.reimbEstimated ? " (est.)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+                <span style={{ color: "#a89f8f" }}>{recoveryLabel(breakdown)}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
               </div>
+              <RecoveryWorking b={breakdown} />
               {breakdown.percentRent > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                  <span style={{ color: "#a89f8f" }}>+ % Rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
+                  <span style={{ color: "#a89f8f" }}>+ % Rent{breakdown.percentRentFormula ? " (lease formula)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
                 </div>
               )}
               {breakdown.other > 0 && (
@@ -323,7 +327,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, datexLive, estimatedRecoveries, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, datexLive, estimatedRecoveries, recoveryNote, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant }: Props) {
   const watchMap = useWatchlist();
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [q, setQ] = useState("");
@@ -373,16 +377,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       if (ls && ls.occupancyCost != null && ls.occSource) return ls.occupancyCost;
       const stated = n(t.occupancyCost);
       if (stated != null) return stated;
-      const base = n(t.annualRent);
-      const disclosedReimb = n(t.expenseReimbursements);
-      const est = estimatedRecoveries?.get(tk(t));
-      const reimb = disclosedReimb ?? (est ? est.value : null);
-      const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
-      const other = n(t.otherRent) ?? 0;
       const sp = n(t.salesPSF), sfn = n(t.sf);
       const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
-      if (base != null && reimb != null && sales != null && sales > 0) return ((base + reimb + pctRent + other) / sales) * 100;
-      return null;
+      return computeOccupancyCost(t, estimatedRecoveries?.get(tk(t)), sales)?.occ ?? null;
     };
     const sortVal = (t: Tenant, key: string): number => {
       const v = key === "salesPSF" ? effSalesPSF(t) : key === "occupancyCost" ? effOccCost(t) : n((t as any)[key]);
@@ -477,6 +474,11 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
             style={{ fontSize:12, padding:"5px 10px", border:"1px solid #e3dccd", borderRadius:7, color:"#383a37", background:"#fff", width:150, fontFamily:"'Inter',sans-serif" }}/>
         </div>
       </div>
+      {recoveryNote && (
+        <div style={{ fontSize:11.5, lineHeight:1.5, color:"#7a4a10", background:"#fdf4e7", border:"1px solid #f0d9b5", borderRadius:8, padding:"7px 10px", marginBottom:8 }}>
+          ⚠ Occupancy cost: {recoveryNote}
+        </div>
+      )}
       {pctOccupied != null && (
         <div style={{ marginBottom:13 }}>
           <span title="Occupied vs vacant by square footage (NAP / owner-occupied parcels excluded; dark stores count as occupied since they still pay rent). The parenthetical adds dark — closed but still-paying — stores to vacancy."
@@ -796,15 +798,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   // (0,1) is a fraction that lost its ×100 on import (0.225 = 22.5%) —
                   // normalize it; retail occupancy cost under 1% is effectively impossible.
                   const stated = statedRaw == null || statedRaw <= 0 ? null : (statedRaw < 1 ? statedRaw * 100 : statedRaw);
-                  const base = n(t.annualRent);
-                  // Recoveries: OM-disclosed value first; else the SF-allocated
-                  // estimate so occ cost can still be computed on NNN tenants.
-                  const disclosedReimb = n(t.expenseReimbursements);
-                  const est = estimatedRecoveries?.get(tenantKey(t.canonicalName || t.name));
-                  const reimb = disclosedReimb ?? (est ? est.value : null);
-                  const reimbEstimated = disclosedReimb == null && !!est?.estimated;
-                  const pctRent = (t.percentageRent != null && typeof t.percentageRent === "number") ? t.percentageRent : 0;
-                  const other = n(t.otherRent) ?? 0;
+                  // Recoveries: OM-disclosed first; else calculated from the lease's
+                  // recovery terms × the OM's expense budget (see recoveryCalc.ts).
                   const sp = n(t.salesPSF);
                   const sfn = n(t.sf);
                   const sales = (sp != null && sfn != null && sp > 0 && sfn > 0) ? sp * sfn : null;
@@ -815,11 +810,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
 
                   if (stated != null) {
                     occ = stated; occSource = "stated";
-                  } else if (base != null && reimb != null && sales != null && sales > 0) {
-                    const total = base + reimb + pctRent + other;
-                    occ = (total / sales) * 100;
-                    occSource = "computed";
-                    occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales, reimbEstimated };
+                  } else {
+                    const oc = computeOccupancyCost(t, estimatedRecoveries?.get(tenantKey(t.canonicalName || t.name)), sales);
+                    if (oc) { occ = oc.occ; occSource = "computed"; occBreakdown = oc.breakdown; }
                   }
 
                   const occGrade = occ != null ? gradeOccupancyCost(t.canonicalName || t.name || "", occ) : null;

@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-16-occupancy-cost-by-expense-bucket",
+    date: "2026-10-16",
+    category: "improved",
+    title: "Occupancy cost now works for gross and modified-gross tenants",
+    detail:
+      "Occupancy cost used to appear only for straight NNN tenants. Now a gross-lease tenant shows base rent ÷ sales, and a modified-gross or fixed-CAM tenant is calculated bucket by bucket (CAM, real estate tax, insurance) from its lease terms and the OM's expense budget. Tap the number to see the working, including what the tenant would pay if it were fully NNN, so you can sanity-check it. When a lease's terms can't be read, or the tenant pays percentage rent we don't have a figure for, it stays blank rather than guessing. And if our numbers would add up to more than the OM says the center collects, they're held back with a note explaining why.",
+    where: "Deal page → Tenants & Sales → Occ Cost column (tap a number)",
+  },
+  {
     id: "2026-10-16-claude-options-from-lease",
     date: "2026-10-16",
     category: "fixed",

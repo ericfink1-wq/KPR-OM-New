@@ -1,6 +1,6 @@
 import type { Deal, TenantSalesYear, OccBreakdown, ReviewQuestion } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
-import { robustParseJSON, tenantKey, stripSuiteCode, estimateRecoveries, parseAiReviewQuestions } from "./utils";
+import { robustParseJSON, tenantKey, stripSuiteCode, estimateRecoveries, computeOccupancyCost, parseAiReviewQuestions } from "./utils";
 
 export interface SalesExtractResult {
   year: number;
@@ -188,19 +188,14 @@ export function buildSalesHistoryPatch(deal: Deal, result: SalesExtractResult): 
     if (occupancyCost != null && occupancyCost <= 0) occupancyCost = null; // a stored 0 is "no data," not a real 0% — compute instead
     let occSource: "stated" | "computed" | undefined = occupancyCost != null ? "stated" : undefined;
     let occBreakdown: OccBreakdown | null = null;
-    const base = nv(rt?.annualRent);
-    const estRec = recEst.get(matchKey);
-    const reimb = nv(rt?.expenseReimbursements) ?? (estRec ? estRec.value : null);
-    const reimbEstimated = nv(rt?.expenseReimbursements) == null && !!estRec?.estimated;
-    const pctRent = nv(rt?.percentageRent) ?? 0, other = nv(rt?.otherRent) ?? 0;
+    const oc = occupancyCost == null ? computeOccupancyCost(rt, recEst.get(matchKey), gross) : null;
     // Only COMPUTE the occ-cost when it wasn't already stated on the report — a
     // disclosed figure is authoritative and must not be overwritten by a derived
     // one (whose reimbursements may even be an estimate).
-    if (occupancyCost == null && base != null && reimb != null && gross != null && gross > 0) {
-      const total = base + reimb + pctRent + other;
-      occupancyCost = Math.round((total / gross) * 1000) / 10;
+    if (oc) {
+      occupancyCost = oc.occ;
       occSource = "computed";
-      occBreakdown = { base, reimbursements: reimb, percentRent: pctRent, other, total, sales: gross, reimbEstimated };
+      occBreakdown = oc.breakdown;
     }
     const cleanName = rt ? (rt.canonicalName || rt.name || stripSuiteCode(t.name as string)) : stripSuiteCode(t.name as string);
     // Internal-consistency check: stated PSF should tie to annual sales ÷ SF. A
