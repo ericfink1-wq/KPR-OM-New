@@ -202,7 +202,12 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex NNN into the comparison inflates the Datex side by the entire recovery load (~$8–15/SF
   in retail) and manufactures a phantom above-market finding. Also: `TenantsMetrics` is MONTHLY
   history keyed by `Period` (YYYYMM) — "current" is the LATEST period, never an arbitrary row.
-  Datex also has `TenantOptions` (option AND notice dates), `Occupancy` (monthly), `Loans`,
+  Datex EXPOSES `TenantOptions` (option AND notice dates in its schema) — **but it returns ZERO
+  rows through the connector (verified live 10/16/26; Tenants/Breakpoints return data, so it
+  isn't access).** Option/notice dates therefore come from the executed lease; never read Datex
+  silence as "no options". If the Datex vendor wires that view up, revert this everywhere
+  (OWNED_AUTHORITY_NOTE, lease_abstracts, MCP_SERVER_INSTRUCTIONS in mcpTools.ts, the skill).
+  Datex also has `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
 - **WHY THE COMP DATABASE IS EMPTY — DIAGNOSED (9/10/26).** `comp_benchmark` returned
