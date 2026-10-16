@@ -85,7 +85,7 @@ const TEST_QUESTION = "Using the KPR deal library, what's the typical rent per S
 const CONNECTOR_NAME = "KPR Deal Library";
 
 type Plan = "free" | "paid";
-type StepId = "plan" | "key" | "copy" | "open" | "add" | "fill" | "turnon" | "instructions" | "rules" | "test" | "code";
+type StepId = "plan" | "key" | "copy" | "open" | "add" | "fill" | "auth" | "turnon" | "instructions" | "rules" | "test" | "code";
 
 function downloadSkill() {
   const blob = makeZip({ "kpr-retail-analysis/SKILL.md": skillMarkdown });
@@ -236,6 +236,42 @@ function MockPreferences() {
   );
 }
 
+function MockAuth() {
+  const opt = (label: string, sub: string, on: boolean) => (
+    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 6px", marginBottom: 4, ...(on ? ring(true) : { opacity: 0.55 }) }}>
+      <span style={{ flexShrink: 0, width: 14, height: 14, marginTop: 2, borderRadius: "50%", border: `2px solid ${on ? "#2f7de1" : "#bbb"}`, background: on ? "radial-gradient(#2f7de1 40%, #fff 45%)" : "#fff" }} />
+      <div>
+        <div style={{ fontSize: 12.5, color: "#111", fontWeight: on ? 700 : 500 }}>{label}{on && <span style={{ marginLeft: 6, fontSize: 10, background: "#eee", borderRadius: 4, padding: "1px 5px", fontWeight: 600 }}>Detected</span>}{on && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: HILITE }}>◀ keep this one</span>}</div>
+        <div style={{ fontSize: 10.5, color: "#888" }}>{sub}</div>
+      </div>
+    </div>
+  );
+  return (
+    <MockFrame>
+      <div style={{ padding: 14, background: "#fff" }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 6 }}>Add custom connector</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>{CONNECTOR_NAME}</div>
+        <div style={{ fontSize: 10.5, color: "#999", fontFamily: "monospace", marginBottom: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>https://kpr-oms.replit.app/api/mcp/k/kpr_…</div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#111", marginBottom: 5 }}>Authentication</div>
+        {opt("Sign in now", "Each user signs in through the server's OAuth flow…", false)}
+        {opt("Sign in when needed", "Claude connects without credentials first…", false)}
+        {opt("No sign-in", "Pick this for servers with open access, or that use an API key…", true)}
+        <div style={{ fontSize: 10.5, background: "#fdf3d8", border: "1px solid #f0d58a", borderRadius: 6, padding: "5px 8px", color: "#7a5a10", margin: "6px 0 8px" }}>⚠ Without sign-in, anyone with the server URL can use this connector… <strong>(that's expected — ignore it)</strong></div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#111" }}>Request headers</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 10px" }}>
+          <span style={{ border: "1px solid #ddd", borderRadius: 6, padding: "3px 9px", fontSize: 11.5, color: "#999", textDecoration: "line-through" }}>＋ Add header</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: HILITE }}>don't touch</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, alignItems: "center" }}>
+          <span style={{ border: "1px solid #ddd", borderRadius: 7, padding: "5px 11px", fontSize: 12 }}>Back</span>
+          <span style={{ background: "#111", color: "#fff", borderRadius: 7, padding: "5px 14px", fontSize: 12, fontWeight: 600, ...ring(true), backgroundColor: "#111" }}>Add</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: HILITE }}>◀ click</span>
+        </div>
+      </div>
+    </MockFrame>
+  );
+}
+
 function MockChat() {
   return (
     <MockFrame>
@@ -291,7 +327,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
 
   const steps: StepId[] = codePath
     ? ["key", "code", "test"]
-    : ["plan", "key", "copy", "open", "add", "fill", "turnon", "instructions", "rules", "test"];
+    : ["plan", "key", "copy", "open", "add", "fill", "auth", "turnon", "instructions", "rules", "test"];
   const step = steps[Math.min(stepIdx, steps.length - 1)];
 
   const load = useCallback(() => {
@@ -459,7 +495,22 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
           Pasted nothing, or the wrong thing? Click here to copy your link again, then paste:
           <div style={{ marginTop: 8 }}><BigCopy value={urlWithKey} label="Copy my link again" /></div>
         </Note>
-        <P><span style={{ display: "block", marginTop: 10 }}>If Claude shows another screen, click <B>Add</B> or <B>Connect</B>. When <strong>{CONNECTOR_NAME}</strong> appears in your list with a ✓, you're connected.</span></P>
+        <P><span style={{ display: "block", marginTop: 10 }}>Claude then shows a second screen about <strong>Authentication</strong>. Click <strong>Next</strong> here for what to do.</span></P>
+      </>);
+
+      case "auth": return (<>
+        <H>Leave it on "No sign-in" and click Add</H>
+        <P>Claude now asks about <strong>Authentication</strong>. You don't need to change anything:</P>
+        <ol style={{ margin: "0 0 6px", paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: "#2f3229" }}>
+          <li>Keep <B>No sign-in</B> selected (Claude picks it for you and marks it "Detected").</li>
+          <li><strong>Ignore</strong> the yellow warning. It's expected: your private link already has your key built in.</li>
+          <li><strong>Don't</strong> click <B>Add header</B>. Leave that section empty.</li>
+          <li>Click the black <B>Add</B> button at the bottom.</li>
+        </ol>
+        <MockAuth />
+        <Note tone="warn">Don't pick <strong>Sign in now</strong> or <strong>Sign in when needed</strong>. The library doesn't use that kind of sign-in, and the connection will fail.</Note>
+        <P><span style={{ display: "block", marginTop: 10 }}><strong>{CONNECTOR_NAME}</strong> now appears in your connectors list with a ✓. You're connected!</span></P>
+        <Note tone="warn"><strong>Never screenshot or share this screen.</strong> It shows your private link at the top, and anyone with it can read the library as you. If you already did, use "Manage my keys" below to turn that key off, then set up again.</Note>
       </>);
 
       case "turnon": return (<>
@@ -592,6 +643,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
                   {[
                     ["I can't find “+ Add” or “Add custom connector”.", "Make sure you're on claude.ai on a computer (not the phone app), on Settings → Connectors. The ＋ Add button is black, in the top-right corner."],
                     ["Claude says I've reached the limit for custom connectors.", "Free accounts allow only a small number. Remove a custom connector you don't use (click it in the list → remove), or upgrade to Pro."],
+                    ["Claude asks how to sign in (Authentication).", "Keep “No sign-in”, leave Request headers empty, and click Add. The yellow warning is expected."],
                     ["The Continue button stays grey.", "Both boxes need something in them. Type the name, then paste the link into the second box."],
                     ["I can't find the personal preferences box, or it won't take that much text.", "Instead: in Claude click Projects → New project, name it “KPR”, and paste the instructions into the project's Instructions box. Then start your KPR chats inside that project."],
                     ["It connected before, but now shows an error.", "Start this window again from the top to make a new key. Then in Claude's Connectors list, remove the old KPR Deal Library and add it again with the new link."],
