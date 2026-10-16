@@ -5,6 +5,7 @@ import {
   type McpKeySummary, type McpInfo, type StaticKeyStatus } from "../lib/api";
 import { useIsMobile } from "../hooks/use-mobile";
 import { makeZip } from "../lib/zipStore";
+import { KPR_CLAUDE_INSTRUCTIONS } from "../lib/claudeInstructions";
 
 // "Claude access": every member mints their own key and connects an outside Claude
 // (claude.ai / desktop / phone, or Claude Code) to this library through /api/mcp.
@@ -84,7 +85,7 @@ const TEST_QUESTION = "Using the KPR deal library, what's the typical rent per S
 const CONNECTOR_NAME = "KPR Deal Library";
 
 type Plan = "free" | "paid";
-type StepId = "plan" | "key" | "copy" | "open" | "add" | "fill" | "turnon" | "rules" | "test" | "code";
+type StepId = "plan" | "key" | "copy" | "open" | "add" | "fill" | "turnon" | "instructions" | "rules" | "test" | "code";
 
 function downloadSkill() {
   const blob = makeZip({ "kpr-retail-analysis/SKILL.md": skillMarkdown });
@@ -146,7 +147,7 @@ function ClickHere() {
   return <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: HILITE, whiteSpace: "nowrap" }}>◀ click</span>;
 }
 
-function MockSidebar({ highlight }: { highlight: "Connectors" | "Skills" | "Capabilities" }) {
+function MockSidebar({ highlight }: { highlight: "Connectors" | "Skills" | "Capabilities" | "General" }) {
   const item = (label: string, icon: string) => (
     <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", fontSize: 12.5, color: "#222", ...ring(highlight === label) }}>
       <span style={{ width: 16, textAlign: "center", opacity: 0.6 }}>{icon}</span>{label}{highlight === label && <ClickHere />}
@@ -215,6 +216,26 @@ function MockDialog() {
   );
 }
 
+function MockPreferences() {
+  return (
+    <MockFrame>
+      <div style={{ padding: 14, background: "#fff" }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 8 }}>General</div>
+        <div style={{ fontSize: 12, color: "#333", marginBottom: 4 }}>What personal preferences should Claude consider in responses?</div>
+        <div style={{ border: `2px solid ${HILITE}`, borderRadius: 7, padding: "8px 9px", fontSize: 11.5, color: "#555", background: "#fff", lineHeight: 1.45 }}>
+          <span style={{ color: "#999" }}>(anything you already had stays here)</span><br />
+          I have two KPR Centers data connectors: Datex (KPR's live Yardi property data) and KPR OM Data…
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: HILITE, margin: "3px 0 8px" }}>① Paste here, at the end</div>
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
+          <span style={{ background: "#111", color: "#fff", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 600, ...ring(true), backgroundColor: "#111" }}>Save</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: HILITE }}>② then Save</span>
+        </div>
+      </div>
+    </MockFrame>
+  );
+}
+
 function MockChat() {
   return (
     <MockFrame>
@@ -270,7 +291,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
 
   const steps: StepId[] = codePath
     ? ["key", "code", "test"]
-    : ["plan", "key", "copy", "open", "add", "fill", "turnon", "rules", "test"];
+    : ["plan", "key", "copy", "open", "add", "fill", "turnon", "instructions", "rules", "test"];
   const step = steps[Math.min(stepIdx, steps.length - 1)];
 
   const load = useCallback(() => {
@@ -449,6 +470,29 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
         <P><span style={{ display: "block", marginTop: 8 }}>It usually stays on for future chats.</span></P>
       </>);
 
+      case "instructions": return (<>
+        <H>Give Claude the KPR instructions</H>
+        <P>These tell Claude how to use <strong>Datex</strong> and the <strong>deal library</strong> together: which one to trust,
+          Datex's quirks, and to ask you for the lease or loan document instead of guessing. You paste them once and Claude follows them in every chat.</P>
+        <Note>Using Datex in Claude too? Connect it first (same way as the library), then do this step. No Datex yet? Do it anyway, it doesn't hurt.</Note>
+        <ol style={{ margin: "12px 0 6px", paddingLeft: 20, fontSize: 14, lineHeight: 1.75, color: "#2f3229" }}>
+          <li>Click the green button to copy the instructions:
+            <div style={{ margin: "6px 0 4px" }}><BigCopy value={KPR_CLAUDE_INSTRUCTIONS} label="Copy the KPR instructions" /></div>
+          </li>
+          <li>In Claude, click your <B>name</B> in the bottom-left corner → <B>Settings</B> → <B>General</B>.</li>
+          <li>Find the box <strong>"What personal preferences should Claude consider in responses?"</strong> and click inside it.
+            <div style={{ fontSize: 12.5, color: "#7a4a10", marginTop: 2 }}>Already something written there? <strong>Don't delete it.</strong> Click at the very end of it, press <B>Enter</B> twice, then paste.</div>
+          </li>
+          <li><strong>Paste</strong> ({/Mac|iPhone|iPad/.test(navigator.userAgent) ? <><B>⌘ Command</B> + <B>V</B></> : <><B>Ctrl</B> + <B>V</B></>}), then click <B>Save</B>.</li>
+        </ol>
+        <MockSidebar highlight="General" />
+        <MockPreferences />
+        <details style={{ marginTop: 10, fontSize: 12, color: MUTED }}>
+          <summary style={{ cursor: "pointer", padding: "4px 0" }}>Read the instructions first</summary>
+          <div style={{ marginTop: 6, maxHeight: 220, overflowY: "auto", whiteSpace: "pre-wrap", background: "#fff", border: "1px solid #e3dccd", borderRadius: 7, padding: "8px 10px", fontSize: 11.5, lineHeight: 1.5, color: "#3a3d33" }}>{KPR_CLAUDE_INSTRUCTIONS}</div>
+        </details>
+      </>);
+
       case "rules": return (<>
         <H>Add the KPR rules {plan === "free" ? "(optional)" : "(recommended)"}</H>
         <P>This teaches Claude how KPR underwrites, so its answers follow our rules — not generic real-estate advice.</P>
@@ -549,6 +593,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
                     ["I can't find “+ Add” or “Add custom connector”.", "Make sure you're on claude.ai on a computer (not the phone app), on Settings → Connectors. The ＋ Add button is black, in the top-right corner."],
                     ["Claude says I've reached the limit for custom connectors.", "Free accounts allow only a small number. Remove a custom connector you don't use (click it in the list → remove), or upgrade to Pro."],
                     ["The Continue button stays grey.", "Both boxes need something in them. Type the name, then paste the link into the second box."],
+                    ["I can't find the personal preferences box, or it won't take that much text.", "Instead: in Claude click Projects → New project, name it “KPR”, and paste the instructions into the project's Instructions box. Then start your KPR chats inside that project."],
                     ["It connected before, but now shows an error.", "Start this window again from the top to make a new key. Then in Claude's Connectors list, remove the old KPR Deal Library and add it again with the new link."],
                     ["I closed this window before I finished.", "No problem — open Claude access again and start over. It just makes a fresh key."],
                     ["Still stuck?", "Ask Eric — send him a screenshot of what you're seeing."],

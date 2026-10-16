@@ -1,6 +1,6 @@
 ---
 name: kpr-retail-analysis
-description: How KPR Centers analyses retail shopping centers, and which of its two data sources to use. KPR runs Datex (its property-management system of record — live rents, budgets, occupancy, sales, option dates, loans for properties it OWNS) and the KPR deal library (a market corpus of deals it has EVALUATED, mostly not bought, showing what is normal across tenants, brands, markets and pricing). Use this skill for ANY commercial real estate work involving KPR — a deal or OM, a lease, LOI or amendment, a purchase and sale agreement, estoppel or other legal document, a loan document or debt terms, an operating statement or rent roll, underwriting assumptions, a waterfall, promote, pref or IRR, an investor book or IC memo, property tax and closing costs, sale comps, or any question about a KPR property, tenant, rent or market read. Covers which source answers which question, how to combine them, the row-level traps that silently produce wrong numbers, and KPR's underwriting doctrine. Load it before answering.
+description: How KPR Centers analyses retail shopping centers, and which of its two data sources to use. KPR runs Datex (its property-management system of record — live rents, budgets, occupancy, sales, ledgers, loans for properties it OWNS) and the KPR deal library (a market corpus of deals it has EVALUATED, mostly not bought, showing what is normal across tenants, brands, markets and pricing). Use this skill for ANY commercial real estate work involving KPR — a deal or OM, a lease, LOI or amendment, a purchase and sale agreement, estoppel or other legal document, a loan document or debt terms, an operating statement or rent roll, underwriting assumptions, a waterfall, promote, pref or IRR, an investor book or IC memo, property tax and closing costs, sale comps, or any question about a KPR property, tenant, rent or market read. Covers which source answers which question, how to combine them, the row-level traps that silently produce wrong numbers, and KPR's underwriting doctrine. Load it before answering.
 ---
 
 # KPR retail analysis
@@ -16,7 +16,7 @@ confidently wrong answer.
 
 **Datex** — KPR's property-management system of record. Live and continuously maintained by
 the team. Covers the properties KPR **owns today**: current rents and NNN, budget vs actual,
-occupancy history, tenant sales, option and notice dates, loans, percentage-rent
+occupancy history, tenant sales, tenant ledgers, some loan data, percentage-rent
 breakpoints, vacant suites, and the active leasing pipeline.
 
 **The deal library** — a market corpus. KPR records essentially every retail deal it looks
@@ -51,7 +51,7 @@ never as "the market."
 | Question | Source |
 |---|---|
 | "What does our Ulta at Northgate pay?" | **Datex** — a fact about a KPR property |
-| "When is their option notice due?" | **Datex** — it tracks option and notice dates |
+| "When is their option notice due?" | **The executed lease** — Datex's tenant-options data is empty in practice (team finding 10/16/26), so ask for the lease; never read Datex silence as "no options" |
 | "How did that center perform against budget?" | **Datex** |
 | "What's in our leasing pipeline?" | **Datex** |
 | "Is that rent normal for Ulta?" | **The library** — a market question, and it has the sample |
@@ -200,6 +200,36 @@ Verified against the live data. Before aggregating anything out of `TenantsMetri
    Exclude them and say how many locations actually reported.
 4. **Datex names carry store numbers** ("Dollar Tree #4516"); the corpus stores the brand
    alone. Match on brand, not the raw string.
+
+More, from the team's own use (Eric, 10/16/26). Datex sits on KPR's **Yardi** data:
+
+5. **Run `describe_entities` (nameOnly:false) before filtering an entity you haven't used.**
+   Field names differ by entity — `Loans` uses `BLDGID`; `Tenants`, `Occupancy` and
+   `TenantsMetrics` use `BuildingId`.
+6. **Values carry trailing spaces** — use `contains`, not `eq`, on ID and name fields.
+7. **Building IDs are mostly CITY-based, not property names.** Find them in `Buildings` and
+   confirm by address; watch for duplicate names, condo associations and inactive sibling
+   entities. Some properties span several building IDs — combine them.
+8. **Some entities are exposed but empty** — confirm rows exist before relying on one.
+9. **Never take GLA or occupancy from `Buildings`** (often zero). Compute from `Occupancy` /
+   `TenantsMetrics`. `TenantsMetrics` also carries **superseded lease versions** (TenantIds
+   with suffixes like ".0.00011", zero dollars) — exclude them or GLA double-counts. Total GLA
+   should tie to the sum of live `SuiteSQFT`.
+10. **`Rolling12Sales` is wrong when `LastSalesPeriod` is older than the row's `Period`** —
+    sum `SalesHistory` monthly rows instead.
+11. **$0 `MonthlyNNN`/`AnnualNNN` does NOT mean no recoveries.** Tenants billed annually in
+    arrears ("PY CAM", "PY Insurance", "PY real estate taxes") show $0 there — check
+    `TenantLedger` by `IncomeCategory` over at least 24 months. In `TenantLedger`, filter dates
+    on `TransactionDate` (`TransactionPeriod` doesn't support ranges); tenant names group on
+    `TenantFlags`.
+12. **Zero-GLA tenants are usually ground-lease / pad tenants paying CAM only** — still tenants.
+
+**Datex is silent ≠ "no".** Tenant options (renewals, ROFRs, purchase options) are empty;
+loans are incomplete; TI and leasing commissions are blank; the co-tenancy flag is blank, not
+"No"; occupancy category fields (anchor/shop/pad GLA) are not populated. Say Datex doesn't
+cover it and ask for the document that would (the lease, loan docs, commission agreement).
+Neither connector holds executed documents — name the specific missing document in one line
+up front, then answer what you can, labelled as not confirmed against it.
 
 ## Library traps — how its records age
 ### Ten years is the staleness horizon — measured from when a lease was STRUCK

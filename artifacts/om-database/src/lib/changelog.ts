@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-16-claude-kpr-instructions",
+    date: "2026-10-16",
+    category: "new",
+    title: "KPR instructions for Claude, in the Claude access setup",
+    detail:
+      "The Claude access walkthrough has a new step that gives your Claude KPR's standing instructions: when to trust Datex versus the deal library, Datex's quirks, and to ask you for the actual lease or loan document instead of guessing. One button copies them, and the step shows exactly where to paste them in Claude's settings so they apply to every chat.",
+    where: "Top bar → Claude access",
+  },
+  {
     id: "2026-10-16-claude-access-guided-setup",
     date: "2026-10-16",
     category: "improved",
