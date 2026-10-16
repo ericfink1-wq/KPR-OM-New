@@ -43,23 +43,30 @@ it's tied to a person's KPR account:
 
 ## Connecting (each person does this themselves)
 
-1. Sign in to the app.
-2. Click **Claude access** in the top bar.
-3. Name it for the device (e.g. "My laptop"), click **Create key**.
-4. Copy the key straight away — it won't be shown again.
-5. Pick the tab for how you use Claude and follow the one-step instructions. The panel
-   gives you a ready-to-paste config with your key already filled in.
+The **Claude access** button in the top bar opens a guided, numbered setup — about two
+minutes. It walks through:
 
-Never send your key to anyone. They make their own.
+1. **Create your personal key** (name it for the device, click *Create my key*). It's shown once.
+2. **Add it to Claude** — pick *Claude website, desktop or phone app* (most people) or
+   *Claude Code*, then follow the click-by-click steps. Each step that needs something
+   pasted has its own Copy button:
+   - claude.ai → Settings → Connectors → **Add custom connector** → Name "KPR Deal Library",
+     paste your connector link into *Remote MCP server URL* → **Add** → in a new chat, switch
+     it on from the + / sliders menu. Adding it on claude.ai also turns it on in the desktop
+     and phone apps.
+   - Claude Code: paste one ready-made `claude mcp add …` command into a terminal, then `/mcp`
+     to confirm it's connected.
+3. **Add the KPR rules (recommended)** — one-click download of the `kpr-retail-analysis`
+   skill as a zip, then Settings → Capabilities → Skills → **Upload skill**.
+4. **Test it** with a ready-to-paste question.
 
-### The three ways to connect
+A "Something not working?" section covers the common snags (no *Add custom connector*
+button = your Claude org owner has to allow custom connectors; connector not found = switch
+it on for the chat; error after it worked = make a new key and re-add the connector).
 
-- **Claude desktop app** — Settings → Connectors → Add custom connector, or paste the
-  supplied JSON into `claude_desktop_config.json`.
-- **Claude Code** — one `claude mcp add …` command, supplied ready to run.
-- **claude.ai** — Settings → Connectors → Add custom connector, using the link that has
-  the key built into it. Convenient, but that link *is* the password: only paste it into
-  your own Claude settings, never into a chat or an email thread.
+The connector link has the key built in, so the link itself is the password: only paste it
+into your own Claude Connectors screen, never into a chat or an email. Never send your key
+to anyone — they make their own.
 
 ## Taking access away
 

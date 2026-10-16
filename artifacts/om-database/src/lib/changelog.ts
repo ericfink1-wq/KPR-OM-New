@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-16-claude-access-guided-setup",
+    date: "2026-10-16",
+    category: "improved",
+    title: "Step-by-step setup for connecting Claude to the library",
+    detail:
+      "The Claude access window is now a guided, numbered setup: create your key, then follow click-by-click instructions to add it to Claude (website, desktop or phone app, or Claude Code), with a Copy button right at the step that needs it. It also lets you download the KPR rules for Claude in one click, gives you a test question to confirm it's working, and has a 'Something not working?' section for the common snags.",
+    where: "Top bar → Claude access",
+  },
+  {
     id: "2026-10-15-roster-totals-row",
     date: "2026-10-15",
     category: "new",
