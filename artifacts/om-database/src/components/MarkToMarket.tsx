@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal } from "../lib/idb";
-import { isVacant, isNAPTenant, tenantKey } from "../lib/utils";
-import { apiLoadTenantBenchmarks, type AnalystTenantBenchmark } from "../lib/api";
+import { isVacant, isNAPTenant } from "../lib/utils";
+import { buildPeerIndex, type SizeBand } from "../lib/mtmPeers";
 import { assessOptionOverhang } from "../lib/renewalOptionOverhang";
 import ScopeToggle, { scopeDeals, type Scope } from "./ScopeToggle";
 
@@ -20,6 +20,9 @@ interface Gap {
   annual: number | null; // $ /yr to market (gapPSF * sf), null if no SF
   locations: number;
   years: [number | null, number | null];
+  band: SizeBand;
+  region: string | null;   // null = national (region too thin)
+  percentile: number;      // share of peers paying less than this store
   // Renewal-option overhang: when the tenant holds fixed-rate options materially
   // below market, the upside isn't capturable — the tenant can just renew cheap.
   locked: boolean;
@@ -43,6 +46,11 @@ function num(v: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
+function ordinal(p: number): string {
+  const v = Math.round(p), s = ["th", "st", "nd", "rd"], m = v % 100;
+  return v + (s[(m - 20) % 10] || s[m] || s[0]);
+}
+
 function fmtMoney(n: number): string {
   const a = Math.abs(n);
   if (a >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -51,12 +59,10 @@ function fmtMoney(n: number): string {
 }
 
 export default function MarkToMarket({ deals, onOpenDeal }: Props) {
-  const [benchmarks, setBenchmarks] = useState<AnalystTenantBenchmark[] | null>(null);
   const [threshold, setThreshold] = useState(15);
   const [scope, setScope] = useState<Scope>("owned");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  useEffect(() => { apiLoadTenantBenchmarks().then(setBenchmarks).catch(() => setBenchmarks([])); }, []);
 
   const ownedCount = useMemo(() => getOwnedProperties(deals).length, [deals]);
   const allCount = useMemo(() => deals.filter(d => !d.trashedAt).length, [deals]);
@@ -67,27 +73,23 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
     return next;
   });
 
-  const benchByKey = useMemo(() => {
-    const m = new Map<string, AnalystTenantBenchmark>();
-    for (const b of benchmarks || []) {
-      if (b.medianRentPerSf == null || b.locations < 2) continue;
-      m.set(tenantKey(b.brand), b);
-    }
-    return m;
-  }, [benchmarks]);
+  // Peers = same brand, same size band, same region (else national in the band), with
+  // ground leases / pads / kiosks excluded — computed from the whole library.
+  const peers = useMemo(() => buildPeerIndex(deals), [deals]);
+  const benchmarks = deals.length ? true : null;
 
   const perDeal = useMemo<DealMtm[]>(() => {
     const out: DealMtm[] = [];
     for (const d of scopedDeals) {
       if (d.trashedAt) continue;
       const rows: Gap[] = [];
-      for (const t of d.tenants || []) {
+      for (const [ti, t] of (d.tenants || []).entries()) {
         if (!t || isVacant(t.name) || isNAPTenant(t)) continue;
         const inPlace = num(t.rentPerSF);
         if (inPlace == null || inPlace <= 0) continue;
-        const b = benchByKey.get(tenantKey(t.canonicalName || t.name || ""));
-        if (!b || b.medianRentPerSf == null) continue;
-        const median = b.medianRentPerSf;
+        const b = peers.get(t, d, ti);
+        if (!b) continue;
+        const median = b.median;
         const sf = num(t.sf);
         const gapPct = ((median - inPlace) / median) * 100;
         const annual = sf != null ? (median - inPlace) * sf : null;
@@ -96,7 +98,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
         const lockNote = locked && oh?.optionRentPSF != null
           ? `options at $${oh.optionRentPSF.toFixed(2)}/SF${oh.parsed.totalOptionYears ? ` (up to ${oh.parsed.totalOptionYears} yrs)` : ""}`
           : null;
-        rows.push({ name: t.canonicalName || t.name || "Tenant", inPlace, median, sf, gapPct, annual, locations: b.locations, years: b.recencyYears, locked, lockNote });
+        rows.push({ name: t.canonicalName || t.name || "Tenant", inPlace, median, sf, gapPct, annual, locations: b.n, years: b.years, band: b.band, region: b.region, percentile: b.percentile, locked, lockNote });
       }
       const below = rows.filter(r => r.gapPct >= threshold).sort((a, b) => (b.annual ?? 0) - (a.annual ?? 0));
       const belowUpside = below.filter(r => !r.locked).reduce((s, r) => s + (r.annual ?? 0), 0);
@@ -107,7 +109,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
     }
     out.sort((a, b) => b.belowUpside - a.belowUpside);
     return out;
-  }, [scopedDeals, benchByKey, threshold]);
+  }, [scopedDeals, peers, threshold]);
 
   const totalUpside = perDeal.reduce((s, d) => s + d.belowUpside, 0);
   const totalLocked = perDeal.reduce((s, d) => s + d.lockedUpside, 0);
@@ -118,7 +120,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
       <h2 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#26281f", margin: "0 0 4px" }}>Mark-to-Market Upside</h2>
       <p style={{ fontSize: 12.5, color: "#7d766a", margin: "0 0 16px", lineHeight: 1.5 }}>
         In-place rents that sit below the same brand's portfolio-median rent — the rent you could recapture at rollover.
-        Benchmarks are recency-weighted medians across your database (2+ locations), not third-party market data, so treat them as directional.
+        Each store is compared only with the same brand in the same size band (under 10k, 10–25k, 25–50k, 50k+ SF) and region, falling back to national in that size band when the region has fewer than 3. Ground leases, pads and kiosks are left out. Medians are recency-weighted by lease start and come from your own database, not third-party market data, so treat them as directional. With fewer than 5 comparable stores the column shows where the rent ranks (percentile) instead of a % gap.
       </p>
 
       <div style={{ marginBottom: 12 }}>
@@ -168,7 +170,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
             <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>
               No leases are {threshold}%+ below their brand benchmark{scope === "owned" ? " among your owned deals" : ""}.
               {scope === "owned" ? " Switch to All deals, or l" : " L"}ower the threshold — or this may mean rents are at/above market,
-              or that few tenants have a 2+ location benchmark yet.
+              or that few stores have 2+ same-brand peers of a similar size yet.
             </p>
           ) : (
             <>
@@ -213,9 +215,12 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
                       </div>
                       <div style={{ color: "#7d766a", whiteSpace: "nowrap" }}>
                         ${r.inPlace.toFixed(2)} vs ${r.median.toFixed(2)} median
-                        <span style={{ color: "#a89f8f" }}> ({r.locations} locs)</span>
+                        <span style={{ color: "#a89f8f" }} title={`Same brand, ${r.band} SF stores${r.region ? `, ${r.region}` : " (national — too few in the region)"}${r.years[0] ? `, leases ${r.years[0]}–${r.years[1]}` : ""}. Ground leases and pads excluded.`}> (n={r.locations} · {r.band}{r.region ? ` · ${r.region}` : " · US"})</span>
                       </div>
-                      <div style={{ width: 56, textAlign: "right", fontWeight: 700, color: "#b3711a" }}>{Math.round(r.gapPct)}%</div>
+                      <div style={{ width: 64, textAlign: "right", fontWeight: 700, color: "#b3711a" }}
+                        title={r.locations < 5 ? `Only ${r.locations} comparable stores — showing where this rent ranks instead of a % gap` : undefined}>
+                        {r.locations < 5 ? `${ordinal(r.percentile)} pct` : `${Math.round(r.gapPct)}%`}
+                      </div>
                       <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: r.locked ? "#9a6b1f" : "#2f6b1f", textDecoration: r.locked ? "line-through" : "none" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
                     </div>
                   ))}

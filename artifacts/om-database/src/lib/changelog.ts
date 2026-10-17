@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-mtm-houseview",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Like-for-like Mark-to-Market, and a House View that starts full",
+    detail:
+      "Mark-to-Market now compares each store only with the same brand in the same size band (under 10k, 10–25k, 25–50k, 50k+ SF) and the same region, falling back to national when the region is thin. Ground leases, pads and kiosks are left out, so a Santander pad or a small-format Office Depot is no longer measured against full-size stores. Each row shows how many stores it was compared with, and when there are fewer than 5 it shows where the rent ranks (percentile) instead of a % gap. House View now opens with KPR's standing underwriting rules built in, and every analysis uses them from day one. What your team's deal takes teach it is added underneath.",
+    where: "Analytics → Mark-to-Market; header → House View",
+  },
+  {
     id: "2026-10-17-ai-guardrails",
     date: "2026-10-17",
     category: "improved",

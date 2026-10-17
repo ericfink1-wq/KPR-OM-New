@@ -28,8 +28,27 @@ export function ensureHouseViewTable(): Promise<void> {
   return ready;
 }
 
+// KPR's STANDING underwriting rules — always part of the House View, so analyses use
+// them from day one, before the team has written a single take (Eric, 10/16/26: House
+// View read "from 0 takes" while it was a featured header button). Distilled from the
+// rules Eric has taught (CLAUDE.md "Analytical heuristics" + the connector's KPR_CORE).
+// Kept SHORT on purpose: it rides along in every analysis. Takes the team writes are
+// distilled into the "learned" part beneath it.
+export const HOUSE_VIEW_BASELINE = `KPR STANDING RULES (built in):
+- PRODUCT: retail shopping centers (grocery, power, community, neighborhood). Anchors are grocery, big-box, junior-box and entertainment uses only; office/coworking, medical, bank and service users are never anchors.
+- RENT vs MARKET: above-market in-place rent is roll-down RISK (it inflates today's NOI and tends to reset down or leave at renewal), never upside. It is defensible only when the tenant's own sales / low occupancy cost support it. Below-market rent locked by cheap options is secure, sticky income, a neutral point, not a risk, unless the tenant is distressed or a dominant anchor's lock caps the asset's growth.
+- UPSIDE is real only when a below-market lease rolls inside the 5–7 yr hold with no cheap options left and the tenant can afford more; rolls 7–12 yrs out are exit upside for the next buyer.
+- LOCATION: higher household income AND population together (infill/urban, supply-constrained) support higher rents and tighter caps; a thin or low-income trade area needs more cap-rate cushion and weaker rent-growth assumptions. Aggressive pricing in a weak trade area is a pricing risk.
+- SALES HEALTH: judge tenants on sales PSF and occupancy cost (base + recoveries + % rent ÷ sales); never base ÷ sales, never guessed. Cinemas are judged on sales per SCREEN (~$400–700k+ healthy), not PSF.
+- BASE vs GROSS: compare base rent to base rent; recoveries (NNN/CAM/tax/insurance) are separate.
+- DATES: a lease is expired only if its expiry is before today; an OM's rent-roll date is often a future assumed closing.
+- STATUS: KPR owns a property until the sale CLOSES; under contract to sell is still owned.
+- NEVER fabricate a figure: if it isn't in the data, say so and leave it out.`;
+
 export interface HouseView {
   content: string;
+  /** The built-in standing rules, always applied ahead of the learned content. */
+  baseline: string;
   sourceCount: number;
   pendingReviews: number;       // takes saved since the last distill that aren't folded in yet
   manuallyEdited: boolean;      // hand-edited after the last rebuild → auto-rebuild won't clobber it
@@ -46,6 +65,7 @@ export async function getHouseView(): Promise<HouseView> {
   const updatedAt = row.updated_at ? new Date(row.updated_at) : null;
   return {
     content: row.content ?? "",
+    baseline: HOUSE_VIEW_BASELINE,
     sourceCount: row.source_count ?? 0,
     pendingReviews: row.pending_reviews ?? 0,
     manuallyEdited: !!(updatedAt && lastDistilledAt && updatedAt.getTime() > lastDistilledAt.getTime()),

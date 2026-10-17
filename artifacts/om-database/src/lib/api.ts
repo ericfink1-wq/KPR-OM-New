@@ -696,6 +696,8 @@ export async function apiReanalyzeDeal(id: string, opts?: { overwriteRoster?: bo
 // --- House View (distilled cross-deal underwriting lens) ---
 export interface HouseViewData {
   content: string; sourceCount: number; pendingReviews: number; manuallyEdited: boolean;
+  /** KPR's built-in standing rules — always applied ahead of the learned content. */
+  baseline?: string;
   lastDistilledAt: string | null; updatedAt: string | null; updatedBy: string | null;
 }
 export async function apiGetHouseView(): Promise<HouseViewData> {

@@ -52,8 +52,8 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>🧠 House View</div>
             <div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>
-              KPR's underwriting lens — distilled from your deal takes, applied to every future analysis. Updates automatically as you write takes.
-              {data ? ` · from ${data.sourceCount} take${data.sourceCount === 1 ? "" : "s"}${data.lastDistilledAt ? ` · rebuilt ${new Date(data.lastDistilledAt).toLocaleDateString()}` : ""}` : ""}
+              KPR's underwriting lens, applied to every analysis: built-in standing rules, plus what your deal takes teach it.
+              {data ? ` · ${data.sourceCount} take${data.sourceCount === 1 ? "" : "s"} learned${data.lastDistilledAt ? ` · rebuilt ${new Date(data.lastDistilledAt).toLocaleDateString()}` : ""}` : ""}
             </div>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ fontSize: 20, lineHeight: 1, color: C.faint, background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>×</button>
@@ -67,6 +67,17 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
               <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.5, marginBottom: 10 }}>
                 This is what the analyst applies to grades, strengths, risks and pricing on every deal. It re-learns automatically when you save a take{isAdmin ? " — or edit it directly below." : "."}
               </div>
+              {data?.baseline && (
+                <details open={!data.content} style={{ marginBottom: 12, border: `1px solid ${C.line}`, borderRadius: 8, background: "#faf8f3" }}>
+                  <summary style={{ cursor: "pointer", padding: "10px 12px", fontSize: 12.5, fontWeight: 700, color: C.ink }}>
+                    KPR standing rules — built in, always applied
+                  </summary>
+                  <div style={{ whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.6, color: C.sub, padding: "0 12px 12px" }}>
+                    {data.baseline.replace(/^KPR STANDING RULES \(built in\):\n/, "")}
+                  </div>
+                </details>
+              )}
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, margin: "4px 0 6px" }}>Learned from your team's deal takes</div>
               {data && data.manuallyEdited && data.pendingReviews > 0 && (
                 <div style={{ fontSize: 12, color: "#8a5a00", background: "#fbf1e4", border: "1px solid #e0c9a8", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
                   ⚠ {data.pendingReviews} new take{data.pendingReviews === 1 ? "" : "s"} since you hand-edited this. Auto-update is paused so your edits aren't overwritten — {isAdmin ? "click Rebuild to fold them in (replaces your edits)." : "ask an admin to Rebuild to fold them in."}
@@ -74,11 +85,11 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
               )}
               {isAdmin ? (
                 <textarea value={text} onChange={(e) => setText(e.target.value)} rows={16}
-                  placeholder="No House View yet. Write a few deal reviews, then click “Rebuild from reviews” to distill them — or type your underwriting principles here directly."
+                  placeholder="Nothing learned yet. Write a take on a few deals (deal page → AI Analysis → Our take), then click “Rebuild from reviews” — or type your own principles here. The standing rules above apply either way."
                   style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "'Inter',sans-serif", fontSize: 13, lineHeight: 1.6, padding: "12px 14px", border: `1px solid ${C.greenBd}`, borderRadius: 8, color: C.ink, background: C.greenBg, outline: "none" }} />
               ) : (
                 <div style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.6, color: C.ink, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 8, padding: "12px 14px", minHeight: 80 }}>
-                  {text || <span style={{ color: C.faint }}>No House View yet — it builds once deals have reviews.</span>}
+                  {text || <span style={{ color: C.faint }}>Nothing learned yet. It builds as the team writes takes on deals. The standing rules above already apply.</span>}
                 </div>
               )}
               {err && <div style={{ marginTop: 8, fontSize: 12, color: "#b3261e", background: "#fdecec", border: "1px solid #f3c0c0", borderRadius: 8, padding: "8px 10px" }}>{err}</div>}

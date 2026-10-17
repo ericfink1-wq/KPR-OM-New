@@ -10,7 +10,7 @@ import { filterNewTenants } from "./tenantDedup";
 import { runLeaseRiskPass, enforceRosterCotenancyRule, validateLeaseRiskAtExtraction, summarizeLeaseRisk } from "./leaseRiskExtract";
 import { auditExtraction, auditSourceText } from "./extractionAudit";
 import { applyImportFixes } from "./importFixes";
-import { getHouseView, saveHouseView, incrementPendingReviews } from "./houseView";
+import { getHouseView, saveHouseView, incrementPendingReviews, HOUSE_VIEW_BASELINE } from "./houseView";
 import { findComparableDeals } from "./comparables";
 import { computePortfolioCalibration } from "./calibration";
 import { Agent, fetch as undiciFetch } from "undici";
@@ -783,7 +783,11 @@ export async function loadLeaseRiskSummary(dealId: string, dealData: Record<stri
 // Load the distilled House View text (KPR's cross-deal underwriting lens) for
 // injection into the grade/narrative. Best-effort: "" on any failure.
 export async function loadHouseViewText(): Promise<string> {
-  try { return (await getHouseView()).content.trim(); } catch { return ""; }
+  // The standing rules always apply; what the team's takes taught is layered on top.
+  try {
+    const learned = (await getHouseView()).content.trim();
+    return learned ? `${HOUSE_VIEW_BASELINE}\n\nLEARNED FROM THE TEAM'S DEAL TAKES:\n${learned}` : HOUSE_VIEW_BASELINE;
+  } catch { return HOUSE_VIEW_BASELINE; }
 }
 
 const HOUSE_VIEW_DISTILL_PROMPT = `You are distilling an acquisitions team's underwriting JUDGMENT from their free-text reviews of retail shopping-center deals into a compact, durable "House View" that will be applied to every FUTURE deal the team analyzes.
