@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
-import OwnedRiskCards from "./OwnedRiskCards";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount, LIBRARY_TRIMMED_MARKER } from "../lib/utils";
 import { buildFocusContext } from "../lib/analystRetrieval";
@@ -319,13 +318,11 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               </>
             )}
 
-            {/* Owned-portfolio risk: watchlist rent + rent at risk if an anchor goes dark */}
-            {onNav && <OwnedRiskCards deals={deals} onOpenDeal={onOpenDeal} onNav={onNav} />}
-
+            {/* Owned-portfolio risk cards live on Portfolio Analytics → Owned only (Eric, 10/17/26). */}
             {/* Deal tiles */}
             {active.length > 0 && (
               <>
-                <div style={{ marginTop: 12, marginBottom: 8, fontSize: 9, letterSpacing: "0.16em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" }}>Pipeline</div>
+                <div style={{ marginTop: 14, marginBottom: 8, fontSize: 9, letterSpacing: "0.16em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" }}>Pipeline</div>
                 <DealTiles deals={active} onOpen={onOpenDeal} />
               </>
             )}

@@ -57,6 +57,15 @@ export const CHANGELOG: ChangeEntry[] = [
     where: "Deal page → status tag and Transaction tab",
   },
   {
+    id: "2026-10-17-home-tidy",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Simpler home page",
+    detail:
+      "The watchlist-rent and anchor-goes-dark cards moved off the home page; they're on Portfolio Analytics → Owned. Pipeline now comes right after the Owned Portfolio numbers.",
+    where: "Analyst home",
+  },
+  {
     id: "2026-10-17-webp-thumbs",
     date: "2026-10-17",
     category: "improved",
