@@ -317,7 +317,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
   const [maintaining, setMaintaining] = useState(false);
   const [maintainMsg, setMaintainMsg] = useState<string | null>(null);
   const [showAuditBreakdown, setShowAuditBreakdown] = useState(false);
-  const [scope, setScope] = useState<"all" | "owned">("all");
+  // Opens on Owned: "All" is the whole market corpus (mostly deals KPR passed on), and its
+  // rent total / top tenant read like KPR's own exposure when shown first (Eric, 10/16/26).
+  const [scope, setScope] = useState<"all" | "owned">("owned");
 
   // Effective deal IDs: when Owned, use ownedDealIds intersected with any Deal Library filter
   const effectiveDealIds = useMemo<string[] | undefined>(() => {
@@ -677,7 +679,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
           <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>Computed live from the tenant index</div>
+          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>{scope === "owned" ? "KPR's owned properties — each counted once" : "Every deal in the library — the market, not KPR's exposure"}</div>
         </div>
         <div style={{ display: "flex", alignItems: "flex-start", columnGap: 12, rowGap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {/* All / Owned scope toggle */}
@@ -695,7 +697,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                   whiteSpace:"nowrap",
                 }}
               >
-                {opt === "all" ? "All" : "Owned"}
+                {opt === "all" ? "All deals (market)" : `Owned${ownedDealIds ? ` (${ownedDealIds.length})` : ""}`}
               </button>
             ))}
           </div>
@@ -806,6 +808,11 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       </div>
 
       {/* No deals match filter */}
+      {scope === "all" && (
+        <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "#7a4a10", background: "#fdf4e7", border: "1px solid #f0d9b5", borderRadius: 9, padding: "9px 12px", marginBottom: 14 }}>
+          <strong>Market view.</strong> This is every deal in the library, mostly ones KPR looked at and didn't buy. Totals, top tenants and concentration here describe the market, <strong>not KPR's exposure</strong>. Switch to <strong>Owned</strong> for the portfolio.
+        </div>
+      )}
       {noDeals && (
         <div style={{ textAlign: "center", padding: "60px 0", color: "#a89f8f", fontSize: 13 }}>
           No deals match the selected filters.

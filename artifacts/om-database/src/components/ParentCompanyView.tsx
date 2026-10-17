@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal } from "../lib/idb";
 import { DETAIL_MAX_WIDTH } from "../lib/constants";
 import { parentCompany, tenantKey, tenantLabel, cityState, fmtLeaseDate, fmtTenantSales, fmtUSD, isNAPTenant, buildSalesByDeal, resolveSalesPSF } from "../lib/utils";
@@ -63,8 +64,9 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
   const salesByDeal = useMemo(() => buildSalesByDeal(deals || []), [deals]);
   const effSales = (r: { deal: Deal; t: NonNullable<Deal["tenants"]>[number] }) => resolveSalesPSF(salesByDeal, r.deal, r.t);
 
+  const ownedIds = useMemo(() => new Set(getOwnedProperties(deals || []).map(d => d.id)), [deals]);
   const rows = scope === "owned"
-    ? allRows.filter(r => r.deal.status === "Owned" || r.deal.status === "Sold")
+    ? allRows.filter(r => ownedIds.has(r.deal.id))
     : allRows;
 
   // Header badge aggregates (across the in-scope rows)

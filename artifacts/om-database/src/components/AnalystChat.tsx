@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount, LIBRARY_TRIMMED_MARKER } from "../lib/utils";
 import { buildFocusContext } from "../lib/analystRetrieval";
@@ -227,7 +228,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
 
   // ── Owned portfolio stats ────────────────────────────────────────────────
   const portfolio = (() => {
-    const owned = active.filter(d => d.status === "Owned");
+    const owned = getOwnedProperties(active);
     const tenants = owned.flatMap(d => (d.tenants || []));
     // Aggregate each anchor brand's total annual rent across owned properties,
     // then rank the list by rent (highest first).

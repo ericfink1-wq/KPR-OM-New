@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal } from "../lib/idb";
 import { parseLeaseDate, isVacant, isNAPTenant } from "../lib/utils";
 import ScopeToggle, { scopeDeals, type Scope } from "./ScopeToggle";
@@ -66,7 +67,7 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
   const [kinds, setKinds] = useState<Set<Kind>>(new Set(["Lease expiry", "Debt maturity", "Pref maturity"]));
   const [scope, setScope] = useState<Scope>("owned");
 
-  const ownedCount = useMemo(() => deals.filter(d => !d.trashedAt && d.status === "Owned").length, [deals]);
+  const ownedCount = useMemo(() => getOwnedProperties(deals).length, [deals]);
   const allCount = useMemo(() => deals.filter(d => !d.trashedAt).length, [deals]);
 
   const allEvents = useMemo<Ev[]>(() => {

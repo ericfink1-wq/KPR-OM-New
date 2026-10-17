@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { resolveTenantRisk, computeExposure, anchorsReferenced, type ExposureResult } from "../lib/leaseRisk";
 import { apiListAllLeaseAbstracts } from "../lib/api";
@@ -43,7 +44,7 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
   const [scope, setScope] = useState<Scope>("owned");
   const [query, setQuery] = useState("");
 
-  const ownedCount = useMemo(() => deals.filter(d => !d.trashedAt && d.status === "Owned").length, [deals]);
+  const ownedCount = useMemo(() => getOwnedProperties(deals).length, [deals]);
   const allCount = useMemo(() => deals.filter(d => !d.trashedAt).length, [deals]);
 
   useEffect(() => { apiListAllLeaseAbstracts().then(setAbstracts).catch(() => setAbstracts([])); }, []);

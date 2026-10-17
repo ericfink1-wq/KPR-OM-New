@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react";
+import { getOwnedProperties } from "./lib/ownedPortfolio";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
 import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot, apiWhatsNewCutoff, apiWhatsNewSeen } from "./lib/api";
@@ -432,7 +433,7 @@ function AppInner() {
   // These are hooks, so they must run before any of the early returns below.
   const activeDeals = useMemo(() => deals.filter(d => !d.trashedAt), [deals]);
   const ownedDealIds = useMemo(
-    () => activeDeals.filter(d => d.status === "Owned" || d.status === "Sold").map(d => d.id),
+    () => getOwnedProperties(activeDeals).map(d => d.id),
     [activeDeals],
   );
 

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { EyeOff } from "lucide-react";
 import type { Deal } from "../lib/idb";
 import { tenantKey, isVacant, isNAPTenant, tenantFormat, TENANT_FORMAT_LABEL, tenantLabel, parentCompany, addUserMerge, removeUserMerge, getUserMerges, buildSalesByDeal, resolveSalesPSF, type UserMerge, type TenantFormat } from "../lib/utils";
@@ -247,9 +248,8 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
   // Aggregate tenants from all filtered deals
   const { rows, allOccurrences } = useMemo(() => {
-    const filtered = filter === "owned"
-      ? deals.filter(d => d.status === "Owned" || d.status === "Sold")
-      : deals;
+    const ownedIds = new Set(getOwnedProperties(deals).map(d => d.id));
+    const filtered = filter === "owned" ? deals.filter(d => ownedIds.has(d.id)) : deals;
 
     const map = new Map<string, TenantRow>();
     // Uploaded sales (tenantSalesHistory) win over raw roster salesPSF, mirroring the deal page.
@@ -293,7 +293,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         }
         const row = map.get(key)!;
         row.locationCount += 1;
-        if (deal.status === "Owned" || deal.status === "Sold") row.ownedCount += 1;
+        if (ownedIds.has(deal.id)) row.ownedCount += 1;
         row.totalAnnualRent += annualRent;
         if (sf != null && sf > 0) row.totalSF += sf;
         if (rentPSF != null && rentPSF > 0) row.rentPSFValues.push(rentPSF);

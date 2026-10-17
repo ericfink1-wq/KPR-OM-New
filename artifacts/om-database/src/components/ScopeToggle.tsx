@@ -1,10 +1,12 @@
+import { getOwnedProperties } from "../lib/ownedPortfolio";
+import type { Deal } from "../lib/idb";
 // Shared "Owned / All deals" scope toggle used by the portfolio analytics views
 // (Critical Dates, Mark-to-Market, Co-Tenancy Cascade) so they look and behave the
 // same. "Owned" means deals currently held (status === "Owned").
 export type Scope = "owned" | "all";
 
-export function scopeDeals<T extends { status?: string | null }>(deals: T[], scope: Scope): T[] {
-  return scope === "owned" ? deals.filter(d => d.status === "Owned") : deals;
+export function scopeDeals<T extends Deal>(deals: T[], scope: Scope): T[] {
+  return scope === "owned" ? getOwnedProperties(deals) : deals;
 }
 
 export default function ScopeToggle({ scope, onChange, ownedCount, allCount }: {

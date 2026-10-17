@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { EyeOff, Unlink } from "lucide-react";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
 import type { Deal } from "../lib/idb";
@@ -104,8 +105,9 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
     forceUpdate(n => n + 1);
   }, [tenantName]);
 
+  const ownedIds = useMemo(() => new Set(getOwnedProperties(deals || []).map(d => d.id)), [deals]);
   const rows = scope === "owned"
-    ? allRows.filter(r => r.deal.status === "Owned")
+    ? allRows.filter(r => ownedIds.has(r.deal.id))
     : allRows;
 
   // Active rows = rows minus explicitly ignored locations

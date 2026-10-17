@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal } from "../lib/idb";
 import { isVacant, isNAPTenant, tenantKey } from "../lib/utils";
 import { apiLoadTenantBenchmarks, type AnalystTenantBenchmark } from "../lib/api";
@@ -57,7 +58,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
 
   useEffect(() => { apiLoadTenantBenchmarks().then(setBenchmarks).catch(() => setBenchmarks([])); }, []);
 
-  const ownedCount = useMemo(() => deals.filter(d => !d.trashedAt && d.status === "Owned").length, [deals]);
+  const ownedCount = useMemo(() => getOwnedProperties(deals).length, [deals]);
   const allCount = useMemo(() => deals.filter(d => !d.trashedAt).length, [deals]);
   const scopedDeals = useMemo(() => scopeDeals(deals, scope), [deals, scope]);
   const toggleCollapse = (id: string) => setCollapsed(prev => {

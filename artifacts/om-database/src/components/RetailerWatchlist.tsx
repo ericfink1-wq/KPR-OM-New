@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { createPortal } from "react-dom";
 import type { Deal } from "../lib/idb";
 import { tenantKey, isVacant } from "../lib/utils";
@@ -117,7 +118,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
 
   // Build a map from canonical tenant key -> exposure across the in-scope deals.
   const scopedDeals = useMemo(
-    () => scope === "owned" ? deals.filter(d => d.status === "Owned" || d.status === "Sold") : deals,
+    () => scope === "owned" ? getOwnedProperties(deals) : deals,
     [deals, scope],
   );
   const exposureByKey = useMemo(() => {

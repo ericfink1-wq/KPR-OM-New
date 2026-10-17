@@ -7,6 +7,7 @@ import { isInvestmentGrade } from "./tenantCredit";
 // is safe — neither module touches the other's exports at module-eval time.
 import { resolveTenantRisk, anchorsReferenced, computeExposure } from "./leaseRisk";
 import { reconcileTaxCapture } from "./taxReassessment";
+import { getOwnedProperties } from "./ownedPortfolio";
 import { parseRecoveryTerms, calcTenantRecoveries, expensePoolsFromDeal, reconcileRecoveries, resolvePercentRent, BUCKET_LABEL, BUCKETS, type RecoveryReconciliation } from "./recoveryCalc";
 
 // Occupancy sanity: some OMs express occupancy as a FRACTION (1.0 = 100%,
@@ -1925,7 +1926,8 @@ export function buildSystemPrompt(
     .filter(d => nz(d.dealReview))
     .map(d => ({ deal: d.propertyName || d.fileName, status: d.status, review: d.dealReview }));
 
-  const ownedCount = bySt["Owned"] || 0;
+  // One owned definition across the site (deduplicated, Owned only) — see ownedPortfolio.ts.
+  const ownedCount = getOwnedProperties(active as Deal[]).length;
 
   // Lease abstracts on file (reconciled from each tenant's full document set).
   // These are the authoritative source for lease-level questions and carry

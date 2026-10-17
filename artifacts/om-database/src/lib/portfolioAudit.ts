@@ -111,7 +111,7 @@ function normAddrForDup(a: unknown): string | null {
 // Street") — two centers with the same name AND the exact same SF in one state is a
 // re-import, not a coincidence. This is the common KPR pattern: a Prospect OM is
 // re-uploaded and marked Owned after closing, leaving a stale Prospect twin.
-function sameProperty(a: Deal, b: Deal): boolean {
+export function sameProperty(a: Deal, b: Deal): boolean {
   const na = normAddrForDup(a.address), nb = normAddrForDup(b.address);
   if (na && nb && na === nb) return true;
   const sa = Number(a.totalSF), sb = Number(b.totalSF);

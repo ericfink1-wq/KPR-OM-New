@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-one-owned-count",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "The owned property count is now the same on every page",
+    detail:
+      "The home page, Portfolio Analytics, Tenant Analytics, brand pages, Critical Dates and the rest now share one definition of 'owned': deals marked Owned, not deleted, with each property counted once even if it was entered twice. Sold deals no longer count as owned anywhere. Portfolio Analytics now opens on Owned, and the All view is labelled as the market, so its totals don't read as KPR's own exposure.",
+    where: "Home page, Portfolio Analytics, Tenant Analytics",
+  },
+  {
     id: "2026-10-16-recovery-badge-partial",
     date: "2026-10-16",
     category: "fixed",
