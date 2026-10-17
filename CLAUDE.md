@@ -528,6 +528,11 @@ on-demand (GET /rates, the app's analysis tick, startup step, 15-min timer), thr
 newer as-of. Payload: `swapCurve`, `termSwapCurve`, `swapHistory`, `sofrOvernight` (NY Fed);
 `swaps.rows` keep the "SOFR Swap – N Year" labels the prepay calc parses. Iron Hound now only
 supplies 1M Term SOFR spot. DTCC data = internal reference, labelled with trade counts.
+PER-USER SETTINGS (10/17/26): `user_prefs` table (api-server `lib/userPrefs.ts`, in all three
+places + startup step) holds a jsonb bag per user; `GET /me/prefs`, `PUT /me/prefs/loan-sizer`
+(user from the SESSION only; `sanitizeLoanSizer` whitelists fields + ranges). The loan sizer
+stores the starred `defaultBase` + last-used inputs there (not localStorage), so it follows the
+person across devices/publishes. No default → 10Y swap. New per-user settings → add a section.
 Loan sizing: `om-database lib/loanSizing.ts` (base options, all-in = base + spread + premium +
 cushion, min of DSCR/DY/LTV, IO) → RatesPanel.
 

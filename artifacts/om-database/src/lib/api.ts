@@ -1038,6 +1038,26 @@ export async function apiSaveSwapCurve(text: string, source: string): Promise<{ 
   if (!resp.ok) throw new Error(body.error || "Couldn't save the curve");
   return { points: body.points ?? [] };
 }
+// The signed-in user's loan-sizer settings, stored on their account (follows them across
+// devices and publishes). Server keeps only known fields with sane values.
+export interface LoanSizerPrefs {
+  defaultBase?: string | null;
+  spreadBps?: number; premiumBps?: number; cushionBps?: number;
+  dscr?: number; debtYieldPct?: number; ltvPct?: number;
+  io?: boolean; amortYears?: number;
+}
+export async function apiGetLoanSizerPrefs(): Promise<LoanSizerPrefs> {
+  const resp = await apiFetch("/me/prefs");
+  if (!resp.ok) throw new Error("Couldn't load your settings");
+  const body = await resp.json().catch(() => ({})) as { loanSizer?: LoanSizerPrefs };
+  return body.loanSizer ?? {};
+}
+export async function apiSaveLoanSizerPrefs(patch: LoanSizerPrefs): Promise<LoanSizerPrefs> {
+  const resp = await apiFetch("/me/prefs/loan-sizer", { method: "PUT", body: JSON.stringify(patch) });
+  const body = await resp.json().catch(() => ({})) as { error?: string; loanSizer?: LoanSizerPrefs };
+  if (!resp.ok) throw new Error(body.error || "Couldn't save your settings");
+  return body.loanSizer ?? {};
+}
 export async function apiGetRates(refresh = false): Promise<RatesPayload> {
   const resp = await apiFetch(`/rates${refresh ? "?refresh=1" : ""}`);
   if (!resp.ok) {

@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-loan-sizer-default",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Star your default base rate in the loan sizer",
+    detail: "Tap the star next to the base rate to make it your default. The sizer will open on it every time, on any device, until you star a different one; tap it again to clear it. Your lender spread, swap premium, cushion, DSCR, debt yield, LTV and amortization are remembered the same way. The settings are saved to your own account, so each person keeps their own.",
+    where: "Today's Rates → Size a loan",
+  },
+  {
     id: "2026-10-17-home-restyle",
     date: "2026-10-17",
     category: "improved",

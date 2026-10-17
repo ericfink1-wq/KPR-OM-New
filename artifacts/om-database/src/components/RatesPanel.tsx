@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Star } from "lucide-react";
 import { createPortal } from "react-dom";
-import { apiGetRates, apiLoadComps, apiSaveSwapCurve, type RatesPayload, type RateRow, type SwapCurveView } from "../lib/api";
+import { apiGetRates, apiLoadComps, apiSaveSwapCurve, apiGetLoanSizerPrefs, apiSaveLoanSizerPrefs, type RatesPayload, type RateRow, type SwapCurveView } from "../lib/api";
 import { baseRateOptions, sizeLoan } from "../lib/loanSizing";
 
 // "Today's Rates" panel. SOFR swaps are read off DTCC's public swap-trade data (every
@@ -54,7 +55,7 @@ function Sparkline({ series, title }: { series: Array<{ month: string; value: nu
 function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string; noi: number | null; price?: number | null } | null }) {
   const options = useMemo(() => baseRateOptions(data), [data]);
   const firstAvailable = options.find(o => o.id === "swap-10" && o.value != null) ?? options.find(o => o.value != null);
-  const [baseId, setBaseId] = useState<string>(firstAvailable?.id ?? "swap-10");
+  const [baseId, setBaseIdRaw] = useState<string>(firstAvailable?.id ?? "swap-10");
   const [spreadBps, setSpreadBps] = useState(200);
   const [premiumBps, setPremiumBps] = useState(0);
   const [cushionBps, setCushionBps] = useState(0);
@@ -63,6 +64,55 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
   const [ltv, setLtv] = useState(65);
   const [io, setIo] = useState(false);
   const [amortYrs, setAmortYrs] = useState(30);
+  // Per-user settings saved on the server (Eric, 10/17/26): a starred default base rate and
+  // the last-used inputs, so the sizer opens the same way on any device after any publish.
+  const [defaultBase, setDefaultBase] = useState<string | null>(null);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [prefsNote, setPrefsNote] = useState<string | null>(null);
+  const touched = useRef(false);
+  const setBaseId = (id: string) => { touched.current = true; setBaseIdRaw(id); };
+  useEffect(() => {
+    let alive = true;
+    apiGetLoanSizerPrefs().then(p => {
+      if (!alive) return;
+      setDefaultBase(p.defaultBase ?? null);
+      if (!touched.current) {
+        const starred = p.defaultBase ? options.find(o => o.id === p.defaultBase && o.value != null) : null;
+        if (starred) setBaseIdRaw(starred.id);
+        if (p.spreadBps != null) setSpreadBps(p.spreadBps);
+        if (p.premiumBps != null) setPremiumBps(p.premiumBps);
+        if (p.cushionBps != null) setCushionBps(p.cushionBps);
+        if (p.dscr != null) setDscr(p.dscr);
+        if (p.debtYieldPct != null) setDebtYield(p.debtYieldPct);
+        if (p.ltvPct != null) setLtv(p.ltvPct);
+        if (p.io != null) setIo(p.io);
+        if (p.amortYears != null) setAmortYrs(p.amortYears);
+      }
+    }).catch(() => { /* signed out / offline: keep today's defaults */ })
+      .finally(() => { if (alive) setPrefsLoaded(true); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Remember the last-used inputs (debounced). Skipped until the stored ones have loaded, so
+  // the built-in defaults never overwrite what the user saved on another device.
+  const lastSaved = useRef<string | null>(null);
+  useEffect(() => {
+    if (!prefsLoaded) return;
+    const patch = { spreadBps, premiumBps, cushionBps, dscr, debtYieldPct: debtYield, ltvPct: ltv, io, amortYears: amortYrs };
+    const key = JSON.stringify(patch);
+    if (lastSaved.current === null) { lastSaved.current = key; return; }
+    if (key === lastSaved.current) return;
+    const t = setTimeout(() => { lastSaved.current = key; apiSaveLoanSizerPrefs(patch).catch(() => { /* best-effort */ }); }, 900);
+    return () => clearTimeout(t);
+  }, [prefsLoaded, spreadBps, premiumBps, cushionBps, dscr, debtYield, ltv, io, amortYrs]);
+  const isDefault = defaultBase != null && defaultBase === baseId;
+  const toggleDefault = () => {
+    const prev = defaultBase, next = isDefault ? null : baseId;
+    setDefaultBase(next); setPrefsNote(null);
+    apiSaveLoanSizerPrefs({ defaultBase: next })
+      .then(() => setPrefsNote(next ? "Saved as your default" : "Default cleared"))
+      .catch(() => { setDefaultBase(prev); setPrefsNote("Couldn't save — are you signed in?"); });
+  };
   const [noiInput, setNoiInput] = useState(deal?.noi ? String(Math.round(deal.noi)) : "");
   const [priceInput, setPriceInput] = useState(deal?.price ? String(Math.round(deal.price)) : "");
   const base = options.find(o => o.id === baseId) ?? null;
@@ -76,7 +126,8 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
       <div style={{ border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", padding: 12 }}>
         <label style={label}>
           Base rate
-          <select value={baseId} onChange={e => setBaseId(e.target.value)} aria-label="Base rate" style={{ ...input, width: "100%" }}>
+          <span style={{ display: "flex", gap: 6, alignItems: "stretch" }}>
+          <select value={baseId} onChange={e => { setBaseId(e.target.value); setPrefsNote(null); }} aria-label="Base rate" style={{ ...input, flex: 1, minWidth: 0 }}>
             {groups.map(g => (
               <optgroup key={g} label={g}>
                 {options.filter(o => o.group === g).map(o => (
@@ -85,6 +136,14 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
               </optgroup>
             ))}
           </select>
+          <button type="button" onClick={e => { e.preventDefault(); toggleDefault(); }} aria-pressed={isDefault}
+            aria-label={isDefault ? "Your default base rate — tap to clear" : "Set as my default base rate"}
+            title={isDefault ? "Your default base rate (tap to clear)" : "Set as my default base rate"}
+            style={{ flexShrink: 0, width: 40, minHeight: 36, border: `1px solid ${isDefault ? "#C9A227" : "#e3dccd"}`, borderRadius: 8, background: isDefault ? "#fbf4dc" : "#fff", color: isDefault ? "#b08a14" : "#8d8577", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Star size={17} strokeWidth={1.9} fill={isDefault ? "currentColor" : "none"} aria-hidden />
+          </button>
+          </span>
+          {(prefsNote || isDefault) && <span style={{ fontSize: 11, fontWeight: 500, color: "#8d8577", marginTop: 3 }}>{prefsNote ?? "Your default — opens here on any device"}</span>}
         </label>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
           <NumField name="Lender spread" value={spreadBps} onChange={setSpreadBps} step={5} suffix="bps" />
