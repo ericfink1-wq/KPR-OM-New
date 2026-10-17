@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-webp-thumbs",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Deal Library photos load faster",
+    detail:
+      "Property photos in the Deal Library, the home page tiles and the portfolio montage are now smaller WebP images, about half the download of before at the same on-screen size. Existing photos convert in the background the first time you open the Deal Library; nothing to do on your end.",
+    where: "Deal Library and home page",
+  },
+  {
     id: "2026-10-17-owned-rollover-datex",
     date: "2026-10-17",
     category: "improved",

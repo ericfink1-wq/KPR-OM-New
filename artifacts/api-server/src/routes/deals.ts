@@ -845,7 +845,9 @@ router.put("/deals/:id/image-raw/:field", requireAuth, rawImageBody, async (req,
   try {
     const ALLOWED = ["cover", "coverThumb", "sitePlanSet", "sitePlanAdd"];
     if (!ALLOWED.includes(field)) { res.status(400).json({ error: "bad field" }); return; }
-    const dataUrl = reqBytes > 0 ? `data:image/jpeg;base64,${buf.toString("base64")}` : null;
+    // Keep the uploaded type when it's a known image type (thumbs are WebP); else JPEG as before.
+    const mime = /^image\/(?:jpeg|png|webp)$/.exec(String(req.headers["content-type"] || "").split(";")[0].trim())?.[0] ?? "image/jpeg";
+    const dataUrl = reqBytes > 0 ? `data:${mime};base64,${buf.toString("base64")}` : null;
     await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL lock_timeout = '6s'`);
       await tx.execute(sql`SET LOCAL statement_timeout = '15s'`);

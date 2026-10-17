@@ -542,7 +542,7 @@ async function capImageDataUrl(url: string | null | undefined, maxBytes: number)
 // now sidesteps entirely. So images can be full quality again (only genuinely huge
 // ones get trimmed). These are data-URL char lengths (~75% is the actual byte size).
 const COVER_CAP = 500_000;   // ~1200px sharp cover
-const THUMB_CAP = 120_000;   // crisp 600px tile thumbnail
+const THUMB_CAP = 120_000;   // 480px WebP tile thumbnail (typically ~20–40 KB)
 const PLAN_CAP = 650_000;    // detailed site plan
 
 // Upload one image as RAW BINARY (not base64-in-JSON). The platform WAF was 403-ing
@@ -559,7 +559,8 @@ async function putImageRaw(id: string, field: "cover" | "coverThumb" | "sitePlan
     const resp = await fetch(`${BASE}/deals/${id}/image-raw/${field}`, {
       method: "PUT",
       credentials: "include",
-      headers: { "Content-Type": "image/jpeg" },
+      // Send the real type (thumbs are WebP now) so the server stores it labelled correctly.
+      headers: { "Content-Type": /^data:(image\/(?:jpeg|png|webp));/.exec(dataUrl)?.[1] ?? "image/jpeg" },
       body: bytes,
       signal: ctrl.signal,
     });

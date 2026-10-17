@@ -431,11 +431,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const hiddenCols = [!showCap && "Cap", !showPrice && "Price", !showSeller && "Seller"].filter(Boolean) as string[];
   useEffect(() => { onCountsChange?.(shownCount, deals.length); }, [shownCount, deals.length, onCountsChange]);
 
-  // One-time, throttled backfill: (re)generate a crisp tile-sized (600px) thumbnail
+  // One-time, throttled backfill: (re)generate a tile-sized (480px WebP) thumbnail
   // for every deal that has a cover, so old tiny 168px thumbs and full-size covers
   // are all replaced. A localStorage marker (versioned) makes it run only once per
   // deal; thumbBust busts the image cache so the sharper thumb shows immediately.
-  const THUMB_BACKFILL_KEY = "kpr_thumb_backfill_v2";
+  const THUMB_BACKFILL_KEY = "kpr_thumb_backfill_v3"; // v3: 480px WebP (was 600px JPEG)
   const [thumbBust, setThumbBust] = useState<Record<string, number>>({});
   useEffect(() => {
     let done: Set<string>;
@@ -451,8 +451,8 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
         try {
           const d = deals.find(x => x.id === id);
           const v = encodeURIComponent(d?.updatedAt || d?.uploadedAt || "");
-          // Downscale the FULL cover (?full=1) to a 600px thumb and save just the thumb.
-          const thumb = await dataUrlToThumb(`/api/deals/${id}/cover-thumb?full=1&v=${v}`, 600, 0.7);
+          // Downscale the FULL cover (?full=1) to a tile thumb and save just the thumb.
+          const thumb = await dataUrlToThumb(`/api/deals/${id}/cover-thumb?full=1&v=${v}`);
           await apiSetCoverThumb(id, thumb);
           if (!cancelled) setThumbBust(b => ({ ...b, [id]: Date.now() }));
         } catch { /* skip this one */ }

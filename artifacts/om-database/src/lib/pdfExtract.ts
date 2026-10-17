@@ -102,8 +102,18 @@ export async function _renderPdfPage(
   return url;
 }
 
+// Deal Library tile thumbnails: ~480px WebP (Eric's 10/16 review asked for ~400px WebP;
+// 480 keeps 280–400px cards sharp). Browsers that can't ENCODE WebP (older Safari) hand
+// back a PNG from toDataURL("image/webp"), so fall back to JPEG there.
+export const THUMB_WIDTH = 480;
+const THUMB_QUALITY = 0.72;
+export function encodeThumb(c: HTMLCanvasElement, quality = THUMB_QUALITY): string {
+  const webp = c.toDataURL("image/webp", quality);
+  return webp.startsWith("data:image/webp") ? webp : c.toDataURL("image/jpeg", quality);
+}
+
 // Downscale a source canvas to a target width and return a JPEG data URL.
-function _scaleCanvas(src: HTMLCanvasElement, targetW: number, quality: number): string {
+function _scaleCanvas(src: HTMLCanvasElement, targetW: number, quality: number, webp = false): string {
   const ratio = Math.min(1, targetW / src.width);
   const w = Math.max(1, Math.round(src.width * ratio));
   const h = Math.max(1, Math.round(src.height * ratio));
@@ -113,14 +123,14 @@ function _scaleCanvas(src: HTMLCanvasElement, targetW: number, quality: number):
   cx.fillStyle = "#ffffff";
   cx.fillRect(0, 0, w, h);
   cx.drawImage(src, 0, 0, w, h);
-  const url = c.toDataURL("image/jpeg", quality);
+  const url = webp ? encodeThumb(c, quality) : c.toDataURL("image/jpeg", quality);
   c.width = c.height = 0;
   return url;
 }
 
-// Downscale any image data URL to a small thumbnail JPEG sized for the deal
-// library / tiles (used for raw cover uploads and the one-time backfill).
-export function dataUrlToThumb(dataUrl: string, width = 600, quality = 0.7): Promise<string> {
+// Downscale any image data URL to a small thumbnail (WebP, JPEG fallback) sized for the
+// deal library / tiles (used for raw cover uploads and the one-time backfill).
+export function dataUrlToThumb(dataUrl: string, width = THUMB_WIDTH, quality = THUMB_QUALITY): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -132,7 +142,7 @@ export function dataUrlToThumb(dataUrl: string, width = 600, quality = 0.7): Pro
       const ctx = c.getContext("2d");
       if (!ctx) { reject(new Error("no canvas context")); return; }
       ctx.drawImage(img, 0, 0, w, h);
-      const out = c.toDataURL("image/jpeg", quality);
+      const out = encodeThumb(c, quality);
       c.width = c.height = 0;
       resolve(out);
     };
@@ -175,7 +185,7 @@ export async function _capturePagePhoto(
   // extraction entirely (which would grab the aerial background only).
   if (preferPageRender && half === "full") {
     const cover = _scaleCanvas(pc, 1600, 0.8);
-    const thumb = _scaleCanvas(pc, 600, 0.7);
+    const thumb = _scaleCanvas(pc, THUMB_WIDTH, THUMB_QUALITY, true);
     pc.width = pc.height = 0;
     return { cover, thumb };
   }
@@ -261,7 +271,7 @@ export async function _capturePagePhoto(
     source = c;
   }
   const cover = _scaleCanvas(source, 1200, 0.74);
-  const thumb = _scaleCanvas(source, 600, 0.7);
+  const thumb = _scaleCanvas(source, THUMB_WIDTH, THUMB_QUALITY, true);
   pc.width = pc.height = 0;
   if (cleanCanvas) { cleanCanvas.width = cleanCanvas.height = 0; }
   if (source !== pc && source !== cleanCanvas) { source.width = source.height = 0; }
