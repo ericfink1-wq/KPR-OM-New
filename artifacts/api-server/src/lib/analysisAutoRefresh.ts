@@ -1,4 +1,5 @@
 import { db, dealsTable } from "@workspace/db";
+import { JSON_REPAIR_VERSION } from "./jsonRepair";
 import { sql } from "drizzle-orm";
 import { updateDealSafely } from "./dealWrite";
 import type { Logger } from "pino";
@@ -39,13 +40,41 @@ async function tick(log: Logger, budgetMs = 45_000): Promise<RefreshTick> {
   const ids = (pending.rows as Array<{ b: string | null }>).map(r => r.b).filter((b): b is string => !!b);
   if (ids.length) {
     const b = ids[0];
-    const r = await applyAnalysisBatchResults(b, log, { budgetMs, skipDone: true });
+    let r: Awaited<ReturnType<typeof applyAnalysisBatchResults>>;
+    try { r = await applyAnalysisBatchResults(b, log, { budgetMs, skipDone: true }); }
+    catch (err) {
+      // A batch whose results can no longer be fetched (expired after 29 days, or gone) must
+      // not hold its deals "pending" forever and block every later batch.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/\(404\)|not[_ ]found|expired/i.test(msg)) {
+        await db.execute(sql`UPDATE deals SET data = (data - 'analysisBatchPending') || jsonb_build_object('analysisAutoError', COALESCE(data->'analysisAutoError', '{}'::jsonb) || jsonb_build_object('reason', ${`batch results no longer available: ${msg.slice(0, 120)}`}::text, 'parser', ${JSON_REPAIR_VERSION}::int)) WHERE data->>'analysisBatchPending' = ${b}`);
+        return { at, action: "released deals from an unavailable batch", batchId: b, error: msg.slice(0, 200) };
+      }
+      throw err;
+    }
     if (r.status === "ended" && !r.remaining) {
       // Everything this batch returned is applied; release any deal it didn't return.
       await db.execute(sql`UPDATE deals SET data = data - 'analysisBatchPending' WHERE data->>'analysisBatchPending' = ${b}`);
       log.info({ batchId: b }, "Auto re-analysis batch fully applied");
     }
     return { at, action: r.status === "ended" ? "applying" : "waiting for batch", batchId: b, status: r.status, applied: r.applied, failed: r.failed, remaining: r.remaining };
+  }
+  // 1b) Replies that could NOT BE READ under an older parser: put each back on the batch it
+  //     came from (its results stay downloadable for 29 days) so the improved parser re-reads
+  //     the reply already paid for — no new tokens. Once per parser version, never a loop.
+  const requeued = await db.execute(sql`UPDATE deals SET data = data
+      || jsonb_build_object('analysisBatchPending', data->'analysisAutoError'->>'batchId')
+      || jsonb_build_object('analysisAutoError', (data->'analysisAutoError') || jsonb_build_object('reparsedWith', ${JSON_REPAIR_VERSION}::int))
+    WHERE data->'analysisAutoError'->>'reason' LIKE 'could not read the AI reply%'
+      AND COALESCE((data->'analysisAutoError'->>'parser')::int, 1) < ${JSON_REPAIR_VERSION}
+      AND COALESCE((data->'analysisAutoError'->>'reparsedWith')::int, 0) < ${JSON_REPAIR_VERSION}
+      AND data->'analysisAutoError'->>'batchId' IS NOT NULL
+      AND COALESCE((data->>'analysisVersion')::int, 0) < ${ANALYSIS_VERSION}
+      AND NOT (data ? 'trashedAt')
+    RETURNING id`);
+  if ((requeued.rows as unknown[]).length) {
+    log.info({ count: (requeued.rows as unknown[]).length }, "Re-reading unreadable analysis replies with the improved parser");
+    return { at, action: "re-reading unreadable replies", remaining: (requeued.rows as unknown[]).length };
   }
   // 2) Nothing in flight → send every still-stale deal that hasn't used its tries.
   const tries = (d: Record<string, unknown>) => { const t = d.analysisAutoTries as { v?: number; n?: number } | undefined; return t?.v === ANALYSIS_VERSION ? (t.n ?? 0) : 0; };

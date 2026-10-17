@@ -471,7 +471,13 @@ built the same way.
 replaces the whole record, so a tab opened before the apply saved its old copy back.
 `keepServerOwnedAnalysis` (lib/analysisOwnership.ts) now keeps the newer stored write-up +
 batch bookkeeping on every PUT, and batch apply / maintenance sweeps write through
-`updateDealSafely` (re-read, write only changed keys). Any new writer: use `updateDealSafely`,
+`updateDealSafely` (re-read, write only changed keys). **Unreadable replies (10/17/26):** Stateline Plaza + Palizzi failed twice with stop_reason=end_turn —
+complete replies that weren't valid JSON (stray quotes / raw newlines in prose). `robustParseJSON`
+now runs `escapeStrayQuotesAndControls`; `JSON_REPAIR_VERSION` (=2) is stamped on each failure with
+a reply `excerpt`. A deal that failed under an OLDER parser is put back on its own batch ONCE
+(`reparsedWith`) so the new parser re-reads the reply already paid for (results live 29 days);
+an expired batch releases its deals instead of blocking later batches. Bump the version when the
+repair learns a new class. Any new writer: use `updateDealSafely`,
 never a whole object read earlier. Status counts are DB-derived (`appliedByAutoRefresh`,
 `lastAppliedAt`, `notApplied` = sent-but-not-applied deals with the recorded `analysisAutoError` reason + whether they retry); `lastTick` is per-instance only. The tick now runs from BACKGROUND tabs too (it used to require the tab in front — stalled 30 min live). Live build: `GET /api/version` (commit
 injected by build.mjs) + "build …" at the bottom of the avatar menu.

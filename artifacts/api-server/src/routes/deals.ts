@@ -1,4 +1,5 @@
 import { stampStatusChange } from "../lib/statusSince";
+import { JSON_REPAIR_VERSION } from "../lib/jsonRepair";
 import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable, leaseAbstractsTable } from "@workspace/db";
@@ -1449,8 +1450,10 @@ export async function applyAnalysisBatchResults(batchId: string, log: Logger, op
   let applied = 0, failed = 0, skipped = 0, remaining = 0;
   // Releasing a deal that FAILED records why, so the failure can be named and it is retried
   // (once more) when the next batch is sent.
-  const release = (id: string, why?: string) => why
-    ? db.execute(sql`UPDATE deals SET data = (data - 'analysisBatchPending') || jsonb_build_object('analysisAutoError', jsonb_build_object('at', ${new Date().toISOString()}::text, 'batchId', ${batchId}::text, 'reason', ${why.slice(0, 300)}::text)) WHERE id = ${id}`)
+  // An unreadable reply also keeps a short excerpt (start + end), so the next failure can be
+  // diagnosed from the record instead of guessed at.
+  const release = (id: string, why?: string, excerpt = "") => why
+    ? db.execute(sql`UPDATE deals SET data = (data - 'analysisBatchPending') || jsonb_build_object('analysisAutoError', jsonb_build_object('at', ${new Date().toISOString()}::text, 'batchId', ${batchId}::text, 'reason', ${why.slice(0, 300)}::text, 'excerpt', ${excerpt}::text, 'parser', ${JSON_REPAIR_VERSION}::int)) WHERE id = ${id}`)
     : db.execute(sql`UPDATE deals SET data = data - 'analysisBatchPending' WHERE id = ${id}`);
   // One read for the whole slice instead of one per result.
   const ids = results.map(r => r.custom_id);
@@ -1476,7 +1479,11 @@ export async function applyAnalysisBatchResults(batchId: string, log: Logger, op
       }
       let analysis: Record<string, unknown>;
       try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
-      catch (err) { failed++; await release(custom_id, `could not read the AI reply (stop_reason=${String((result.message as { stop_reason?: unknown }).stop_reason ?? "?")}): ${errText(err)}`); continue; }
+      catch (err) {
+        const txt = ((result.message as { content?: Array<{ type: string; text?: string }> }).content ?? []).find(b => b.type === "text")?.text ?? "";
+        const excerpt = txt.length > 500 ? `${txt.slice(0, 250)} … ${txt.slice(-250)}` : txt;
+        failed++; await release(custom_id, `could not read the AI reply (stop_reason=${String((result.message as { stop_reason?: unknown }).stop_reason ?? "?")}): ${errText(err)}`, excerpt); continue;
+      }
       analysis = applyAnalysisGuardrails(data, analysis);
       try { await applyAnalysisToDeal(custom_id, data, analysis, log); applied++; }
       catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id, `saving failed: ${errText(err)}`); }
