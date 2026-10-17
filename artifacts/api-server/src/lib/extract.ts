@@ -987,7 +987,9 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
 export function rosterAnalysisParams(snapshot: Record<string, unknown>): Record<string, unknown> {
   return {
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4000,
+    // 8000, not 4000 (10/17/26): long write-ups on big centers were being cut off mid-JSON
+    // and failed to parse. Unused headroom costs nothing.
+    max_tokens: 8000,
     messages: [{ role: "user", content: [
       { type: "text", text: ROSTER_ANALYSIS_PROMPT, cache_control: { type: "ephemeral" } },
       { type: "text", text: JSON.stringify(snapshot, null, 1) },

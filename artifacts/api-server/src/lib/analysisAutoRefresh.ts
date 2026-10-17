@@ -4,6 +4,7 @@ import { updateDealSafely } from "./dealWrite";
 import type { Logger } from "pino";
 import { logger } from "./logger";
 import { BUILD_COMMIT } from "./buildInfo";
+import { startupComplete, startupStepRunning } from "./startup";
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { submitStaleAnalysisBatch, applyAnalysisBatchResults } from "../routes/deals";
 
@@ -63,6 +64,8 @@ let sliceRunning = false;
 /** One bounded slice (single-flight per instance). Records the outcome for the status read. */
 export async function runAnalysisRefreshSlice(log: Logger = logger, budgetMs = 45_000): Promise<RefreshTick> {
   if (sliceRunning) return { at: new Date().toISOString(), action: "busy (a slice is already running)" };
+  // Never compete with the one-time startup jobs for database connections (10/17/26).
+  if (!startupComplete()) return { at: new Date().toISOString(), action: `waiting (server still starting: ${startupStepRunning() ?? "…"})` };
   sliceRunning = true;
   try { lastTick = await tick(log, budgetMs); }
   catch (err) { lastTick = { at: new Date().toISOString(), action: "error", error: err instanceof Error ? err.message.slice(0, 300) : String(err) }; log.error({ err }, "Auto re-analysis slice failed"); }
@@ -105,7 +108,7 @@ export function startAnalysisAutoRefresh(): void {
     running = true;
     runAnalysisRefreshSlice(logger).finally(() => { running = false; });
   };
-  setTimeout(run, 90_000); // let startup sweeps (cleanup, guardrails) land first
+  setTimeout(run, 30_000); // started only after the startup sequence has finished
   setInterval(run, EVERY_MS).unref?.();
 }
 

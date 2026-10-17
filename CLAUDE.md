@@ -476,6 +476,18 @@ never a whole object read earlier. Status counts are DB-derived (`appliedByAutoR
 `lastAppliedAt`, `notApplied` = sent-but-not-applied deals with the recorded `analysisAutoError` reason + whether they retry); `lastTick` is per-instance only. The tick now runs from BACKGROUND tabs too (it used to require the tab in front — stalled 30 min live). Live build: `GET /api/version` (commit
 injected by build.mjs) + "build …" at the bottom of the avatar menu.
 
+## STARTUP IS ONE ORDERED SEQUENCE (10/17/26 — a publish "built but failed to start")
+~25 startup jobs (ensure*Table, sweeps, merges, the refresh tick) hit Postgres in the same
+second, the 10-connection pool ran dry, and the deploy healthcheck failed. Now: the
+healthcheck (`GET /api`, `/api/healthz`) is answered at the TOP of app.ts before any
+middleware (no DB); every startup job is a step in `runStartupSequence` (index.ts →
+lib/startup.ts) run ONE AT A TIME after listen, a lost connection retried once, a failure
+logged and skipped; schedulers (self-improve, analysis refresh) start only after it, and the
+refresh tick answers "waiting (server still starting)" until `startupComplete()`. Pool: max
+`PG_POOL_MAX`||10, connect timeout 10s. **A new startup job goes in that list — never as a
+bare call in index.ts.** Verified locally with a 2-connection pool (all steps OK) and with
+the DB unreachable (healthcheck still 200, process stays up).
+
 ## Deal LIST vs FULL record + gzip (10/17/26 — GET /deals was 18 MB per page load)
 `compression()` gzips every response (app.ts). GET /deals returns LIVE deals only (`?trashed=1`
 = Trash, `?all=1` both, `?full=1` complete records for backups/exports) in LIST VIEW

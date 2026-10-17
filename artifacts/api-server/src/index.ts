@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
+import { runStartupSequence } from "./lib/startup";
 import { ensureUsersTable } from "./routes/auth";
 import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
@@ -37,133 +38,48 @@ const server = app.listen(port, (err) => {
     process.exit(1);
   }
   logger.info({ port }, "Server listening");
-  // Continuous self-improvement: a daily, token-free, non-destructive sweep that
-  // re-audits every deal (self-healing the flags), records a metrics snapshot for
-  // the accuracy-over-time trend, and auto-mints a standing extraction lesson when a
-  // mistake recurs across many deals. Best-effort; never blocks startup.
-  startSelfImproveScheduler();
-  // Fill in closing dates/buyers Eric confirmed for already-Sold owned centers (fill-blanks only).
-  // Failed-upload leftovers (the "duplicates" and blank-name records): merge into the
-  // live twin, then Trash (recoverable; snapshot first). Idempotent.
-  runFailedUploadCleanup()
-    .then(plan => { const acted = plan.filter(a => a.kind !== "keep").length; if (plan.length) logger.info({ acted, kept: plan.length - acted }, "Failed-upload cleanup done"); })
-    .catch((err) => logger.error({ err }, "runFailedUploadCleanup failed on startup"));
-  sweepAnalysisGuardrails()
-    .then(n => { if (n) logger.info({ n }, "Applied write-up guardrails to stored analyses"); })
-    .catch((err) => logger.error({ err }, "sweepAnalysisGuardrails failed on startup"));
-  // One-time batch re-analysis of every deal for the v4 rules (Eric, 10/17/26).
-  startAnalysisAutoRefresh();
-  // Comp typos / units / KPR-as-buyer on our own purchases (token-free, only when needed).
-  runCompsCleanupIfNeeded()
-    .then(r => { if (r.applied) logger.info(r, "Comp clean-up applied"); })
-    .catch((err) => logger.error({ err }, "runCompsCleanupIfNeeded failed on startup"))
-    // …then merge TRUE duplicate comps (strict: same trade; resales stay separate). Snapshot first.
-    .finally(() => runCompDedupe(true)
-      .then(r => { if (r.applied) logger.info({ groups: r.groups, removed: r.removed, examples: r.examples }, "Merged duplicate comps"); })
-      .catch((err) => logger.error({ err }, "runCompDedupe failed on startup")));
-  // OM dates (cover → file name → upload date), so history entries can say WHEN, then the
-  // superseded-OM pass (keep newer, Trash older, record history).
-  sweepOmDates()
-    .catch((err) => logger.error({ err }, "sweepOmDates failed on startup"))
-    .finally(() => retireSupersededOms()
-    .then(n => { if (n) logger.info({ n }, "Retired superseded OMs"); })
-    .catch((err) => logger.error({ err }, "retireSupersededOms failed on startup"))
-    .finally(() => sweepPropertyHistory().catch((err) => logger.error({ err }, "sweepPropertyHistory failed on startup"))));
-  purgePendingSaleData()
-    .then(n => { if (n) logger.info({ n }, "Deleted stored pending-sale data"); })
-    .catch((err) => logger.error({ err }, "purgePendingSaleData failed on startup"));
-  addMissingProperties()
-    .then(n => { if (n) logger.info({ n }, "Added missing owned/sold properties"); })
-    .catch((err) => logger.error({ err }, "addMissingProperties failed on startup"));
-  applyRecordedSales()
-    .then(n => { if (n) logger.info({ n }, "Recorded confirmed sale closings"); })
-    .catch((err) => logger.error({ err }, "applyRecordedSales failed on startup"));
+  // Everything below runs ONE AT A TIME, after the server is already answering (the
+  // healthcheck never waits on it). See lib/startup.ts for why.
+  const log = (msg: string) => (r: unknown) => { if (r) logger.info({ result: r }, msg); };
+  void runStartupSequence([
+    // Clear ZOMBIE database connections. A stuck/idle-in-transaction connection (left by an
+    // earlier hung request, and kept alive across restarts by the managed pooler) holds a
+    // row lock on deal_images, which makes every later image save hang. Self-excluding.
+    { name: "unjam stuck connections", run: () => pool.query(`
+        SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+        WHERE pid <> pg_backend_pid() AND datname = current_database()
+          AND ( (state = 'idle in transaction' AND now() - state_change > interval '15 seconds')
+             OR (state = 'active' AND query ILIKE '%deal_images%' AND now() - query_start > interval '15 seconds') )
+      `).then(r => log("Cleared stuck DB connections")(r.rowCount || null)) },
+    // Runtime-created tables (so DEV matches PROD and the publish diff never proposes a
+    // DROP — see CLAUDE.md). Accounts + sessions first: sign-in depends on them.
+    { name: "users table", run: () => ensureUsersTable() },
+    { name: "session table", run: () => ensureSessionTable() },
+    { name: "tenant_index columns", run: () => ensureTenantIndexColumns() },
+    { name: "extraction_lessons table", run: () => ensureExtractionLessonsTable() },
+    { name: "upload_log table", run: () => ensureUploadLogTable() },
+    { name: "lease_abstracts table", run: () => ensureLeaseAbstractsTable() },
+    { name: "site_agreements table", run: () => ensureSiteAgreementsTable() },
+    { name: "trace tables", run: () => ensureTraceTables() },
+    { name: "house view table", run: () => ensureHouseViewTable() },
+    { name: "mcp_api_keys table", run: () => ensureMcpKeysTable() },
+    // One-time / idempotent data jobs.
+    { name: "failed-upload cleanup", run: () => runFailedUploadCleanup().then(plan => log("Failed-upload cleanup done")(plan.filter(a => a.kind !== "keep").length || null)) },
+    { name: "write-up guardrails", run: () => sweepAnalysisGuardrails().then(log("Applied write-up guardrails to stored analyses")) },
+    { name: "comp clean-up", run: () => runCompsCleanupIfNeeded().then(r => log("Comp clean-up applied")(r.applied ? r : null)) },
+    { name: "comp duplicate merge", run: () => runCompDedupe(true).then(r => log("Merged duplicate comps")(r.applied ? { groups: r.groups, removed: r.removed, examples: r.examples } : null)) },
+    { name: "OM dates", run: () => sweepOmDates() },
+    { name: "superseded OMs", run: () => retireSupersededOms().then(log("Retired superseded OMs")) },
+    { name: "property history", run: () => sweepPropertyHistory() },
+    { name: "pending-sale purge", run: () => purgePendingSaleData().then(log("Deleted stored pending-sale data")) },
+    { name: "missing properties", run: () => addMissingProperties().then(log("Added missing owned/sold properties")) },
+    { name: "recorded sales", run: () => applyRecordedSales().then(log("Recorded confirmed sale closings")) },
+  ], logger).then(() => {
+    // Recurring work starts only once the one-time jobs are finished.
+    startSelfImproveScheduler();
+    startAnalysisAutoRefresh();
+  });
 });
-
-// Restore/provision the accounts tables on startup: recreates `users` and
-// `login_events` (CREATE TABLE IF NOT EXISTS) and re-seeds the owner admin from
-// ADMIN_PASSWORD if they were missing — so a dropped/missing accounts schema is
-// healed the moment a healthy build boots, without waiting for a login attempt.
-// Best-effort: never crash the server if the database is briefly unreachable.
-ensureUsersTable()
-  .then(() => logger.info("Accounts tables ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureUsersTable failed on startup (will retry on first auth request)"));
-
-// Provision the runtime-added tenant_index columns on startup too, so the DEV
-// database (which only gets them when these run) matches PROD. That keeps
-// Replit's publish diff clean and stops it proposing to DROP these columns on
-// every publish. Best-effort. Keep in sync with schema/tenantIndex.ts.
-ensureTenantIndexColumns()
-  .then(() => logger.info("tenant_index columns ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureTenantIndexColumns failed on startup (will retry on first index query)"));
-
-// Provision the operator-taught extraction-lessons table on startup (CREATE
-// TABLE IF NOT EXISTS), so DEV matches PROD and Replit's publish diff stays
-// clean. Best-effort. Keep in sync with lib/extractionLessons.ts.
-ensureExtractionLessonsTable()
-  .then(() => logger.info("extraction_lessons table ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureExtractionLessonsTable failed on startup (will retry on first use)"));
-
-// Provision the DB-backed session table before requests need it (best-effort).
-ensureSessionTable()
-  .then(() => logger.info("session table ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureSessionTable failed on startup (will retry on next boot)"));
-
-// Provision the upload-activity audit log (best-effort).
-ensureUploadLogTable()
-  .then(() => logger.info("upload_log table ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureUploadLogTable failed on startup (will retry on first use)"));
-
-// Provision the lease-abstracts table on startup, so DEV matches PROD and
-// Replit's publish diff stays clean. Best-effort. Keep in sync with
-// schema/leaseAbstracts.ts and routes/leaseAbstracts.ts.
-ensureLeaseAbstractsTable()
-  .then(() => logger.info("lease_abstracts table ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureLeaseAbstractsTable failed on startup (will retry on first use)"));
-
-// Provision the site-agreements (REA) table on startup, mirroring lease_abstracts.
-// Best-effort. Keep in sync with schema/siteAgreements.ts and routes/siteAgreements.ts.
-ensureSiteAgreementsTable()
-  .then(() => logger.info("site_agreements table ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureSiteAgreementsTable failed on startup (will retry on first use)"));
-
-// Provision the diagnostic trace tables (img_trace, upload_trace) on startup so the
-// DEV database matches PROD even when their endpoints aren't exercised in dev — this
-// keeps Replit's publish diff clean and stops it proposing to DROP these
-// runtime-created tables. Best-effort. Keep in sync with lib/traceTables.ts.
-ensureTraceTables()
-  .then(() => logger.info("img_trace / upload_trace tables ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureTraceTables failed on startup (will retry on first use)"));
-
-// Provision the Analyst House View table (analyst_house_view) on startup for the same
-// reason — otherwise it only exists once the house view is touched, so dev lacks it
-// and the publish proposes to DROP it from prod. Best-effort. Keep in sync with
-// lib/houseView.ts and schema/deals.ts (analystHouseViewTable).
-ensureHouseViewTable()
-  .then(() => logger.info("analyst_house_view table ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureHouseViewTable failed on startup (will retry on first use)"));
-
-// Provision the MCP access-key table on startup, so DEV matches PROD and Replit's
-// publish diff stays clean for this runtime-created table. Best-effort. Keep in sync
-// with lib/mcpKeys.ts and schema/mcpKeys.ts.
-ensureMcpKeysTable()
-  .then(() => logger.info("mcp_api_keys table ensured on startup"))
-  .catch((err) => logger.error({ err }, "ensureMcpKeysTable failed on startup (will retry on first use)"));
-
-// Clear ZOMBIE database connections on every boot. A stuck/idle-in-transaction
-// connection (left by an earlier hung request, and kept alive across app restarts
-// by the managed pooler) holds a row lock on deal_images, which makes every later
-// image save (cover / site plan) hang until the client times out. Terminating those
-// backends on startup unjams the table — so a redeploy reliably fixes a stuck save.
-// Best-effort and self-excluding; never blocks or crashes startup.
-pool.query(`
-  SELECT pg_terminate_backend(pid) FROM pg_stat_activity
-  WHERE pid <> pg_backend_pid() AND datname = current_database()
-    AND ( (state = 'idle in transaction' AND now() - state_change > interval '15 seconds')
-       OR (state = 'active' AND query ILIKE '%deal_images%' AND now() - query_start > interval '15 seconds') )
-`)
-  .then((r) => logger.info({ cleared: r.rowCount ?? 0 }, "Cleared stuck DB connections on startup"))
-  .catch((err) => logger.error({ err }, "Startup DB-unjam query failed (non-fatal)"));
 
 // Allow long-running AI calls (AnalystChat, lookup endpoints) up to 5 minutes.
 // The PDF ingest route is not affected since it returns immediately.

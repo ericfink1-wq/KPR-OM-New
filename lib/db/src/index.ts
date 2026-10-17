@@ -15,9 +15,13 @@ if (!process.env.DATABASE_URL) {
 // if every pooled connection is busy/stuck a new query waits forever; with it the
 // acquire fails fast and the caller gets a clear error instead of hanging.
 // (Per-statement timeouts are set INSIDE the transaction that needs them.)
+// Pool size is explicit (node-postgres defaults to 10). Startup jobs now run one at a time
+// (api-server lib/startup.ts), so 10 leaves ample room for requests; PG_POOL_MAX overrides.
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 8000,
+  max: Number(process.env.PG_POOL_MAX) || 10,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
 });
 
 // CRITICAL: a pg Pool with no 'error' listener CRASHES the whole process when an

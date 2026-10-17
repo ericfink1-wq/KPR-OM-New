@@ -1429,6 +1429,13 @@ export async function submitStaleAnalysisBatch(log: Logger, filter: (id: string,
  *  `budgetMs` bounds one call (autoscale hosting only gives CPU during a request, so the work
  *  is done in request-sized slices); `skipDone` skips deals already applied from this batch
  *  (their `analysisBatchPending` marker is gone), so each slice picks up where the last stopped. */
+// The useful part of an error: drizzle wraps the real database error in `cause` behind a
+// "Failed query: … params: {whole deal}" message that buries it.
+const errText = (err: unknown): string => {
+  const e = err as { message?: string; cause?: { message?: string; code?: string } } | null;
+  if (e?.cause?.message) return `${e.cause.message}${e.cause.code ? ` (${e.cause.code})` : ""}`;
+  return String(e?.message ?? err).split("\nparams:")[0].slice(0, 200);
+};
 const batchResultsCache = new Map<string, Awaited<ReturnType<typeof fetchBatchResults>>>();
 export async function applyAnalysisBatchResults(batchId: string, log: Logger, opts: { budgetMs?: number; skipDone?: boolean } = {}): Promise<{ status: string; applied: number; failed: number; skipped: number; remaining?: number; counts?: unknown; note?: string }> {
   const t0 = Date.now();
@@ -1469,10 +1476,10 @@ export async function applyAnalysisBatchResults(batchId: string, log: Logger, op
       }
       let analysis: Record<string, unknown>;
       try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
-      catch (err) { failed++; await release(custom_id, `could not read the AI reply: ${err instanceof Error ? err.message : String(err)}`); continue; }
+      catch (err) { failed++; await release(custom_id, `could not read the AI reply (stop_reason=${String((result.message as { stop_reason?: unknown }).stop_reason ?? "?")}): ${errText(err)}`); continue; }
       analysis = applyAnalysisGuardrails(data, analysis);
       try { await applyAnalysisToDeal(custom_id, data, analysis, log); applied++; }
-      catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id, `saving failed: ${err instanceof Error ? err.message : String(err)}`); }
+      catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id, `saving failed: ${errText(err)}`); }
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, todo.length) }, worker));

@@ -58,6 +58,11 @@ app.use(
   }),
 );
 
+// Liveness for the deployment healthcheck — answered FIRST, before sessions, body parsing or
+// anything else that could touch the database, so a busy pool at boot can never fail the
+// deploy (10/17/26: "built successfully but failed to start"). Same body as routes/health.ts.
+app.get(["/api", "/api/healthz"], (_req, res) => { res.json({ status: "ok" }); });
+
 app.use(cors({
   origin: true,
   credentials: true,
