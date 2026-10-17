@@ -985,6 +985,7 @@ export interface RatesPayload {
   treasuries: { rows: RateRow[]; asOf: string | null; source: string };
   sofr: { rows: RateRow[]; asOf: string | null; source: string };
   swaps: { rows: RateRow[]; asOf: string | null; source: string; spreadBps: number };
+  tenYearMonthly?: Array<{ month: string; value: number }>;
   fetchedAt: string;
 }
 export async function apiGetRates(refresh = false): Promise<RatesPayload> {

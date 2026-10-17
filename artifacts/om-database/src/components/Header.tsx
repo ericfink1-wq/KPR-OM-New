@@ -45,9 +45,11 @@ interface Props {
   onAnalyticsNav?: (dest: string) => void;
   onClosingCalc?: () => void;
   onOpenSearch?: () => void;
+  /** The deal page that's open, if any — Today's Rates sizes a loan for it. */
+  currentDeal?: { name: string; noi: number | null } | null;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onWhatsNew, whatsNewCount = 0, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onWhatsNew, whatsNewCount = 0, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch, currentDeal }: Props) {
   const isMobile = useIsMobile();
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
@@ -830,7 +832,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFolder(e.target.files)} />
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
-        {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} />}
+        {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} deal={currentDeal} />}
         <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
     </div>
 

@@ -576,6 +576,7 @@ function AppInner() {
         onAdminChange={checkAuth}
         onAnalyticsNav={onAnalyticsNav}
         onOpenSearch={() => setSearchOpen(true)}
+        currentDeal={currentDeal ? { name: currentDeal.propertyName || currentDeal.fileName || "this deal", noi: currentDeal.noi != null ? Number(currentDeal.noi) : null } : null}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} isAdmin={isAdmin} />
       <WhatsNewModal

@@ -17,6 +17,9 @@ export interface RatesPayload {
   treasuries: { rows: RateRow[]; asOf: string | null; source: string };
   sofr: { rows: RateRow[]; asOf: string | null; source: string };
   swaps: { rows: RateRow[]; asOf: string | null; source: string; spreadBps: number };
+  /** 10-Yr Treasury at each month-end for the last 12 months (oldest first) — for the
+   *  cap-rate-spread sparkline. Empty if Treasury's history couldn't be read. */
+  tenYearMonthly?: Array<{ month: string; value: number }>;
   fetchedAt: string;          // ISO timestamp of this server fetch
 }
 
@@ -203,6 +206,32 @@ async function fetchTreasuries(): Promise<{ rows: RateRow[]; asOf: string | null
   return { rows, asOf };
 }
 
+// Month-end 10-Yr Treasury for the trailing 12 months, from the same official feed
+// (this year's and last year's pages). Pure parse of every <entry>.
+export function parseTenYearSeries(xml: string): Array<{ date: string; value: number }> {
+  const out: Array<{ date: string; value: number }> = [];
+  for (const e of xml.split(/<entry[\s>]/i).slice(1)) {
+    const d = e.match(/<d:NEW_DATE[^>]*>([^<]*)<\/d:NEW_DATE>/i)?.[1]?.slice(0, 10);
+    const v = Number(e.match(/<d:BC_10YEAR[^>]*>([^<]*)<\/d:BC_10YEAR>/i)?.[1]);
+    if (d && Number.isFinite(v) && v > 0) out.push({ date: d, value: v });
+  }
+  return out;
+}
+export function monthEnds(series: Array<{ date: string; value: number }>, months = 12, now = new Date()): Array<{ month: string; value: number }> {
+  const byMonth = new Map<string, { date: string; value: number }>();
+  for (const p of series) { const m = p.date.slice(0, 7); const cur = byMonth.get(m); if (!cur || p.date > cur.date) byMonth.set(m, p); }
+  const keys = [...byMonth.keys()].sort();
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (months - 1), 1)).toISOString().slice(0, 7);
+  return keys.filter(k => k >= cutoff).map(k => ({ month: k, value: byMonth.get(k)!.value }));
+}
+async function fetchTenYearMonthly(): Promise<Array<{ month: string; value: number }>> {
+  const y = new Date().getUTCFullYear();
+  const page = (year: number) => fetchWithTimeout(`https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value=${year}`, 12_000)
+    .then(r => (r.ok ? r.text() : "")).catch(() => "");
+  const [a, b] = await Promise.all([page(y - 1), page(y)]);
+  return monthEnds([...parseTenYearSeries(a), ...parseTenYearSeries(b)]);
+}
+
 // ── 1-month SOFR — NY Fed 30-Day Average SOFR (free, no key) ──────────────────
 async function fetchSofr(): Promise<{ rows: RateRow[]; asOf: string | null }> {
   // The 30-/90-/180-day compounded averages live on the SOFR Averages & Index
@@ -228,7 +257,7 @@ async function fetchSofr(): Promise<{ rows: RateRow[]; asOf: string | null }> {
 }
 
 export async function fetchTodaysRates(): Promise<RatesPayload> {
-  const [tres, sofr, iron] = await Promise.allSettled([fetchTreasuries(), fetchSofr(), fetchIronhound()]);
+  const [tres, sofr, iron, hist] = await Promise.allSettled([fetchTreasuries(), fetchSofr(), fetchIronhound(), fetchTenYearMonthly()]);
 
   const treasuries = tres.status === "fulfilled" ? tres.value : { rows: [] as RateRow[], asOf: null };
   const sofrData = sofr.status === "fulfilled" ? sofr.value : { rows: [] as RateRow[], asOf: null };
@@ -274,6 +303,7 @@ export async function fetchTodaysRates(): Promise<RatesPayload> {
     treasuries: { rows: treasuries.rows, asOf: treasuries.asOf, source: "U.S. Treasury (par yield curve)" },
     sofr: { rows: sofrRows, asOf: sofrAsOf, source: sofrSource },
     swaps: { rows: swapRows, asOf: iron2.asOf, source: swapsSource, spreadBps: 0 },
+    tenYearMonthly: hist.status === "fulfilled" ? hist.value : [],
     fetchedAt: new Date().toISOString(),
   };
 }

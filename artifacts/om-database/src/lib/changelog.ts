@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-debt-sizing",
+    date: "2026-10-17",
+    category: "new",
+    title: "Today's Rates: all-in fixed rate, cap-rate spread and loan sizing",
+    detail:
+      "Today's Rates now opens with a Debt sizing box. It shows an all-in fixed rate (the 10-Yr Treasury plus a spread you can adjust, 200 bps by default), and the cap-rate spread: the median cap rate of real sales in the last 12 months minus the 10-Yr, with a 12-month trend line. It also sizes a loan: enter NOI (it's filled in when a deal page is open), DSCR (1.30x), debt yield (9%) and amortization, and it shows the loan each test allows and which one limits it. These are indicative numbers, not a lender quote.",
+    where: "Today's Rates (top bar, or ☰ menu on a phone)",
+  },
+  {
     id: "2026-10-17-dispositions-risk",
     date: "2026-10-17",
     category: "new",

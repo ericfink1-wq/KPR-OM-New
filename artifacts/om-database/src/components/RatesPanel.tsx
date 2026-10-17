@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiGetRates, type RatesPayload, type RateRow } from "../lib/api";
+import { apiGetRates, apiLoadComps, type RatesPayload, type RateRow } from "../lib/api";
 
 // "Today's Rates" panel — benchmark interest rates from free official sources
 // (Treasury par yields, NY Fed SOFR) plus indicative SOFR swaps. Each section
@@ -11,7 +11,115 @@ import { apiGetRates, type RatesPayload, type RateRow } from "../lib/api";
 // displays the tenors that matter for retail-center loans.
 const TREASURY_TENORS_SHOWN = ["1-Yr", "2-Yr", "3-Yr", "5-Yr", "7-Yr", "10-Yr"];
 
-export default function RatesPanel({ onClose }: { onClose: () => void }) {
+// ── Debt sizing (Eric, 10/16/26: "SOFR swaps show Unavailable") ───────────────
+// All-in fixed = 10-Yr Treasury + an adjustable spread. Cap-rate spread = median sale-comp
+// cap (trailing 12 months, real single-asset sales only) − 10-Yr, month by month. Loan
+// sizing for the deal that's open: the lower of the 1.30x DSCR and 9% debt-yield loans.
+const mortgageConstant = (rate: number, years: number) => {
+  if (years <= 0) return rate;                     // interest-only
+  const r = rate / 12, n = years * 12;
+  return (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) * 12;
+};
+const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const usd = (n: number) => n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n).toLocaleString()}`;
+
+function DebtSizing({ data, deal }: { data: RatesPayload; deal?: { name: string; noi: number | null } | null }) {
+  const [spreadBps, setSpreadBps] = useState(200);
+  const [dscr, setDscr] = useState(1.3);
+  const [debtYield, setDebtYield] = useState(9);
+  const [amortYrs, setAmortYrs] = useState(30);
+  const [noiInput, setNoiInput] = useState<string>(deal?.noi ? String(Math.round(deal.noi)) : "");
+  const [comps, setComps] = useState<Array<{ capRate?: number | null; saleDate?: string | null; isCompetitiveSet?: boolean; isPortfolioAllocation?: boolean }> | null>(null);
+  useEffect(() => { apiLoadComps().then(r => setComps(r as never)).catch(() => setComps([])); }, []);
+  const t10 = data.treasuries.rows.find(r => r.label === "10-Yr")?.value ?? null;
+  const allIn = t10 != null ? t10 + spreadBps / 100 : null;
+
+  // Monthly cap spread: median cap of sales in the 12 months ending that month − that month's 10-Yr.
+  const spreadSeries = (() => {
+    if (!comps || !data.tenYearMonthly?.length) return [] as Array<{ month: string; spread: number; n: number }>;
+    const sales = comps.filter(c => !c.isCompetitiveSet && !c.isPortfolioAllocation && c.saleDate && typeof c.capRate === "number" && c.capRate >= 3 && c.capRate <= 12);
+    return data.tenYearMonthly.map(p => {
+      const end = new Date(p.month + "-01T00:00:00Z"); end.setUTCMonth(end.getUTCMonth() + 1);
+      const start = new Date(end); start.setUTCFullYear(start.getUTCFullYear() - 1);
+      const caps = sales.filter(c => { const t = Date.parse(String(c.saleDate)); return t >= start.getTime() && t < end.getTime(); }).map(c => c.capRate as number);
+      return caps.length >= 4 ? { month: p.month, spread: median(caps) - p.value, n: caps.length } : null;
+    }).filter(Boolean) as Array<{ month: string; spread: number; n: number }>;
+  })();
+  const latest = spreadSeries[spreadSeries.length - 1];
+
+  const noi = Number(noiInput.replace(/[$,\s]/g, ""));
+  const k = allIn != null ? mortgageConstant(allIn / 100, amortYrs) : null;
+  const dscrLoan = noi > 0 && k ? noi / dscr / k : null;
+  const dyLoan = noi > 0 ? noi / (debtYield / 100) : null;
+  const binding = dscrLoan != null && dyLoan != null ? Math.min(dscrLoan, dyLoan) : null;
+
+  const field = (label: string, value: number, set: (n: number) => void, step: number, suffix: string) => (
+    <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 10, color: "#7d766a", fontWeight: 600 }}>
+      {label}
+      <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <input type="number" inputMode="decimal" step={step} value={value} onChange={e => set(Number(e.target.value))} aria-label={label}
+          style={{ width: 70, padding: "6px 8px", border: "1px solid #e3dccd", borderRadius: 6, fontSize: 13, fontFamily: "inherit" }} />
+        <span style={{ fontSize: 11 }}>{suffix}</span>
+      </span>
+    </label>
+  );
+
+  const spark = (() => {
+    if (spreadSeries.length < 2) return null;
+    const W = 160, H = 36, xs = spreadSeries.map(p => p.spread), lo = Math.min(...xs), hi = Math.max(...xs), rng = hi - lo || 1;
+    const pts = spreadSeries.map((p, i) => `${(i / (spreadSeries.length - 1)) * W},${H - ((p.spread - lo) / rng) * (H - 4) - 2}`).join(" ");
+    return <svg width={W} height={H} aria-label="Cap rate spread over the last 12 months" role="img"><polyline points={pts} fill="none" stroke="#3f7a1f" strokeWidth="1.8" /></svg>;
+  })();
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#5c5047", marginBottom: 8 }}>Debt sizing</div>
+      <div style={{ border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", padding: "12px 12px 10px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10, flexWrap: "wrap" }}>
+          {field("Spread over 10-Yr", spreadBps, setSpreadBps, 5, "bps")}
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: "#7d766a", fontWeight: 600 }}>All-in fixed rate</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#26281f", fontVariantNumeric: "tabular-nums" }}>{allIn != null ? `${allIn.toFixed(2)}%` : "—"}</div>
+            <div style={{ fontSize: 10, color: "#a89f8f" }}>{t10 != null ? `10-Yr ${t10.toFixed(2)}% + ${spreadBps} bps` : "10-Yr unavailable"}</div>
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid #f3eee3", margin: "10px 0", paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 10, color: "#7d766a", fontWeight: 600 }}>Cap-rate spread (comp median cap − 10-Yr)</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#26281f" }}>{latest ? `${Math.round(latest.spread * 100)} bps` : "—"}</div>
+            <div style={{ fontSize: 10, color: "#a89f8f" }}>{latest ? `${latest.n} sales in the 12 months to ${latest.month}` : comps == null ? "Loading comps…" : "Not enough recent sales"}</div>
+          </div>
+          {spark}
+        </div>
+        <div style={{ borderTop: "1px solid #f3eee3", paddingTop: 10 }}>
+          <div style={{ fontSize: 10, color: "#7d766a", fontWeight: 600, marginBottom: 6 }}>Size a loan{deal?.name ? ` — ${deal.name}` : ""}</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 10, color: "#7d766a", fontWeight: 600 }}>
+              NOI
+              <input value={noiInput} onChange={e => setNoiInput(e.target.value)} inputMode="numeric" placeholder="e.g. 2,100,000" aria-label="NOI"
+                style={{ width: 110, padding: "6px 8px", border: "1px solid #e3dccd", borderRadius: 6, fontSize: 13, fontFamily: "inherit" }} />
+            </label>
+            {field("DSCR", dscr, setDscr, 0.05, "x")}
+            {field("Debt yield", debtYield, setDebtYield, 0.25, "%")}
+            {field("Amortization", amortYrs, setAmortYrs, 5, "yrs (0 = IO)")}
+          </div>
+          {binding != null ? (
+            <div style={{ marginTop: 10, fontSize: 12.5, color: "#383a37", lineHeight: 1.6 }}>
+              <div>At {dscr}x DSCR: <b>{usd(dscrLoan!)}</b> <span style={{ color: "#a89f8f" }}>(constant {(k! * 100).toFixed(2)}%)</span></div>
+              <div>At {debtYield}% debt yield: <b>{usd(dyLoan!)}</b></div>
+              <div style={{ marginTop: 3, fontWeight: 700, color: "#1f5d2b" }}>Max loan ≈ {usd(binding)} <span style={{ fontWeight: 500, color: "#7d766a" }}>({dscrLoan! <= dyLoan! ? "DSCR" : "debt yield"} binds)</span></div>
+            </div>
+          ) : (
+            <div style={{ marginTop: 8, fontSize: 11.5, color: "#a89f8f" }}>{allIn == null ? "Needs the 10-Yr Treasury." : "Enter an NOI to size the loan."}</div>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 9.5, color: "#bcae97", marginTop: 5 }}>Indicative only — a lender's quote, reserves and their own NOI underwriting will differ.</div>
+    </div>
+  );
+}
+
+export default function RatesPanel({ onClose, deal }: { onClose: () => void; deal?: { name: string; noi: number | null } | null }) {
   const [data, setData] = useState<RatesPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +199,7 @@ export default function RatesPanel({ onClose }: { onClose: () => void }) {
           {error && !data && <div style={{ color: "#c0392b", fontSize: 13, padding: "20px 0" }}>{error}</div>}
           {data && (
             <>
+              <DebtSizing data={data} deal={deal} />
               <Section title="SOFR" rows={sofrRows} asOf={data.sofr.asOf} source={data.sofr.source} />
               <Section title="SOFR Swaps" rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
               <Section title="Treasury Yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
