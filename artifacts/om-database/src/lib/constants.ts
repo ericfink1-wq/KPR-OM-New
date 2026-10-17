@@ -1,7 +1,7 @@
 // Mirror of the server's ANALYSIS_VERSION (artifacts/api-server/src/lib/analysisVersion.ts).
 // A deal whose analysisVersion is below this has saved AI analysis produced under
 // older scoring logic — the deal page shows an "outdated" refresh badge. Keep in sync.
-export const ANALYSIS_VERSION = 3;
+export const ANALYSIS_VERSION = 4;
 
 // On-screen build stamp — injected by Vite's `define` at build time (see
 // vite.config.ts and build-info.d.ts). Surfaced in the header so we can tell at a

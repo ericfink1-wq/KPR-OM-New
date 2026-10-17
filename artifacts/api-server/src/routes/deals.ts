@@ -1345,22 +1345,54 @@ router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
 // client polls /apply-analysis-batch to apply the results when the batch finishes. The
 // per-deal request is built from the SAME helpers as the live path (rosterAnalysisParams),
 // so the two can't drift. custom_id is the deal id, so results map straight back.
+/** Submit every stale deal (optionally filtered) as ONE Message Batch. Returns the batch id and the ids sent. */
+export async function submitStaleAnalysisBatch(log: Logger, filter: (id: string, d: Record<string, unknown>) => boolean = () => true): Promise<{ batchId: string | null; ids: string[]; status: string | null }> {
+  const rows = await db.select().from(dealsTable);
+  const library = rows.map((r) => r.data as Record<string, unknown>);
+  const targets = rows.filter((r) => isStaleAnalysisTarget(r.data as Record<string, unknown>) && isValidBatchCustomId(r.id) && filter(r.id, r.data as Record<string, unknown>));
+  if (!targets.length) return { batchId: null, ids: [], status: null };
+  const requests: BatchRequest[] = [];
+  for (const r of targets) {
+    const data = r.data as Record<string, unknown>;
+    const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data), library);
+    requests.push({ custom_id: r.id, params: rosterAnalysisParams(snapshot) });
+  }
+  const batch = await createMessageBatch(requests);
+  log.info({ batchId: batch.id, count: requests.length }, "Submitted stale-analysis batch");
+  return { batchId: (batch.id as string) ?? null, ids: targets.map(r => r.id), status: (batch.processing_status as string) ?? null };
+}
+
+/** Apply a finished batch (idempotent). While it is still running, returns its status and applies nothing. */
+export async function applyAnalysisBatchResults(batchId: string, log: Logger): Promise<{ status: string; applied: number; failed: number; skipped: number; counts?: unknown; note?: string }> {
+  const batch = await retrieveMessageBatch(batchId);
+  const status = String(batch.processing_status ?? "");
+  if (status !== "ended") return { status, applied: 0, failed: 0, skipped: 0, counts: batch.request_counts ?? null };
+  const resultsUrl = batch.results_url;
+  if (typeof resultsUrl !== "string" || !resultsUrl) return { status, applied: 0, failed: 0, skipped: 0, note: "no results_url" };
+  const results = await fetchBatchResults(resultsUrl);
+  let applied = 0, failed = 0, skipped = 0;
+  for (const { custom_id, result } of results) {
+    if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; continue; }
+    let analysis: Record<string, unknown>;
+    try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
+    catch { failed++; continue; }
+    const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, custom_id));
+    if (!rows.length) { skipped++; continue; }
+    const data = rows[0].data as Record<string, unknown>;
+    if (data.trashedAt) { skipped++; continue; }
+    analysis = applyAnalysisGuardrails(data, analysis);
+    try { await applyAnalysisToDeal(custom_id, data, analysis, log); applied++; }
+    catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; }
+  }
+  log.info({ batchId, applied, failed, skipped }, "Applied stale-analysis batch");
+  return { status, applied, failed, skipped };
+}
+
 router.post("/deals/refresh-stale-analysis-batch", requireAuth, async (req, res) => {
   try {
     if (!process.env.ANTHROPIC_API_KEY) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
-    const rows = await db.select().from(dealsTable);
-    const library = rows.map((r) => r.data as Record<string, unknown>);
-    const targets = rows.filter((r) => isStaleAnalysisTarget(r.data as Record<string, unknown>) && isValidBatchCustomId(r.id));
-    if (!targets.length) { res.json({ ok: true, batchId: null, count: 0 }); return; }
-    const requests: BatchRequest[] = [];
-    for (const r of targets) {
-      const data = r.data as Record<string, unknown>;
-      const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data), library);
-      requests.push({ custom_id: r.id, params: rosterAnalysisParams(snapshot) });
-    }
-    const batch = await createMessageBatch(requests);
-    req.log.info({ batchId: batch.id, count: requests.length }, "Submitted stale-analysis batch");
-    res.json({ ok: true, batchId: batch.id ?? null, count: requests.length, status: batch.processing_status ?? null });
+    const r = await submitStaleAnalysisBatch(req.log);
+    res.json({ ok: true, batchId: r.batchId, count: r.ids.length, status: r.status });
   } catch (err) {
     req.log.error({ err }, "Failed to submit stale-analysis batch");
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to submit batch" });
@@ -1375,28 +1407,7 @@ router.post("/deals/apply-analysis-batch", requireAuth, async (req, res) => {
     if (!process.env.ANTHROPIC_API_KEY) { res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" }); return; }
     const batchId = String((req.body as Record<string, unknown> | undefined)?.batchId ?? "");
     if (!batchId) { res.status(400).json({ error: "batchId required" }); return; }
-    const batch = await retrieveMessageBatch(batchId);
-    const status = String(batch.processing_status ?? "");
-    if (status !== "ended") { res.json({ ok: true, status, applied: 0, counts: batch.request_counts ?? null }); return; }
-    const resultsUrl = batch.results_url;
-    if (typeof resultsUrl !== "string" || !resultsUrl) { res.json({ ok: true, status, applied: 0, note: "no results_url" }); return; }
-    const results = await fetchBatchResults(resultsUrl);
-    let applied = 0, failed = 0, skipped = 0;
-    for (const { custom_id, result } of results) {
-      if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; continue; }
-      let analysis: Record<string, unknown>;
-      try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
-      catch { failed++; continue; }
-      const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, custom_id));
-      if (!rows.length) { skipped++; continue; }
-      const data = rows[0].data as Record<string, unknown>;
-      if (data.trashedAt) { skipped++; continue; }
-      analysis = applyAnalysisGuardrails(data, analysis);
-      try { await applyAnalysisToDeal(custom_id, data, analysis, req.log); applied++; }
-      catch (err) { req.log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; }
-    }
-    req.log.info({ batchId, applied, failed, skipped }, "Applied stale-analysis batch");
-    res.json({ ok: true, status, applied, failed, skipped });
+    res.json({ ok: true, ...(await applyAnalysisBatchResults(batchId, req.log)) });
   } catch (err) {
     req.log.error({ err }, "Failed to apply analysis batch");
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to apply batch" });

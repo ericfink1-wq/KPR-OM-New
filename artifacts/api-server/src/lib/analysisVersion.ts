@@ -17,4 +17,7 @@
 //   3 — lease-risk / co-tenancy exposure folded into Risks + narrative
 //       (anchor-dependency: base rent at risk if an anchor goes dark, plus any
 //       executed-lease mitigation) (2026-06)
-export const ANALYSIS_VERSION = 3;
+//   4 — above-market rent is never upside, written figures tie to stored fields,
+//       anchor = retail use (no office/IWG), today vs rent-roll date, no pending
+//       sales, like-for-like MTM (2026-10). Auto-refreshed once (analysisAutoRefresh).
+export const ANALYSIS_VERSION = 4;

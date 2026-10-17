@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-reanalysis-v4",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Every deal's AI write-up is being redone under the new rules",
+    detail:
+      "All deal analyses are being regenerated in the background with the latest rules: above-market rent is a roll-down risk, never upside; the write-up's numbers must match the deal's own figures; office users like IWG don't count as anchors; and no mention of pending sales. It runs as one discounted batch and the results land on their own, usually within a few hours. Until then, an above-market 'upside' item has already been moved to red flags, and a write-up figure that disagrees with the stored one shows up as a question to review.",
+    where: "Every deal page → Overview and AI Analysis",
+  },
+  {
     id: "2026-10-17-failed-upload-cleanup",
     date: "2026-10-17",
     category: "fixed",

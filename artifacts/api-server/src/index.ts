@@ -15,6 +15,7 @@ import { startSelfImproveScheduler } from "./lib/selfImprove";
 import { applyRecordedSales, addMissingProperties } from "./lib/recordedSales";
 import { purgePendingSaleData } from "./lib/pendingSale";
 import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
+import { startAnalysisAutoRefresh, sweepAnalysisGuardrails } from "./lib/analysisAutoRefresh";
 
 const rawPort = process.env["PORT"];
 
@@ -44,6 +45,11 @@ const server = app.listen(port, (err) => {
   runFailedUploadCleanup()
     .then(plan => { const acted = plan.filter(a => a.kind !== "keep").length; if (plan.length) logger.info({ acted, kept: plan.length - acted }, "Failed-upload cleanup done"); })
     .catch((err) => logger.error({ err }, "runFailedUploadCleanup failed on startup"));
+  sweepAnalysisGuardrails()
+    .then(n => { if (n) logger.info({ n }, "Applied write-up guardrails to stored analyses"); })
+    .catch((err) => logger.error({ err }, "sweepAnalysisGuardrails failed on startup"));
+  // One-time batch re-analysis of every deal for the v4 rules (Eric, 10/17/26).
+  startAnalysisAutoRefresh();
   purgePendingSaleData()
     .then(n => { if (n) logger.info({ n }, "Deleted stored pending-sale data"); })
     .catch((err) => logger.error({ err }, "purgePendingSaleData failed on startup"));
