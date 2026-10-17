@@ -36,3 +36,30 @@ describe("deal list view (10/17/26: GET /deals was 18 MB)", () => {
     expect(inc.taxParcels).toEqual([{ parcelId: "2" }]);
   });
 });
+
+describe("list view — tenant rows without null fields", () => {
+  // Shape of a real J.A.N.A.F. row (10/17/26): ~20 of 44 fields null.
+  const row = { name: "Goodwill", sf: 16211, rentPerSF: 12.25, annualRent: 198585, isAnchor: false, percentageRent: 0,
+    salesPSF: null, camCapPct: null, otherRent: null, salesNotes: null, creditRating: null, occupancyCost: null,
+    parentCompany: null, priorSalesPSF: null, percentageRentRate: null, remainingTermYears: null, screens: null,
+    assumptionNote: "Ground lease section of center.", rentSchedule: "2030-04-01: $13.48 PSF" };
+
+  it("drops only nulls — zeros, false and text survive", () => {
+    const out = toListView({ tenants: [row] }).tenants as Array<Record<string, unknown>>;
+    expect(out[0]).toEqual({ name: "Goodwill", sf: 16211, rentPerSF: 12.25, annualRent: 198585, isAnchor: false, percentageRent: 0,
+      assumptionNote: "Ground lease section of center.", rentSchedule: "2030-04-01: $13.48 PSF" });
+    for (const [k, v] of Object.entries(row)) if (v !== null) expect(out[0][k]).toEqual(v);
+  });
+
+  it("never changes the stored record it was built from", () => {
+    const stored = { tenants: [{ ...row }] };
+    toListView(stored);
+    expect(stored.tenants[0]).toEqual(row);
+  });
+
+  it("cuts the row size materially", () => {
+    const before = JSON.stringify(row).length;
+    const after = JSON.stringify((toListView({ tenants: [row] }).tenants as unknown[])[0]).length;
+    expect(after).toBeLessThan(before * 0.75);
+  });
+});

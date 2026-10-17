@@ -18,10 +18,24 @@ export const LIST_OMIT_KEYS = [
   "packageSources", "propertyHistory", "taxParcels", "customAmortSchedule", "prefSchedule",
 ] as const;
 
+// The roster stays in the list (58 library-wide readers), but each row carries ~20 null
+// fields out of ~44 (measured on J.A.N.A.F., 10/17/26). A null and an absent field read
+// the same everywhere — every reader uses `== null` / `??` / optional chaining (checked
+// both packages for `=== null` and key-presence tests on tenants) — so the list leaves
+// the nulls out. Nothing is lost on a save from a list copy: the stored row loses keys
+// that held null, which every reader already treats as "not captured".
+function withoutNulls(t: unknown): unknown {
+  if (!t || typeof t !== "object" || Array.isArray(t)) return t;
+  const o: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(t as Record<string, unknown>)) if (v !== null && v !== undefined) o[k] = v;
+  return o;
+}
+
 export function toListView(d: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...d };
   let dropped = false;
   for (const k of LIST_OMIT_KEYS) if (k in out) { delete out[k]; dropped = true; }
+  if (Array.isArray(out.tenants)) out.tenants = out.tenants.map(withoutNulls);
   if (dropped) out._summary = true;
   return out;
 }
