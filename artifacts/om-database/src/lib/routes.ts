@@ -5,7 +5,7 @@
 // rewrites every path to index.html, so any of these can be opened directly.
 
 export type RouteTab = "analyst" | "portfolio" | "analytics" | "comps";
-export type AnalyticsView = "portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning" | "dispositions";
+export type AnalyticsView = "portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning";
 export type RouteView =
   | { type: "list" }
   | { type: "detail"; dealId: string }
@@ -24,7 +24,6 @@ export interface RouteState { tab: RouteTab; analyticsView: AnalyticsView; view:
 const AV_SLUG: Record<AnalyticsView, string> = {
   portfolio: "portfolio", tenant: "tenants", watchlist: "watchlist", calendar: "critical-dates",
   marktomarket: "mtm", cotenancy: "co-tenancy", audit: "data-audit", feedback: "feedback", learning: "learning",
-  dispositions: "dispositions",
 };
 const SLUG_AV: Record<string, AnalyticsView> = Object.fromEntries(
   Object.entries(AV_SLUG).map(([k, v]) => [v, k as AnalyticsView]),

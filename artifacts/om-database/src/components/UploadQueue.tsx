@@ -165,9 +165,7 @@ function userOwnedFields(existing: Deal): Partial<Deal> {
     debtNotes: existing.debtNotes, marketSale: existing.marketSale,
     marketSaleChecked: existing.marketSaleChecked,
     marketDemographics: existing.marketDemographics, demoChecked: existing.demoChecked,
-    saleStage: existing.saleStage, saleExpectedClosing: existing.saleExpectedClosing,
-    saleDeposit: existing.saleDeposit, saleDepositStatus: existing.saleDepositStatus,
-    salePsaDate: existing.salePsaDate, saleDiligenceEnd: existing.saleDiligenceEnd, txnPortfolio: existing.txnPortfolio,
+    txnPortfolio: existing.txnPortfolio,
     aka: existing.aka, tenantsManual: existing.tenantsManual,
   };
   for (const f of Object.keys(existing.verified || {})) {

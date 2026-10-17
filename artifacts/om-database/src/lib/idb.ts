@@ -1109,14 +1109,8 @@ export interface Deal {
   txnSalePrice?: number | null;
   txnBuyer?: string | null;
   txnSaleDate?: string | null;      // the CLOSING date of KPR's sale — required for status "Sold"
-  // A property under contract to sell (or being marketed) is still OWNED until closing;
-  // this flag sits on top of the Owned status. Buyer / price reuse txnBuyer / txnSalePrice.
-  saleStage?: "Marketed" | "Under Contract" | null;
-  saleExpectedClosing?: string | null;
-  saleDeposit?: number | null;                                  // buyer's earnest money
-  saleDepositStatus?: "Refundable" | "Hard" | "Partially hard" | null;
-  salePsaDate?: string | null;                                  // PSA signed
-  saleDiligenceEnd?: string | null;                             // due-diligence period ends (deposit typically goes hard)
+  // txnSalePrice / txnBuyer / txnSaleDate describe a sale that has CLOSED only. Nothing
+  // about a pending or contemplated sale is ever stored (Eric, 10/17/26).
   txnBroker?: string | null;
   // Disposition
   dispExitCap?: number | null;

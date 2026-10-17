@@ -61,7 +61,6 @@ const ClosingCostEstimator = lazyWithReload(() => import("./components/ClosingCo
 const CriticalDates = lazyWithReload(() => import("./components/CriticalDates"));
 const MarkToMarket = lazyWithReload(() => import("./components/MarkToMarket"));
 const CoTenancyCascade = lazyWithReload(() => import("./components/CoTenancyCascade"));
-const Dispositions = lazyWithReload(() => import("./components/Dispositions"));
 const TenantView = lazyWithReload(() => import("./components/TenantView"));
 const TenantLink = lazyWithReload(() => import("./components/TenantLink"));
 const LenderView = lazyWithReload(() => import("./components/LenderView"));
@@ -225,7 +224,6 @@ function AppInner() {
     else if (dest === "critical-dates") setAnalyticsView("calendar");
     else if (dest === "mark-to-market") setAnalyticsView("marktomarket");
     else if (dest === "cotenancy-cascade") setAnalyticsView("cotenancy");
-    else if (dest === "dispositions") setAnalyticsView("dispositions");
     else if (dest === "data-audit") { setAuditFilterKey(null); setAnalyticsView("audit"); }
     else if (dest === "learning") setAnalyticsView("learning");
     else setAnalyticsView("tenant");
@@ -259,7 +257,7 @@ function AppInner() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
   const isPhone = useIsMobile();
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning" | "dispositions">(() => initialRoute?.analyticsView ?? "tenant");
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning">(() => initialRoute?.analyticsView ?? "tenant");
   // Keep the address bar in step with the screen. navigate() already pushed an entry
   // (just name it); a tab or analytics-page change pushes its own so Back returns to
   // it; a Back/Forward (popstate) changes nothing. Skipped until signed in, so the
@@ -671,8 +669,6 @@ function AppInner() {
                   <MarkToMarket deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "cotenancy" ? (
                   <CoTenancyCascade deals={activeDeals} onOpenDeal={handleOpenDeal} />
-                ) : analyticsView === "dispositions" ? (
-                  <Dispositions deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "audit" ? (
                   <DataAuditView deals={activeDeals} onOpenDeal={handleOpenDeal} initialFilterKey={auditFilterKey}
                     onMerge={ids => { setMergePreset(ids); resetToList(); setTab("portfolio"); }} />

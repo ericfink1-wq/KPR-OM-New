@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import SaleStagePill from "./SaleStagePill";
+import NoClosingDatePill from "./NoClosingDatePill";
 import { useIsMobile } from "../hooks/use-mobile";
 import { isNonAnchorUse } from "../lib/anchorUse";
-import { isClosingDate } from "../lib/saleStage";
+import { isClosingDate } from "../lib/closingDate";
 import type { Deal } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
@@ -773,7 +773,6 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       }
     }
     const patch: Record<string, unknown> = { [cfg.key]: finalVal };
-    if (cfg.key === "status" && finalVal === "Sold") patch.saleStage = null;
     for (const k of cfg.also || []) patch[k] = finalVal;
     const n = selected.size;
     for (const id of selected) onUpdate(id, patch as Partial<Deal>);
@@ -1356,7 +1355,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                   {loc && <div style={{ fontSize: 11.5, color: "#7d766a", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loc}</div>}
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 5 }}>
                     <StatusTag status={d.status} size="sm" />
-                    {((d.saleStage && d.status === "Owned") || (d.status === "Sold" && !isClosingDate(d.txnSaleDate))) && <SaleStagePill deal={d} size="sm" />}
+                    <NoClosingDatePill deal={d} size="sm" />
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 6, marginTop: 7 }}>
                     {stat("NOI", fmtPriceShort(d.noi))}
@@ -1478,7 +1477,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       </td>
                       <td style={{ padding: "8px 10px" }}>
                         <StatusTag status={d.status} size="sm" />
-                        {((d.saleStage && d.status === "Owned") || (d.status === "Sold" && !isClosingDate(d.txnSaleDate))) && <div style={{ marginTop: 3 }}><SaleStagePill deal={d} size="sm" /></div>}
+                        {d.status === "Sold" && !isClosingDate(d.txnSaleDate) && <div style={{ marginTop: 3 }}><NoClosingDatePill deal={d} size="sm" /></div>}
                       </td>
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{cityOnly(d.city, d.state)}</td>
                       <td style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>

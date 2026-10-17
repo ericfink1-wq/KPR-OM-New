@@ -5,8 +5,8 @@
 // filter: some counted Sold as owned, some counted deleted deals, none de-duplicated).
 //
 // Rules:
-//  • status === "Owned" only. A property under contract to SELL is still Owned (it
-//    carries saleStage on top); it becomes Sold only once the sale has CLOSED.
+//  • status === "Owned" only. A property stays Owned until its sale CLOSES (nothing about
+//    a pending sale is recorded); then it becomes Sold.
 //  • Deleted (trashed) deals never count.
 //  • One record per PROPERTY: same name + (same address, same GLA+state, or same
 //    state) collapses to the most complete record (most tenants, then most recent).

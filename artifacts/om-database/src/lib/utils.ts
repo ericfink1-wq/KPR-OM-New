@@ -1729,9 +1729,9 @@ export function buildSystemPrompt(
     // Pref equity
     if (nz(d.prefAmount)) k.prefAmount = d.prefAmount;
     if (nz(d.prefRateCurrent)) k.prefPayRate = d.prefRateCurrent;
-    // Disposition (Sold)
-    if (nz(d.txnSalePrice)) k.kprSalePrice = d.txnSalePrice;
-    if (nz(d.txnSaleDate)) k.kprSaleDate = d.txnSaleDate;
+    // Disposition — a CLOSED sale only. Nothing about a pending sale is ever passed on.
+    if (d.status === "Sold" && nz(d.txnSalePrice)) k.kprSalePrice = d.txnSalePrice;
+    if (d.status === "Sold" && nz(d.txnSaleDate)) k.kprSaleDate = d.txnSaleDate;
     return Object.keys(k).length ? k : undefined;
   };
 
@@ -1838,6 +1838,7 @@ export function buildSystemPrompt(
       if (DEAL_OMIT.has(k)) continue;
       if (lean && PASSED_HEAVY_OMIT.has(k)) continue;
       if (/^(acq|debt|pref|txn|disp)/.test(k)) continue; // KPR economics → consolidated in `kpr`
+      if (/^sale(Stage|Expected|Deposit|Psa|Diligence)/.test(k)) continue; // legacy pending-sale keys — never shown
       if (has(v)) o[k] = v;
     }
     return o;
@@ -1935,13 +1936,11 @@ export function buildSystemPrompt(
   const ownedList = getOwnedProperties(active as Deal[]);
   const money = (v: unknown) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? (x >= 1e6 ? `$${(x / 1e6).toFixed(1).replace(/\.0$/, "")}M` : `$${Math.round(x).toLocaleString()}`) : null; };
   const nm = (d: Deal) => d.propertyName || d.fileName || d.id;
-  const selling = ownedList.filter(d => d.saleStage);
   const soldClosed = active.filter(d => d.status === "Sold" && /\d{4}-\d{2}-\d{2}/.test(String(d.txnSaleDate || "")));
   const soldNoDate = active.filter(d => d.status === "Sold" && !/\d{4}-\d{2}-\d{2}/.test(String(d.txnSaleDate || "")));
   const buying = active.filter(d => d.status === "Under Contract");
   const statusRoster = [
     `OWNED (${ownedList.length}, each property once): ${ownedList.map(nm).join("; ") || "none"}`,
-    `OWNED — BEING SOLD (still owned; sale NOT closed) (${selling.length}): ${selling.map(d => [nm(d), d.saleStage, d.txnBuyer ? `buyer ${d.txnBuyer}` : null, money(d.txnSalePrice), d.saleExpectedClosing ? `expected closing ${d.saleExpectedClosing}` : null].filter(Boolean).join(" · ")).join("; ") || "none"}`,
     `SOLD — CLOSED (${soldClosed.length}): ${soldClosed.map(d => [nm(d), `closed ${String(d.txnSaleDate).slice(0, 10)}`, money(d.txnSalePrice), d.txnBuyer ? `buyer ${d.txnBuyer}` : null].filter(Boolean).join(" · ")).join("; ") || "none"}`,
     soldNoDate.length ? `MARKED SOLD BUT NO CLOSING DATE ON FILE (unconfirmed — say so; do not count as closed) (${soldNoDate.length}): ${soldNoDate.map(nm).join("; ")}` : null,
     `UNDER CONTRACT TO BUY (KPR acquiring, not yet owned) (${buying.length}): ${buying.map(nm).join("; ") || "none"}`,
@@ -2100,7 +2099,8 @@ ${JSON.stringify(absOut)}`;
 Every deal has a "status". It is critical you interpret these correctly:
 - "Owned"          → KPR ACTUALLY OWNS this. These ${ownedCount} deal(s) ARE the "KPR portfolio" / "our centers" / "our properties" / "what we own".
 - "Under Contract" → KPR is acquiring it (in progress), not yet owned.
-- "Sold"           → KPR previously owned it and has since sold it (realized/exited).
+- "Sold"           → KPR previously owned it and the sale has CLOSED (realized/exited).
+- PENDING SALES DO NOT EXIST HERE: an Owned property is simply Owned until its sale closes. Never say an owned property is being sold, marketed, under contract to sell, or has a buyer/price/expected closing, and never speculate about a contemplated sale — even if old narrative text hints at one.
 - "Prospect"       → A deal KPR is evaluating or has read an OM on. NOT owned. This is pipeline / the broader database.
 - "Passed"         → KPR looked at it and declined. NOT owned. Kept only as market intelligence / comps.
 

@@ -24,7 +24,7 @@ const SEARCH_SHORTCUT_LABEL = IS_MAC ? "⌘K" : "Ctrl+K";
 // The two analytics menus, split back out into separate top-nav dropdowns
 // (Portfolio Analytics ▾ / Tenant Analytics ▾).
 export const ANALYTICS_GROUPS: Record<"portfolio" | "tenant", [string, string][]> = {
-  portfolio: [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"], ["Critical Dates", "critical-dates"], ["Co-Tenancy Cascade", "cotenancy-cascade"], ["Dispositions", "dispositions"], ["Data Audit", "data-audit"], ["Learning", "learning"]],
+  portfolio: [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"], ["Critical Dates", "critical-dates"], ["Co-Tenancy Cascade", "cotenancy-cascade"], ["Data Audit", "data-audit"], ["Learning", "learning"]],
   tenant: [["Tenant Analytics", "tenant-list"], ["Mark-to-Market", "mark-to-market"], ["Retailer Watchlist", "watchlist"], ["Tenant Name Audit", "tenant-audit"], ["Link Tenants", "link-tenants"]],
 };
 

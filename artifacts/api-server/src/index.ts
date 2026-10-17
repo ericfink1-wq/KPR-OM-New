@@ -13,6 +13,7 @@ import { ensureHouseViewTable } from "./lib/houseView";
 import { ensureMcpKeysTable } from "./lib/mcpKeys";
 import { startSelfImproveScheduler } from "./lib/selfImprove";
 import { applyRecordedSales } from "./lib/recordedSales";
+import { purgePendingSaleData } from "./lib/pendingSale";
 
 const rawPort = process.env["PORT"];
 
@@ -37,6 +38,9 @@ const server = app.listen(port, (err) => {
   // mistake recurs across many deals. Best-effort; never blocks startup.
   startSelfImproveScheduler();
   // Fill in closing dates/buyers Eric confirmed for already-Sold owned centers (fill-blanks only).
+  purgePendingSaleData()
+    .then(n => { if (n) logger.info({ n }, "Deleted stored pending-sale data"); })
+    .catch((err) => logger.error({ err }, "purgePendingSaleData failed on startup"));
   applyRecordedSales()
     .then(n => { if (n) logger.info({ n }, "Recorded confirmed sale closings"); })
     .catch((err) => logger.error({ err }, "applyRecordedSales failed on startup"));

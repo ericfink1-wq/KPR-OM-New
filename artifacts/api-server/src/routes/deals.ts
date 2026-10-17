@@ -208,8 +208,6 @@ const USER_PRESERVED_KEYS = new Set([
   "userNotes", "dealThesis", "dealReview",
   "txnPurchasePrice", "txnSeller", "txnLoiDate", "txnCloseDate",
   "txnSalePrice", "txnBuyer", "txnSaleDate", "txnBroker", "txnPortfolio",
-  // Sale in progress on an Owned asset (stays Owned until closing).
-  "saleStage", "saleExpectedClosing", "saleDeposit", "saleDepositStatus", "salePsaDate", "saleDiligenceEnd",
   "acqCapRate", "acqNOIAtClose", "acqEntity", "acqBroker", "acqContractDate", "acqDDExpiration",
   "acqDeposit", "acqClosingCosts", "acqFee", "acqTitleCo", "acqCounsel", "acqPropManager",
   "acqStrategy", "acqHoldPeriod", "acqTargetIRR", "acqNotes",
@@ -553,7 +551,7 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     // Capture the prior "Our Take" so we only re-learn the House View when it changes.
     const prevRows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
     // A property is SOLD only once the sale has CLOSED (Eric, 10/16/26). Until then it
-    // stays Owned with a saleStage on top. So becoming Sold requires a real closing date.
+    // simply stays Owned. So becoming Sold requires a real closing date.
     const prevStatus = (prevRows[0]?.data as Record<string, unknown> | undefined)?.status;
     if (rest.status === "Sold" && prevStatus !== "Sold" && !isClosingDate(rest.txnSaleDate)) {
       res.status(400).json({ error: "A deal can only be marked Sold once the sale has closed. Enter the closing date (Sale Date, YYYY-MM-DD) first; until then keep it Owned and set its Sale stage." });

@@ -12,6 +12,7 @@
 // action, and the same logic powers the one-click "scrub everything" sweep over legacy
 // deals.
 
+import { stripPendingSaleData } from "./pendingSale";
 import { applyImportFixes } from "./importFixes";
 import { applyAnalysisGuardrails } from "./analysisGuardrails";
 import { auditExtraction, AUDIT_ID_PREFIX } from "./extractionAudit";
@@ -78,6 +79,8 @@ export function ensurePropertyName(data: Record<string, unknown>): boolean {
 
 export function autoMaintainDealData(input: Record<string, unknown>): MaintainResult {
   ensurePropertyName(input);
+  // No pending-sale data, ever (Eric, 10/17/26) — stripped on every write.
+  const saleStripped = stripPendingSaleData(input).length > 0;
   // AI write-up guardrails: above-market "upside" → red flag; quoted % vs stored fields.
   try { applyAnalysisGuardrails(input, input); } catch { /* never block a save */ }
   const fix = applyImportFixes(input);
@@ -88,7 +91,7 @@ export function autoMaintainDealData(input: Record<string, unknown>): MaintainRe
   if (auditChanged) data.reviewQuestions = questions;
   return {
     data,
-    changed: fix.changed || auditChanged,
+    changed: fix.changed || auditChanged || saleStripped,
     occCostFixed: fix.occCostFixed,
     dupeFixed: fix.dupeFixed,
     metricFixes: fix.metricFixes,

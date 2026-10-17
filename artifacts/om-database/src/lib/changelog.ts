@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-no-pending-sales",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Sales are recorded only once they close",
+    detail:
+      "The sale-stage flag, the Dispositions page and the pending-sale fields (buyer, price, deposit, PSA, diligence and expected closing on an owned property) are gone, and the data that was in them has been deleted. An owned property simply stays Owned until the sale closes; then mark it Sold with the closing date, price and buyer. The Analyst chat and the AI write-ups no longer mention pending sales.",
+    where: "Deal page → status tag and Transaction tab",
+  },
+  {
     id: "2026-10-17-webp-thumbs",
     date: "2026-10-17",
     category: "improved",
@@ -96,10 +105,10 @@ export const CHANGELOG: ChangeEntry[] = [
     id: "2026-10-17-dispositions-risk",
     date: "2026-10-17",
     category: "new",
-    title: "Dispositions page, plus owned-portfolio risk cards",
+    title: "Owned-portfolio risk cards",
     detail:
-      "A new Dispositions page lists every owned property KPR is selling, with stage, buyer, price and price per SF, the buyer's deposit and whether it's refundable or hard, and the PSA, diligence and expected closing dates. It flags a diligence deadline within two weeks, a closing within 30 days, and a closing date that has passed without the deal being marked Sold. Sales closed in the last 12 months are listed underneath. Enter the new deposit and date fields on a deal's Transaction tab. The home page and the Owned view of Portfolio Analytics now show two cards: how much owned rent is with tenants on the retailer watchlist, and, for each owned center, the rent at risk if its key anchor goes dark (co-tenancy clauses that trip on that anchor alone).",
-    where: "Analytics → Portfolio → Dispositions; Analyst home; Portfolio Analytics → Owned",
+      "The Owned view of Portfolio Analytics now shows two cards: how much owned rent is with tenants on the retailer watchlist, and, for each owned center, the rent at risk if its key anchor goes dark (co-tenancy clauses that trip on that anchor alone).",
+    where: "Portfolio Analytics → Owned",
   },
   {
     id: "2026-10-17-layout-pass",
@@ -214,10 +223,10 @@ export const CHANGELOG: ChangeEntry[] = [
     id: "2026-10-17-sale-stage",
     date: "2026-10-17",
     category: "new",
-    title: "Under-contract sales stay Owned, with a sale flag",
+    title: "Sold means closed",
     detail:
-      "A property KPR is selling now stays Owned, and keeps counting in every owned total, until the sale closes. Set its Sale Stage (Marketed or Under Contract), buyer, price and expected closing on the Transaction tab, and a pill appears next to the Owned tag, e.g. 'Under contract · Wharton · $39M · closing Jan '27'. Marking a deal Sold now asks for the closing date and won't save without one. Any deal already marked Sold with no closing date shows a red 'no closing date' flag. On the Comps page, KPR's own trades are now tagged KPR BUY or KPR SALE instead of OWNED.",
-    where: "Deal page → status tag and Transaction tab; Deal Library; Comps",
+      "A property stays Owned, and keeps counting in every owned total, until its sale closes. Marking a deal Sold now asks for the closing date and won't save without one. Any deal already marked Sold with no closing date shows a red 'no closing date' flag. On the Comps page, KPR's own trades are now tagged KPR BUY or KPR SALE instead of OWNED.",
+    where: "Deal page → status tag; Deal Library; Comps",
   },
   {
     id: "2026-10-17-ig-and-brand-names",

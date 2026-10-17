@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "rea
 import MarkSoldDialog from "./MarkSoldDialog";
 import CompScatter from "./CompScatter";
 import { isNonAnchorUse } from "../lib/anchorUse";
-import SaleStagePill from "./SaleStagePill";
-import { isClosingDate } from "../lib/saleStage";
+import NoClosingDatePill from "./NoClosingDatePill";
+import { isClosingDate } from "../lib/closingDate";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
@@ -2726,7 +2726,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {markSoldOpen && (
         <MarkSoldDialog deal={d}
           onConfirm={patch => { setMarkSoldOpen(false); onUpdate(d.id, patch); }}
-          onKeepOwned={() => { setMarkSoldOpen(false); onUpdate(d.id, { status: "Owned", saleStage: "Under Contract" }); setTab("transaction"); }}
           onCancel={() => setMarkSoldOpen(false)} />
       )}
       <AddIntelModal deal={d} open={intelOpen} onClose={() => setIntelOpen(false)} onApply={patch => onUpdate(d.id, patch)} />
@@ -2739,9 +2738,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             <StatusTag status={d.status} onChange={s => {
               // Sold = the sale has CLOSED. Without a closing date, ask first.
               if (s === "Sold" && d.status !== "Sold" && !isClosingDate(d.txnSaleDate)) { setMarkSoldOpen(true); return; }
-              onUpdate(d.id, s === "Sold" ? { status: s, saleStage: null } : { status: s });
+              onUpdate(d.id, { status: s });
             }}/>
-            <SaleStagePill deal={d} />
+            <NoClosingDatePill deal={d} />
             <ScoreBadge score={adjustedScore} size={12}/>
             <RecencyBadge deal={d}/>
             {(() => {
@@ -3776,14 +3775,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               </div>
             )}
 
-            {/* Disposition — collapsed behind a toggle, auto-expanded when Sold */}
-            <DispositionSection sold={sold || !!d.saleStage}>
-            {!sold && d.status === "Owned" && (
-              <div style={{ fontSize:12, lineHeight:1.5, color:"#7d766a", marginBottom:10 }}>
-                Selling this property? Set the <strong>Sale Stage</strong> here — it stays <strong>Owned</strong> (and in every owned total) until the sale closes. Change the status to Sold once there's a closing date.
-              </div>
-            )}
-            {sold && (() => {
+            {/* Disposition — only for a sale that has CLOSED (status Sold). Nothing about a
+                pending sale is recorded anywhere (Eric, 10/17/26). */}
+            {sold && <DispositionSection sold>
+            {(() => {
               const req: [string, unknown][] = [["Sale price", d.txnSalePrice],["Buyer", d.txnBuyer],["Sale date", d.txnSaleDate],["Exit cap", d.dispExitCap]];
               const missing = req.filter(([,v]) => v == null || v === "");
               const filled  = req.length - missing.length, pct = Math.round((filled/req.length)*100), done = missing.length === 0;
@@ -3803,22 +3798,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             })()}
 
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
-              {!sold && tf({ label:"Sale Stage", field:"saleStage", options:["Marketed","Under Contract"] })}
-              {tf({ label: sold ? "Sale Price" : "Sale / Contract Price", field:"txnSalePrice", placeholder:"e.g. 54,000,000", prefix:"$" })}
-              {tf({ label: sold ? "Sold To (Buyer)" : "Buyer", field:"txnBuyer", placeholder:"Buyer entity / name" })}
-              {!sold && tf({ label:"PSA Signed", field:"salePsaDate", placeholder:"YYYY-MM-DD" })}
-              {!sold && tf({ label:"Diligence Ends", field:"saleDiligenceEnd", placeholder:"YYYY-MM-DD" })}
-              {!sold && tf({ label:"Expected Closing", field:"saleExpectedClosing", placeholder:"YYYY-MM-DD" })}
-              {!sold && tf({ label:"Buyer Deposit", field:"saleDeposit", placeholder:"e.g. 1,500,000", prefix:"$" })}
-              {!sold && tf({ label:"Deposit Status", field:"saleDepositStatus", options:["Refundable","Hard","Partially hard"] })}
-              {tf({ label: sold ? "Closing Date" : "Closing Date (once closed)", field:"txnSaleDate", placeholder:"YYYY-MM-DD" })}
+              {tf({ label:"Sale Price", field:"txnSalePrice", placeholder:"e.g. 54,000,000", prefix:"$" })}
+              {tf({ label:"Sold To (Buyer)", field:"txnBuyer", placeholder:"Buyer entity / name" })}
+              {tf({ label:"Closing Date", field:"txnSaleDate", placeholder:"YYYY-MM-DD" })}
               {tf({ label:"Disposition Broker", field:"txnBroker", placeholder:"firm representing the sale" })}
-              {sold && <>
-                {tf({ label:"Exit Cap Rate", field:"dispExitCap", placeholder:"e.g. 5.75", suffix:"%" })}
-                {tf({ label:"Selling Costs", field:"dispCosts", placeholder:"commission, legal, transfer", prefix:"$" })}
-                {tf({ label:"Loan Payoff at Sale", field:"dispLoanPayoff", placeholder:"outstanding balance repaid", prefix:"$" })}
-                {tf({ label:"Disposition Notes", field:"dispNotes", placeholder:"rationale, terms, buyer profile", wide:true })}
-              </>}
+              {tf({ label:"Exit Cap Rate", field:"dispExitCap", placeholder:"e.g. 5.75", suffix:"%" })}
+              {tf({ label:"Selling Costs", field:"dispCosts", placeholder:"commission, legal, transfer", prefix:"$" })}
+              {tf({ label:"Loan Payoff at Sale", field:"dispLoanPayoff", placeholder:"outstanding balance repaid", prefix:"$" })}
+              {tf({ label:"Disposition Notes", field:"dispNotes", placeholder:"rationale, terms, buyer profile", wide:true })}
             </div>
 
             {gain != null && (
@@ -3826,7 +3813,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Realized Gain / (Loss)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:gain>=0?"#0f9d63":"#dc2626" }}>{gain>=0?"":"-"}${Math.abs(gain).toLocaleString()}</div></div>
               </div>
             )}
-            </DispositionSection>
+            </DispositionSection>}
           </div>
         );
       })()}

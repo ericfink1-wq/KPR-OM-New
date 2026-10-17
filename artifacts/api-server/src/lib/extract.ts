@@ -691,6 +691,8 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
 // re-reading a stale OM. Returns ONLY the analytical fields; never touches tenants.
 const ROSTER_ANALYSIS_PROMPT = `You are an expert real estate investment analyst. You are given the CURRENT, verified data for a single retail property — its live tenant roster and key financials. Regenerate ONLY the analytical narrative fields, based STRICTLY on the data provided. Do NOT invent tenants, sales, cap rates, or figures that are not present in the data. If a value is null/absent, do not fabricate it.
 
+NO PENDING SALES: never say or imply that KPR is selling, marketing, or has put under contract to sell this property, and never mention a prospective buyer, contract price or expected closing for it — KPR records a sale only once it has closed. Analyze the property as it stands.
+
 Return ONLY a single valid JSON object with EXACTLY these keys and nothing else:
 {
   "notes": "5-8 sentence institutional underwriting narrative covering: (1) what the asset is and why the location matters, (2) anchor tenant quality and lease profile, (3) inline tenant mix and credit quality, (4) key lease metrics (WALT, occupancy, rent PSF), (5) the primary investment thesis (cash-flow, mark-to-market, value-add, or development), (6) the most important risk or watch item. Specific and data-driven using the numbers provided; no generic filler; do not just restate the tenant list. Wrap the MOST IMPORTANT figures and phrases in **double asterisks** for bold emphasis (key metrics, lead anchor, core thesis, top risk) — selectively, a handful per narrative.",
