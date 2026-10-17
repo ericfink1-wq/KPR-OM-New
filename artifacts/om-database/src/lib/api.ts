@@ -577,6 +577,7 @@ async function putImageRaw(id: string, field: "cover" | "coverThumb" | "sitePlan
 }
 
 export async function apiSaveImages(id: string, bundle: ImageBundle): Promise<void> {
+  invalidateRead(`images:${id}`);
   // Save in isolated requests, smallest/most-important first (cover, then site plan,
   // then pagePicks), and CAP each image's size so the request body can't exceed the
   // platform proxy's limit (which was silently dropping the upload before it ever
@@ -626,13 +627,32 @@ export async function apiSetCoverThumb(id: string, coverThumb: string): Promise<
   await apiFetch(`/deals/${id}/cover-thumb`, { method: "PUT", body: JSON.stringify({ coverThumb }) });
 }
 
+// Shared read cache: several components ask for the same thing at once (the home chat
+// and the chat drawer both load lease abstracts, comps and benchmarks; the deal page and
+// its cards both load images). One request in flight, reused for a short window.
+const readCache = new Map<string, { at: number; p: Promise<unknown> }>();
+export function cachedRead<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
+  const hit = readCache.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.p as Promise<T>;
+  const p = load();
+  readCache.set(key, { at: Date.now(), p });
+  p.catch(() => readCache.delete(key));
+  return p;
+}
+export function invalidateRead(prefix: string): void {
+  for (const k of [...readCache.keys()]) if (k.startsWith(prefix)) readCache.delete(k);
+}
+
 export async function apiLoadImages(id: string): Promise<ImageBundle | null> {
-  const resp = await apiFetch(`/deals/${id}/images`);
-  if (!resp.ok) {
-    reportClientError(`apiLoadImages failed: HTTP ${resp.status}`, `deal ${id}`);
-    return null;
-  }
-  return resp.json() as Promise<ImageBundle | null>;
+  return cachedRead(`images:${id}`, 60_000, async () => {
+    const resp = await apiFetch(`/deals/${id}/images`);
+    if (!resp.ok) {
+      reportClientError(`apiLoadImages failed: HTTP ${resp.status}`, `deal ${id}`);
+      readCache.delete(`images:${id}`);
+      return null;
+    }
+    return resp.json() as Promise<ImageBundle | null>;
+  });
 }
 
 // --- Async ingest ---
@@ -990,6 +1010,9 @@ export async function apiListLeaseAbstracts(dealId: string): Promise<LeaseAbstra
 // Every abstract across the library (for the Analyst chat's lease-level recall).
 // Returns [] on any failure so the chat never breaks.
 export async function apiListAllLeaseAbstracts(): Promise<LeaseAbstract[]> {
+  return cachedRead("lease-abstracts:all", 5 * 60_000, apiListAllLeaseAbstractsUncached);
+}
+async function apiListAllLeaseAbstractsUncached(): Promise<LeaseAbstract[]> {
   try {
     const resp = await apiFetch(`/lease-abstracts`);
     if (!resp.ok) return [];
@@ -1001,6 +1024,9 @@ export async function apiListAllLeaseAbstracts(): Promise<LeaseAbstract[]> {
 
 // Whole comps_index table — used to build the analyst's comp-benchmark summary.
 export async function apiLoadComps(): Promise<CompInput[]> {
+  return cachedRead("comps:all", 5 * 60_000, apiLoadCompsUncached);
+}
+async function apiLoadCompsUncached(): Promise<CompInput[]> {
   try {
     const resp = await apiFetch(`/comps`);
     if (!resp.ok) return [];
@@ -1025,6 +1051,9 @@ export interface AnalystTenantBenchmark {
   confidence: "high" | "medium" | "low" | string;
 }
 export async function apiLoadTenantBenchmarks(): Promise<AnalystTenantBenchmark[]> {
+  return cachedRead("tenant-benchmarks", 5 * 60_000, apiLoadTenantBenchmarksUncached);
+}
+async function apiLoadTenantBenchmarksUncached(): Promise<AnalystTenantBenchmark[]> {
   try {
     const resp = await apiFetch(`/analytics/tenant-benchmarks`);
     if (!resp.ok) return [];
@@ -1051,6 +1080,7 @@ export async function apiSaveLeaseAbstract(
   dealId: string,
   abstract: LeaseAbstract,
 ): Promise<{ ok: boolean; id?: string; version?: number; error?: string }> {
+  invalidateRead("lease-abstracts:");
   try {
     const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/lease-abstracts`, {
       method: "POST",
@@ -1068,6 +1098,7 @@ export async function apiSaveLeaseAbstract(
 
 // Delete an abstract (admin only on the server).
 export async function apiDeleteLeaseAbstract(id: string): Promise<{ ok: boolean; error?: string }> {
+  invalidateRead("lease-abstracts:");
   try {
     const resp = await apiFetch(`/lease-abstracts/${encodeURIComponent(id)}`, { method: "DELETE" });
     if (!resp.ok) {
@@ -1085,6 +1116,7 @@ export async function apiBulkSaveLeaseAbstracts(
   dealId: string,
   abstracts: LeaseAbstract[],
 ): Promise<{ ok: boolean; saved?: number; skipped?: string[]; error?: string }> {
+  invalidateRead("lease-abstracts:");
   try {
     const resp = await apiFetch(`/deals/${encodeURIComponent(dealId)}/lease-abstracts/bulk`, {
       method: "POST",

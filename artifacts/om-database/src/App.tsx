@@ -343,7 +343,9 @@ function AppInner() {
           return deal;
         });
         setDeals(patched);
-        apiCreateSnapshot("auto").catch(() => {});
+        // Daily safety backup — off the start-up path (the server copies every deal, so
+        // it competed with the first screen's own requests). Throttled to once a day.
+        setTimeout(() => { apiCreateSnapshot("auto").catch(() => {}); }, 20_000);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));

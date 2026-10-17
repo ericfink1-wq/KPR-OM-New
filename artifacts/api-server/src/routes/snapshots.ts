@@ -66,9 +66,23 @@ export async function createSnapshot(
 }
 
 // POST /api/snapshots
+// One automatic snapshot at a time: two tabs opening at once used to each copy the
+// whole database (~8s apiece) on the same process that serves everyone else.
+let autoInFlight: Promise<unknown> | null = null;
+
 router.post("/snapshots", requireAuth, async (req, res) => {
   try {
     const reason = (req.body as { reason?: string }).reason ?? "manual";
+    if (reason === "auto") {
+      // Answer immediately; the copy runs in the background (it's a safety net, nobody waits on it).
+      if (!autoInFlight) {
+        autoInFlight = createSnapshot("auto")
+          .catch(err => req.log.error({ err }, "Auto snapshot failed"))
+          .finally(() => { autoInFlight = null; });
+      }
+      res.json({ queued: true });
+      return;
+    }
     const result = await createSnapshot(reason);
     res.json(result);
   } catch (err) {

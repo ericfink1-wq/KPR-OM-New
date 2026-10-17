@@ -71,10 +71,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [uploadFails, setUploadFails] = useState(0);
   useEffect(() => {
     if (!isAdmin) return;
-    // Automatic backup: take a periodic snapshot whenever an admin opens the app.
-    // The server throttles "auto" snapshots to once a day and keeps the 30 most
-    // recent, so this is a safe set-and-forget backup that needs no scheduling.
-    apiCreateSnapshot("auto").catch(() => { /* best-effort */ });
+    // (The daily automatic backup is requested once, from App, after start-up — it used
+    // to be fired here too, so every admin load asked for it twice.)
     apiUploadLog().then(list => {
       let lastView = 0;
       try { lastView = Number(localStorage.getItem("uploadlog-last-view")) || 0; } catch { /* ignore */ }

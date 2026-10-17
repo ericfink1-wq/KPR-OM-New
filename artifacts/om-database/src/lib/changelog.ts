@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-fewer-requests",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Faster start-up",
+    detail:
+      "The app no longer asks the server for the same data twice when it opens: lease abstracts, comps, tenant benchmarks and deal photos are each loaded once and shared. The daily automatic backup now runs in the background shortly after you sign in, instead of slowing down the first screen.",
+    where: "Everywhere",
+  },
+  {
     id: "2026-10-17-fl-closing",
     date: "2026-10-17",
     category: "fixed",
