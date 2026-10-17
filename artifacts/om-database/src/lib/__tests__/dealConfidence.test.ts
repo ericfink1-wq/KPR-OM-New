@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { scoreDealConfidence } from "../dealConfidence";
 import type { Deal } from "../idb";
+import { ANALYSIS_VERSION } from "../constants";
 
 const base = (over: Partial<Deal>): Deal => ({ id: "d", propertyName: "Test", ...over } as Deal);
 
@@ -9,7 +10,7 @@ describe("scoreDealConfidence", () => {
     const d = base({
       address: "1 Main St", state: "OH", totalSF: 100000, occupancy: 95, noi: 2_000_000,
       walt: 7, weightedAvgRentPSF: 18, grossPotentialRent: 3_000_000,
-      omDate: "2026-01-01", tenantsAsOf: "2026-01-01", analysisVersion: 3, notes: "Solid center.",
+      omDate: "2026-01-01", tenantsAsOf: "2026-01-01", analysisVersion: ANALYSIS_VERSION, notes: "Solid center.",
       marketDemographics: { pop3mi: 80000 } as any, comparableSales: [{ salePrice: 1 }] as any,
       tenants: [
         { name: "Kroger", sf: 60000, annualRent: 600000, leaseExpiry: "2034-01-01" } as any,
