@@ -1014,12 +1014,29 @@ export async function apiRestoreSnapshot(
 
 // ── Today's Rates ────────────────────────────────────────────────────────────
 export interface RateRow { label: string; value: number | null; asOf: string | null; note?: string }
+export interface SwapCurveView {
+  kind: "dtcc-eod" | "dtcc-intraday" | "manual";
+  asOf: string; curveDate: string; source: string; enteredBy: string | null;
+  points: Array<{ tenor: number; rate: number; n?: number; nDay?: number; p25?: number; p75?: number; method?: string }>;
+  trades: number | null; tradesUsed: number | null;
+}
 export interface RatesPayload {
   treasuries: { rows: RateRow[]; asOf: string | null; source: string };
   sofr: { rows: RateRow[]; asOf: string | null; source: string };
   swaps: { rows: RateRow[]; asOf: string | null; source: string; spreadBps: number };
   tenYearMonthly?: Array<{ month: string; value: number }>;
+  swapCurve?: SwapCurveView | null;
+  termSwapCurve?: SwapCurveView | null;
+  swapHistory?: Array<{ month: string; y5: number | null; y10: number | null }>;
+  sofrOvernight?: { rate: number; date: string } | null;
   fetchedAt: string;
+}
+/** Paste today's swap curve (e.g. from Chatham); it shows until DTCC has newer trades. */
+export async function apiSaveSwapCurve(text: string, source: string): Promise<{ points: Array<{ tenor: number; rate: number }> }> {
+  const resp = await apiFetch("/rates/swap-curve", { method: "POST", body: JSON.stringify({ text, source }) });
+  const body = await resp.json().catch(() => ({})) as { error?: string; points?: Array<{ tenor: number; rate: number }> };
+  if (!resp.ok) throw new Error(body.error || "Couldn't save the curve");
+  return { points: body.points ?? [] };
 }
 export async function apiGetRates(refresh = false): Promise<RatesPayload> {
   const resp = await apiFetch(`/rates${refresh ? "?refresh=1" : ""}`);

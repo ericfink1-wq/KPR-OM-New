@@ -618,7 +618,8 @@ function AppInner() {
         onAdminChange={checkAuth}
         onAnalyticsNav={onAnalyticsNav}
         onOpenSearch={() => setSearchOpen(true)}
-        currentDeal={currentDeal ? { name: currentDeal.propertyName || currentDeal.fileName || "this deal", noi: currentDeal.noi != null ? Number(currentDeal.noi) : null } : null}
+        currentDeal={currentDeal ? { name: currentDeal.propertyName || currentDeal.fileName || "this deal", noi: currentDeal.noi != null ? Number(currentDeal.noi) : null,
+          price: currentDeal.txnPurchasePrice != null ? Number(currentDeal.txnPurchasePrice) : currentDeal.askingPrice != null ? Number(currentDeal.askingPrice) : null } : null}
       />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onNavigate={handleHelpNavigate} isAdmin={isAdmin} />
       <WhatsNewModal

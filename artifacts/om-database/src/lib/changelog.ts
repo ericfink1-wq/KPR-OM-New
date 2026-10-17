@@ -48,6 +48,22 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-dtcc-swap-curve",
+    date: "2026-10-17",
+    category: "new",
+    title: "Live SOFR swap curve from every reported swap trade",
+    detail: "SOFR swap rates (1, 2, 3, 5, 7, 10, 15 and 30 years) are now read straight off the swap trades reported to DTCC's public data — the median of the afternoon's trades at each term, with how many trades and their range. Checked against Chatham's 10/15 close, it came within about 1 basis point at every term. It updates through the trading day, keeps a 12-month history, and anyone can paste today's curve from Chatham, which is used until DTCC has newer trades. SOFR overnight now comes from the NY Fed.",
+    where: "Today's Rates",
+  },
+  {
+    id: "2026-10-17-loan-sizing",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Size a loan off any base rate, with every spread shown",
+    detail: "Pick the base rate (SOFR, 1-month Term SOFR, a SOFR swap or a Treasury), add the lender spread, a swap or credit premium and a stress cushion, and see the all-in rate with its breakdown. The loan is sized on DSCR, debt yield and loan-to-value, with the one that limits it highlighted, amortizing or interest-only. The open deal's NOI and price fill in automatically.",
+    where: "Today's Rates → Size a loan",
+  },
+  {
     id: "2026-10-17-refresh-background-tab",
     date: "2026-10-17",
     category: "fixed",

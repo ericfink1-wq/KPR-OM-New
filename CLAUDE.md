@@ -504,6 +504,27 @@ two own trades never merge) → `runCompDedupe` at startup, snapshot `before-com
 removed rows; MCP `library_overview.compDuplicates` reports the last merge. Mark-to-Market:
 `lib/mtmCount.ts` — n<5 shown but not counted in $, ≥50th percentile never below market.
 
+## SOFR SWAP CURVE FROM DTCC (10/17/26 — company-wide priority)
+`api-server lib/dtccSwaps.ts` (pure: CSV parse, trade filter, curve) + `lib/rateCurves.ts`
+(download/unzip with fflate, `rate_curves` table, refresh, manual override). Filter: NEWT ·
+USD · UPI Underlier contains SOFR (OIS/compound; "CME Term" kept as a separate Term-SOFR
+curve) · not package · fixed rate Leg1/Leg2 · spot-starting (eff −3…+7d) · tenor ±0.05y.
+Rate = median of the **1:00–4:30pm ET close window** (≥5 trades) → latest 3h → day, AFTER
+dropping prints >10 bp from the tenor's day median. MEASURED: 10/15 within 0.1–1.1 bp of
+Chatham at every tenor (plain day median was 0.3–1.6 bp; notional-weighting didn't help);
+without the outlier filter 10/16's 30Y read 4.649 vs a 4.788 day median. Term SOFR swaps are
+thin + mixed with all-in loan-hedge prints (7.5%) → anchored within 50 bp of the OIS curve,
+5-trade minimum per tenor. Tests run on the REAL 10/15 + 10/16 files (fixtures/*.csv.gz).
+Weekend/holiday EOD files exist with a handful of trades → only files with ≥5,000 rows count
+(`filesToBackfill`: newest full day + each of the last 12 months' last full day). Refresh is
+on-demand (GET /rates, the app's analysis tick, startup step, 15-min timer), throttled to
+10 min, time-boxed. Pasted curve (`POST /rates/swap-curve`, signed-in) wins until DTCC has a
+newer as-of. Payload: `swapCurve`, `termSwapCurve`, `swapHistory`, `sofrOvernight` (NY Fed);
+`swaps.rows` keep the "SOFR Swap – N Year" labels the prepay calc parses. Iron Hound now only
+supplies 1M Term SOFR spot. DTCC data = internal reference, labelled with trade counts.
+Loan sizing: `om-database lib/loanSizing.ts` (base options, all-in = base + spread + premium +
+cushion, min of DSCR/DY/LTV, IO) → RatesPanel.
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.

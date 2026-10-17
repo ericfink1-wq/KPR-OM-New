@@ -46,7 +46,7 @@ interface Props {
   onClosingCalc?: () => void;
   onOpenSearch?: () => void;
   /** The deal page that's open, if any — Today's Rates sizes a loan for it. */
-  currentDeal?: { name: string; noi: number | null } | null;
+  currentDeal?: { name: string; noi: number | null; price?: number | null } | null;
 }
 
 export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onWhatsNew, whatsNewCount = 0, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch, currentDeal }: Props) {

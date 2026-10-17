@@ -6,6 +6,7 @@
 //     API for them. If the scrape fails, SOFR falls back to the free NY Fed
 //     30-day average and swaps are omitted (better empty than wrong).
 import { fetchWithTimeout } from "./http";
+import { refreshSwapCurves, getSwapCurves, fetchSofrOvernight, type CurveView, type SwapCurvesPayload } from "./rateCurves";
 
 export interface RateRow {
   label: string;
@@ -20,7 +21,23 @@ export interface RatesPayload {
   /** 10-Yr Treasury at each month-end for the last 12 months (oldest first) — for the
    *  cap-rate-spread sparkline. Empty if Treasury's history couldn't be read. */
   tenYearMonthly?: Array<{ month: string; value: number }>;
+  /** SOFR swap curve read off DTCC-reported trades (or a pasted curve, when newer). */
+  swapCurve?: CurveView | null;
+  /** Swaps on 1-month CME Term SOFR, same method. */
+  termSwapCurve?: CurveView | null;
+  /** Month-end 5Y / 10Y SOFR swap for the last 12 months (oldest first). */
+  swapHistory?: SwapCurvesPayload["history"];
+  sofrOvernight?: { rate: number; date: string } | null;
   fetchedAt: string;          // ISO timestamp of this server fetch
+}
+
+const ET_TIME = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
+/** "SOFR swaps: median of 412 DTCC-reported trades, as of Oct 16, 4:29 PM ET" */
+export function curveSourceLabel(c: CurveView): string {
+  if (c.kind === "manual") return `SOFR swaps: pasted by ${c.enteredBy ?? "a user"} at ${ET_TIME(c.asOf)}${c.source ? ` (${c.source})` : ""} — used until DTCC has newer trades`;
+  const when = c.kind === "dtcc-intraday" ? `today so far, as of ${ET_TIME(c.asOf)}` : `close of ${c.curveDate}, as of ${ET_TIME(c.asOf)}`;
+  const window = c.kind === "dtcc-intraday" ? "latest trades" : "1:00–4:30pm ET trades";
+  return `SOFR swaps: median of ${c.tradesUsed ?? "?"} DTCC-reported trades (${window}; ${c.trades ?? "?"} that day), ${when}`;
 }
 
 // ── Iron Hound "Today's Market" board — its Vue app loads the rate rows from a
@@ -256,8 +273,12 @@ async function fetchSofr(): Promise<{ rows: RateRow[]; asOf: string | null }> {
   return { rows, asOf };
 }
 
-export async function fetchTodaysRates(): Promise<RatesPayload> {
-  const [tres, sofr, iron, hist] = await Promise.allSettled([fetchTreasuries(), fetchSofr(), fetchIronhound(), fetchTenYearMonthly()]);
+export async function fetchTodaysRates(force = false): Promise<RatesPayload> {
+  // Top up the DTCC curves (time-boxed, throttled) before reading them.
+  await refreshSwapCurves(15_000, force).catch(() => null);
+  const [tres, sofr, iron, hist, curves, overnight] = await Promise.allSettled([fetchTreasuries(), fetchSofr(), fetchIronhound(), fetchTenYearMonthly(), getSwapCurves(), fetchSofrOvernight()]);
+  const curvesV = curves.status === "fulfilled" ? curves.value : null;
+  const sofrOvernight = overnight.status === "fulfilled" ? overnight.value : null;
 
   const treasuries = tres.status === "fulfilled" ? tres.value : { rows: [] as RateRow[], asOf: null };
   const sofrData = sofr.status === "fulfilled" ? sofr.value : { rows: [] as RateRow[], asOf: null };
@@ -297,13 +318,25 @@ export async function fetchTodaysRates(): Promise<RatesPayload> {
   }
   if (iron2.swap5 != null) swapRows.push({ label: "SOFR Swap – 5 Year", value: iron2.swap5, asOf: iron2.asOf });
   if (iron2.swap10 != null) swapRows.push({ label: "SOFR Swap – 10 Year", value: iron2.swap10, asOf: iron2.asOf });
-  const swapsSource = swapRows.length ? "Iron Hound (3yr est. from Treasury curve)" : "Unavailable — no free live swap feed";
+  let swapsSource = swapRows.length ? "Iron Hound (3yr est. from Treasury curve)" : "Unavailable — no free live swap feed";
+  let swapsAsOf = iron2.asOf;
+  // DTCC-reported trades (or a newer pasted curve) replace the scraped board when present.
+  const curve = curvesV?.ois ?? null;
+  if (curve && curve.points.length) {
+    swapRows.length = 0;
+    for (const p of curve.points) swapRows.push({ label: `SOFR Swap – ${p.tenor} Year`, value: p.rate, asOf: curve.asOf,
+      note: p.n != null ? `${p.n} trades${p.p25 != null && p.p75 != null ? `, ${p.p25.toFixed(2)}–${p.p75.toFixed(2)}` : ""}` : undefined });
+    swapsSource = curveSourceLabel(curve);
+    swapsAsOf = curve.asOf;
+  }
+  if (sofrOvernight) sofrRows = [...sofrRows, { label: "SOFR (overnight)", value: sofrOvernight.rate, asOf: sofrOvernight.date }];
 
   return {
     treasuries: { rows: treasuries.rows, asOf: treasuries.asOf, source: "U.S. Treasury (par yield curve)" },
     sofr: { rows: sofrRows, asOf: sofrAsOf, source: sofrSource },
-    swaps: { rows: swapRows, asOf: iron2.asOf, source: swapsSource, spreadBps: 0 },
+    swaps: { rows: swapRows, asOf: swapsAsOf, source: swapsSource, spreadBps: 0 },
     tenYearMonthly: hist.status === "fulfilled" ? hist.value : [],
+    swapCurve: curve, termSwapCurve: curvesV?.term ?? null, swapHistory: curvesV?.history ?? [], sofrOvernight,
     fetchedAt: new Date().toISOString(),
   };
 }

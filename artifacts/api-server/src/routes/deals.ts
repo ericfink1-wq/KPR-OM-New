@@ -1498,6 +1498,9 @@ router.post("/analysis-refresh/tick", requireAuth, async (req, res) => {
   try {
     const { runAnalysisRefreshSlice, analysisRefreshStatus } = await import("../lib/analysisAutoRefresh");
     const tick = await runAnalysisRefreshSlice(req.log, 45_000);
+    // The open app pings this every couple of minutes — also keep the swap curve current
+    // (throttled to every 10 minutes inside; time-boxed).
+    await import("../lib/rateCurves").then(m => m.refreshSwapCurves(10_000)).catch(() => null);
     res.json({ tick, status: await analysisRefreshStatus() });
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "tick failed" }); }
 });

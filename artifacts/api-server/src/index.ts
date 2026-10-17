@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 import { runStartupSequence } from "./lib/startup";
+import { ensureRateCurvesTable, refreshSwapCurves } from "./lib/rateCurves";
 import { ensureUsersTable } from "./routes/auth";
 import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
@@ -63,6 +64,7 @@ const server = app.listen(port, (err) => {
     { name: "trace tables", run: () => ensureTraceTables() },
     { name: "house view table", run: () => ensureHouseViewTable() },
     { name: "mcp_api_keys table", run: () => ensureMcpKeysTable() },
+    { name: "rate_curves table", run: () => ensureRateCurvesTable() },
     // One-time / idempotent data jobs.
     { name: "failed-upload cleanup", run: () => runFailedUploadCleanup().then(plan => log("Failed-upload cleanup done")(plan.filter(a => a.kind !== "keep").length || null)) },
     { name: "write-up guardrails", run: () => sweepAnalysisGuardrails().then(log("Applied write-up guardrails to stored analyses")) },
@@ -74,7 +76,13 @@ const server = app.listen(port, (err) => {
     { name: "pending-sale purge", run: () => purgePendingSaleData().then(log("Deleted stored pending-sale data")) },
     { name: "missing properties", run: () => addMissingProperties().then(log("Added missing owned/sold properties")) },
     { name: "recorded sales", run: () => applyRecordedSales().then(log("Recorded confirmed sale closings")) },
+    // SOFR swap curves from DTCC (newest day + 12 month-ends for the sparkline). Last, and
+    // time-boxed: it downloads public files, so it never holds up the jobs above.
+    { name: "swap curves", run: () => refreshSwapCurves(60_000, true).then(r => log("Swap curves refreshed")(r.eodIngested || r.intradaySlices ? r : null)) },
   ], logger).then(() => {
+    // Every 15 minutes (only effective where the host keeps running between requests — on
+    // autoscale the rates request and the app's refresh step top it up instead).
+    setInterval(() => { void refreshSwapCurves(30_000); }, 15 * 60_000).unref?.();
     // Recurring work starts only once the one-time jobs are finished.
     startSelfImproveScheduler();
     startAnalysisAutoRefresh();
