@@ -4682,8 +4682,8 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   const [swapBusy, setSwapBusy] = useState(false);
   const [swapErr, setSwapErr] = useState<string | null>(null);
 
-  // Seed the market swap rate from the live SOFR SWAP curve in Today's Rates
-  // (Iron Hound 3/5/10-yr par swap rates — the actual rates swaps price off of),
+  // Seed the market swap rate from the live swap curve in Today's Rates (1M Term SOFR swaps
+  // by default; SOFR annual/annual for a Daily Simple SOFR swap),
   // interpolated to the remaining term, until the user types their bank's quote.
   // Breakage is brutally sensitive to this input: the locked fixed rate is all-in
   // (SOFR swap rate + credit spread), so we compare against the current swap rate
@@ -4700,12 +4700,17 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       const yrsLeft = Math.max(0, (term.getTime() - new Date(payoff).getTime()) / (365.25 * 864e5));
       const spread = (swap.floatingSpreadBps ?? 0) / 100;
 
-      // Pull (tenorYears, rate) points from the SOFR swap rows ("SOFR Swap – 3 Year",
-      // "… 3 Year (est.)", "… 5 Year", "… 10 Year") and interpolate to yrsLeft.
-      const swapPts = (r.swaps?.rows ?? [])
+      // KPR's swaps hedge 1M CME Term SOFR (Eric, 10/17/26 — "that's what my loans use"), so
+      // breakage is priced off the 1M TERM SOFR swap curve. A swap whose recorded index is
+      // Daily Simple / compounded SOFR (Overland/ONB) uses the SOFR (annual/annual) curve.
+      const idx = String(swap.floatingIndex ?? "");
+      const dailySofr = /daily|simple|compound|\bOIS\b/i.test(idx) && !/term/i.test(idx);
+      const termPts = (r.termSwapCurve?.points ?? []).map(p => [p.tenor, p.rate] as [number, number]);
+      // SOFR (annual/annual) rows: "SOFR Swap – 3 Year", "… 5 Year", "… 10 Year".
+      const oisPts = (r.swaps?.rows ?? [])
         .map(x => { const m = /(\d+)\s*Year/i.exec(x.label || ""); return m && x.value != null ? [Number(m[1]), x.value] as [number, number] : null; })
-        .filter((p): p is [number, number] => !!p)
-        .sort((a, b) => a[0] - b[0]);
+        .filter((p): p is [number, number] => !!p);
+      const swapPts = (!dailySofr && termPts.length >= 2 ? termPts : oisPts).sort((a, b) => a[0] - b[0]);
 
       const interp = (pts: [number, number][], t: number): number | null => {
         if (!pts.length) return null;
@@ -4729,7 +4734,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       if (mkt != null) setSwapRate(Math.round((mkt + spread) * 100) / 100);
     }).catch(() => {});
     return () => { alive = false; };
-  }, [swap?.terminationDate, swap?.floatingSpreadBps, payoff, swapRateTouched]);
+  }, [swap?.terminationDate, swap?.floatingSpreadBps, swap?.floatingIndex, payoff, swapRateTouched]);
 
   const importSwap = async (file: File) => {
     setSwapBusy(true); setSwapErr(null);
@@ -4980,7 +4985,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
                 style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
             </label>
             <div style={{ fontSize:10, color:"#bcae97", maxWidth:300, lineHeight:1.5 }}>
-              All-in rate (current SOFR swap rate for your remaining term + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from the live SOFR swap curve in Today's Rates — replace with your bank's actual quote for a tighter estimate. Breakage is very rate-sensitive, so a few bps here moves the number a lot.
+              All-in rate (current {/daily|simple|compound|\bOIS\b/i.test(swap.floatingIndex ?? "") && !/term/i.test(swap.floatingIndex ?? "") ? "SOFR (annual/annual)" : "1M Term SOFR"} swap rate for your remaining term + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from the live swap curve in Today's Rates — replace with your bank's actual quote for a tighter estimate. Breakage is very rate-sensitive, so a few bps here moves the number a lot.
             </div>
           </div>
 
