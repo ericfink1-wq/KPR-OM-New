@@ -5,6 +5,7 @@
 // leads with the defensive/discretionary read an IC cares about.
 
 import type { Deal, Tenant } from "./idb";
+import { isAnchorUse } from "./anchorUse";
 import { isVacant, isNAPTenant, tenantKey } from "./utils";
 import { analyzeCenterMix } from "./retailCategory";
 import { isInvestmentGrade } from "./tenantCredit";
@@ -123,7 +124,7 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
   if (inc3 != null) demographics.push({ label: "Avg HH Income (3-mi)", value: money(inc3) ?? "—" });
   if (traffic != null) demographics.push({ label: "Traffic", value: `${Math.round(traffic).toLocaleString()} VPD` });
 
-  const anchorTenants = occ.filter((t) => t.isAnchor === true || (n(t.sf) ?? 0) >= 20000).slice(0, 6);
+  const anchorTenants = occ.filter((t) => isAnchorUse(t)).slice(0, 6);
   const anchors = anchorTenants.map((t) => `${t.name}${sfFmt(t.sf) ? ` (${sfFmt(t.sf)})` : ""}`);
   // Per-anchor detail with rent/sales relative to each chain's own DB median.
   const rentIdx = buildBrandMedians(opts.allDeals ?? [], "rentPerSF");
@@ -280,7 +281,7 @@ export function buildICMemo(deal: Deal, opts: ICMemoOptions = {}): string {
     if (deal.tenantsAsOf) L.push(`*Rent roll as of ${deal.tenantsAsOf}${deal.tenantsSource ? ` (${deal.tenantsSource})` : ""}.*`);
 
     const rentOf = (t: Tenant) => n(t.annualRent) ?? (n(t.rentPerSF) != null && n(t.sf) != null ? n(t.rentPerSF)! * n(t.sf)! : 0);
-    const anchors = occ.filter((t) => t.isAnchor === true || (n(t.sf) ?? 0) >= 20000);
+    const anchors = occ.filter((t) => isAnchorUse(t));
     if (anchors.length) {
       const a = anchors.slice(0, 6).map((t) => `${t.name}${sfFmt(t.sf) ? ` (${sfFmt(t.sf)})` : ""}`).join(", ");
       L.push(`**Anchor(s):** ${a}.`);

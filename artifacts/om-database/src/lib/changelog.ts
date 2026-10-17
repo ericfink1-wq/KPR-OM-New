@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-ai-guardrails",
+    date: "2026-10-17",
+    category: "improved",
+    title: "AI write-ups checked against the deal's own numbers",
+    detail:
+      "After the AI writes a deal's analysis, the app now checks it. A tenant paying ABOVE market rent can no longer be listed as 'upside'; it moves to the red flags as roll-down risk. If the write-up quotes an occupancy, or a tenant's share of base rent, that is more than half a point off the deal's stored figure, a review question appears so you can see which one is right. Calling a lease 'already in holdover' when it hasn't expired yet is flagged too. The AI also gets today's date, so a lease that ends before the OM's future rent-roll date isn't mistaken for expired. Office, coworking, medical and bank tenants are no longer treated as anchors. The chat answers 'what do we own / what are we selling / what have we sold' from a computed status list, so an under-contract sale is never reported as sold.",
+    where: "Deal page → AI Analysis and review questions; Analyst chat",
+  },
+  {
     id: "2026-10-17-fewer-requests",
     date: "2026-10-17",
     category: "improved",

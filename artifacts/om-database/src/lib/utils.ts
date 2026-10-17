@@ -1928,6 +1928,24 @@ export function buildSystemPrompt(
 
   // One owned definition across the site (deduplicated, Owned only) — see ownedPortfolio.ts.
   const ownedCount = getOwnedProperties(active as Deal[]).length;
+  // Structured status roster (Eric, 10/16/26: asked "which are under contract to sell?",
+  // the chat called Vestavia both under contract AND sold and missed Lakeland, Central
+  // Plaza and Bend). These lists are computed here and are the ONLY source for status
+  // questions — the model must not infer status from narrative text.
+  const ownedList = getOwnedProperties(active as Deal[]);
+  const money = (v: unknown) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? (x >= 1e6 ? `$${(x / 1e6).toFixed(1).replace(/\.0$/, "")}M` : `$${Math.round(x).toLocaleString()}`) : null; };
+  const nm = (d: Deal) => d.propertyName || d.fileName || d.id;
+  const selling = ownedList.filter(d => d.saleStage);
+  const soldClosed = active.filter(d => d.status === "Sold" && /\d{4}-\d{2}-\d{2}/.test(String(d.txnSaleDate || "")));
+  const soldNoDate = active.filter(d => d.status === "Sold" && !/\d{4}-\d{2}-\d{2}/.test(String(d.txnSaleDate || "")));
+  const buying = active.filter(d => d.status === "Under Contract");
+  const statusRoster = [
+    `OWNED (${ownedList.length}, each property once): ${ownedList.map(nm).join("; ") || "none"}`,
+    `OWNED — BEING SOLD (still owned; sale NOT closed) (${selling.length}): ${selling.map(d => [nm(d), d.saleStage, d.txnBuyer ? `buyer ${d.txnBuyer}` : null, money(d.txnSalePrice), d.saleExpectedClosing ? `expected closing ${d.saleExpectedClosing}` : null].filter(Boolean).join(" · ")).join("; ") || "none"}`,
+    `SOLD — CLOSED (${soldClosed.length}): ${soldClosed.map(d => [nm(d), `closed ${String(d.txnSaleDate).slice(0, 10)}`, money(d.txnSalePrice), d.txnBuyer ? `buyer ${d.txnBuyer}` : null].filter(Boolean).join(" · ")).join("; ") || "none"}`,
+    soldNoDate.length ? `MARKED SOLD BUT NO CLOSING DATE ON FILE (unconfirmed — say so; do not count as closed) (${soldNoDate.length}): ${soldNoDate.map(nm).join("; ")}` : null,
+    `UNDER CONTRACT TO BUY (KPR acquiring, not yet owned) (${buying.length}): ${buying.map(nm).join("; ") || "none"}`,
+  ].filter(Boolean).join("\n");
 
   // Lease abstracts on file (reconciled from each tenant's full document set).
   // These are the authoritative source for lease-level questions and carry
@@ -2096,6 +2114,10 @@ INTERPRETATION RULES:
 - "the pipeline", "deals we're considering", "what's in the funnel" → Prospect (+ Under Contract).
 - "deals we passed on" / "rejected" → Passed.
 - If a question is genuinely ambiguous about scope, DEFAULT to Owned (the KPR portfolio) for "we/our" phrasing, but STATE your assumption in one short clause (e.g. "Across your 6 owned centers, …") so the user can correct you. When you give an aggregate, say which set it covers (KPR portfolio vs the database).
+
+=== STATUS ROSTER — THE ONLY SOURCE FOR "WHAT DO WE OWN / SELLING / SOLD / BUYING" ===
+${statusRoster}
+Rules: a property is SOLD only once the sale has CLOSED (a closing date). Until then it is OWNED and counts in every owned total, with a sale stage on top. "What's under contract to sell / what are we selling" = the OWNED — BEING SOLD list only. "What have we sold" = SOLD — CLOSED only. A property is never both. Answer status questions from these lists verbatim — do not infer status from notes or narrative text.
 
 === KPR's OWN ECONOMICS vs OM-STATED FIGURES ===
 For Owned / Under Contract / Sold deals, a "kpr" object holds KPR's ACTUAL deal terms:

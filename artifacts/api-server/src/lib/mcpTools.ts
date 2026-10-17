@@ -402,6 +402,9 @@ function dealSummary(r: DealRecord) {
     state: d.state ?? null,
     centerType: d.centerType ?? d.assetType ?? null,
     status: d.status ?? null,
+    // Owned stays Owned until a sale CLOSES; a sale in progress shows here instead.
+    saleStage: d.status === "Owned" && d.saleStage ? d.saleStage : undefined,
+    saleClosedOn: d.status === "Sold" ? (typeof d.txnSaleDate === "string" && d.txnSaleDate ? d.txnSaleDate : "no closing date on file") : undefined,
     totalSF: d.totalSF ?? null,
     occupancy: d.occupancy ?? null,
     noi: d.noi ?? null,

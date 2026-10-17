@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import MarkSoldDialog from "./MarkSoldDialog";
+import { isNonAnchorUse } from "../lib/anchorUse";
 import SaleStagePill from "./SaleStagePill";
 import { isClosingDate } from "../lib/saleStage";
 import { createPortal } from "react-dom";
@@ -811,7 +812,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     : (deal.askingPrice && deal.totalSF ? Math.round((deal.askingPrice as number) / (deal.totalSF as number)) : null);
 
   // Subject anchor signals for smart matching: lead anchor name(s) + IG flag.
-  const anchorTenants = (deal.tenants || []).filter(t => t.isAnchor && t.name);
+  const anchorTenants = (deal.tenants || []).filter(t => t.isAnchor && t.name && !isNonAnchorUse(t.name));
   const subjAnchorNames = anchorTenants.map(t => t.canonicalName || t.name).filter(Boolean).slice(0, 3).join(", ");
   const subjAnchorIG = anchorTenants.some(t => isInvestmentGrade(t.name || "", t.creditRating));
 

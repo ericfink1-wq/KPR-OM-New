@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import SaleStagePill from "./SaleStagePill";
+import { isNonAnchorUse } from "../lib/anchorUse";
 import { isClosingDate } from "../lib/saleStage";
 import type { Deal } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
@@ -36,7 +37,7 @@ interface Props {
 
 // Largest anchor tenant's name — used for the portfolio "Anchor" column and sort.
 function leadAnchorName(d: Deal): string {
-  const anchors = (d.tenants || []).filter(t => t.isAnchor);
+  const anchors = (d.tenants || []).filter(t => t.isAnchor && !isNonAnchorUse(t.name));
   if (anchors.length === 0) return "";
   const best = anchors.reduce((a, b) => (Number(b.sf) || 0) > (Number(a.sf) || 0) ? b : a);
   return (best.canonicalName || best.name || "").trim();

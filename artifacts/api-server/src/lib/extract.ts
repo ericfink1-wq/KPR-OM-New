@@ -15,6 +15,7 @@ import { findComparableDeals } from "./comparables";
 import { computePortfolioCalibration } from "./calibration";
 import { Agent, fetch as undiciFetch } from "undici";
 import { ensurePropertyName } from "./dealMaintenance";
+import { applyAnalysisGuardrails } from "./analysisGuardrails";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -136,7 +137,7 @@ REQUIRED SCHEMA:
       "salesNotes": "string or null",
       "occupancyCost": "number or null — TOTAL occupancy cost as a percentage of gross sales, defined as (base rent + expense reimbursements/CAM+taxes+insurance + percentage rent + other rent) ÷ gross sales. Often labeled 'Occ Cost %', 'OC%', or 'Occupancy Cost'. Use the OM's stated total occ-cost % when given. ENTER THE PERCENT NUMBER ITSELF (e.g. 22.5 for 22.5%), NEVER a 0.NN decimal fraction (not 0.225) — retail occupancy cost is essentially always between ~1% and ~30%, so any value below 1 means you wrote a fraction by mistake. If the OM only states base rent ÷ sales (not the full health ratio), note that in salesNotes instead and leave this null.",
       "assumptionNote": "string or null — any footnote/assumption for this tenant",
-      "isAnchor": "true|false",
+      "isAnchor": "true|false — true ONLY for grocery, big-box, junior-box (~10,000+ SF soft goods/home/sporting/off-price) or entertainment (cinema, family entertainment) uses. An office, coworking/flex-office (IWG/Regus), medical, bank or service user is NEVER an anchor, even when it is the largest tenant.",
       "isNAP": "true if this tenant is on an adjacent parcel NOT part of this sale/ownership (marked NAP, Not A Part, or outparcel on the site plan). false or null otherwise. IMPORTANT: a signed inline tenant whose rent has NOT yet commenced (future rent-commencement / lease-start date, $0 or blank current rent, in build-out/free-rent) is a REAL tenant, NOT NAP — set isNAP false, set leaseStart to the commencement date, and capture their contractual base rent (not $0).",
       "isDark": "true if this tenant is a 'dark' store — they still hold the lease and are paying rent, but the store is closed / no longer operating (look for words like 'dark', 'closed but paying', 'gone dark', 'not operating', 'vacated but obligated', 'lease in place, store closed'). false or null otherwise. Do NOT mark a unit dark just because it is vacant with no tenant — dark specifically means a paying tenant whose store is closed.",
       "leaseStatus": "executed|signed-not-open|loi|proposed|null — the EXECUTION status of the lease the OM is underwriting for this tenant. Default 'executed' for a normal in-place rent-roll tenant. Use 'signed-not-open' when the lease is signed but the store has NOT opened / rent has not commenced (e.g. 'signed not open', in build-out, future rent-commencement date). Use 'loi' when the deal is only a Letter of Intent, and 'proposed' when it is a proposed / under-negotiation / spec deal that is NOT yet executed but the OM models it in place (look for 'LOI', 'proposed', 'under negotiation', 'JLL assumes [tenant] is in place at start of analysis', or a footnote that the lease is not yet signed). These NON-executed tenants overstate NOI until signed, so flag them here — do NOT silently treat them as executed.",
@@ -698,6 +699,14 @@ Return ONLY a single valid JSON object with EXACTLY these keys and nothing else:
   "redFlags": [{"severity":"high|medium|low","description":"string; reflect near-term lease expirations or vacancy evident in the data"}]
 }
 
+SOURCE OF TRUTH — the snapshot's "sourceOfTruth" block holds the deal's STORED occupancy, GLA, NOI, grossPotentialRent and each top tenant's share of grossPotentialRent. Quote THOSE numbers exactly; never recompute occupancy from the roster or quote a different rent base (a "% of base rent" uses grossPotentialRent as the denominator). A figure that differs from the stored one is checked in code and flagged as an error.
+
+TODAY vs THE ROLL DATE — "today" in the snapshot is the real current date; tenantsAsOf is the OM's rent-roll date, which is often in the FUTURE (an assumed closing). A lease is expired / in holdover ONLY if its expiry is before TODAY. A lease that expires after today but before the rent-roll date "expires before the OM's rent-roll date" — never call it "already in holdover" or "expired".
+
+ANCHORS — only grocery, big-box, junior-box (roughly 10,000+ SF soft-goods/home/sporting/off-price), and entertainment uses (cinema, family entertainment) are ANCHORS. An office, coworking/flex-office (e.g. IWG/Regus), medical, bank or service user is NOT an anchor even when it is the largest tenant — call it the "largest tenant" and never compare it to anchor benchmarks.
+
+ABOVE-MARKET RENT IS NEVER UPSIDE — an in-place rent ABOVE market (e.g. "$41.13/SF vs a $24 market") is roll-down RISK: it goes in redFlags/risks, never in upsideItems or strengths as "mark-to-market". A below-market lease with no options left that expires inside the hold is upside.
+
 LANGUAGE — when comparing rents, RENTS DO NOT "TRADE." Properties trade; rents do not. Never write that a rent "trades" above/below a benchmark — say it "IS X% below/above" (e.g. "$15.00/SF is 24% below the $19.83/SF average across 15 comparable leases"). Also reserve "portfolio"/"KPR portfolio" for assets KPR OWNS; call the full analyzed dataset "the database."
 
 TJX COMBO BOX — a tenant named like "Marshalls / HomeGoods" (or "T.J. Maxx / HomeGoods") is ONE lease housing TWO TJX banners in a single combined box. Treat it as a single anchor lease, but recognize it as a DUAL draw (two co-tenant magnets), and remember its footprint is ~2× a single banner — so its larger SF is expected and is NOT an oversized-store or SF-error risk. Do not double-count it as two leases, and do not read its blended rent/sales PSF as if it were a single standalone banner.
@@ -894,7 +903,20 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
         return txt ? `${txt}${applied}` : null;
       }).filter(Boolean)
     : undefined;
+  // Stored figures the narrative must quote exactly (checked in code afterwards).
+  const toN = (v: unknown) => { const n = typeof v === "string" ? Number(v.replace(/[$,%\s]/g, "")) : Number(v); return Number.isFinite(n) ? n : null; };
+  const gprN = toN(dealData.grossPotentialRent) ?? t.reduce((s2, x) => s2 + (toN(x.annualRent) ?? 0), 0);
+  const topShares = gprN && gprN > 0
+    ? [...t].filter(x => (toN(x.annualRent) ?? 0) > 0).sort((a2, b2) => (toN(b2.annualRent) ?? 0) - (toN(a2.annualRent) ?? 0)).slice(0, 5)
+        .map(x => ({ tenant: x.name, pctOfGrossPotentialRent: Math.round(((toN(x.annualRent) ?? 0) / gprN) * 1000) / 10 }))
+    : undefined;
   const snapshot = {
+    today: new Date().toISOString().slice(0, 10),
+    sourceOfTruth: {
+      occupancyPct: dealData.occupancy ?? null, totalSF: dealData.totalSF ?? null, noi: dealData.noi ?? null,
+      grossPotentialRent: dealData.grossPotentialRent ?? null, tenantsAsOf: dealData.tenantsAsOf ?? null,
+      topTenantShares: topShares,
+    },
     houseView: houseView || undefined,
     leaseRiskExposure: leaseRiskSummary || undefined,
     kprReview: review || undefined,
@@ -986,7 +1008,8 @@ export async function runRosterAnalysis(dealData: Record<string, unknown>, lease
       : String(data.error ?? "Unknown error");
     throw new Error(String(errMsg));
   }
-  return parseRosterAnalysisMessage(data);
+  // Above-market rent can't be "upside"; quoted % must match the stored fields.
+  return applyAnalysisGuardrails(dealData, parseRosterAnalysisMessage(data));
 }
 
 // Deterministic SF-weighted WALT from the extracted roster — mirrors the
@@ -1092,6 +1115,7 @@ export async function runBackgroundExtraction(
       }
     } catch { /* validators must never break an upload */ }
     ensurePropertyName(dealData);
+    try { applyAnalysisGuardrails(dealData, dealData); } catch { /* never break an upload */ }
     await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })
       .where(eq(dealsTable.id, id));

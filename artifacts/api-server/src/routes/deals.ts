@@ -13,6 +13,7 @@ import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from 
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { autoMaintainDealData } from "../lib/dealMaintenance";
+import { applyAnalysisGuardrails } from "../lib/analysisGuardrails";
 import { normalizeDate } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
 import { ensureAuditHistoryTable, runDailySelfClean } from "../lib/selfImprove";
@@ -1383,6 +1384,7 @@ router.post("/deals/apply-analysis-batch", requireAuth, async (req, res) => {
       if (!rows.length) { skipped++; continue; }
       const data = rows[0].data as Record<string, unknown>;
       if (data.trashedAt) { skipped++; continue; }
+      analysis = applyAnalysisGuardrails(data, analysis);
       try { await applyAnalysisToDeal(custom_id, data, analysis, req.log); applied++; }
       catch (err) { req.log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; }
     }

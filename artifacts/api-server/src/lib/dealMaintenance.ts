@@ -13,6 +13,7 @@
 // deals.
 
 import { applyImportFixes } from "./importFixes";
+import { applyAnalysisGuardrails } from "./analysisGuardrails";
 import { auditExtraction, AUDIT_ID_PREFIX } from "./extractionAudit";
 
 export interface MaintainResult {
@@ -77,6 +78,8 @@ export function ensurePropertyName(data: Record<string, unknown>): boolean {
 
 export function autoMaintainDealData(input: Record<string, unknown>): MaintainResult {
   ensurePropertyName(input);
+  // AI write-up guardrails: above-market "upside" → red flag; quoted % vs stored fields.
+  try { applyAnalysisGuardrails(input, input); } catch { /* never block a save */ }
   const fix = applyImportFixes(input);
   const data = fix.deal;
   const fresh = auditExtraction(data);
