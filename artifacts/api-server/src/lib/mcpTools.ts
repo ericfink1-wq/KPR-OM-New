@@ -496,7 +496,7 @@ const libraryOverview: McpToolDef = {
       const { analysisRefreshStatus } = await import("./analysisAutoRefresh");
       const st = await analysisRefreshStatus();
       analysisFreshness = { rulesVersion: st.version, dealsOnCurrentRules: st.current, dealsOutdated: st.outdated,
-        dealsAwaitingBatch: st.inBatch, appliedByAutoRefresh: st.appliedByAutoRefresh, lastAppliedAt: st.lastAppliedAt,
+        dealsAwaitingBatch: st.inBatch, appliedByAutoRefresh: st.appliedByAutoRefresh, lastAppliedAt: st.lastAppliedAt, notApplied: st.notApplied,
         batchId: st.batchId, serverBuild: st.build, lastRefreshStepOnThisInstance: st.lastTick };
     } catch { /* never block the overview */ }
     // Sale-comp duplicate merges (operational): the latest merge and what's still left.

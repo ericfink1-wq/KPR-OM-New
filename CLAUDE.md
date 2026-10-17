@@ -473,7 +473,7 @@ replaces the whole record, so a tab opened before the apply saved its old copy b
 batch bookkeeping on every PUT, and batch apply / maintenance sweeps write through
 `updateDealSafely` (re-read, write only changed keys). Any new writer: use `updateDealSafely`,
 never a whole object read earlier. Status counts are DB-derived (`appliedByAutoRefresh`,
-`lastAppliedAt`); `lastTick` is per-instance only. Live build: `GET /api/version` (commit
+`lastAppliedAt`, `notApplied` = sent-but-not-applied deals with the recorded `analysisAutoError` reason + whether they retry); `lastTick` is per-instance only. The tick now runs from BACKGROUND tabs too (it used to require the tab in front — stalled 30 min live). Live build: `GET /api/version` (commit
 injected by build.mjs) + "build …" at the bottom of the avatar menu.
 
 ## Deal LIST vs FULL record + gzip (10/17/26 — GET /deals was 18 MB per page load)

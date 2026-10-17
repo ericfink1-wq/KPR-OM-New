@@ -73,7 +73,7 @@ export async function runAnalysisRefreshSlice(log: Logger = logger, budgetMs = 4
 /** Live progress, DB-only (no model call): how many deals are on the current version.
  *  Everything here is read from the DATABASE, so it is the same whichever server instance
  *  answers (autoscale runs several; the old in-memory "last tick" differed per instance). */
-export async function analysisRefreshStatus(): Promise<{ version: number; build: string; current: number; outdated: number; inBatch: number; appliedByAutoRefresh: number; lastAppliedAt: string | null; batchId: string | null; workPending: boolean; lastTick: RefreshTick | null }> {
+export async function analysisRefreshStatus(): Promise<{ version: number; build: string; current: number; outdated: number; inBatch: number; appliedByAutoRefresh: number; lastAppliedAt: string | null; notApplied: Array<{ id: string; name: string | null; tries: number; willRetry: boolean; reason: string }>; batchId: string | null; workPending: boolean; lastTick: RefreshTick | null }> {
   const r = await db.execute(sql`SELECT
       count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION})::int AS current,
       count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) < ${ANALYSIS_VERSION} AND data ? 'dealScore')::int AS outdated,
@@ -83,9 +83,17 @@ export async function analysisRefreshStatus(): Promise<{ version: number; build:
       max(data->>'analysisBatchPending') AS batch
     FROM deals WHERE data->>'trashedAt' IS NULL AND COALESCE((data->>'_processing')::boolean, false) = false`);
   const row = (r.rows[0] ?? {}) as { current?: number; outdated?: number; inbatch?: number; applied?: number; last_applied?: string | null; batch?: string | null };
+  // Sent at least once, not applied, not in a batch now → it goes again with the next batch
+  // (up to MAX_TRIES). The reason is recorded for failures from 10/17/26 on.
+  const w = await db.execute(sql`SELECT id, data->>'propertyName' AS name, (data->'analysisAutoTries'->>'n')::int AS tries, data->'analysisAutoError'->>'reason' AS reason
+    FROM deals WHERE data->>'trashedAt' IS NULL AND NOT (data ? 'analysisBatchPending')
+      AND (data->'analysisAutoTries'->>'v')::int = ${ANALYSIS_VERSION} AND COALESCE((data->>'analysisVersion')::int, 0) < ${ANALYSIS_VERSION}
+    ORDER BY 2 LIMIT 50`);
+  const notApplied = (w.rows as Array<{ id: string; name: string | null; tries: number | null; reason: string | null }>)
+    .map(x => ({ id: x.id, name: x.name, tries: x.tries ?? 0, willRetry: (x.tries ?? 0) < MAX_TRIES, reason: x.reason ?? "not recorded (before 10/17/26)" }));
   const inBatch = row.inbatch ?? 0;
   return { version: ANALYSIS_VERSION, build: BUILD_COMMIT, current: row.current ?? 0, outdated: row.outdated ?? 0, inBatch,
-    appliedByAutoRefresh: row.applied ?? 0, lastAppliedAt: row.last_applied ?? null, batchId: row.batch ?? null,
+    appliedByAutoRefresh: row.applied ?? 0, lastAppliedAt: row.last_applied ?? null, notApplied, batchId: row.batch ?? null,
     workPending: ANALYSIS_VERSION === AUTO_REFRESH_FOR_VERSION && !!process.env.ANTHROPIC_API_KEY && (inBatch > 0 || (row.outdated ?? 0) > 0) && !(lastTick?.action?.startsWith("done")),
     lastTick };
 }

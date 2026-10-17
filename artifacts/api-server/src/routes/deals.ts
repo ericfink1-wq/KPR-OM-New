@@ -1369,7 +1369,7 @@ async function applyAnalysisToDeal(id: string, data: Record<string, unknown>, an
   const keys = Object.keys(updated).filter(k => JSON.stringify(updated[k]) !== JSON.stringify(data[k]));
   let written: Record<string, unknown> | null = null;
   await updateDealSafely(id, (fresh) => {
-    const changes: Record<string, unknown> = { analysisBatchPending: undefined };
+    const changes: Record<string, unknown> = { analysisBatchPending: undefined, analysisAutoError: undefined };
     for (const k of keys) changes[k] = updated[k];
     written = JSON.parse(JSON.stringify({ ...fresh, ...changes })) as Record<string, unknown>;
     return changes;
@@ -1440,7 +1440,11 @@ export async function applyAnalysisBatchResults(batchId: string, log: Logger, op
   let results = batchResultsCache.get(batchId);
   if (!results) { results = await fetchBatchResults(resultsUrl); batchResultsCache.set(batchId, results); }
   let applied = 0, failed = 0, skipped = 0, remaining = 0;
-  const release = (id: string) => db.execute(sql`UPDATE deals SET data = data - 'analysisBatchPending' WHERE id = ${id}`);
+  // Releasing a deal that FAILED records why, so the failure can be named and it is retried
+  // (once more) when the next batch is sent.
+  const release = (id: string, why?: string) => why
+    ? db.execute(sql`UPDATE deals SET data = (data - 'analysisBatchPending') || jsonb_build_object('analysisAutoError', jsonb_build_object('at', ${new Date().toISOString()}::text, 'batchId', ${batchId}::text, 'reason', ${why.slice(0, 300)}::text)) WHERE id = ${id}`)
+    : db.execute(sql`UPDATE deals SET data = data - 'analysisBatchPending' WHERE id = ${id}`);
   // One read for the whole slice instead of one per result.
   const ids = results.map(r => r.custom_id);
   const rows = ids.length ? await db.select().from(dealsTable).where(inArray(dealsTable.id, ids)) : [];
@@ -1452,7 +1456,7 @@ export async function applyAnalysisBatchResults(batchId: string, log: Logger, op
   });
   // Each apply makes one benchmark-rescore model call (~10–20 s), so run a few at once —
   // sequentially a 45 s slice only fit ~2 deals and 290 would have taken most of a day.
-  const CONCURRENCY = 5;
+  const CONCURRENCY = 8;
   let next = 0;
   const worker = async () => {
     while (next < todo.length) {
@@ -1460,13 +1464,15 @@ export async function applyAnalysisBatchResults(batchId: string, log: Logger, op
       if (opts.budgetMs && Date.now() - t0 > opts.budgetMs) { remaining++; continue; }
       const data = byId.get(custom_id)!;
       if (data.trashedAt) { skipped++; await release(custom_id); continue; }
-      if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; await release(custom_id); continue; }
+      if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) {
+        failed++; await release(custom_id, `batch result ${result.type}${(result as { error?: { type?: string } }).error?.type ? ` (${(result as { error?: { type?: string } }).error!.type})` : ""}`); continue;
+      }
       let analysis: Record<string, unknown>;
       try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
-      catch { failed++; await release(custom_id); continue; }
+      catch (err) { failed++; await release(custom_id, `could not read the AI reply: ${err instanceof Error ? err.message : String(err)}`); continue; }
       analysis = applyAnalysisGuardrails(data, analysis);
       try { await applyAnalysisToDeal(custom_id, data, analysis, log); applied++; }
-      catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id); }
+      catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id, `saving failed: ${err instanceof Error ? err.message : String(err)}`); }
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, todo.length) }, worker));

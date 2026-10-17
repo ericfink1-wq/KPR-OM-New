@@ -14,11 +14,12 @@ export function useAnalysisRefresh(enabled: boolean): void {
     const step = async () => {
       if (stopped) return;
       try {
-        if (document.visibilityState === "visible") {
-          const r = await fetch("/api/analysis-refresh/tick", { method: "POST", credentials: "include" });
-          const j = r.ok ? await r.json() as { status?: { workPending?: boolean } } : null;
-          if (j && j.status && !j.status.workPending) { stopped = true; return; }
-        }
+        // Runs in a background tab too (10/17/26: the refresh sat frozen for 30 minutes while
+        // a tab was open but not in front). Browsers slow background timers to about once a
+        // minute, which this 2-minute step is already under.
+        const r = await fetch("/api/analysis-refresh/tick", { method: "POST", credentials: "include" });
+        const j = r.ok ? await r.json() as { status?: { workPending?: boolean } } : null;
+        if (j && j.status && !j.status.workPending) { stopped = true; return; }
       } catch { /* try again next round */ }
       if (!stopped) timer = window.setTimeout(step, EVERY_MS);
     };

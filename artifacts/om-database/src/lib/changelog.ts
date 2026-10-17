@@ -48,6 +48,13 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-refresh-background-tab",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "The AI write-up refresh keeps going in a background tab",
+    detail: "The one-time re-analysis of every deal only moved while the site was the tab in front, so it paused whenever you switched away. It now keeps going as long as the site is open in any tab, works on more deals at once, and records why any deal fails so it can be retried.",
+  },
+  {
     id: "2026-10-17-faster-load",
     date: "2026-10-17",
     category: "improved",
