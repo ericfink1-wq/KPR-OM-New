@@ -207,7 +207,9 @@ const USER_PRESERVED_KEYS = new Set([
   "status", "statusSince", "autoPassed",
   "userNotes", "dealThesis", "dealReview",
   "txnPurchasePrice", "txnSeller", "txnLoiDate", "txnCloseDate",
-  "txnSalePrice", "txnBuyer", "txnSaleDate", "txnBroker",
+  "txnSalePrice", "txnBuyer", "txnSaleDate", "txnBroker", "txnPortfolio",
+  // Sale in progress on an Owned asset (stays Owned until closing).
+  "saleStage", "saleExpectedClosing", "saleDeposit", "saleDepositStatus", "salePsaDate", "saleDiligenceEnd",
   "acqCapRate", "acqNOIAtClose", "acqEntity", "acqBroker", "acqContractDate", "acqDDExpiration",
   "acqDeposit", "acqClosingCosts", "acqFee", "acqTitleCo", "acqCounsel", "acqPropManager",
   "acqStrategy", "acqHoldPeriod", "acqTargetIRR", "acqNotes",

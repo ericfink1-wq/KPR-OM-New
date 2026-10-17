@@ -3792,7 +3792,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               {!sold && tf({ label:"Sale Stage", field:"saleStage", options:["Marketed","Under Contract"] })}
               {tf({ label: sold ? "Sale Price" : "Sale / Contract Price", field:"txnSalePrice", placeholder:"e.g. 54,000,000", prefix:"$" })}
               {tf({ label: sold ? "Sold To (Buyer)" : "Buyer", field:"txnBuyer", placeholder:"Buyer entity / name" })}
+              {!sold && tf({ label:"PSA Signed", field:"salePsaDate", placeholder:"YYYY-MM-DD" })}
+              {!sold && tf({ label:"Diligence Ends", field:"saleDiligenceEnd", placeholder:"YYYY-MM-DD" })}
               {!sold && tf({ label:"Expected Closing", field:"saleExpectedClosing", placeholder:"YYYY-MM-DD" })}
+              {!sold && tf({ label:"Buyer Deposit", field:"saleDeposit", placeholder:"e.g. 1,500,000", prefix:"$" })}
+              {!sold && tf({ label:"Deposit Status", field:"saleDepositStatus", options:["Refundable","Hard","Partially hard"] })}
               {tf({ label: sold ? "Closing Date" : "Closing Date (once closed)", field:"txnSaleDate", placeholder:"YYYY-MM-DD" })}
               {tf({ label:"Disposition Broker", field:"txnBroker", placeholder:"firm representing the sale" })}
               {sold && <>

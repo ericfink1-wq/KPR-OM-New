@@ -1113,6 +1113,10 @@ export interface Deal {
   // this flag sits on top of the Owned status. Buyer / price reuse txnBuyer / txnSalePrice.
   saleStage?: "Marketed" | "Under Contract" | null;
   saleExpectedClosing?: string | null;
+  saleDeposit?: number | null;                                  // buyer's earnest money
+  saleDepositStatus?: "Refundable" | "Hard" | "Partially hard" | null;
+  salePsaDate?: string | null;                                  // PSA signed
+  saleDiligenceEnd?: string | null;                             // due-diligence period ends (deposit typically goes hard)
   txnBroker?: string | null;
   // Disposition
   dispExitCap?: number | null;
