@@ -476,6 +476,22 @@ never a whole object read earlier. Status counts are DB-derived (`appliedByAutoR
 `lastAppliedAt`); `lastTick` is per-instance only. Live build: `GET /api/version` (commit
 injected by build.mjs) + "build …" at the bottom of the avatar menu.
 
+## Deal LIST vs FULL record + gzip (10/17/26 — GET /deals was 18 MB per page load)
+`compression()` gzips every response (app.ts). GET /deals returns LIVE deals only (`?trashed=1`
+= Trash, `?all=1` both, `?full=1` complete records for backups/exports) in LIST VIEW
+(`lib/dealListView.ts` `LIST_OMIT_KEYS`, marked `_summary: true`). GET /deals/:id/full is the
+complete record; App.tsx fills a list copy's missing keys when a deal page opens
+(`withDetail`, only ABSENT keys — never overwrites local edits). Merges, re-upload merges and
+import-undo use `ensureFullDeal`; backups use `apiLoadDealsFull`. **PUT restores omitted keys
+from the stored record when the body is `_summary`** (`restoreOmittedDetail`, BEFORE the audit
+runs) — so a save from a list copy can never wipe them. Tenants, cashFlowProjection, leaseRisk,
+comparableSales, incomeBreakdown STAY in the list because library-wide views read them.
+**Before adding a key to LIST_OMIT_KEYS, grep the web app for every reader.**
+Comp duplicates: `lib/compDuplicates.ts` (strict same-trade rules; resales >31 days apart and
+two own trades never merge) → `runCompDedupe` at startup, snapshot `before-comp-merge` holds
+removed rows; MCP `library_overview.compDuplicates` reports the last merge. Mark-to-Market:
+`lib/mtmCount.ts` — n<5 shown but not counted in $, ≥50th percentile never below market.
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.

@@ -734,6 +734,12 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
     for (let i = 0; i < rows.length; i++) {
       for (let j = i + 1; j < rows.length; j++) {
         const a = rows[i], b = rows[j];
+        // A resale — the same property traded again on a clearly different date — is its
+        // own comp, never a duplicate (Eric, 10/17/26). Two of KPR's own trades (buy and
+        // later sell) likewise.
+        const apart = daysBetween(a.saleDate, b.saleDate);
+        if (apart != null && apart > 90) continue;
+        if (a.isOwnTransaction && b.isOwnTransaction) continue;
         const reasons: string[] = [];
         const na = normComp(a.name), nb = normComp(b.name);
         if (na && na === nb) {

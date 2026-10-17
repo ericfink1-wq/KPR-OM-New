@@ -17,7 +17,7 @@ import { purgePendingSaleData } from "./lib/pendingSale";
 import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
 import { retireSupersededOms } from "./lib/supersededOms";
 import { sweepOmDates, sweepPropertyHistory } from "./lib/omDateSweep";
-import { runCompsCleanupIfNeeded } from "./routes/comps";
+import { runCompsCleanupIfNeeded, runCompDedupe } from "./routes/comps";
 import { startAnalysisAutoRefresh, sweepAnalysisGuardrails } from "./lib/analysisAutoRefresh";
 
 const rawPort = process.env["PORT"];
@@ -56,7 +56,11 @@ const server = app.listen(port, (err) => {
   // Comp typos / units / KPR-as-buyer on our own purchases (token-free, only when needed).
   runCompsCleanupIfNeeded()
     .then(r => { if (r.applied) logger.info(r, "Comp clean-up applied"); })
-    .catch((err) => logger.error({ err }, "runCompsCleanupIfNeeded failed on startup"));
+    .catch((err) => logger.error({ err }, "runCompsCleanupIfNeeded failed on startup"))
+    // …then merge TRUE duplicate comps (strict: same trade; resales stay separate). Snapshot first.
+    .finally(() => runCompDedupe(true)
+      .then(r => { if (r.applied) logger.info({ groups: r.groups, removed: r.removed, examples: r.examples }, "Merged duplicate comps"); })
+      .catch((err) => logger.error({ err }, "runCompDedupe failed on startup")));
   // OM dates (cover → file name → upload date), so history entries can say WHEN, then the
   // superseded-OM pass (keep newer, Trash older, record history).
   sweepOmDates()

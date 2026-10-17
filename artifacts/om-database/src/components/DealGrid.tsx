@@ -4,7 +4,7 @@ import { useIsMobile } from "../hooks/use-mobile";
 import { isNonAnchorUse } from "../lib/anchorUse";
 import { isClosingDate } from "../lib/closingDate";
 import type { Deal } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
+import { ensureFullDeal, apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
 import { ensureUploadAllowed } from "../lib/uploadAuth";
 import { classifyLocation, cityState, assessExtraction, openReviewCount, openAuditCount } from "../lib/utils";
@@ -479,9 +479,11 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     const others = ids.filter(id => id !== primaryId);
     if (!others.length) return;
     setCombining(true);
-    const P = deals.find(d => d.id === primaryId);
-    if (!P) { setCombining(false); return; }
-    const os = deals.filter(d => others.includes(d.id));
+    const P0 = deals.find(d => d.id === primaryId);
+    if (!P0) { setCombining(false); return; }
+    // Combine from COMPLETE records — the library list leaves detail blocks out.
+    const P = await ensureFullDeal(P0);
+    const os = await Promise.all(deals.filter(d => others.includes(d.id)).map(ensureFullDeal));
     const all = [P, ...os];
     const ts = new Date().toISOString();
 
@@ -606,9 +608,10 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const commitMerge = async () => {
     if (!modal || !modal.keeperId) return;
     setMerging(true);
-    const keeper = modal.deals.find(d => d.id === modal.keeperId)!;
-    const others = modal.deals.filter(d => d.id !== modal.keeperId);
-    const all = modal.deals;
+    // Merge COMPLETE records — the library list leaves detail blocks out.
+    const all = await Promise.all(modal.deals.map(ensureFullDeal));
+    const keeper = all.find(d => d.id === modal.keeperId)!;
+    const others = all.filter(d => d.id !== modal.keeperId);
     const nonEmpty = (v: unknown) => v != null && v !== "";
 
     // Base = the KEEPER the user explicitly chose. Its name and every detail win;

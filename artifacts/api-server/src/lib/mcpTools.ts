@@ -499,9 +499,19 @@ const libraryOverview: McpToolDef = {
         dealsAwaitingBatch: st.inBatch, appliedByAutoRefresh: st.appliedByAutoRefresh, lastAppliedAt: st.lastAppliedAt,
         batchId: st.batchId, serverBuild: st.build, lastRefreshStepOnThisInstance: st.lastTick };
     } catch { /* never block the overview */ }
+    // Sale-comp duplicate merges (operational): the latest merge and what's still left.
+    let compDuplicates: unknown = undefined;
+    try {
+      const { runCompDedupe, COMP_MERGE_REASON } = await import("../routes/comps");
+      const last = await db.execute(sql`SELECT created_at, data->'compMerge' AS m FROM snapshots WHERE reason = ${COMP_MERGE_REASON} ORDER BY created_at DESC LIMIT 1`);
+      const row = last.rows[0] as { created_at?: string; m?: unknown } | undefined;
+      const left = await runCompDedupe(false);
+      compDuplicates = { lastMergeAt: row?.created_at ?? null, lastMerge: row?.m ?? null, strictDuplicatesRemaining: left.removed };
+    } catch { /* never block the overview */ }
     return {
       dealCount: deals.length,
       analysisFreshness,
+      compDuplicates,
       totals: {
         gla: Math.round(totalSF), dealsWithGla: sfCount,
         noi: Math.round(totalNOI), dealsWithNoi: noiCount,

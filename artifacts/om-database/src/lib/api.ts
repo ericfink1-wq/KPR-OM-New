@@ -364,6 +364,8 @@ export async function apiAdminUnlock(password: string): Promise<void> {
 
 // --- Deals ---
 
+// The library LIST: live deals only, with the blocks only the deal page uses left out
+// (marked `_summary`). Use apiLoadFullDeal / apiLoadDealsFull where the whole record matters.
 export async function apiLoadDeals(): Promise<Deal[]> {
   const resp = await apiFetch("/deals");
   if (!resp.ok) throw new Error("Failed to load deals");
@@ -371,6 +373,36 @@ export async function apiLoadDeals(): Promise<Deal[]> {
   // Normalize occupancy on load so stored fraction values (1.0 / 0.99 read as
   // "1%") display correctly everywhere without needing a re-extract.
   return deals.map(normalizeDeal);
+}
+
+/** One complete record (the deal page, merges, re-uploads). */
+export async function apiLoadFullDeal(id: string): Promise<Deal> {
+  const resp = await apiFetch(`/deals/${encodeURIComponent(id)}/full`);
+  if (!resp.ok) throw new Error("Failed to load deal");
+  return normalizeDeal(await resp.json() as Deal);
+}
+
+/** Complete records for backups / exports; `includeTrashed` for the full backup. */
+export async function apiLoadDealsFull(includeTrashed = false): Promise<Deal[]> {
+  const resp = await apiFetch(`/deals?full=1${includeTrashed ? "&all=1" : ""}`);
+  if (!resp.ok) throw new Error("Failed to load deals");
+  return (await resp.json() as Deal[]).map(normalizeDeal);
+}
+
+/** Fill a list copy's missing detail from the full record. Only keys the copy LACKS are
+ *  taken, so edits made since the list loaded are kept. */
+export function withDetail(d: Deal, full: Deal): Deal {
+  const merged: Record<string, unknown> = { ...d };
+  for (const [k, v] of Object.entries(full)) if (!(k in merged)) merged[k] = v;
+  delete merged._summary;
+  return merged as unknown as Deal;
+}
+
+/** `d` with its detail filled in when it is a list copy, else `d` itself. Never throws
+ *  (falls back to `d`, whose saves are still made safe server-side). */
+export async function ensureFullDeal(d: Deal): Promise<Deal> {
+  if (!d._summary) return d;
+  try { return withDetail(d, await apiLoadFullDeal(d.id)); } catch { return d; }
 }
 
 // Save a deal, retrying transient failures (network drop, 5xx) with backoff. A 4xx

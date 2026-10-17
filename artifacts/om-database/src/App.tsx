@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } fro
 import { getOwnedProperties } from "./lib/ownedPortfolio";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Deal } from "./lib/idb";
-import { apiLoadDeals, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot, apiWhatsNewCutoff, apiWhatsNewSeen } from "./lib/api";
+import { apiLoadDeals, apiLoadFullDeal, withDetail, apiSaveDeal, apiDeleteDeal, apiCheckAuth, apiLogout, apiCreateSnapshot, apiWhatsNewCutoff, apiWhatsNewSeen } from "./lib/api";
 import { shouldAutoPass } from "./lib/constants";
 import { ensureUploadAllowed } from "./lib/uploadAuth";
 import Header from "./components/Header";
@@ -401,6 +401,23 @@ function AppInner() {
     setDeals(prev => prev.filter(d => d.id !== id));
     if (view.type === "detail" && view.dealId === id) resetToList();
   }, [view, resetToList]);
+
+  // The library list leaves the deal-page-only blocks out (cash flow, citations, history…).
+  // Opening a deal fills them in from the full record — only the MISSING keys, so nothing
+  // the user has edited since the list loaded is overwritten. Not a save.
+  const openDealId = view.type === "detail" ? view.dealId : null;
+  const hydrateId = openDealId && deals.find(d => d.id === openDealId)?._summary ? openDealId : null;
+  useEffect(() => {
+    if (!hydrateId) return;
+    let cancelled = false;
+    apiLoadFullDeal(hydrateId).then(full => {
+      if (cancelled) return;
+      const next = dealsRef.current.map(d => d.id === hydrateId && d._summary ? withDetail(d, full) : d);
+      dealsRef.current = next;
+      setDeals(next);
+    }).catch(() => { /* the list copy still renders; saves from it are made safe server-side */ });
+    return () => { cancelled = true; };
+  }, [hydrateId]);
 
   const handleOpenDeal = useCallback((id: string) => {
     navigate({ type: "detail", dealId: id });

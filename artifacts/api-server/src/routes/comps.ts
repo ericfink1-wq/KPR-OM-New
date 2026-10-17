@@ -4,6 +4,8 @@ import { compsIndexTable, dealsTable } from "@workspace/db";
 import { and, or, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
 import { rebuildAllComps, rebuildCompsIndex, comparableToIndexRow, syncOwnTransactionComps } from "../lib/compsIndex";
 import { normalizeComp, isSaleComp, isPortfolioAllocation } from "../lib/compNormalize";
+import { planCompMerges, fillFrom, type CompLike } from "../lib/compDuplicates";
+import { createSnapshot } from "./snapshots";
 
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { toFloat, toStr } from "../lib/parsers";
@@ -620,6 +622,55 @@ export async function runCompsCleanupIfNeeded(): Promise<{ applied: boolean; row
   const r = await runCompsCleanup(true);
   return { applied: true, rowsChanged: r.rowsChanged };
 }
+
+// ---------------------------------------------------------------------------
+// TRUE-DUPLICATE MERGE (Eric, 10/17/26). Strict rules in lib/compDuplicates.ts — resales
+// (different sale dates) stay separate, KPR's own trades are never merged together. The best
+// source is kept; a broker/manual keeper takes over any blanks the copies had filled. A copy
+// that came from an OM's comp page is removed from that deal's comparableSales (exactly what
+// the comp's own Delete does). Snapshot first, and every removed row is kept in it.
+// ---------------------------------------------------------------------------
+export const COMP_MERGE_REASON = "before-comp-merge";
+export async function runCompDedupe(apply: boolean): Promise<{ applied: boolean; groups: number; removed: number; examples: Array<{ kept: string; keptSource: string; removed: Array<{ name: string | null; source: string; saleDate: string | null; salePrice: number | null }> }> }> {
+  const rows = await db.select().from(compsIndexTable);
+  const plan = planCompMerges(rows as unknown as CompLike[]);
+  const src = (r: CompLike) => r.isOwnTransaction ? "KPR" : r.isManual ? "broker/manual" : "OM";
+  const examples = plan.map(g => ({ kept: String(g.keep.name ?? g.keep.address ?? g.keep.id), keptSource: src(g.keep),
+    removed: g.remove.map(r => ({ name: r.name, source: src(r), saleDate: r.saleDate, salePrice: r.salePrice })) }));
+  const removed = plan.reduce((n, g) => n + g.remove.length, 0);
+  if (!apply || !plan.length) return { applied: false, groups: plan.length, removed, examples };
+
+  const snap = await createSnapshot(COMP_MERGE_REASON);
+  if ("id" in snap) {
+    await db.execute(sql`UPDATE snapshots SET data = data || ${JSON.stringify({ removedComps: plan.flatMap(g => g.remove), compMerge: examples })}::jsonb WHERE id = ${snap.id}`);
+  }
+  for (const g of plan) {
+    if (g.keep.isManual) {
+      const patch = fillFrom(g.keep, g.remove);
+      if (Object.keys(patch).length) await db.update(compsIndexTable).set({ ...patch, updatedAt: new Date() } as never).where(eq(compsIndexTable.id, g.keep.id));
+    }
+    for (const r of g.remove) {
+      if (r.isManual) { await db.delete(compsIndexTable).where(eq(compsIndexTable.id, r.id)); continue; }
+      // OM-sourced: take it off the source deal's comp page, then re-index that deal.
+      const ctx = await loadOmCompContext(r.id);
+      if ("error" in ctx) continue;
+      if (!ctx.deal) { await db.delete(compsIndexTable).where(eq(compsIndexTable.id, r.id)); continue; }
+      const data = ctx.deal.data as Record<string, unknown>;
+      const comps = Array.isArray(data.comparableSales) ? (data.comparableSales as Array<Record<string, unknown>>) : [];
+      const idx = findComparableIndex(comps, ctx.row);
+      if (idx === -1) continue;   // can't place it confidently — leave it for a person
+      const nextData = { ...data, comparableSales: comps.slice(0, idx).concat(comps.slice(idx + 1)) };
+      await db.update(dealsTable).set({ data: nextData, updatedAt: new Date() }).where(eq(dealsTable.id, ctx.deal.id));
+      await rebuildCompsIndex(ctx.deal.id, nextData);
+    }
+  }
+  return { applied: true, groups: plan.length, removed, examples };
+}
+
+router.post("/comps/dedupe", requireAdmin, async (req, res) => {
+  try { res.json(await runCompDedupe((req.body as { apply?: boolean } | undefined)?.apply === true)); }
+  catch (err) { req.log.error({ err }, "Comp dedupe failed"); res.status(500).json({ error: "Comp dedupe failed" }); }
+});
 
 router.post("/comps/cleanup", requireAdmin, async (req, res) => {
   try {

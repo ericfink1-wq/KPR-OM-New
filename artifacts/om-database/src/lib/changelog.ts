@@ -48,6 +48,29 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-faster-load",
+    date: "2026-10-17",
+    category: "improved",
+    title: "The app loads much faster, especially on phones",
+    detail: "The deal library used to download every deal's full detail — including deleted deals — on every visit (about 18 MB). It's now compressed, leaves deleted deals out, and loads the deal-page-only details (citations, tax parcels, property history and similar) when you open that deal.",
+  },
+  {
+    id: "2026-10-17-mtm-thin-samples",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Mark-to-Market no longer counts dollars from thin samples",
+    detail: "A store with fewer than 5 comparable stores is still listed (with its percentile), but its dollars aren't added to the capturable upside or the deal total. A store paying more than half its peers is never shown as below market.",
+    where: "Portfolio Analytics → Mark-to-Market",
+  },
+  {
+    id: "2026-10-17-comp-duplicates",
+    date: "2026-10-17",
+    category: "data",
+    title: "Duplicate sale comps merged; resales stay separate",
+    detail: "The same sale entered twice is merged into one comp, keeping the best source (KPR's own trades first, then broker comps, then OM comps) and filling in any blanks from the copy. A property that sold again on a different date is a separate comp and is no longer flagged as a possible duplicate.",
+    where: "Comps",
+  },
+  {
     id: "2026-10-17-history-renames-om-dates",
     date: "2026-10-17",
     category: "fixed",

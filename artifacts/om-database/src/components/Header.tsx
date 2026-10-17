@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle } from "../lib/idb";
-import { apiImportDeal, apiSaveDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog, apiRecordUpload, apiBulkSaveLeaseAbstracts, apiBulkSaveSiteAgreements } from "../lib/api";
+import { apiImportDeal, apiSaveDeal, apiLoadDealsFull, ensureFullDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog, apiRecordUpload, apiBulkSaveLeaseAbstracts, apiBulkSaveSiteAgreements } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
@@ -317,6 +317,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const runJsonImport = async (allDeals: Deal[]) => {
     const existingById = new Map(deals.map(d => [d.id, d]));
     await apiCreateSnapshot("before-import").catch(() => {});
+    // Undo restores the COMPLETE prior record, so fetch it for every deal this will update
+    // (the in-memory list copy leaves detail blocks out).
+    const fullPriors = new Map<string, Deal>();
+    for (const u of computeImportPlan(allDeals, deals.filter(d => !d.trashedAt)).updates) {
+      const d = existingById.get(u.id);
+      if (d) fullPriors.set(u.id, await ensureFullDeal(d));
+    }
 
     const succeeded: Deal[] = [];
     const mergedNames: string[] = [];
@@ -342,7 +349,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         }
         if (result.merged) {
           mergedNames.push(result.propertyName || allDeals[i].propertyName || "");
-          const prior = existingById.get(result.id);
+          const prior = fullPriors.get(result.id) ?? existingById.get(result.id);
           if (prior) priors.push(prior);
         }
       } catch (err) {
@@ -394,7 +401,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const handleFullBackup = async () => {
     setBackupMenu(false);
     try {
-      const ids = deals.map(d => d.id);
+      // The list in memory leaves detail out (and has no trashed deals) — back up the
+      // complete records, trashed included, straight from the server.
+      const fullDeals = await apiLoadDealsFull(true);
+      const ids = fullDeals.map(d => d.id);
       const [sourcePairs, imagePairs] = await Promise.all([
         Promise.all(ids.map(id => apiLoadSource(id).then(t => [id, t] as const).catch(() => [id, null] as const))),
         Promise.all(ids.map(id => apiLoadImages(id).then(img => [id, img] as const).catch(() => [id, null] as const))),
@@ -408,8 +418,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         app: "KPR Deal Intelligence",
         schema: 2,
         exportedAt: new Date().toISOString(),
-        dealCount: deals.length,
-        deals,
+        dealCount: fullDeals.length,
+        deals: fullDeals,
         sources,
         images,
       };
@@ -427,9 +437,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   // — small enough to hand off (Drive/email/chat) for analysis or validation. Same
   // {deals:[...]} shape, so "Restore from backup" and the validation harness both read
   // it. NOT a substitute for the full backup (no images/sources) — it's for data work.
-  const handleDealsOnlyBackup = () => {
+  const handleDealsOnlyBackup = async () => {
     setBackupMenu(false);
     try {
+      const deals = await apiLoadDealsFull(false);   // complete records, not the list view
       // EXCLUDE trashed (soft-deleted) deals. This is the file used for data work /
       // analysis, and a deleted deal's data lingering in the DB (kept for restore)
       // would otherwise leak in and pollute the sample — inflating counts and

@@ -1189,6 +1189,8 @@ export interface Deal {
   myUnderwriting?: MyUnderwritingInputs | null;
   // Trash
   trashedAt?: string | null;
+  /** Set on a LIST copy from GET /deals (detail-only blocks left out); the full record comes from GET /deals/:id/full. */
+  _summary?: boolean;
   // Benchmark scoring metadata
   lastScoredAt?: string | null;
   lastScoredDealCount?: number | null;

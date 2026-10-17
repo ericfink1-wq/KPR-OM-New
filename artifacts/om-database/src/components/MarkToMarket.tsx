@@ -1,3 +1,4 @@
+import { isBelowMarket, countsInUpside, MIN_PEERS_FOR_DOLLARS } from "../lib/mtmCount";
 import { useMemo, useState } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal } from "../lib/idb";
@@ -35,6 +36,7 @@ interface DealMtm {
   belowUpside: number;  // sum of annual upside for below-market leases past threshold (free, not option-locked)
   lockedUpside: number; // upside sitting behind below-market renewal options
   belowCount: number;
+  countedCount: number; // rows with enough peers to count in dollars
   rows: Gap[];          // below-market past threshold, biggest upside first
 }
 
@@ -100,11 +102,14 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
           : null;
         rows.push({ name: t.canonicalName || t.name || "Tenant", inPlace, median, sf, gapPct, annual, locations: b.n, years: b.years, band: b.band, region: b.region, percentile: b.percentile, locked, lockNote });
       }
-      const below = rows.filter(r => r.gapPct >= threshold).sort((a, b) => (b.annual ?? 0) - (a.annual ?? 0));
-      const belowUpside = below.filter(r => !r.locked).reduce((s, r) => s + (r.annual ?? 0), 0);
-      const lockedUpside = below.filter(r => r.locked).reduce((s, r) => s + (r.annual ?? 0), 0);
+      // Counted rows (enough peers) first by dollars; thin ones after — shown, never totalled.
+      const below = rows.filter(r => isBelowMarket(r, threshold))
+        .sort((a, b) => Number(countsInUpside(b)) - Number(countsInUpside(a)) || (b.annual ?? 0) - (a.annual ?? 0));
+      const counted = below.filter(countsInUpside);
+      const belowUpside = counted.filter(r => !r.locked).reduce((s, r) => s + (r.annual ?? 0), 0);
+      const lockedUpside = counted.filter(r => r.locked).reduce((s, r) => s + (r.annual ?? 0), 0);
       if (below.length > 0) {
-        out.push({ dealId: d.id, dealName: d.propertyName || d.address || "Untitled deal", belowUpside, lockedUpside, belowCount: below.length, rows: below });
+        out.push({ dealId: d.id, dealName: d.propertyName || d.address || "Untitled deal", belowUpside, lockedUpside, belowCount: below.length, countedCount: counted.length, rows: below });
       }
     }
     out.sort((a, b) => b.belowUpside - a.belowUpside);
@@ -114,13 +119,15 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
   const totalUpside = perDeal.reduce((s, d) => s + d.belowUpside, 0);
   const totalLocked = perDeal.reduce((s, d) => s + d.lockedUpside, 0);
   const totalLeases = perDeal.reduce((s, d) => s + d.belowCount, 0);
+  const thinLeases = totalLeases - perDeal.reduce((s, d) => s + d.countedCount, 0);
+  const dealsWithUpside = perDeal.filter(d => d.countedCount > 0).length;
 
   return (
     <div style={{ padding: "20px 18px 80px", maxWidth: 940, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
       <h1 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#26281f", margin: "0 0 4px" }}>Mark-to-Market Upside</h1>
       <p style={{ fontSize: 12.5, color: "#7d766a", margin: "0 0 16px", lineHeight: 1.5 }}>
         In-place rents that sit below the same brand's portfolio-median rent — the rent you could recapture at rollover.
-        Each store is compared only with the same brand in the same size band (under 10k, 10–25k, 25–50k, 50k+ SF) and region, falling back to national in that size band when the region has fewer than 3. Ground leases, pads and kiosks are left out. Medians are recency-weighted by lease start and come from your own database, not third-party market data, so treat them as directional. With fewer than 5 comparable stores the column shows where the rent ranks (percentile) instead of a % gap.
+        Each store is compared only with the same brand in the same size band (under 10k, 10–25k, 25–50k, 50k+ SF) and region, falling back to national in that size band when the region has fewer than 3. Ground leases, pads and kiosks are left out. Medians are recency-weighted by lease start and come from your own database, not third-party market data, so treat them as directional. With fewer than 5 comparable stores the column shows where the rent ranks (percentile) instead of a % gap, and its dollars are not added to the upside totals. A store paying more than half its peers is never shown as below market.
       </p>
 
       <div style={{ marginBottom: 12 }}>
@@ -159,10 +166,11 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
             <div>
               <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Below-market leases</div>
               <div style={{ fontSize: 24, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{totalLeases}</div>
+              {thinLeases > 0 && <div style={{ fontSize: 10.5, color: "#a89f8f", marginTop: 3 }}>{thinLeases} with under {MIN_PEERS_FOR_DOLLARS} comps — not counted in $</div>}
             </div>
             <div>
               <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Deals with upside</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{perDeal.length}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{dealsWithUpside}</div>
             </div>
           </div>
 
@@ -221,7 +229,12 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
                         title={r.locations < 5 ? `Only ${r.locations} comparable stores — showing where this rent ranks instead of a % gap` : undefined}>
                         {r.locations < 5 ? `${ordinal(r.percentile)} pct` : `${Math.round(r.gapPct)}%`}
                       </div>
-                      <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: r.locked ? "#9a6b1f" : "#2f6b1f", textDecoration: r.locked ? "line-through" : "none" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
+                      {countsInUpside(r) ? (
+                        <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: r.locked ? "#9a6b1f" : "#2f6b1f", textDecoration: r.locked ? "line-through" : "none" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
+                      ) : (
+                        <div title={`Only ${r.locations} comparable stores — too few to put a dollar figure on, so it isn't added to the upside totals.`}
+                          style={{ width: 70, textAlign: "right", fontSize: 10.5, fontWeight: 600, color: "#a89f8f", lineHeight: 1.2 }}>not counted<br />(n={r.locations})</div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -27,6 +27,7 @@ import { triageAiQuestions, summarizeTriage, TRIAGE_MARK, type TriageOutcome } f
 import { planDatexImport, applyLiveBlock, datexDivergence, DATEX_BLOCK_KEY, type DatexPayload } from "../lib/datexImport";
 import { updateDealSafely } from "../lib/dealWrite";
 import { keepServerOwnedAnalysis } from "../lib/analysisOwnership";
+import { toListView, restoreOmittedDetail } from "../lib/dealListView";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
 // imported deal and merge the result back. The JSON's self-contained grade is
@@ -266,8 +267,21 @@ function prettyName(name: unknown): unknown {
 }
 
 // GET /api/deals — list all deals (excludes in-progress ingests)
+// One stored row → what the app receives (tidied name, canonical tenant names, cover flags).
+function presentDeal(r: { id: string; data: Record<string, unknown>; updatedAt: Date | null }, aliasMap: Awaited<ReturnType<typeof loadAliasMap>>, hasCover: boolean, hasThumb: boolean): Record<string, unknown> {
+  const { _processing: _p, _processingError: _e, _reanalyzeError: _r, ...rest } = r.data;
+  const out = { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt } as Record<string, unknown>;
+  out.propertyName = prettyName(out.propertyName);   // tidy ALL-CAPS names for display/exports (stored value unchanged)
+  if (hasCover) out.imageMeta = { ...((out.imageMeta as Record<string, unknown>) || {}), cover: true, thumb: hasThumb };
+  return out;
+}
+
+// GET /deals — the library list. Live deals only, list view (see lib/dealListView.ts);
+// `?trashed=1` returns the Trash instead; `?full=1` the complete records (backups/exports).
 router.get("/deals", requireAuth, async (req, res) => {
   try {
+    const wantTrash = req.query.trashed === "1";
+    const full = req.query.full === "1";
     const [rows, aliasMap, coverIdRows, thumbIdRows] = await Promise.all([
       db.select().from(dealsTable).orderBy(dealsTable.createdAt),
       loadAliasMap(),
@@ -283,19 +297,32 @@ router.get("/deals", requireAuth, async (req, res) => {
     const thumbSet = new Set(thumbIdRows.map(c => c.id));
     const deals = rows
       .filter(r => !r.data._processing)
+      .filter(r => req.query.all === "1" || (wantTrash ? !!r.data.trashedAt : !r.data.trashedAt))
       .map(r => {
-        const { _processing: _p, _processingError: _e, _reanalyzeError: _r, ...rest } = r.data;
-        const out = { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt } as Record<string, unknown>;
-        out.propertyName = prettyName(out.propertyName);   // tidy ALL-CAPS names for display/exports (stored value unchanged)
-        if (coverSet.has(r.id)) {
-          out.imageMeta = { ...((out.imageMeta as Record<string, unknown>) || {}), cover: true, thumb: thumbSet.has(r.id) };
-        }
-        return out;
+        const out = presentDeal(r as { id: string; data: Record<string, unknown>; updatedAt: Date | null }, aliasMap, coverSet.has(r.id), thumbSet.has(r.id));
+        return full || wantTrash ? out : toListView(out);
       });
     res.json(deals);
   } catch (err) {
     req.log.error({ err }, "Failed to load deals");
     res.status(500).json({ error: "Failed to load deals" });
+  }
+});
+
+// GET /deals/:id/full — one complete record, for the deal page (the list leaves blocks out).
+router.get("/deals/:id/full", requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const [[row], aliasMap, img] = await Promise.all([
+      db.select().from(dealsTable).where(eq(dealsTable.id, id)),
+      loadAliasMap(),
+      db.select({ cover: isNotNull(dealImagesTable.cover), thumb: isNotNull(dealImagesTable.coverThumb) }).from(dealImagesTable).where(eq(dealImagesTable.id, id)),
+    ]);
+    if (!row || row.data._processing) { res.status(404).json({ error: "Deal not found" }); return; }
+    res.json(presentDeal(row as { id: string; data: Record<string, unknown>; updatedAt: Date | null }, aliasMap, !!img[0]?.cover, !!img[0]?.thumb));
+  } catch (err) {
+    req.log.error({ err }, "Failed to load deal");
+    res.status(500).json({ error: "Failed to load deal" });
   }
 });
 
@@ -316,6 +343,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
     }
 
     const body = req.body as Record<string, unknown>;
+    delete body._summary;   // a list-view marker is never stored
     req.log.info({ propertyName: body.propertyName, keys: Object.keys(body).length }, "import deal request");
 
     const { id: uploadedId, ...uploadedData } = body;
@@ -526,6 +554,7 @@ router.post("/deals", requireAuth, async (req, res) => {
       return;
     }
     const rest = coerceDealArrays(rest0);
+    delete rest._summary;         // a list-view marker is never stored
     normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
     Object.assign(rest, autoMaintainDealData(rest).data);   // self-clean + refresh audit on create
     await db.insert(dealsTable).values({ id, data: rest });
@@ -550,13 +579,16 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     const id = req.params.id as string;
     const { id: _bodyId, ...rest0 } = req.body as Record<string, unknown>;
     const rest = coerceDealArrays(rest0);
+    // Capture the prior "Our Take" so we only re-learn the House View when it changes.
+    const prevRows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
+    // A save from a LIST copy must not wipe the blocks the list leaves out — put them back
+    // BEFORE the audit runs, or it would judge an incomplete record.
+    restoreOmittedDetail(prevRows[0]?.data as Record<string, unknown> | undefined, rest);
     normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
     // Self-clean + refresh the integrity audit on every save (edits, roster pastes), so
     // the data stays clean and the audit stays current without any manual sweep. Pure +
     // fast; honors `verified` locks and leaves ambiguous figures flagged, not changed.
     Object.assign(rest, autoMaintainDealData(rest).data);
-    // Capture the prior "Our Take" so we only re-learn the House View when it changes.
-    const prevRows = await db.select().from(dealsTable).where(eq(dealsTable.id, id));
     // A property is SOLD only once the sale has CLOSED (Eric, 10/16/26). Until then it
     // simply stays Owned. So becoming Sold requires a real closing date.
     const prevStatus = (prevRows[0]?.data as Record<string, unknown> | undefined)?.status;

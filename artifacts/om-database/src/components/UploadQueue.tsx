@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, type CSSProperties } from "react";
 import type { Deal, ImageBundle, ReviewQuestion } from "../lib/idb";
-import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload, apiDealUploadedBy } from "../lib/api";
+import { ensureFullDeal, apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload, apiDealUploadedBy } from "../lib/api";
 import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
@@ -1419,7 +1419,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           // Re-base on the LATEST version of the matched deal: it may have just had a
           // sales report / roster / swap / another package file applied earlier in
           // this SAME drop. Merging onto a stale snapshot here would overwrite that.
-          const freshDup = getLatestDeal?.(dup.id) ?? dup;
+          // …and on its COMPLETE record: the library list leaves detail blocks out, and the
+          // merge below decides per block what to keep.
+          const freshDup = await ensureFullDeal(getLatestDeal?.(dup.id) ?? dup);
           const incoming = { ...extracted, imageMeta, fileName, pdfPages: pages };
           // Another file of the same broker package → each part of the deal comes
           // from the file that is best at it, whatever order they finished in.
