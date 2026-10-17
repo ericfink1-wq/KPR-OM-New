@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { tenantIndexTable } from "@workspace/db";
+import { tenantIndexTable, dealsTable } from "@workspace/db";
 import { inArray } from "drizzle-orm";
 import type { TenantIndexRow } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
@@ -23,6 +23,38 @@ function pct(part: number, total: number): number {
 }
 
 // parseDealIds lives in lib/queryParams (pure, no DB import) so it's unit-testable.
+
+// Datex mode (Eric, 10/16/26: "Owned figures are as of each OM — ideally pull Owned
+// rollover from Datex"). For a deal whose stored Datex snapshot carries its billed
+// tenants, those tenants REPLACE the OM roster in the roll-up: today's rents and
+// expiries. Anchor / canonical name / credit come from the OM roster row of the same
+// brand when one exists (Datex doesn't carry them); a 20k+ SF box counts as an anchor.
+export function datexRowsFor(
+  dealId: string,
+  datexTenants: Array<{ name?: string | null; sf?: number | null; annualRent?: number | null; leaseExpiry?: string | null }>,
+  omRows: TenantIndexRow[],
+): TenantIndexRow[] {
+  const byBrand = new Map<string, TenantIndexRow>();
+  for (const r of omRows) { const k = brandFamilyKey(r.canonicalName || r.rawName); if (k && !byBrand.has(k)) byBrand.set(k, r); }
+  return datexTenants
+    .filter(t => t && t.name && !/^(vacant|available)\b/i.test(String(t.name).trim()))
+    .map(t => {
+      const om = byBrand.get(brandFamilyKey(t.name));
+      const sf = typeof t.sf === "number" ? t.sf : null;
+      const exp = typeof t.leaseExpiry === "string" && /^\d{4}-\d{2}/.test(t.leaseExpiry) ? t.leaseExpiry.slice(0, 10) : null;
+      return {
+        ...(om ?? {}),
+        dealId,
+        rawName: String(t.name).replace(/\s*#\s*\d+\s*$/, "").trim(),   // Datex names carry store numbers
+        canonicalName: om?.canonicalName ?? null,
+        annualRent: typeof t.annualRent === "number" ? t.annualRent : null,
+        leaseExpiryDate: exp,
+        sf,
+        isAnchor: om?.isAnchor ?? (sf != null && sf >= 20000),
+        creditRating: om?.creditRating ?? null,
+      } as TenantIndexRow;
+    });
+}
 
 function computeAnalytics(rows: TenantIndexRow[]) {
   // Exclude vacant and rows with no name
@@ -143,11 +175,28 @@ router.get("/analytics/portfolio", requireAuth, async (req, res) => {
       return;
     }
 
-    const rows = dealIds
+    let rows = dealIds
       ? await db.select().from(tenantIndexTable).where(inArray(tenantIndexTable.dealId, dealIds))
       : await db.select().from(tenantIndexTable);
 
-    res.json(computeAnalytics(rows));
+    // ?source=datex (Owned view): swap in each deal's live Datex tenants where a snapshot exists.
+    let datex: { deals: number; of: number; asOf: string | null } | undefined;
+    if (req.query.source === "datex" && dealIds && dealIds.length) {
+      const deals = await db.select({ id: dealsTable.id, data: dealsTable.data }).from(dealsTable).where(inArray(dealsTable.id, dealIds));
+      let n = 0; let latest: string | null = null;
+      for (const d of deals) {
+        const live = (d.data as Record<string, unknown>)?.datexLive as { tenants?: Array<Record<string, unknown>>; asOf?: string | null } | undefined;
+        const ts = Array.isArray(live?.tenants) ? live!.tenants! : [];
+        if (!ts.some(t => typeof t.annualRent === "number" && (t.annualRent as number) > 0)) continue;
+        const om = rows.filter(r => r.dealId === d.id);
+        rows = rows.filter(r => r.dealId !== d.id).concat(datexRowsFor(d.id, ts as never, om));
+        n++;
+        if (live?.asOf && (!latest || String(live.asOf) > latest)) latest = String(live.asOf).slice(0, 10);
+      }
+      datex = { deals: n, of: dealIds.length, asOf: latest };
+    }
+
+    res.json({ ...computeAnalytics(rows), ...(datex ? { datex } : {}) });
   } catch (err) {
     req.log.error({ err }, "Failed to compute portfolio analytics");
     res.status(500).json({ error: "Failed to compute portfolio analytics" });

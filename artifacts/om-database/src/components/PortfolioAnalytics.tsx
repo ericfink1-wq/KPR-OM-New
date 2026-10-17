@@ -43,6 +43,8 @@ interface PortfolioAnalyticsData {
   leaseExpiration: ExpirationBucket[];
   tenantConcentration: TenantConcentration;
   creditMix: MixItem[];
+  /** Present on the Owned view: how many centers use today's Datex tenants instead of the OM roster. */
+  datex?: { deals: number; of: number; asOf: string | null };
 }
 
 // ---------------------------------------------------------------------------
@@ -361,7 +363,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
 
   const noDeals = effectiveDealIds !== undefined && effectiveDealIds.length === 0;
 
-  const load = useCallback((dealIds?: string[]) => {
+  const load = useCallback((dealIds?: string[], owned?: boolean) => {
     setLoading(true);
     setError(null);
     let url = "/api/analytics/portfolio";
@@ -369,6 +371,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       // Send repeated dealId= (no brackets) so it parses to an array under both
       // Express 5's default "simple" query parser and the "extended" (qs) parser.
       url += "?" + dealIds.map(id => `dealId=${encodeURIComponent(id)}`).join("&");
+      // Owned centers: use today's Datex tenants where we have them (the OM roster is as of the OM).
+      if (owned) url += "&source=datex";
     }
     fetch(url, { credentials: "include" })
       .then(r => {
@@ -381,8 +385,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
 
   useEffect(() => {
     if (noDeals) { setLoading(false); setData(null); return; }
-    load(effectiveDealIds);
-  }, [effectiveDealIds, noDeals, load]);
+    load(effectiveDealIds, scope === "owned");
+  }, [effectiveDealIds, noDeals, load, scope]);
 
   const handleRebuild = () => {
     setRebuilding(true);
@@ -876,7 +880,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                 <ExpirationWaterfall data={data.leaseExpiration} onYearClick={onYearClick ? (year => onYearClick(year, scope)) : undefined} />
               )}
               <div style={{ fontSize: 10.5, color: "#a89f8f", marginTop: 8, lineHeight: 1.45 }}>
-                Expiry dates come from each deal's OM or rent roll, so these are as of each document's date, not live.{scope === "owned" ? " For today's rollover on owned centers, Datex is the source of record." : ""}
+                {scope === "owned" && data.datex && data.datex.deals > 0
+                  ? <>{data.datex.deals === data.datex.of ? `All ${data.datex.of}` : `${data.datex.deals} of ${data.datex.of}`} owned centers use today's tenants from Datex{data.datex.asOf ? ` (synced ${new Date(data.datex.asOf + "T00:00:00").toLocaleDateString()})` : ""}.{data.datex.deals < data.datex.of ? " The rest use their OM or rent roll, as of that document's date." : ""}</>
+                  : <>Expiry dates come from each deal's OM or rent roll, so these are as of each document's date, not live.{scope === "owned" ? " For today's rollover on owned centers, Datex is the source of record." : ""}</>}
               </div>
             </Card>
 

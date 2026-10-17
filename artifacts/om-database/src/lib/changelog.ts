@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-owned-rollover-datex",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Owned rollover uses today's Datex tenants",
+    detail:
+      "On the Owned view of Portfolio Analytics, the lease-expiration waterfall, top tenants and credit mix now use each center's current tenant list from Datex wherever a Datex snapshot is loaded, instead of the OM's roster. A note under the waterfall says how many owned centers are on Datex and when it was synced; any center without a snapshot still uses its OM or rent roll.",
+    where: "Portfolio Analytics → Owned",
+  },
+  {
     id: "2026-10-17-datex-owned",
     date: "2026-10-17",
     category: "improved",
