@@ -768,7 +768,7 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
       const thisCid = cid++;
       const mRows = members.map(id => rowById.get(id)).filter((r): r is CompRow => !!r);
       const maxTier = Math.max(...mRows.map(tierOf));
-      const bestTierName = maxTier === 2 ? "OWNED" : "Manual";
+      const bestTierName = maxTier === 2 ? "KPR transaction" : "Manual";
       for (const row of mRows) {
         const others = mRows.filter(m => m.id !== row.id);
         const myEdges = edges.filter(e => e.a === row.id || e.b === row.id);
@@ -1222,8 +1222,8 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
                           {row.isOwnTransaction ? (
-                            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
-                              OWNED
+                            <span title={row.txnKind === "disposition" ? "KPR's own sale of this property (closed)" : "KPR's own purchase of this property"} style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                              {row.txnKind === "disposition" ? "KPR SALE" : "KPR BUY"}
                             </span>
                           ) : row.isManual && row.sourceDealId === "__upload__" ? (
                             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#7a6aa0", background: "#efeaf7", border: "1px solid #d4c9ec", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>

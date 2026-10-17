@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-sale-stage",
+    date: "2026-10-17",
+    category: "new",
+    title: "Under-contract sales stay Owned, with a sale flag",
+    detail:
+      "A property KPR is selling now stays Owned, and keeps counting in every owned total, until the sale closes. Set its Sale Stage (Marketed or Under Contract), buyer, price and expected closing on the Transaction tab, and a pill appears next to the Owned tag, e.g. 'Under contract · Wharton · $39M · closing Jan '27'. Marking a deal Sold now asks for the closing date and won't save without one. Any deal already marked Sold with no closing date shows a red 'no closing date' flag. On the Comps page, KPR's own trades are now tagged KPR BUY or KPR SALE instead of OWNED.",
+    where: "Deal page → status tag and Transaction tab; Deal Library; Comps",
+  },
+  {
     id: "2026-10-17-ig-and-brand-names",
     date: "2026-10-17",
     category: "fixed",

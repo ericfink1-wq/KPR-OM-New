@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
+import MarkSoldDialog from "./MarkSoldDialog";
+import SaleStagePill from "./SaleStagePill";
+import { isClosingDate } from "../lib/saleStage";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
@@ -1640,6 +1643,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // If the underwriting tabs are hidden while one of them is open, fall back to Summary.
   useEffect(() => { if (!showUnderwriting && UW_TABS.has(tab)) setTab("overview"); }, [showUnderwriting, tab]);
   const [navMenu, setNavMenu] = useState<string | null>(null);  // open jump-dropdown (a tab key, or "toc" on mobile)
+  const [markSoldOpen, setMarkSoldOpen] = useState(false);       // Sold requires a closing date
   const [intelOpen, setIntelOpen] = useState(false);            // Add-Intel modal (pinned in the top bar + tab row)
   const isMobileNav = useIsMobile();
   const [actionsHelpOpen, setActionsHelpOpen] = useState(false);
@@ -2683,6 +2687,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         />
         <AddIntelButton onClick={() => setIntelOpen(true)} />
       </div>
+      {markSoldOpen && (
+        <MarkSoldDialog deal={d}
+          onConfirm={patch => { setMarkSoldOpen(false); onUpdate(d.id, patch); }}
+          onKeepOwned={() => { setMarkSoldOpen(false); onUpdate(d.id, { status: "Owned", saleStage: "Under Contract" }); setTab("transaction"); }}
+          onCancel={() => setMarkSoldOpen(false)} />
+      )}
       <AddIntelModal deal={d} open={intelOpen} onClose={() => setIntelOpen(false)} onApply={patch => onUpdate(d.id, patch)} />
       <input ref={rerunPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleRerunPdf}/>
 
@@ -2690,7 +2700,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       <div style={{ marginBottom:14 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:6, marginBottom:4 }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-            <StatusTag status={d.status} onChange={s => onUpdate(d.id, { status:s })}/>
+            <StatusTag status={d.status} onChange={s => {
+              // Sold = the sale has CLOSED. Without a closing date, ask first.
+              if (s === "Sold" && d.status !== "Sold" && !isClosingDate(d.txnSaleDate)) { setMarkSoldOpen(true); return; }
+              onUpdate(d.id, s === "Sold" ? { status: s, saleStage: null } : { status: s });
+            }}/>
+            <SaleStagePill deal={d} />
             <ScoreBadge score={adjustedScore} size={12}/>
             <RecencyBadge deal={d}/>
             {(() => {
@@ -3708,7 +3723,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             )}
 
             {/* Disposition — collapsed behind a toggle, auto-expanded when Sold */}
-            <DispositionSection sold={sold}>
+            <DispositionSection sold={sold || !!d.saleStage}>
+            {!sold && d.status === "Owned" && (
+              <div style={{ fontSize:12, lineHeight:1.5, color:"#7d766a", marginBottom:10 }}>
+                Selling this property? Set the <strong>Sale Stage</strong> here — it stays <strong>Owned</strong> (and in every owned total) until the sale closes. Change the status to Sold once there's a closing date.
+              </div>
+            )}
             {sold && (() => {
               const req: [string, unknown][] = [["Sale price", d.txnSalePrice],["Buyer", d.txnBuyer],["Sale date", d.txnSaleDate],["Exit cap", d.dispExitCap]];
               const missing = req.filter(([,v]) => v == null || v === "");
@@ -3729,9 +3749,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             })()}
 
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
-              {tf({ label:"Sale Price", field:"txnSalePrice", placeholder:"e.g. 54,000,000", prefix:"$" })}
-              {tf({ label:"Sold To (Buyer)", field:"txnBuyer", placeholder:"Buyer entity / name" })}
-              {tf({ label:"Sale Date", field:"txnSaleDate", placeholder:"YYYY-MM-DD" })}
+              {!sold && tf({ label:"Sale Stage", field:"saleStage", options:["Marketed","Under Contract"] })}
+              {tf({ label: sold ? "Sale Price" : "Sale / Contract Price", field:"txnSalePrice", placeholder:"e.g. 54,000,000", prefix:"$" })}
+              {tf({ label: sold ? "Sold To (Buyer)" : "Buyer", field:"txnBuyer", placeholder:"Buyer entity / name" })}
+              {!sold && tf({ label:"Expected Closing", field:"saleExpectedClosing", placeholder:"YYYY-MM-DD" })}
+              {tf({ label: sold ? "Closing Date" : "Closing Date (once closed)", field:"txnSaleDate", placeholder:"YYYY-MM-DD" })}
               {tf({ label:"Disposition Broker", field:"txnBroker", placeholder:"firm representing the sale" })}
               {sold && <>
                 {tf({ label:"Exit Cap Rate", field:"dispExitCap", placeholder:"e.g. 5.75", suffix:"%" })}

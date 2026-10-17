@@ -383,7 +383,10 @@ async function putDealWithRetry(id: string, rest: Record<string, unknown>): Prom
       const resp = await apiFetch(`/deals/${id}`, { method: "PUT", body: JSON.stringify(rest) });
       if (resp.ok) return;
       if (resp.status >= 400 && resp.status < 500) {
-        throw new Error(resp.status === 401 ? "Signed out — please sign in again." : `Save rejected (HTTP ${resp.status}).`);
+        // Surface the server's own reason (e.g. "mark Sold only once the sale has closed").
+        let why = "";
+        try { why = String(((await resp.json()) as { error?: unknown })?.error ?? ""); } catch { /* no body */ }
+        throw new Error(resp.status === 401 ? "Signed out — please sign in again." : `Save rejected${why ? `: ${why}` : ` (HTTP ${resp.status}).`}`);
       }
       lastErr = `Server error (HTTP ${resp.status}).`;
     } catch (e) {

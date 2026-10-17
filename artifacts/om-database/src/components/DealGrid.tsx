@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import SaleStagePill from "./SaleStagePill";
+import { isClosingDate } from "../lib/saleStage";
 import type { Deal } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiSaveDeal, apiReanalyzeDeal, apiPollDealStatus, apiAiMessages } from "../lib/api";
 import { STATUS_COLORS, STATUS_OPTS } from "../lib/constants";
@@ -712,7 +714,16 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     let v = bulkEditValue.trim();
     if (cfg.key === "state") v = v.toUpperCase();
     const finalVal = v === "" ? null : v;
+    // Sold = the sale has CLOSED: refuse to bulk-mark Sold any deal without a closing date.
+    if (cfg.key === "status" && finalVal === "Sold") {
+      const noDate = deals.filter(d => selected.has(d.id) && d.status !== "Sold" && !isClosingDate(d.txnSaleDate));
+      if (noDate.length) {
+        setNotice(`Not changed: ${noDate.length} of the selected propert${noDate.length === 1 ? "y has" : "ies have"} no closing date (${noDate.slice(0, 3).map(d => d.propertyName || "unnamed").join(", ")}${noDate.length > 3 ? "…" : ""}). A deal is Sold only once the sale has closed — open each one and mark it Sold with the closing date, or keep it Owned with a Sale stage.`);
+        return;
+      }
+    }
     const patch: Record<string, unknown> = { [cfg.key]: finalVal };
+    if (cfg.key === "status" && finalVal === "Sold") patch.saleStage = null;
     for (const k of cfg.also || []) patch[k] = finalVal;
     const n = selected.size;
     for (const id of selected) onUpdate(id, patch as Partial<Deal>);
@@ -1356,6 +1367,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       </td>
                       <td style={{ padding: "8px 10px" }}>
                         <StatusTag status={d.status} size="sm" />
+                        {((d.saleStage && d.status === "Owned") || (d.status === "Sold" && !isClosingDate(d.txnSaleDate))) && <div style={{ marginTop: 3 }}><SaleStagePill deal={d} size="sm" /></div>}
                       </td>
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{cityOnly(d.city, d.state)}</td>
                       <td style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>

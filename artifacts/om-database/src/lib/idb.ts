@@ -1105,7 +1105,11 @@ export interface Deal {
   txnCloseDate?: string | null;
   txnSalePrice?: number | null;
   txnBuyer?: string | null;
-  txnSaleDate?: string | null;
+  txnSaleDate?: string | null;      // the CLOSING date of KPR's sale — required for status "Sold"
+  // A property under contract to sell (or being marketed) is still OWNED until closing;
+  // this flag sits on top of the Owned status. Buyer / price reuse txnBuyer / txnSalePrice.
+  saleStage?: "Marketed" | "Under Contract" | null;
+  saleExpectedClosing?: string | null;
   txnBroker?: string | null;
   // Disposition
   dispExitCap?: number | null;
