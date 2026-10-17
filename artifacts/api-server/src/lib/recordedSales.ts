@@ -16,13 +16,12 @@ export interface RecordedSale {
 }
 
 export const RECORDED_SALES: RecordedSale[] = [
-  // Pompano price: Eric 10/17/26. Sunshine + Crossroads prices not yet given — the
-  // audit-sold-no-price check flags them on the deal page until someone fills them in.
+  // Sale prices from Eric 10/17/26 (Pompano $53.0M, Sunshine $56.0M, Crossroads $38.75M).
   { id: "1781018389244-8qtnfqj", name: "Pompano Marketplace", txnSaleDate: "2026-07-28", txnBuyer: "Kimco", txnSalePrice: 53000000 },
   // Bolton: closing date + original acquisition from Eric 10/17/26.
   { id: "kpr-sold-bolton-plaza", name: "Bolton Plaza", txnSaleDate: "2026-04-21", txnSalePrice: 22875000, txnCloseDate: "2019-08-01", txnPurchasePrice: 18050000 },
-  { id: "1781018408735-iawdlv1", name: "Sunshine Plaza", txnSaleDate: "2026-07-28", txnBuyer: "Kimco" },
-  { id: "1782135445555-qd67vrz", name: "Shops at Crossroads", txnSaleDate: "2026-06-29" },
+  { id: "1781018408735-iawdlv1", name: "Sunshine Plaza", txnSaleDate: "2026-07-28", txnBuyer: "Kimco", txnSalePrice: 56000000 },
+  { id: "1782135445555-qd67vrz", name: "Shops at Crossroads", txnSaleDate: "2026-06-29", txnSalePrice: 38750000 },
 ];
 
 const blank = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "") || (typeof v === "number" && !(v > 0));

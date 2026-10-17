@@ -12,7 +12,7 @@ describe("recorded sale closings", () => {
     expect(salePatch({ status: "Sold", txnSaleDate: "2026-07-30", txnBuyer: "Kimco Realty", txnSalePrice: 52000000 }, pompano)).toBeNull();
   });
   it("does not invent a buyer when none was given", () => {
-    expect(salePatch({ status: "Sold" }, crossroads)).toEqual({ txnSaleDate: "2026-06-29" });
+    expect(salePatch({ status: "Sold" }, crossroads)).toEqual({ txnSaleDate: "2026-06-29", txnSalePrice: 38750000 });
   });
   it("leaves a deal that isn't marked Sold alone", () => {
     expect(salePatch({ status: "Owned" }, pompano)).toBeNull();
