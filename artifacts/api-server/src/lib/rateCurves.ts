@@ -73,7 +73,8 @@ async function upsert(id: string, curveDate: string, kind: string, asOf: string,
 // DTCC (a few per refresh) instead of being skipped as "already have it". v2 (10/17/26) =
 // executed-that-day filter + duplicate drop + 3:00–5:00pm ET close. Stored as `m` on each
 // point, so no schema change.
-export const CURVE_METHOD = 2;
+const TERM_CLEAN_SINCE_METHOD = 2;
+export const CURVE_METHOD = 3;   // v3: thin tenors = day median + neighbours' move into the close
 async function storedIds(): Promise<Set<string>> {
   const r = await db.execute(sql`SELECT id FROM rate_curves WHERE kind = 'manual' OR (points->0->>'m')::int >= ${CURVE_METHOD}`);
   return new Set((r.rows as Array<{ id: string }>).map(x => x.id));
@@ -214,9 +215,9 @@ export function basisSamples(rows: Array<{ curve_date: string; kind: string; poi
   const out: BasisSample[] = [], seen = new Set<string>();
   for (const r of rows) {
     if (r.kind !== "term" && r.kind !== "term-live") continue;
-    // Term prints stored before CURVE_METHOD 2 were filtered loosely (±50 bp of raw OIS) —
-    // never measure a basis from them.
-    if (!((r.points[0]?.m ?? 0) >= CURVE_METHOD)) continue;
+    // Term prints stored before method 2 were filtered loosely (±50 bp of raw OIS) — never
+    // measure a basis from them. (Fixed at 2: later method bumps don't change Term cleaning.)
+    if (!((r.points[0]?.m ?? 0) >= TERM_CLEAN_SINCE_METHOD)) continue;
     const d = String(r.curve_date).slice(0, 10);
     if (d > asOfDate || businessDaysBetween(d, asOfDate) >= BASIS_WINDOW_BDAYS) continue;
     if (seen.has(d) && r.kind === "term-live") continue;

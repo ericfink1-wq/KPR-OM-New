@@ -21,7 +21,7 @@
 
 export const TENORS = [1, 2, 3, 5, 7, 10, 15, 30] as const;
 export type CurveKind = "ois" | "term";
-export type CurveMethod = "close-window" | "latest-2h" | "day";
+export type CurveMethod = "close-window" | "day+drift" | "latest-2h" | "day";
 
 export interface SwapTrade { tenor: number; rate: number; execMs: number; notional: number | null }
 export interface CurvePoint { tenor: number; rate: number; n: number; p25: number; p75: number; method: CurveMethod; nDay: number }
@@ -136,6 +136,7 @@ export interface BuildOptions {
 /** Curve from one trading day's trades: 3:00–5:00pm ET median → latest 2h → whole day. */
 export function buildCurve(trades: SwapTrade[], opts: BuildOptions = {}): SwapCurve {
   const points: CurvePoint[] = [];
+  const dayMedian = new Map<number, number>(), daySet = new Map<number, number[]>();
   if (opts.curveDate) trades = trades.filter(x => nyDate(x.execMs) === opts.curveDate);
   const seen = new Set<string>();
   trades = trades.filter(x => { const k = `${x.tenor}|${x.execMs}|${x.rate}|${x.notional}`; if (seen.has(k)) return false; seen.add(k); return true; });
@@ -157,6 +158,24 @@ export function buildCurve(trades: SwapTrade[], opts: BuildOptions = {}): SwapCu
     const [set, method]: [SwapTrade[], CurveMethod] = close.length >= MIN_N ? [close, "close-window"] : late.length >= MIN_N ? [late, "latest-2h"] : [all, "day"];
     const v = set.map(x => x.rate).sort((a, b) => a - b);
     points.push({ tenor: t, rate: r3(quantile(v, 0.5)), n: v.length, p25: r3(quantile(v, 0.25)), p75: r3(quantile(v, 0.75)), method, nDay });
+    dayMedian.set(t, quantile(all.map(x => x.rate).sort((a, b) => a - b), 0.5));
+    daySet.set(t, all.map(x => x.rate).sort((a, b) => a - b));
+  }
+  // THIN TENORS (10/17/26, checked vs Chatham's 10/16 close): a tenor with too few trades in the
+  // close falls back to a wider window, which misses the day's move (1Y +2.5 bp, 15Y +1.7 bp on
+  // a ~3 bp rally). Interpolating across tenors is worse — the curve humps at 15Y (a 10Y–30Y line
+  // was ~10 bp low). So: its whole-day median + the median move into the close of its two
+  // nearest well-traded tenors (close − whole-day). 10/16: 1Y → +0.1 bp, 15Y → +0.6 bp.
+  const anchored = points.filter(p => p.method === "close-window" && dayMedian.has(p.tenor));
+  if (anchored.length) {
+    for (const p of points) {
+      if (p.method === "close-window" || !daySet.get(p.tenor)?.length) continue;
+      const nb = [...anchored].sort((a, b) => Math.abs(Math.log(a.tenor / p.tenor)) - Math.abs(Math.log(b.tenor / p.tenor))).slice(0, 2);
+      const drift = quantile(nb.map(n => n.rate - dayMedian.get(n.tenor)!).sort((a, b) => a - b), 0.5);
+      const day = daySet.get(p.tenor)!;
+      p.rate = r3(quantile(day, 0.5) + drift); p.p25 = r3(quantile(day, 0.25) + drift); p.p75 = r3(quantile(day, 0.75) + drift);
+      p.n = day.length; p.method = "day+drift";
+    }
   }
   return { points, trades: trades.length, lastTradeAt: lastTrade ? new Date(lastTrade).toISOString() : null };
 }

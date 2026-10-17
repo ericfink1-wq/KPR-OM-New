@@ -551,8 +551,11 @@ of converted OIS in 20 business days (wider ones are contamination, not basis). 
 (late reports + the evening session) — the close filtered by time of day only, so 10/16 read ~2.5–3bp
 high (=10/15). Now `buildCurve({curveDate})` keeps only that day's executions, drops duplicate
 reports, close = 3:00–5:00pm ET (3:00–4:15 missed the post-4:15 rally: worst 2.4bp vs 0.8bp). 1Y is
-the thin tenor (held to 3bp in tests). `CURVE_METHOD` (=2, stored as `m` on points) — bump it when
-the method changes so stored days get re-read instead of skipped. Tests on the real files.
+the thin tenor (held to 3bp in tests). `CURVE_METHOD` (=3, stored as `m` on points) — bump it when
+the method changes so stored days get re-read instead of skipped (Term-print basis gate is fixed at
+m≥2 separately). v3: a THIN tenor (close window <5 trades) = its day median + the median move into
+the close of its 2 nearest close-window tenors (`day+drift`) — 10/16 1Y +2.5→+0.1bp, 15Y +1.7→+0.6bp.
+Never interpolate across tenors: the curve humps at 15Y (a 10Y–30Y line was ~10bp low). Tests on the real files.
 **CHATHAM MARK (admin paste, NEVER scraped — login + CME licensing):** `parseChathamMark` →
 POST /rates/chatham-mark/preview (parse only) → /rates/chatham-mark (requireAdmin; no
 capital-markets role exists). Stored as `rate_curves` kind `chatham` ({ois, term, termSofr1m}).

@@ -34,6 +34,12 @@ export interface RatesPayload {
   fetchedAt: string;          // ISO timestamp of this server fetch
 }
 
+// How each tenor was read, when it isn't straight off the 3:00–5:00pm ET close.
+const METHOD_NOTE: Record<string, string> = {
+  "day+drift": " · thin close: day median + neighbours' move",
+  "latest-2h": " · thin close: latest 2 hours",
+  "day": " · thin close: whole day",
+};
 const ET_TIME = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
 /** "SOFR swaps: median of 412 DTCC-reported trades, as of Oct 16, 4:29 PM ET" */
 export function curveSourceLabel(c: CurveView): string {
@@ -335,7 +341,7 @@ export async function fetchTodaysRates(force = false): Promise<RatesPayload> {
   if (curve && curve.points.length) {
     swapRows.length = 0;
     for (const p of curve.points) swapRows.push({ label: `SOFR Swap – ${p.tenor} Year`, value: p.rate, asOf: curve.asOf,
-      note: p.n != null ? `${p.n} trades${p.p25 != null && p.p75 != null ? `, ${p.p25.toFixed(2)}–${p.p75.toFixed(2)}` : ""}` : undefined });
+      note: p.n != null ? `${p.n} trades${p.p25 != null && p.p75 != null ? `, ${p.p25.toFixed(2)}–${p.p75.toFixed(2)}` : ""}${METHOD_NOTE[p.method ?? ""] ?? ""}` : undefined });
     swapsSource = curveSourceLabel(curve);
     swapsAsOf = curve.asOf;
   }

@@ -10,22 +10,22 @@ const csv = gunzipSync(readFileSync(resolve(__dirname, "fixtures/dtcc-sofr-2026-
 const csv16 = gunzipSync(readFileSync(resolve(__dirname, "fixtures/dtcc-sofr-2026-10-16.csv.gz"))).toString("utf8");
 const CHATHAM: Record<string, Record<number, number>> = {
   "2026-10-15": { 1: 4.495, 2: 4.62, 3: 4.638, 5: 4.628, 7: 4.648, 10: 4.708, 30: 4.797 },
-  "2026-10-16": { 1: 4.456, 2: 4.577, 3: 4.600, 5: 4.598, 7: 4.625, 10: 4.694, 30: 4.798 },
+  "2026-10-16": { 1: 4.456, 2: 4.577, 3: 4.600, 5: 4.598, 7: 4.625, 10: 4.694, 15: 4.820, 30: 4.798 },
 };
 
 describe("DTCC SOFR swap curve", () => {
   const curve = buildCurve(extractSofrSwaps(csv, "ois"), { curveDate: "2026-10-15" });
   for (const [date, text] of [["2026-10-15", csv], ["2026-10-16", csv16]] as const) {
-    it(`${date}: within 1 bp of Chatham's close at 2Y–10Y and 30Y (3:00–5:00pm ET, executed that day)`, () => {
+    it(`${date}: within 1 bp of Chatham's close at every tenor Chatham gave (3:00–5:00pm ET, executed that day)`, () => {
       const c = buildCurve(extractSofrSwaps(text, "ois"), { curveDate: date });
       for (const [t, mark] of Object.entries(CHATHAM[date])) {
         const p = c.points.find(x => x.tenor === Number(t))!;
         expect(p, `tenor ${t}`).toBeTruthy();
-        // 1Y is the thin tenor — few clean trades in the close; held to 3 bp, not 1.
-        const tol = Number(t) === 1 ? 0.03 : 0.01;
+        // Thin tenors (1Y, 15Y on 10/16) use day median + neighbours' move into the close.
+        const tol = 0.01;
         expect(Math.abs(p.rate - mark), `${date} ${t}Y: ${p.rate} vs Chatham ${mark}`).toBeLessThan(tol);
         expect(p.p25).toBeLessThanOrEqual(p.rate); expect(p.p75).toBeGreaterThanOrEqual(p.rate);
-        if (Number(t) !== 1) expect(p.method).toBe("close-window");
+        expect(["close-window", "day+drift"]).toContain(p.method);
       }
     });
   }
