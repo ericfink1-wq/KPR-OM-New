@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-comp-scatter",
+    date: "2026-10-17",
+    category: "new",
+    title: "Comp scatter chart",
+    detail:
+      "The Comps page and each deal's comp benchmark now show a chart of cap rate by sale date, with each sale colored by center type (grocery-anchored, power, neighborhood/community, lifestyle, strip). On a deal page the deal's own cap rate is drawn as a dashed line, so you can see at a glance where it sits. Hover or tap a dot to see the sale. The chart follows the filters you've set.",
+    where: "Comps page; deal page → Market & Comps",
+  },
+  {
     id: "2026-10-17-debt-sizing",
     date: "2026-10-17",
     category: "new",

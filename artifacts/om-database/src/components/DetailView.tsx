@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import MarkSoldDialog from "./MarkSoldDialog";
+import CompScatter from "./CompScatter";
 import { isNonAnchorUse } from "../lib/anchorUse";
 import SaleStagePill from "./SaleStagePill";
 import { isClosingDate } from "../lib/saleStage";
@@ -1091,6 +1092,13 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 {bm.last12.capRate && <span> median cap {fmtPct2(bm.last12.capRate.median)}</span>}
                 {bm.last12.capRate && bm.last12.pricePerSf && <span>,</span>}
                 {bm.last12.pricePerSf && <span> median PSF {fmtPsf(bm.last12.pricePerSf.median)}</span>}
+              </div>
+            )}
+
+            {/* Cap rate vs sale date for the benchmark set, with this deal's cap as a line. */}
+            {activeComps.length >= 3 && (
+              <div style={{ marginTop: 12 }}>
+                <CompScatter comps={activeComps} subject={deal.capRate ? { label: "This deal", capRate: Number(deal.capRate) } : null} height={200} />
               </div>
             )}
 

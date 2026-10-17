@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
+import CompScatter from "./CompScatter";
 import { EyeOff } from "lucide-react";
 import { exportCompsToExcel } from "../lib/exportExcel";
 import { extractAnyFile, isPdf, isSpreadsheet } from "../lib/fileExtract";
@@ -940,7 +941,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
       />
 
       {/* Header row */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h1 style={{ margin: 0, fontFamily: "'Fraunces',serif", fontSize: 21, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>
             Comp Sales Database
@@ -954,7 +955,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
             </div>
           )}
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {dupMap.size > 0 && (
             <button
               onClick={() => setShowDupsOnly(v => !v)}
@@ -1073,6 +1074,13 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
         )}
         {cleanup.msg && <span style={{ fontSize: 11.5, color: cleanup.msg.startsWith("⚠") ? "#c0392b" : "#3d7a1f" }}>{cleanup.msg}</span>}
       </div>
+
+      {compView === "sales" && displayRows.filter(r => r.capRate != null && r.saleDate).length >= 3 && (
+        <details open style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: "8px 12px 10px", marginBottom: 14 }}>
+          <summary style={{ cursor: "pointer", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#7d766a", padding: "2px 0 6px" }}>Cap rate by sale date (filtered set)</summary>
+          <CompScatter comps={displayRows.filter(r => !ignoredComps.has(r.id))} />
+        </details>
+      )}
 
       {/* Stats banner — client-computed from active (filtered + visible) rows */}
       {(() => {
