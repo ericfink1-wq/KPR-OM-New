@@ -71,6 +71,8 @@ export function auditCheckKey(id: string): string {
 }
 export const AUDIT_CHECK_LABELS: Record<string, string> = {
   "audit-sf-gla-short": "Roster SF short of GLA",
+  "audit-sold-no-date": "Sold — no closing date",
+  "audit-sold-no-price": "Sold — no sale price",
   "audit-sf-gla-over": "Roster SF over GLA",
   "audit-occupancy-tieout": "Occupancy vs roster",
   "audit-noi-cap-price": "NOI ÷ cap vs price",
@@ -930,6 +932,26 @@ export function auditExtraction(deal: Record<string, unknown>): AuditQuestion[] 
         });
       }
     }
+  }
+
+  // ── Sold = a CLOSED sale, so its record needs the closing date and price (Eric, 10/17/26:
+  // "flag them for me to fill in"). Self-heals once filled; never guesses a value.
+  if (deal.status === "Sold") {
+    const blank = (v: unknown) => v == null || (typeof v === "string" && !v.trim()) || (typeof v === "number" && !(v > 0));
+    if (blank(deal.txnSaleDate)) out.push({
+      id: "audit-sold-no-date", source: "check", severity: "medium",
+      field: "Closing date (sale)",
+      question: "This property is marked Sold but has no closing date on file. Add it on the Transaction tab.",
+      detail: "A deal is Sold only once the sale has closed, so its record should carry the closing date.",
+      suggestedValue: null, target: null,
+    });
+    if (blank(deal.txnSalePrice)) out.push({
+      id: "audit-sold-no-price", source: "check", severity: "medium",
+      field: "Sale price",
+      question: "This property is marked Sold but has no sale price on file. Add it on the Transaction tab.",
+      detail: "Without the price the sale can't serve as a KPR sale comp or a realized-gain figure.",
+      suggestedValue: null, target: null,
+    });
   }
 
   return out;

@@ -430,8 +430,12 @@ updated until a deal is officially sold." Never enter a sale stage, buyer, price
 dates for a pending/under-contract sale. Only once it CLOSES: status Sold + txnSaleDate (+ buyer/
 price if Eric gives them). Confirmed closings Eric hands over go in `RECORDED_SALES`
 (api-server `lib/recordedSales.ts`, applied fill-blanks-only on startup). Recorded so far:
-Pompano Marketplace + Sunshine Plaza sold 2026-07-28 to Kimco; Shops at Crossroads sold
-2026-06-29 (buyer not given — leave blank, never guess).
+Pompano Marketplace + Sunshine Plaza sold 2026-07-28 to Kimco (Pompano $53,000,000);
+Shops at Crossroads sold 2026-06-29 (buyer not given — leave blank, never guess); Bolton Plaza
+bought 2019-08-01 for $18,050,000, sold 2026-04-21 for $22,875,000. Sunshine + Crossroads sale
+prices still OPEN — `audit-sold-no-price` flags them until Eric supplies them.
+New Garden Crossing's two records are TWO MARKETINGS (2021 OM + 2026 OM), not a duplicate
+upload — don't merge them without asking Eric.
 
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).

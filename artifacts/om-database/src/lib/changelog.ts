@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-sold-record-flags",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Sold deals missing a closing date or sale price are flagged",
+    detail:
+      "A deal marked Sold with no closing date or no sale price now shows a 'number to verify' item on its page saying exactly what's missing. It clears itself once you fill it in on the Transaction tab. Bolton Plaza now has its closing date and KPR's original purchase, so it appears in Comps as both a KPR buy and a KPR sale.",
+    where: "Deal page → review banner; Comps",
+  },
+  {
     id: "2026-10-17-small-fixes",
     date: "2026-10-17",
     category: "fixed",
