@@ -854,7 +854,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFolder(e.target.files)} />
         <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
         <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
-        {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} deal={currentDeal} />}
+        {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} deal={currentDeal} isAdmin={!!isAdmin} />}
         <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
     </div>
 

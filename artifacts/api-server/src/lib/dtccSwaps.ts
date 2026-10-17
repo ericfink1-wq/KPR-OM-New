@@ -15,14 +15,13 @@
 //   not part of a package · fixed rate from Leg 1 or Leg 2 (decimal) · spot-starting
 //   (Effective Date −3…+7 days of execution) · tenor = (Expiration − Effective)/365.25
 //   within 0.05y of 1/2/3/5/7/10/15/30.
-//   Rate = median per tenor, with n and p25–p75. MEASURED on 10/15: the median of trades
-//   executed 1:00–4:30pm ET lands within 0.1–0.7 bp of Chatham's close at every tenor (the
-//   whole-day median was 0.3–1.6 bp off; notional-weighting did not help). So the close
-//   window is used when it has ≥5 trades, then the latest 3 hours, then the whole day.
+//   Rate = median per tenor, with n and p25–p75, of trades EXECUTED on the curve date in the
+//   3:00–5:00pm ET close (≥5 trades), else the latest 2 hours, else the whole day — see the
+//   re-calibration note at CLOSE_FROM (within 0.8 bp of Chatham at 2Y–10Y on 10/15 + 10/16).
 
 export const TENORS = [1, 2, 3, 5, 7, 10, 15, 30] as const;
 export type CurveKind = "ois" | "term";
-export type CurveMethod = "close-window" | "latest-3h" | "day";
+export type CurveMethod = "close-window" | "latest-2h" | "day";
 
 export interface SwapTrade { tenor: number; rate: number; execMs: number; notional: number | null }
 export interface CurvePoint { tenor: number; rate: number; n: number; p25: number; p75: number; method: CurveMethod; nDay: number }
@@ -109,7 +108,15 @@ export function nyDate(ms: number): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
 }
 
-const CLOSE_FROM = 13 * 60, CLOSE_TO = 16 * 60 + 30, MIN_N = 5;
+// RE-CALIBRATED 10/17/26 against Chatham's logged-in closes for 10/15 (flat) and 10/16 (a
+// ~3 bp rally). The old 1:00–4:30 window ran ~2.5–3 bp high on 10/16: the DTCC file dated
+// 10/16 also carries trades EXECUTED on 10/15 (late reports + the 10/15 evening session),
+// and the window only looked at the time of day. Now: only trades executed on the curve
+// date, exact duplicate reports dropped, and the close = 3:00–5:00pm ET. Measured over
+// 2Y–10Y on both days: 3:00–5:00 mean 0.35 bp / worst 0.8 bp; 3:00–4:15 mean 0.74 / worst
+// 2.4 (the 10Y kept rallying after 4:15); 1:00–4:30 worst ~3. Re-check whenever a Chatham
+// mark is pasted (the panel logs DTCC-vs-Chatham error per day).
+const CLOSE_FROM = 15 * 60, CLOSE_TO = 17 * 60, MIN_N = 5;
 // Off-market prints (non-standard terms booked as plain swaps) sit far from the pack: on
 // 10/16 a handful pulled the 30Y close-window median to 4.649 against a 4.788 day median.
 // Trades more than 10 bp from the tenor's whole-day median are left out first.
@@ -121,11 +128,17 @@ export interface BuildOptions {
   anchor?: Map<number, number>; anchorTol?: number;
   /** Leave out a tenor with fewer trades than this after filtering. */
   minTrades?: number;
+  /** Only trades EXECUTED on this New York date count. A DTCC file dated D also carries
+   *  late-reported trades executed on earlier days; without this they leak into D's close. */
+  curveDate?: string;
 }
 
-/** Curve from one trading day's trades: close-window median → latest 3h → whole day. */
+/** Curve from one trading day's trades: 3:00–5:00pm ET median → latest 2h → whole day. */
 export function buildCurve(trades: SwapTrade[], opts: BuildOptions = {}): SwapCurve {
   const points: CurvePoint[] = [];
+  if (opts.curveDate) trades = trades.filter(x => nyDate(x.execMs) === opts.curveDate);
+  const seen = new Set<string>();
+  trades = trades.filter(x => { const k = `${x.tenor}|${x.execMs}|${x.rate}|${x.notional}`; if (seen.has(k)) return false; seen.add(k); return true; });
   let lastTrade = 0;
   for (const t of TENORS) {
     let all = trades.filter(x => x.tenor === t);
@@ -140,8 +153,8 @@ export function buildCurve(trades: SwapTrade[], opts: BuildOptions = {}): SwapCu
     const last = Math.max(...all.map(x => x.execMs));
     lastTrade = Math.max(lastTrade, last);
     const close = all.filter(x => { const m = nyMinutes(x.execMs); return m >= CLOSE_FROM && m <= CLOSE_TO; });
-    const late = all.filter(x => x.execMs >= last - 3 * 3_600_000);
-    const [set, method]: [SwapTrade[], CurveMethod] = close.length >= MIN_N ? [close, "close-window"] : late.length >= MIN_N ? [late, "latest-3h"] : [all, "day"];
+    const late = all.filter(x => x.execMs >= last - 2 * 3_600_000);
+    const [set, method]: [SwapTrade[], CurveMethod] = close.length >= MIN_N ? [close, "close-window"] : late.length >= MIN_N ? [late, "latest-2h"] : [all, "day"];
     const v = set.map(x => x.rate).sort((a, b) => a - b);
     points.push({ tenor: t, rate: r3(quantile(v, 0.5)), n: v.length, p25: r3(quantile(v, 0.25)), p75: r3(quantile(v, 0.75)), method, nDay });
   }
@@ -167,6 +180,20 @@ export function parseManualCurve(text: string): Array<{ tenor: number; rate: num
 // So: take the validated OIS curve (annual/annual), convert each tenor to monthly
 // compounding, and add a small Term-vs-OIS basis. CHECKED vs Chatham 10/15: OIS 1Y 4.495 →
 // 4.405 monthly vs Chatham 1M Term 4.391; 2Y 4.620 → 4.525 vs 4.517 — residual ≈ −1 bp.
+/** Default Term-vs-OIS basis by tenor (bp): Chatham's 1M Term column minus its own
+ *  annual/annual column converted to monthly, averaged over 10/15 + 10/16/26 (the
+ *  conversion reproduced Chatham's Term column within 0.2–1.4 bp at every tenor).
+ *  Linear in between; flat beyond the ends. A pasted Chatham mark re-calibrates it. */
+export const TERM_BASIS_DEFAULT_BY_TENOR: ReadonlyArray<[number, number]> = [[1, -1.2], [2, -0.7], [3, -0.5], [5, -0.35], [7, -0.3], [10, -0.3], [15, -0.3], [30, -0.2]];
+export function defaultTermBasisBp(tenor: number, table: ReadonlyArray<[number, number]> = TERM_BASIS_DEFAULT_BY_TENOR): number {
+  if (tenor <= table[0][0]) return table[0][1];
+  for (let i = 1; i < table.length; i++) {
+    const [t1, b1] = table[i];
+    if (tenor <= t1) { const [t0, b0] = table[i - 1]; return Math.round((b0 + (b1 - b0) * (tenor - t0) / (t1 - t0)) * 100) / 100; }
+  }
+  return table[table.length - 1][1];
+}
+/** Kept for the label when every tenor is on its default. */
 export const TERM_BASIS_DEFAULT_BP = -1.0;
 export const TERM_BASIS_CLAMP_BP = 5;
 export const TERM_BASIS_MIN_PRINTS = 5;
@@ -183,15 +210,15 @@ export function annualToMonthly(ratePct: number): number {
 
 /** One day's Term SOFR swap median at a tenor, minus that day's converted OIS rate. */
 export interface BasisSample { date: string; tenor: number; diffBp: number; n: number }
-export interface TermBasis { bp: number; source: "measured" | "default"; prints: number; days: number }
+export interface TermBasis { bp: number; source: "measured" | "default" | "chatham"; prints: number; days: number }
 
 /** Basis at a tenor: the median of CLEAN samples (|diff| ≤ 5 bp) when they hold ≥5 prints
  *  in total, clamped to ±5 bp; otherwise the −1.0 bp default. A stale or thin print never
  *  moves the curve on its own. */
-export function termBasis(samples: BasisSample[], tenor: number): TermBasis {
+export function termBasis(samples: BasisSample[], tenor: number, defaultBp = defaultTermBasisBp(tenor)): TermBasis {
   const clean = samples.filter(s => s.tenor === tenor && Number.isFinite(s.diffBp) && Math.abs(s.diffBp) <= TERM_CLEAN_TOL_BP && s.n > 0);
   const prints = clean.reduce((t, s) => t + s.n, 0);
-  if (prints < TERM_BASIS_MIN_PRINTS) return { bp: TERM_BASIS_DEFAULT_BP, source: "default", prints, days: clean.length };
+  if (prints < TERM_BASIS_MIN_PRINTS) return { bp: defaultBp, source: "default", prints, days: clean.length };
   const expanded = clean.flatMap(s => Array(Math.round(s.n)).fill(s.diffBp) as number[]).sort((a, b) => a - b);
   const med = quantile(expanded, 0.5);
   const bp = Math.max(-TERM_BASIS_CLAMP_BP, Math.min(TERM_BASIS_CLAMP_BP, Math.round(med * 10) / 10));
@@ -200,10 +227,74 @@ export function termBasis(samples: BasisSample[], tenor: number): TermBasis {
 
 export interface TermPoint { tenor: number; rate: number; oisRate: number; monthly: number; basisBp: number; basisSource: TermBasis["source"]; basisPrints: number; n?: number; p25?: number; p75?: number }
 
-/** The 1M Term SOFR swap curve for every tenor the OIS curve has. */
-export function deriveTermCurve(ois: Array<{ tenor: number; rate: number; n?: number; p25?: number; p75?: number }>, samples: BasisSample[]): TermPoint[] {
+// ── CHATHAM MARK (pasted by a person — never scraped: Chatham is behind a login and carries a
+//    CME licensing notice). Text copied from cf.com/rates/us: a 1M Term SOFR swap table and a
+//    SOFR (annual/annual) table, plus the 1M Term SOFR spot. Parsed, PREVIEWED, then saved. ──
+export interface ChathamMark { date: string | null; ois: Array<{ tenor: number; rate: number }>; term: Array<{ tenor: number; rate: number }>; termSofr1m: number | null; warnings: string[] }
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+function findDate(text: string): string | null {
+  const a = /\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/.exec(text);
+  if (a) return `${a[3]}-${a[1].padStart(2, "0")}-${a[2].padStart(2, "0")}`;
+  const b = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(20\d{2})\b/i.exec(text);
+  if (b) return `${b[3]}-${String(MONTHS.indexOf(b[1].slice(0, 3).toLowerCase()) + 1).padStart(2, "0")}-${b[2].padStart(2, "0")}`;
+  const c = /\b(20\d{2})-(\d{2})-(\d{2})\b/.exec(text);
+  return c ? `${c[1]}-${c[2]}-${c[3]}` : null;
+}
+
+const RATE = /(?<![\d.\-+])(\d{1,2}\.\d{2,6})\s*%?/g;
+const TENOR = /\b(\d{1,2})\s*-?\s*(?:y|yr|yrs|year|years)\b/i;
+const isTermHeader = (l: string) => /term/i.test(l) && /sofr|swap|1\s*-?\s*m/i.test(l);
+const isOisHeader = (l: string) => /annual\s*\/?\s*annual|\bOIS\b|compound/i.test(l);
+
+/** Parse the Chatham page text. Section headers decide which column a rate belongs to; a line
+ *  carrying two rates takes the order of the last header that named both. Change/bp columns
+ *  are ignored (a rate must be 0.5–15% and the pair within 50 bp of each other). */
+export function parseChathamMark(text: string): ChathamMark {
+  const ois = new Map<number, number>(), term = new Map<number, number>(), warnings: string[] = [];
+  let section: "ois" | "term" | null = null, pairOrder: Array<"ois" | "term"> = ["term", "ois"];
+  let termSofr1m: number | null = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim(); if (!line) continue;
+    const tenor = TENOR.exec(line);
+    const rates = [...line.matchAll(RATE)].map(m => Number(m[1])).filter(r => r >= 0.5 && r <= 15);
+    if (!tenor) {
+      const t = isTermHeader(line), o = isOisHeader(line);
+      if (t && o) { const it = line.search(/term/i), io = line.search(/annual|OIS|compound/i); pairOrder = it < io ? ["term", "ois"] : ["ois", "term"]; section = null; }
+      else if (t) section = "term"; else if (o) section = "ois";
+      if (t && !o && rates.length && /(1\s*-?\s*m(onth)?|one[- ]month)/i.test(line) && !/swap/i.test(line) && termSofr1m == null) termSofr1m = rates[0];
+      continue;
+    }
+    const t = Number(tenor[1]);
+    if (!TENORS.includes(t as typeof TENORS[number]) && ![4, 6, 8, 9, 12, 20, 25].includes(t)) continue;
+    const after = line.slice((tenor.index ?? 0) + tenor[0].length);
+    const rs = [...after.matchAll(RATE)].map(m => Number(m[1])).filter(r => r >= 0.5 && r <= 15);
+    if (!rs.length) continue;
+    if (rs.length >= 2 && Math.abs(rs[0] - rs[1]) <= 0.5 && section == null) {
+      const [a, b] = pairOrder; (a === "term" ? term : ois).set(t, rs[0]); (b === "term" ? term : ois).set(t, rs[1]);
+    } else if (section) (section === "term" ? term : ois).set(t, rs[0]);
+    else warnings.push(`Couldn't tell which table "${line.slice(0, 40)}" belongs to`);
+  }
+  const sorted = (m: Map<number, number>) => [...m.entries()].sort((a, b) => a[0] - b[0]).map(([tenor, rate]) => ({ tenor, rate }));
+  const out: ChathamMark = { date: findDate(text), ois: sorted(ois), term: sorted(term), termSofr1m, warnings };
+  if (!out.date) warnings.push("No date found — it will be saved for today");
+  for (const p of out.term) { const o = ois.get(p.tenor); if (o != null && Math.abs(annualToMonthly(o) - p.rate) > 0.05) warnings.push(`${p.tenor}Y: Term ${p.rate} vs annual/annual ${o} looks off (>5 bp after conversion) — check the columns`); }
+  return out;
+}
+
+/** Term-vs-OIS basis by tenor measured from a Chatham mark (its own two columns). */
+export function chathamBasis(mark: Pick<ChathamMark, "ois" | "term">): Array<[number, number]> {
+  const ois = new Map(mark.ois.map(p => [p.tenor, p.rate]));
+  return mark.term.filter(p => ois.has(p.tenor)).map(p => [p.tenor, Math.round((p.rate - annualToMonthly(ois.get(p.tenor)!)) * 1000) / 10] as [number, number]).sort((a, b) => a[0] - b[0]);
+}
+
+/** The 1M Term SOFR swap curve for every tenor the OIS curve has. `chathamBasis` (bp by
+ *  tenor, from the latest pasted Chatham mark) outranks DTCC prints and the defaults. */
+export function deriveTermCurve(ois: Array<{ tenor: number; rate: number; n?: number; p25?: number; p75?: number }>, samples: BasisSample[], chathamBasis?: ReadonlyArray<[number, number]> | null): TermPoint[] {
   return ois.map(p => {
-    const b = termBasis(samples, p.tenor);
+    const b: TermBasis = chathamBasis && chathamBasis.length
+      ? { bp: defaultTermBasisBp(p.tenor, chathamBasis), source: "chatham", prints: 0, days: 0 }
+      : termBasis(samples, p.tenor);
     const monthly = annualToMonthly(p.rate);
     const shift = (x: number) => r3(annualToMonthly(x) + b.bp / 100);
     return { tenor: p.tenor, rate: r3(monthly + b.bp / 100), oisRate: p.rate, monthly: r3(monthly), basisBp: b.bp, basisSource: b.source, basisPrints: b.prints,

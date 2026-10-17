@@ -55,9 +55,9 @@ const HOME_CSS = `
 .kpr-home{font-family:'Roboto',system-ui,sans-serif;color:${K.ink}}
 .kpr-wrap{max-width:1320px;margin:0 auto;padding:0 28px;box-sizing:border-box}
 .kpr-hero{position:relative;overflow:hidden;background:${K.charcoal};padding:34px 0 40px;margin-bottom:28px}
-.kpr-hero-inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:32px;align-items:center;position:relative;z-index:1}
+.kpr-hero-inner{position:relative;z-index:1}
 .kpr-hero-greet h1{font-family:'Lora',Georgia,serif;font-weight:500;font-size:34px;line-height:1.12;color:#fff;margin:0 0 10px;letter-spacing:-.01em}
-.kpr-hero-greet p{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.74);margin:0;max-width:460px}
+.kpr-hero-greet p{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.74);margin:0;max-width:620px}
 .kpr-hero-panel{position:relative;z-index:1;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:14px 16px 16px;background:rgba(0,0,0,.12)}
 .kpr-eyebrow{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
 .kpr-eyebrow-dark{color:${K.green}}
@@ -74,12 +74,13 @@ const HOME_CSS = `
 .kpr-stat.dark .kpr-stat-v{color:#fff}
 .kpr-stat.dark .kpr-stat-l{color:rgba(255,255,255,.9)}
 .kpr-stat.dark .kpr-stat-s{color:rgba(255,255,255,.6)}
-.kpr-anchors{display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;margin-top:13px}
-.kpr-anchors-label{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-right:12px}
-.kpr-wordmark{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:none;border:none;padding:2px 0}
+.kpr-anchors{display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;padding:12px 16px;border-top:1px solid #e7e7e3}
+.kpr-anchors-label{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:${K.gray};margin-right:12px}
+.kpr-wordmark{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:${K.ink};background:none;border:none;padding:2px 0}
 .kpr-wordmark:hover{color:${K.green}}
 .kpr-dot{width:4px;height:4px;border-radius:50%;background:${K.green};margin:0 10px;display:inline-block}
-.kpr-anchors-more{font-size:12px;color:rgba(255,255,255,.55);margin-left:10px}
+.kpr-anchors-more{font-size:12px;color:${K.gray};margin-left:10px}
+.kpr-owned-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kpr-chevron{position:absolute;right:0;bottom:0;width:84px;height:84px;pointer-events:none}
 .kpr-section{margin-bottom:26px}
 .kpr-title{display:block;font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:${K.charcoal};margin-bottom:12px}
@@ -103,7 +104,7 @@ const HOME_CSS = `
   .kpr-hero-greet h1{font-size:27px}
   .kpr-hero-greet p{font-size:13.5px}
   .kpr-hero-panel{padding:12px}
-  .kpr-rule-grid-dark{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpr-rule-grid-dark,.kpr-owned-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kpr-lib-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kpr-stat{padding:12px 12px 13px}
   .kpr-ask-grid{grid-template-columns:1fr}
@@ -338,44 +339,14 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
         {isEmpty ? (
           <div className="kpr-home" style={{ paddingBottom: 8, animation: "riseIn 0.3s ease both" }}>
             <style>{HOME_CSS}</style>
-            {/* Hero — charcoal band: greeting + owned portfolio (KPR house style, 10/17/26) */}
+            {/* Hero — charcoal band with the greeting only (Eric, 10/17/26: owned portfolio moved
+                to its own white row under the Intelligence Library). */}
             <section className="kpr-hero">
               <div className="kpr-wrap kpr-hero-inner">
               <div className="kpr-hero-greet">
                 <h1>Good {getTimeGreeting()}.</h1>
                 <p>I'm your KPR deal analyst. I know your entire deal library — ask me anything about your deals, comps, lease rollover, demographics, or market trends.</p>
               </div>
-              {active.length > 0 && (
-                <div className="kpr-hero-panel">
-                  <div className="kpr-eyebrow kpr-eyebrow-dark">Owned portfolio</div>
-                  {portfolio.count === 0 ? (
-                    <div style={{ fontSize: 13, color: "rgba(255,255,255,.72)", padding: "4px 0 2px" }}>
-                      No owned properties yet — mark a deal as <span style={{ color: K.green, fontWeight: 700 }}>Owned</span> to build your portfolio snapshot here.
-                    </div>
-                  ) : (
-                    <>
-                      <div className="kpr-rule-grid kpr-rule-grid-dark">
-                        <HomeStat dark label="Properties" value={portfolio.count.toLocaleString()} sub="marked Owned" />
-                        {portfolio.value > 0 && <HomeStat dark label="Cost basis" value={fmtM(portfolio.value)} sub="purchase price, or asking where none" />}
-                        {portfolio.sf > 0 && <HomeStat dark label="Square footage" value={fmtSF(portfolio.sf)} sub="gross leasable area" />}
-                        {portfolio.igRentPct != null && <HomeStat dark label="Investment-grade rent" value={`${portfolio.igRentPct}%`} sub="of in-place base rent" />}
-                      </div>
-                      {portfolio.anchors.length > 0 && (
-                        <div className="kpr-anchors">
-                          <span className="kpr-anchors-label">Key anchors</span>
-                          {portfolio.anchors.slice(0, 12).map((a, i) => (
-                            <span key={a} style={{ display: "inline-flex", alignItems: "center" }}>
-                              {i > 0 && <span className="kpr-dot" aria-hidden />}
-                              <button type="button" onClick={() => onTenantClick?.(a)} className="kpr-wordmark" style={{ cursor: onTenantClick ? "pointer" : "default" }}>{a}</button>
-                            </span>
-                          ))}
-                          {portfolio.anchors.length > 12 && <span className="kpr-anchors-more">+{portfolio.anchors.length - 12}</span>}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
               </div>
               <svg className="kpr-chevron" viewBox="0 0 120 120" aria-hidden><path d="M120 0 L120 120 L0 120 Z" fill={K.green} /><path d="M120 34 L120 120 L34 120 Z" fill="#4a9a3a" /></svg>
             </section>
@@ -395,6 +366,39 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                     <HomeStat label="Data points" value={stats.dataPoints ? stats.dataPoints.toLocaleString() : "—"} sub="figures captured" />
                   </div>
                 </div>
+              </section>
+            )}
+
+            {/* Owned portfolio — its own white stat row, styled like the Intelligence Library. */}
+            {active.length > 0 && (
+              <section className="kpr-section">
+                <SectionTitle>Owned portfolio</SectionTitle>
+                {portfolio.count === 0 ? (
+                  <div className="kpr-card" style={{ padding: "14px 16px", fontSize: 13, color: K.gray }}>
+                    No owned properties yet — mark a deal as <span style={{ color: "#3e8a2f", fontWeight: 700 }}>Owned</span> to build your portfolio snapshot here.
+                  </div>
+                ) : (
+                  <div className="kpr-card" style={{ padding: 0, overflow: "hidden" }}>
+                    <div className="kpr-rule-grid kpr-rule-grid-light kpr-owned-grid">
+                      <HomeStat label="Properties" value={portfolio.count.toLocaleString()} sub="marked Owned" />
+                      {portfolio.value > 0 && <HomeStat label="Cost basis" value={fmtM(portfolio.value)} sub="purchase price, or asking where none" />}
+                      {portfolio.sf > 0 && <HomeStat label="Square footage" value={fmtSF(portfolio.sf)} sub="gross leasable area" />}
+                      {portfolio.igRentPct != null && <HomeStat label="Investment-grade rent" value={`${portfolio.igRentPct}%`} sub="of in-place base rent" />}
+                    </div>
+                    {portfolio.anchors.length > 0 && (
+                      <div className="kpr-anchors">
+                        <span className="kpr-anchors-label">Key anchors</span>
+                        {portfolio.anchors.slice(0, 12).map((a, i) => (
+                          <span key={a} style={{ display: "inline-flex", alignItems: "center" }}>
+                            {i > 0 && <span className="kpr-dot" aria-hidden />}
+                            <button type="button" onClick={() => onTenantClick?.(a)} className="kpr-wordmark" style={{ cursor: onTenantClick ? "pointer" : "default" }}>{a}</button>
+                          </span>
+                        ))}
+                        {portfolio.anchors.length > 12 && <span className="kpr-anchors-more">+{portfolio.anchors.length - 12}</span>}
+                      </div>
+                    )}
+                  </div>
+                )}
               </section>
             )}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Star, Info } from "lucide-react";
 import { createPortal } from "react-dom";
-import { apiGetRates, apiLoadComps, apiSaveSwapCurve, apiGetLoanSizerPrefs, apiSaveLoanSizerPrefs, type RatesPayload, type RateRow, type SwapCurveView } from "../lib/api";
+import { apiGetRates, apiLoadComps, apiSaveSwapCurve, apiGetLoanSizerPrefs, apiSaveLoanSizerPrefs, apiPreviewChathamMark, apiSaveChathamMark, type ChathamMarkParse, type RatesPayload, type RateRow, type SwapCurveView } from "../lib/api";
 import { baseRateOptions, sizeLoan, BASE_GROUPS, DEFAULT_BASE_ID } from "../lib/loanSizing";
 
 // "Today's Rates" panel. SOFR swaps are read off DTCC's public swap-trade data (every
@@ -236,13 +236,14 @@ function CapSpread({ data }: { data: RatesPayload }) {
 }
 
 // ── Rate tables ────────────────────────────────────────────────────────────────
-function Section({ title, rows, asOf, source, info }: { title: string; rows: RateRow[]; asOf: string | null; source: string; info?: string }) {
+function Section({ title, rows, asOf, source, info, badge }: { title: string; rows: RateRow[]; asOf: string | null; source: string; info?: string; badge?: string }) {
   const [showInfo, setShowInfo] = useState(false);
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
           <span style={cap}>{title}</span>
+          {badge && <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.04em", color: "#7a5b0c", background: "#fbf4dc", border: "1px solid #e8d48f", borderRadius: 20, padding: "1px 7px", whiteSpace: "nowrap" }}>{badge}</span>}
           {info && (
             <button type="button" onClick={() => setShowInfo(v => !v)} aria-expanded={showInfo} aria-label="About this curve" title={info}
               style={{ background: "transparent", border: "none", padding: 4, margin: -4, color: "#8a7f6d", cursor: "pointer", display: "inline-flex" }}>
@@ -283,7 +284,7 @@ function SwapCurveSection({ data, onSaved }: { data: RatesPayload; onSaved: () =
   };
   return (
     <div style={{ marginBottom: 18 }}>
-      <Section title={c?.kind === "manual" ? "SOFR OIS (annual/annual) — pasted" : "SOFR OIS (annual/annual)"} rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
+      <Section title={c?.kind === "manual" ? "SOFR OIS (annual/annual) — pasted" : "SOFR OIS (annual/annual)"} badge={c?.kind === "chatham" ? "Chatham mark" : undefined} rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
       {hist.length >= 2 && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "-8px 0 10px", padding: "8px 12px", border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", flexWrap: "wrap" }}>
           <div>
@@ -314,7 +315,86 @@ function SwapCurveSection({ data, onSaved }: { data: RatesPayload; onSaved: () =
   );
 }
 
-export default function RatesPanel({ onClose, deal }: { onClose: () => void; deal?: { name: string; noi: number | null; price?: number | null } | null }) {
+// Chatham mark: an admin pastes the text copied from cf.com/rates/us (1M Term + annual/annual
+// tables, 1M Term SOFR spot). Never scraped (login wall + CME licensing notice). The site
+// parses it, SHOWS what it read, and saves only on confirm — then it's the primary curve,
+// recalibrates the Term basis, and DTCC's error vs it is logged per day.
+function ChathamMarkBox({ data, isAdmin, onSaved }: { data: RatesPayload; isAdmin: boolean; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [parsed, setParsed] = useState<ChathamMarkParse | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const log = (data.chathamLog ?? []).slice(0, 8);
+  const preview = async () => {
+    setBusy(true); setMsg(null);
+    try { setParsed(await apiPreviewChathamMark(text)); } catch (e) { setMsg(e instanceof Error ? e.message : "Couldn't read it"); } finally { setBusy(false); }
+  };
+  const save = async () => {
+    setBusy(true); setMsg(null);
+    try { const r = await apiSaveChathamMark(text); setMsg(`Saved as the Chatham mark for ${r.date}.`); setText(""); setParsed(null); onSaved(); }
+    catch (e) { setMsg(e instanceof Error ? e.message : "Couldn't save"); } finally { setBusy(false); }
+  };
+  const tenors = parsed ? [...new Set([...parsed.ois, ...parsed.term].map(p => p.tenor))].sort((a, b) => a - b) : [];
+  const at = (arr: Array<{ tenor: number; rate: number }>, t: number) => arr.find(p => p.tenor === t)?.rate;
+  if (!isAdmin && !log.length) return null;
+  return (
+    <div style={{ marginBottom: 18 }}>
+      {log.length > 0 && (
+        <div style={{ border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", padding: "8px 12px", marginBottom: 8 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#6b6356", marginBottom: 4 }}>DTCC vs Chatham mark (worst miss at 2Y–10Y)</div>
+          {log.map(l => (
+            <div key={l.date} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 11.5, color: "#4a4d46", padding: "2px 0", fontVariantNumeric: "tabular-nums" }}>
+              <span>{l.date}{l.enteredBy ? ` · ${l.enteredBy}` : ""}</span>
+              <span style={{ color: l.maxAbsErrorBp2to10 == null ? "#a89f8f" : l.maxAbsErrorBp2to10 <= 1 ? "#3f7a1f" : "#b45309", fontWeight: 600 }}>
+                {l.maxAbsErrorBp2to10 == null ? "no DTCC close that day" : `${l.maxAbsErrorBp2to10.toFixed(1)} bp`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {isAdmin && (
+        <>
+          <button onClick={() => setOpen(o => !o)} aria-expanded={open}
+            style={{ background: "transparent", border: "1px solid #e8d48f", color: "#7a5b0c", padding: "7px 12px", minHeight: 34, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>
+            {open ? "Close" : "Paste a Chatham mark"}
+          </button>
+          {open && (
+            <div style={{ marginTop: 8, padding: 10, border: "1px solid #ece5d7", borderRadius: 10, background: "#fff" }}>
+              <div style={{ fontSize: 11, color: "#6b6356", marginBottom: 6, lineHeight: 1.45 }}>On cf.com/rates/us, select the 1M Term SOFR and SOFR (annual/annual) swap tables (and the 1-Month Term SOFR rate), copy, and paste here. Nothing is saved until you check the preview.</div>
+              <textarea value={text} onChange={e => { setText(e.target.value); setParsed(null); }} rows={6} aria-label="Pasted Chatham rates"
+                style={{ ...input, width: "100%", resize: "vertical", fontFamily: "ui-monospace, Menlo, monospace" }} />
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                <button onClick={preview} disabled={busy || text.trim().length < 10}
+                  style={{ background: "#fff", color: "#383a37", border: "1px solid #d8d2c1", padding: "8px 14px", minHeight: 34, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit", opacity: busy || text.trim().length < 10 ? 0.6 : 1 }}>Preview</button>
+                {parsed && parsed.ois.length >= 2 && (
+                  <button onClick={save} disabled={busy}
+                    style={{ background: "#383A37", color: "#fff", border: "none", padding: "8px 14px", minHeight: 34, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit" }}>Save as Chatham mark{parsed.date ? ` for ${parsed.date}` : ""}</button>
+                )}
+              </div>
+              {parsed && (
+                <div style={{ marginTop: 10, fontSize: 12, color: "#383a37" }}>
+                  <div style={{ marginBottom: 4 }}><b>Date:</b> {parsed.date ?? "not found (today)"} · <b>1M Term SOFR:</b> {parsed.termSofr1m != null ? `${parsed.termSofr1m}%` : "not found"}</div>
+                  {tenors.length > 0 ? (
+                    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1fr", gap: "2px 12px", fontVariantNumeric: "tabular-nums" }}>
+                      <span style={{ fontWeight: 700, color: "#6b6356" }}>Tenor</span><span style={{ fontWeight: 700, color: "#6b6356" }}>1M Term</span><span style={{ fontWeight: 700, color: "#6b6356" }}>annual/annual</span>
+                      {tenors.map(t => (<span key={t} style={{ display: "contents" }}><span>{t}Y</span><span>{at(parsed.term, t)?.toFixed(3) ?? "—"}</span><span>{at(parsed.ois, t)?.toFixed(3) ?? "—"}</span></span>))}
+                    </div>
+                  ) : <div style={{ color: "#b45309" }}>No tenors read.</div>}
+                  {parsed.warnings.map(w => <div key={w} style={{ color: "#b45309", marginTop: 4 }}>⚠ {w}</div>)}
+                  {parsed.ois.length < 2 && <div style={{ color: "#b45309", marginTop: 4 }}>Needs at least two annual/annual tenors to save.</div>}
+                </div>
+              )}
+              {msg && <div style={{ fontSize: 11.5, color: "#3f5a2a", marginTop: 6 }}>{msg}</div>}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function RatesPanel({ onClose, deal, isAdmin = false }: { onClose: () => void; deal?: { name: string; noi: number | null; price?: number | null } | null; isAdmin?: boolean }) {
   const [data, setData] = useState<RatesPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -337,7 +417,9 @@ export default function RatesPanel({ onClose, deal }: { onClose: () => void; dea
   const term = data?.termSwapCurve;
   const bp = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(1)}bp`;
   const termRows: RateRow[] = term ? term.points.map(p => ({ label: `SOFR Swap – 1M Term – ${p.tenor} Year`, value: p.rate, asOf: term.asOf,
-    note: `OIS ${p.oisRate.toFixed(3)} → monthly ${p.monthly.toFixed(3)} ${bp(p.basisBp)}${p.basisSource === "measured" ? ` measured, ${p.basisPrints} prints` : ""}` })) : [];
+    note: p.basisSource === "chatham" && term.fromKind === "chatham" && Math.abs(p.rate - (p.monthly + p.basisBp / 100)) < 0.0006
+      ? `Chatham 1M Term · OIS ${p.oisRate.toFixed(3)} → ${p.monthly.toFixed(3)} ${bp(p.basisBp)}`
+      : `OIS ${p.oisRate.toFixed(3)} → monthly ${p.monthly.toFixed(3)} ${bp(p.basisBp)}${p.basisSource === "measured" ? ` measured, ${p.basisPrints} prints` : p.basisSource === "chatham" ? " Chatham basis" : ""}` })) : [];
 
   return createPortal(
     <>
@@ -359,12 +441,13 @@ export default function RatesPanel({ onClose, deal }: { onClose: () => void; dea
               <LoanSizing data={data} deal={deal} />
               <CapSpread data={data} />
               <Section title="SOFR" rows={data.sofr.rows} asOf={data.sofr.asOf} source={`${data.sofr.source}${data.sofrOvernight ? " · overnight SOFR: NY Fed" : ""}`} />
-              {termRows.length > 0 && <Section title="SOFR Swap – 1M Term (monthly)" rows={termRows} asOf={term!.asOf} source={term!.source}
+              {termRows.length > 0 && <Section title="SOFR Swap – 1M Term (monthly)" rows={termRows} asOf={term!.asOf} source={term!.source} badge={term!.fromKind === "chatham" ? "Chatham mark" : undefined}
                 info="KPR's swapped loans hedge 1M CME Term SOFR. Overland (ONB) uses Daily Simple SOFR — use the OIS curve for that type of loan." />}
+              <ChathamMarkBox data={data} isAdmin={isAdmin} onSaved={() => load(true)} />
               <SwapCurveSection data={data} onSaved={() => load(true)} />
               <Section title="Treasury yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
               <div style={{ fontSize: 10.5, color: "#8a7f6d", lineHeight: 1.5, marginTop: 4 }}>
-                SOFR swap rates are read off every swap trade reported to DTCC's public price-dissemination feed: plain, spot-starting USD SOFR swaps, the median at each tenor of the trades done 1:00–4:30pm ET (or the latest trades during the day), leaving out prints more than 10 bp from the day's pack. On 10/15/26 that came within about 1 bp of Chatham's close at every tenor. The 1M Term SOFR swap curve is derived from it: each OIS rate converted from annual to monthly compounding, plus a Term-vs-OIS basis (−1.0 bp by default, which matched Chatham's 1M Term column within about 1 bp on 10/15/26; measured from DTCC's own Term SOFR prints only when at least 5 clean ones exist at a tenor in the last 20 business days, capped at ±5 bp). It's market data for internal reference, not a dealer quote. Treasuries are the U.S. Treasury's official par curve; SOFR overnight is the NY Fed's.
+                SOFR swap rates are read off every swap trade reported to DTCC's public price-dissemination feed: plain, spot-starting USD SOFR swaps, the median at each tenor of the trades done 3:00–5:00pm ET (or the latest 2 hours, or the whole day, when the close is thin), leaving out prints more than 10 bp from the day's pack and duplicate reports. Since 10/17/26 only trades executed on the curve date count (the DTCC file for a day also carries the prior day's late reports), and the close is 3:00–5:00pm ET — within 0.8 bp of Chatham at 2Y–10Y on 10/15 and 10/16. The 1M Term SOFR swap curve is derived from it: each OIS rate converted from annual to monthly compounding, plus a Term-vs-OIS basis by tenor (Chatham-measured: 1Y −1.2 bp to 30Y −0.2 bp; recalibrated from the latest pasted Chatham mark; DTCC's own Term prints only count when at least 5 clean ones exist at a tenor in the last 20 business days, capped at ±5 bp). A pasted Chatham mark is shown as the primary curve until DTCC has a newer close. It's market data for internal reference, not a dealer quote. Treasuries are the U.S. Treasury's official par curve; SOFR overnight is the NY Fed's.
               </div>
             </>
           )}

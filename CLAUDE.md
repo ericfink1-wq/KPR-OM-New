@@ -533,6 +533,25 @@ places + startup step) holds a jsonb bag per user; `GET /me/prefs`, `PUT /me/pre
 (user from the SESSION only; `sanitizeLoanSizer` whitelists fields + ranges). The loan sizer
 stores the starred `defaultBase` + last-used inputs there (not localStorage), so it follows the
 person across devices/publishes. No default → 10Y swap. New per-user settings → add a section.
+**1M TERM SOFR IS THE DEFAULT SWAP CURVE (Eric + KPR's MTM report, 10/17/26):** all 7 KPR swaps
+(Bensalem, Brunswick, Concordia, Voorhees, Kokomo, Waterbury, Bolton) index CME Term SOFR 1M; only
+Overland/ONB is Daily Simple SOFR (→ use OIS). DTCC has too few clean Term prints (9/30 5Y printed
++17bp ABOVE OIS — wrong sign, loan hedges), so the Term curve is DERIVED: each OIS tenor converted
+annual→monthly (`annualToMonthly`) + a tenor basis (`TERM_BASIS_DEFAULT_BY_TENOR`, Chatham-measured
+1Y −1.2 … 30Y −0.2bp; `deriveTermCurve`). DTCC Term prints only move it with ≥5 prints within ±5bp
+of converted OIS in 20 business days (wider ones are contamination, not basis). Loan sizer default
+`term-swap-5`; ids `swap-N` stay = OIS so old stars keep their meaning.
+**CLOSE RE-CALIBRATED vs Chatham 10/15+10/16:** a DTCC file dated D carries trades EXECUTED on D−1
+(late reports + the evening session) — the close filtered by time of day only, so 10/16 read ~2.5–3bp
+high (=10/15). Now `buildCurve({curveDate})` keeps only that day's executions, drops duplicate
+reports, close = 3:00–5:00pm ET (3:00–4:15 missed the post-4:15 rally: worst 2.4bp vs 0.8bp). 1Y is
+the thin tenor (held to 3bp in tests). `CURVE_METHOD` (=2, stored as `m` on points) — bump it when
+the method changes so stored days get re-read instead of skipped. Tests on the real files.
+**CHATHAM MARK (admin paste, NEVER scraped — login + CME licensing):** `parseChathamMark` →
+POST /rates/chatham-mark/preview (parse only) → /rates/chatham-mark (requireAdmin; no
+capital-markets role exists). Stored as `rate_curves` kind `chatham` ({ois, term, termSofr1m}).
+Primary while ≥ newest DTCC date; its own columns recalibrate the basis for 60 bdays; its 1M Term
+SOFR spot feeds the SOFR box; `chathamLog` = DTCC−Chatham error per marked day.
 Loan sizing: `om-database lib/loanSizing.ts` (base options, all-in = base + spread + premium +
 cushion, min of DSCR/DY/LTV, IO) → RatesPanel.
 

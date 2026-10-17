@@ -1015,14 +1015,14 @@ export async function apiRestoreSnapshot(
 // ── Today's Rates ────────────────────────────────────────────────────────────
 export interface RateRow { label: string; value: number | null; asOf: string | null; note?: string }
 export interface SwapCurveView {
-  kind: "dtcc-eod" | "dtcc-intraday" | "manual";
+  kind: "dtcc-eod" | "dtcc-intraday" | "manual" | "chatham";
   asOf: string; curveDate: string; source: string; enteredBy: string | null;
   points: Array<{ tenor: number; rate: number; n?: number; nDay?: number; p25?: number; p75?: number; method?: string }>;
   trades: number | null; tradesUsed: number | null;
 }
 export interface TermSwapCurveView {
   derived: true; fromKind: SwapCurveView["kind"]; asOf: string; curveDate: string; source: string; basisWindowDays: number;
-  points: Array<{ tenor: number; rate: number; oisRate: number; monthly: number; basisBp: number; basisSource: "measured" | "default"; basisPrints: number; n?: number; p25?: number; p75?: number }>;
+  points: Array<{ tenor: number; rate: number; oisRate: number; monthly: number; basisBp: number; basisSource: "measured" | "default" | "chatham"; basisPrints: number; n?: number; p25?: number; p75?: number }>;
 }
 export interface RatesPayload {
   treasuries: { rows: RateRow[]; asOf: string | null; source: string };
@@ -1030,6 +1030,8 @@ export interface RatesPayload {
   swaps: { rows: RateRow[]; asOf: string | null; source: string; spreadBps: number };
   tenYearMonthly?: Array<{ month: string; value: number }>;
   swapCurve?: SwapCurveView | null;
+  /** Pasted Chatham marks, with DTCC's error vs each (bp, DTCC − Chatham), newest first. */
+  chathamLog?: Array<{ date: string; enteredBy: string | null; enteredAt: string; termSofr1m: number | null; dtccErrorBp: Record<string, number> | null; maxAbsErrorBp2to10: number | null }>;
   /** 1M CME Term SOFR swaps (monthly) — derived from the OIS curve + a Term basis. */
   termSwapCurve?: TermSwapCurveView | null;
   swapHistory?: Array<{ month: string; y5: number | null; y10: number | null }>;
@@ -1062,6 +1064,20 @@ export async function apiSaveLoanSizerPrefs(patch: LoanSizerPrefs): Promise<Loan
   const body = await resp.json().catch(() => ({})) as { error?: string; loanSizer?: LoanSizerPrefs };
   if (!resp.ok) throw new Error(body.error || "Couldn't save your settings");
   return body.loanSizer ?? {};
+}
+export interface ChathamMarkParse { date: string | null; ois: Array<{ tenor: number; rate: number }>; term: Array<{ tenor: number; rate: number }>; termSofr1m: number | null; warnings: string[] }
+/** Parse pasted Chatham text WITHOUT saving — for the preview. */
+export async function apiPreviewChathamMark(text: string): Promise<ChathamMarkParse> {
+  const resp = await apiFetch("/rates/chatham-mark/preview", { method: "POST", body: JSON.stringify({ text }) });
+  if (!resp.ok) throw new Error("Couldn't read the pasted text");
+  return resp.json() as Promise<ChathamMarkParse>;
+}
+/** Save the Chatham mark (admin only). */
+export async function apiSaveChathamMark(text: string): Promise<{ date: string }> {
+  const resp = await apiFetch("/rates/chatham-mark", { method: "POST", body: JSON.stringify({ text }) });
+  const body = await resp.json().catch(() => ({})) as { error?: string; date?: string };
+  if (!resp.ok) throw new Error(body.error || "Couldn't save the Chatham mark");
+  return { date: body.date ?? "" };
 }
 export async function apiGetRates(refresh = false): Promise<RatesPayload> {
   const resp = await apiFetch(`/rates${refresh ? "?refresh=1" : ""}`);

@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { unzipSync, strFromU8 } from "fflate";
 import { fetchWithTimeout } from "./http";
 import { logger } from "./logger";
-import { extractSofrSwaps, buildCurve, nyDate, nyMinutes, annualToMonthly, deriveTermCurve, businessDaysBetween, TERM_CLEAN_TOL_BP, TERM_BASIS_DEFAULT_BP, type CurveKind, type CurvePoint, type SwapTrade, type BasisSample, type TermPoint } from "./dtccSwaps";
+import { extractSofrSwaps, buildCurve, nyDate, nyMinutes, annualToMonthly, deriveTermCurve, businessDaysBetween, chathamBasis, TERM_CLEAN_TOL_BP, type CurveKind, type CurvePoint, type SwapTrade, type BasisSample, type TermPoint, type ChathamMark } from "./dtccSwaps";
 
 // Stored SOFR swap curves (see dtccSwaps.ts for how a curve is read off DTCC's trades).
 // One row per curve: `${YYYY-MM-DD}|${kind}` where kind is ois / term (end-of-day files),
@@ -69,8 +69,13 @@ async function upsert(id: string, curveDate: string, kind: string, asOf: string,
     ON CONFLICT (id) DO UPDATE SET as_of = EXCLUDED.as_of, source = EXCLUDED.source, points = EXCLUDED.points, entered_by = EXCLUDED.entered_by`);
 }
 
+// Bump when the curve METHOD changes: stored days computed the old way are then re-read from
+// DTCC (a few per refresh) instead of being skipped as "already have it". v2 (10/17/26) =
+// executed-that-day filter + duplicate drop + 3:00–5:00pm ET close. Stored as `m` on each
+// point, so no schema change.
+export const CURVE_METHOD = 2;
 async function storedIds(): Promise<Set<string>> {
-  const r = await db.execute(sql`SELECT id FROM rate_curves`);
+  const r = await db.execute(sql`SELECT id FROM rate_curves WHERE kind = 'manual' OR (points->0->>'m')::int >= ${CURVE_METHOD}`);
   return new Set((r.rows as Array<{ id: string }>).map(x => x.id));
 }
 
@@ -86,11 +91,11 @@ async function ingestEod(e: IndexEntry): Promise<void> {
   const date = fileDate(e.fileName);
   if (!date) return;
   const csv = await downloadCsv(e.fullFilePath);
-  const ois = buildCurve(extractSofrSwaps(csv, "ois"));
-  const term = buildCurve(extractSofrSwaps(csv, "term"), termOpts(ois));
+  const ois = buildCurve(extractSofrSwaps(csv, "ois"), { curveDate: date });
+  const term = buildCurve(extractSofrSwaps(csv, "term"), { ...termOpts(ois), curveDate: date });
   for (const [kind, c] of [["ois", ois], ["term", term]] as const) {
     if (!c.points.length) continue;
-    await upsert(`${date}|${kind}`, date, kind, c.lastTradeAt ?? `${date}T21:00:00Z`, `DTCC end-of-day ${date} (${c.trades} trades)`, c.points);
+    await upsert(`${date}|${kind}`, date, kind, c.lastTradeAt ?? `${date}T21:00:00Z`, `DTCC end-of-day ${date} (${c.trades} trades)`, c.points.map(p => ({ ...p, m: CURVE_METHOD })));
   }
 }
 
@@ -111,8 +116,8 @@ async function ingestIntraday(slices: IndexEntry[], deadline: number): Promise<n
   let oisLive: ReturnType<typeof buildCurve> | null = null;
   for (const kind of ["ois", "term"] as CurveKind[]) {
     const trades = mine.flatMap(v => v[kind]).filter(t => nyDate(t.execMs) === today);
-    const c = kind === "ois" ? (oisLive = buildCurve(trades)) : buildCurve(trades, termOpts(oisLive!));
-    if (c.points.length) await upsert(`${today}|${kind}-live`, today, `${kind}-live`, c.lastTradeAt ?? new Date().toISOString(), `DTCC intraday ${today} (${c.trades} trades so far)`, c.points);
+    const c = kind === "ois" ? (oisLive = buildCurve(trades, { curveDate: today })) : buildCurve(trades, { ...termOpts(oisLive!), curveDate: today });
+    if (c.points.length) await upsert(`${today}|${kind}-live`, today, `${kind}-live`, c.lastTradeAt ?? new Date().toISOString(), `DTCC intraday ${today} (${c.trades} trades so far)`, c.points.map(p => ({ ...p, m: CURVE_METHOD })));
   }
   return mine.length;
 }
@@ -173,7 +178,7 @@ export function refreshSwapCurves(budgetMs = 20_000, force = false): Promise<Ref
 
 interface Row { id: string; curve_date: string; kind: string; as_of: string; source: string; points: Array<CurvePoint | { tenor: number; rate: number }>; entered_by: string | null }
 export interface CurveView {
-  kind: "dtcc-eod" | "dtcc-intraday" | "manual";
+  kind: "dtcc-eod" | "dtcc-intraday" | "manual" | "chatham";
   asOf: string; curveDate: string; source: string; enteredBy: string | null;
   points: Array<{ tenor: number; rate: number; n?: number; nDay?: number; p25?: number; p75?: number; method?: string }>;
   trades: number | null;        // every qualifying trade that day
@@ -184,11 +189,22 @@ export interface TermCurveView {
   derived: true; fromKind: CurveView["kind"]; asOf: string; curveDate: string; source: string;
   points: TermPoint[]; basisWindowDays: number;
 }
-export interface SwapCurvesPayload { ois: CurveView | null; term: TermCurveView | null; termPrints: CurveView | null; manualAvailable: CurveView | null; history: Array<{ month: string; y5: number | null; y10: number | null }> }
+/** One pasted Chatham mark, with how far DTCC's own curve for that day was from it. */
+export interface ChathamLogEntry { date: string; enteredBy: string | null; enteredAt: string; termSofr1m: number | null; dtccErrorBp: Record<string, number> | null; maxAbsErrorBp2to10: number | null }
+export interface SwapCurvesPayload {
+  ois: CurveView | null; term: TermCurveView | null; termPrints: CurveView | null; manualAvailable: CurveView | null;
+  history: Array<{ month: string; y5: number | null; y10: number | null }>;
+  /** Latest Chatham mark's 1M Term SOFR spot, if one was pasted. */
+  termSofr1m: { rate: number; date: string; enteredBy: string | null } | null;
+  chathamLog: ChathamLogEntry[];
+}
+interface ChathamStored { ois: Array<{ tenor: number; rate: number }>; term: Array<{ tenor: number; rate: number }>; termSofr1m: number | null }
+/** A Chatham mark recalibrates the Term basis for this long; older → the defaults. */
+const CHATHAM_BASIS_MAX_AGE_BDAYS = 60;
 
 const BASIS_WINDOW_BDAYS = 20;
 /** Term-minus-converted-OIS samples from stored days within the trailing 20 business days. */
-export function basisSamples(rows: Array<{ curve_date: string; kind: string; points: Array<{ tenor: number; rate: number; n?: number }> }>, asOfDate: string): BasisSample[] {
+export function basisSamples(rows: Array<{ curve_date: string; kind: string; points: Array<{ tenor: number; rate: number; n?: number; m?: number }> }>, asOfDate: string): BasisSample[] {
   const oisByDate = new Map<string, Map<number, number>>();
   for (const r of rows) if (r.kind === "ois" || r.kind === "ois-live") {
     const d = String(r.curve_date).slice(0, 10);
@@ -198,6 +214,9 @@ export function basisSamples(rows: Array<{ curve_date: string; kind: string; poi
   const out: BasisSample[] = [], seen = new Set<string>();
   for (const r of rows) {
     if (r.kind !== "term" && r.kind !== "term-live") continue;
+    // Term prints stored before CURVE_METHOD 2 were filtered loosely (±50 bp of raw OIS) —
+    // never measure a basis from them.
+    if (!((r.points[0]?.m ?? 0) >= CURVE_METHOD)) continue;
     const d = String(r.curve_date).slice(0, 10);
     if (d > asOfDate || businessDaysBetween(d, asOfDate) >= BASIS_WINDOW_BDAYS) continue;
     if (seen.has(d) && r.kind === "term-live") continue;
@@ -211,11 +230,13 @@ export function basisSamples(rows: Array<{ curve_date: string; kind: string; poi
   return out;
 }
 
-export function termSourceLabel(t: TermCurveView): string {
+const fmtBp = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(2).replace(/0$/, "")}bp`;
+export function termSourceLabel(t: TermCurveView, chathamBasisDate?: string | null): string {
+  if (t.fromKind === "chatham") return `Chatham mark ${t.curveDate} (1M Term column as pasted; tenors it didn't list derived from its annual/annual column)`;
   const measured = t.points.filter(p => p.basisSource === "measured");
-  const basis = measured.length
-    ? `Term basis ${TERM_BASIS_DEFAULT_BP.toFixed(1)}bp default; measured from DTCC Term SOFR prints at ${measured.map(p => `${p.tenor}Y ${p.basisBp >= 0 ? "+" : ""}${p.basisBp.toFixed(1)}bp (${p.basisPrints})`).join(", ")}`
-    : `Term basis (${TERM_BASIS_DEFAULT_BP.toFixed(1)}bp)`;
+  const basis = chathamBasisDate
+    ? `Term basis by tenor from the Chatham mark of ${chathamBasisDate}`
+    : `Term basis by tenor (${t.points.filter(p => [1, 5, 10, 30].includes(p.tenor)).map(p => `${p.tenor}Y ${fmtBp(p.basisBp)}`).join(", ")}${measured.length ? `; measured from DTCC Term prints at ${measured.map(p => `${p.tenor}Y`).join(", ")}` : ""})`;
   const from = t.fromKind === "manual" ? "a pasted SOFR OIS curve" : "DTCC SOFR OIS";
   return `Derived from ${from} (${t.curveDate}), converted to monthly + ${basis}`;
 }
@@ -238,19 +259,54 @@ export async function getSwapCurves(): Promise<SwapCurvesPayload> {
   const dtcc = newest(["ois", "ois-live"]), manual = newest(["manual"]);
   const pickOis = manual && (!dtcc || Date.parse(manual.as_of) > Date.parse(dtcc.as_of)) ? manual : dtcc;
   const termRow = newest(["term", "term-live"]);
-  const oisView = pickOis ? toView(pickOis) : null;
+  // Chatham marks: newest by MARK DATE (a mark can be pasted the next morning).
+  const marks = rows.filter(x => x.kind === "chatham").sort((a, b) => (a.curve_date < b.curve_date ? 1 : -1));
+  const mark = marks[0] ?? null, markData = mark ? (mark.points as unknown as ChathamStored) : null;
+  let oisView = pickOis ? toView(pickOis) : null;
+  // A mark is PRIMARY while it is at least as new as the best DTCC/pasted curve.
+  const markPrimary = !!(mark && markData && markData.ois.length >= 2 && (!oisView || mark.curve_date >= oisView.curveDate));
+  if (markPrimary && mark && markData) oisView = { kind: "chatham", asOf: new Date(mark.as_of).toISOString(), curveDate: String(mark.curve_date).slice(0, 10), source: "Chatham mark", enteredBy: mark.entered_by, points: markData.ois, trades: null, tradesUsed: null };
+  const basisMark = mark && markData && businessDaysBetween(String(mark.curve_date).slice(0, 10), nyDate(Date.now())) <= CHATHAM_BASIS_MAX_AGE_BDAYS ? chathamBasis(markData) : [];
   let term: TermCurveView | null = null;
   if (oisView && oisView.points.length) {
-    const t: TermCurveView = { derived: true, fromKind: oisView.kind, asOf: oisView.asOf, curveDate: oisView.curveDate, source: "",
-      points: deriveTermCurve(oisView.points, basisSamples(rows, oisView.curveDate)), basisWindowDays: BASIS_WINDOW_BDAYS };
-    t.source = termSourceLabel(t);
+    let points = deriveTermCurve(oisView.points, basisSamples(rows, oisView.curveDate), basisMark.length >= 2 ? basisMark : null);
+    if (markPrimary && markData) {
+      // Chatham's own 1M Term column wins where it lists the tenor.
+      const pasted = new Map(markData.term.map(p => [p.tenor, p.rate]));
+      points = points.map(p => pasted.has(p.tenor) ? { ...p, rate: pasted.get(p.tenor)!, basisBp: Math.round((pasted.get(p.tenor)! - p.monthly) * 1000) / 10, basisSource: "chatham" as const } : p);
+    }
+    const t: TermCurveView = { derived: true, fromKind: oisView.kind, asOf: oisView.asOf, curveDate: oisView.curveDate, source: "", points, basisWindowDays: BASIS_WINDOW_BDAYS };
+    t.source = termSourceLabel(t, basisMark.length >= 2 && mark ? String(mark.curve_date).slice(0, 10) : null);
     term = t;
   }
+  // DTCC-vs-Chatham error per marked day (DTCC end-of-day for that same date).
+  const oisEod = new Map(rows.filter(x => x.kind === "ois").map(x => [String(x.curve_date).slice(0, 10), x.points]));
+  const chathamLog: ChathamLogEntry[] = marks.slice(0, 30).map(m => {
+    const md = m.points as unknown as ChathamStored, date = String(m.curve_date).slice(0, 10), d = oisEod.get(date);
+    let err: Record<string, number> | null = null, max: number | null = null;
+    if (d) {
+      err = {};
+      for (const p of md.ois) { const q = d.find(x => x.tenor === p.tenor); if (q) err[`${p.tenor}Y`] = Math.round((q.rate - p.rate) * 1000) / 10; }
+      const core = Object.entries(err).filter(([k]) => [2, 3, 5, 7, 10].includes(Number(k.slice(0, -1)))).map(([, v]) => Math.abs(v));
+      max = core.length ? Math.max(...core) : null;
+    }
+    return { date, enteredBy: m.entered_by, enteredAt: new Date(m.as_of).toISOString(), termSofr1m: md.termSofr1m ?? null, dtccErrorBp: err, maxAbsErrorBp2to10: max };
+  });
+  const termSofr1m = mark && markData?.termSofr1m != null ? { rate: markData.termSofr1m, date: String(mark.curve_date).slice(0, 10), enteredBy: mark.entered_by } : null;
   const byMonth = new Map<string, Row>();
   for (const x of rows) if (x.kind === "ois") { const m = x.curve_date.slice(0, 7); const cur = byMonth.get(m); if (!cur || x.curve_date > cur.curve_date) byMonth.set(m, x); }
   const at = (x: Row, t: number) => (x.points.find(p => p.tenor === t)?.rate ?? null) as number | null;
   const history = [...byMonth.keys()].sort().slice(-12).map(m => ({ month: m, y5: at(byMonth.get(m)!, 5), y10: at(byMonth.get(m)!, 10) }));
-  return { ois: oisView, term, termPrints: termRow ? toView(termRow) : null, manualAvailable: manual ? toView(manual) : null, history };
+  return { ois: oisView, term, termPrints: termRow ? toView(termRow) : null, manualAvailable: manual ? toView(manual) : null, history, termSofr1m, chathamLog };
+}
+
+/** Save a parsed Chatham mark as the official mark for its date (one per date; re-pasting replaces). */
+export async function saveChathamMark(m: ChathamMark, enteredBy: string): Promise<{ date: string }> {
+  await ensureRateCurvesTable();
+  const date = m.date ?? nyDate(Date.now());
+  const stored: ChathamStored = { ois: m.ois, term: m.term, termSofr1m: m.termSofr1m };
+  await upsert(`${date}|chatham`, date, "chatham", new Date().toISOString(), "Chatham mark (pasted)", stored, enteredBy);
+  return { date };
 }
 
 export async function saveManualCurve(points: Array<{ tenor: number; rate: number }>, enteredBy: string, source: string): Promise<void> {

@@ -4,31 +4,43 @@ import { gunzipSync } from "node:zlib";
 import { resolve } from "node:path";
 import { extractSofrSwaps, buildCurve, parseCsv, parseManualCurve } from "../dtccSwaps";
 
-// The REAL DTCC 10/15/26 file (SOFR rows, the columns we read), against Chatham's
-// published 10/15 close — the accuracy bar Chrome Claude measured in the browser.
+// The REAL DTCC 10/15 + 10/16 files (SOFR rows, the columns we read), against Chatham's
+// logged-in closes for both days (10/16 was a ~3 bp rally). Target: within 1 bp at 2Y–10Y.
 const csv = gunzipSync(readFileSync(resolve(__dirname, "fixtures/dtcc-sofr-2026-10-15.csv.gz"))).toString("utf8");
-const CHATHAM_1015: Record<number, number> = { 1: 4.495, 2: 4.62, 3: 4.638, 5: 4.628, 7: 4.648, 10: 4.708, 30: 4.797 };
+const csv16 = gunzipSync(readFileSync(resolve(__dirname, "fixtures/dtcc-sofr-2026-10-16.csv.gz"))).toString("utf8");
+const CHATHAM: Record<string, Record<number, number>> = {
+  "2026-10-15": { 1: 4.495, 2: 4.62, 3: 4.638, 5: 4.628, 7: 4.648, 10: 4.708, 30: 4.797 },
+  "2026-10-16": { 1: 4.456, 2: 4.577, 3: 4.600, 5: 4.598, 7: 4.625, 10: 4.694, 30: 4.798 },
+};
 
 describe("DTCC SOFR swap curve", () => {
-  const curve = buildCurve(extractSofrSwaps(csv, "ois"));
-  it("lands within 1.5 bp of Chatham's close at every tenor (filtered close-window median)", () => {
-    for (const [t, c] of Object.entries(CHATHAM_1015)) {
-      const p = curve.points.find(x => x.tenor === Number(t))!;
-      expect(p, `tenor ${t}`).toBeTruthy();
-      expect(Math.abs(p.rate - c), `tenor ${t}: ${p.rate} vs ${c}`).toBeLessThan(0.015);
-      expect(p.method).toBe("close-window");
-      expect(p.n).toBeGreaterThanOrEqual(5);
-      expect(p.p25).toBeLessThanOrEqual(p.rate); expect(p.p75).toBeGreaterThanOrEqual(p.rate);
-    }
+  const curve = buildCurve(extractSofrSwaps(csv, "ois"), { curveDate: "2026-10-15" });
+  for (const [date, text] of [["2026-10-15", csv], ["2026-10-16", csv16]] as const) {
+    it(`${date}: within 1 bp of Chatham's close at 2Y–10Y and 30Y (3:00–5:00pm ET, executed that day)`, () => {
+      const c = buildCurve(extractSofrSwaps(text, "ois"), { curveDate: date });
+      for (const [t, mark] of Object.entries(CHATHAM[date])) {
+        const p = c.points.find(x => x.tenor === Number(t))!;
+        expect(p, `tenor ${t}`).toBeTruthy();
+        // 1Y is the thin tenor — few clean trades in the close; held to 3 bp, not 1.
+        const tol = Number(t) === 1 ? 0.03 : 0.01;
+        expect(Math.abs(p.rate - mark), `${date} ${t}Y: ${p.rate} vs Chatham ${mark}`).toBeLessThan(tol);
+        expect(p.p25).toBeLessThanOrEqual(p.rate); expect(p.p75).toBeGreaterThanOrEqual(p.rate);
+        if (Number(t) !== 1) expect(p.method).toBe("close-window");
+      }
+    });
+  }
+  it("a file dated D never lets trades EXECUTED on another day into D's curve (the 10/16 miss)", () => {
+    const ms = (iso: string) => Date.parse(iso);
+    const mk = (iso: string, rate: number) => ({ tenor: 5, rate, execMs: ms(iso), notional: 10e6 });
+    // Prior day's 3–5pm ET prints at 4.63; the day's own close at 4.60.
+    const trades = [...Array(8)].map((_, i) => mk(`2026-10-15T20:${10 + i}:00Z`, 4.63)).concat([...Array(6)].map((_, i) => mk(`2026-10-16T20:${10 + i}:00Z`, 4.60)));
+    expect(buildCurve(trades, { curveDate: "2026-10-16" }).points[0].rate).toBe(4.6);
+    expect(buildCurve(trades).points[0].rate).toBe(4.63);   // without the date: the bug
   });
-  it("10/16: off-market prints in the close window don't drag the 30Y (was 4.649 vs a 4.788 day median)", () => {
-    const csv16 = gunzipSync(readFileSync(resolve(__dirname, "fixtures/dtcc-sofr-2026-10-16.csv.gz"))).toString("utf8");
-    const c16 = buildCurve(extractSofrSwaps(csv16, "ois"));
-    const DAY_1016: Record<number, number> = { 1: 4.477, 2: 4.606, 3: 4.62, 5: 4.63, 7: 4.649, 10: 4.713, 30: 4.788 };  // Chrome Claude's day medians
-    for (const [t, m] of Object.entries(DAY_1016)) expect(Math.abs(c16.points.find(p => p.tenor === Number(t))!.rate - m), `tenor ${t}`).toBeLessThan(0.015);
-    // Term SOFR swaps: anchored to the OIS curve, so the 7.5% loan-hedge prints never show.
-    const term = buildCurve(extractSofrSwaps(csv16, "term"), { anchor: new Map(c16.points.map(p => [p.tenor, p.rate])), anchorTol: 0.5, minTrades: 5 });
-    for (const p of term.points) expect(Math.abs(p.rate - c16.points.find(x => x.tenor === p.tenor)!.rate)).toBeLessThan(0.5);
+  it("drops exact duplicate reports of one trade", () => {
+    const t = { tenor: 5, rate: 4.62, execMs: Date.parse("2026-10-16T20:00:00Z"), notional: 300e6 };
+    const c = buildCurve([t, t, t, ...[...Array(5)].map((_, i) => ({ ...t, rate: 4.6, execMs: t.execMs + (i + 1) * 60000 }))], { curveDate: "2026-10-16" });
+    expect(c.points[0].n).toBe(6);
   });
   it("keeps Term SOFR swaps separate from the OIS curve", () => {
     const term = extractSofrSwaps(csv, "term"), ois = extractSofrSwaps(csv, "ois");

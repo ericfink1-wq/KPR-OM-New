@@ -26,6 +26,8 @@ export interface RatesPayload {
   /** 1-month CME Term SOFR swaps (monthly, ACT/360) — DERIVED from the OIS curve (converted
    *  to monthly + a Term basis). The curve KPR's swapped loans price off; the panel default. */
   termSwapCurve?: TermCurveView | null;
+  /** Pasted Chatham marks with DTCC's error vs each (newest first). */
+  chathamLog?: SwapCurvesPayload["chathamLog"];
   /** Month-end 5Y / 10Y SOFR swap for the last 12 months (oldest first). */
   swapHistory?: SwapCurvesPayload["history"];
   sofrOvernight?: { rate: number; date: string } | null;
@@ -35,9 +37,10 @@ export interface RatesPayload {
 const ET_TIME = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
 /** "SOFR swaps: median of 412 DTCC-reported trades, as of Oct 16, 4:29 PM ET" */
 export function curveSourceLabel(c: CurveView): string {
+  if (c.kind === "chatham") return `SOFR OIS (annual/annual): Chatham mark for ${c.curveDate}, pasted by ${c.enteredBy ?? "a user"} — shown until DTCC has a newer close`;
   if (c.kind === "manual") return `SOFR swaps: pasted by ${c.enteredBy ?? "a user"} at ${ET_TIME(c.asOf)}${c.source ? ` (${c.source})` : ""} — used until DTCC has newer trades`;
   const when = c.kind === "dtcc-intraday" ? `today so far, as of ${ET_TIME(c.asOf)}` : `close of ${c.curveDate}, as of ${ET_TIME(c.asOf)}`;
-  const window = c.kind === "dtcc-intraday" ? "latest trades" : "1:00–4:30pm ET trades";
+  const window = c.kind === "dtcc-intraday" ? "latest trades" : "3:00–5:00pm ET trades";
   return `SOFR swaps: median of ${c.tradesUsed ?? "?"} DTCC-reported trades (${window}; ${c.trades ?? "?"} that day), ${when}`;
 }
 
@@ -268,7 +271,7 @@ async function fetchSofr(): Promise<{ rows: RateRow[]; asOf: string | null }> {
   const asOf = (rec.effectiveDate as string) ?? null;
   const num = (v: unknown) => { const n = Number(v); return isNaN(n) ? null : n; };
   const rows: RateRow[] = [
-    { label: "30-Day Avg SOFR (1-mo)", value: num(rec.average30day), asOf },
+    { label: "30-Day Average SOFR", value: num(rec.average30day), asOf },
     { label: "90-Day Avg SOFR", value: num(rec.average90day), asOf },
   ];
   return { rows, asOf };
@@ -285,20 +288,26 @@ export async function fetchTodaysRates(force = false): Promise<RatesPayload> {
   const sofrData = sofr.status === "fulfilled" ? sofr.value : { rows: [] as RateRow[], asOf: null };
   const iron2 = iron.status === "fulfilled" ? iron.value : { termSofr1mo: null, swap3: null, swap5: null, swap10: null, asOf: null };
 
-  // SOFR row: prefer Iron Hound's true 1-month Term SOFR (what loans quote off);
-  // fall back to the free NY Fed 30-day average if the scrape didn't return it.
-  let sofrRows: RateRow[];
+  // 1M Term SOFR spot (what KPR's loans reset off): the newer of a pasted Chatham mark and
+  // Iron Hound. The NY Fed 30-Day AVERAGE SOFR is always shown under its own name — it is a
+  // backward-looking average, NOT a 1-month rate (10/16/26: 3.874% vs 1M Term 3.97183%).
+  let sofrRows: RateRow[] = [];
   let sofrAsOf: string | null;
-  let sofrSource: string;
-  if (iron2.termSofr1mo != null) {
-    sofrRows = [{ label: "SOFR Term – 1 Month", value: iron2.termSofr1mo, asOf: iron2.asOf }];
-    sofrAsOf = iron2.asOf;
-    sofrSource = "Iron Hound (Term SOFR)";
+  const srcParts: string[] = [];
+  const mk = curvesV?.termSofr1m ?? null;
+  const ironDate = iron2.asOf ? String(iron2.asOf).slice(0, 10) : null;
+  if (mk && (iron2.termSofr1mo == null || !ironDate || mk.date >= ironDate)) {
+    sofrRows.push({ label: "SOFR Term – 1 Month", value: mk.rate, asOf: mk.date, note: "Chatham mark" });
+    sofrAsOf = mk.date; srcParts.push(`1M Term SOFR: Chatham mark ${mk.date}${mk.enteredBy ? `, pasted by ${mk.enteredBy}` : ""}`);
+  } else if (iron2.termSofr1mo != null) {
+    sofrRows.push({ label: "SOFR Term – 1 Month", value: iron2.termSofr1mo, asOf: iron2.asOf });
+    sofrAsOf = iron2.asOf; srcParts.push("1M Term SOFR: Iron Hound");
   } else {
-    sofrRows = sofrData.rows.filter(r => r.label.includes("30-Day"));
-    sofrAsOf = sofrData.asOf;
-    sofrSource = "NY Fed 30-day avg (Term SOFR unavailable)";
+    sofrAsOf = sofrData.asOf; srcParts.push("1M Term SOFR: not available — paste a Chatham mark");
   }
+  sofrRows.push(...sofrData.rows.filter(r => r.label.includes("30-Day")));
+  srcParts.push("30-Day Average SOFR: NY Fed");
+  const sofrSource = srcParts.join(" · ");
 
   // SOFR swaps: Iron Hound 5yr & 10yr (omitted entirely if the scrape failed —
   // better to show nothing than a wrong estimate).
@@ -337,7 +346,7 @@ export async function fetchTodaysRates(force = false): Promise<RatesPayload> {
     sofr: { rows: sofrRows, asOf: sofrAsOf, source: sofrSource },
     swaps: { rows: swapRows, asOf: swapsAsOf, source: swapsSource, spreadBps: 0 },
     tenYearMonthly: hist.status === "fulfilled" ? hist.value : [],
-    swapCurve: curve, termSwapCurve: curvesV?.term ?? null, swapHistory: curvesV?.history ?? [], sofrOvernight,
+    swapCurve: curve, termSwapCurve: curvesV?.term ?? null, swapHistory: curvesV?.history ?? [], sofrOvernight, chathamLog: curvesV?.chathamLog ?? [],
     fetchedAt: new Date().toISOString(),
   };
 }

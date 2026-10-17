@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { fetchTodaysRates, debugIronhound, type RatesPayload } from "../lib/rates";
-import { saveManualCurve } from "../lib/rateCurves";
-import { parseManualCurve } from "../lib/dtccSwaps";
-import { requireAuth } from "../middleware/auth";
+import { saveManualCurve, saveChathamMark } from "../lib/rateCurves";
+import { parseManualCurve, parseChathamMark } from "../lib/dtccSwaps";
+import { requireAuth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -55,6 +55,25 @@ router.post("/rates/swap-curve", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to save pasted swap curve");
     res.status(500).json({ error: "Couldn't save the curve" });
+  }
+});
+
+// Chatham mark: text copied from cf.com/rates/us by a person (never scraped — login wall +
+// CME licensing notice). /preview parses only, so the user sees exactly what will be saved;
+// saving is admin-only (there is no separate capital-markets role) and stamped with who.
+router.post("/rates/chatham-mark/preview", requireAuth, (req, res) => {
+  res.json(parseChathamMark(String((req.body ?? {}).text ?? "").slice(0, 20000)));
+});
+router.post("/rates/chatham-mark", requireAdmin, async (req, res) => {
+  try {
+    const m = parseChathamMark(String((req.body ?? {}).text ?? "").slice(0, 20000));
+    if (m.ois.length < 2) { res.status(400).json({ error: "Couldn't read at least two annual/annual (OIS) tenors — check the pasted text.", parsed: m }); return; }
+    const out = await saveChathamMark(m, req.session.userEmail || "unknown user");
+    cache = null;
+    res.json({ ok: true, ...out, parsed: m });
+  } catch (err) {
+    req.log.error({ err }, "Failed to save Chatham mark");
+    res.status(500).json({ error: "Couldn't save the Chatham mark" });
   }
 });
 

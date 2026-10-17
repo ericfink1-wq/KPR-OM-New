@@ -48,6 +48,23 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-term-sofr-swaps",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Swap rates now default to 1-Month Term SOFR, and match Chatham's close",
+    detail: "KPR's swapped loans hedge 1-Month CME Term SOFR, so Today's Rates now leads with the 1M Term SOFR swap curve, and the loan sizer opens on the 5-year Term swap unless you've starred another rate. The usual SOFR (annual/annual) curve is still there for Daily Simple SOFR loans like Overland. The daily close was also corrected: it now uses only trades done that day, near the 4pm close, and lands within about 1 basis point of Chatham. The SOFR box now labels the NY Fed figure as the 30-Day Average, not a 1-month rate.",
+    where: "Today's Rates",
+  },
+  {
+    id: "2026-10-17-chatham-mark",
+    date: "2026-10-17",
+    category: "new",
+    adminOnly: true,
+    title: "Paste Chatham's rates as the official mark",
+    detail: "Copy the 1M Term SOFR and annual/annual swap tables (and the 1-Month Term SOFR rate) from Chatham's rates page and paste them in. You'll see exactly what was read before anything is saved. The mark becomes the curve everyone sees for that day, fine-tunes the Term SOFR conversion, and the panel keeps a log of how far the free market-data curve was from Chatham each day.",
+    where: "Today's Rates → Paste a Chatham mark",
+  },
+  {
     id: "2026-10-17-loan-sizer-default",
     date: "2026-10-17",
     category: "improved",

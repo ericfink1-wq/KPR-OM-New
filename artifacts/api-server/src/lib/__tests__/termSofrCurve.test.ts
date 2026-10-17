@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { annualToMonthly, termBasis, deriveTermCurve, businessDaysBetween, TERM_BASIS_DEFAULT_BP } from "../dtccSwaps";
+import { annualToMonthly, termBasis, deriveTermCurve, businessDaysBetween, defaultTermBasisBp } from "../dtccSwaps";
 import { basisSamples, termSourceLabel } from "../rateCurves";
 
 describe("1M Term SOFR swap curve derived from OIS", () => {
@@ -9,14 +9,14 @@ describe("1M Term SOFR swap curve derived from OIS", () => {
     const t = deriveTermCurve([{ tenor: 1, rate: 4.495 }, { tenor: 2, rate: 4.620 }], []);
     expect(Math.abs(t[0].rate - 4.391) * 100).toBeLessThan(1);   // 4.395 vs Chatham 4.391
     expect(Math.abs(t[1].rate - 4.517) * 100).toBeLessThan(1);   // 4.515 vs Chatham 4.517
-    expect(t.every(p => p.basisBp === TERM_BASIS_DEFAULT_BP && p.basisSource === "default")).toBe(true);
+    expect(t.every(p => p.basisBp === defaultTermBasisBp(p.tenor) && p.basisSource === "default")).toBe(true);
   });
 
   it("the 9/30 wrong-sign print (5Y ~+17bp above OIS) never moves the curve", () => {
     const oisRate = 4.62, termPrint = 4.80;
     const diff = (termPrint - annualToMonthly(oisRate)) * 100;   // ~+27bp vs converted OIS
     const b = termBasis([{ date: "2026-09-30", tenor: 5, diffBp: diff, n: 10 }], 5);
-    expect(b).toMatchObject({ bp: TERM_BASIS_DEFAULT_BP, source: "default", prints: 0 });
+    expect(b).toMatchObject({ bp: defaultTermBasisBp(5), source: "default", prints: 0 });
   });
 
   it("thin prints (<5 in the window) keep the default", () => {
@@ -44,10 +44,12 @@ describe("1M Term SOFR swap curve derived from OIS", () => {
   it("basis samples: only days inside the trailing 20 business days, paired with that day's OIS", () => {
     const rows = [
       { curve_date: "2026-10-16", kind: "ois", points: [{ tenor: 5, rate: 4.626 }] },
-      { curve_date: "2026-10-16", kind: "term", points: [{ tenor: 5, rate: annualToMonthly(4.626) - 0.008, n: 6 }] },
+      { curve_date: "2026-10-16", kind: "term", points: [{ tenor: 5, rate: annualToMonthly(4.626) - 0.008, n: 6, m: 2 }] },
+      { curve_date: "2026-10-15", kind: "ois", points: [{ tenor: 5, rate: 4.628 }] },
+      { curve_date: "2026-10-15", kind: "term", points: [{ tenor: 5, rate: annualToMonthly(4.628) + 0.03, n: 9 }] },     // old method (no m) — ignored
       { curve_date: "2026-09-10", kind: "ois", points: [{ tenor: 5, rate: 4.5 }] },
-      { curve_date: "2026-09-10", kind: "term", points: [{ tenor: 5, rate: annualToMonthly(4.5) + 0.04, n: 9 }] },   // >20 bdays old
-      { curve_date: "2026-10-14", kind: "term", points: [{ tenor: 5, rate: 4.4, n: 9 }] },                             // no OIS that day
+      { curve_date: "2026-09-10", kind: "term", points: [{ tenor: 5, rate: annualToMonthly(4.5) + 0.04, n: 9, m: 2 }] },   // >20 bdays old
+      { curve_date: "2026-10-14", kind: "term", points: [{ tenor: 5, rate: 4.4, n: 9, m: 2 }] },                             // no OIS that day
     ];
     const s = basisSamples(rows, "2026-10-16");
     expect(s).toHaveLength(1);
@@ -58,6 +60,7 @@ describe("1M Term SOFR swap curve derived from OIS", () => {
   it("labels the source plainly", () => {
     const t = { derived: true as const, fromKind: "dtcc-eod" as const, asOf: "x", curveDate: "2026-10-16", source: "", basisWindowDays: 20,
       points: deriveTermCurve([{ tenor: 5, rate: 4.626 }], []) };
-    expect(termSourceLabel(t)).toBe("Derived from DTCC SOFR OIS (2026-10-16), converted to monthly + Term basis (-1.0bp)");
+    expect(termSourceLabel(t)).toBe("Derived from DTCC SOFR OIS (2026-10-16), converted to monthly + Term basis by tenor (5Y −0.35bp)");
+    expect(termSourceLabel(t, "2026-10-16")).toBe("Derived from DTCC SOFR OIS (2026-10-16), converted to monthly + Term basis by tenor from the Chatham mark of 2026-10-16");
   });
 });
