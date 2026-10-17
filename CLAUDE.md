@@ -434,8 +434,13 @@ Pompano Marketplace + Sunshine Plaza sold 2026-07-28 to Kimco (Pompano $53,000,0
 Shops at Crossroads sold 2026-06-29 (buyer not given — leave blank, never guess); Bolton Plaza
 bought 2019-08-01 for $18,050,000, sold 2026-04-21 for $22,875,000. Sunshine + Crossroads sale
 prices still OPEN — `audit-sold-no-price` flags them until Eric supplies them.
-New Garden Crossing's two records are TWO MARKETINGS (2021 OM + 2026 OM), not a duplicate
-upload — don't merge them without asking Eric.
+**An older OM covered by a newer OM for the same property → NEWER WINS (Eric, 10/17/26:
+"newer info is always best").** Keep the newer record; carry over only HUMAN-entered fields
+(acq*/debt*/pref*/txn*/disp*, notes, review, Datex, sales history) where the newer one is blank —
+never the old OM's own figures (roster, NOI, its loan balance); Trash the older (restorable).
+Listed in `SUPERSEDED_OMS` (api-server `lib/supersededOms.ts`, applied on startup). Done:
+New Garden Crossing (2021 OM retired, 2026 kept). Same name at a DIFFERENT address = different
+centers (Parkway Plaza Durham NC vs Brunswick GA) — never merge those.
 
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).

@@ -15,6 +15,7 @@ import { startSelfImproveScheduler } from "./lib/selfImprove";
 import { applyRecordedSales, addMissingProperties } from "./lib/recordedSales";
 import { purgePendingSaleData } from "./lib/pendingSale";
 import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
+import { retireSupersededOms } from "./lib/supersededOms";
 import { runCompsCleanupIfNeeded } from "./routes/comps";
 import { startAnalysisAutoRefresh, sweepAnalysisGuardrails } from "./lib/analysisAutoRefresh";
 
@@ -55,6 +56,10 @@ const server = app.listen(port, (err) => {
   runCompsCleanupIfNeeded()
     .then(r => { if (r.applied) logger.info(r, "Comp clean-up applied"); })
     .catch((err) => logger.error({ err }, "runCompsCleanupIfNeeded failed on startup"));
+  // An older OM covered by a newer one for the same property → keep the newer, Trash the older.
+  retireSupersededOms()
+    .then(n => { if (n) logger.info({ n }, "Retired superseded OMs"); })
+    .catch((err) => logger.error({ err }, "retireSupersededOms failed on startup"));
   purgePendingSaleData()
     .then(n => { if (n) logger.info({ n }, "Deleted stored pending-sale data"); })
     .catch((err) => logger.error({ err }, "purgePendingSaleData failed on startup"));
