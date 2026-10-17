@@ -499,6 +499,12 @@ from the stored record when the body is `_summary`** (`restoreOmittedDetail`, BE
 runs) — so a save from a list copy can never wipe them. Tenants, cashFlowProjection, leaseRisk,
 comparableSales, incomeBreakdown STAY in the list because library-wide views read them.
 **Before adding a key to LIST_OMIT_KEYS, grep the web app for every reader.**
+Tenant rows in the list also leave out NULL fields (`withoutNulls`, 10/17/26) — ~30% less JSON
+to parse, but only ~2% less DOWNLOAD (gzip already squeezes repeated nulls). The roster itself
+stays: 58 web files read it library-wide, and the analyst chat passes tenant notes to the AI. A
+real download cut means a separate tenant feed + rewiring those readers — a big job, not a tweak.
+Home page (10/17/26) uses the KPR house tokens in AnalystChat.tsx `K` + `HOME_CSS` (green
+#5BBA47, charcoal #383A37, ink #232422, gray #676767, page #FAF9F5; Montserrat/Lora/Roboto).
 Comp duplicates: `lib/compDuplicates.ts` (strict same-trade rules; resales >31 days apart and
 two own trades never merge) → `runCompDedupe` at startup, snapshot `before-comp-merge` holds
 removed rows; MCP `library_overview.compDuplicates` reports the last merge. Mark-to-Market:
