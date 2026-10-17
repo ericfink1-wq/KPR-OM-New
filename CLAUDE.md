@@ -621,6 +621,13 @@ have recurred on EVERY publish. All runtime tables are in the script now.
   byte-identical to the runtime DDL (same columns, nullability, defaults, both indexes),
   and `drizzle-kit push` against the mirrored DB then proposes NOTHING for the table.
 - **Never approve a `DROP TABLE` in the publish diff.** Cancel, and fix the mirror first.
+- **10/17/26 repeat: `rate_curves` (17 rows of DTCC history) was proposed for DROP** — it WAS in
+  the mirror + schema, but Eric's workspace never ran it after the pull (hook didn't fire, the
+  workspace API hadn't restarted since the code landed, so dev never created it while prod did
+  at startup). Fix: the api-server `dev` script now runs the mirror BEFORE build/start, so ANY
+  workspace Run/restart syncs dev even if the server then fails. The instruction that always
+  works before a publish that adds a runtime table: **Pull → Stop + Run the workspace app →
+  Publish**, and approve the migration only if every line is CREATE/ADD.
 
 ## Cardinal rules
 1. **Every UI/site change must work on desktop AND mobile** — by default, unprompted. Layouts reflow for narrow screens (grids/strips/tables collapse sensibly, not just shrink), finger-friendly tap targets, compact formatting, working touch interactions (modals, dropdowns, toggles). Wide tables (comps/tenants) break most easily on phones — test them.
