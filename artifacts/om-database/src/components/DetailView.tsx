@@ -2802,7 +2802,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         if (d.capRate) tiles.push({ l: "Cap Rate", v: `${d.capRate}%`, c: "#0f9d63" });
         const price = compactUSD(d.askingPrice ?? ((d as unknown as Record<string, unknown>).txnPurchasePrice as number)); if (price) tiles.push({ l: "Price", v: price, c: "#6dba43" });
         if (Number.isFinite(sfNum) && sfNum > 0) tiles.push({ l: "GLA", v: sfNum >= 1000 ? `${Math.round(sfNum / 1000)}K SF` : `${sfNum} SF` });
-        if (occN != null && occN > 0) tiles.push({ l: "Occupancy", v: `${occN}%`, c: occN < 85 ? "#dc2626" : occN < 92 ? "#c97a18" : "#26281f" });
+        // Owned + a Datex snapshot: today's occupancy from Datex leads; the OM's figure is
+        // kept and labelled with its own date (Eric, 10/16/26).
+        const dx = d.status === "Owned" ? d.datexLive : null;
+        if (dx?.occupancyPct != null) {
+          tiles.push({ l: `Occupancy · Datex ${String(dx.asOf || "").slice(5, 10).replace("-", "/")}`, v: `${dx.occupancyPct}%`, c: dx.occupancyPct < 85 ? "#dc2626" : dx.occupancyPct < 92 ? "#c97a18" : "#26281f",
+            sub: occN != null ? `${occN}% at OM / roll date` : undefined, title: "Current occupancy from Datex (KPR's property-management system). The OM / rent-roll figure is shown underneath for comparison." });
+        } else if (occN != null && occN > 0) tiles.push({ l: "Occupancy", v: `${occN}%`, c: occN < 85 ? "#dc2626" : occN < 92 ? "#c97a18" : "#26281f" });
         if (waltN != null && waltN > 0) tiles.push({ l: "WALT", v: `${waltN} yrs`, c: waltN < 3 ? "#dc2626" : waltN < 6 ? "#26281f" : "#0f9d63" });
         if (liveWtdRent) tiles.push({ l: "Avg Rent", v: `$${Number(liveWtdRent).toFixed(2)}` });
         if (d.pricePerSF) tiles.push({ l: "Price / SF", v: `$${d.pricePerSF}` });

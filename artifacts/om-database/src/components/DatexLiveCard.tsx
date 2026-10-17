@@ -42,7 +42,36 @@ function differences(deal: Deal) {
       alarming: Math.abs(pct) >= 5,
     });
   }
+  // Current billed base rent vs the OM's gross potential rent (base only, both sides).
+  const rentNow = (live.tenants || []).reduce((s, t) => s + (num(t.annualRent) ?? 0), 0);
+  const rentWas = num(deal.grossPotentialRent);
+  if (rentNow > 0 && rentWas != null && rentWas > 0) {
+    const pct = Math.round(((rentNow - rentWas) / rentWas) * 1000) / 10;
+    out.push({
+      label: "Base rent (annual)", was: `$${fmtInt(rentWas)}`, now: `$${fmtInt(rentNow)}`,
+      delta: pct === 0 ? null : `${pct > 0 ? "+" : ""}${pct}%`,
+      alarming: pct <= -5,
+    });
+  }
   return out;
+}
+
+/** Leases expiring in the next 12 and 13–24 months, from Datex's live tenant list. */
+export function datexRollover(deal: Deal, today = new Date()) {
+  const ts = deal.datexLive?.tenants || [];
+  const t0 = today.getTime(), Y = 365.25 * 86_400_000;
+  const bucket = () => ({ count: 0, sf: 0, rent: 0 });
+  const y1 = bucket(), y2 = bucket();
+  const next: Array<{ name: string; expiry: string; sf: number | null; rent: number | null }> = [];
+  for (const t of ts) {
+    const e = t.leaseExpiry ? Date.parse(String(t.leaseExpiry).slice(0, 10)) : NaN;
+    if (!Number.isFinite(e) || e < t0) continue;
+    const b = e - t0 <= Y ? y1 : e - t0 <= 2 * Y ? y2 : null;
+    if (b) { b.count++; b.sf += num(t.sf) ?? 0; b.rent += num(t.annualRent) ?? 0; }
+    next.push({ name: t.name || "Tenant", expiry: String(t.leaseExpiry).slice(0, 10), sf: num(t.sf), rent: num(t.annualRent) });
+  }
+  next.sort((a, b) => a.expiry.localeCompare(b.expiry));
+  return { y1, y2, next: next.slice(0, 5), hasData: ts.some(t => t.leaseExpiry) };
 }
 
 /** Segments standing entirely empty — invisible in a headline occupancy figure. */
@@ -128,6 +157,32 @@ export default function DatexLiveCard({ deal }: { deal: Deal }) {
           </div>
         ))}
       </div>
+
+      {(() => {
+        const ro = datexRollover(deal);
+        if (!ro.hasData) return null;
+        const line = (lbl: string, b: { count: number; sf: number; rent: number }) => (
+          <div style={{ border: "1px solid #ece6da", background: "#faf8f4", borderRadius: 9, padding: "9px 11px" }}>
+            <div style={{ ...label, marginBottom: 3 }}>{lbl}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: "#383a37" }}>{b.count} lease{b.count === 1 ? "" : "s"} · {fmtInt(b.sf)} SF</div>
+            <div style={{ fontSize: 11.5, color: "#7d766a" }}>${fmtInt(b.rent)}/yr base rent</div>
+          </div>
+        );
+        return (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ ...label, marginBottom: 6 }}>Rollover — from Datex, as of today</div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,minmax(0,1fr))", gap: 10 }}>
+              {line("Next 12 months", ro.y1)}
+              {line("13–24 months", ro.y2)}
+            </div>
+            {ro.next.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 12, color: "#5c5850", lineHeight: 1.6 }}>
+                Next up: {ro.next.map(n => `${n.name} (${n.expiry.slice(0, 7)}${n.sf ? `, ${fmtInt(n.sf)} SF` : ""})`).join(" · ")}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {live.tenants && live.tenants.length > 0 && (
         <div style={{ marginTop: 12, fontSize: 11.5, color: "#a69e91" }}>

@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-datex-owned",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Owned deals lead with today's Datex numbers",
+    detail:
+      "On an owned deal with a Datex snapshot, the summary band now shows today's occupancy from Datex, labelled with its date, and the OM / rent-roll figure underneath for comparison. The 'Live from Datex' card adds current base rent compared with the OM's, and a rollover view built from Datex's current tenant list: leases expiring in the next 12 months and in 13–24 months (count, SF, rent) and the next five expirations. Load a fresh snapshot any time from Portfolio Analytics → Maintenance → Import Datex snapshot.",
+    where: "Owned deal page → summary band and Transaction tab",
+  },
+  {
     id: "2026-10-17-comp-scatter",
     date: "2026-10-17",
     category: "new",
