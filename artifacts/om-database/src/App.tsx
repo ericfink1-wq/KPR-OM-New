@@ -24,6 +24,7 @@ import AiProgressBar from "./components/AiProgressBar";
 import SaveStatusIndicator from "./components/SaveStatusIndicator";
 import GlobalSearch from "./components/GlobalSearch";
 import { isSupportedUpload } from "./lib/fileExtract";
+import { useAnalysisRefresh } from "./lib/useAnalysisRefresh";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
 // when first opened; a Suspense fallback covers the brief load.
@@ -128,6 +129,8 @@ function AppInner() {
     setDealCounts(prev => (prev && prev.shown === shown && prev.total === total) ? prev : { shown, total });
   }, []);
   const [deals, setDeals] = useState<Deal[]>([]);
+  // Background re-analysis is advanced by the open app (see useAnalysisRefresh).
+  const dealsLoaded = deals.length > 0;
   // Always-current mirror of `deals`. Background saves in UploadQueue finish out of
   // band, so they need to re-base their changes onto the LATEST deal (which may
   // include edits the user just made on the deal page) rather than a stale snapshot
@@ -151,6 +154,7 @@ function AppInner() {
   });
   // Set by popstate so the URL-sync effect doesn't push a new entry for a Back/Forward.
   useEffect(() => installEscapeToClose(), []);
+  useAnalysisRefresh(dealsLoaded);
   const fromPopRef = useRef(false);
   // Set by navigate(): it already pushed the entry, so the sync effect only names it.
   const navPushedRef = useRef(false);

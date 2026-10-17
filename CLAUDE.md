@@ -441,6 +441,33 @@ Listed in `SUPERSEDED_OMS` (api-server `lib/supersededOms.ts`, applied on startu
 New Garden Crossing (2021 OM retired, 2026 kept). Same name at a DIFFERENT address = different
 centers (Parkway Plaza Durham NC vs Brunswick GA) — never merge those.
 
+## Property history + OM dates (Eric, 10/17/26)
+"Newer data should win versus the older data, but it's always good to have historical data
+baked into the analysis — re-tenanting of big spaces, bankruptcies, backfills — a running
+history of what happened at the property." `lib/propertyHistory.ts` (api-server, pure,
+deterministic) diffs the PRIOR picture vs the NEW one whenever a new document lands (PUT with a
+changed `lastUploadAt`/`tenantsAsOf`, bulk import merge, superseded-OM retirement) and appends
+a dated entry to `propertyHistory` (left / arrived / backfill / renewed / rent / dark / metric).
+Entry ids use each document's upload stamp (never its OM date, which can be corrected later →
+would double-record). It is a USER_PRESERVED key, carried by the client re-upload merge, fed to
+the AI snapshot (`historyForAnalysis` + PROPERTY HISTORY prompt block), shown on the deal page
+(`PropertyHistoryCard`), and passes to chat/MCP. Bankruptcy isn't in a roster — departures are
+recorded factually; never infer a cause.
+OM dates: `lib/omDate.ts` (cover text first 1,500 chars → file name → upload date) with
+`omDateSource`; the upload-date stand-in only for records that came from a document, and it's
+labelled "uploaded … (OM undated)" in the UI. Startup sweep `sweepOmDates`; every save fills a
+missing one; the extraction prompt now says where to find the date.
+
+## Background AI re-analysis on AUTOSCALE hosting (10/17/26)
+The live app is `deploymentTarget = "autoscale"` — CPU only while a request runs, so a
+server timer barely fires and long loops get cut off. The v4 batch WAS submitted
+(`analysisBatchPending` on deals) but never applied. Now the open app drives it:
+`useAnalysisRefresh` → `POST /api/analysis-refresh/tick` every 2 min while work remains; each
+slice applies what fits in 45 s, dropping each deal's marker as applied so the next slice
+resumes. Progress: `GET /api/analysis-refresh/status` and `analysisFreshness` in the MCP
+`library_overview` (check it there — no prod logs needed). Any future background job must be
+built the same way.
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.

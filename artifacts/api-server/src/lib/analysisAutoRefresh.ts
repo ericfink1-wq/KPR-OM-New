@@ -18,30 +18,69 @@ export const AUTO_REFRESH_FOR_VERSION = 4;
 const MAX_TRIES = 2;
 const EVERY_MS = 15 * 60_000;
 
-async function tick(log: Logger): Promise<void> {
-  if (ANALYSIS_VERSION !== AUTO_REFRESH_FOR_VERSION || !process.env.ANTHROPIC_API_KEY) return;
-  // 1) A batch in flight → apply it once it has ended, then release its deals.
+// Autoscale hosting only gives the server CPU while it is answering a request, so a
+// background timer barely runs and a long apply gets cut off (10/17/26: the batch was
+// submitted live but nothing was ever applied). The work is therefore done in
+// REQUEST-SIZED SLICES: the open app calls POST /analysis-refresh/tick every couple of
+// minutes while there is work, each slice applies as many finished results as fit in its
+// time budget, and each applied deal drops its marker so the next slice resumes there.
+export interface RefreshTick { at: string; action: string; batchId?: string; status?: string; applied?: number; failed?: number; remaining?: number; error?: string }
+let lastTick: RefreshTick | null = null;
+
+async function tick(log: Logger, budgetMs = 45_000): Promise<RefreshTick> {
+  const at = new Date().toISOString();
+  if (ANALYSIS_VERSION !== AUTO_REFRESH_FOR_VERSION) return { at, action: "off (version not pinned for auto-refresh)" };
+  if (!process.env.ANTHROPIC_API_KEY) return { at, action: "off (no ANTHROPIC_API_KEY)" };
+  // 1) A batch in flight → apply what fits in this slice once it has ended.
   const pending = await db.execute(sql`SELECT DISTINCT data->>'analysisBatchPending' AS b FROM deals WHERE data ? 'analysisBatchPending'`);
   const ids = (pending.rows as Array<{ b: string | null }>).map(r => r.b).filter((b): b is string => !!b);
   if (ids.length) {
-    for (const b of ids) {
-      const r = await applyAnalysisBatchResults(b, log);
-      if (r.status !== "ended") continue;
+    const b = ids[0];
+    const r = await applyAnalysisBatchResults(b, log, { budgetMs, skipDone: true });
+    if (r.status === "ended" && !r.remaining) {
+      // Everything this batch returned is applied; release any deal it didn't return.
       await db.execute(sql`UPDATE deals SET data = data - 'analysisBatchPending' WHERE data->>'analysisBatchPending' = ${b}`);
-      log.info({ batchId: b, ...r }, "Auto re-analysis batch applied");
+      log.info({ batchId: b }, "Auto re-analysis batch fully applied");
     }
-    return;
+    return { at, action: r.status === "ended" ? "applying" : "waiting for batch", batchId: b, status: r.status, applied: r.applied, failed: r.failed, remaining: r.remaining };
   }
   // 2) Nothing in flight → send every still-stale deal that hasn't used its tries.
   const tries = (d: Record<string, unknown>) => { const t = d.analysisAutoTries as { v?: number; n?: number } | undefined; return t?.v === ANALYSIS_VERSION ? (t.n ?? 0) : 0; };
   const sent = await submitStaleAnalysisBatch(log, (_id, d) => tries(d) < MAX_TRIES);
-  if (!sent.batchId || !sent.ids.length) return;
+  if (!sent.batchId || !sent.ids.length) return { at, action: "done (nothing left to refresh)" };
   for (const id of sent.ids) {
     await db.execute(sql`UPDATE deals SET data = data || jsonb_build_object('analysisBatchPending', ${sent.batchId}::text,
       'analysisAutoTries', jsonb_build_object('v', ${ANALYSIS_VERSION}::int, 'n', COALESCE(CASE WHEN (data->'analysisAutoTries'->>'v')::int = ${ANALYSIS_VERSION} THEN (data->'analysisAutoTries'->>'n')::int END, 0) + 1))
       WHERE id = ${id}`);
   }
   log.info({ batchId: sent.batchId, count: sent.ids.length }, "Auto re-analysis batch submitted");
+  return { at, action: "submitted", batchId: sent.batchId, remaining: sent.ids.length };
+}
+
+let sliceRunning = false;
+/** One bounded slice (single-flight per instance). Records the outcome for the status read. */
+export async function runAnalysisRefreshSlice(log: Logger = logger, budgetMs = 45_000): Promise<RefreshTick> {
+  if (sliceRunning) return { at: new Date().toISOString(), action: "busy (a slice is already running)" };
+  sliceRunning = true;
+  try { lastTick = await tick(log, budgetMs); }
+  catch (err) { lastTick = { at: new Date().toISOString(), action: "error", error: err instanceof Error ? err.message.slice(0, 300) : String(err) }; log.error({ err }, "Auto re-analysis slice failed"); }
+  finally { sliceRunning = false; }
+  return lastTick;
+}
+
+/** Live progress, DB-only (no model call): how many deals are on the current version. */
+export async function analysisRefreshStatus(): Promise<{ version: number; current: number; outdated: number; inBatch: number; batchId: string | null; workPending: boolean; lastTick: RefreshTick | null }> {
+  const r = await db.execute(sql`SELECT
+      count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION})::int AS current,
+      count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) < ${ANALYSIS_VERSION} AND data ? 'dealScore')::int AS outdated,
+      count(*) FILTER (WHERE data ? 'analysisBatchPending')::int AS inbatch,
+      max(data->>'analysisBatchPending') AS batch
+    FROM deals WHERE data->>'trashedAt' IS NULL AND COALESCE((data->>'_processing')::boolean, false) = false`);
+  const row = (r.rows[0] ?? {}) as { current?: number; outdated?: number; inbatch?: number; batch?: string | null };
+  const inBatch = row.inbatch ?? 0;
+  return { version: ANALYSIS_VERSION, current: row.current ?? 0, outdated: row.outdated ?? 0, inBatch, batchId: row.batch ?? null,
+    workPending: ANALYSIS_VERSION === AUTO_REFRESH_FOR_VERSION && !!process.env.ANTHROPIC_API_KEY && (inBatch > 0 || (row.outdated ?? 0) > 0) && !(lastTick?.action?.startsWith("done")),
+    lastTick };
 }
 
 export function startAnalysisAutoRefresh(): void {
@@ -49,7 +88,7 @@ export function startAnalysisAutoRefresh(): void {
   const run = () => {
     if (running) return;
     running = true;
-    tick(logger).catch(err => logger.error({ err }, "Auto re-analysis tick failed")).finally(() => { running = false; });
+    runAnalysisRefreshSlice(logger).finally(() => { running = false; });
   };
   setTimeout(run, 90_000); // let startup sweeps (cleanup, guardrails) land first
   setInterval(run, EVERY_MS).unref?.();

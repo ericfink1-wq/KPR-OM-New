@@ -13,6 +13,8 @@ import { fetchCensusDemographics, fetchAddressMarket, MARKET_GEO_VERSION } from 
 import { ANALYSIS_VERSION } from "../lib/analysisVersion";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "../lib/extractionAudit";
 import { autoMaintainDealData } from "../lib/dealMaintenance";
+import { recordHistory, isNewDocument } from "../lib/propertyHistory";
+import { fillOmDate } from "../lib/omDateSweep";
 import { applyAnalysisGuardrails } from "../lib/analysisGuardrails";
 import { normalizeDate } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
@@ -228,6 +230,8 @@ const USER_PRESERVED_KEYS = new Set([
   "prefLender", "prefAmount", "prefRateCurrent", "prefRateAllIn", "prefReturnType", "prefOriginationDate", "prefMaturityDate", "prefTermYears", "prefRecourse", "prefNotes",
   "tenantSalesHistory",
   "ownershipStructure",
+  // Running record of what changed between successive documents (Eric, 10/17/26).
+  "propertyHistory",
 ]);
 
 // Known Deal fields that must be arrays. A malformed extraction can return one as
@@ -361,6 +365,8 @@ router.post("/deals/import", requireAuth, async (req, res) => {
       merged.address = existingRow.data.address ?? uploadedData.address;
 
       const id = existingRow.id;
+      // A new document for an existing property: keep a dated record of what changed.
+      try { recordHistory(existingRow.data as Record<string, unknown>, merged); } catch { /* never block an import */ }
       const clean = sanitize(merged);
       normalizeDealAddress(clean);   // street-only address + backfill blank city/state/zip
       const mClean = autoMaintainDealData(clean).data;   // self-clean + refresh audit on import
@@ -558,6 +564,17 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
       return;
     }
     stampStatusChange(prevRows[0]?.data as Record<string, unknown> | undefined, rest);
+    // OM date (cover → file name → upload date) so this document can be dated in history.
+    try { await fillOmDate(id, rest); } catch { /* never block a save */ }
+    // Running property history: a new upload replaced the picture → record what changed;
+    // and never let a save drop history the deal already had.
+    {
+      const prevData = prevRows[0]?.data as Record<string, unknown> | undefined;
+      if (prevData) {
+        if (!Array.isArray(rest.propertyHistory) && Array.isArray(prevData.propertyHistory)) rest.propertyHistory = prevData.propertyHistory;
+        try { if (isNewDocument(prevData, rest)) recordHistory(prevData, rest); } catch { /* never block a save */ }
+      }
+    }
     const prevReview = typeof (prevRows[0]?.data as Record<string, unknown> | undefined)?.dealReview === "string"
       ? ((prevRows[0]!.data as Record<string, unknown>).dealReview as string).trim() : "";
     await db.insert(dealsTable)
@@ -1302,6 +1319,7 @@ function isStaleAnalysisTarget(d: Record<string, unknown>): boolean {
 // sequential refresh and the Batch-results apply so both behave identically.
 async function applyAnalysisToDeal(id: string, data: Record<string, unknown>, analysis: Record<string, unknown>, log: Logger): Promise<void> {
   const updated: Record<string, unknown> = { ...data, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
+  delete updated.analysisBatchPending;   // this deal's batch result is now applied
   try {
     const patch = await rescoreDeal(id, updated, log);
     if (patch.dealScore !== undefined) updated.dealScore = patch.dealScore;
@@ -1362,31 +1380,55 @@ export async function submitStaleAnalysisBatch(log: Logger, filter: (id: string,
   return { batchId: (batch.id as string) ?? null, ids: targets.map(r => r.id), status: (batch.processing_status as string) ?? null };
 }
 
-/** Apply a finished batch (idempotent). While it is still running, returns its status and applies nothing. */
-export async function applyAnalysisBatchResults(batchId: string, log: Logger): Promise<{ status: string; applied: number; failed: number; skipped: number; counts?: unknown; note?: string }> {
+/** Apply a finished batch (idempotent). While it is still running, returns its status and applies nothing.
+ *  `budgetMs` bounds one call (autoscale hosting only gives CPU during a request, so the work
+ *  is done in request-sized slices); `skipDone` skips deals already applied from this batch
+ *  (their `analysisBatchPending` marker is gone), so each slice picks up where the last stopped. */
+const batchResultsCache = new Map<string, Awaited<ReturnType<typeof fetchBatchResults>>>();
+export async function applyAnalysisBatchResults(batchId: string, log: Logger, opts: { budgetMs?: number; skipDone?: boolean } = {}): Promise<{ status: string; applied: number; failed: number; skipped: number; remaining?: number; counts?: unknown; note?: string }> {
+  const t0 = Date.now();
   const batch = await retrieveMessageBatch(batchId);
   const status = String(batch.processing_status ?? "");
   if (status !== "ended") return { status, applied: 0, failed: 0, skipped: 0, counts: batch.request_counts ?? null };
   const resultsUrl = batch.results_url;
   if (typeof resultsUrl !== "string" || !resultsUrl) return { status, applied: 0, failed: 0, skipped: 0, note: "no results_url" };
-  const results = await fetchBatchResults(resultsUrl);
-  let applied = 0, failed = 0, skipped = 0;
+  let results = batchResultsCache.get(batchId);
+  if (!results) { results = await fetchBatchResults(resultsUrl); batchResultsCache.set(batchId, results); }
+  let applied = 0, failed = 0, skipped = 0, remaining = 0;
+  const release = (id: string) => db.execute(sql`UPDATE deals SET data = data - 'analysisBatchPending' WHERE id = ${id}`);
   for (const { custom_id, result } of results) {
-    if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; continue; }
-    let analysis: Record<string, unknown>;
-    try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
-    catch { failed++; continue; }
     const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, custom_id));
     if (!rows.length) { skipped++; continue; }
     const data = rows[0].data as Record<string, unknown>;
-    if (data.trashedAt) { skipped++; continue; }
+    if (opts.skipDone && data.analysisBatchPending !== batchId) continue;   // done in an earlier slice
+    if (opts.budgetMs && Date.now() - t0 > opts.budgetMs) { remaining++; continue; }
+    if (data.trashedAt) { skipped++; await release(custom_id); continue; }
+    if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; await release(custom_id); continue; }
+    let analysis: Record<string, unknown>;
+    try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
+    catch { failed++; await release(custom_id); continue; }
     analysis = applyAnalysisGuardrails(data, analysis);
     try { await applyAnalysisToDeal(custom_id, data, analysis, log); applied++; }
-    catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; }
+    catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id); }
   }
-  log.info({ batchId, applied, failed, skipped }, "Applied stale-analysis batch");
-  return { status, applied, failed, skipped };
+  if (!remaining) batchResultsCache.delete(batchId);
+  log.info({ batchId, applied, failed, skipped, remaining }, "Applied stale-analysis batch slice");
+  return { status, applied, failed, skipped, remaining };
 }
+
+// Auto re-analysis, driven by the open app in request-sized slices (autoscale hosting only
+// runs code during a request). GET = progress; POST = do one bounded slice.
+router.get("/analysis-refresh/status", requireAuth, async (_req, res) => {
+  try { const { analysisRefreshStatus } = await import("../lib/analysisAutoRefresh"); res.json(await analysisRefreshStatus()); }
+  catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "status failed" }); }
+});
+router.post("/analysis-refresh/tick", requireAuth, async (req, res) => {
+  try {
+    const { runAnalysisRefreshSlice, analysisRefreshStatus } = await import("../lib/analysisAutoRefresh");
+    const tick = await runAnalysisRefreshSlice(req.log, 45_000);
+    res.json({ tick, status: await analysisRefreshStatus() });
+  } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "tick failed" }); }
+});
 
 router.post("/deals/refresh-stale-analysis-batch", requireAuth, async (req, res) => {
   try {

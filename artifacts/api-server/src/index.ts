@@ -16,6 +16,7 @@ import { applyRecordedSales, addMissingProperties } from "./lib/recordedSales";
 import { purgePendingSaleData } from "./lib/pendingSale";
 import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
 import { retireSupersededOms } from "./lib/supersededOms";
+import { sweepOmDates } from "./lib/omDateSweep";
 import { runCompsCleanupIfNeeded } from "./routes/comps";
 import { startAnalysisAutoRefresh, sweepAnalysisGuardrails } from "./lib/analysisAutoRefresh";
 
@@ -56,10 +57,13 @@ const server = app.listen(port, (err) => {
   runCompsCleanupIfNeeded()
     .then(r => { if (r.applied) logger.info(r, "Comp clean-up applied"); })
     .catch((err) => logger.error({ err }, "runCompsCleanupIfNeeded failed on startup"));
-  // An older OM covered by a newer one for the same property → keep the newer, Trash the older.
-  retireSupersededOms()
+  // OM dates (cover → file name → upload date), so history entries can say WHEN, then the
+  // superseded-OM pass (keep newer, Trash older, record history).
+  sweepOmDates()
+    .catch((err) => logger.error({ err }, "sweepOmDates failed on startup"))
+    .finally(() => retireSupersededOms()
     .then(n => { if (n) logger.info({ n }, "Retired superseded OMs"); })
-    .catch((err) => logger.error({ err }, "retireSupersededOms failed on startup"));
+    .catch((err) => logger.error({ err }, "retireSupersededOms failed on startup")));
   purgePendingSaleData()
     .then(n => { if (n) logger.info({ n }, "Deleted stored pending-sale data"); })
     .catch((err) => logger.error({ err }, "purgePendingSaleData failed on startup"));

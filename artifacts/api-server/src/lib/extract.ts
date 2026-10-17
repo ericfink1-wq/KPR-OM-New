@@ -16,6 +16,7 @@ import { computePortfolioCalibration } from "./calibration";
 import { Agent, fetch as undiciFetch } from "undici";
 import { ensurePropertyName } from "./dealMaintenance";
 import { applyAnalysisGuardrails } from "./analysisGuardrails";
+import { historyForAnalysis } from "./propertyHistory";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -40,7 +41,7 @@ REQUIRED SCHEMA:
   "assetType": "Retail|Office|Industrial|Multifamily|Mixed-Use|NNN|Other",
   "centerType": "For retail, the center FORMAT: Grocery-Anchored|Power Center|Neighborhood Center|Community Center|Lifestyle Center|Regional Mall|Super-Regional Mall|Outlet Center|Strip/Unanchored|Single-Tenant NNN|Mixed-Use|Other. Infer from anchors and description. null if not retail.",
   "urbanicity": "Urban|Suburban|Exurban|Rural or null",
-  "omDate": "YYYY-MM-DD or null",
+  "omDate": "YYYY-MM-DD — the date the OFFERING MEMORANDUM itself is dated: look on the cover / title page / first pages and the footer or disclaimer for a printed date (e.g. \"February 2021\" → 2021-02-01, \"Oct 2025\" → 2025-10-01). NOT a lease date, a rent-roll as-of date, an analysis start date or a projected year. null only if the document prints no date at all.",
   "askingPrice": "number or null — ONLY if explicitly stated",
   "capRate": "number or null — ONLY if explicitly stated",
   "noi": "number or null",
@@ -754,6 +755,7 @@ NEW UNDERWRITING SIGNALS — fold these into the grade, strengths, risks AND the
 - TAX REASSESSMENT: when currentAssessedValue and the purchase/asking price are both present, compare the assessed-implied market (assessedValue ÷ the state's commercial assessment ratio — e.g. Ohio ~35%, Texas ~100%) to the price. If the price is WELL ABOVE the implied current market, flag a likely property-tax reassessment INCREASE as a risk (a real go-forward NOI hit). A disclosed taxAbatement that may not survive the sale is also a risk (current taxes are artificially low).
 - MOVIE THEATERS — JUDGE ON SALES PER SCREEN, NOT PSF (screens): a cinema is a big box, so its sales/SF looks tiny and is MEANINGLESS; theaters are underwritten on sales PER SCREEN (and per seat). When a theater tenant has both sales and a screen count, compute sales/screen = (salesPSF × sf) ÷ screens and judge productivity on THAT (a healthy modern theater is roughly ~$400k–$700k+ of sales per screen; well below that is a weak/at-risk location). Never call a theater's low sales/SF a red flag. If screens is null for a theater with sales, say the per-screen read needs the screen count. Same logic informs anchor viability for cinema anchors.
 - LEASE VINTAGE (leaseStart): a lease's rent was priced the day it was SIGNED. A roster dominated by old paper (signed 8+ years ago) or by 2020–2021 COVID-era signings (cut when landlords had little leverage) likely sits below today's market — a mark-to-market story, gated by the timing tiers and options gate above. Conversely, the center's own RECENT signings (last ~24 months) are the best evidence of where market rent sits: if recent inline leases were signed well above the older paper, cite that spread as hard mark-to-market evidence. Ignore when leaseStart coverage is thin.
+- PROPERTY HISTORY (propertyHistory, when present): dated changes between this property's EARLIER documents and the current one — tenants who left, backfills of their space, new tenants, renewals/extensions, anchor rent moves, dark stores, NOI/occupancy then vs now. The CURRENT figures always govern every number you state; use the history as context: a big box that was backfilled (and by whom), an anchor that renewed (durability), repeated turnover in the same suite (a weak space), occupancy or NOI trend across marketings. Mention the most material change in the narrative with its dates. Never present a historical figure as current.
 - LOCATION QUALITY (demographics: population3mi, avgHHIncome3mi/medianHHIncome3mi, trafficCountVPD): higher household income AND higher population — ESPECIALLY when BOTH are high together — generally support HIGHER rents and TIGHTER (lower) cap rates, and signal a dense INFILL / URBAN trade area where supply is constrained (a strength: durable demand, pricing power, stronger residual value). Use this as an interpretive lens: a high-density, high-income location helps justify above-average in-place rent or a tighter going-in cap, and supports mark-to-market upside; a thin or low-income trade area is the opposite (more cap-rate cushion warranted, weaker rent growth). Conversely, a deal whose rent/cap looks aggressive for a WEAK trade area is a pricing risk. Weave it into the location sentence of the narrative and the strengths/risks. Compare to comparableDeals' demographics where present rather than asserting absolute thresholds.
 - OPERATOR INTEL (the "operatorIntel" field, if present): these are notes the KPR deal team typed in directly about THIS property — sales they've learned, lease changes that are expected, market/tenant color. Treat them as INFORMED FIRST-HAND CONTEXT and weave the material ones into the narrative, strengths, risks and upside. Two cautions: (1) a note tagged "(reported — not yet executed)" or "anecdotal" is an EXPECTATION / soft figure, not a committed fact — frame it as such ("Best Buy is reportedly extending five years — confirm the executed amendment") and don't let it inflate in-place NOI or the grade as if signed/verified; (2) where an intel note has already been applied to the structured data (sales/expiry), don't double-count it. If operatorIntel is absent, ignore this.
 
@@ -944,6 +946,10 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
     trafficCountVPD: dealData.trafficCountVPD ?? undefined,
     kprThesis: thesis || undefined,
     operatorIntel: dealIntel && dealIntel.length ? dealIntel : undefined,
+    // What changed between this property's earlier documents and now (backfills,
+    // departures, renewals, anchor rent moves) — see PROPERTY HISTORY in the prompt.
+    propertyHistory: historyForAnalysis(dealData),
+    omDate: dealData.omDate ?? undefined,
     // Center-level non-rent income (utility resale, EV, parking, storage) — durability
     // of NOI; and the current tax facts so the grade can flag a reassessment step-up.
     otherIncome: dealData.otherIncome ?? undefined,

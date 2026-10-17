@@ -958,6 +958,11 @@ export interface Deal {
   lastUploadAt?: string | null; // last time a FILE (OM/rent roll/sales/lease options) was uploaded to this deal
   refreshedAt?: string | null; // last time an OM re-upload / merge refreshed this deal
   omDate?: string;
+  // Where omDate came from: printed on the OM, read from the file name, or (no date
+  // anywhere) the upload date as a stand-in — shown as such, never as the OM's own date.
+  omDateSource?: "pdf" | "file-name" | "upload-date" | null;
+  // Running record of what changed between this property's successive documents (server-built).
+  propertyHistory?: PropertyHistoryEntry[] | null;
   pdfPages?: number;
   // Financials
   askingPrice?: number | null;
@@ -1246,4 +1251,13 @@ export interface MyUnderwritingInputs {
   reservesPerSF?: number | null;
   marketRentPSF?: number | null;
   targetCapRate?: number | null;
+}
+
+export interface PropertyHistoryEntry {
+  id: string; recordedAt: string;
+  fromAsOf: string | null; toAsOf: string | null;
+  fromSource: string | null; toSource: string | null;
+  before: { noi?: number | null; occupancy?: number | null; totalSF?: number | null; walt?: number | null; tenants?: number | null; askingPrice?: number | null };
+  after: { noi?: number | null; occupancy?: number | null; totalSF?: number | null; walt?: number | null; tenants?: number | null; askingPrice?: number | null };
+  events: Array<{ kind: "left" | "arrived" | "backfill" | "renewed" | "rent" | "dark" | "metric"; text: string }>;
 }

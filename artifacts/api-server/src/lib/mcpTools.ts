@@ -490,8 +490,17 @@ const libraryOverview: McpToolDef = {
       .sort((a, b) => b[1].rent - a[1].rent).slice(0, 15)
       .map(([name, v]) => ({ name, annualRent: Math.round(v.rent), locations: v.locations }));
 
+    // AI write-up freshness (operational): how many deals carry the current analysis rules.
+    let analysisFreshness: unknown = undefined;
+    try {
+      const { analysisRefreshStatus } = await import("./analysisAutoRefresh");
+      const st = await analysisRefreshStatus();
+      analysisFreshness = { rulesVersion: st.version, dealsOnCurrentRules: st.current, dealsOutdated: st.outdated,
+        dealsAwaitingBatch: st.inBatch, batchId: st.batchId, lastRefreshStep: st.lastTick };
+    } catch { /* never block the overview */ }
     return {
       dealCount: deals.length,
+      analysisFreshness,
       totals: {
         gla: Math.round(totalSF), dealsWithGla: sfCount,
         noi: Math.round(totalNOI), dealsWithNoi: noiCount,

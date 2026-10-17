@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-property-history",
+    date: "2026-10-17",
+    category: "new",
+    title: "Property history: what changed between OMs",
+    detail:
+      "When a newer OM or rent roll replaces an older one for the same center, the newer figures still lead, and the deal page now keeps a dated Property History of what changed: tenants who left, who backfilled their space, new tenants, renewals and extensions, anchor rent moves, stores gone dark, and NOI and occupancy then vs now. It builds up with every new document and the AI write-up uses it as background. Every OM now carries a date too: read from the OM's cover, else its file name, else shown as 'uploaded … (OM undated)'.",
+    where: "Deal page → Summary, under the anchor comparison",
+  },
+  {
     id: "2026-10-17-sold-record-flags",
     date: "2026-10-17",
     category: "improved",

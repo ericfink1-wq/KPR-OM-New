@@ -1,6 +1,7 @@
 import { db, dealsTable, dealImagesTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { logger } from "./logger";
+import { recordHistory } from "./propertyHistory";
 
 // AN OLDER OM SUPERSEDED BY A NEWER ONE for the same property (Eric, 10/17/26: "we have an
 // older OM that now is covered by a new OM — newer info is always best"). The NEWER record
@@ -38,10 +39,18 @@ export async function retireSupersededOms(): Promise<number> {
     const keep = rows.find(r => r.id === s.keep), old = rows.find(r => r.id === s.retire);
     if (!keep || !old) continue;
     const kd = keep.data as Record<string, unknown>, od = old.data as Record<string, unknown>;
-    if (od.trashedAt || kd.trashedAt) continue; // already done (or the keeper was deleted — leave it to a person)
+    if (kd.trashedAt) continue; // the keeper was deleted — leave it to a person
+    // History first (Eric, 10/17/26: newer wins, but keep what happened). Runs even when the
+    // older record was already retired on an earlier boot, so it backfills once.
+    const next: Record<string, unknown> = { ...kd };
+    const recorded = recordHistory(od, next, undefined, `superseded:${s.retire}`);
+    if (od.trashedAt) {
+      if (recorded) await db.update(dealsTable).set({ data: next, updatedAt: new Date() }).where(eq(dealsTable.id, s.keep));
+      continue;
+    }
     const patch = carryOver(kd, od);
     const now = new Date().toISOString();
-    if (Object.keys(patch).length) await db.update(dealsTable).set({ data: { ...kd, ...patch }, updatedAt: new Date() }).where(eq(dealsTable.id, s.keep));
+    if (Object.keys(patch).length || recorded) await db.update(dealsTable).set({ data: { ...next, ...patch }, updatedAt: new Date() }).where(eq(dealsTable.id, s.keep));
     // Cover photo: keep the newer one's; borrow the older one's only if the newer has none.
     try {
       const imgs = await db.select().from(dealImagesTable).where(inArray(dealImagesTable.id, [s.keep, s.retire]));

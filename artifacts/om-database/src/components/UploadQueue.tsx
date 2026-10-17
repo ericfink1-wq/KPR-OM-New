@@ -167,6 +167,7 @@ function userOwnedFields(existing: Deal): Partial<Deal> {
     marketDemographics: existing.marketDemographics, demoChecked: existing.demoChecked,
     txnPortfolio: existing.txnPortfolio,
     aka: existing.aka, tenantsManual: existing.tenantsManual,
+    propertyHistory: existing.propertyHistory,
   };
   for (const f of Object.keys(existing.verified || {})) {
     const k = f as keyof Deal;

@@ -3,6 +3,7 @@ import MarkSoldDialog from "./MarkSoldDialog";
 import CompScatter from "./CompScatter";
 import { isNonAnchorUse } from "../lib/anchorUse";
 import NoClosingDatePill from "./NoClosingDatePill";
+import PropertyHistoryCard from "./PropertyHistoryCard";
 import { isClosingDate } from "../lib/closingDate";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
@@ -2743,7 +2744,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
           </div>
           <span style={{ fontSize:9, color:"#958d80", textAlign:"right" }}>
-            {[d.omDate ? `OM ${d.omDate}` : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
+            {[d.omDate ? (d.omDateSource === "upload-date" ? `uploaded ${d.omDate} (OM undated)` : `OM ${d.omDate}`) : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
             {uploader && (uploader.userName || uploader.userEmail) && (
               <span title={uploader.inferred ? "No upload record for this deal — attributed to the library's primary uploader" : (uploader.at ? `Uploaded ${new Date(uploader.at).toLocaleDateString()}` : "Uploaded by")} style={{ display:"block" }}>
                 ⬆ Uploaded by {uploader.userName || uploader.userEmail}{uploader.inferred ? " *" : ""}
@@ -3519,6 +3520,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       {/* Anchor comparison — the size/rent/term/sales vs-chain read, on the Summary. */}
       <AnchorSnapshot deal={d} allDeals={allDeals} />
+
+      {/* What changed between this property's earlier documents and now. */}
+      <PropertyHistoryCard deal={d} />
 
       <div id="section-metriceditor"><MetricsEditor deal={d} onUpdate={onUpdate}/></div>
 
