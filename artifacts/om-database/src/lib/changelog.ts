@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-anchor-names-no-autoscore",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Go-dark anchors show the tenant's name; opening a deal no longer re-scores it",
+    detail:
+      "The anchor-goes-dark figures (owned risk card, Co-Tenancy Cascade, the deal's lease-risk panel) now name the actual tenant instead of a piece of lease wording like 'Anchor Premises (Other Required Lessees per…)'. A clause that names no tenant shows as 'a required anchor'. Opening a deal page also no longer starts 'Re-scoring against portfolio benchmarks' on its own; scores refresh with Refresh Analysis and the background re-analysis.",
+    where: "Portfolio Analytics → Owned; Co-Tenancy Cascade; deal page",
+  },
+  {
     id: "2026-10-17-implied-same-type",
     date: "2026-10-17",
     category: "fixed",

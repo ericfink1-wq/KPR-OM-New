@@ -3,7 +3,7 @@ import type { Deal, LeaseAbstract } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { useWatchlist, lookupWatch } from "../lib/useWatchlist";
 import { isVacant, isNAPTenant, tenantLabel } from "../lib/utils";
-import { resolveTenantRisk, computeExposure, anchorsReferenced } from "../lib/leaseRisk";
+import { resolveTenantRisk, computeExposure, anchorsReferenced, anchorLabel } from "../lib/leaseRisk";
 import { apiListAllLeaseAbstracts } from "../lib/api";
 
 // Two numbers for the OWNED portfolio (Eric, 10/16/26):
@@ -51,7 +51,7 @@ export default function OwnedRiskCards({ deals, onOpenDeal, onNav }: { deals: De
       let best: { anchor: string; rent: number; tenants: number } | null = null;
       for (const anchor of anchorsReferenced(resolved)) {
         const e = computeExposure(resolved, anchor);
-        if (e.tier1Rent > 0 && (!best || e.tier1Rent > best.rent)) best = { anchor, rent: e.tier1Rent, tenants: e.tier1Count };
+        if (e.tier1Rent > 0 && (!best || e.tier1Rent > best.rent)) best = { anchor: anchorLabel(d, anchor), rent: e.tier1Rent, tenants: e.tier1Count };
       }
       if (best) rows.push({ d, ...best });
     }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import {
-  resolveTenantRisk, computeExposure, computeCombinedExposure, anchorsReferenced,
+  resolveTenantRisk, computeExposure, computeCombinedExposure, anchorsReferenced, anchorLabel,
   buildAnchorDependencyGraph, buildDiligenceList, buildRiskMatrix, type ExposureResult,
 } from "../lib/leaseRisk";
 import { exportLeaseRiskMatrix } from "../lib/leaseRiskExcel";
@@ -201,9 +201,10 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
             {sortedAnchors.map((a) => {
               const on = active.includes(a);
               const n = depByAnchor.get(a) ?? 0;
-              const short = a.length > 30 ? a.slice(0, 28).trimEnd() + "…" : a;
+              const lbl = anchorLabel(deal, a);
+              const short = lbl.length > 30 ? lbl.slice(0, 28).trimEnd() + "…" : lbl;
               return (
-                <button key={a} onClick={() => toggle(a)} title={`${a}${n ? ` — ${n} dependent tenant${n === 1 ? "" : "s"}` : ""}`}
+                <button key={a} onClick={() => toggle(a)} title={`${lbl}${n ? ` — ${n} dependent tenant${n === 1 ? "" : "s"}` : ""}`}
                   style={{ fontSize: 12, fontWeight: on ? 800 : 600, color: on ? "#fff" : C.ink, background: on ? C.red : "#fff", border: `1px solid ${on ? C.red : C.line}`, borderRadius: 999, padding: "5px 12px", cursor: "pointer", maxWidth: "100%" }}>
                   {on ? "✓ " : ""}{short}{n ? <span style={{ opacity: 0.7, fontWeight: 700 }}> · {n}</span> : null}
                 </button>

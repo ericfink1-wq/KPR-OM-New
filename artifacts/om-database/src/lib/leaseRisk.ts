@@ -293,6 +293,30 @@ export function anchorsReferenced(resolved: ResolvedTenantRisk[]): string[] {
   return [...seen.values()];
 }
 
+/** How to SHOW a co-tenancy anchor (Eric, 10/17/26: Rockaway showed the clause text
+ *  "Anchor Premises (Other Required Lessees per BLP Para 8…" as the anchor's name). The
+ *  roster tenant it refers to, by word-boundary match on the normalized name; a phrase
+ *  that names no roster tenant and reads like lease language becomes "a required anchor".
+ *  Display only — exposure math still keys off the clause's own anchor string. */
+export function anchorLabel(deal: Pick<Deal, "tenants">, anchor: string): string {
+  const k = normAnchor(anchor);
+  const pad = (x: string) => ` ${x.replace(/[^a-z0-9]+/g, " ").trim()} `;
+  const kp = pad(k);
+  let best: string | null = null;
+  for (const t of deal.tenants || []) {
+    if (!t?.name || isVacant(t.name)) continue;
+    const tk = tenantKey(t.name);
+    if (tk.length < 3) continue;
+    if (tk === k || kp.includes(pad(tk)) || pad(tk).includes(kp)) {
+      if (!best || t.name.length < best.length) best = t.name; // shortest = the plain brand
+    }
+  }
+  if (best) return cleanAnchorName(best);
+  const raw = cleanAnchorName(anchor);
+  if (raw.length > 40 || /\b(premises|lessees?|para(graph)?|per\b|section|§|required|other)\b/i.test(raw)) return "a required anchor";
+  return raw;
+}
+
 /** Seed an editable anchor-status table from the roster + referenced anchors. */
 export function seedAnchorStatus(deal: Deal, abstracts: LeaseAbstract[] = []): AnchorStatus[] {
   const resolved = resolveTenantRisk(deal, abstracts);

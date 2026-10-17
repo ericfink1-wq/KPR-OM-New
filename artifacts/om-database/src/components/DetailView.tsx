@@ -6,7 +6,7 @@ import NoClosingDatePill from "./NoClosingDatePill";
 import { isClosingDate } from "../lib/closingDate";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
-import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
+import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
   apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader, cachedRead } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, openAuditCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
@@ -1699,8 +1699,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     onUpdate(d.id, { imageMeta: { ...(d.imageMeta || {}), sitePlanConfirmed: v } });
   };
   const { mutateAsync: sendMessage } = useCreateAiMessage();
-  const [rescoreBusy, setRescoreBusy] = useState(false);
-  const autoRescoreTriggered = useRef(false);
   // Long-running AI actions report to the global pinned progress bar (see lib/aiProgress).
 
   useEffect(() => {
@@ -1876,23 +1874,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     };
   }, [actionsOpen]);
 
-  // DetailView stays mounted as you move between deals, so the one-shot guard
-  // below must reset per deal — otherwise only the FIRST deal opened in a session
-  // could ever auto-rescore.
-  useEffect(() => { autoRescoreTriggered.current = false; }, [d.id]);
-  // Auto-rescore when ≥10 new deals have been added to the portfolio since this deal was last scored
-  useEffect(() => {
-    const lastCount = d.lastScoredDealCount ?? 0;
-    if (!autoRescoreTriggered.current && allDeals.length - lastCount >= 10) {
-      autoRescoreTriggered.current = true;
-      setRescoreBusy(true);
-      runWithProgress(
-        `Re-scoring against portfolio benchmarks — ${d.propertyName || d.fileName || "deal"}`,
-        async () => { const patch = await apiRescore(d.id); onUpdate(d.id, patch as Partial<typeof d>); },
-        { doneLabel: "Score refreshed against portfolio benchmarks", errorLabel: "Auto re-score failed" },
-      ).catch(() => {}).finally(() => setRescoreBusy(false));
-    }
-  }, [d.id, allDeals.length]);
+  // No automatic re-score on page view (Eric, 10/17/26: opening a deal kicked off "Re-scoring
+  // against portfolio benchmarks" — an AI pass — whenever 10+ deals had been added since,
+  // i.e. on nearly every deal). "Refresh Analysis" and the batch refresh re-score instead.
 
   useEffect(() => { setNotesVal(d.userNotes || ""); }, [d.id]);
 

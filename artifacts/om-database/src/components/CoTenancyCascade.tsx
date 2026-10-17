@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal, LeaseAbstract } from "../lib/idb";
-import { resolveTenantRisk, computeExposure, anchorsReferenced, type ExposureResult } from "../lib/leaseRisk";
+import { resolveTenantRisk, computeExposure, anchorsReferenced, anchorLabel, type ExposureResult } from "../lib/leaseRisk";
 import { apiListAllLeaseAbstracts } from "../lib/api";
 import { isVacant } from "../lib/utils";
 import ScopeToggle, { scopeDeals, type Scope } from "./ScopeToggle";
@@ -71,9 +71,12 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
       for (const anchor of anchors) {
         const exposure = computeExposure(resolved, anchor);
         if (exposure.tier3Count === 0) continue;
-        const key = anchor.toLowerCase().trim();
+        // Show the roster tenant, never the clause text (Eric, 10/17/26).
+        const lbl = anchorLabel(d, anchor);
+        const shown = lbl === "a required anchor" ? `An unnamed required anchor (${dealName})` : lbl;
+        const key = shown.toLowerCase().trim();
         let row = byAnchor.get(key);
-        if (!row) { row = { anchor, tier1Rent: 0, tier3Rent: 0, dealCount: 0, tenantCount: 0, hits: [] }; byAnchor.set(key, row); }
+        if (!row) { row = { anchor: shown, tier1Rent: 0, tier3Rent: 0, dealCount: 0, tenantCount: 0, hits: [] }; byAnchor.set(key, row); }
         row.tier1Rent += exposure.tier1Rent;
         row.tier3Rent += exposure.tier3Rent;
         row.dealCount += 1;
