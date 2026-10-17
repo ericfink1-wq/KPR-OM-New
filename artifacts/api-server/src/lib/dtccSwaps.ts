@@ -157,3 +157,65 @@ export function parseManualCurve(text: string): Array<{ tenor: number; rate: num
   }
   return [...out.entries()].sort((a, b) => a[0] - b[0]).map(([tenor, rate]) => ({ tenor, rate }));
 }
+
+// ── 1-MONTH TERM SOFR SWAP CURVE, DERIVED FROM THE OIS CURVE (10/17/26) ──────────────────
+// KPR's swapped loans hedge 1M CME Term SOFR (Derivative Advisors MTM report 6/9/26: all 7
+// swaps — Bensalem, Brunswick, Concordia, Voorhees, Kokomo, Waterbury, Bolton — index CME
+// Term SOFR 1M; only Overland/ONB is Daily Simple SOFR). DTCC carries too few clean Term
+// SOFR prints to read that curve directly (10/16: none usable; newest was 9/30 with two
+// tenors, 5Y printing ~17 bp ABOVE OIS — the wrong sign, loan-hedge prints at all-in rates).
+// So: take the validated OIS curve (annual/annual), convert each tenor to monthly
+// compounding, and add a small Term-vs-OIS basis. CHECKED vs Chatham 10/15: OIS 1Y 4.495 →
+// 4.405 monthly vs Chatham 1M Term 4.391; 2Y 4.620 → 4.525 vs 4.517 — residual ≈ −1 bp.
+export const TERM_BASIS_DEFAULT_BP = -1.0;
+export const TERM_BASIS_CLAMP_BP = 5;
+export const TERM_BASIS_MIN_PRINTS = 5;
+/** A Term print/day-median further than this from converted OIS is contamination, not basis.
+ *  Same as the clamp: a real Term-vs-OIS basis is a couple of bp. At 10 bp the old 9/30
+ *  day-medians (stored under the earlier ±50 bp filter) passed and pinned 3Y/5Y to the ±5 bp
+ *  edges — exactly the stale, thin print the rule says must never move the curve. */
+export const TERM_CLEAN_TOL_BP = 5;
+
+/** Annual-compounding rate (%) → the equivalent monthly-compounding rate (%). */
+export function annualToMonthly(ratePct: number): number {
+  return 12 * (Math.pow(1 + ratePct / 100, 1 / 12) - 1) * 100;
+}
+
+/** One day's Term SOFR swap median at a tenor, minus that day's converted OIS rate. */
+export interface BasisSample { date: string; tenor: number; diffBp: number; n: number }
+export interface TermBasis { bp: number; source: "measured" | "default"; prints: number; days: number }
+
+/** Basis at a tenor: the median of CLEAN samples (|diff| ≤ 5 bp) when they hold ≥5 prints
+ *  in total, clamped to ±5 bp; otherwise the −1.0 bp default. A stale or thin print never
+ *  moves the curve on its own. */
+export function termBasis(samples: BasisSample[], tenor: number): TermBasis {
+  const clean = samples.filter(s => s.tenor === tenor && Number.isFinite(s.diffBp) && Math.abs(s.diffBp) <= TERM_CLEAN_TOL_BP && s.n > 0);
+  const prints = clean.reduce((t, s) => t + s.n, 0);
+  if (prints < TERM_BASIS_MIN_PRINTS) return { bp: TERM_BASIS_DEFAULT_BP, source: "default", prints, days: clean.length };
+  const expanded = clean.flatMap(s => Array(Math.round(s.n)).fill(s.diffBp) as number[]).sort((a, b) => a - b);
+  const med = quantile(expanded, 0.5);
+  const bp = Math.max(-TERM_BASIS_CLAMP_BP, Math.min(TERM_BASIS_CLAMP_BP, Math.round(med * 10) / 10));
+  return { bp, source: "measured", prints, days: clean.length };
+}
+
+export interface TermPoint { tenor: number; rate: number; oisRate: number; monthly: number; basisBp: number; basisSource: TermBasis["source"]; basisPrints: number; n?: number; p25?: number; p75?: number }
+
+/** The 1M Term SOFR swap curve for every tenor the OIS curve has. */
+export function deriveTermCurve(ois: Array<{ tenor: number; rate: number; n?: number; p25?: number; p75?: number }>, samples: BasisSample[]): TermPoint[] {
+  return ois.map(p => {
+    const b = termBasis(samples, p.tenor);
+    const monthly = annualToMonthly(p.rate);
+    const shift = (x: number) => r3(annualToMonthly(x) + b.bp / 100);
+    return { tenor: p.tenor, rate: r3(monthly + b.bp / 100), oisRate: p.rate, monthly: r3(monthly), basisBp: b.bp, basisSource: b.source, basisPrints: b.prints,
+      n: p.n, p25: p.p25 != null ? shift(p.p25) : undefined, p75: p.p75 != null ? shift(p.p75) : undefined };
+  });
+}
+
+/** Weekdays strictly after `from` up to and including `to` (ISO dates). */
+export function businessDaysBetween(from: string, to: string): number {
+  const a = Date.parse(from + "T00:00:00Z"), b = Date.parse(to + "T00:00:00Z");
+  if (!(b > a)) return 0;
+  let n = 0;
+  for (let t = a + 86_400_000; t <= b; t += 86_400_000) { const d = new Date(t).getUTCDay(); if (d !== 0 && d !== 6) n++; }
+  return n;
+}

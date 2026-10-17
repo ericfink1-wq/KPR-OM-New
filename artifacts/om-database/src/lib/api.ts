@@ -1020,13 +1020,18 @@ export interface SwapCurveView {
   points: Array<{ tenor: number; rate: number; n?: number; nDay?: number; p25?: number; p75?: number; method?: string }>;
   trades: number | null; tradesUsed: number | null;
 }
+export interface TermSwapCurveView {
+  derived: true; fromKind: SwapCurveView["kind"]; asOf: string; curveDate: string; source: string; basisWindowDays: number;
+  points: Array<{ tenor: number; rate: number; oisRate: number; monthly: number; basisBp: number; basisSource: "measured" | "default"; basisPrints: number; n?: number; p25?: number; p75?: number }>;
+}
 export interface RatesPayload {
   treasuries: { rows: RateRow[]; asOf: string | null; source: string };
   sofr: { rows: RateRow[]; asOf: string | null; source: string };
   swaps: { rows: RateRow[]; asOf: string | null; source: string; spreadBps: number };
   tenYearMonthly?: Array<{ month: string; value: number }>;
   swapCurve?: SwapCurveView | null;
-  termSwapCurve?: SwapCurveView | null;
+  /** 1M CME Term SOFR swaps (monthly) — derived from the OIS curve + a Term basis. */
+  termSwapCurve?: TermSwapCurveView | null;
   swapHistory?: Array<{ month: string; y5: number | null; y10: number | null }>;
   sofrOvernight?: { rate: number; date: string } | null;
   fetchedAt: string;

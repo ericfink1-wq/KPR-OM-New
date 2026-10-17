@@ -5,7 +5,12 @@ import type { RatesPayload } from "./api";
 // the breakdown is visible. The loan is the LOWEST of the DSCR, debt-yield and LTV loans,
 // and the one that binds is named.
 
-export interface BaseRate { id: string; label: string; value: number | null; asOf: string | null; group: "Floating" | "SOFR swap" | "Treasury" }
+// KPR's swapped loans hedge 1M CME Term SOFR, so the Term swap is the default base rate;
+// the OIS swap stays selectable (Overland/ONB is Daily Simple SOFR → price that off OIS).
+export const BASE_GROUPS = ["Floating", "SOFR Swap – 1M Term (monthly)", "SOFR OIS (annual/annual)", "Treasury"] as const;
+export interface BaseRate { id: string; label: string; value: number | null; asOf: string | null; group: typeof BASE_GROUPS[number] }
+/** System default when the user hasn't starred one: the 5Y 1M Term SOFR swap. */
+export const DEFAULT_BASE_ID = "term-swap-5";
 
 /** Every base rate the panel can price off, with null where the source has nothing today. */
 export function baseRateOptions(d: RatesPayload): BaseRate[] {
@@ -16,9 +21,14 @@ export function baseRateOptions(d: RatesPayload): BaseRate[] {
   const term = sofr(/term.*1\s*month/i);
   out.push({ id: "term-1m", label: "1M Term SOFR", value: term?.value ?? null, asOf: term?.asOf ?? null, group: "Floating" });
   for (const t of [1, 2, 3, 5, 7, 10]) {
+    const p = d.termSwapCurve?.points.find(x => x.tenor === t) ?? null;
+    out.push({ id: `term-swap-${t}`, label: `${t}Y SOFR Swap – 1M Term`, value: p?.rate ?? null, asOf: d.termSwapCurve?.asOf ?? null, group: "SOFR Swap – 1M Term (monthly)" });
+  }
+  // ids stay "swap-N" so a star saved before the Term curve existed still means the OIS swap.
+  for (const t of [1, 2, 3, 5, 7, 10]) {
     const p = d.swapCurve?.points.find(x => x.tenor === t) ?? null;
     const row = !p ? d.swaps.rows.find(r => new RegExp(`\\b${t}\\s*Year\\b`, "i").test(r.label) && !/est\./i.test(r.label)) : null;
-    out.push({ id: `swap-${t}`, label: `${t}Y SOFR swap`, value: p?.rate ?? row?.value ?? null, asOf: d.swapCurve?.asOf ?? row?.asOf ?? null, group: "SOFR swap" });
+    out.push({ id: `swap-${t}`, label: `${t}Y SOFR OIS swap`, value: p?.rate ?? row?.value ?? null, asOf: d.swapCurve?.asOf ?? row?.asOf ?? null, group: "SOFR OIS (annual/annual)" });
   }
   for (const t of [2, 5, 7, 10]) {
     const r = d.treasuries.rows.find(x => x.label === `${t}-Yr`) ?? null;

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Star } from "lucide-react";
+import { Star, Info } from "lucide-react";
 import { createPortal } from "react-dom";
 import { apiGetRates, apiLoadComps, apiSaveSwapCurve, apiGetLoanSizerPrefs, apiSaveLoanSizerPrefs, type RatesPayload, type RateRow, type SwapCurveView } from "../lib/api";
-import { baseRateOptions, sizeLoan } from "../lib/loanSizing";
+import { baseRateOptions, sizeLoan, BASE_GROUPS, DEFAULT_BASE_ID } from "../lib/loanSizing";
 
 // "Today's Rates" panel. SOFR swaps are read off DTCC's public swap-trade data (every
 // reported trade — median per tenor, with the trade count and range), or a curve someone
@@ -54,8 +54,9 @@ function Sparkline({ series, title }: { series: Array<{ month: string; value: nu
 // ── Loan sizing ────────────────────────────────────────────────────────────────
 function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string; noi: number | null; price?: number | null } | null }) {
   const options = useMemo(() => baseRateOptions(data), [data]);
-  const firstAvailable = options.find(o => o.id === "swap-10" && o.value != null) ?? options.find(o => o.value != null);
-  const [baseId, setBaseIdRaw] = useState<string>(firstAvailable?.id ?? "swap-10");
+  // No star → the 5Y 1M Term SOFR swap (what KPR's swapped loans price off), then the 10Y OIS.
+  const firstAvailable = options.find(o => o.id === DEFAULT_BASE_ID && o.value != null) ?? options.find(o => o.id === "swap-10" && o.value != null) ?? options.find(o => o.value != null);
+  const [baseId, setBaseIdRaw] = useState<string>(firstAvailable?.id ?? DEFAULT_BASE_ID);
   const [spreadBps, setSpreadBps] = useState(200);
   const [premiumBps, setPremiumBps] = useState(0);
   const [cushionBps, setCushionBps] = useState(0);
@@ -118,7 +119,7 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
   const base = options.find(o => o.id === baseId) ?? null;
   const num = (s: string) => { const n = Number(s.replace(/[$,\s]/g, "")); return Number.isFinite(n) && n > 0 ? n : null; };
   const sizing = base?.value != null ? sizeLoan({ basePct: base.value, spreadBps, premiumBps, cushionBps, noi: num(noiInput), price: num(priceInput), dscr, debtYieldPct: debtYield, ltvPct: ltv, amortYears: io ? null : amortYrs }) : null;
-  const groups = ["Floating", "SOFR swap", "Treasury"] as const;
+  const groups = BASE_GROUPS;
 
   return (
     <div style={{ marginBottom: 18 }}>
@@ -235,13 +236,23 @@ function CapSpread({ data }: { data: RatesPayload }) {
 }
 
 // ── Rate tables ────────────────────────────────────────────────────────────────
-function Section({ title, rows, asOf, source }: { title: string; rows: RateRow[]; asOf: string | null; source: string }) {
+function Section({ title, rows, asOf, source, info }: { title: string; rows: RateRow[]; asOf: string | null; source: string; info?: string }) {
+  const [showInfo, setShowInfo] = useState(false);
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-        <span style={cap}>{title}</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <span style={cap}>{title}</span>
+          {info && (
+            <button type="button" onClick={() => setShowInfo(v => !v)} aria-expanded={showInfo} aria-label="About this curve" title={info}
+              style={{ background: "transparent", border: "none", padding: 4, margin: -4, color: "#8a7f6d", cursor: "pointer", display: "inline-flex" }}>
+              <Info size={14} strokeWidth={2} aria-hidden />
+            </button>
+          )}
+        </span>
         <span style={{ fontSize: 10, color: "#a89f8f" }}>as of {fmtAsOf(asOf)}</span>
       </div>
+      {info && showInfo && <div style={{ fontSize: 11.5, color: "#4a4d46", background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "8px 10px", marginBottom: 8, lineHeight: 1.45 }}>{info}</div>}
       <div style={{ border: "1px solid #ece5d7", borderRadius: 10, overflow: "hidden" }}>
         {rows.map((r, i) => (
           <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: i % 2 ? "#faf7f0" : "#fff", borderTop: i ? "1px solid #f3eee3" : "none" }}>
@@ -272,11 +283,11 @@ function SwapCurveSection({ data, onSaved }: { data: RatesPayload; onSaved: () =
   };
   return (
     <div style={{ marginBottom: 18 }}>
-      <Section title={c?.kind === "manual" ? "SOFR swaps (pasted)" : "SOFR swaps"} rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
+      <Section title={c?.kind === "manual" ? "SOFR OIS (annual/annual) — pasted" : "SOFR OIS (annual/annual)"} rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
       {hist.length >= 2 && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "-8px 0 10px", padding: "8px 12px", border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontSize: 10.5, color: "#6b6356", fontWeight: 600 }}>10Y SOFR swap, month-end</div>
+            <div style={{ fontSize: 10.5, color: "#6b6356", fontWeight: 600 }}>10Y SOFR OIS swap, month-end</div>
             <div style={{ fontSize: 11, color: "#a89f8f" }}>{hist[0].month} {hist[0].value.toFixed(2)}% → {hist[hist.length - 1].month} {hist[hist.length - 1].value.toFixed(2)}%</div>
           </div>
           <Sparkline series={hist} title="10-year SOFR swap, month-end, last 12 months" />
@@ -284,7 +295,7 @@ function SwapCurveSection({ data, onSaved }: { data: RatesPayload; onSaved: () =
       )}
       <button onClick={() => setOpen(o => !o)} aria-expanded={open}
         style={{ background: "transparent", border: "1px solid #e3dccd", color: "#5c5047", padding: "7px 12px", minHeight: 34, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>
-        {open ? "Close" : "Paste today's curve (e.g. Chatham)"}
+        {open ? "Close" : "Paste today's SOFR OIS curve (e.g. Chatham)"}
       </button>
       {open && (
         <div style={{ marginTop: 8, padding: 10, border: "1px solid #ece5d7", borderRadius: 10, background: "#fff" }}>
@@ -295,7 +306,7 @@ function SwapCurveSection({ data, onSaved }: { data: RatesPayload; onSaved: () =
             <button onClick={save} disabled={busy || text.trim().length < 4}
               style={{ background: "#3f7a1f", color: "#fff", border: "none", padding: "8px 14px", minHeight: 34, borderRadius: 8, cursor: busy ? "default" : "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit", opacity: busy || text.trim().length < 4 ? 0.6 : 1 }}>Use this curve</button>
           </div>
-          <div style={{ fontSize: 10.5, color: "#8a7f6d", marginTop: 6 }}>Stamped with your name and the time. It replaces the DTCC curve for everyone until DTCC reports newer trades.</div>
+          <div style={{ fontSize: 10.5, color: "#8a7f6d", marginTop: 6 }}>Paste the SOFR (annual/annual) column. Stamped with your name and the time. It replaces the DTCC curve for everyone until DTCC reports newer trades, and the 1M Term curve is derived from it.</div>
           {msg && <div style={{ fontSize: 11.5, color: "#3f5a2a", marginTop: 6 }}>{msg}</div>}
         </div>
       )}
@@ -324,7 +335,9 @@ export default function RatesPanel({ onClose, deal }: { onClose: () => void; dea
 
   const treasuryRows = data ? data.treasuries.rows.filter(r => TREASURY_TENORS_SHOWN.includes(r.label)) : [];
   const term = data?.termSwapCurve;
-  const termRows: RateRow[] = term ? term.points.map(p => ({ label: `${p.tenor}Y swap on 1M Term SOFR`, value: p.rate, asOf: term.asOf, note: p.n != null ? `${p.n} trades` : undefined })) : [];
+  const bp = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(1)}bp`;
+  const termRows: RateRow[] = term ? term.points.map(p => ({ label: `SOFR Swap – 1M Term – ${p.tenor} Year`, value: p.rate, asOf: term.asOf,
+    note: `OIS ${p.oisRate.toFixed(3)} → monthly ${p.monthly.toFixed(3)} ${bp(p.basisBp)}${p.basisSource === "measured" ? ` measured, ${p.basisPrints} prints` : ""}` })) : [];
 
   return createPortal(
     <>
@@ -346,12 +359,12 @@ export default function RatesPanel({ onClose, deal }: { onClose: () => void; dea
               <LoanSizing data={data} deal={deal} />
               <CapSpread data={data} />
               <Section title="SOFR" rows={data.sofr.rows} asOf={data.sofr.asOf} source={`${data.sofr.source}${data.sofrOvernight ? " · overnight SOFR: NY Fed" : ""}`} />
+              {termRows.length > 0 && <Section title="SOFR Swap – 1M Term (monthly)" rows={termRows} asOf={term!.asOf} source={term!.source}
+                info="KPR's swapped loans hedge 1M CME Term SOFR. Overland (ONB) uses Daily Simple SOFR — use the OIS curve for that type of loan." />}
               <SwapCurveSection data={data} onSaved={() => load(true)} />
-              {termRows.length > 0 && <Section title={`Swaps on Term SOFR${term!.curveDate ? ` (${fmtAsOf(term!.curveDate)})` : ""}`} rows={termRows} asOf={term!.asOf}
-                source="DTCC-reported swaps on 1M CME Term SOFR — thin market, held within 50 bp of the SOFR curve; a tenor needs 5 trades to show." />}
               <Section title="Treasury yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
               <div style={{ fontSize: 10.5, color: "#8a7f6d", lineHeight: 1.5, marginTop: 4 }}>
-                SOFR swap rates are read off every swap trade reported to DTCC's public price-dissemination feed: plain, spot-starting USD SOFR swaps, the median at each tenor of the trades done 1:00–4:30pm ET (or the latest trades during the day), leaving out prints more than 10 bp from the day's pack. On 10/15/26 that came within about 1 bp of Chatham's close at every tenor. It's market data for internal reference, not a dealer quote. Treasuries are the U.S. Treasury's official par curve; SOFR overnight is the NY Fed's.
+                SOFR swap rates are read off every swap trade reported to DTCC's public price-dissemination feed: plain, spot-starting USD SOFR swaps, the median at each tenor of the trades done 1:00–4:30pm ET (or the latest trades during the day), leaving out prints more than 10 bp from the day's pack. On 10/15/26 that came within about 1 bp of Chatham's close at every tenor. The 1M Term SOFR swap curve is derived from it: each OIS rate converted from annual to monthly compounding, plus a Term-vs-OIS basis (−1.0 bp by default, which matched Chatham's 1M Term column within about 1 bp on 10/15/26; measured from DTCC's own Term SOFR prints only when at least 5 clean ones exist at a tenor in the last 20 business days, capped at ±5 bp). It's market data for internal reference, not a dealer quote. Treasuries are the U.S. Treasury's official par curve; SOFR overnight is the NY Fed's.
               </div>
             </>
           )}

@@ -6,7 +6,7 @@
 //     API for them. If the scrape fails, SOFR falls back to the free NY Fed
 //     30-day average and swaps are omitted (better empty than wrong).
 import { fetchWithTimeout } from "./http";
-import { refreshSwapCurves, getSwapCurves, fetchSofrOvernight, type CurveView, type SwapCurvesPayload } from "./rateCurves";
+import { refreshSwapCurves, getSwapCurves, fetchSofrOvernight, type CurveView, type SwapCurvesPayload, type TermCurveView } from "./rateCurves";
 
 export interface RateRow {
   label: string;
@@ -23,8 +23,9 @@ export interface RatesPayload {
   tenYearMonthly?: Array<{ month: string; value: number }>;
   /** SOFR swap curve read off DTCC-reported trades (or a pasted curve, when newer). */
   swapCurve?: CurveView | null;
-  /** Swaps on 1-month CME Term SOFR, same method. */
-  termSwapCurve?: CurveView | null;
+  /** 1-month CME Term SOFR swaps (monthly, ACT/360) — DERIVED from the OIS curve (converted
+   *  to monthly + a Term basis). The curve KPR's swapped loans price off; the panel default. */
+  termSwapCurve?: TermCurveView | null;
   /** Month-end 5Y / 10Y SOFR swap for the last 12 months (oldest first). */
   swapHistory?: SwapCurvesPayload["history"];
   sofrOvernight?: { rate: number; date: string } | null;

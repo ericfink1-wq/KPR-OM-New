@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { unzipSync, strFromU8 } from "fflate";
 import { fetchWithTimeout } from "./http";
 import { logger } from "./logger";
-import { extractSofrSwaps, buildCurve, nyDate, nyMinutes, type CurveKind, type CurvePoint, type SwapTrade } from "./dtccSwaps";
+import { extractSofrSwaps, buildCurve, nyDate, nyMinutes, annualToMonthly, deriveTermCurve, businessDaysBetween, TERM_CLEAN_TOL_BP, TERM_BASIS_DEFAULT_BP, type CurveKind, type CurvePoint, type SwapTrade, type BasisSample, type TermPoint } from "./dtccSwaps";
 
 // Stored SOFR swap curves (see dtccSwaps.ts for how a curve is read off DTCC's trades).
 // One row per curve: `${YYYY-MM-DD}|${kind}` where kind is ois / term (end-of-day files),
@@ -74,10 +74,12 @@ async function storedIds(): Promise<Set<string>> {
   return new Set((r.rows as Array<{ id: string }>).map(x => x.id));
 }
 
-// Term SOFR swaps are thin and mixed with loan-hedge prints at all-in rates (two 2Y prints
-// at 7.5% on 10/16), so they're held within 50 bp of the same day's OIS curve and a tenor
-// needs 5 trades to be shown at all.
-const termOpts = (ois: ReturnType<typeof buildCurve>) => ({ anchor: new Map(ois.points.map(p => [p.tenor, p.rate])), anchorTol: 0.5, minTrades: 5 });
+// Term SOFR swap PRINTS are only used to measure the Term-vs-OIS basis now (the curve itself
+// is derived from OIS — see deriveTermCurve). They're thin and mixed with loan-hedge prints
+// at all-in rates (two 2Y prints at 7.5% on 10/16), so only prints within 10 bp of the same
+// day's OIS curve CONVERTED TO MONTHLY are kept; the 5-print minimum is applied across the
+// trailing window when the basis is measured, not per day.
+const termOpts = (ois: ReturnType<typeof buildCurve>) => ({ anchor: new Map(ois.points.map(p => [p.tenor, annualToMonthly(p.rate)])), anchorTol: TERM_CLEAN_TOL_BP / 100, minTrades: 1 });
 
 /** One end-of-day DTCC file → the day's OIS and Term SOFR curves. */
 async function ingestEod(e: IndexEntry): Promise<void> {
@@ -177,7 +179,46 @@ export interface CurveView {
   trades: number | null;        // every qualifying trade that day
   tradesUsed: number | null;    // the ones the rates were read from (close window / latest 3h)
 }
-export interface SwapCurvesPayload { ois: CurveView | null; term: CurveView | null; manualAvailable: CurveView | null; history: Array<{ month: string; y5: number | null; y10: number | null }> }
+/** The 1M Term SOFR swap curve, derived from the OIS curve on show (see deriveTermCurve). */
+export interface TermCurveView {
+  derived: true; fromKind: CurveView["kind"]; asOf: string; curveDate: string; source: string;
+  points: TermPoint[]; basisWindowDays: number;
+}
+export interface SwapCurvesPayload { ois: CurveView | null; term: TermCurveView | null; termPrints: CurveView | null; manualAvailable: CurveView | null; history: Array<{ month: string; y5: number | null; y10: number | null }> }
+
+const BASIS_WINDOW_BDAYS = 20;
+/** Term-minus-converted-OIS samples from stored days within the trailing 20 business days. */
+export function basisSamples(rows: Array<{ curve_date: string; kind: string; points: Array<{ tenor: number; rate: number; n?: number }> }>, asOfDate: string): BasisSample[] {
+  const oisByDate = new Map<string, Map<number, number>>();
+  for (const r of rows) if (r.kind === "ois" || r.kind === "ois-live") {
+    const d = String(r.curve_date).slice(0, 10);
+    if (r.kind === "ois-live" && oisByDate.has(d)) continue;          // end-of-day wins
+    oisByDate.set(d, new Map(r.points.map(p => [p.tenor, p.rate])));
+  }
+  const out: BasisSample[] = [], seen = new Set<string>();
+  for (const r of rows) {
+    if (r.kind !== "term" && r.kind !== "term-live") continue;
+    const d = String(r.curve_date).slice(0, 10);
+    if (d > asOfDate || businessDaysBetween(d, asOfDate) >= BASIS_WINDOW_BDAYS) continue;
+    if (seen.has(d) && r.kind === "term-live") continue;
+    const ois = oisByDate.get(d); if (!ois) continue;
+    for (const p of r.points) {
+      const o = ois.get(p.tenor); if (o == null) continue;
+      out.push({ date: d, tenor: p.tenor, diffBp: (p.rate - annualToMonthly(o)) * 100, n: p.n ?? 1 });
+    }
+    seen.add(d);
+  }
+  return out;
+}
+
+export function termSourceLabel(t: TermCurveView): string {
+  const measured = t.points.filter(p => p.basisSource === "measured");
+  const basis = measured.length
+    ? `Term basis ${TERM_BASIS_DEFAULT_BP.toFixed(1)}bp default; measured from DTCC Term SOFR prints at ${measured.map(p => `${p.tenor}Y ${p.basisBp >= 0 ? "+" : ""}${p.basisBp.toFixed(1)}bp (${p.basisPrints})`).join(", ")}`
+    : `Term basis (${TERM_BASIS_DEFAULT_BP.toFixed(1)}bp)`;
+  const from = t.fromKind === "manual" ? "a pasted SOFR OIS curve" : "DTCC SOFR OIS";
+  return `Derived from ${from} (${t.curveDate}), converted to monthly + ${basis}`;
+}
 
 const toView = (r: Row): CurveView => {
   const kind = r.kind === "manual" ? "manual" : r.kind.endsWith("-live") ? "dtcc-intraday" : "dtcc-eod";
@@ -196,12 +237,20 @@ export async function getSwapCurves(): Promise<SwapCurvesPayload> {
   const newest = (kinds: string[]) => rows.find(x => kinds.includes(x.kind)) ?? null;
   const dtcc = newest(["ois", "ois-live"]), manual = newest(["manual"]);
   const pickOis = manual && (!dtcc || Date.parse(manual.as_of) > Date.parse(dtcc.as_of)) ? manual : dtcc;
-  const term = newest(["term", "term-live"]);
+  const termRow = newest(["term", "term-live"]);
+  const oisView = pickOis ? toView(pickOis) : null;
+  let term: TermCurveView | null = null;
+  if (oisView && oisView.points.length) {
+    const t: TermCurveView = { derived: true, fromKind: oisView.kind, asOf: oisView.asOf, curveDate: oisView.curveDate, source: "",
+      points: deriveTermCurve(oisView.points, basisSamples(rows, oisView.curveDate)), basisWindowDays: BASIS_WINDOW_BDAYS };
+    t.source = termSourceLabel(t);
+    term = t;
+  }
   const byMonth = new Map<string, Row>();
   for (const x of rows) if (x.kind === "ois") { const m = x.curve_date.slice(0, 7); const cur = byMonth.get(m); if (!cur || x.curve_date > cur.curve_date) byMonth.set(m, x); }
   const at = (x: Row, t: number) => (x.points.find(p => p.tenor === t)?.rate ?? null) as number | null;
   const history = [...byMonth.keys()].sort().slice(-12).map(m => ({ month: m, y5: at(byMonth.get(m)!, 5), y10: at(byMonth.get(m)!, 10) }));
-  return { ois: pickOis ? toView(pickOis) : null, term: term ? toView(term) : null, manualAvailable: manual ? toView(manual) : null, history };
+  return { ois: oisView, term, termPrints: termRow ? toView(termRow) : null, manualAvailable: manual ? toView(manual) : null, history };
 }
 
 export async function saveManualCurve(points: Array<{ tenor: number; rate: number }>, enteredBy: string, source: string): Promise<void> {

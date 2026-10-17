@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sizeLoan, mortgageConstant, baseRateOptions } from "../loanSizing";
+import { sizeLoan, mortgageConstant, baseRateOptions, DEFAULT_BASE_ID } from "../loanSizing";
 
 describe("loan sizing", () => {
   it("adds the spreads to the base and names the binding constraint", () => {
@@ -28,5 +28,20 @@ describe("loan sizing", () => {
     });
     const v = (id: string) => opts.find(o => o.id === id)!.value;
     expect([v("sofr-on"), v("term-1m"), v("swap-10"), v("swap-5"), v("ust-10"), v("ust-2")]).toEqual([3.89, 4.31, 4.715, null, 4.1, null]);
+  });
+  it("puts the 1M Term SOFR swap first and makes its 5Y the default; OIS stays selectable", () => {
+    const opts = baseRateOptions({
+      treasuries: { rows: [], asOf: null, source: "" }, sofr: { rows: [], asOf: null, source: "" },
+      swaps: { rows: [], asOf: null, source: "", spreadBps: 0 },
+      swapCurve: { kind: "dtcc-eod", asOf: "x", curveDate: "2026-10-16", source: "", enteredBy: null, trades: 1, tradesUsed: 1, points: [{ tenor: 5, rate: 4.626 }] },
+      termSwapCurve: { derived: true, fromKind: "dtcc-eod", asOf: "x", curveDate: "2026-10-16", source: "", basisWindowDays: 20,
+        points: [{ tenor: 5, rate: 4.525, oisRate: 4.626, monthly: 4.535, basisBp: -1, basisSource: "default", basisPrints: 0 }] },
+      fetchedAt: "",
+    });
+    expect(DEFAULT_BASE_ID).toBe("term-swap-5");
+    const t5 = opts.find(o => o.id === "term-swap-5")!, o5 = opts.find(o => o.id === "swap-5")!;
+    expect([t5.value, t5.group, t5.label]).toEqual([4.525, "SOFR Swap – 1M Term (monthly)", "5Y SOFR Swap – 1M Term"]);
+    expect([o5.value, o5.group]).toEqual([4.626, "SOFR OIS (annual/annual)"]);
+    expect(opts.findIndex(o => o.id === "term-swap-5")).toBeLessThan(opts.findIndex(o => o.id === "swap-5"));
   });
 });
