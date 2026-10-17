@@ -6,6 +6,7 @@ import type { TenantIndexRow } from "@workspace/db";
 import { requireAuth } from "../middleware/auth";
 import { ensureTenantIndexColumns } from "../lib/tenantIndex";
 import { parseDealIds } from "../lib/queryParams";
+import { creditBucket, brandFamilyKey, brandDisplayName } from "../lib/tenantCredit";
 
 const router = Router();
 
@@ -62,28 +63,38 @@ function computeAnalytics(rows: TenantIndexRow[]) {
     }));
 
   // ---- Tenant Concentration -----------------------------------------------
-  const byTenant = new Map<string, number>();
+  // Group by BRAND, not raw roster spelling: hand-made links (canonicalName) first,
+  // then brandFamilyKey, so "Giant Food Stores" and "Giant" are one tenant and
+  // "HOME DEPOT" / "The Home Depot" don't split (Eric, 10/16/26). The label is the
+  // highest-rent spelling, de-shouted.
+  const byTenant = new Map<string, { rent: number; labels: Map<string, number> }>();
   for (const r of withRent) {
     const name = r.canonicalName || r.rawName || "Unknown";
-    byTenant.set(name, (byTenant.get(name) ?? 0) + (r.annualRent ?? 0));
+    const key = brandFamilyKey(name) || name;
+    const e = byTenant.get(key) ?? { rent: 0, labels: new Map<string, number>() };
+    e.rent += r.annualRent ?? 0;
+    e.labels.set(name, (e.labels.get(name) ?? 0) + (r.annualRent ?? 0));
+    byTenant.set(key, e);
   }
-  const topTenants = [...byTenant.entries()]
-    .sort(([, a], [, b]) => b - a)
+  const topTenants = [...byTenant.values()]
+    .sort((a, b) => b.rent - a.rent)
     .slice(0, 10)
-    .map(([name, annualRent]) => ({ name, annualRent, pct: pct(annualRent, totalRent) }));
+    .map(e => {
+      const label = [...e.labels.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Unknown";
+      return { name: brandDisplayName(label), annualRent: e.rent, pct: pct(e.rent, totalRent) };
+    });
 
   const anchors = withRent.filter(r => r.isAnchor === true);
   const anchorRent = sumRent(anchors);
-  const anchorNames = new Set(anchors.map(r => r.canonicalName || r.rawName));
+  const anchorNames = new Set(anchors.map(r => brandFamilyKey(r.canonicalName || r.rawName) || r.canonicalName || r.rawName));
 
   // ---- Credit Mix ---------------------------------------------------------
   const CREDIT_ORDER = ["Investment Grade", "Non-Investment Grade", "Unrated"] as const;
   const creditMap = new Map<string, { annualRent: number; count: number }>();
   for (const r of withRent) {
-    const label =
-      r.creditRating === "Investment Grade" ? "Investment Grade"
-      : r.creditRating === "Non-Investment Grade" ? "Non-Investment Grade"
-      : "Unrated";
+    // Same brand list + rating rules as the home page (shared tenantCredit.ts), so
+    // the two can't disagree — a typed-in rating alone left TJX, Ross, Kroger etc. "Unrated".
+    const label = creditBucket(r.canonicalName || r.rawName || "", r.creditRating);
     const e = creditMap.get(label) ?? { annualRent: 0, count: 0 };
     creditMap.set(label, { annualRent: e.annualRent + (r.annualRent ?? 0), count: e.count + 1 });
   }

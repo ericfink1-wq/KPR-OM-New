@@ -4,7 +4,7 @@ import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount, LIBRARY_TRIMMED_MARKER } from "../lib/utils";
 import { buildFocusContext } from "../lib/analystRetrieval";
 import { scoreDealConfidence } from "../lib/dealConfidence";
-import { isInvestmentGrade } from "../lib/tenantCredit";
+import { isInvestmentGrade, brandFamilyKey, brandDisplayName } from "../lib/tenantCredit";
 import { SUGGESTED } from "../lib/constants";
 import { apiLoadImages, apiListAllLeaseAbstracts, apiLoadComps, apiLoadTenantBenchmarks, type AnalystTenantBenchmark } from "../lib/api";
 import { buildCompsSummary, type CompsSummary } from "../lib/compsSummary";
@@ -235,9 +235,9 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
     const anchorAgg = new Map<string, { label: string; rent: number }>();
     for (const t of tenants) {
       if (!t.isAnchor || !t.name) continue;
-      const k = tenantKey(t.canonicalName || t.name);
+      const k = brandFamilyKey(t.canonicalName || t.name) || tenantKey(t.canonicalName || t.name);
       if (!k) continue;
-      const cur = anchorAgg.get(k) ?? { label: tenantLabel(t.name, t.canonicalName), rent: 0 };
+      const cur = anchorAgg.get(k) ?? { label: brandDisplayName(tenantLabel(t.name, t.canonicalName)), rent: 0 };
       cur.rent += num(t.annualRent);
       anchorAgg.set(k, cur);
     }

@@ -7,6 +7,7 @@
 // of it for 150+ deals would blow the client's context. So list tools return compact
 // summaries and get_deal returns the full record with the heavy blocks opt-in.
 import { db, dealsTable, tenantIndexTable, leaseAbstractsTable, compsIndexTable } from "@workspace/db";
+import { creditBucket, brandFamilyKey, brandDisplayName, isInvestmentGrade } from "./tenantCredit";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { auditExtraction, auditCheckKey, AUDIT_CHECK_LABELS } from "./extractionAudit";
 import { summarizePortfolioIssues } from "./portfolioIssues";
@@ -901,21 +902,25 @@ const portfolioAnalytics: McpToolDef = {
       .sort(([x], [y]) => (x === "Unknown" ? 1 : y === "Unknown" ? -1 : Number(x) - Number(y)))
       .map(([year, v]) => ({ year, annualRentRolling: Math.round(v.rent), pctOfTotalRent: pct(v.rent), tenantCount: v.count, sf: Math.round(v.sf) }));
 
-    const byTenant = new Map<string, number>();
+    // Brand-level grouping, same as the site's Portfolio Analytics (shared tenantCredit.ts).
+    const byTenant = new Map<string, { rent: number; label: string; top: number }>();
     for (const r of withRent) {
       const n = r.canonicalName || r.rawName || "Unknown";
-      byTenant.set(n, (byTenant.get(n) ?? 0) + (r.annualRent ?? 0));
+      const k = brandFamilyKey(n) || n;
+      const e = byTenant.get(k) ?? { rent: 0, label: n, top: 0 };
+      e.rent += r.annualRent ?? 0;
+      if ((r.annualRent ?? 0) > e.top) { e.top = r.annualRent ?? 0; e.label = n; }
+      byTenant.set(k, e);
     }
-    const topTenants = [...byTenant.entries()].sort((x, y) => y[1] - x[1]).slice(0, 10)
-      .map(([name, rent]) => ({ name, annualRent: Math.round(rent), pctOfTotalRent: pct(rent) }));
+    const topTenants = [...byTenant.values()].sort((x, y) => y.rent - x.rent).slice(0, 10)
+      .map(e => ({ name: brandDisplayName(e.label), annualRent: Math.round(e.rent), pctOfTotalRent: pct(e.rent) }));
 
     const anchors = withRent.filter(r => r.isAnchor === true);
     const anchorRent = anchors.reduce((s, r) => s + (r.annualRent ?? 0), 0);
 
     const creditMap = new Map<string, { rent: number; count: number }>();
     for (const r of withRent) {
-      const label = r.creditRating === "Investment Grade" ? "Investment Grade"
-        : r.creditRating === "Non-Investment Grade" ? "Non-Investment Grade" : "Unrated";
+      const label = creditBucket(r.canonicalName || r.rawName || "", r.creditRating);
       const e = creditMap.get(label) ?? { rent: 0, count: 0 };
       creditMap.set(label, { rent: e.rent + (r.annualRent ?? 0), count: e.count + 1 });
     }
@@ -1778,7 +1783,7 @@ const compBenchmarkTool: McpToolDef = {
       occupancy: num(d.occupancy),
       anchor: anchors.length ? anchors.join(", ") : null,
       anchorIG: (Array.isArray(d.tenants) ? (d.tenants as DealData[]) : [])
-        .some(t => t.isAnchor && t.creditRating === "Investment Grade"),
+        .some(t => t.isAnchor && isInvestmentGrade(String(t.name ?? ""), t.creditRating as string | null)),
       excludeOmComps: bool(a.excludeOmComps),
       excludeCompIds: [], includeCompIds: [], starCompIds: [], manual: null,
     });

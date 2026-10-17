@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-ig-and-brand-names",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Investment-grade share and top tenants now agree across pages",
+    detail:
+      "The home page and Portfolio Analytics were working out investment-grade rent two different ways, so one said 27% and the other 11%. They now use the same list, which also gained brands it was missing: Giant and the other Ahold banners, Dick's, Fred Meyer and the other Kroger banners, and plain 'Ross' or 'T.J. Maxx'. Look-alikes such as Giant Eagle are kept out. Tenants whose names differ only in spelling, like 'Giant Food Stores' and 'Giant', or 'HOME DEPOT' and 'The Home Depot', are now counted as one, and all-caps names display normally.",
+    where: "Home page, Portfolio Analytics → credit mix and top tenants",
+  },
+  {
     id: "2026-10-17-one-owned-count",
     date: "2026-10-17",
     category: "fixed",
