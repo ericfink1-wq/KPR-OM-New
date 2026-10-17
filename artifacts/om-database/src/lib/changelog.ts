@@ -89,7 +89,7 @@ export const CHANGELOG: ChangeEntry[] = [
     category: "improved",
     title: "Faster start-up",
     detail:
-      "The app no longer asks the server for the same data twice when it opens: lease abstracts, comps, tenant benchmarks and deal photos are each loaded once and shared. The daily automatic backup now runs in the background shortly after you sign in, instead of slowing down the first screen.",
+      "The app no longer asks the server for the same data twice when it opens: lease abstracts, comps, tenant benchmarks and deal photos are each loaded once and shared. The daily automatic backup now runs in the background shortly after you sign in, instead of slowing down the first screen. Home-page photos now load as small cached thumbnails instead of each deal's full image set (roughly 5 MB less on the home page). The app's first download is about 45% smaller: the spreadsheet tools, the upload readers, Closing Costs, Critical Dates, Mark-to-Market and Co-Tenancy load the first time you open them.",
     where: "Everywhere",
   },
   {

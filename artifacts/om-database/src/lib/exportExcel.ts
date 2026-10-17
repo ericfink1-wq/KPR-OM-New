@@ -1,4 +1,8 @@
-import * as XLSX from "xlsx";
+import type * as XLSXNS from "xlsx";
+// xlsx (~400 KB) is loaded on the first export, not with the app. Every exported
+// function loads it first; the helpers below run after that.
+let XLSX: typeof XLSXNS;
+async function loadXLSX(): Promise<void> { if (!XLSX) XLSX = await import("xlsx"); }
 import type { Deal, CashFlowRow } from "./idb";
 import { filterFutureRentSteps } from "./utils";
 
@@ -18,7 +22,7 @@ function fmtDate(raw: unknown): string {
   return s;
 }
 
-function applyFmt(ws: XLSX.WorkSheet, r: number, c: number, fmt: string) {
+function applyFmt(ws: XLSXNS.WorkSheet, r: number, c: number, fmt: string) {
   const addr = XLSX.utils.encode_cell({ r, c });
   const cell = ws[addr];
   if (cell && cell.v !== "" && cell.v != null) cell.z = fmt;
@@ -32,7 +36,7 @@ function applyFmt(ws: XLSX.WorkSheet, r: number, c: number, fmt: string) {
 // are honored; bold is best-effort).
 // ---------------------------------------------------------------------------
 function polishSheet(
-  ws: XLSX.WorkSheet,
+  ws: XLSXNS.WorkSheet,
   opts: { rows: number; cols: number; widths: number[]; colFormats?: Record<number, string> },
 ) {
   const { rows, cols, widths, colFormats } = opts;
@@ -55,7 +59,7 @@ function polishSheet(
   }
 }
 
-function downloadWb(ws: XLSX.WorkSheet, sheetName: string, fileName: string) {
+function downloadWb(ws: XLSXNS.WorkSheet, sheetName: string, fileName: string) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
   XLSX.writeFile(wb, fileName);
@@ -64,7 +68,8 @@ function downloadWb(ws: XLSX.WorkSheet, sheetName: string, fileName: string) {
 const today = () => new Date().toISOString().slice(0, 10);
 
 
-export function exportDealToExcel(deal: Deal): void {
+export async function exportDealToExcel(deal: Deal): Promise<void> {
+  await loadXLSX();
   const wb = XLSX.utils.book_new();
 
   // ─── Sheet 1: Rent Roll ────────────────────────────────────────────────
@@ -201,7 +206,8 @@ type CompExportRow = {
   isOwnTransaction: boolean; isManual: boolean;
 };
 
-export function exportCompsToExcel(comps: CompExportRow[]): void {
+export async function exportCompsToExcel(comps: CompExportRow[]): Promise<void> {
+  await loadXLSX();
   const headers = [
     "Property", "Address", "Market", "State",
     "Sale Date", "Sale Price", "Cap Rate (%)", "Price/SF",
@@ -266,7 +272,8 @@ export function exportCompsToExcel(comps: CompExportRow[]): void {
 // ---------------------------------------------------------------------------
 // Export the PORTFOLIO deal library list to Excel (polished + formatted).
 // ---------------------------------------------------------------------------
-export function exportPortfolioToExcel(deals: Deal[], scopeLabel = "All"): void {
+export async function exportPortfolioToExcel(deals: Deal[], scopeLabel = "All"): Promise<void> {
+  await loadXLSX();
   const headers = [
     "Property", "City", "State", "Market", "Asset Type", "Center Type", "Status",
     "Grade", "Total SF", "Occupancy (%)", "WALT (yrs)", "Avg Rent/SF",
@@ -308,7 +315,8 @@ export function exportPortfolioToExcel(deals: Deal[], scopeLabel = "All"): void 
 // Export ONE deal's rent roll to a clean, formatted single-sheet Excel.
 // (Distinct from exportDealToExcel, which is the full multi-sheet workbook.)
 // ---------------------------------------------------------------------------
-export function exportRosterToExcel(deal: Deal): void {
+export async function exportRosterToExcel(deal: Deal): Promise<void> {
+  await loadXLSX();
   const tenants = deal.tenants ?? [];
   const headers = [
     "Tenant", "Suite", "Anchor", "Dark", "Credit", "SF", "Rent/SF", "Annual Rent",
@@ -355,12 +363,13 @@ export function exportRosterToExcel(deal: Deal): void {
 // ---------------------------------------------------------------------------
 export type AggColumn = { header: string; width: number; fmt?: string; get: (r: Record<string, unknown>) => string | number | "" };
 
-export function exportAggregateToExcel(
+export async function exportAggregateToExcel(
   rowsIn: Record<string, unknown>[],
   columns: AggColumn[],
   sheetName: string,
   fileName: string,
-): void {
+): Promise<void> {
+  await loadXLSX();
   const headers = columns.map(c => c.header);
   const rows = rowsIn.map(r => columns.map(c => c.get(r)));
   const aoa = [headers, ...rows];

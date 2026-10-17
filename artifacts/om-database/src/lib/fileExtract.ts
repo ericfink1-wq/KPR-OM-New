@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+// xlsx (~400 KB) is loaded only when a spreadsheet is actually read, not at start-up.
 import { extractPdfText } from "./pdfExtract";
 import { MAMMOTH_CDN } from "./constants";
 
@@ -66,6 +66,7 @@ async function extractWordText(file: File): Promise<ExtractedFile> {
 // sheet is rendered as CSV with a header line, so rent rolls / sales reports
 // that arrive as spreadsheets flow through the same prompts as PDFs.
 async function extractSpreadsheetText(file: File): Promise<ExtractedFile> {
+  const XLSX = await import("xlsx");
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
   const parts: string[] = [];

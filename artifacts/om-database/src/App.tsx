@@ -12,7 +12,6 @@ import MobileTabBar, { MOBILE_TAB_BAR_H } from "./components/MobileTabBar";
 import { useIsMobile } from "./hooks/use-mobile";
 import { routeToPath, pathToRoute } from "./lib/routes";
 import { installEscapeToClose } from "./lib/escapeClose";
-import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import AnalystChat from "./components/AnalystChat";
 import Login from "./components/Login";
@@ -21,12 +20,8 @@ import Reverify2FAModal from "./components/Reverify2FAModal";
 import HelpModal from "./components/HelpModal";
 import WhatsNewModal from "./components/WhatsNewModal";
 import { entriesSince } from "./lib/changelog";
-import ClosingCostEstimator from "./components/ClosingCostEstimator";
 import AiProgressBar from "./components/AiProgressBar";
 import SaveStatusIndicator from "./components/SaveStatusIndicator";
-import CriticalDates from "./components/CriticalDates";
-import MarkToMarket from "./components/MarkToMarket";
-import CoTenancyCascade from "./components/CoTenancyCascade";
 import GlobalSearch from "./components/GlobalSearch";
 import { isSupportedUpload } from "./lib/fileExtract";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
@@ -59,6 +54,13 @@ function lazyWithReload<T extends React.ComponentType<unknown>>(factory: () => P
 }
 
 const DetailView = lazyWithReload(() => import("./components/DetailView"));
+// Opened on demand, so they don't ship with the first screen.
+// The upload pipeline (PDF/rent-roll/sales readers) loads on the first drop, then stays mounted.
+const UploadQueue = lazyWithReload(() => import("./components/UploadQueue"));
+const ClosingCostEstimator = lazyWithReload(() => import("./components/ClosingCostEstimator"));
+const CriticalDates = lazyWithReload(() => import("./components/CriticalDates"));
+const MarkToMarket = lazyWithReload(() => import("./components/MarkToMarket"));
+const CoTenancyCascade = lazyWithReload(() => import("./components/CoTenancyCascade"));
 const TenantView = lazyWithReload(() => import("./components/TenantView"));
 const TenantLink = lazyWithReload(() => import("./components/TenantLink"));
 const LenderView = lazyWithReload(() => import("./components/LenderView"));
@@ -235,6 +237,10 @@ function AppInner() {
   const dragCounter = useRef(0);
   const analyticsScrollRef = useRef<HTMLDivElement>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  // Once a file has been dropped, keep the (lazily loaded) upload queue mounted so its
+  // in-progress state survives the queue emptying.
+  const [uploadEverUsed, setUploadEverUsed] = useState(false);
+  useEffect(() => { if (pendingFiles.length) setUploadEverUsed(true); }, [pendingFiles.length]);
   const [uploadPanelH, setUploadPanelH] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
   // "What's new" — the changes shipped since this person was last caught up. The
@@ -586,7 +592,7 @@ function AppInner() {
           apiWhatsNewSeen();
         }}
       />
-      {closingCalcOpen && <ClosingCostEstimator deals={deals} onClose={() => setClosingCalcOpen(false)} />}
+      {closingCalcOpen && <Suspense fallback={null}><ClosingCostEstimator deals={deals} onClose={() => setClosingCalcOpen(false)} /></Suspense>}
       {/* The deal page is crowded top (fixed action bar + title) and the toast
           would cover them at scroll-top — anchor it to the bottom there, clear of
           the Ask/flag buttons. Other pages keep it pinned near the top. */}
@@ -873,7 +879,7 @@ function AppInner() {
       />
 
       {/* Global fixed-bottom upload queue — always rendered so it can track uploads from any tab */}
-      <UploadQueue
+      {(uploadEverUsed || pendingFiles.length > 0) && <Suspense fallback={null}><UploadQueue
         pendingFiles={pendingFiles}
         onFilesConsumed={() => setPendingFiles([])}
         onDealsAdded={handleDealsAdded}
@@ -882,7 +888,7 @@ function AppInner() {
         onOpenDeal={handleOpenDeal}
         existingDeals={deals}
         onPanelHeightChange={setUploadPanelH}
-      />
+      /></Suspense>}
       <SaveStatusIndicator />
       <GlobalSearch open={searchOpen} deals={deals} onClose={() => setSearchOpen(false)} onOpenDeal={handleOpenDeal} onOpenParent={name => handleOpenTenant("__parent__" + name)} onOpenTenantPage={handleOpenTenant} />
     </div>
