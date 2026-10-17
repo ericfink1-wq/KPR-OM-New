@@ -11,6 +11,7 @@ import { createSnapshot } from "../routes/snapshots";
 import { updateDealSafely } from "./dealWrite";
 import { normalizeDate, deriveRents, occCostCorroboratedBySales } from "./importFixes";
 import { repairCoTenancyTrigger, type CoTenancyLike } from "./coTenancyStructure";
+import { ensurePropertyName } from "./dealMaintenance";
 import { logger } from "./logger";
 import type { Logger } from "pino";
 
@@ -18,7 +19,7 @@ export interface AutofixResult {
   scanned: number; occCostFixed: number; occUnitFixed: number; capUnitFixed: number;
   ppsfFixed: number; rentFixed: number; rentFilled: number; dupeFixed: number;
   dateFixed: number; metricFixes: number; changedDeals: number; cleared: number;
-  coTenancyFixed: number;
+  coTenancyFixed: number; nameFixed: number;
   snapshot: unknown;
 }
 
@@ -73,6 +74,7 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
   const rows = await db.select().from(dealsTable);
   let scanned = 0, occCostFixed = 0, rentFixed = 0, dupeFixed = 0, metricFixes = 0, changedDeals = 0, cleared = 0;
   let coTenancyFixed = 0;
+  let nameFixed = 0;
   let occUnitFixed = 0, capUnitFixed = 0, ppsfFixed = 0, dateFixed = 0, rentFilled = 0;
   for (const r of rows) {
     const data = r.data as Record<string, unknown>;
@@ -129,6 +131,7 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
     if (rf > 0) { rentFilled += rf; changed = true; }
     const updated: Record<string, unknown> = { ...data, tenants: withRents };
     // 1b. Deal-level UNAMBIGUOUS unit fixes.
+    if (ensurePropertyName(updated)) { nameFixed++; changed = true; }   // never a nameless record
     {
       const oc = nA(updated.occupancy);
       if (oc != null && oc > 0 && oc <= 1.0) { updated.occupancy = Math.round(oc * 100 * 10) / 10; occUnitFixed++; changed = true; }
@@ -194,6 +197,6 @@ export async function runAutofixSweep(log: Logger = logger): Promise<AutofixResu
       if (Object.keys(touched).length) await updateDealSafely(r.id, () => touched);
     }
   }
-  log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, changedDeals, cleared }, "Auto-fix sweep complete");
-  return { scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, changedDeals, cleared, snapshot: snap };
+  log.info({ scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, nameFixed, changedDeals, cleared }, "Auto-fix sweep complete");
+  return { scanned, occCostFixed, occUnitFixed, capUnitFixed, ppsfFixed, rentFixed, rentFilled, dupeFixed, dateFixed, metricFixes, coTenancyFixed, nameFixed, changedDeals, cleared, snapshot: snap };
 }

@@ -132,6 +132,8 @@ function AppInner() {
   dealsRef.current = deals;
   const getLatestDeal = useCallback((id: string) => dealsRef.current.find(d => d.id === id), []);
   const [tab, setTab] = useState<TabId>("analyst");
+  // Data Audit → "Merge these": the duplicate group to open in the library's Merge dialog.
+  const [mergePreset, setMergePreset] = useState<string[] | null>(null);
   // Right-side AI chat drawer (opened from the ask bar / "Ask about this property").
   const [chatOpen, setChatOpen] = useState(false);
   const [viewStack, setViewStack] = useState<View[]>([{ type: "list" }]);
@@ -618,7 +620,8 @@ function AppInner() {
                 ) : analyticsView === "cotenancy" ? (
                   <CoTenancyCascade deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "audit" ? (
-                  <DataAuditView deals={activeDeals} onOpenDeal={handleOpenDeal} initialFilterKey={auditFilterKey} />
+                  <DataAuditView deals={activeDeals} onOpenDeal={handleOpenDeal} initialFilterKey={auditFilterKey}
+                    onMerge={ids => { setMergePreset(ids); resetToList(); setTab("portfolio"); }} />
                 ) : analyticsView === "feedback" ? (
                   <FeedbackConsole onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "learning" ? (
@@ -691,6 +694,8 @@ function AppInner() {
                   onAddFiles={files => setPendingFiles(prev => [...prev, ...files])}
                   isAdmin={isAdmin}
                   onCountsChange={handleDealCounts}
+                  mergePreset={mergePreset}
+                  onMergePresetUsed={() => setMergePreset(null)}
                 />
               )}
             </>

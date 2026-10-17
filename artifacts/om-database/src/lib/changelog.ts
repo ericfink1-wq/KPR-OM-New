@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-upload-duplicates",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Uploads ask before merging into an existing deal",
+    detail:
+      "When an upload looks like a property already in the library, you now choose what happens: Add to existing deal (fill in the gaps, flag anything that disagrees), Replace existing (the new file's numbers win, but your status, notes and underwriting are kept), or New deal. Nothing merges into a library deal without asking anymore. Two properties with the same name in different states or ZIP codes are no longer treated as the same deal. A supporting file on its own, like a site plan, financial narrative or add-on info, now asks which deal it belongs to instead of becoming its own record. A deal can no longer be saved without a property name. To clean up existing doubles, open Data Audit → Possible duplicate deals and tap 'Merge these'.",
+    where: "Upload OMs; Analytics → Data Audit → Possible duplicate deals",
+  },
+  {
     id: "2026-10-17-sale-stage",
     date: "2026-10-17",
     category: "new",

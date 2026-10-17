@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, type CSSProperties } from "react";
 import type { Deal, ImageBundle, ReviewQuestion } from "../lib/idb";
 import { apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload, apiDealUploadedBy } from "../lib/api";
 import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
@@ -45,7 +45,18 @@ interface QueueItem {
   pendingText2?: string;               // extracted text, kept for re-routing after manual pick
   matchHint?: { propertyName: string | null; address: string | null; fileName: string | null }; // for auto-attaching to a same-drop deal
   confirmDealName?: string;            // awaiting_confirm: the already-uploaded property this file looks like
+  // awaiting_confirm flavour: "pre" = before extraction (Skip saves AI credits),
+  // "post" = after extraction matched a library deal, "pick" = a supporting file
+  // (site plan, financial narrative…) that needs to be told which property it belongs to.
+  confirmMode?: "pre" | "post" | "pick";
 }
+
+/** The person's answer to "this looks like a property already in the library". */
+export type UploadChoice =
+  | { kind: "attach"; deal?: Deal }   // fill this file into the existing deal (keep-and-flag)
+  | { kind: "replace"; deal?: Deal }  // this file's values win; KPR's own fields kept
+  | { kind: "new" }                   // a different property — save it separately
+  | { kind: "skip" };
 
 interface Props {
   pendingFiles: File[];
@@ -93,6 +104,8 @@ function findDuplicate(fileName: string, extracted: Record<string, unknown>, exi
     {
       propertyName: (extracted.propertyName as string) ?? null,
       address: (extracted.address as string) ?? null,
+      state: (extracted.state as string) ?? null,
+      zip: (extracted.zip as string) ?? null,
       fileName,
     },
     existing,
@@ -128,7 +141,9 @@ function findRosterStubMatch(extracted: Record<string, unknown>, existing: Deal[
   return null;
 }
 
-export function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>, pkg: PackagePlan | null = null): Deal {
+// What KPR typed in by hand (status, transaction, acquisition, debt, verified fields…).
+// No re-upload — attach OR replace — ever overwrites these.
+function userOwnedFields(existing: Deal): Partial<Deal> {
   const preserved: Partial<Deal> = {
     status: existing.status, userNotes: existing.userNotes, verified: existing.verified,
     propertyGroupId: existing.propertyGroupId, trashedAt: existing.trashedAt,
@@ -150,13 +165,42 @@ export function reconcileRefresh(existing: Deal, extracted: Record<string, unkno
     debtNotes: existing.debtNotes, marketSale: existing.marketSale,
     marketSaleChecked: existing.marketSaleChecked,
     marketDemographics: existing.marketDemographics, demoChecked: existing.demoChecked,
+    saleStage: existing.saleStage, saleExpectedClosing: existing.saleExpectedClosing,
+    aka: existing.aka, tenantsManual: existing.tenantsManual,
   };
-  const verifiedFields = Object.keys(existing.verified || {});
-  const verifiedOverrides: Partial<Deal> = {};
-  for (const f of verifiedFields) {
+  for (const f of Object.keys(existing.verified || {})) {
     const k = f as keyof Deal;
-    if (existing[k] !== undefined) (verifiedOverrides as Record<string, unknown>)[f] = existing[k];
+    if (existing[k] !== undefined) (preserved as Record<string, unknown>)[f] = existing[k];
   }
+  return preserved;
+}
+
+/** "Replace existing": the new file's values win wherever it HAS a value; anything it
+ *  doesn't carry is kept (a file with no roster never wipes the roster), and so is
+ *  everything KPR entered by hand. Same deal id, so links and history survive. */
+export function replaceWithUpload(existing: Deal, extracted: Record<string, unknown>): Deal {
+  const merged: Record<string, unknown> = { ...(existing as unknown as Record<string, unknown>) };
+  for (const [k, v] of Object.entries(extracted)) if (!isEmptyVal(v)) merged[k] = v;
+  // A hand-pasted roster is curated — Replace takes the file's roster only if asked
+  // to on a deal that wasn't hand-built.
+  if (existing.tenantsManual && (existing.tenants || []).length) {
+    merged.tenants = existing.tenants; merged.tenantsAsOf = existing.tenantsAsOf; merged.tenantsSource = existing.tenantsSource;
+  }
+  const priorQs = (existing.reviewQuestions || []).filter(q => !(q.id || "").startsWith("refresh-"));
+  const newQs = Array.isArray(extracted.reviewQuestions) ? (extracted.reviewQuestions as ReviewQuestion[]) : [];
+  return {
+    ...(merged as Partial<Deal>), ...userOwnedFields(existing),
+    id: existing.id, uploadedAt: existing.uploadedAt,
+    propertyName: (String(extracted.propertyName || "").trim() || existing.propertyName),
+    refreshedAt: new Date().toISOString(),
+    analysisStale: true,
+    reviewQuestions: [...priorQs.filter(q => !(q.id || "").startsWith("audit-")), ...newQs],
+  } as Deal;
+}
+
+export function reconcileRefresh(existing: Deal, extracted: Record<string, unknown>, pkg: PackagePlan | null = null): Deal {
+  const preserved = userOwnedFields(existing);
+  const verifiedFields = Object.keys(existing.verified || {});
 
   // Conservative merge: KEEP everything the existing deal already has and only
   // FILL fields that are currently empty from the new extraction — a re-upload
@@ -223,7 +267,7 @@ export function reconcileRefresh(existing: Deal, extracted: Record<string, unkno
 
   const priorQs = (existing.reviewQuestions || []).filter(q => !(q.id || "").startsWith("refresh-"));
   return {
-    ...(merged as Partial<Deal>), ...preserved, ...verifiedOverrides,
+    ...(merged as Partial<Deal>), ...preserved,
     id: existing.id, uploadedAt: existing.uploadedAt,
     refreshedAt: new Date().toISOString(),
     analysisStale: true,
@@ -292,16 +336,16 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const cancelledRef = useRef<Set<string>>(new Set());
   const isCancelled = (id: string) => cancelledRef.current.has(id);
   // Answers to "this property was already uploaded — continue?" keyed by item id.
-  const confirmRef = useRef<Map<string, boolean>>(new Map());
-  const answerConfirm = (itemId: string, go: boolean) => {
-    confirmRef.current.set(itemId, go);
-    updateItem(itemId, { status: "extracting", msg: go ? "Continuing…" : "Skipping…" });
+  const confirmRef = useRef<Map<string, UploadChoice>>(new Map());
+  const answerConfirm = (itemId: string, choice: UploadChoice) => {
+    confirmRef.current.set(itemId, choice);
+    updateItem(itemId, { status: "extracting", msg: choice.kind === "skip" ? "Skipping…" : choice.kind === "new" ? "Saving as a new deal…" : "Continuing…" });
   };
-  // Waits for the person to answer the already-uploaded prompt. Resolves false if the
+  // Waits for the person to answer the already-uploaded prompt. Resolves "skip" if the
   // file is cancelled or the whole queue is stopped in the meantime.
-  const waitForConfirm = async (itemId: string): Promise<boolean> => {
+  const waitForConfirm = async (itemId: string): Promise<UploadChoice> => {
     for (;;) {
-      if (isCancelled(itemId)) return false;
+      if (isCancelled(itemId)) return { kind: "skip" };
       const a = confirmRef.current.get(itemId);
       if (a !== undefined) { confirmRef.current.delete(itemId); return a; }
       await new Promise(r => setTimeout(r, 400));
@@ -1189,6 +1233,9 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       // library from an earlier upload (often by a teammate)? Ask first. Deals created
       // in this same session are excluded, so the other files of a broker package
       // dropped together never trigger it.
+      // The answer, once given, is carried to the save step below so the person is
+      // never asked twice and nothing merges without their say.
+      let choice: UploadChoice | null = null;
       {
         const madeHere = new Set(createdDealsRef.current.map(d => d.id));
         const prior = matchDeal(
@@ -1200,16 +1247,17 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           const by = await apiDealUploadedBy(prior.deal.id).catch(() => null);
           if (isCancelled(itemId)) return;
           updateItem(itemId, {
-            status: "awaiting_confirm", progress: 30, confirmDealName: name,
+            status: "awaiting_confirm", progress: 30, confirmDealName: name, confirmMode: "pre", dupCandidate: prior.deal,
             msg: alreadyUploadedMessage(name, prior.deal.lastUploadAt || prior.deal.uploadedAt || by?.at || null,
               by && !by.inferred ? (by.userName || by.userEmail) : null),
           });
-          const go = await waitForConfirm(itemId);
-          if (!go) {
+          choice = await waitForConfirm(itemId);
+          if (choice.kind === "skip") {
             if (!isCancelled(itemId)) updateItem(itemId, { status: "done", progress: 100, msg: `Skipped — “${name}” is already in the library` });
             return;
           }
-          updateItem(itemId, { status: "extracting", msg: `Updating “${name}”…` });
+          if (choice.kind === "attach" || choice.kind === "replace") choice = { ...choice, deal: prior.deal };
+          updateItem(itemId, { status: "extracting", msg: choice.kind === "new" ? "Reading it as a new deal…" : `Updating “${name}”…` });
         }
       }
 
@@ -1306,6 +1354,52 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       const role = detectPackageRole(fileName, text);
       const incomingHasRoster = Array.isArray(extracted.tenants) && (extracted.tenants as unknown[]).length > 0;
 
+      // Never merge into a library deal without asking (Eric, 10/16/26 — silent
+      // fuzzy merges and silent new deals are how Pentagon Centre ended up ×3).
+      // Only another file of THIS drop's broker package combines automatically.
+      // Asked OUTSIDE the merge lock, so other files keep saving while we wait.
+      if (!choice) {
+        const sameDropDup = () => findDuplicate(fileName, extracted, createdDealsRef.current) || findRosterStubMatch(extracted, createdDealsRef.current);
+        const madeHere = new Set(createdDealsRef.current.map(d => d.id));
+        const library = existingDeals.filter(d => !madeHere.has(d.id));
+        const libDup = findDuplicate(fileName, extracted, library) || findRosterStubMatch(extracted, library);
+        if (libDup && !sameDropDup()) {
+          const name = libDup.propertyName || libDup.fileName || "an existing deal";
+          updateItem(itemId, {
+            status: "awaiting_confirm", confirmMode: "post", confirmDealName: name, dupCandidate: libDup,
+            msg: `This looks like “${name}”${libDup.city || libDup.state ? ` (${[libDup.city, libDup.state].filter(Boolean).join(", ")})` : ""}, already in the library. Add this file to it, replace it, or save as a new deal?`,
+          });
+          choice = await waitForConfirm(itemId);
+          if (choice.kind === "attach" || choice.kind === "replace") choice = { ...choice, deal: libDup };
+        } else if (!libDup && role !== "om") {
+          // A supporting file (site plan, financial narrative, tenant detail, add-on
+          // info) that matched nothing. Let the rest of the drop finish first — its OM
+          // is usually still reading — then ask instead of spawning a stray deal.
+          for (let i = 0; i < 480 && !sameDropDup(); i++) {
+            if (isCancelled(itemId)) return;
+            const othersReading = queueRef.current.some(q => q.id !== itemId && q.status === "extracting");
+            if (!othersReading) break;
+            updateItem(itemId, { msg: "Waiting for the rest of this drop to finish…" });
+            await new Promise(r => setTimeout(r, 2500));
+          }
+          if (!sameDropDup()) {
+            updateItem(itemId, {
+              status: "awaiting_confirm", confirmMode: "pick", confirmDealName: undefined, dupCandidate: undefined,
+              msg: "This looks like a supporting file (site plan, financials or add-on info), not a full OM, and it doesn’t name a property we recognise. Which deal does it belong to?",
+            });
+            choice = await waitForConfirm(itemId);
+          }
+        }
+        if (choice?.kind === "skip") {
+          await apiDeleteDeal(dealId).catch(() => {});
+          if (!isCancelled(itemId)) updateItem(itemId, { status: "done", progress: 100, msg: "Discarded — nothing was saved" });
+          return;
+        }
+        if (isCancelled(itemId)) { await apiDeleteDeal(dealId).catch(() => {}); return; }
+        updateItem(itemId, { status: "extracting", msg: "Saving…" });
+      }
+      const chosen = choice;
+
       // The duplicate check and the save that follows run one file at a time.
       // Without this, two files of one package finishing in the same moment could
       // both see "no match yet" and each create its own deal.
@@ -1313,28 +1407,34 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         // Include deals created earlier in THIS drop (e.g. a stub made from a rent
         // roll, or another file of the same broker package, that finished before
         // this one) so this file merges into it instead of creating a second deal.
-        const candidates = [...existingDeals, ...createdDealsRef.current];
-        const dup = findDuplicate(fileName, extracted, candidates) || findRosterStubMatch(extracted, candidates);
+        // A library match only gets here when the person said so.
+        let dup: Deal | null = null;
+        let replace = false;
+        if (chosen?.kind === "attach" || chosen?.kind === "replace") { dup = chosen.deal ?? null; replace = chosen.kind === "replace"; }
+        else if (!chosen) dup = findDuplicate(fileName, extracted, createdDealsRef.current) || findRosterStubMatch(extracted, createdDealsRef.current);
 
         if (dup) {
-          // Auto-merge into the matched deal instead of pausing the queue to ask.
           await apiDeleteDeal(dealId).catch(() => {});   // drop the temp deal we were creating
           // Re-base on the LATEST version of the matched deal: it may have just had a
           // sales report / roster / swap / another package file applied earlier in
           // this SAME drop. Merging onto a stale snapshot here would overwrite that.
           const freshDup = getLatestDeal?.(dup.id) ?? dup;
+          const incoming = { ...extracted, imageMeta, fileName, pdfPages: pages };
           // Another file of the same broker package → each part of the deal comes
           // from the file that is best at it, whatever order they finished in.
           // Otherwise (a re-upload / new vintage) → the conservative keep-and-flag merge.
-          const pkg = planPackageMerge(freshDup, role, incomingHasRoster);
-          const refreshed = reconcileRefresh(freshDup, { ...extracted, imageMeta, fileName, pdfPages: pages }, pkg);
+          const pkg = replace ? null : planPackageMerge(freshDup, role, incomingHasRoster);
+          const refreshed = replace ? replaceWithUpload(freshDup, incoming) : reconcileRefresh(freshDup, incoming, pkg);
           refreshed.lastUploadAt = new Date().toISOString();
           await apiSaveDeal(refreshed).catch(() => {});
           await apiSaveSource(refreshed.id, text).catch(() => {});
           if (imgs) await saveImagesNoting(refreshed.id, imgs, itemId);
-          const doneMsg = pkg
-            ? `Combined into “${refreshed.propertyName || refreshed.fileName || "deal"}” (same broker package)`
-            : `Merged into existing “${refreshed.propertyName || refreshed.fileName || "deal"}” · review any flagged conflicts`;
+          const label = refreshed.propertyName || refreshed.fileName || "deal";
+          const doneMsg = replace
+            ? `Replaced “${label}” with this file’s data · your status, notes and underwriting were kept`
+            : pkg
+            ? `Combined into “${label}” (same broker package)`
+            : `Added to existing “${label}” · review any flagged conflicts`;
           updateItem(itemId, {
             status: "done", progress: 100, deal: refreshed, routedType: "om",
             matchedDealName: refreshed.propertyName || refreshed.fileName,
@@ -1348,6 +1448,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
         const finalDeal: Deal = {
           ...resolvedDeal!, imageMeta, lastUploadAt: new Date().toISOString(),
+          // Never a nameless record (Eric, 10/16/26): what the file says, else its file name.
+          propertyName: (resolvedDeal!.propertyName || "").trim() || nameFromFileName(fileName) || fileName.replace(/\.pdf$/i, "").trim() || "Untitled property",
           packageSources: initialPackageSources(role),
         };
         await apiSaveDeal(finalDeal).catch(() => {});
@@ -1564,18 +1666,49 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                         </div>
                       )}
                       {item.error && <div style={{ fontSize: 11, color: "#c0563b", marginTop: 3, lineHeight: 1.4, wordBreak: "break-word" }}>{item.error}</div>}
-                      {item.status === "awaiting_confirm" && (
-                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                          <button onClick={() => answerConfirm(item.id, true)}
-                            style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                            Continue & update
-                          </button>
-                          <button onClick={() => answerConfirm(item.id, false)}
-                            style={{ background: "#fff", color: "#6f6a5f", border: "1px solid #d9d2c4", borderRadius: 7, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                            Skip this file
-                          </button>
-                        </div>
-                      )}
+                      {item.status === "awaiting_confirm" && (() => {
+                        const btn = (primary: boolean): CSSProperties => ({
+                          background: primary ? "#26281f" : "#fff", color: primary ? "#fff" : "#4f4a40",
+                          border: primary ? "none" : "1px solid #d9d2c4", borderRadius: 7, padding: "9px 14px", minHeight: 36,
+                          fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                        });
+                        const quiet: CSSProperties = { background: "transparent", color: "#a89f8f", border: "none", padding: "9px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" };
+                        if (item.confirmMode === "pick") {
+                          const pickable = [...existingDeals, ...createdDealsRef.current.filter(c => !existingDeals.some(e => e.id === c.id))]
+                            .filter(d => !d.trashedAt)
+                            .sort((x, y) => (x.propertyName || x.fileName || "").localeCompare(y.propertyName || y.fileName || ""));
+                          return (
+                            <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+                              <select defaultValue="" onChange={e => { const d = pickable.find(x => x.id === e.target.value); if (d) answerConfirm(item.id, { kind: "attach", deal: d }); }}
+                                style={{ fontSize: 12, padding: "8px 10px", minHeight: 36, border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: "100%", flex: "1 1 200px" }}>
+                                <option value="" disabled>Add this file to an existing deal…</option>
+                                {pickable.map(d => <option key={d.id} value={d.id}>{d.propertyName || d.fileName || "Untitled"}{d.city || d.state ? ` — ${[d.city, d.state].filter(Boolean).join(", ")}` : ""}</option>)}
+                              </select>
+                              <button onClick={() => answerConfirm(item.id, { kind: "new" })} style={btn(false)}>Save as a new deal</button>
+                              <button onClick={() => answerConfirm(item.id, { kind: "skip" })} style={quiet}>Discard</button>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                            <button onClick={() => answerConfirm(item.id, { kind: "attach" })} style={btn(true)}
+                              title="Fill this file into the existing deal. Anything that disagrees is flagged for you to review — nothing is overwritten.">
+                              Add to existing deal
+                            </button>
+                            <button onClick={() => answerConfirm(item.id, { kind: "replace" })} style={btn(false)}
+                              title="This file's numbers win. Your status, notes, transaction and underwriting fields are kept.">
+                              Replace existing
+                            </button>
+                            <button onClick={() => answerConfirm(item.id, { kind: "new" })} style={btn(false)}
+                              title="It's a different property — save it as its own deal.">
+                              New deal
+                            </button>
+                            <button onClick={() => answerConfirm(item.id, { kind: "skip" })} style={quiet}>
+                              {item.confirmMode === "post" ? "Discard" : "Skip this file"}
+                            </button>
+                          </div>
+                        );
+                      })()}
                       {item.status === "done" && !item.undone && item.appliedDealId && (
                         <div style={{ display: "flex", gap: 8, marginTop: 7, flexWrap: "wrap", alignItems: "center" }}>
                           <span style={{ fontSize: 11, color: "#7d766a" }}>→ <b style={{ color: "#383a37" }}>{item.matchedDealName || "property"}</b>{item.createdNew ? " (new)" : ""}</span>

@@ -29,6 +29,9 @@ interface Props {
   onAddFiles?: (files: File[]) => void;
   isAdmin?: boolean;
   onCountsChange?: (shown: number, total: number) => void;
+  /** Deal ids to open straight into the Merge dialog (from Data Audit's duplicates list). */
+  mergePreset?: string[] | null;
+  onMergePresetUsed?: () => void;
 }
 
 // Largest anchor tenant's name — used for the portfolio "Anchor" column and sort.
@@ -288,7 +291,7 @@ const BULK_FIELDS: { key: keyof Deal; label: string; also?: (keyof Deal)[]; hint
   { key: "centerType", label: "Center Type" },
 ];
 
-export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles, isAdmin, onCountsChange }: Props) {
+export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete, onAddFiles, isAdmin, onCountsChange, mergePreset, onMergePresetUsed }: Props) {
   const watchMap = useWatchlist();
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [filterStates, setFilterStates] = useState<string[]>([]);
@@ -543,6 +546,20 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
     const sel = deals.filter(d => selected.has(d.id));
     setModal({ action, deals: sel, keeperId: sel[0]?.id });
   };
+
+  // Data Audit's "Merge these" lands here with the duplicate group pre-selected. The
+  // suggested keeper is the fullest record (most tenants, then most recently changed);
+  // the person still confirms in the same Merge dialog as a hand-picked merge.
+  useEffect(() => {
+    if (!mergePreset || mergePreset.length < 2) return;
+    const sel = deals.filter(d => mergePreset.includes(d.id));
+    if (sel.length < 2) return;
+    const keeper = [...sel].sort((a, b) => ((b.tenants || []).length - (a.tenants || []).length)
+      || (Date.parse(String(b.updatedAt || b.uploadedAt || 0)) || 0) - (Date.parse(String(a.updatedAt || a.uploadedAt || 0)) || 0))[0];
+    setSelected(new Set(sel.map(d => d.id)));
+    setModal({ action: "merge", deals: sel, keeperId: keeper.id });
+    onMergePresetUsed?.();
+  }, [mergePreset, deals, onMergePresetUsed]);
 
   const commitLink = async () => {
     if (!modal) return;

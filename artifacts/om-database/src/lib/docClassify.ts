@@ -328,16 +328,41 @@ const dealNames = (d: Deal): string[] => {
 const hintName = (hint: { propertyName?: string | null; fileName?: string | null }): string =>
   (hint.propertyName || "").trim() || nameFromFileName(hint.fileName) || "";
 
+// Zip / state guard: two records that share a name but sit in different ZIP codes or
+// states are different properties ("Crossroads Plaza" exists in a dozen states). Only
+// blocks when BOTH sides positively state it; a missing value never blocks.
+// The ZIP at the END of an address, after a comma — never a bare street number.
+const ZIP_RE = /,[^,]*\b(\d{5})(?:-\d{4})?\s*(?:,?\s*usa)?\s*$/i;
+const zipOf = (zip?: string | null, address?: string | null): string | null => {
+  const z = String(zip || "").match(/\b\d{5}\b/);
+  if (z) return z[0];
+  const m = String(address || "").match(ZIP_RE);
+  return m ? m[1] : null;
+};
+const stateOf = (s?: string | null): string | null => {
+  const t = String(s || "").trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(t) ? t : null;
+};
+export function locationConflict(
+  hint: { address?: string | null; state?: string | null; zip?: string | null },
+  d: Pick<Deal, "address" | "state" | "zip">,
+): boolean {
+  const hz = zipOf(hint.zip, hint.address), dz = zipOf(d.zip, d.address);
+  if (hz && dz && hz !== dz) return true;
+  const hs = stateOf(hint.state), ds = stateOf(d.state);
+  return !!(hs && ds && hs !== ds);
+}
+
 /**
  * Match a classified document to an existing deal by property name / address /
  * file name. Returns a confidence so callers can auto-commit only when sure.
  * (Generalizes UploadQueue's findDuplicate with a confidence signal.)
  */
 export function matchDeal(
-  hint: { propertyName?: string | null; address?: string | null; fileName?: string | null },
+  hint: { propertyName?: string | null; address?: string | null; fileName?: string | null; state?: string | null; zip?: string | null },
   existing: Deal[],
 ): DealMatch {
-  const active = existing.filter(d => !d.trashedAt);
+  const active = existing.filter(d => !d.trashedAt && !locationConflict(hint, d));
 
   // Address guard: when BOTH sides have an address, they must be compatible —
   // otherwise two different properties that share a NAME (e.g. "Crossroads Plaza"

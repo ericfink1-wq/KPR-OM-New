@@ -14,6 +14,7 @@ import { getHouseView, saveHouseView, incrementPendingReviews } from "./houseVie
 import { findComparableDeals } from "./comparables";
 import { computePortfolioCalibration } from "./calibration";
 import { Agent, fetch as undiciFetch } from "undici";
+import { ensurePropertyName } from "./dealMaintenance";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -1090,6 +1091,7 @@ export async function runBackgroundExtraction(
         dealData.reviewQuestions = [...existing, ...allChecks.filter((q) => !seen.has(q.id))];
       }
     } catch { /* validators must never break an upload */ }
+    ensurePropertyName(dealData);
     await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })
       .where(eq(dealsTable.id, id));

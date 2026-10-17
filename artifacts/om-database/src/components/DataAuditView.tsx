@@ -65,7 +65,7 @@ function ReimbDealRow({ g, kind, onOpen }: { g: ReimbDealGroup; kind: "fixedCam"
   );
 }
 
-export default function DataAuditView({ deals, onOpenDeal, initialFilterKey = null }: { deals: Deal[]; onOpenDeal: (id: string) => void; initialFilterKey?: string | null }) {
+export default function DataAuditView({ deals, onOpenDeal, initialFilterKey = null, onMerge }: { deals: Deal[]; onOpenDeal: (id: string) => void; initialFilterKey?: string | null; onMerge?: (ids: string[]) => void }) {
   const audit = useMemo(() => runPortfolioAudit(deals), [deals]);
   const taxHigh = audit.tax.filter((t) => t.severity === "high").length;
   const fixedCamDeals = audit.reimbDeals.filter((g) => g.fixedCam.length > 0);
@@ -237,6 +237,12 @@ export default function DataAuditView({ deals, onOpenDeal, initialFilterKey = nu
                     </div>
                     <div style={{ fontSize: 11.5, color: C.sub, lineHeight: 1.45, marginTop: 4 }}>{dup.message}</div>
                     <div style={{ fontSize: 10.5, color: C.faint, marginTop: 3 }}>{dup.addresses.join("  ·  ")}</div>
+                    {onMerge && dup.ids.length > 1 && (
+                      <button onClick={(e) => { e.stopPropagation(); onMerge(dup.ids); }}
+                        style={{ marginTop: 8, background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "8px 14px", minHeight: 34, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+                        Merge these {dup.ids.length} →
+                      </button>
+                    )}
                   </div>
                 );
               })}

@@ -49,7 +49,34 @@ export function mergeAuditQuestions(
 
 // Run the full maintenance pass on one deal's data. Returns a NEW data object (never
 // mutates the input) plus a breakdown of what changed, so callers can log/aggregate.
+// A deal must never be saved without a property name (Eric, 10/16/26 — three records
+// showed up as raw file names / blanks: "Blue Bell Site Plan OM- Revised" and two NMRK
+// Lake Brandon add-on files). Fall back to the name recovered from the file name,
+// the way the upload screen does, and finally to the bare file name.
+const FILE_NOISE: RegExp[] = [
+  /\b(nmrk|newmark|cbre|jll|eastdil|colliers|berkadia|northmarq|ngkf|hff|srs|matthews|cushman\s*(&|and)\s*wakefield|marcus\s*(&|and)\s*millichap|avison\s+young)\b/gi,
+  /\bdetailed\s+tenant\s+underwriting\b/gi, /\btenant\s+underwriting\b/gi, /\bfinancial\s+narrative\b/gi,
+  /\boffering\s+memo(randum)?\b/gi, /\badditional\s+info(rmation)?(\s*\d+)?\b/gi, /\brent\s*roll\b/gi,
+  /\bsite\s+plan\b/gi, /\b(executive|investment)\s+summary\b/gi, /\bcash\s*flow\b/gi,
+  /\b(financials|om|dtu|teaser|flyer|brochure|final|draft|copy|revised|v\d+)\b/gi,
+  /\(\s*\d+\s*\)/g, /\b\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}\b/g, /\b(19|20)\d{2}\b/g,
+];
+export function propertyNameFromFile(fileName: unknown): string | null {
+  if (typeof fileName !== "string" || !fileName.trim()) return null;
+  let s = fileName.replace(/\.(pdf|xlsx?|xlsm|xlsb|csv|json)$/i, "").replace(/_/g, " ");
+  for (const re of FILE_NOISE) s = s.replace(re, " ");
+  s = s.split(/\s*[-–—|]+\s*/).map(x => x.trim()).filter(x => x.replace(/[^a-z0-9]/gi, "").length >= 3).join(" - ").trim();
+  return s.replace(/[^a-z0-9]/gi, "").length >= 4 ? s : null;
+}
+export function ensurePropertyName(data: Record<string, unknown>): boolean {
+  if (typeof data.propertyName === "string" && data.propertyName.trim()) return false;
+  const bare = typeof data.fileName === "string" ? data.fileName.replace(/\.(pdf|xlsx?|xlsm|xlsb|csv|json)$/i, "").trim() : "";
+  data.propertyName = propertyNameFromFile(data.fileName) || bare || "Untitled property";
+  return true;
+}
+
 export function autoMaintainDealData(input: Record<string, unknown>): MaintainResult {
+  ensurePropertyName(input);
   const fix = applyImportFixes(input);
   const data = fix.deal;
   const fresh = auditExtraction(data);

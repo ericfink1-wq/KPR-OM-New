@@ -58,6 +58,7 @@ export function detectPackageRole(fileName: string, text = ""): PackageRole {
   const f = (fileName || "").toLowerCase().replace(/[_]+/g, " ");
   if (/tenant\s+underwriting|rent\s*roll|lease\s+schedule|tenant\s+schedule|\bdtu\b/.test(f)) return "tenant-detail";
   if (/financial\s+narrative|cash\s*flow|\bargus\b|\bfinancials\b|operating\s+statement|historicals?\b|\bt-?12\b|pro\s*-?\s*forma/.test(f)) return "financials";
+  if (/site\s*plan/.test(f)) return "other";
   if (/offering\s+memo|\bom\b/.test(f)) return "om";
   if (/additional\s+info|supplement|addendum/.test(f)) return "other";
   const head = (text || "").slice(0, 3000).toLowerCase();
