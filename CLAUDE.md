@@ -424,6 +424,15 @@ tools to have an always-on real estate brain working side by side with me."
   exposed as MCP tools, so an outside chat can only read the doctrine, not compute a number.
   Exposing them needs those libs reachable from the api-server package.
 
+## Sales: record ONLY closed deals (Eric, 10/17/26)
+"Don't put dates or any info for any of the pending sales. This site doesn't need to ever be
+updated until a deal is officially sold." Never enter a sale stage, buyer, price, deposit or
+dates for a pending/under-contract sale. Only once it CLOSES: status Sold + txnSaleDate (+ buyer/
+price if Eric gives them). Confirmed closings Eric hands over go in `RECORDED_SALES`
+(api-server `lib/recordedSales.ts`, applied fill-blanks-only on startup). Recorded so far:
+Pompano Marketplace + Sunshine Plaza sold 2026-07-28 to Kimco; Shops at Crossroads sold
+2026-06-29 (buyer not given — leave blank, never guess).
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.

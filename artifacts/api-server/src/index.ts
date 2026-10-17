@@ -12,6 +12,7 @@ import { ensureTraceTables } from "./lib/traceTables";
 import { ensureHouseViewTable } from "./lib/houseView";
 import { ensureMcpKeysTable } from "./lib/mcpKeys";
 import { startSelfImproveScheduler } from "./lib/selfImprove";
+import { applyRecordedSales } from "./lib/recordedSales";
 
 const rawPort = process.env["PORT"];
 
@@ -35,6 +36,10 @@ const server = app.listen(port, (err) => {
   // the accuracy-over-time trend, and auto-mints a standing extraction lesson when a
   // mistake recurs across many deals. Best-effort; never blocks startup.
   startSelfImproveScheduler();
+  // Fill in closing dates/buyers Eric confirmed for already-Sold owned centers (fill-blanks only).
+  applyRecordedSales()
+    .then(n => { if (n) logger.info({ n }, "Recorded confirmed sale closings"); })
+    .catch((err) => logger.error({ err }, "applyRecordedSales failed on startup"));
 });
 
 // Restore/provision the accounts tables on startup: recreates `users` and
