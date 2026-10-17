@@ -15,6 +15,7 @@ import { startSelfImproveScheduler } from "./lib/selfImprove";
 import { applyRecordedSales, addMissingProperties } from "./lib/recordedSales";
 import { purgePendingSaleData } from "./lib/pendingSale";
 import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
+import { runCompsCleanupIfNeeded } from "./routes/comps";
 import { startAnalysisAutoRefresh, sweepAnalysisGuardrails } from "./lib/analysisAutoRefresh";
 
 const rawPort = process.env["PORT"];
@@ -50,6 +51,10 @@ const server = app.listen(port, (err) => {
     .catch((err) => logger.error({ err }, "sweepAnalysisGuardrails failed on startup"));
   // One-time batch re-analysis of every deal for the v4 rules (Eric, 10/17/26).
   startAnalysisAutoRefresh();
+  // Comp typos / units / KPR-as-buyer on our own purchases (token-free, only when needed).
+  runCompsCleanupIfNeeded()
+    .then(r => { if (r.applied) logger.info(r, "Comp clean-up applied"); })
+    .catch((err) => logger.error({ err }, "runCompsCleanupIfNeeded failed on startup"));
   purgePendingSaleData()
     .then(n => { if (n) logger.info({ n }, "Deleted stored pending-sale data"); })
     .catch((err) => logger.error({ err }, "purgePendingSaleData failed on startup"));

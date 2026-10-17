@@ -549,6 +549,29 @@ function AppInner() {
   }
 
   const currentDeal = view.type === "detail" ? deals.find(d => d.id === view.dealId) : null;
+  // Every page gets one h1 (Eric, 10/17/26). Pages whose component already renders a
+  // visible h1 (Deal Library, deal page, Comps, Portfolio Analytics, MTM, tenant / parent /
+  // tenant-audit) return null here; the rest get a screen-reader-only heading.
+  const fallbackH1: string | null = (() => {
+    if (tab === "analyst") return "KPR Analyst";
+    if (tab === "comps") return null;
+    if (tab === "portfolio") {
+      if (view.type === "compare") return "Compare deals";
+      if (view.type === "lender") return `Lender: ${view.lenderName}`;
+      return null;
+    }
+    if (tab === "analytics") {
+      if (view.type === "tenant-link") return "Link tenants";
+      if (view.type === "rollover-year") return `Lease rollover ${view.year}`;
+      if (view.type !== "list") return null;
+      const titles: Partial<Record<typeof analyticsView, string>> = {
+        calendar: "Critical Dates", cotenancy: "Co-Tenancy Cascade", audit: "Data Audit",
+        feedback: "Feedback & Trends", learning: "Learning", watchlist: "Retailer Watchlist", tenant: "Tenant Analytics",
+      };
+      return titles[analyticsView] ?? null;
+    }
+    return null;
+  })();
 
   return (
     <div
@@ -614,6 +637,7 @@ function AppInner() {
         </div>
       )}
 
+      {fallbackH1 && <h1 className="sr-only">{fallbackH1}</h1>}
       <Suspense fallback={<ViewLoading />}>
       {/* Comps tab */}
       {tab === "comps" && (

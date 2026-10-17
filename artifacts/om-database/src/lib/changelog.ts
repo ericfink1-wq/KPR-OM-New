@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-small-fixes",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Comps tidy-up and a clearer phone layout",
+    detail:
+      "KPR's own purchases on the Comps page now show KPR Centers as the buyer (and KPR's sales show KPR Centers as the seller). Existing comps were cleaned of known typos such as 'Dick's Sporting Good sRoss' and 'Potttstown'. On phones, the deal page's Ask button is now a small round button, and the 'Review ›' link sits under the banner text where the button can't cover it.",
+    where: "Comps; deal page on phones",
+  },
+  {
     id: "2026-10-17-anchor-names-no-autoscore",
     date: "2026-10-17",
     category: "fixed",

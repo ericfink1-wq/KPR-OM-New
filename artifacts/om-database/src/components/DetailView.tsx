@@ -2845,8 +2845,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <span style={{ flex: 1 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: "#b3261e" }}>{auditCount} number{auditCount === 1 ? "" : "s"} to verify — the OM's figures don't all tie out</span>
                 <span style={{ display: "block", fontSize: 11, color: "#c0564f", marginTop: 1 }}>Independent arithmetic checks found {auditCount === 1 ? "a figure that doesn't" : "figures that don't"} reconcile (SF, NOI/cap/price, rent roll-ups…){other > 0 ? ` · + ${other} other detail${other === 1 ? "" : "s"} to confirm` : ""} — tap to review or fix.</span>
+                {/* Phones: under the text, clear of the floating Ask button (Eric, 10/17/26). */}
+                {isMobileNav && <span style={{ display: "block", fontSize: 12, color: "#b3261e", fontWeight: 700, marginTop: 5 }}>Review ›</span>}
               </span>
-              <span style={{ fontSize: 12, color: "#b3261e", fontWeight: 600 }}>Review ›</span>
+              {!isMobileNav && <span style={{ fontSize: 12, color: "#b3261e", fontWeight: 600 }}>Review ›</span>}
             </button>
           );
         }
@@ -2858,8 +2860,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <span style={{ flex: 1 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: "#9a6a1e" }}>{openCount} import detail{openCount === 1 ? "" : "s"} to confirm</span>
                 <span style={{ display: "block", fontSize: 11, color: "#b08a4e", marginTop: 1 }}>A few values I wasn't fully sure I captured right (incl. any failed data checks) — tap to review or fix.</span>
+                {isMobileNav && <span style={{ display: "block", fontSize: 12, color: "#9a6a1e", fontWeight: 700, marginTop: 5 }}>Review ›</span>}
               </span>
-              <span style={{ fontSize: 12, color: "#9a6a1e", fontWeight: 600 }}>Review ›</span>
+              {!isMobileNav && <span style={{ fontSize: 12, color: "#9a6a1e", fontWeight: 600 }}>Review ›</span>}
             </button>
           );
         }
@@ -5196,9 +5199,11 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
   const phone = typeof window !== "undefined" && window.innerWidth < 768;
   return (
     <>
-      <button onClick={() => setOpen(o => !o)} title="Ask AI about this property"
-        style={{ position:"fixed", bottom: phone ? 74 : 24, right: phone ? 16 : 24, zIndex:160, height: phone ? 48 : 52, padding:"0 20px", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif" }}>
-        {phone ? "✦ Ask" : "✦ Ask about this property"}
+      <button onClick={() => setOpen(o => !o)} title="Ask AI about this property" aria-label="Ask AI about this property"
+        // Phones: a compact round button, so it covers as little of the page as possible
+        // (it sat on the "Review ›" link — Eric, 10/17/26).
+        style={{ position:"fixed", bottom: phone ? 74 : 24, right: phone ? 14 : 24, zIndex:160, height: phone ? 46 : 52, width: phone ? 46 : undefined, padding: phone ? 0 : "0 20px", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif" }}>
+        {phone ? "✦" : "✦ Ask about this property"}
       </button>
       {open && (
         <>

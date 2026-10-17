@@ -133,7 +133,8 @@ export async function syncOwnTransactionComps(
           salePrice: acqSalePrice, capRate: acqCapRate, pricePerSf: acqPsf,
           sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "acquisition",
           anchor, propertyType,
-          seller, buyer: null,
+          // KPR's own purchase: KPR is the buyer (Eric, 10/17/26).
+          seller, buyer: "KPR Centers",
           sourceNotes: notes,
         }).row);
       }
@@ -166,7 +167,7 @@ export async function syncOwnTransactionComps(
           salePrice: dispSalePrice, capRate: dispCapRate, pricePerSf: dispPsf,
           sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "disposition",
           anchor, propertyType,
-          buyer, seller: null,
+          buyer, seller: "KPR Centers",
           sourceNotes: notes,
         }).row);
       }

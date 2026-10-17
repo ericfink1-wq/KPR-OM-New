@@ -568,9 +568,8 @@ router.post("/comps/retag-manual-to-upload", requireAdmin, async (req, res) => {
 // deals (real city instead of the MSA, cap from our own NOI ÷ price, portfolio tag).
 // Never deletes a row: a non-sale is only CLASSIFIED as competitive set.
 // ---------------------------------------------------------------------------
-router.post("/comps/cleanup", requireAdmin, async (req, res) => {
-  try {
-    const apply = (req.body as { apply?: boolean } | undefined)?.apply === true;
+/** Deterministic comp clean-up (typos, units, fields) + KPR's own trades re-derived. Also run on startup. */
+export async function runCompsCleanup(apply: boolean) {
     const rows = await db.select().from(compsIndexTable);
     const changes: Array<{ id: number; name: string | null; source: string; changes: string[] }> = [];
     const tally: Record<string, number> = {};
@@ -600,14 +599,32 @@ router.post("/comps/cleanup", requireAdmin, async (req, res) => {
     const ownDeals = await db.select().from(dealsTable).where(sql`${dealsTable.data}->>'status' in ('Owned','Sold')`);
     if (apply) for (const d of ownDeals) await syncOwnTransactionComps(d.id, d.data as Record<string, unknown>);
     const after = apply ? await db.select().from(compsIndexTable) : rows;
-    res.json({
+    return {
       ok: true, applied: apply,
       rowsChanged: changes.length, tally,
       ownTradesRederived: apply ? ownDeals.length : 0, ownTradeRows: ownDealIds.length,
       competitiveSet: after.filter(r => !isSaleComp(r)).length,
       portfolioAllocations: after.filter(r => isPortfolioAllocation(r)).length,
       examples: changes.slice(0, 60),
-    });
+    };
+}
+
+/** Startup: apply the clean-up only when there is something to fix — any comp the
+ *  normalizer would change, or a KPR purchase still missing "KPR Centers" as buyer — so a
+ *  normal boot doesn't churn comp rows (re-deriving own trades re-creates them). */
+export async function runCompsCleanupIfNeeded(): Promise<{ applied: boolean; rowsChanged: number }> {
+  const dry = await runCompsCleanup(false);
+  const [own] = await db.select({ n: sql<number>`count(*)::int` }).from(compsIndexTable)
+    .where(sql`${compsIndexTable.isOwnTransaction} AND ${compsIndexTable.txnKind} = 'acquisition' AND (${compsIndexTable.buyer} IS NULL OR ${compsIndexTable.buyer} = '')`);
+  if (!dry.rowsChanged && !(own?.n)) return { applied: false, rowsChanged: 0 };
+  const r = await runCompsCleanup(true);
+  return { applied: true, rowsChanged: r.rowsChanged };
+}
+
+router.post("/comps/cleanup", requireAdmin, async (req, res) => {
+  try {
+    const apply = (req.body as { apply?: boolean } | undefined)?.apply === true;
+    res.json(await runCompsCleanup(apply));
   } catch (err) {
     req.log.error({ err }, "Comp cleanup failed");
     res.status(500).json({ error: "Comp cleanup failed" });
