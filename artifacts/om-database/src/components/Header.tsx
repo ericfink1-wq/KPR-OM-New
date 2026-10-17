@@ -792,10 +792,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         </button>
 
         {/* Upload OMs split button */}
-        <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
+        <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(35,36,34,0.35)" }}>
           <button
             onClick={() => fileRef.current?.click()}
-            style={{ background: "#5BBA47", border: "none", color: "#16240f", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif" }}>
+            style={{ background: "#383A37", border: "none", color: "#fff", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif" }}>
             Upload
           </button>
           <button
@@ -805,7 +805,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               }
               setUploadMenu(m => !m);
             }}
-            style={{ background: "#6dba43", border: "none", borderLeft: "1px solid rgba(31,43,22,0.22)", color: "#1f2b16", padding: "8px 9px", borderRadius: "0 8px 8px 0", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>
+            style={{ background: "#383A37", border: "none", borderLeft: "1px solid rgba(255,255,255,0.22)", color: "#fff", padding: "8px 9px", borderRadius: "0 8px 8px 0", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>
             ▾
           </button>
         </div>

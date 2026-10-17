@@ -53,7 +53,9 @@ const SUGGESTED_ICONS = [CalendarClock, BarChart3, ShieldAlert, Scale, Landmark,
 
 const HOME_CSS = `
 .kpr-home{font-family:'Roboto',system-ui,sans-serif;color:${K.ink}}
-.kpr-hero{position:relative;overflow:hidden;background:${K.charcoal};border-radius:16px;padding:28px 46px 34px 30px;margin-bottom:26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:28px;align-items:center;box-shadow:0 18px 40px -28px rgba(35,36,34,.7)}
+.kpr-wrap{max-width:1320px;margin:0 auto;padding:0 28px;box-sizing:border-box}
+.kpr-hero{position:relative;overflow:hidden;background:${K.charcoal};padding:34px 0 40px;margin-bottom:28px}
+.kpr-hero-inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:32px;align-items:center;position:relative;z-index:1}
 .kpr-hero-greet h1{font-family:'Lora',Georgia,serif;font-weight:500;font-size:34px;line-height:1.12;color:#fff;margin:0 0 10px;letter-spacing:-.01em}
 .kpr-hero-greet p{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.74);margin:0;max-width:460px}
 .kpr-hero-panel{position:relative;z-index:1;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:14px 16px 16px;background:rgba(0,0,0,.12)}
@@ -78,7 +80,7 @@ const HOME_CSS = `
 .kpr-wordmark:hover{color:${K.green}}
 .kpr-dot{width:4px;height:4px;border-radius:50%;background:${K.green};margin:0 10px;display:inline-block}
 .kpr-anchors-more{font-size:12px;color:rgba(255,255,255,.55);margin-left:10px}
-.kpr-chevron{position:absolute;right:0;bottom:0;width:70px;height:70px;pointer-events:none}
+.kpr-chevron{position:absolute;right:0;bottom:0;width:84px;height:84px;pointer-events:none}
 .kpr-section{margin-bottom:26px}
 .kpr-title{display:block;font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:${K.charcoal};margin-bottom:12px}
 .kpr-title:after{content:"";display:block;height:2px;margin-top:8px;background:linear-gradient(90deg,${K.green} 0 56px,#dcdcd8 56px)}
@@ -92,10 +94,12 @@ const HOME_CSS = `
 .kpr-ask-card{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:15px 16px;cursor:pointer;font-family:inherit;font-size:14px;line-height:1.45;color:${K.ink};transition:border-color .15s ease,transform .15s ease}
 .kpr-ask-card:hover{border-color:${K.green};transform:translateY(-1px)}
 .kpr-ask-icon{flex-shrink:0;width:32px;height:32px;border-radius:8px;background:#eef7eb;color:#3e8a2f;display:flex;align-items:center;justify-content:center}
-@media(max-width:1023px){.kpr-lib-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kpr-hero{grid-template-columns:1fr;gap:20px}}
+@media(max-width:1023px){.kpr-lib-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kpr-hero-inner{grid-template-columns:1fr;gap:20px}}
+@media(max-width:1500px){.kpr-hero{padding-right:0}.kpr-hero-inner{padding-right:64px}}
 @media(max-width:640px){
-  .kpr-home{padding:0 16px 8px !important}
-  .kpr-hero{padding:22px 18px 46px;border-radius:14px}
+  .kpr-wrap{padding:0 16px}
+  .kpr-hero{padding:24px 0 50px}
+  .kpr-hero-inner{padding-right:16px}
   .kpr-hero-greet h1{font-size:27px}
   .kpr-hero-greet p{font-size:13.5px}
   .kpr-hero-panel{padding:12px}
@@ -330,12 +334,13 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: onAsk ? K.page : "transparent" }}>
       {/* Messages area */}
-      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 0 0" }}>
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: isEmpty && onAsk ? 0 : "24px 0 0" }}>
         {isEmpty ? (
-          <div className="kpr-home" style={{ maxWidth: 1400, margin: "0 auto", padding: "0 28px 8px", animation: "riseIn 0.3s ease both" }}>
+          <div className="kpr-home" style={{ paddingBottom: 8, animation: "riseIn 0.3s ease both" }}>
             <style>{HOME_CSS}</style>
             {/* Hero — charcoal band: greeting + owned portfolio (KPR house style, 10/17/26) */}
             <section className="kpr-hero">
+              <div className="kpr-wrap kpr-hero-inner">
               <div className="kpr-hero-greet">
                 <h1>Good {getTimeGreeting()}.</h1>
                 <p>I'm your KPR deal analyst. I know your entire deal library — ask me anything about your deals, comps, lease rollover, demographics, or market trends.</p>
@@ -371,9 +376,11 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                   )}
                 </div>
               )}
+              </div>
               <svg className="kpr-chevron" viewBox="0 0 120 120" aria-hidden><path d="M120 0 L120 120 L0 120 Z" fill={K.green} /><path d="M120 34 L120 120 L34 120 Z" fill="#4a9a3a" /></svg>
             </section>
 
+            <div className="kpr-wrap">
             {/* Intelligence library — one ruled white panel */}
             {active.length > 0 && (
               <section className="kpr-section">
@@ -439,6 +446,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                 })}
               </div>
             </section>
+            </div>
           </div>
         ) : (
           <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 28px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -483,7 +491,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
 
       {/* Input bar */}
       <div className="kpr-chatbar-wrap" style={{ background: "linear-gradient(180deg, rgba(250,249,245,0) 0%, rgba(250,249,245,0.92) 38%)", flexShrink: 0 }}>
-        <div className="kpr-chatbar" style={{ maxWidth: 1400, margin: "0 auto", padding: "10px 28px 12px" }}>
+        <div className="kpr-chatbar" style={{ maxWidth: onAsk ? 1320 : 1400, margin: "0 auto", padding: "10px 28px 12px", boxSizing: "border-box" }}>
         {msgs.length > 0 && (
           <button onClick={() => setMsgs([])} style={{ fontSize: 10, color: "#a89f8f", background: "transparent", border: "none", cursor: "pointer", marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>
             ← New conversation
