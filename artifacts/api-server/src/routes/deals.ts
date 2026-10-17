@@ -2,7 +2,7 @@ import { stampStatusChange } from "../lib/statusSince";
 import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable, leaseAbstractsTable } from "@workspace/db";
-import { eq, isNotNull, sql } from "drizzle-orm";
+import { eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHouseViewOnReview,
   buildRosterAnalysisSnapshot, rosterAnalysisParams, parseRosterAnalysisMessage } from "../lib/extract";
 import { createMessageBatch, retrieveMessageBatch, fetchBatchResults, isValidBatchCustomId, type BatchRequest } from "../lib/analysisBatch";
@@ -26,6 +26,7 @@ import type { Logger } from "pino";
 import { triageAiQuestions, summarizeTriage, TRIAGE_MARK, type TriageOutcome } from "../lib/aiQuestionTriage";
 import { planDatexImport, applyLiveBlock, datexDivergence, DATEX_BLOCK_KEY, type DatexPayload } from "../lib/datexImport";
 import { updateDealSafely } from "../lib/dealWrite";
+import { keepServerOwnedAnalysis } from "../lib/analysisOwnership";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
 // imported deal and merge the result back. The JSON's self-contained grade is
@@ -572,7 +573,11 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
       const prevData = prevRows[0]?.data as Record<string, unknown> | undefined;
       if (prevData) {
         if (!Array.isArray(rest.propertyHistory) && Array.isArray(prevData.propertyHistory)) rest.propertyHistory = prevData.propertyHistory;
-        try { if (isNewDocument(prevData, rest)) recordHistory(prevData, rest); } catch { /* never block a save */ }
+        const newDoc = (() => { try { return isNewDocument(prevData, rest); } catch { return false; } })();
+        try { if (newDoc) recordHistory(prevData, rest); } catch { /* never block a save */ }
+        // A tab opened before the background re-analysis must not roll the new write-up back.
+        const kept = keepServerOwnedAnalysis(prevData, rest, newDoc);
+        if (kept.length) req.log.info({ id, kept }, "PUT kept the newer server write-up over a stale copy");
       }
     }
     const prevReview = typeof (prevRows[0]?.data as Record<string, unknown> | undefined)?.dealReview === "string"
@@ -1319,7 +1324,6 @@ function isStaleAnalysisTarget(d: Record<string, unknown>): boolean {
 // sequential refresh and the Batch-results apply so both behave identically.
 async function applyAnalysisToDeal(id: string, data: Record<string, unknown>, analysis: Record<string, unknown>, log: Logger): Promise<void> {
   const updated: Record<string, unknown> = { ...data, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
-  delete updated.analysisBatchPending;   // this deal's batch result is now applied
   try {
     const patch = await rescoreDeal(id, updated, log);
     if (patch.dealScore !== undefined) updated.dealScore = patch.dealScore;
@@ -1327,9 +1331,18 @@ async function applyAnalysisToDeal(id: string, data: Record<string, unknown>, an
     updated.lastScoredAt = patch.lastScoredAt;
     updated.lastScoredDealCount = patch.lastScoredDealCount;
   } catch { /* benchmark layer non-fatal */ }
-  const clean = JSON.parse(JSON.stringify(updated)) as Record<string, unknown>;
-  await db.update(dealsTable).set({ data: clean, updatedAt: new Date() }).where(eq(dealsTable.id, id));
-  rebuildTenantIndex(id, clean).catch(() => {});
+  // Write ONLY what the analysis produced onto the CURRENT row (the rescore above is a model
+  // call, so the copy read before it can be seconds stale — a whole-object write would
+  // revert anything saved meanwhile). Undefined drops the batch marker in serialisation.
+  const keys = Object.keys(updated).filter(k => JSON.stringify(updated[k]) !== JSON.stringify(data[k]));
+  let written: Record<string, unknown> | null = null;
+  await updateDealSafely(id, (fresh) => {
+    const changes: Record<string, unknown> = { analysisBatchPending: undefined };
+    for (const k of keys) changes[k] = updated[k];
+    written = JSON.parse(JSON.stringify({ ...fresh, ...changes })) as Record<string, unknown>;
+    return changes;
+  });
+  if (written) rebuildTenantIndex(id, written).catch(() => {});
 }
 
 router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
@@ -1396,21 +1409,35 @@ export async function applyAnalysisBatchResults(batchId: string, log: Logger, op
   if (!results) { results = await fetchBatchResults(resultsUrl); batchResultsCache.set(batchId, results); }
   let applied = 0, failed = 0, skipped = 0, remaining = 0;
   const release = (id: string) => db.execute(sql`UPDATE deals SET data = data - 'analysisBatchPending' WHERE id = ${id}`);
-  for (const { custom_id, result } of results) {
-    const rows = await db.select().from(dealsTable).where(eq(dealsTable.id, custom_id));
-    if (!rows.length) { skipped++; continue; }
-    const data = rows[0].data as Record<string, unknown>;
-    if (opts.skipDone && data.analysisBatchPending !== batchId) continue;   // done in an earlier slice
-    if (opts.budgetMs && Date.now() - t0 > opts.budgetMs) { remaining++; continue; }
-    if (data.trashedAt) { skipped++; await release(custom_id); continue; }
-    if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; await release(custom_id); continue; }
-    let analysis: Record<string, unknown>;
-    try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
-    catch { failed++; await release(custom_id); continue; }
-    analysis = applyAnalysisGuardrails(data, analysis);
-    try { await applyAnalysisToDeal(custom_id, data, analysis, log); applied++; }
-    catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id); }
-  }
+  // One read for the whole slice instead of one per result.
+  const ids = results.map(r => r.custom_id);
+  const rows = ids.length ? await db.select().from(dealsTable).where(inArray(dealsTable.id, ids)) : [];
+  const byId = new Map(rows.map(r => [r.id, r.data as Record<string, unknown>]));
+  const todo = results.filter(({ custom_id }) => {
+    const data = byId.get(custom_id);
+    if (!data) { skipped++; return false; }
+    return !(opts.skipDone && data.analysisBatchPending !== batchId);   // done in an earlier slice
+  });
+  // Each apply makes one benchmark-rescore model call (~10–20 s), so run a few at once —
+  // sequentially a 45 s slice only fit ~2 deals and 290 would have taken most of a day.
+  const CONCURRENCY = 5;
+  let next = 0;
+  const worker = async () => {
+    while (next < todo.length) {
+      const { custom_id, result } = todo[next++];
+      if (opts.budgetMs && Date.now() - t0 > opts.budgetMs) { remaining++; continue; }
+      const data = byId.get(custom_id)!;
+      if (data.trashedAt) { skipped++; await release(custom_id); continue; }
+      if (result.type !== "succeeded" || typeof result.message !== "object" || result.message == null) { failed++; await release(custom_id); continue; }
+      let analysis: Record<string, unknown>;
+      try { analysis = parseRosterAnalysisMessage(result.message as Record<string, unknown>); }
+      catch { failed++; await release(custom_id); continue; }
+      analysis = applyAnalysisGuardrails(data, analysis);
+      try { await applyAnalysisToDeal(custom_id, data, analysis, log); applied++; }
+      catch (err) { log.error({ err, id: custom_id }, "apply-analysis-batch: failed for deal"); failed++; await release(custom_id); }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, todo.length) }, worker));
   if (!remaining) batchResultsCache.delete(batchId);
   log.info({ batchId, applied, failed, skipped, remaining }, "Applied stale-analysis batch slice");
   return { status, applied, failed, skipped, remaining };

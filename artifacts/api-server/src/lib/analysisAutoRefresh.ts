@@ -1,7 +1,9 @@
 import { db, dealsTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { updateDealSafely } from "./dealWrite";
 import type { Logger } from "pino";
 import { logger } from "./logger";
+import { BUILD_COMMIT } from "./buildInfo";
 import { ANALYSIS_VERSION } from "./analysisVersion";
 import { submitStaleAnalysisBatch, applyAnalysisBatchResults } from "../routes/deals";
 
@@ -68,17 +70,22 @@ export async function runAnalysisRefreshSlice(log: Logger = logger, budgetMs = 4
   return lastTick;
 }
 
-/** Live progress, DB-only (no model call): how many deals are on the current version. */
-export async function analysisRefreshStatus(): Promise<{ version: number; current: number; outdated: number; inBatch: number; batchId: string | null; workPending: boolean; lastTick: RefreshTick | null }> {
+/** Live progress, DB-only (no model call): how many deals are on the current version.
+ *  Everything here is read from the DATABASE, so it is the same whichever server instance
+ *  answers (autoscale runs several; the old in-memory "last tick" differed per instance). */
+export async function analysisRefreshStatus(): Promise<{ version: number; build: string; current: number; outdated: number; inBatch: number; appliedByAutoRefresh: number; lastAppliedAt: string | null; batchId: string | null; workPending: boolean; lastTick: RefreshTick | null }> {
   const r = await db.execute(sql`SELECT
       count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION})::int AS current,
       count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) < ${ANALYSIS_VERSION} AND data ? 'dealScore')::int AS outdated,
       count(*) FILTER (WHERE data ? 'analysisBatchPending')::int AS inbatch,
+      count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION} AND (data->'analysisAutoTries'->>'v')::int = ${ANALYSIS_VERSION})::int AS applied,
+      max(data->>'lastScoredAt') FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION} AND (data->'analysisAutoTries'->>'v')::int = ${ANALYSIS_VERSION}) AS last_applied,
       max(data->>'analysisBatchPending') AS batch
     FROM deals WHERE data->>'trashedAt' IS NULL AND COALESCE((data->>'_processing')::boolean, false) = false`);
-  const row = (r.rows[0] ?? {}) as { current?: number; outdated?: number; inbatch?: number; batch?: string | null };
+  const row = (r.rows[0] ?? {}) as { current?: number; outdated?: number; inbatch?: number; applied?: number; last_applied?: string | null; batch?: string | null };
   const inBatch = row.inbatch ?? 0;
-  return { version: ANALYSIS_VERSION, current: row.current ?? 0, outdated: row.outdated ?? 0, inBatch, batchId: row.batch ?? null,
+  return { version: ANALYSIS_VERSION, build: BUILD_COMMIT, current: row.current ?? 0, outdated: row.outdated ?? 0, inBatch,
+    appliedByAutoRefresh: row.applied ?? 0, lastAppliedAt: row.last_applied ?? null, batchId: row.batch ?? null,
     workPending: ANALYSIS_VERSION === AUTO_REFRESH_FOR_VERSION && !!process.env.ANTHROPIC_API_KEY && (inBatch > 0 || (row.outdated ?? 0) > 0) && !(lastTick?.action?.startsWith("done")),
     lastTick };
 }
@@ -104,11 +111,14 @@ export async function sweepAnalysisGuardrails(): Promise<number> {
   for (const r of rows) {
     const d = r.data as Record<string, unknown>;
     if (d.trashedAt || d._processing || d._processingError) continue;
-    const before = JSON.stringify([d.upsideItems, d.redFlags, d.reviewQuestions]);
-    const next = applyAnalysisGuardrails(d, { ...d });
-    if (JSON.stringify([next.upsideItems, next.redFlags, next.reviewQuestions]) === before) continue;
-    await db.execute(sql`UPDATE deals SET data = data || ${JSON.stringify({ upsideItems: next.upsideItems ?? null, redFlags: next.redFlags ?? null, reviewQuestions: next.reviewQuestions ?? null })}::jsonb WHERE id = ${r.id}`);
-    n++;
+    const changed = (x: Record<string, unknown>) => {
+      const next = applyAnalysisGuardrails(x, { ...x });
+      return JSON.stringify([next.upsideItems, next.redFlags, next.reviewQuestions]) === JSON.stringify([x.upsideItems, x.redFlags, x.reviewQuestions])
+        ? null : { upsideItems: next.upsideItems ?? null, redFlags: next.redFlags ?? null, reviewQuestions: next.reviewQuestions ?? null };
+    };
+    if (!changed(d)) continue;
+    // Recompute from the CURRENT row: a batch apply may have landed since the bulk read.
+    if (await updateDealSafely(r.id, changed)) n++;
   }
   return n;
 }

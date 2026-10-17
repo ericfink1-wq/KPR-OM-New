@@ -1,5 +1,6 @@
 import { db, dealsTable } from "@workspace/db";
 import { inArray, sql } from "drizzle-orm";
+import { updateDealSafely } from "./dealWrite";
 import { autoMaintainDealData } from "./dealMaintenance";
 import { logger } from "./logger";
 import { rebuildCompsIndex } from "./compsIndex";
@@ -54,8 +55,7 @@ export async function applyRecordedSales(): Promise<number> {
   // flagged at once (Sunshine Plaza, Shops at Crossroads) instead of at the next daily sweep.
   const sold = await db.select().from(dealsTable).where(sql`${dealsTable.data}->>'status' = 'Sold' AND ${dealsTable.data}->>'trashedAt' IS NULL`);
   for (const r of sold) {
-    const m = autoMaintainDealData({ ...(r.data as Record<string, unknown>) });
-    if (m.auditAdded || m.auditCleared) await db.update(dealsTable).set({ data: m.data, updatedAt: new Date() }).where(inArray(dealsTable.id, [r.id]));
+    await updateDealSafely(r.id, (fresh) => { const m = autoMaintainDealData({ ...fresh }); return m.auditAdded || m.auditCleared ? m.data : null; });
   }
   return n;
 }

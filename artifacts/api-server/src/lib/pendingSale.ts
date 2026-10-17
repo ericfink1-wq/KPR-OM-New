@@ -1,5 +1,6 @@
 import { db, dealsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { updateDealSafely } from "./dealWrite";
 import { logger } from "./logger";
 
 // NO PENDING-SALE DATA, ANYWHERE (Eric, 10/17/26): "an owned property stays Owned until
@@ -25,10 +26,13 @@ export async function purgePendingSaleData(): Promise<number> {
   const rows = await db.select().from(dealsTable).where(sql`${dealsTable.data} ?| array[${keys}] OR (${dealsTable.data}->>'status' = 'Owned' AND ${dealsTable.data} ?| array[${ownedKeys}])`);
   let n = 0;
   for (const r of rows) {
-    const data = { ...(r.data as Record<string, unknown>) };
-    const removed = stripPendingSaleData(data);
+    let removed: string[] = [];
+    // Re-read before writing (dealWrite.ts): only the removed keys change.
+    await updateDealSafely(r.id, (fresh) => {
+      removed = stripPendingSaleData({ ...fresh });
+      return removed.length ? Object.fromEntries(removed.map(k => [k, undefined])) : null;
+    });
     if (!removed.length) continue;
-    await db.update(dealsTable).set({ data, updatedAt: new Date() }).where(eq(dealsTable.id, r.id));
     logger.info({ dealId: r.id, removed }, "Deleted pending-sale data");
     n++;
   }

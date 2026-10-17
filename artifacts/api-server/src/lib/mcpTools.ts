@@ -496,7 +496,8 @@ const libraryOverview: McpToolDef = {
       const { analysisRefreshStatus } = await import("./analysisAutoRefresh");
       const st = await analysisRefreshStatus();
       analysisFreshness = { rulesVersion: st.version, dealsOnCurrentRules: st.current, dealsOutdated: st.outdated,
-        dealsAwaitingBatch: st.inBatch, batchId: st.batchId, lastRefreshStep: st.lastTick };
+        dealsAwaitingBatch: st.inBatch, appliedByAutoRefresh: st.appliedByAutoRefresh, lastAppliedAt: st.lastAppliedAt,
+        batchId: st.batchId, serverBuild: st.build, lastRefreshStepOnThisInstance: st.lastTick };
     } catch { /* never block the overview */ }
     return {
       dealCount: deals.length,

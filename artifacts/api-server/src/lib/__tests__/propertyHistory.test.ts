@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffSnapshots, recordHistory, brandKey, isNewDocument } from "../propertyHistory";
+import { diffSnapshots, recordHistory, brandKey, isNewDocument, sameTenant, repairPropertyHistory, HISTORY_RULES } from "../propertyHistory";
 
 // Shaped on the real New Garden Crossing pair (2021 OM vs 2026 OM).
 const old = {
@@ -66,5 +66,46 @@ describe("history entry identity", () => {
     const b: Record<string, unknown> = { lastUploadAt: "2026-09-02T00:00:00Z", noi: 200, tenants: [{ name: "B" }] };
     expect(recordHistory(a, b)).toBe(true);
     expect(recordHistory({ ...a, omDate: "2021-02-01" }, { ...b, omDate: "2026-08-01" } as Record<string, unknown> & { propertyHistory?: unknown }) || (b.propertyHistory as unknown[]).length).toBe(1);
+  });
+});
+
+describe("renamed tenants are not move-outs (New Garden, 10/17/26)", () => {
+  const before = { uploadedAt: "a", tenants: [
+    { name: "AutoBell Car Wash (GL)", suite: "OP1", sf: 4000 },
+    { name: "Chili's (GL)", suite: "OP2", sf: 5600 },
+    { name: "Triad Eye Associates of Greensboro", suite: "8", sf: 2400 },
+    { name: "Head 2 Feet Massage", suite: "9", sf: 1200 },
+    { name: "Dollar Tree", suite: "10", sf: 10000 },
+  ] };
+  const after = { lastUploadAt: "b", tenants: [
+    { name: "Auto Bell Car Wash", suite: "OP1", sf: 4000 },
+    { name: "Chili's Bar & Grill", suite: "OP2", sf: 5600 },
+    { name: "Triad Eye Associates of Greensboro O.D., P.A.", suite: "8", sf: 2400 },
+    { name: "Head 2 Feet Massage and Facial Spa", suite: "9", sf: 1200 },
+    { name: "Dollar General", suite: "10", sf: 10000 },
+  ] };
+  it("pairs spelling variants and keeps real re-tenanting", () => {
+    const ev = diffSnapshots(before, after);
+    expect(ev.map(e => e.text).join(" | ")).not.toMatch(/AutoBell|Chili's \(GL\)|Head 2 Feet Massage replaced|Triad Eye Associates of Greensboro is no longer/);
+    expect(ev).toEqual([{ kind: "backfill", text: "Dollar Tree (10,000 SF) replaced by Dollar General (10,000 SF)" }]);
+  });
+  it("sameTenant needs the suite/size to agree for a looser (prefix) match", () => {
+    expect(sameTenant({ name: "Chili's", suite: "OP2" }, { name: "Chili's Bar & Grill", suite: "OP2" })).toBe(true);
+    expect(sameTenant({ name: "Planet Fitness", sf: 20000 }, { name: "Planet Fitness Kids Club", sf: 1200 })).toBe(false);
+    expect(sameTenant({ name: "Dollar Tree" }, { name: "Dollar General" })).toBe(false);
+    expect(sameTenant({ name: "Ross" }, { name: "Ross Dress for Less" })).toBe(false);   // too short to match loosely
+  });
+  it("repairs an entry recorded under the old rules from its own text", () => {
+    const entry = { id: "superseded:x", recordedAt: "", fromAsOf: "2021-02-01", toAsOf: "2026-09-02", fromSource: null, toSource: null, before: {}, after: {},
+      events: [
+        { kind: "left" as const, text: "AutoBell Car Wash (GL) (4,000 SF) is no longer on the roster — lease was to 2027-01-31" },
+        { kind: "arrived" as const, text: "Auto Bell Car Wash (4,000 SF) added, lease from 2007-01-01" },
+        { kind: "backfill" as const, text: "Head 2 Feet Massage (1,200 SF) replaced by Head 2 Feet Massage and Facial Spa (1,200 SF)" },
+        { kind: "left" as const, text: "Wagner Financial Services (1,400 SF) is no longer on the roster" },
+      ] };
+    const fixed = repairPropertyHistory([entry])!;
+    expect(fixed[0].events.map(e => e.text)).toEqual(["Wagner Financial Services (1,400 SF) is no longer on the roster"]);
+    expect(fixed[0].rules).toBe(HISTORY_RULES);
+    expect(repairPropertyHistory(fixed)).toBeNull();   // idempotent
   });
 });

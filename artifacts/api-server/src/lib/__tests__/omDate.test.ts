@@ -33,3 +33,24 @@ describe("hand-added records", () => {
     expect(findOmDate({ uploadedAt: "2026-10-17T00:00:00Z" }, now)).toBeNull();
   });
 });
+
+describe("OM date — labelled dates past the cover (Eric, 10/17/26)", () => {
+  const filler = "TOWNSHIP PLAZA  Coconut Creek, FL  Exclusively offered ".padEnd(1600, " ");
+  it("reads the rent roll's 'as of' date", () => {
+    expect(findOmDate({ sourceText: filler + " RENT ROLL as of October 1, 2026  Suite 101 Lease expires March 2031", uploadedAt: "2026-10-15T16:11:25Z" }, now))
+      .toEqual({ omDate: "2026-10-01", omDateSource: "pdf" });
+  });
+  it("reads a footer 'dated' / 'as of 9/30/2026'", () => {
+    expect(findOmDate({ sourceText: filler + " Information as of 9/30/2026. Lease to 12/31/2032.", uploadedAt: "2026-10-15" }, now)?.omDate).toBe("2026-09-30");
+  });
+  it("never takes the forward-dated assumed closing ('as of January 1, 2027')", () => {
+    expect(findOmDate({ sourceText: filler + " In-Place NOI as of January 1, 2027", uploadedAt: "2026-10-15" }, now)?.omDateSource).toBe("upload-date");
+  });
+  it("prefers the best-supported date when several are labelled", () => {
+    const t = filler + " Rent Roll as of August 1, 2026 … as of August 1, 2026 … as of June 30, 2026";
+    expect(findOmDate({ sourceText: t, uploadedAt: "2026-09-01" }, now)?.omDate).toBe("2026-08-01");
+  });
+  it("still ignores an unlabelled date deep in the text", () => {
+    expect(findOmDate({ sourceText: filler + " Kohl's lease commenced March 2019", uploadedAt: "2026-09-01" }, now)?.omDateSource).toBe("upload-date");
+  });
+});

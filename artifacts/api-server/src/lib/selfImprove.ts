@@ -17,6 +17,7 @@
 
 import { db, dealsTable } from "@workspace/db";
 import { sql, eq } from "drizzle-orm";
+import { updateDealSafely } from "./dealWrite";
 import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } from "./extractionAudit";
 import { ensureExtractionLessonsTable } from "./extractionLessons";
 import { runAutofixSweep } from "./autofixSweep";
@@ -101,7 +102,7 @@ export async function runDailySelfClean(reason = "scheduled"): Promise<SelfClean
     const clearedHere = existing.length - kept.length;
     if (newOnes.length || clearedHere) {
       added += newOnes.length; cleared += clearedHere; changedDeals++;
-      await db.update(dealsTable).set({ data: { ...data, reviewQuestions: next }, updatedAt: new Date() }).where(eq(dealsTable.id, r.id));
+      await updateDealSafely(r.id, () => ({ reviewQuestions: next }));   // never a whole stale copy
     }
     // Tally OPEN audit issues for metrics + recurring-pattern detection.
     const openAudit = next.filter(q => { const x = q as Record<string, unknown>; const id = String(x?.id || ""); return id.startsWith(AUDIT_ID_PREFIX) && !x?.resolvedAt; });

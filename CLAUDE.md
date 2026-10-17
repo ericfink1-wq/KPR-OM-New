@@ -467,6 +467,14 @@ slice applies what fits in 45 s, dropping each deal's marker as applied so the n
 resumes. Progress: `GET /api/analysis-refresh/status` and `analysisFreshness` in the MCP
 `library_overview` (check it there — no prod logs needed). Any future background job must be
 built the same way.
+**LOST UPDATES (found live 10/17/26):** applied write-ups kept reverting — PUT /deals/:id
+replaces the whole record, so a tab opened before the apply saved its old copy back.
+`keepServerOwnedAnalysis` (lib/analysisOwnership.ts) now keeps the newer stored write-up +
+batch bookkeeping on every PUT, and batch apply / maintenance sweeps write through
+`updateDealSafely` (re-read, write only changed keys). Any new writer: use `updateDealSafely`,
+never a whole object read earlier. Status counts are DB-derived (`appliedByAutoRefresh`,
+`lastAppliedAt`); `lastTick` is per-instance only. Live build: `GET /api/version` (commit
+injected by build.mjs) + "build …" at the bottom of the avatar menu.
 
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).

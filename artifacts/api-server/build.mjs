@@ -4,6 +4,14 @@ import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
+import { execSync } from "node:child_process";
+
+// Build stamp (short git SHA) so GET /api/version says exactly which commit is live —
+// mirrors the web app's stamp in vite.config.ts. Must never fail the build.
+function buildCommit() {
+  try { return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim() || "nogit"; }
+  catch { return "nogit"; }
+}
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -101,6 +109,10 @@ async function buildAll() {
       "puppeteer-core",
       "electron",
     ],
+    define: {
+      "process.env.BUILD_COMMIT": JSON.stringify(buildCommit()),
+      "process.env.BUILD_TIME": JSON.stringify(new Date().toISOString()),
+    },
     sourcemap: "linked",
     plugins: [
       // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it

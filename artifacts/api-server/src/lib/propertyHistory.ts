@@ -16,7 +16,10 @@ export interface HistoryEntry {
   fromSource: string | null; toSource: string | null;
   before: HistoryMetrics; after: HistoryMetrics;
   events: HistoryEvent[];
+  rules?: number;        // matching rules the events were produced under (see HISTORY_RULES)
 }
+/** Bump when the matching changes, so stored entries are re-checked (repairHistoryEntry). */
+export const HISTORY_RULES = 2;
 
 type T = Record<string, unknown>;
 const num = (v: unknown): number | null => { const n = typeof v === "string" ? Number(v.replace(/[$,%\s]/g, "")) : Number(v); return v == null || v === "" || !Number.isFinite(n) ? null : n; };
@@ -29,11 +32,40 @@ export function brandKey(name: unknown): string {
     .replace(/\b(co|company|inc|llc|corp|corporation|the|store|stores)\b\.?/g, " ")
     .replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 }
+// Words that dress up a name without changing who the tenant is ("Chili's Bar & Grill",
+// "Triad Eye Associates … O.D., P.A."). Dropped only when TRAILING, never mid-name.
+const SUFFIX_WORDS = new Set(["bar", "and", "grill", "grille", "restaurant", "cafe", "kitchen", "spa", "facial", "salon", "studio",
+  "od", "o", "d", "p", "a", "pa", "pc", "pllc", "md", "dds", "dmd", "llp", "ltd", "group", "of", "usa", "us", "america", "international", "intl"]);
+const tokens = (name: unknown) => brandKey(name).split(" ").filter(Boolean);
+const core = (ts: string[]) => { const out = [...ts]; while (out.length > 1 && SUFFIX_WORDS.has(out[out.length - 1])) out.pop(); return out; };
+const sizeAgrees = (a: number | null, b: number | null) => a == null || b == null || !a || !b || Math.abs(a - b) / Math.max(a, b) <= 0.25;
+const suiteOf = (t: { suite?: unknown }) => String(t.suite ?? "").trim().toLowerCase().replace(/^(suite|ste\.?|unit)\s*/, "");
+
+/** The SAME tenant under a different spelling between two documents (10/17/26 — New Garden
+ *  Crossing logged "AutoBell Car Wash (GL)" → "Auto Bell Car Wash" and "Chili's (GL)" →
+ *  "Chili's Bar & Grill" as a departure plus a new arrival). Matches on the name with
+ *  spacing/punctuation/"(GL)"/trailing suffixes ignored, or one name being the other plus
+ *  trailing words — and for that looser case the suite/SF must not disagree, so "Dollar"
+ *  can't swallow a different "Dollar General" in another box. */
+export function sameTenant(a: { name?: unknown; sf?: unknown; suite?: unknown }, b: { name?: unknown; sf?: unknown; suite?: unknown }): boolean {
+  const ta = tokens(a.name), tb = tokens(b.name);
+  if (!ta.length || !tb.length) return false;
+  const ca = core(ta), cb = core(tb);
+  if (ca.join("") === cb.join("")) return true;                       // "AutoBell" ≡ "Auto Bell", "Chili's (GL)" ≡ "Chili's Bar & Grill"
+  const [short, long] = ca.length <= cb.length ? [ca, cb] : [cb, ca];
+  const prefix = short.every((w, i) => long[i] === w);
+  const meaningful = short.join("").length >= 5 && (short.length >= 2 || short[0].length >= 5);
+  if (!prefix || !meaningful) return false;
+  const sa = suiteOf(a), sb = suiteOf(b);
+  if (sa && sb && sa !== sb) return false;
+  return sizeAgrees(num(a.sf), num(b.sf));
+}
+
 const money = (n: number) => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`;
 const sfTxt = (n: number | null) => n ? `${Math.round(n).toLocaleString()} SF` : "";
 // When the document's picture applies: the rent-roll date — unless it's the OM's forward-dated
 // ASSUMED closing (common: "as of 1/1/27"), then the OM's own date, then the upload.
-const docDate = (d: T) => {
+export const docDate = (d: T): string | null => {
   const roll = day(d.tenantsAsOf);
   if (roll && Date.parse(roll) <= Date.now() + 86400_000) return roll;
   return day(d.omDate) ?? day(d.lastUploadAt) ?? day(d.uploadedAt) ?? roll;
@@ -53,8 +85,17 @@ export function diffSnapshots(prev: T, next: T): HistoryEvent[] {
   if (pt.length && nt.length) {
     const nByKey = new Map(nt.map(t => [brandKey(t.name), t]));
     const pByKey = new Map(pt.map(t => [brandKey(t.name), t]));
-    const gone = pt.filter(t => !nByKey.has(brandKey(t.name)));
-    const fresh = nt.filter(t => !pByKey.has(brandKey(t.name)));
+    let gone = pt.filter(t => !nByKey.has(brandKey(t.name)));
+    let fresh = nt.filter(t => !pByKey.has(brandKey(t.name)));
+    // Renamed, not re-tenanted: pair those up before calling anything a move-out / backfill.
+    const renamed = new Map<T, T>();   // next → prev
+    for (const g of gone) {
+      const f = fresh.find(x => !renamed.has(x) && sameTenant(g, x));
+      if (f) renamed.set(f, g);
+    }
+    const renamedPrev = new Set(renamed.values());
+    gone = gone.filter(g => !renamedPrev.has(g));
+    fresh = fresh.filter(f => !renamed.has(f));
     // Backfill: a newcomer in the departed tenant's suite, or (big boxes) a near-identical footprint.
     const used = new Set<T>();
     for (const g of gone) {
@@ -72,7 +113,7 @@ export function diffSnapshots(prev: T, next: T): HistoryEvent[] {
     for (const f of fresh) if (!used.has(f)) events.push({ kind: "arrived", text: `${f.name}${num(f.sf) ? ` (${sfTxt(num(f.sf))})` : ""} added${day(f.leaseStart) ? `, lease from ${day(f.leaseStart)}` : ""}` });
     // Same tenant, both documents.
     for (const n of nt) {
-      const p = pByKey.get(brandKey(n.name)); if (!p) continue;
+      const p = pByKey.get(brandKey(n.name)) ?? renamed.get(n); if (!p) continue;
       const pe = day(p.leaseExpiry), ne = day(n.leaseExpiry);
       if (pe && ne && Date.parse(ne) - Date.parse(pe) > 180 * 86400_000) events.push({ kind: "renewed", text: `${n.name} extended: lease to ${pe} → ${ne}` });
       const pr = num(p.rentPerSF), nr = num(n.rentPerSF);
@@ -100,7 +141,7 @@ export function recordHistory(prev: T, next: T, now = new Date().toISOString(), 
   if (prior.some(h => h.id === id)) return false;
   const pt = Array.isArray(prev.tenants) ? prev.tenants as T[] : [], nt = Array.isArray(next.tenants) ? next.tenants as T[] : [];
   const entry: HistoryEntry = { id, recordedAt: now, fromAsOf, toAsOf, fromSource: docLabel(prev), toSource: docLabel(next),
-    before: metrics(prev, pt), after: metrics(next, nt), events };
+    before: metrics(prev, pt), after: metrics(next, nt), events, rules: HISTORY_RULES };
   next.propertyHistory = [entry, ...prior].slice(0, 40);
   return true;
 }
@@ -115,4 +156,39 @@ export function isNewDocument(prev: T, next: T): boolean {
 export function historyForAnalysis(d: T): Array<{ from: string | null; to: string | null; changes: string[] }> | undefined {
   const h = Array.isArray(d.propertyHistory) ? d.propertyHistory as HistoryEntry[] : [];
   return h.length ? h.slice(0, 5).map(e => ({ from: e.fromAsOf, to: e.toAsOf, changes: e.events.map(x => x.text).slice(0, 15) })) : undefined;
+}
+
+// ── Re-checking entries recorded under older matching rules ────────────────────────────
+// The prior document's roster isn't kept, so an old entry is repaired from its own event
+// text: a "left" and an "added" (or a "replaced by") that turn out to be the same tenant
+// under another spelling are dropped. Nothing is added or re-worded.
+const parseNameSf = (s: string): { name: string; sf: number | null } => {
+  const m = s.match(/^(.*?)\s*\(([\d,]+) SF\)\s*$/);
+  return m ? { name: m[1].trim(), sf: Number(m[2].replace(/,/g, "")) } : { name: s.trim(), sf: null };
+};
+export function repairHistoryEntry(e: HistoryEntry): { entry: HistoryEntry; dropped: number } {
+  if ((e.rules ?? 1) >= HISTORY_RULES) return { entry: e, dropped: 0 };
+  const left: Array<{ i: number; t: { name: string; sf: number | null } }> = [];
+  const added: Array<{ i: number; t: { name: string; sf: number | null } }> = [];
+  const drop = new Set<number>();
+  e.events.forEach((ev, i) => {
+    if (ev.kind === "left") { const m = ev.text.match(/^(.*) is no longer on the roster/); if (m) left.push({ i, t: parseNameSf(m[1]) }); }
+    else if (ev.kind === "arrived") { const m = ev.text.match(/^(.*?) added(,|$)/); if (m) added.push({ i, t: parseNameSf(m[1]) }); }
+    else if (ev.kind === "backfill") {
+      const m = ev.text.match(/^(.*) replaced by (.*)$/);
+      if (m && sameTenant(parseNameSf(m[1]), parseNameSf(m[2]))) drop.add(i);
+    }
+  });
+  for (const l of left) {
+    const a = added.find(x => !drop.has(x.i) && sameTenant(l.t, x.t));
+    if (a) { drop.add(l.i); drop.add(a.i); }
+  }
+  return { entry: { ...e, events: e.events.filter((_, i) => !drop.has(i)), rules: HISTORY_RULES }, dropped: drop.size };
+}
+/** Repair a deal's whole history; entries left with no events are removed. Null = nothing to change. */
+export function repairPropertyHistory(h: unknown): HistoryEntry[] | null {
+  if (!Array.isArray(h) || !h.length) return null;
+  const entries = h as HistoryEntry[];
+  if (entries.every(e => (e.rules ?? 1) >= HISTORY_RULES)) return null;
+  return entries.map(e => repairHistoryEntry(e).entry).filter(e => e.events.length > 0);
 }

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { HealthCheckResponse } from "@workspace/api-zod";
+import { buildInfo } from "../lib/buildInfo";
 
 const router: IRouter = Router();
 
@@ -11,5 +12,9 @@ router.get(["/", "/healthz"], (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
 });
+
+// Which commit is live (no DB, no auth — the hash is the public repo's). Compare it with the
+// "build …" line in the avatar menu (the web app's commit) and the latest commit on main.
+router.get("/version", (_req, res) => { res.json(buildInfo()); });
 
 export default router;

@@ -48,6 +48,21 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-history-renames-om-dates",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Property history no longer counts a renamed tenant as a move-out",
+    detail: "When the same tenant is spelled differently in two OMs (\"AutoBell Car Wash (GL)\" vs \"Auto Bell Car Wash\", \"Chili's\" vs \"Chili's Bar & Grill\"), it's now recognised as the same tenant instead of a departure plus a new arrival. Existing histories were re-checked. OM dates are also read from the rent roll's \"as of\" date and other dated lines inside the PDF, not just the cover, before falling back to the upload date.",
+    where: "Deal page → Summary → Property History",
+  },
+  {
+    id: "2026-10-17-reanalysis-sticks",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Refreshed AI write-ups now stick, and the refresh runs about 5× faster",
+    detail: "Saving a deal from a tab that was opened earlier could put the old write-up back over a freshly redone one. The newer write-up now always wins, while your edit still saves. The background refresh also works on several deals at once. The build number at the bottom of your account menu is easier to read, so you can check which version is live.",
+  },
+  {
     id: "2026-10-17-property-history",
     date: "2026-10-17",
     category: "new",

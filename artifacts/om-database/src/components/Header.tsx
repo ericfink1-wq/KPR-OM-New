@@ -58,6 +58,14 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const uploadTriggerRef = useRef<HTMLDivElement>(null);
   const backupTriggerRef = useRef<HTMLDivElement>(null);
   const [backupMenu, setBackupMenu] = useState(false);
+  // The server's own build (GET /api/version) — shown next to the web build only when it
+  // differs, so a half-finished deploy is visible instead of guessed at.
+  const [serverBuild, setServerBuild] = useState<string | null>(null);
+  useEffect(() => {
+    if (!backupMenu || serverBuild) return;
+    fetch("/api/version").then(r => r.ok ? r.json() : null)
+      .then((j: { commit?: string } | null) => { if (j?.commit && j.commit !== "dev") setServerBuild(j.commit); }).catch(() => {});
+  }, [backupMenu, serverBuild]);
   const [uploadMenu, setUploadMenu] = useState(false);
   const [ratesOpen, setRatesOpen] = useState(false);
   const [houseViewOpen, setHouseViewOpen] = useState(false);
@@ -726,8 +734,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             <div style={{ padding: "8px 14px 10px", borderTop: "1px solid #f1eadc" }}>
               <span
                 title={BUILD_TIME ? `This is the code currently running. Built ${new Date(BUILD_TIME).toLocaleString()}. Tell Claude this id to confirm a fix is live.` : "development build"}
-                style={{ fontSize: 9, color: "#c3bbac", fontFamily: "'Inter',sans-serif", letterSpacing: "0.03em", alignSelf: "center", whiteSpace: "nowrap", cursor: "default" }}>
-                build {BUILD_ID}
+                style={{ fontSize: 11, color: "#8a8172", fontFamily: "'Inter',sans-serif", letterSpacing: "0.03em", alignSelf: "center", whiteSpace: "nowrap", cursor: "default" }}>
+                build {BUILD_ID}{serverBuild && serverBuild !== BUILD_ID ? ` · server ${serverBuild}` : ""}
               </span>
             </div>
           </div>
