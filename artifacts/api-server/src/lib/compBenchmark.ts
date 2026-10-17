@@ -1,4 +1,5 @@
 import { db } from "@workspace/db";
+import { isPortfolioAllocation } from "./compNormalize";
 import { compsIndexTable } from "@workspace/db";
 
 const MIN_N = 4;
@@ -58,6 +59,8 @@ export interface BenchmarkRequest {
   anchor?: string | null;
   /** True if the subject's lead anchor is investment-grade */
   anchorIG?: boolean;
+  /** Portfolio trades / allocated prices are left out unless asked for (Eric, 10/16/26). */
+  includePortfolioAllocations?: boolean;
   /** User-locked filters. When present, the auto-relaxation tiers are bypassed —
    *  exactly these filters apply and whatever count results is shown (no MIN_N
    *  suppression, no smart auto-include). */
@@ -141,6 +144,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   const valid = allRows.filter(row => {
     if (row.sourceDealId === req.dealId) return false;
     if (!row.salePrice || row.salePrice <= 0)              { excludedInvalid++; return false; }
+    if (!req.includePortfolioAllocations && isPortfolioAllocation(row)) { excludedInvalid++; return false; }
     if (!row.saleDate)                                      { excludedInvalid++; return false; }
     const sd = parseD(row.saleDate);
     if (!sd || sd > now)                                    { excludedInvalid++; return false; }

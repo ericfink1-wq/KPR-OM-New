@@ -568,7 +568,7 @@ function AppInner() {
       {/* Comps tab */}
       {tab === "comps" && (
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
-          <CompsSearch onOpenDeal={id => { handleOpenDeal(id); }} />
+          <CompsSearch onOpenDeal={id => { handleOpenDeal(id); }} isAdmin={isAdmin} />
         </div>
       )}
 

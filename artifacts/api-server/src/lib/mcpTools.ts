@@ -7,6 +7,7 @@
 // of it for 150+ deals would blow the client's context. So list tools return compact
 // summaries and get_deal returns the full record with the heavy blocks opt-in.
 import { db, dealsTable, tenantIndexTable, leaseAbstractsTable, compsIndexTable } from "@workspace/db";
+import { isSaleComp, isPortfolioAllocation } from "./compNormalize";
 import { creditBucket, brandFamilyKey, brandDisplayName, isInvestmentGrade } from "./tenantCredit";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { auditExtraction, auditCheckKey, AUDIT_CHECK_LABELS } from "./extractionAudit";
@@ -963,11 +964,15 @@ const saleComps: McpToolDef = {
       minSalePrice: { type: "number" }, maxCapRate: { type: "number" }, minCapRate: { type: "number" },
       sinceDate: { type: "string", description: "ISO date — only comps that traded on or after this." },
       ownedOnly: { type: "boolean", description: "KPR's own verified transactions only." },
+      includeCompetitiveSet: { type: "boolean", description: "Also return the OMs' competitive-set rows (no price, no date — NOT sales). Default false." },
+      includePortfolioAllocations: { type: "boolean", description: "Also return portfolio trades / allocated prices (skew averages). Default false." },
       limit: { type: "number", description: "Default 40, max 120." },
     },
   },
   handler: async (a) => {
     const rows = await db.select().from(compsIndexTable);
+    const withCompSet = bool(a.includeCompetitiveSet), withAlloc = bool(a.includePortfolioAllocations);
+    let leftOutCompSet = 0, leftOutAlloc = 0;
     const state = str(a.state)?.toUpperCase(), market = str(a.market)?.toLowerCase(), q = str(a.query)?.toLowerCase();
     const minPrice = num(a.minSalePrice), minCap = num(a.minCapRate), maxCap = num(a.maxCapRate);
     const since = isoDateOrNull(a.sinceDate);
@@ -977,7 +982,10 @@ const saleComps: McpToolDef = {
     const hit = r2.filter(c => {
       if (state && String(c.state ?? "").toUpperCase() !== state) return false;
       if (market && !String(c.market ?? "").toLowerCase().includes(market)) return false;
-      if (q && !`${c.propertyName ?? ""} ${c.address ?? ""} ${c.city ?? ""}`.toLowerCase().includes(q)) return false;
+      if (q && !`${c.name ?? ""} ${c.sourceDealName ?? ""} ${c.address ?? ""} ${c.market ?? ""}`.toLowerCase().includes(q)) return false;
+      const sale = isSaleComp(c as { salePrice?: number | null; saleDate?: string | null });
+      if (!sale && !withCompSet) { leftOutCompSet++; return false; }
+      if (isPortfolioAllocation(c as { name?: string | null; sourceNotes?: string | null }) && !withAlloc) { leftOutAlloc++; return false; }
       if (ownedOnly && c.isOwnTransaction !== true) return false;
       const price = num(c.salePrice);
       if (minPrice != null && (price == null || price < minPrice)) return false;
@@ -996,12 +1004,17 @@ const saleComps: McpToolDef = {
     return {
       matched: hit.length,
       sourceMix: hit.reduce<Record<string, number>>((m, c) => { const t = tier(c); m[t] = (m[t] ?? 0) + 1; return m; }, {}),
+      leftOut: { competitiveSet: leftOutCompSet, portfolioAllocations: leftOutAlloc,
+        why: "Competitive-set rows have no sale price or date (the OM's nearby centers, not trades); portfolio allocations are prices carved out of a multi-property deal. Both skew comp statistics — pass the include* flags only to look at them." },
       comps: hit.slice(0, limit).map(c => ({
-        propertyName: c.propertyName ?? null, city: c.city ?? null, state: c.state ?? null, market: c.market ?? null,
+        propertyName: c.name ?? c.sourceDealName ?? null, city: c.market ?? null, state: c.state ?? null, market: c.market ?? null,
         saleDate: c.saleDate ? String(c.saleDate).slice(0, 10) : null,
         salePrice: c.salePrice ?? null, sf: c.sf ?? null, pricePerSf: c.pricePerSf ?? null,
         capRate: c.capRate ?? null, occupancy: c.occupancy ?? null, anchor: c.anchor ?? null,
-        propertyType: c.propertyType ?? null, sourceTier: tier(c), sourceDealId: c.dealId ?? null,
+        propertyType: c.propertyType ?? null, sourceTier: tier(c),
+        sourceDealId: typeof c.sourceDealId === "string" && !c.sourceDealId.startsWith("__") ? c.sourceDealId : null,
+        isCompetitiveSet: !isSaleComp(c as { salePrice?: number | null; saleDate?: string | null }) || undefined,
+        isPortfolioAllocation: isPortfolioAllocation(c as { name?: string | null; sourceNotes?: string | null }) || undefined,
       })),
       useCompBenchmarkInstead:
         "For a verdict on what a specific deal should trade at, call comp_benchmark with its " +

@@ -1101,6 +1101,9 @@ export interface Deal {
   // Transaction fields (user-entered)
   txnPurchasePrice?: number | null;
   txnSeller?: string | null;
+  // "Portfolio (allocated price)" when this trade was one piece of a multi-property
+  // deal — its price/cap is an allocation and is kept out of comp averages.
+  txnPortfolio?: "Single asset" | "Portfolio (allocated price)" | null;
   txnLoiDate?: string | null;
   txnCloseDate?: string | null;
   txnSalePrice?: number | null;

@@ -3696,6 +3696,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               {tf({ label:"Purchase Price", field:"txnPurchasePrice", placeholder:"e.g. 42,500,000", prefix:"$" })}
               {tf({ label:"Acquired From (Seller)", field:"txnSeller", placeholder:"Seller entity / name" })}
               {tf({ label:"Close Date", field:"txnCloseDate", placeholder:"YYYY-MM-DD" })}
+              {tf({ label:"Single asset or portfolio?", field:"txnPortfolio", options:["Single asset","Portfolio (allocated price)"] })}
               {owned && <>
                 {tf({ label:"Going-In Cap Rate", field:"acqCapRate", placeholder:"e.g. 6.50", suffix:"%" })}
                 {tf({ label:"NOI at Close", field:"acqNOIAtClose", placeholder:"actual in-place NOI", prefix:"$" })}

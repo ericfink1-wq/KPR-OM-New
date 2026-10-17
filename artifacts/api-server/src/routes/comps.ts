@@ -2,7 +2,8 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { compsIndexTable, dealsTable } from "@workspace/db";
 import { and, or, eq, gte, lte, ilike, sql, asc, desc } from "drizzle-orm";
-import { rebuildAllComps, rebuildCompsIndex } from "../lib/compsIndex";
+import { rebuildAllComps, rebuildCompsIndex, comparableToIndexRow, syncOwnTransactionComps } from "../lib/compsIndex";
+import { normalizeComp, isSaleComp, isPortfolioAllocation } from "../lib/compNormalize";
 
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { toFloat, toStr } from "../lib/parsers";
@@ -15,7 +16,8 @@ const router = Router();
 router.get("/comps/stats", requireAuth, async (req, res) => {
   try {
     const [result] = await db.select({
-      count:         sql<number>`count(*)::int`,
+      count:         sql<number>`count(*) filter (where sale_price > 0 or sale_date is not null)::int`,
+      competitiveSet: sql<number>`count(*) filter (where not (coalesce(sale_price, 0) > 0 or sale_date is not null))::int`,
       totalVolume:   sql<number>`coalesce(sum(sale_price) filter (where sale_price > 0), 0)`,
       statesCovered: sql<number>`count(distinct state) filter (where state is not null)::int`,
       earliestSale:  sql<string | null>`min(sale_date) filter (where sale_date is not null)`,
@@ -109,7 +111,9 @@ router.get("/comps", requireAuth, async (req, res) => {
       ? await db.select().from(compsIndexTable).where(and(...conditions)).orderBy(...orderBy)
       : await db.select().from(compsIndexTable).orderBy(...orderBy);
 
-    res.json(rows);
+    // Every row says whether it is a real SALE (else it is the OM's competitive set,
+    // kept out of comp statistics) and whether its price is a portfolio allocation.
+    res.json(rows.map(r => ({ ...r, isCompetitiveSet: !isSaleComp(r), isPortfolioAllocation: isPortfolioAllocation(r) })));
   } catch (err) {
     req.log.error({ err }, "Failed to query comps index");
     res.status(500).json({ error: "Failed to query comps index" });
@@ -135,7 +139,7 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
       parsedPsf = Math.round(parsedPrice / parsedSf);
     }
 
-    const [inserted] = await db.insert(compsIndexTable).values({
+    const [inserted] = await db.insert(compsIndexTable).values(normalizeComp({
       sourceDealId: "__manual__",
       sourceDealName: null,
       sourceDealMarket: toStr(market),
@@ -156,7 +160,7 @@ router.post("/comps/manual", requireAuth, async (req, res) => {
       sourceNotes: toStr(sourceNotes),
       buyer: toStr(buyer),
       seller: toStr(seller),
-    }).returning();
+    }).row).returning();
 
     res.json(inserted);
   } catch (err) {
@@ -200,7 +204,7 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
         parsedPsf = Math.round(salePrice / parsedSf);
       }
       const market = toStr(item.market);
-      candidates.push({
+      candidates.push(normalizeComp({
         // Bulk/file imports are tagged "__upload__" so the UI can show an UPLOAD
         // badge distinct from a hand-typed MANUAL comp. Still isManual:true — same
         // broker/manual quality tier for benchmarking, and still editable/deletable.
@@ -213,7 +217,7 @@ router.post("/comps/manual/bulk", requireAuth, async (req, res) => {
         isManual: true,
         anchor: toStr(item.anchor), propertyType: toStr(item.propertyType), sourceNotes: toStr(item.sourceNotes),
         buyer: toStr(item.buyer), seller: toStr(item.seller),
-      });
+      } as CompInsert).row);
     }
 
     // Smart import: never replace/delete. Skip any comp that duplicates one
@@ -299,7 +303,7 @@ router.put("/comps/manual/:id", requireAuth, async (req, res) => {
     }
 
     const [updated] = await db.update(compsIndexTable)
-      .set({
+      .set(normalizeComp({
         name: toStr(name),
         address: toStr(address),
         market: toStr(market),
@@ -317,7 +321,7 @@ router.put("/comps/manual/:id", requireAuth, async (req, res) => {
         buyer: toStr(buyer),
         seller: toStr(seller),
         updatedAt: new Date(),
-      })
+      }).row)
       .where(eq(compsIndexTable.id, id))
       .returning();
 
@@ -357,15 +361,12 @@ function findComparableIndex(
   comps: Array<Record<string, unknown>>,
   row: typeof compsIndexTable.$inferSelect,
 ): number {
-  const rowSig = compSignature({
-    name: row.name, address: row.address, salePrice: row.salePrice, capRate: row.capRate,
-    pricePerSf: row.pricePerSf, sf: row.sf, occupancy: row.occupancy, saleDateRaw: row.saleDateRaw,
-  });
-  return comps.findIndex(c => compSignature({
-    name: c.name, address: c.address, salePrice: toFloat(c.salePrice), capRate: toFloat(c.capRate),
-    pricePerSf: toFloat(c.pricePerSF), sf: toFloat(c.sf), occupancy: toFloat(c.occupancy),
-    saleDateRaw: c.saleDate,
-  }) === rowSig);
+  const sigOf = (r: { name: unknown; address: unknown; salePrice: number | null; capRate: number | null; pricePerSf: number | null; sf: number | null; occupancy: number | null; saleDateRaw: unknown }) =>
+    compSignature(r);
+  const rowSig = sigOf(row);
+  // Run each source entry through the SAME conversion + cleaning the index uses, so a
+  // cleaned row (occupancy 1 → 100, derived price/SF) still finds its source entry.
+  return comps.findIndex(c => sigOf(comparableToIndexRow(c, row.sourceDealId, null, null)) === rowSig);
 }
 
 type OmCompCtx =
@@ -501,6 +502,7 @@ router.post("/comps/benchmark", requireAuth, async (req, res) => {
       starCompIds: Array.isArray(body.starCompIds) ? body.starCompIds : [],
       occupancy: body.occupancy ?? null, anchor: body.anchor ?? null, anchorIG: !!body.anchorIG,
       manual: body.manual ?? null,
+      includePortfolioAllocations: !!(body as { includePortfolioAllocations?: boolean }).includePortfolioAllocations,
     });
     res.json(result);
   } catch (err) {
@@ -555,6 +557,60 @@ router.post("/comps/retag-manual-to-upload", requireAdmin, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to retag manual comps");
     res.status(500).json({ error: "Failed to retag manual comps" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/comps/cleanup — one-time (re-runnable) comp-data cleanup (Eric's
+// 10/16/26 review, items 5–9). DRY RUN by default: reports every change it WOULD
+// make; { apply: true } writes them. Rows are updated IN PLACE (ids kept, so starred
+// / excluded comps on deal pages survive). KPR's own trades are re-derived from their
+// deals (real city instead of the MSA, cap from our own NOI ÷ price, portfolio tag).
+// Never deletes a row: a non-sale is only CLASSIFIED as competitive set.
+// ---------------------------------------------------------------------------
+router.post("/comps/cleanup", requireAdmin, async (req, res) => {
+  try {
+    const apply = (req.body as { apply?: boolean } | undefined)?.apply === true;
+    const rows = await db.select().from(compsIndexTable);
+    const changes: Array<{ id: number; name: string | null; source: string; changes: string[] }> = [];
+    const tally: Record<string, number> = {};
+    const bump = (why: string) => {
+      const k = why.startsWith("occupancy") ? "occupancy fraction → %" : why.startsWith("price/SF") ? "price/SF recomputed"
+        : why.startsWith("state") ? "state fixed" : why.startsWith("city") ? "number removed from City"
+        : why.startsWith("anchor") ? "anchor field fixed" : why.startsWith("type") ? "type field fixed"
+        : why.includes("cleaned") ? "typo / spacing" : "other";
+      tally[k] = (tally[k] ?? 0) + 1;
+    };
+    for (const r of rows) {
+      if (r.isOwnTransaction) continue;                      // re-derived from the deal below
+      const { row, changes: ch } = normalizeComp(r);
+      if (!ch.length) continue;
+      ch.forEach(bump);
+      changes.push({ id: r.id, name: r.name || r.sourceDealName, source: r.isManual ? "broker/manual" : "OM", changes: ch });
+      if (apply) {
+        await db.update(compsIndexTable).set({
+          name: row.name, address: row.address, market: row.market, state: row.state,
+          pricePerSf: row.pricePerSf, occupancy: row.occupancy, anchor: row.anchor,
+          propertyType: row.propertyType, sourceNotes: row.sourceNotes, updatedAt: new Date(),
+        }).where(eq(compsIndexTable.id, r.id));
+      }
+    }
+    // KPR's own trades: re-derive from each Owned/Sold deal.
+    const ownDealIds = [...new Set(rows.filter(r => r.isOwnTransaction).map(r => r.sourceDealId))];
+    const ownDeals = await db.select().from(dealsTable).where(sql`${dealsTable.data}->>'status' in ('Owned','Sold')`);
+    if (apply) for (const d of ownDeals) await syncOwnTransactionComps(d.id, d.data as Record<string, unknown>);
+    const after = apply ? await db.select().from(compsIndexTable) : rows;
+    res.json({
+      ok: true, applied: apply,
+      rowsChanged: changes.length, tally,
+      ownTradesRederived: apply ? ownDeals.length : 0, ownTradeRows: ownDealIds.length,
+      competitiveSet: after.filter(r => !isSaleComp(r)).length,
+      portfolioAllocations: after.filter(r => isPortfolioAllocation(r)).length,
+      examples: changes.slice(0, 60),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Comp cleanup failed");
+    res.status(500).json({ error: "Comp cleanup failed" });
   }
 });
 

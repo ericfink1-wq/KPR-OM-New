@@ -48,6 +48,25 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-comps-cleanup-admin",
+    date: "2026-10-17",
+    category: "new",
+    title: "One-click comp data cleanup",
+    detail:
+      "A '🧹 Clean up comp data' button on the Comps page first shows what it would fix (occupancy stored as a decimal, wrong price per SF, numbers in the City column, strategy words in Anchor, anchor names in Type, typos), then asks before writing anything. It also rebuilds KPR's own trades from their deals. Nothing is deleted.",
+    where: "Comps page, next to the Sales / Competitive set switch",
+    adminOnly: true,
+  },
+  {
+    id: "2026-10-17-comps-quality",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Cleaner sale comps, and only real sales in the averages",
+    detail:
+      "Comps now always calculate price per SF as price ÷ SF and show occupancy as a percent. Values typed into the wrong column (a number in City, 'Value-Add' in Anchor, an anchor name in Type) are moved or cleared, and known typos are fixed. Rows with no sale price and no sale date are the OMs' nearby competing centers, not sales, so they now sit under their own 'Competitive set' tab and never count in comp stats. Prices carved out of a portfolio purchase (like the Cedar portfolio's 14–17% caps) are left out of averages by default; untick 'Leave out portfolio allocations' to see them. On a deal's Transaction tab you can mark a trade as 'Single asset' or 'Portfolio (allocated price)'. KPR's own trades show the real city instead of the metro area, and a missing cap is filled from our own NOI ÷ price.",
+    where: "Comps page; deal page → Transaction tab",
+  },
+  {
     id: "2026-10-17-upload-duplicates",
     date: "2026-10-17",
     category: "improved",

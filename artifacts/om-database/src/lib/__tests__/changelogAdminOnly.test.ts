@@ -20,6 +20,8 @@ describe("What's new hides admin-only features from non-admins", () => {
   it("the unread count a non-admin gets excludes admin-only entries", () => {
     const all = entriesSince("2026-10-13T00:00:00Z", NOW, true).length;
     const member = entriesSince("2026-10-13T00:00:00Z", NOW, false).length;
-    expect(all - member).toBe(1);
+    const adminInWindow = entriesSince("2026-10-13T00:00:00Z", NOW, true).filter(e => e.adminOnly).length;
+    expect(adminInWindow).toBeGreaterThanOrEqual(1);
+    expect(all - member).toBe(adminInWindow);
   });
 });

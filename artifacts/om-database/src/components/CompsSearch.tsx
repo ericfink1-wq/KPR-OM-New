@@ -38,6 +38,10 @@ interface CompRow {
   sourceNotes: string | null;
   buyer: string | null;
   seller: string | null;
+  /** No sale price and no sale date — the OM's competitive set, not a sale. */
+  isCompetitiveSet?: boolean;
+  /** One piece of a portfolio trade (allocated price) — skews averages. */
+  isPortfolioAllocation?: boolean;
 }
 
 type SortKey =
@@ -550,7 +554,7 @@ function AddCompModal({
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
-export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) => void }) {
+export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id: string) => void; isAdmin?: boolean }) {
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   // The server returns every matching comp; ordering happens here so people can
@@ -580,6 +584,17 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
   const [pendingImport, setPendingImport] = useState<unknown[] | null>(null);
   const [editRow, setEditRow] = useState<CompRow | null>(null);
   const [showDupsOnly, setShowDupsOnly] = useState(false);
+  // Sales vs the OM competitive-set rows (no price, no date), which never count in stats.
+  const [compView, setCompView] = useState<"sales" | "competitive">("sales");
+  // Portfolio trades / allocated prices skew averages — left out unless asked (default on).
+  const [hideAllocations, setHideAllocations] = useState<boolean>(() => {
+    try { return localStorage.getItem("comps-hide-allocations") !== "0"; } catch { return true; }
+  });
+  const toggleAllocations = (v: boolean) => {
+    setHideAllocations(v);
+    try { localStorage.setItem("comps-hide-allocations", v ? "1" : "0"); } catch { /* ignore */ }
+  };
+  const [cleanup, setCleanup] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   const importRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Clear any pending debounced fetch on unmount so it can't fire setState after
@@ -791,9 +806,15 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
     [rows]
   );
 
+  const competitiveCount = useMemo(() => rows.filter(r => r.isCompetitiveSet).length, [rows]);
+  const allocationCount = useMemo(() => rows.filter(r => !r.isCompetitiveSet && r.isPortfolioAllocation).length, [rows]);
+
   const displayRows = useMemo(() => {
     const stateSet = selectedStates.length ? new Set(selectedStates) : null;
-    const stateFilter = (r: CompRow) => !stateSet || stateSet.has((r.state || "").trim().toUpperCase());
+    const inView = (r: CompRow) => compView === "competitive"
+      ? !!r.isCompetitiveSet
+      : !r.isCompetitiveSet && !(hideAllocations && r.isPortfolioAllocation);
+    const stateFilter = (r: CompRow) => inView(r) && (!stateSet || stateSet.has((r.state || "").trim().toUpperCase()));
     if (!showDupsOnly) return rows.filter(stateFilter).sort(chainComparator<CompRow>(msort.levels, compAscending,
       (a, b) => (b.id - a.id), (k, r) => compValue(r, k) == null));
     const tierOf = (r: CompRow) => r.isOwnTransaction ? 2 : r.isManual ? 1 : 0;
@@ -804,7 +825,24 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
         if (ca !== cb) return ca - cb;
         return tierOf(b) - tierOf(a);
       });
-  }, [rows, dupMap, showDupsOnly, selectedStates, msort.levels]);
+  }, [rows, dupMap, showDupsOnly, selectedStates, msort.levels, compView, hideAllocations]);
+
+  const runCleanup = async () => {
+    setCleanup({ busy: true, msg: "Checking…" });
+    try {
+      const dry = await fetch("/api/comps/cleanup", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).then(r => r.json());
+      if (!dry?.ok) throw new Error(dry?.error || "Cleanup check failed");
+      const lines = Object.entries(dry.tally as Record<string, number>).map(([k, n]) => `• ${k}: ${n}`).join("\n");
+      const ok = window.confirm(`Comp cleanup would fix ${dry.rowsChanged} row${dry.rowsChanged === 1 ? "" : "s"}:\n${lines || "• nothing to fix"}\n\nIt also re-derives KPR's own trades from their deals (real city, cap from our NOI ÷ price, portfolio tag). Nothing is deleted. Apply?`);
+      if (!ok) { setCleanup({ busy: false, msg: null }); return; }
+      const done = await fetch("/api/comps/cleanup", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apply: true }) }).then(r => r.json());
+      if (!done?.ok) throw new Error(done?.error || "Cleanup failed");
+      setCleanup({ busy: false, msg: `✓ Fixed ${done.rowsChanged} rows, re-derived ${done.ownTradesRederived} KPR trades · ${done.competitiveSet} competitive-set rows · ${done.portfolioAllocations} portfolio allocations` });
+      fetch_(filters, sort);
+    } catch (e) {
+      setCleanup({ busy: false, msg: `⚠ ${e instanceof Error ? e.message : "Cleanup failed"}` });
+    }
+  };
 
   // Tile stats — derived from displayRows minus hidden rows (client-side, filter-aware)
   const activeTileStats = useMemo(() => {
@@ -1006,6 +1044,33 @@ export default function CompsSearch({ onOpenDeal }: { onOpenDeal?: (id: string) 
             + Add Comp
           </button>
         </div>
+      </div>
+
+      {/* Sales vs competitive set · portfolio allocations · admin cleanup */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 14 }}>
+        <div style={{ display: "inline-flex", border: "1px solid #e1d9c8", borderRadius: 8, overflow: "hidden" }}>
+          {([["sales", `Sales (${rows.length - competitiveCount})`], ["competitive", `Competitive set (${competitiveCount})`]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setCompView(k)}
+              title={k === "competitive" ? "Nearby centers the OMs listed with no sale price or date. Kept for reference, never counted in comp stats." : "Actual trades — the rows that count."}
+              style={{ background: compView === k ? "#26281f" : "#fff", color: compView === k ? "#fff" : "#5f5a50", border: "none", padding: "8px 12px", minHeight: 34, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {compView === "sales" && (
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#5f5a50", cursor: "pointer", minHeight: 34 }}
+            title="A price allocated out of a portfolio purchase (e.g. the Cedar portfolio) isn't a market trade — its cap and $/SF skew averages.">
+            <input type="checkbox" checked={hideAllocations} onChange={e => toggleAllocations(e.target.checked)} style={{ width: 16, height: 16 }} />
+            Leave out portfolio allocations ({allocationCount})
+          </label>
+        )}
+        {isAdmin && (
+          <button onClick={runCleanup} disabled={cleanup.busy}
+            style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#4f4a40", padding: "8px 12px", minHeight: 34, borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: cleanup.busy ? "wait" : "pointer", fontFamily: "'Inter',sans-serif" }}>
+            🧹 Clean up comp data
+          </button>
+        )}
+        {cleanup.msg && <span style={{ fontSize: 11.5, color: cleanup.msg.startsWith("⚠") ? "#c0392b" : "#3d7a1f" }}>{cleanup.msg}</span>}
       </div>
 
       {/* Stats banner — client-computed from active (filtered + visible) rows */}

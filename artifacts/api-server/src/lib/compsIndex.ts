@@ -3,6 +3,8 @@ import { compsIndexTable, dealsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { parseLeaseDate } from "./tenantIndex";
 import { toFloat, toStr } from "./parsers";
+import { normalizeComp, PORTFOLIO_NOTE } from "./compNormalize";
+import { sql, ne } from "drizzle-orm";
 
 // Normalize a cap rate that may have been ingested as a fraction (0.065) to
 // percent (6.5), mirroring the occupancy fraction guard. Without this a comp
@@ -48,7 +50,10 @@ export async function syncOwnTransactionComps(
     const status      = toStr(data.status);
     const propertyName = toStr(data.propertyName);
     const address     = toStr(data.address);
-    const market      = toStr(data.market) ?? toStr(data.state);
+    // The City column shows `market`. For KPR's own trades use the real city, not
+    // the MSA (Pompano Beach was showing as "Miami", Blue Bell as "Philadelphia").
+    const city        = toStr(data.city);
+    const market      = city ?? toStr(data.market) ?? toStr(data.state);
     const sf          = toFloat(data.totalSF);
     // Occupancy stored as a fraction (1.0 = 100%) → scale to percent (matches the
     // client-side normalizeOccupancy guard).
@@ -64,6 +69,40 @@ export async function syncOwnTransactionComps(
       .filter((n): n is string => n !== null);
     const anchor = anchorNames.length > 0 ? anchorNames.join(", ") : null;
 
+    // Bought as part of a PORTFOLIO (another KPR deal closed the same day from the same
+    // seller — the Cedar purchase): the price is an allocation, not a market trade, so
+    // its cap (The Point 16.6%, Academy 14.7%) must not skew averages. Tagged in the notes.
+    const portfolioSaid = toStr(data.txnPortfolio);
+    let portfolioAcq = !!portfolioSaid && /portfolio/i.test(portfolioSaid);
+    const sellerRaw = toStr(data.txnSeller), closeRaw = toStr(data.txnCloseDate);
+    if (!portfolioSaid && sellerRaw && closeRaw) {   // "Single asset" said explicitly → trust it
+      const [hit] = await db.select({ n: sql<number>`count(*)::int` }).from(dealsTable).where(and(
+        ne(dealsTable.id, dealId),
+        sql`lower(${dealsTable.data}->>'txnSeller') = lower(${sellerRaw})`,
+        sql`${dealsTable.data}->>'txnCloseDate' = ${closeRaw}`,
+        sql`${dealsTable.data}->>'trashedAt' is null`,
+      ));
+      portfolioAcq = (hit?.n ?? 0) > 0;
+    }
+    // Same test for a portfolio SALE (the Asana 10-pack): same buyer, same closing day.
+    let portfolioDisp = !!portfolioSaid && /portfolio/i.test(portfolioSaid);
+    const buyerRaw = toStr(data.txnBuyer), saleRaw = toStr(data.txnSaleDate);
+    if (!portfolioSaid && status === "Sold" && buyerRaw && saleRaw) {
+      const [hit] = await db.select({ n: sql<number>`count(*)::int` }).from(dealsTable).where(and(
+        ne(dealsTable.id, dealId),
+        sql`lower(${dealsTable.data}->>'txnBuyer') = lower(${buyerRaw})`,
+        sql`${dealsTable.data}->>'txnSaleDate' = ${saleRaw}`,
+        sql`${dealsTable.data}->>'trashedAt' is null`,
+      ));
+      portfolioDisp = (hit?.n ?? 0) > 0;
+    }
+    // Cap from KPR's own records when no cap was typed: NOI at close ÷ price, else the
+    // deal's in-place NOI ÷ price. Labelled as derived in the notes.
+    const derivedCap = (noi: unknown, price: number): number | null => {
+      const n = toFloat(noi);
+      return n && n > 0 && price > 0 ? Math.round((n / price) * 10000) / 100 : null;
+    };
+
     // ── ACQUISITION ──
     // Only a CLOSED deal (Owned or Sold) is a real KPR transaction comp. A deal
     // still Under Contract may have a purchase price + close date entered, but it
@@ -78,11 +117,16 @@ export async function syncOwnTransactionComps(
       const acqSalePrice = toFloat(data.txnPurchasePrice);
       const acqSaleDate  = parseSaleDate(data.txnCloseDate);
       if (acqSalePrice && acqSalePrice > 0 && acqSaleDate) {
-        const acqCapRate = normCapRate(data.acqCapRate) ?? normCapRate(data.capRate);
+        const statedCap  = normCapRate(data.acqCapRate) ?? normCapRate(data.capRate);
+        const acqDerived = statedCap == null ? (derivedCap(data.acqNOIAtClose, acqSalePrice) ?? derivedCap(data.noi, acqSalePrice)) : null;
+        const acqCapRate = statedCap ?? acqDerived;
         const acqPsf     = sf && sf > 0 ? Math.round(acqSalePrice / sf) : toFloat(data.pricePerSF);
         const seller     = toStr(data.txnSeller);
         const dealState = toStr(data.state);
-        await db.insert(compsIndexTable).values({
+        const notes = ["KPR acquisition" + (seller ? `, seller: ${seller}` : ""),
+          acqDerived != null ? "cap derived: NOI ÷ price" : null,
+          portfolioAcq ? PORTFOLIO_NOTE : null].filter(Boolean).join(" · ");
+        await db.insert(compsIndexTable).values(normalizeComp({
           sourceDealId: dealId, sourceDealName: propertyName, sourceDealMarket: market,
           name: propertyName, address, market, state: dealState,
           saleDateRaw: toStr(data.txnCloseDate), saleDate: acqSaleDate,
@@ -90,8 +134,8 @@ export async function syncOwnTransactionComps(
           sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "acquisition",
           anchor, propertyType,
           seller, buyer: null,
-          sourceNotes: "KPR acquisition" + (seller ? `, seller: ${seller}` : ""),
-        });
+          sourceNotes: notes,
+        }).row);
       }
     }
 
@@ -106,11 +150,16 @@ export async function syncOwnTransactionComps(
       const dispSalePrice = toFloat(data.txnSalePrice);
       const dispSaleDate  = parseSaleDate(data.txnSaleDate);
       if (dispSalePrice && dispSalePrice > 0 && dispSaleDate) {
-        const dispCapRate = normCapRate(data.dispExitCap);
+        const statedCap   = normCapRate(data.dispExitCap);
+        const dispDerived = statedCap == null ? derivedCap(data.noi, dispSalePrice) : null;
+        const dispCapRate = statedCap ?? dispDerived;
         const dispPsf     = sf && sf > 0 ? Math.round(dispSalePrice / sf) : null;
         const buyer       = toStr(data.txnBuyer);
         const dealState = toStr(data.state);
-        await db.insert(compsIndexTable).values({
+        const notes = ["KPR disposition" + (buyer ? `, buyer: ${buyer}` : ""),
+          dispDerived != null ? "cap derived: NOI ÷ price" : null,
+          portfolioDisp ? PORTFOLIO_NOTE : null].filter(Boolean).join(" · ");
+        await db.insert(compsIndexTable).values(normalizeComp({
           sourceDealId: dealId, sourceDealName: propertyName, sourceDealMarket: market,
           name: propertyName, address, market, state: dealState,
           saleDateRaw: toStr(data.txnSaleDate), saleDate: dispSaleDate,
@@ -118,8 +167,8 @@ export async function syncOwnTransactionComps(
           sf, occupancy, isManual: false, isOwnTransaction: true, txnKind: "disposition",
           anchor, propertyType,
           buyer, seller: null,
-          sourceNotes: "KPR disposition" + (buyer ? `, buyer: ${buyer}` : ""),
-        });
+          sourceNotes: notes,
+        }).row);
       }
     }
   } catch {
@@ -150,31 +199,7 @@ export async function rebuildCompsIndex(
       const sourceDealName = typeof data.propertyName === "string" ? data.propertyName : null;
       const sourceDealMarket = typeof data.market === "string" ? data.market : null;
 
-      const rows = comps.map((c) => {
-        const saleDateRaw = typeof c.saleDate === "string" && c.saleDate ? c.saleDate : null;
-        const market =
-          (typeof c.market === "string" && c.market.trim() ? c.market.trim() : null)
-          ?? sourceDealMarket;
-        const compState =
-          (typeof c.state === "string" && c.state.trim() ? c.state.trim() : null)
-          ?? (market ? (/,\s*([A-Z]{2})\s*$/.exec(market)?.[1] ?? null) : null);
-        return {
-          sourceDealId: dealId,
-          sourceDealName,
-          sourceDealMarket,
-          name: typeof c.name === "string" && c.name.trim() ? c.name.trim() : null,
-          address: typeof c.address === "string" && c.address.trim() ? c.address.trim() : null,
-          market,
-          state: compState,
-          saleDateRaw,
-          saleDate: parseSaleDate(saleDateRaw),
-          salePrice: toFloat(c.salePrice),
-          capRate: normCapRate(c.capRate),
-          pricePerSf: toFloat(c.pricePerSF),
-          sf: toFloat(c.sf),
-          occupancy: toFloat(c.occupancy),
-        };
-      });
+      const rows = comps.map((c) => comparableToIndexRow(c, dealId, sourceDealName, sourceDealMarket));
 
       await db.insert(compsIndexTable).values(rows);
     }
@@ -184,6 +209,38 @@ export async function rebuildCompsIndex(
   } catch {
     // Non-fatal — mirror table; don't break deal writes
   }
+}
+
+
+// One OM comparableSales entry → the comps_index row it becomes (cleaned). Also used
+// to match an index row back to its source entry when a person edits/deletes it, so
+// both sides go through the same cleaning and still line up.
+export function comparableToIndexRow(
+  c: Record<string, unknown>, dealId: string, sourceDealName: string | null, sourceDealMarket: string | null,
+) {
+  const saleDateRaw = typeof c.saleDate === "string" && c.saleDate ? c.saleDate : null;
+  const market =
+    (typeof c.market === "string" && c.market.trim() ? c.market.trim() : null)
+    ?? sourceDealMarket;
+  const compState =
+    (typeof c.state === "string" && c.state.trim() ? c.state.trim() : null)
+    ?? (market ? (/,\s*([A-Z]{2})\s*$/.exec(market)?.[1] ?? null) : null);
+  return normalizeComp({
+    sourceDealId: dealId,
+    sourceDealName,
+    sourceDealMarket,
+    name: typeof c.name === "string" && c.name.trim() ? c.name.trim() : null,
+    address: typeof c.address === "string" && c.address.trim() ? c.address.trim() : null,
+    market,
+    state: compState,
+    saleDateRaw,
+    saleDate: parseSaleDate(saleDateRaw),
+    salePrice: toFloat(c.salePrice),
+    capRate: normCapRate(c.capRate),
+    pricePerSf: toFloat(c.pricePerSF),
+    sf: toFloat(c.sf),
+    occupancy: toFloat(c.occupancy),
+  }).row;
 }
 
 // ---------------------------------------------------------------------------
