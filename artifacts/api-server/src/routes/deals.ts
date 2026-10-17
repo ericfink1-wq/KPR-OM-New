@@ -279,7 +279,7 @@ router.get("/deals", requireAuth, async (req, res) => {
     const deals = rows
       .filter(r => !r.data._processing)
       .map(r => {
-        const { _processing: _p, _processingError: _e, ...rest } = r.data;
+        const { _processing: _p, _processingError: _e, _reanalyzeError: _r, ...rest } = r.data;
         const out = { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt } as Record<string, unknown>;
         out.propertyName = prettyName(out.propertyName);   // tidy ALL-CAPS names for display/exports (stored value unchanged)
         if (coverSet.has(r.id)) {
@@ -958,10 +958,10 @@ router.get("/deals/:id/status", requireAuth, async (req, res) => {
     const data = rows[0].data;
     if (data._processing) {
       res.json({ processing: true });
-    } else if (data._processingError) {
-      res.json({ processing: false, error: data._processingError });
+    } else if (data._processingError || data._reanalyzeError) {
+      res.json({ processing: false, error: data._processingError || data._reanalyzeError });
     } else {
-      const { _processing: _p, _processingError: _e, ...rest } = data;
+      const { _processing: _p, _processingError: _e, _reanalyzeError: _r, ...rest } = data;
       res.json({ processing: false, deal: { ...enrichTenants(rest, aliasMap), id } });
     }
   } catch (err) {
@@ -1115,13 +1115,17 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
       return;
     }
 
-    // Build processing snapshot preserving all user fields
+    // User fields survive the re-extraction (merged on top of the fresh read below).
     const userFields: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(existing)) {
       if (USER_PRESERVED_KEYS.has(k)) userFields[k] = v;
     }
+    // Keep the WHOLE deal in place while re-reading (10/17/26). This used to write only
+    // the user fields, so a failed re-analysis — or a restart mid-run — left the deal
+    // gutted (no roster, no NOI) and people re-uploaded it, creating duplicates.
+    const { _reanalyzeError: _re, ...existingClean } = existing;
     const processingData: Record<string, unknown> = {
-      ...userFields,
+      ...existingClean,
       _processing: true,
       fileName: existing.fileName || "Unknown",
     };
@@ -1165,8 +1169,9 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : "Re-analysis failed";
           req.log.error({ err, id }, "Re-analysis failed");
+          // Restore the deal exactly as it was; the error is reported to the status poll only.
           await db.update(dealsTable)
-            .set({ data: { ...userFields, _processing: false, _processingError: errorMsg, fileName: existing.fileName || "Unknown" }, updatedAt: new Date() })
+            .set({ data: { ...existingClean, _processing: false, _reanalyzeError: errorMsg }, updatedAt: new Date() })
             .where(eq(dealsTable.id, id));
         }
       })().catch(() => {});

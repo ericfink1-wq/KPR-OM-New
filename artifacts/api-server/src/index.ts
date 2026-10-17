@@ -14,6 +14,7 @@ import { ensureMcpKeysTable } from "./lib/mcpKeys";
 import { startSelfImproveScheduler } from "./lib/selfImprove";
 import { applyRecordedSales, addMissingProperties } from "./lib/recordedSales";
 import { purgePendingSaleData } from "./lib/pendingSale";
+import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
 
 const rawPort = process.env["PORT"];
 
@@ -38,6 +39,11 @@ const server = app.listen(port, (err) => {
   // mistake recurs across many deals. Best-effort; never blocks startup.
   startSelfImproveScheduler();
   // Fill in closing dates/buyers Eric confirmed for already-Sold owned centers (fill-blanks only).
+  // Failed-upload leftovers (the "duplicates" and blank-name records): merge into the
+  // live twin, then Trash (recoverable; snapshot first). Idempotent.
+  runFailedUploadCleanup()
+    .then(plan => { const acted = plan.filter(a => a.kind !== "keep").length; if (plan.length) logger.info({ acted, kept: plan.length - acted }, "Failed-upload cleanup done"); })
+    .catch((err) => logger.error({ err }, "runFailedUploadCleanup failed on startup"));
   purgePendingSaleData()
     .then(n => { if (n) logger.info({ n }, "Deleted stored pending-sale data"); })
     .catch((err) => logger.error({ err }, "purgePendingSaleData failed on startup"));

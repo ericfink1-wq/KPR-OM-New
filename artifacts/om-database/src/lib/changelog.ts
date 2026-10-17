@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-failed-upload-cleanup",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Duplicate and blank deals from failed uploads cleared",
+    detail:
+      "Uploads or re-analyses that failed used to leave a record behind in the Deal Library, often with a blank name or just the file name, so the same property seemed to appear several times. Each one was merged into the real deal: any notes or acquisition / debt terms the real deal was missing were copied over, then the leftover was moved to Trash, where it can be restored. A re-analysis that fails no longer wipes the deal's rent roll and numbers; it leaves the deal exactly as it was.",
+    where: "Deal Library; Trash",
+  },
+  {
     id: "2026-10-17-no-pending-sales",
     date: "2026-10-17",
     category: "improved",
