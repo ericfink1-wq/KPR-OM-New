@@ -392,6 +392,9 @@ function statusBadge(d: Deal): string {
 function CompareMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
   return <>{lines.map((line, i) => {
+    const hm = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (hm && (hm[1].length === 1 || hm[1].length >= 4)) return <div key={i} style={{ fontFamily: "'Fraunces',serif", fontSize: hm[1].length === 1 ? 17 : 14, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 3 }}>{inl(hm[2])}</div>;
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return <div key={i} style={{ height: 1, background: "#e7e0d2", margin: "8px 0" }} />;
     if (line.startsWith("### ")) return <div key={i} style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 3 }}>{inl(line.slice(4))}</div>;
     if (line.startsWith("## ")) return <div key={i} style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 3 }}>{inl(line.slice(3))}</div>;
     if (/^[-*] /.test(line)) return <div key={i} style={{ display: "flex", gap: 7, marginLeft: 2 }}><span style={{ color: "#c89a3e", flexShrink: 0 }}>›</span><span>{inl(line.slice(2))}</span></div>;

@@ -48,6 +48,33 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-fl-closing",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Florida closing costs: correct county range and title payer",
+    detail:
+      "Before an address is entered, Florida's deed tax now shows 0.70%–1.05% in total. Miami-Dade's 1.05% replaces the 0.70% state rate rather than adding to it, so the high end is no longer overstated. Who pays the owner's title policy now follows county custom: the buyer in Miami-Dade, Broward, Sarasota and Collier, the seller everywhere else. Picking a state with no address shows a neutral note instead of a red error, and the card no longer says 'Using the deal address' when there isn't one.",
+    where: "Closing Costs",
+  },
+  {
+    id: "2026-10-17-header-links",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Tidier header, shareable links, Escape closes windows",
+    detail:
+      "What's new, Tutorial, Claude access, Send feedback, Members, Backup, Change password, Security and Sign out now live in one menu (☰) at the top right, so the top bar no longer runs off the screen or slides under the logo. Today's Rates, House View and Upload sit next to the search bar. Every page now has its own web address, such as a deal page, Comps or Mark-to-Market. Refreshing keeps your place, the browser's Back button works, and you can copy the address to send someone a link to a deal. Escape now closes any open window, menu or drawer. Chat replies no longer show a stray '#' before headings. The floating feedback flag is gone; use ☰ → Send feedback.",
+    where: "Top bar; ☰ menu; every page",
+  },
+  {
+    id: "2026-10-17-phone-nav",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Phone layout: bottom tabs and a smaller header",
+    detail:
+      "On a phone, the main sections are now tabs along the bottom: Analyst, Deals, Comps, Analytics and More. Analytics opens a list of every analytics page, and More opens the menu, which also holds Upload, Today's Rates, House View and Closing Costs. The top bar is just the logo, a search button and the menu. The always-on question bar is replaced by one floating Ask button, so far more of the screen shows your data. Keyboard hints such as 'Ctrl+K' are hidden on touch screens.",
+    where: "iPhone / small screens",
+  },
+  {
     id: "2026-10-17-analytics-labels",
     date: "2026-10-17",
     category: "improved",

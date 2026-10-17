@@ -11,6 +11,7 @@ import ChangePassword from "./ChangePassword";
 import HouseViewModal from "./HouseViewModal";
 import { dedupeStoredAddress } from "../lib/utils";
 import { BUILD_ID, BUILD_TIME } from "../lib/constants";
+import { useIsMobile } from "../hooks/use-mobile";
 import { computeImportPlan, type ImportPlan } from "../lib/importDiff";
 import ImportDiffModal from "./ImportDiffModal";
 
@@ -22,7 +23,7 @@ const SEARCH_SHORTCUT_LABEL = IS_MAC ? "⌘K" : "Ctrl+K";
 
 // The two analytics menus, split back out into separate top-nav dropdowns
 // (Portfolio Analytics ▾ / Tenant Analytics ▾).
-const ANALYTICS_GROUPS: Record<"portfolio" | "tenant", [string, string][]> = {
+export const ANALYTICS_GROUPS: Record<"portfolio" | "tenant", [string, string][]> = {
   portfolio: [["Portfolio Overview", "portfolio-overview"], ["Lease Rollover", "lease-rollover"], ["Critical Dates", "critical-dates"], ["Co-Tenancy Cascade", "cotenancy-cascade"], ["Data Audit", "data-audit"], ["Learning", "learning"]],
   tenant: [["Tenant Analytics", "tenant-list"], ["Mark-to-Market", "mark-to-market"], ["Retailer Watchlist", "watchlist"], ["Tenant Name Audit", "tenant-audit"], ["Link Tenants", "link-tenants"]],
 };
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onWhatsNew, whatsNewCount = 0, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch }: Props) {
+  const isMobile = useIsMobile();
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
@@ -83,6 +85,15 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       setUploadFails(list.filter(u => u.status === "failed" && new Date(u.createdAt).getTime() > floor).length);
     }).catch(() => { /* non-fatal */ });
   }, [isAdmin]);
+  // The phone tab bar's "More" opens this same menu.
+  useEffect(() => {
+    const onOpen = () => {
+      if (backupTriggerRef.current) setBackupRect(backupTriggerRef.current.getBoundingClientRect());
+      setBackupMenu(true);
+    };
+    window.addEventListener("kpr:open-menu", onOpen);
+    return () => window.removeEventListener("kpr:open-menu", onOpen);
+  }, []);
   // Analytics nav dropdowns (Portfolio Analytics ▾ / Tenant Analytics ▾)
   const [analyticsMenu, setAnalyticsMenu] = useState<null | "portfolio" | "tenant">(null);
   const [analyticsRect, setAnalyticsRect] = useState<DOMRect | null>(null);
@@ -523,8 +534,9 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     background: isActive ? "#2a2c27" : "transparent",
     border: "none",
     color: isActive ? "#f6f2ea" : "#8a8579",
-    padding: "8px 17px",
+    padding: "8px 13px",
     borderRadius: 9,
+    whiteSpace: "nowrap" as const,
     cursor: "pointer" as const,
     fontSize: 13.5,
     fontWeight: isActive ? 600 : 500,
@@ -559,7 +571,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       boxShadow: "0 8px 28px -22px rgba(56,58,55,0.55)",
     }}>
       {/* Main row: logo + nav tabs + action buttons */}
-      <div style={{ display: "flex", alignItems: "center", height: 72, paddingLeft: 28, width: "100%", boxSizing: "border-box", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", height: isMobile ? 58 : 72, paddingLeft: isMobile ? 16 : 28, width: "100%", boxSizing: "border-box", minWidth: 0 }}>
       {/* Logo + wordmark — anchored, never scrolls */}
       <div style={{ display: "flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
         <img
@@ -578,7 +590,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: "#2a2c27", letterSpacing: "-0.01em" }}>KPR Centers</span>
         </div>
         <span className="deal-intel-label" style={{ fontSize: 9, color: "#958d80", letterSpacing: "0.22em", borderLeft: "1px solid #e3dccd", paddingLeft: 11, fontWeight: 600, textTransform: "uppercase" }}>Deal Intelligence</span>
-        <style>{`@media (max-width: 640px) { .deal-intel-label { display: none; } }`}</style>
+        <style>{`@media (max-width: 1180px) { .deal-intel-label { display: none; } }`}</style>
       </div>
 
       {/* Scrollable zone: tabs + action buttons — swipeable on mobile */}
@@ -588,8 +600,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         scrollbarWidth: "none" as React.CSSProperties["scrollbarWidth"],
         paddingLeft: 28,
       }}>
-        {/* Nav tabs */}
-        <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+        {/* Nav tabs — on phones the bottom tab bar replaces them */}
+        <div style={{ display: isMobile ? "none" : "flex", gap: 2, flexShrink: 0 }}>
           <button style={T(tab === "analyst")} onClick={() => onTab("analyst")}>Analyst</button>
           <button style={T(tab === "portfolio")} onClick={() => onTab("portfolio")}>
             Portfolio{active.length > 0 ? ` (${active.length})` : ""}
@@ -637,15 +649,111 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
         {/* Action buttons */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, paddingRight: 28 }}>
+        {/* Everything account/admin-ish lives in the avatar menu (right, never scrolls),
+            so the nav no longer overflows and slides under the logo (Eric, 10/16/26). */}
+        {membersOpen && <Members onClose={() => setMembersOpen(false)} />}
+        {mcpOpen && <McpAccess onClose={() => setMcpOpen(false)} isAdmin={isAdmin} />}
+        {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}
+        {twoFAOpen && <TwoFactorModal onClose={() => setTwoFAOpen(false)} />}
+        {restoreResult && (
+          <div onClick={() => setRestoreResult(null)} style={{ position: "fixed", top: 80, right: 16, zIndex: 9100, background: restoreResult.startsWith("Restore failed") ? "#fef2f2" : "#f0fdf4", border: `1px solid ${restoreResult.startsWith("Restore failed") ? "#fecaca" : "#bbf7d0"}`, borderRadius: 9, padding: "10px 14px", fontSize: 12, color: restoreResult.startsWith("Restore failed") ? "#b91c1c" : "#166534", boxShadow: "0 4px 16px rgba(56,58,55,0.12)", cursor: "pointer", maxWidth: 320 }}>
+            {restoreResult}
+          </div>
+        )}
+        </div>
+      </div>
+      {/* Avatar menu — anchored at the right, outside the scrolling zone */}
+      <div ref={backupTriggerRef} style={{ flexShrink: 0, padding: isMobile ? "0 14px 0 8px" : "0 20px 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
+        {isMobile && onOpenSearch && (
+          <button onClick={onOpenSearch} aria-label="Search deals and tenants"
+            style={{ width: 40, height: 40, borderRadius: "50%", background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#6dba43", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⌕</button>
+        )}
+        <button
+          aria-label={`Account menu${whatsNewCount + uploadFails > 0 ? ` — ${whatsNewCount + uploadFails} new` : ""}`}
+          title="Account, help and settings"
+          onClick={() => {
+            if (!backupMenu) {
+              if (backupTriggerRef.current) setBackupRect(backupTriggerRef.current.getBoundingClientRect());
+              if (isAdmin) apiListFeedback().then(list => setFeedbackUnresolved(list.filter(f => !f.resolved).length)).catch(() => {});
+            }
+            setBackupMenu(m => !m);
+          }}
+          disabled={restoreBusy}
+          style={{ position: "relative", width: 40, height: 40, borderRadius: "50%", background: "#2a2c27", color: "#f6f2ea", border: "none", cursor: restoreBusy ? "wait" : "pointer", fontSize: 15, fontWeight: 700, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {restoreBusy ? "…" : "☰"}
+          {whatsNewCount + uploadFails > 0 && (
+            <span aria-hidden="true" style={{ position: "absolute", top: -3, right: -3, minWidth: 17, height: 17, padding: "0 4px", boxSizing: "border-box", borderRadius: 9, background: uploadFails > 0 ? "#c0392b" : "#3f7a1f", color: "#fff", fontSize: 10, fontWeight: 700, lineHeight: "17px", textAlign: "center", boxShadow: "0 0 0 2px #faf7f0" }}>
+              {whatsNewCount + uploadFails > 9 ? "9+" : whatsNewCount + uploadFails}
+            </span>
+          )}
+        </button>
+      </div>
+      {backupMenu && backupRect && createPortal(
+        <>
+          <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
+          <div role="menu" style={{
+            position: "fixed", top: backupRect.bottom + 6, right: 12, zIndex: 9001,
+            background: "#fff", border: "1px solid #e6dfd0", borderRadius: 12,
+            boxShadow: "0 12px 36px rgba(56,58,55,0.18)", width: 280, maxWidth: "calc(100vw - 24px)",
+            maxHeight: `calc(100vh - ${Math.round(backupRect.bottom) + 18}px)`, overflowY: "auto",
+          }}>
+            {isMobile && <>
+              {menuBtn(() => { setBackupMenu(false); fileRef.current?.click(); }, "⬆ Upload files", "OMs, rent rolls, sales reports")}
+              {menuBtn(() => { setBackupMenu(false); setRatesOpen(true); }, "📈 Today's Rates", "Benchmark interest rates")}
+              {menuBtn(() => { setBackupMenu(false); setHouseViewOpen(true); }, "🧠 House View", "KPR's underwriting lens")}
+              {onClosingCalc && menuBtn(() => { setBackupMenu(false); onClosingCalc(); }, "Closing Costs", "Title, transfer & recording taxes")}
+              <div style={{ borderTop: "1px solid #f1eadc" }} />
+            </>}
+            {onWhatsNew && menuBtn(() => { setBackupMenu(false); onWhatsNew(); }, `✨ What's new${whatsNewCount > 0 ? ` (${whatsNewCount})` : ""}`, "Recent changes to the app")}
+            {onHelpOpen && menuBtn(() => { setBackupMenu(false); onHelpOpen(); }, "Tutorial", "How each part of the app works")}
+            {menuBtn(() => { setBackupMenu(false); setMcpOpen(true); }, "Claude access", "Connect Claude to this deal library")}
+            {menuBtn(() => { setBackupMenu(false); window.dispatchEvent(new Event("kpr:open-feedback")); }, "⚑ Send feedback", "Report a bug or share an idea")}
+            {isAdmin && <>
+              <div style={{ padding: "10px 14px 4px", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase", background: "#faf7f0", borderTop: "1px solid #f1eadc" }}>Admin</div>
+              {menuBtn(() => { setBackupMenu(false); setMembersOpen(true); setUploadFails(0); try { localStorage.setItem("uploadlog-last-view", String(Date.now())); } catch { /* ignore */ } }, `Members${uploadFails > 0 ? ` (${uploadFails} failed upload${uploadFails === 1 ? "" : "s"})` : ""}`, "Approve accounts, upload log")}
+              {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
+              {menuBtn(handleDealsOnlyBackup, "Deals only (.json, no images)", `Deal data only — a few MB, easy to share`)}
+              {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
+              {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals")}
+              {menuBtn(openSnapshotModal, "Restore a snapshot…", "Auto-saved before imports, deletes & restores")}
+              {menuBtn(handleCleanupAddresses, "Clean up addresses", "Trim duplicated city/state/zip off street fields")}
+              {menuBtn(openFeedbackInbox, `Feedback inbox${feedbackUnresolved ? ` (${feedbackUnresolved})` : ""}`, "Bug reports, ideas & comments")}
+            </>}
+            <div style={{ borderTop: "1px solid #f1eadc" }} />
+            {menuBtn(() => { setBackupMenu(false); setPwOpen(true); }, "Change password", "Update your sign-in password")}
+            {onLogout && menuBtn(() => { setBackupMenu(false); setTwoFAOpen(true); }, "🔒 Security", "Two-factor authentication")}
+            {onLogout && menuBtn(() => { setBackupMenu(false); onLogout(); }, "Sign out", "End this session", false)}
+            <div style={{ padding: "8px 14px 10px", borderTop: "1px solid #f1eadc" }}>
+              <span
+                title={BUILD_TIME ? `This is the code currently running. Built ${new Date(BUILD_TIME).toLocaleString()}. Tell Claude this id to confirm a fix is live.` : "development build"}
+                style={{ fontSize: 9, color: "#c3bbac", fontFamily: "'Inter',sans-serif", letterSpacing: "0.03em", alignSelf: "center", whiteSpace: "nowrap", cursor: "default" }}>
+                build {BUILD_ID}
+              </span>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+      </div>
+      {/* Search row — its own line under the nav. The primary feature, made prominent
+          without crowding the menu; full-width on phones, capped on wide screens. */}
+      <div className="kpr-header-row2" style={{ padding: "0 20px 11px 28px", width: "100%", boxSizing: "border-box", display: isMobile ? "none" : "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      {onOpenSearch && (
+          <button onClick={onOpenSearch} title={`Search deals & tenants (${SEARCH_SHORTCUT_LABEL})`}
+            style={{ display: "flex", alignItems: "center", gap: 9, flex: "1 1 320px", maxWidth: 620, background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#8a8170", padding: "9px 15px", borderRadius: 999, cursor: "text", fontSize: 13, fontWeight: 500, fontFamily: "'Inter',sans-serif", boxShadow: "inset 0 1px 2px rgba(56,58,55,0.04)" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#6dba43"; e.currentTarget.style.background = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#cdbf9f"; e.currentTarget.style.background = "#fbf9f4"; }}>
+            <span style={{ fontSize: 15, color: "#6dba43", fontWeight: 700, lineHeight: 1 }}>⌕</span>
+            <span style={{ flex: 1, textAlign: "left" }}>Search deals &amp; tenants…</span>
+            <span className="kpr-kbd-hint" style={{ fontSize: 10, fontWeight: 700, color: "#a89f8f", background: "#efe9dc", borderRadius: 4, padding: "2px 5px", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>{SEARCH_SHORTCUT_LABEL}</span>
+          </button>
+      )}
+        {/* Tools: rates, house view, upload — on the search row so the nav row never overflows */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexWrap: "wrap" }}>
         {queueLen > 0 && (
           <span style={{ fontSize: 11, color: "#d9890c", fontWeight: 600 }}>⏳ {queueLen} processing…</span>
         )}
 
-        {/* Hidden inputs */}
-        <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
-        <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFolder(e.target.files)} />
-        <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
-        <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
 
         {/* Global search moved to its own row below the nav (see search row). */}
 
@@ -654,14 +762,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#5c5047", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
           📈 Today's Rates
         </button>
-        {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} />}
 
         {/* House View — KPR's distilled underwriting lens (spans all deals) */}
         <button onClick={() => setHouseViewOpen(true)} title="House View — the underwriting lens learned from your deal takes, applied to every analysis"
           style={{ background: "#fff", border: "1px solid #c2e0c9", color: "#1f7a43", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
           🧠 House View
         </button>
-        <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
 
         {/* Upload OMs split button */}
         <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
@@ -719,152 +825,15 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           document.body
         )}
 
-        {/* Members (account approvals) — admin only */}
-        {isAdmin && (
-          <div style={{ position: "relative", display: "inline-flex" }}>
-            <button onClick={() => { setMembersOpen(true); setUploadFails(0); try { localStorage.setItem("uploadlog-last-view", String(Date.now())); } catch { /* ignore */ } }}
-              style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
-              Members
-            </button>
-            {uploadFails > 0 && (
-              <span title={`${uploadFails} new failed upload${uploadFails === 1 ? "" : "s"} since you last viewed the log`}
-                style={{ position: "absolute", top: -6, right: -6, minWidth: 17, height: 17, padding: "0 4px", boxSizing: "border-box", background: "#c0392b", color: "#fff", borderRadius: 9, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif", border: "2px solid #faf7f0" }}>
-                {uploadFails}
-              </span>
-            )}
-          </div>
-        )}
-        {membersOpen && <Members onClose={() => setMembersOpen(false)} />}
-
-        {/* Claude access (MCP keys). Available to EVERY signed-in member: keys are tied to
-            your own account and you mint your own, so this is not an admin handout. Admins
-            additionally get oversight of everyone's keys inside the panel. */}
-        {(
-          <button onClick={() => setMcpOpen(true)} title="Connect Claude to this deal library — create or switch off your own access key"
-            style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-            Claude access
-          </button>
-        )}
-        {mcpOpen && <McpAccess onClose={() => setMcpOpen(false)} isAdmin={isAdmin} />}
-
-        {/* Backup menu — admin only */}
-        {isAdmin && <div ref={backupTriggerRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => {
-              if (!backupMenu) {
-                if (backupTriggerRef.current) setBackupRect(backupTriggerRef.current.getBoundingClientRect());
-                apiListFeedback()
-                  .then(list => setFeedbackUnresolved(list.filter(f => !f.resolved).length))
-                  .catch(() => {});
-              }
-              setBackupMenu(m => !m);
-            }}
-            disabled={restoreBusy}
-            style={{ background: "#fff", border: "1px solid #ddd4c2", color: "#52554e", padding: "8px 13px", borderRadius: 8, cursor: restoreBusy ? "default" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, fontFamily: "'Inter',sans-serif", opacity: restoreBusy ? 0.7 : 1 }}>
-            {restoreBusy ? "Restoring…" : "Backup"} <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
-          </button>
-          {restoreResult && (
-            <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41, background: restoreResult.startsWith("Restore failed") ? "#fef2f2" : "#f0fdf4", border: `1px solid ${restoreResult.startsWith("Restore failed") ? "#fecaca" : "#bbf7d0"}`, borderRadius: 9, padding: "10px 14px", fontSize: 12, color: restoreResult.startsWith("Restore failed") ? "#b91c1c" : "#166534", whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(56,58,55,0.12)" }}>
-              {restoreResult}
-            </div>
-          )}
-        </div>}
-
-        {isAdmin && backupMenu && backupRect && createPortal(
-          <>
-            <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
-            <div style={{
-              position: "fixed",
-              top: backupRect.bottom + 6,
-              right: window.innerWidth - backupRect.right,
-              zIndex: 9001,
-              background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
-              boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 260, overflow: "hidden"
-            }}>
-              {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
-              {menuBtn(handleDealsOnlyBackup, "Deals only (.json, no images)", `Deal data only — a few MB, easy to share · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
-              {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}
-              {menuBtn(() => { setBackupMenu(false); setRestoreResult(null); restoreRef.current?.click(); }, "Restore from backup (.json)", "Merge by deal id — never deletes existing deals")}
-              {menuBtn(openSnapshotModal, "Restore a snapshot…", "Auto-saved before imports, deletes & restores")}
-              {menuBtn(handleCleanupAddresses, "Clean up addresses", "Trim duplicated city/state/zip off street fields")}
-              {menuBtn(openFeedbackInbox, `Feedback${feedbackUnresolved ? ` (${feedbackUnresolved})` : ""}`, "Bug reports, ideas & comments", false)}
-            </div>
-          </>,
-          document.body
-        )}
-
-        {onWhatsNew && (
-          <button
-            type="button"
-            onClick={onWhatsNew}
-            aria-label={whatsNewCount > 0 ? `What's new — ${whatsNewCount} unread` : "What's new"}
-            title="What's changed in the app recently"
-            style={{ position:"relative", background:"#fff", border:"1px solid #d9d2c4", color:"#5c5047", padding:"8px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap", flexShrink:0 }}
-          >
-            ✨ What's new
-            {whatsNewCount > 0 && (
-              <span
-                aria-hidden="true"
-                style={{ position:"absolute", top:-5, right:-5, minWidth:17, height:17, padding:"0 4px", borderRadius:9, background:"#3f7a1f", color:"#fff", fontSize:10, fontWeight:700, lineHeight:"17px", textAlign:"center", boxShadow:"0 0 0 2px #f6f2ea" }}
-              >{whatsNewCount > 9 ? "9+" : whatsNewCount}</span>
-            )}
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={onHelpOpen}
-          aria-label="Open tutorial"
-          style={{ background:"#4f7aac", border:"none", color:"#fff", padding:"7px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", flexShrink:0 }}
-          onMouseEnter={e => (e.currentTarget.style.background = "#3f6595")}
-          onMouseLeave={e => (e.currentTarget.style.background = "#4f7aac")}
-          onFocus={e => (e.currentTarget.style.outline = "2px solid #4f7aac", e.currentTarget.style.outlineOffset = "2px")}
-          onBlur={e => (e.currentTarget.style.outline = "none")}
-        >Tutorial</button>
-
-        <span style={{ width: 1, height: 24, background: "#e3dccd" }} />
-
-        <button onClick={() => setPwOpen(true)}
-          style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "6px 11px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", letterSpacing: "0.04em" }}>
-          Change password
-        </button>
-        {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}
-
-        {onLogout && (
-          <button onClick={() => setTwoFAOpen(true)} title="Two-factor authentication"
-            style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "6px 11px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", letterSpacing: "0.04em" }}>
-            🔒 Security
-          </button>
-        )}
-        {twoFAOpen && <TwoFactorModal onClose={() => setTwoFAOpen(false)} />}
-        {onLogout && (
-          <button onClick={onLogout}
-            style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "6px 11px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", letterSpacing: "0.04em" }}>
-            Sign out
-          </button>
-        )}
-        <span
-          title={BUILD_TIME ? `This is the code currently running. Built ${new Date(BUILD_TIME).toLocaleString()}. Tell Claude this id to confirm a fix is live.` : "development build"}
-          style={{ fontSize: 9, color: "#c3bbac", fontFamily: "'Inter',sans-serif", letterSpacing: "0.03em", alignSelf: "center", whiteSpace: "nowrap", cursor: "default" }}>
-          build {BUILD_ID}
-        </span>
         </div>
       </div>
-      </div>
-      {/* Search row — its own line under the nav. The primary feature, made prominent
-          without crowding the menu; full-width on phones, capped on wide screens. */}
-      {onOpenSearch && (
-        <div style={{ padding: "0 28px 11px", width: "100%", boxSizing: "border-box" }}>
-          <button onClick={onOpenSearch} title={`Search deals & tenants (${SEARCH_SHORTCUT_LABEL})`}
-            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", maxWidth: 620, background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#8a8170", padding: "9px 15px", borderRadius: 999, cursor: "text", fontSize: 13, fontWeight: 500, fontFamily: "'Inter',sans-serif", boxShadow: "inset 0 1px 2px rgba(56,58,55,0.04)" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#6dba43"; e.currentTarget.style.background = "#fff"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#cdbf9f"; e.currentTarget.style.background = "#fbf9f4"; }}>
-            <span style={{ fontSize: 15, color: "#6dba43", fontWeight: 700, lineHeight: 1 }}>⌕</span>
-            <span style={{ flex: 1, textAlign: "left" }}>Search deals &amp; tenants…</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#a89f8f", background: "#efe9dc", borderRadius: 4, padding: "2px 5px", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>{SEARCH_SHORTCUT_LABEL}</span>
-          </button>
-        </div>
-      )}
+        {/* Hidden inputs */}
+        <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
+        <input ref={folderRef} type="file" multiple style={{ display: "none" }} onChange={e => handleFolder(e.target.files)} />
+        <input ref={restoreRef} type="file" accept=".json" style={{ display: "none" }} onChange={handleRestore} />
+        <input ref={jsonRef} type="file" accept=".json" multiple style={{ display: "none" }} onChange={handleJsonFiles} />
+        {ratesOpen && <RatesPanel onClose={() => setRatesOpen(false)} />}
+        <HouseViewModal open={houseViewOpen} onClose={() => setHouseViewOpen(false)} isAdmin={isAdmin} />
     </div>
 
     {importPlan && (

@@ -8,6 +8,10 @@ import { ensureUploadAllowed } from "./lib/uploadAuth";
 import Header from "./components/Header";
 import FeedbackWidget from "./components/FeedbackWidget";
 import AnalystBar from "./components/AnalystBar";
+import MobileTabBar, { MOBILE_TAB_BAR_H } from "./components/MobileTabBar";
+import { useIsMobile } from "./hooks/use-mobile";
+import { routeToPath, pathToRoute } from "./lib/routes";
+import { installEscapeToClose } from "./lib/escapeClose";
 import UploadQueue from "./components/UploadQueue";
 import DealGrid from "./components/DealGrid";
 import AnalystChat from "./components/AnalystChat";
@@ -131,13 +135,26 @@ function AppInner() {
   const dealsRef = useRef<Deal[]>([]);
   dealsRef.current = deals;
   const getLatestDeal = useCallback((id: string) => dealsRef.current.find(d => d.id === id), []);
-  const [tab, setTab] = useState<TabId>("analyst");
+  // The screen to open on comes from the address bar, so a refresh or a shared link
+  // (/deals/<id>, /comps, /analytics/mtm…) lands where it points.
+  const [initialRoute] = useState(() => { try { return pathToRoute(window.location.pathname, window.location.search); } catch { return null; } });
+  const [tab, setTab] = useState<TabId>(() => (initialRoute?.tab as TabId) ?? "analyst");
   // Data Audit → "Merge these": the duplicate group to open in the library's Merge dialog.
   const [mergePreset, setMergePreset] = useState<string[] | null>(null);
   // Right-side AI chat drawer (opened from the ask bar / "Ask about this property").
   const [chatOpen, setChatOpen] = useState(false);
-  const [viewStack, setViewStack] = useState<View[]>([{ type: "list" }]);
+  const [viewStack, setViewStack] = useState<View[]>(() => {
+    const v = initialRoute?.view as View | undefined;
+    return v && v.type !== "list" ? [{ type: "list" }, v] : [{ type: "list" }];
+  });
+  // Set by popstate so the URL-sync effect doesn't push a new entry for a Back/Forward.
+  useEffect(() => installEscapeToClose(), []);
+  const fromPopRef = useRef(false);
+  // Set by navigate(): it already pushed the entry, so the sync effect only names it.
+  const navPushedRef = useRef(false);
   const view = viewStack[viewStack.length - 1];
+  const viewStackRef = useRef(viewStack);
+  viewStackRef.current = viewStack;
 
   // History-backed navigation. Every navigate() pushes a REAL browser-history entry
   // carrying the full view stack, so the browser Back/Forward buttons and the in-app
@@ -146,7 +163,7 @@ function AppInner() {
   const navigate = useCallback((v: View) => {
     setViewStack(prev => {
       const next = [...prev, v];
-      try { window.history.pushState({ kprStack: next }, ""); } catch { /* ignore */ }
+      try { window.history.pushState({ kprStack: next }, ""); navPushedRef.current = true; } catch { /* ignore */ }
       return next;
     });
   }, []);
@@ -163,12 +180,19 @@ function AppInner() {
   }, []);
 
   useEffect(() => {
-    // Seed the current (root) entry's state so a Back to it restores the list.
-    try { window.history.replaceState({ kprStack: [{ type: "list" }] }, ""); } catch { /* ignore */ }
+    // Seed the current entry's state so a Back to it restores this screen.
+    try { window.history.replaceState({ ...(window.history.state || {}), kprStack: viewStackRef.current }, ""); } catch { /* ignore */ }
     const onPop = (e: PopStateEvent) => {
-      const s = e.state && Array.isArray((e.state as { kprStack?: unknown }).kprStack)
-        ? (e.state as { kprStack: View[] }).kprStack : null;
-      setViewStack(s && s.length ? s : [{ type: "list" }]);
+      const st = (e.state || {}) as { kprStack?: View[]; tab?: TabId; av?: string };
+      const s = Array.isArray(st.kprStack) ? st.kprStack : null;
+      fromPopRef.current = true;
+      // Entries made before routing existed carry no tab — read it from the address.
+      const fromUrl = st.tab ? null : pathToRoute(window.location.pathname, window.location.search);
+      const nextTab = (st.tab ?? fromUrl?.tab) as TabId | undefined;
+      if (nextTab) setTab(nextTab);
+      const nextAv = st.av ?? fromUrl?.analyticsView;
+      if (nextAv) setAnalyticsView(nextAv as Parameters<typeof setAnalyticsView>[0]);
+      setViewStack(s && s.length ? s : fromUrl?.view && fromUrl.view.type !== "list" ? [{ type: "list" }, fromUrl.view as View] : [{ type: "list" }]);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -226,7 +250,24 @@ function AppInner() {
   const [closingCalcOpen, setClosingCalcOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning">("tenant");
+  const isPhone = useIsMobile();
+  const [analyticsView, setAnalyticsView] = useState<"portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning">(() => initialRoute?.analyticsView ?? "tenant");
+  // Keep the address bar in step with the screen. navigate() already pushed an entry
+  // (just name it); a tab or analytics-page change pushes its own so Back returns to
+  // it; a Back/Forward (popstate) changes nothing. Skipped until signed in, so the
+  // ?reset= / ?verify= email links on "/" stay intact.
+  useEffect(() => {
+    if (auth !== "authenticated") return;
+    const path = routeToPath({ tab, analyticsView, view });
+    const here = window.location.pathname + window.location.search;
+    const state = { ...(window.history.state || {}), kprStack: viewStack, tab, av: analyticsView };
+    try {
+      if (fromPopRef.current) { fromPopRef.current = false; window.history.replaceState(state, ""); return; }
+      if (navPushedRef.current) { navPushedRef.current = false; window.history.replaceState(state, "", path); return; }
+      if (path !== here) window.history.pushState(state, "", path);
+      else window.history.replaceState(state, "");
+    } catch { /* ignore */ }
+  }, [auth, tab, analyticsView, view, viewStack]);
   // When the Data Audit view is opened from a breakdown chip, pre-filter it to that check.
   const [auditFilterKey, setAuditFilterKey] = useState<string | null>(null);
 
@@ -772,8 +813,19 @@ function AppInner() {
 
       </Suspense>
 
-      {tab !== "analyst" && view.type !== "detail" && (
+      {/* Phones: no always-on ask bar (with the header it ate ~40% of an iPhone screen).
+          A single floating Ask button opens the chat; the deal page has its own. */}
+      {!isPhone && tab !== "analyst" && view.type !== "detail" && (
         <AnalystBar onAsk={handleQuery} />
+      )}
+      {isPhone && tab !== "analyst" && view.type !== "detail" && !chatOpen && (
+        <button onClick={() => setChatOpen(true)} aria-label="Ask the KPR Analyst"
+          style={{ position: "fixed", right: 16, bottom: MOBILE_TAB_BAR_H + 14, zIndex: 160, height: 48, padding: "0 18px", borderRadius: 24, background: "#6dba43", color: "#1f2b16", border: "none", boxShadow: "0 8px 24px -6px rgba(56,58,55,0.5)", fontSize: 14, fontWeight: 700, fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
+          ✦ Ask
+        </button>
+      )}
+      {isPhone && (
+        <MobileTabBar tab={tab} onTab={t => { setTab(t as TabId); resetToList(); }} onAnalyticsNav={onAnalyticsNav} />
       )}
 
       {/* AI chat drawer — right side, ~1/3 of the screen on desktop, full on mobile */}

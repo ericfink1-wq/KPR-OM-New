@@ -187,3 +187,6 @@ body { background: #f1ece1; font-family: 'Inter', -apple-system, sans-serif; -we
 
 /* Clickable chart rows (lease waterfall): subtle hover instead of link styling. */
 .kpr-row-hover:hover { background: #f7f3ea; }
+
+/* Keyboard shortcut hints mean nothing on a touch screen (iPhone / iPad). */
+@media (hover: none) and (pointer: coarse) { .kpr-kbd-hint { display: none !important; } }

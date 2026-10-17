@@ -482,6 +482,11 @@ export const CLOSING_COSTS_BY_STATE: Record<string, JurisdictionRates> = {
   FL: {
     state: "FL", stateName: "Florida", ratesAsOf: "2026-09-24",
     titleInsuranceRate: 0.00575, titleInsuranceParty: "seller",
+    titlePartyByCounty: {
+      counties: ["Miami-Dade County", "Broward County", "Sarasota County", "Collier County"], party: "buyer",
+      source: "Florida closing custom (not statute): the buyer customarily pays the owner's policy in Miami-Dade, Broward, Sarasota and Collier; the seller pays elsewhere. Negotiable in the contract.",
+      asOf: "2026-10-17",
+    },
     titleSchedule: TITLE_FL,
     transferTaxes: [
       { id: "fl-deed-stamps",

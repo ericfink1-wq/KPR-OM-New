@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { apiSubmitFeedback } from "../lib/api";
 
 interface Props {
@@ -64,6 +64,14 @@ export default function FeedbackWidget({ currentPage, liftAboveBar, liftAbove }:
 
   const close = () => setPhase("idle");
 
+  // Opened from the account menu ("⚑ Send feedback") — the floating flag button used
+  // to sit on top of the stat cards and the deal page's Summary tab (Eric, 10/16/26).
+  useEffect(() => {
+    const onOpen = () => open();
+    window.addEventListener("kpr:open-feedback", onOpen);
+    return () => window.removeEventListener("kpr:open-feedback", onOpen);
+  }, []);
+
   const addFiles = async (files: FileList | File[] | null | undefined) => {
     if (!files) return;
     const imgs = Array.from(files).filter(f => f.type.startsWith("image/"));
@@ -103,6 +111,7 @@ export default function FeedbackWidget({ currentPage, liftAboveBar, liftAbove }:
     }
   };
 
+  if (phase === "idle") return null;
   return (
     <div style={{ position: "fixed", bottom: bottomOffset, left: 24, zIndex: 9500, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, transition: "bottom 0.2s ease" }}>
       {(phase === "open" || phase === "submitting" || phase === "error") && (
@@ -279,33 +288,6 @@ export default function FeedbackWidget({ currentPage, liftAboveBar, liftAbove }:
         </div>
       )}
 
-      {/* Trigger button */}
-      <button
-        onClick={phase === "idle" || phase === "done" ? open : close}
-        title="Send feedback"
-        aria-label="Send feedback"
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: "50%",
-          background: "#383a37",
-          border: "none",
-          boxShadow: "0 4px 16px rgba(56,58,55,0.28)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          transition: "background 0.15s",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = "#52554e")}
-        onMouseLeave={e => (e.currentTarget.style.background = "#383a37")}
-      >
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f6f2ea" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-          <path d="M4 22v-7"/>
-        </svg>
-      </button>
     </div>
   );
 }

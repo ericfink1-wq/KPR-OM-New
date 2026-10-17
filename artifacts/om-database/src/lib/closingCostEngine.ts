@@ -130,6 +130,8 @@ export interface LocalResolution {
   confirmedNone: Array<"county" | "municipal">;
   unverified: UnverifiedLayer[];
   where: string;
+  /** The property's county when known (geocoded or picked) — drives county customs. */
+  county?: string | null;
 }
 
 function hasCountyLayer(j: JurisdictionRates): boolean {
@@ -252,6 +254,7 @@ export function resolveLocal(
   else if (geo?.place || geo?.municipality) whereParts.push((geo.place || geo.municipality)!);
   if (countyName) whereParts.push(countyName);
   out.where = whereParts.join(", ") || "an unresolved location";
+  out.county = countyName;
   out.status = out.unverified.length ? "unverified" : "verified";
   return out;
 }
@@ -316,21 +319,32 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
   // Title.
   const sched = j.titleSchedule;
   const titleAmt = sched ? resolveTitlePremium(sched, price) : price * j.titleInsuranceRate;
-  const ts = splitOf(titleAmt, j.titleInsuranceParty);
+  // Who pays the owner's policy can follow county custom (FL). Unknown county → the
+  // statewide default, with the exceptions named in the note.
+  const tpc = j.titlePartyByCounty;
+  const countyKnown = local.county ?? null;
+  const countyCustom = tpc && countyKnown && tpc.counties.some(c => sameCounty(c, countyKnown));
+  const titleParty = countyCustom ? tpc!.party : j.titleInsuranceParty;
+  const titleCustomNote = tpc
+    ? countyCustom
+      ? ` Payer: ${tpc.party} — customary in ${countyKnown}.`
+      : ` Payer: ${j.titleInsuranceParty} statewide${countyKnown ? "" : `; ${tpc.party} by custom in ${tpc.counties.map(c => c.replace(/ County$/, "")).join(", ")}`}.`
+    : "";
+  const ts = splitOf(titleAmt, titleParty);
   lines.push(sched
     ? {
         name: "Title Insurance (Owner's Policy)", scope: "title",
         rate: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
         rateMin: sched.brackets[sched.brackets.length - 1].per1000 / 1000,
         rateMax: Math.max(...sched.brackets.map((b) => b.per1000)) / 1000,
-        base: "price", party: j.titleInsuranceParty, verify: !sched.promulgated,
+        base: "price", party: titleParty, verify: !sched.promulgated,
         source: sched.source, asOf: sched.asOf,
         amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
-        notes: `${sched.promulgated ? "Promulgated/filed-bureau schedule" : "REPRESENTATIVE schedule (not a filed per-state rate) — confirm an underwriter quote"}. Rate shown is the sliding range.${sched.minPremium ? ` Min premium $${sched.minPremium.toLocaleString()}.` : ""}`,
+        notes: `${sched.promulgated ? "Promulgated/filed-bureau schedule" : "REPRESENTATIVE schedule (not a filed per-state rate) — confirm an underwriter quote"}. Rate shown is the sliding range.${sched.minPremium ? ` Min premium $${sched.minPremium.toLocaleString()}.` : ""}${titleCustomNote}`,
       }
     : {
         name: "Title Insurance (Owner's Policy)", scope: "title",
-        rate: j.titleInsuranceRate, base: "price", party: j.titleInsuranceParty, verify: true,
+        rate: j.titleInsuranceRate, base: "price", party: titleParty, verify: true,
         source: "National-average placeholder — no schedule configured", asOf: j.ratesAsOf,
         amount: titleAmt, buyer: ts.buyer, seller: ts.seller,
       });
@@ -368,7 +382,16 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
       candidates: [hint.minRate, hint.maxRate].map((r, i) => ({ id: `range-${i}`, kind: u0.layer, name: hint.note,
         lines: [{ name: hint.note, rate: r, base: "price" as const, party: hint.party, source: j.localLevelSource.source, asOf: j.localLevelSource.asOf }] })),
     } : u0;
-    const costs = u.candidates.map((e) => entryCost(e, price, loan, opts));
+    // A candidate that REPLACES a state line (Miami-Dade's 1.05% in place of FL's 0.70%)
+    // only adds the DIFFERENCE — the state line is already in the total.
+    const stateById = new Map(j.transferTaxes.filter((t) => t.id && inForce(t, closingDate)).map((t) => [t.id!, t]));
+    const replacedCost = (e: LocalEntry) => (e.replaces ?? []).reduce((acc, id) => {
+      const t = stateById.get(id);
+      if (!t || replaced.has(id)) return acc;
+      const sp = splitOf(lineAmount(t, price, loan), t.party);
+      return { buyer: acc.buyer + sp.buyer, seller: acc.seller + sp.seller, rate: acc.rate + (t.base === "price" ? t.rate : 0) };
+    }, { buyer: 0, seller: 0, rate: 0 });
+    const costs = u.candidates.map((e) => { const c = entryCost(e, price, loan, opts), r = replacedCost(e); return { buyer: c.buyer - r.buyer, seller: c.seller - r.seller }; });
     if (u.canBeNone || !costs.length) costs.push({ buyer: 0, seller: 0 });
     const r = {
       buyerMin: Math.min(...costs.map((c) => c.buyer)), buyerMax: Math.max(...costs.map((c) => c.buyer)),
@@ -376,7 +399,8 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
     };
     // Rate range across the candidates (nominal top rates of each candidate's price-based lines).
     const nominal = u.candidates.map((e) => e.lines.filter((l) => l.base === "price" && !l.residentialOnly && !l.entitySaleOnly && inForce(l, closingDate))
-      .reduce((s, l) => s + (l.tiers ? Math.max(...l.tiers.map((t) => t.rate)) : l.marginalTiers ? Math.max(...l.marginalTiers.map((t) => t.rate)) : l.rate), 0));
+      .reduce((s, l) => s + (l.tiers ? Math.max(...l.tiers.map((t) => t.rate)) : l.marginalTiers ? Math.max(...l.marginalTiers.map((t) => t.rate)) : l.rate), 0) - replacedCost(e).rate);
+    const replacesState = u.candidates.some((e) => (e.replaces ?? []).length);
     if (u.canBeNone || !nominal.length) nominal.push(0);
     const layerName = u.layer === "county" ? "County" : j.localLevel === "municipality+school" ? "Municipal + school district" : "Municipal";
     lines.push({
@@ -390,7 +414,7 @@ export function calculateClosingCosts(j: JurisdictionRates, price: number, loan:
         ? `Local rate not verified: ${u.reason}. Shown from $0 up to the highest rate it could be. Confirm the exact local rate with title.`
         : hint && u !== u0
         ? `Local rate not verified: ${u.reason}. ${hint.note}. Confirm the exact local rate with title.`
-        : `Local rate not verified: ${u.reason}. Shown as the range across ${u.candidates.length} ${j.stateName} ${u.layer === "county" ? "counties" : "localities"} in our table${u.canBeNone ? " (or none)" : ""}. Confirm the exact local rate with title.`,
+        : `Local rate not verified: ${u.reason}. Shown as the range across ${u.candidates.length} ${j.stateName} ${u.layer === "county" ? "counties" : "localities"} in our table${u.canBeNone ? " (or none)" : ""}${replacesState ? " — counted as the extra over the state rate, since a local rate there REPLACES it" : ""}. Confirm the exact local rate with title.`,
     });
   }
 

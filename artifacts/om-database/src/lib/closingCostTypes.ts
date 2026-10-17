@@ -115,6 +115,9 @@ export interface JurisdictionRates {
   ratesAsOf: string;
   titleInsuranceRate: number;
   titleInsuranceParty: Party;
+  /** Counties where custom flips who pays the owner's policy (FL: buyer in Miami-Dade,
+   *  Broward, Sarasota, Collier). Applied once the property's county is known. */
+  titlePartyByCounty?: { counties: string[]; party: Party } & SourceRef;
   titleSchedule?: TitleSchedule;
   transferTaxes: TaxLineItem[];      // STATE-level lines (apply everywhere in the state)
   mortgageRecordingTax?: TaxLineItem;

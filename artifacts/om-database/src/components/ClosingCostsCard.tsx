@@ -46,6 +46,8 @@ export default function ClosingCostsCard({ deal }: Props) {
     () => [deal.address, deal.city, deal.state].map((s) => (s || "").trim()).filter(Boolean).join(", "),
     [deal.address, deal.city, deal.state],
   );
+  // A state picked with no street address is the NORMAL starting point, not an error.
+  const hasDealStreet = !!(deal.address || "").trim();
 
   // Live address autocomplete (free OSM geocoder via /api/closing/suggest).
   const [addrOverride, setAddrOverride] = useState<{ address: string; state: string } | null>(null);
@@ -189,8 +191,15 @@ export default function ClosingCostsCard({ deal }: Props) {
         </div>
       )}
 
+      {/* No address yet: a neutral note — the range is expected until a locality is known. */}
+      {hasRange && !addrOverride && !hasDealStreet && local.basis !== "manual" && (
+        <div style={{ fontSize: 12, color: "#5c5047", background: "#f7f4ee", border: "1px solid #e3dccd", borderRadius: 8, padding: "10px 12px", marginBottom: 14, lineHeight: 1.5 }}>
+          <b>ⓘ No address yet.</b> {jurisdiction.stateName} sets local transfer tax at the <b>{LOCAL_LEVEL_LABEL[jurisdiction.localLevel]}</b> level, so the local line shows the possible <b>range</b> until you type the property address or pick the {jurisdiction.localLevel === "county" ? "county" : "town"} below.
+        </div>
+      )}
+
       {/* RED: the local rate for this exact locality is not verified. Never a silent default. */}
-      {hasRange && (
+      {hasRange && (addrOverride || hasDealStreet || local.basis === "manual") && (
         <div style={{ fontSize: 12, color: "#8a1f14", background: "#fde9e6", border: "2px solid #d9695a", borderRadius: 8, padding: "11px 13px", marginBottom: 14, lineHeight: 1.5 }}>
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, display: "flex", alignItems: "flex-start", gap: 6 }}>
             <span style={{ fontSize: 15, lineHeight: 1.2 }}>⛔</span>
@@ -225,7 +234,7 @@ export default function ClosingCostsCard({ deal }: Props) {
             onChange={(e) => onAddrType(e.target.value)}
             onFocus={() => { if (suggests.length) setSugOpen(true); }}
             onBlur={() => setTimeout(() => setSugOpen(false), 120)}
-            placeholder={dealAddress || "Type an address to estimate…"}
+            placeholder={hasDealStreet ? dealAddress : "Type an address to estimate…"}
             autoComplete="off" style={inputStyle}
           />
         </label>
@@ -245,7 +254,7 @@ export default function ClosingCostsCard({ deal }: Props) {
         <div style={{ fontSize: 10, color: "#a69e91", marginTop: 4 }}>
           {addrOverride
             ? <>Estimating a custom address ({effectiveState || "—"}). <span onClick={clearAddr} style={{ color: "#6dba43", cursor: "pointer", fontWeight: 600 }}>↺ use deal address</span></>
-            : (dealAddress ? "Using the deal address — type above to estimate a different one." : "Type an address to set the state & locality.")}
+            : (hasDealStreet ? "Using the deal address — type above to estimate a different one." : "Type an address to set the state & locality.")}
         </div>
       </div>
 
@@ -279,10 +288,12 @@ export default function ClosingCostsCard({ deal }: Props) {
       {jurisdiction.localLevel !== "none" ? (
         <div style={{ marginBottom: 12 }}>
           <div style={{ ...labelStyle, marginBottom: 4 }}>Local taxing jurisdiction · set by {LOCAL_LEVEL_LABEL[jurisdiction.localLevel]}</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: local.status === "unverified" ? "#fdf1ef" : "#fafaf8", border: `1px solid ${local.status === "unverified" ? "#e9b3aa" : "#e3dccd"}`, borderRadius: 6, padding: "8px 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: local.status === "unverified" && (hasDealStreet || addrOverride) ? "#fdf1ef" : "#fafaf8", border: `1px solid ${local.status === "unverified" && (hasDealStreet || addrOverride) ? "#e9b3aa" : "#e3dccd"}`, borderRadius: 6, padding: "8px 10px" }}>
             <span style={{ fontSize: 12.5, color: "#383a37", lineHeight: 1.4 }}>
               {local.status === "verified" && <span style={{ color: "#3f7a1f", marginRight: 5 }}>✓</span>}
-              {local.status === "unverified" && <span style={{ color: "#b3261e", marginRight: 5 }}>⛔</span>}
+              {local.status === "unverified" && (hasDealStreet || addrOverride || local.basis === "manual"
+                ? <span style={{ color: "#b3261e", marginRight: 5 }}>⛔</span>
+                : <span style={{ color: "#8a8170", marginRight: 5 }}>ⓘ</span>)}
               {appliedLocalNames.length ? appliedLocalNames.join(" + ") : (local.status === "unverified" ? `Not resolved — ${whereLabel}` : local.where)}
               {local.confirmedNone.length > 0 && <span style={{ color: "#7d766a" }}> · no {local.confirmedNone.join("/")} tax here</span>}
             </span>

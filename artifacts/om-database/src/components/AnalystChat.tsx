@@ -477,7 +477,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             </button>
           )}
         </div>
-        <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6 }}>Enter to send · Shift+Enter for new line · Powered by Claude</div>
+        <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6 }}><span className="kpr-kbd-hint">Enter to send · Shift+Enter for new line · </span>Powered by Claude</div>
         </div>
       </div>
     </div>
@@ -496,7 +496,14 @@ function MarkdownText({ text }: { text: string }) {
   const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
   lines.forEach((line, i) => {
-    if (line.startsWith("### ")) {
+    // Any heading level renders as a heading — a stray "# Title" used to show its "#".
+    const hm = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (hm && (hm[1].length === 1 || hm[1].length >= 4)) {
+      const big = hm[1].length === 1;
+      elements.push(<div key={i} style={{ fontFamily: "'Fraunces', serif", fontSize: big ? 18 : 14.5, fontWeight: big ? 500 : 600, color: "#26281f", marginTop: big ? 6 : 10, marginBottom: 4 }}>{inlineFmt(hm[2])}</div>);
+    } else if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      elements.push(<div key={i} style={{ height: 1, background: "#e7e0d2", margin: "10px 0" }} />);
+    } else if (line.startsWith("### ")) {
       elements.push(<div key={i} style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 4 }}>{inlineFmt(line.slice(4))}</div>);
     } else if (line.startsWith("## ")) {
       elements.push(<div key={i} style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 500, color: "#26281f", marginTop: 14, marginBottom: 4 }}>{inlineFmt(line.slice(3))}</div>);

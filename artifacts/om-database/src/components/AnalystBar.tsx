@@ -100,7 +100,7 @@ export default function AnalystBar({ onAsk }: Props) {
           >↑</button>
         </div>
         <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6, fontFamily: "'Inter',sans-serif" }}>
-          Enter to send · Shift+Enter for new line · Powered by Claude
+          <span className="kpr-kbd-hint">Enter to send · Shift+Enter for new line · </span>Powered by Claude
         </div>
       </div>
     </div>

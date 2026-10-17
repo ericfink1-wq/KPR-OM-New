@@ -58,6 +58,7 @@ function fmtRent(n: number): string {
 
 function barColor(year: string): string {
   if (year === "Unknown") return "#c9c2b8";
+  if (year === "Expired") return "#a39a8c";
   const y = parseInt(year);
   if (y <= NOW_YEAR) return "#b0a898";
   const delta = y - NOW_YEAR;

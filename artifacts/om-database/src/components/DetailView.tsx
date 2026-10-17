@@ -5022,7 +5022,10 @@ function _pcMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
   const els: React.ReactNode[] = [];
   lines.forEach((line, i) => {
-    if (line.startsWith("### ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:13, color:"#26281f", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(line.slice(4))}</div>);
+    const hm = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (hm && (hm[1].length === 1 || hm[1].length >= 4)) els.push(<div key={i} style={{ fontWeight:600, fontSize: hm[1].length === 1 ? 15 : 13, color:"#26281f", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(hm[2])}</div>);
+    else if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) els.push(<div key={i} style={{ height:1, background:"#e7e0d2", margin:"8px 0" }}/>);
+    else if (line.startsWith("### ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:13, color:"#26281f", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(line.slice(4))}</div>);
     else if (line.startsWith("## ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:14, color:"#26281f", marginTop:10, marginBottom:2 }}>{_pcInlineFmt(line.slice(3))}</div>);
     else if (/^[-*] /.test(line)) els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#6dba43", flexShrink:0 }}>›</span><span>{_pcInlineFmt(line.slice(2))}</span></div>);
     else if (/^\d+\. /.test(line)) { const [num2,...rest] = line.split(". "); els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#a89f8f", flexShrink:0 }}>{num2}.</span><span>{_pcInlineFmt(rest.join(". "))}</span></div>); }
@@ -5154,11 +5157,13 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
   ];
 
   const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+  // On phones the bottom tab bar sits under this button — lift it clear.
+  const phone = typeof window !== "undefined" && window.innerWidth < 768;
   return (
     <>
       <button onClick={() => setOpen(o => !o)} title="Ask AI about this property"
-        style={{ position:"fixed", bottom:24, right:24, zIndex:160, height:52, padding:"0 20px", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif" }}>
-        ✦ Ask about this property
+        style={{ position:"fixed", bottom: phone ? 74 : 24, right: phone ? 16 : 24, zIndex:160, height: phone ? 48 : 52, padding:"0 20px", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif" }}>
+        {phone ? "✦ Ask" : "✦ Ask about this property"}
       </button>
       {open && (
         <>
