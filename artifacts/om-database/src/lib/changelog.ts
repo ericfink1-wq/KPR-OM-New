@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-home-restyle",
+    date: "2026-10-17",
+    category: "improved",
+    title: "A cleaner home page in KPR's colors",
+    detail: "The home page now uses the KPR palette and fonts. Your owned portfolio sits in a dark band at the top with larger, easier-to-read figures, and the anchors are listed by name. Pipeline cards show the deal photo, a status tag (gold for Under Contract), the AI grade, and NOI, square footage and occupancy. Deals that need attention show a data-confidence ring. Suggested questions appear as cards, and the question box is a floating bar. It works on desktop and phone.",
+    where: "Analyst (home page)",
+  },
+  {
     id: "2026-10-17-dtcc-swap-curve",
     date: "2026-10-17",
     category: "new",

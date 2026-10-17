@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Upload, LineChart, Brain, Sparkles, Flag, Lock } from "lucide-react";
 import type { Deal, ImageBundle } from "../lib/idb";
 import { apiImportDeal, apiSaveDeal, apiLoadDealsFull, ensureFullDeal, apiLoadSource, apiLoadImages, apiSaveSource, apiSaveImages, apiCreateSnapshot, apiListSnapshots, apiRestoreSnapshot, apiListFeedback, apiSetFeedbackResolved, apiAdminUnlock, apiUploadLog, apiRecordUpload, apiBulkSaveLeaseAbstracts, apiBulkSaveSiteAgreements } from "../lib/api";
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
@@ -549,27 +550,28 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     setRestoreBusy(false);
   };
 
+  // Active tab = ink text on a KPR-green underline (house style), not a dark pill.
   const T = (isActive: boolean) => ({
-    background: isActive ? "#2a2c27" : "transparent",
+    background: "transparent",
     border: "none",
-    color: isActive ? "#f6f2ea" : "#8a8579",
-    padding: "8px 13px",
-    borderRadius: 9,
+    color: isActive ? "#232422" : "#676767",
+    padding: "8px 12px",
+    borderRadius: 0,
     whiteSpace: "nowrap" as const,
     cursor: "pointer" as const,
-    fontSize: 13.5,
-    fontWeight: isActive ? 600 : 500,
-    letterSpacing: "-0.01em",
-    boxShadow: isActive ? "0 6px 18px -8px rgba(42,44,39,0.6)" : "none",
-    fontFamily: "'Inter',sans-serif",
+    fontSize: 13,
+    fontWeight: isActive ? 700 : 600,
+    letterSpacing: "0.02em",
+    boxShadow: isActive ? "inset 0 -3px 0 #5BBA47" : "none",
+    fontFamily: "'Montserrat','Inter',sans-serif",
   });
 
-  const menuBtn = (onClick: () => void, title: string, sub: string, border = true) => (
+  const menuBtn = (onClick: () => void, title: React.ReactNode, sub: string, border = true) => (
     <button onClick={onClick}
       style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: border ? "1px solid #f1eadc" : "none", padding: "12px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
       onMouseEnter={e => e.currentTarget.style.background = "#f9f6f0"}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-      <div style={{ fontWeight: 600, color: "#383a37" }}>{title}</div>
+      <div style={{ fontWeight: 600, color: "#383a37", display: "flex", alignItems: "center", gap: 7 }}>{title}</div>
       <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>{sub}</div>
     </button>
   );
@@ -577,8 +579,9 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   return (
     <>
     <div style={{
-      borderBottom: "1px solid #e7e0d2",
-      background: "rgba(252,250,245,0.92)",
+      // KPR house style (investor books): frosted white bar on a 3px KPR-green rule.
+      borderBottom: "3px solid #5BBA47",
+      background: "rgba(255,255,255,0.88)",
       backdropFilter: "blur(12px)",
       WebkitBackdropFilter: "blur(12px)",
       display: "flex",
@@ -717,16 +720,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             maxHeight: `calc(100vh - ${Math.round(backupRect.bottom) + 18}px)`, overflowY: "auto",
           }}>
             {isMobile && <>
-              {menuBtn(() => { setBackupMenu(false); fileRef.current?.click(); }, "⬆ Upload files", "OMs, rent rolls, sales reports")}
-              {menuBtn(() => { setBackupMenu(false); setRatesOpen(true); }, "📈 Today's Rates", "Benchmark interest rates")}
-              {menuBtn(() => { setBackupMenu(false); setHouseViewOpen(true); }, "🧠 House View", "KPR's underwriting lens")}
+              {menuBtn(() => { setBackupMenu(false); fileRef.current?.click(); }, <><Upload size={15} strokeWidth={1.8} aria-hidden />Upload files</>, "OMs, rent rolls, sales reports")}
+              {menuBtn(() => { setBackupMenu(false); setRatesOpen(true); }, <><LineChart size={15} strokeWidth={1.8} aria-hidden />Today's Rates</>, "Benchmark interest rates")}
+              {menuBtn(() => { setBackupMenu(false); setHouseViewOpen(true); }, <><Brain size={15} strokeWidth={1.8} aria-hidden />House View</>, "KPR's underwriting lens")}
               {onClosingCalc && menuBtn(() => { setBackupMenu(false); onClosingCalc(); }, "Closing Costs", "Title, transfer & recording taxes")}
               <div style={{ borderTop: "1px solid #f1eadc" }} />
             </>}
-            {onWhatsNew && menuBtn(() => { setBackupMenu(false); onWhatsNew(); }, `✨ What's new${whatsNewCount > 0 ? ` (${whatsNewCount})` : ""}`, "Recent changes to the app")}
+            {onWhatsNew && menuBtn(() => { setBackupMenu(false); onWhatsNew(); }, <><Sparkles size={15} strokeWidth={1.8} aria-hidden />What's new{whatsNewCount > 0 ? ` (${whatsNewCount})` : ""}</>, "Recent changes to the app")}
             {onHelpOpen && menuBtn(() => { setBackupMenu(false); onHelpOpen(); }, "Tutorial", "How each part of the app works")}
             {menuBtn(() => { setBackupMenu(false); setMcpOpen(true); }, "Claude access", "Connect Claude to this deal library")}
-            {menuBtn(() => { setBackupMenu(false); window.dispatchEvent(new Event("kpr:open-feedback")); }, "⚑ Send feedback", "Report a bug or share an idea")}
+            {menuBtn(() => { setBackupMenu(false); window.dispatchEvent(new Event("kpr:open-feedback")); }, <><Flag size={15} strokeWidth={1.8} aria-hidden />Send feedback</>, "Report a bug or share an idea")}
             {isAdmin && <>
               <div style={{ padding: "10px 14px 4px", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase", background: "#faf7f0", borderTop: "1px solid #f1eadc" }}>Admin</div>
               {menuBtn(() => { setBackupMenu(false); setMembersOpen(true); setUploadFails(0); try { localStorage.setItem("uploadlog-last-view", String(Date.now())); } catch { /* ignore */ } }, `Members${uploadFails > 0 ? ` (${uploadFails} failed upload${uploadFails === 1 ? "" : "s"})` : ""}`, "Approve accounts, upload log")}
@@ -740,7 +743,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             </>}
             <div style={{ borderTop: "1px solid #f1eadc" }} />
             {menuBtn(() => { setBackupMenu(false); setPwOpen(true); }, "Change password", "Update your sign-in password")}
-            {onLogout && menuBtn(() => { setBackupMenu(false); setTwoFAOpen(true); }, "🔒 Security", "Two-factor authentication")}
+            {onLogout && menuBtn(() => { setBackupMenu(false); setTwoFAOpen(true); }, <><Lock size={15} strokeWidth={1.8} aria-hidden />Security</>, "Two-factor authentication")}
             {onLogout && menuBtn(() => { setBackupMenu(false); onLogout(); }, "Sign out", "End this session", false)}
             <div style={{ padding: "8px 14px 10px", borderTop: "1px solid #f1eadc" }}>
               <span
@@ -778,21 +781,21 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
         {/* Today's Rates */}
         <button onClick={() => setRatesOpen(true)} title="Today's benchmark interest rates"
-          style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#5c5047", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-          📈 Today's Rates
+          style={{ background: "#fff", border: "1px solid #d6d6d2", color: "#383A37", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <LineChart size={15} strokeWidth={1.8} aria-hidden /> Today's Rates
         </button>
 
         {/* House View — KPR's distilled underwriting lens (spans all deals) */}
         <button onClick={() => setHouseViewOpen(true)} title="House View — the underwriting lens learned from your deal takes, applied to every analysis"
-          style={{ background: "#fff", border: "1px solid #c2e0c9", color: "#1f7a43", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-          🧠 House View
+          style={{ background: "#fff", border: "1px solid #bfe2b5", color: "#2f7a22", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <Brain size={15} strokeWidth={1.8} aria-hidden /> House View
         </button>
 
         {/* Upload OMs split button */}
         <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(109,186,67,0.4)" }}>
           <button
             onClick={() => fileRef.current?.click()}
-            style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+            style={{ background: "#5BBA47", border: "none", color: "#16240f", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif" }}>
             Upload
           </button>
           <button

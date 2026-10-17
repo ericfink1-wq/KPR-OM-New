@@ -11,6 +11,7 @@ import { buildCompsSummary, type CompsSummary } from "../lib/compsSummary";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
+import { CalendarClock, BarChart3, ShieldAlert, Scale, Landmark, Users, ChevronRight, ArrowUp, Square } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -46,27 +47,97 @@ function fmtM(n: number): string {
 }
 const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? 0 : Number(v);
 
-// Stat box tile
-function StatBox({ label, value, accent, flexWeight }: { label: string; value: string | number; accent?: string; flexWeight?: number }) {
+// ── Home page (KPR house style, 10/17/26) ───────────────────────────────────
+const K = { green: "#5BBA47", charcoal: "#383A37", ink: "#232422", gray: "#676767", page: "#FAF9F5" };
+const SUGGESTED_ICONS = [CalendarClock, BarChart3, ShieldAlert, Scale, Landmark, Users];
+
+const HOME_CSS = `
+.kpr-home{font-family:'Roboto',system-ui,sans-serif;color:${K.ink}}
+.kpr-hero{position:relative;overflow:hidden;background:${K.charcoal};border-radius:16px;padding:28px 46px 34px 30px;margin-bottom:26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:28px;align-items:center;box-shadow:0 18px 40px -28px rgba(35,36,34,.7)}
+.kpr-hero-greet h1{font-family:'Lora',Georgia,serif;font-weight:500;font-size:34px;line-height:1.12;color:#fff;margin:0 0 10px;letter-spacing:-.01em}
+.kpr-hero-greet p{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.74);margin:0;max-width:460px}
+.kpr-hero-panel{position:relative;z-index:1;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:14px 16px 16px;background:rgba(0,0,0,.12)}
+.kpr-eyebrow{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.kpr-eyebrow-dark{color:${K.green}}
+.kpr-rule-grid{display:grid;gap:1px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.kpr-rule-grid-dark{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden}
+.kpr-rule-grid-dark>div{background:${K.charcoal}}
+.kpr-rule-grid-light{background:#e7e7e3}
+.kpr-rule-grid-light>div{background:#fff}
+.kpr-lib-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.kpr-stat{padding:14px 16px 15px;min-width:0}
+.kpr-stat-v{font-family:'Roboto',sans-serif;font-variant-numeric:tabular-nums;font-weight:500;font-size:clamp(22px,2.2vw,30px);line-height:1.1;white-space:nowrap;color:${K.ink}}
+.kpr-stat-l{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:${K.charcoal};margin-top:7px}
+.kpr-stat-s{font-size:13px;color:${K.gray};margin-top:2px;line-height:1.35}
+.kpr-stat.dark .kpr-stat-v{color:#fff}
+.kpr-stat.dark .kpr-stat-l{color:rgba(255,255,255,.9)}
+.kpr-stat.dark .kpr-stat-s{color:rgba(255,255,255,.6)}
+.kpr-anchors{display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;margin-top:13px}
+.kpr-anchors-label{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-right:12px}
+.kpr-wordmark{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:none;border:none;padding:2px 0}
+.kpr-wordmark:hover{color:${K.green}}
+.kpr-dot{width:4px;height:4px;border-radius:50%;background:${K.green};margin:0 10px;display:inline-block}
+.kpr-anchors-more{font-size:12px;color:rgba(255,255,255,.55);margin-left:10px}
+.kpr-chevron{position:absolute;right:0;bottom:0;width:70px;height:70px;pointer-events:none}
+.kpr-section{margin-bottom:26px}
+.kpr-title{display:block;font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:${K.charcoal};margin-bottom:12px}
+.kpr-title:after{content:"";display:block;height:2px;margin-top:8px;background:linear-gradient(90deg,${K.green} 0 56px,#dcdcd8 56px)}
+.kpr-card{background:#fff;border:1px solid #ecebe6;border-radius:12px;box-shadow:0 1px 2px rgba(35,36,34,.04),0 10px 26px -20px rgba(35,36,34,.35)}
+.kpr-attn-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:#fff;border:none;padding:12px 16px;cursor:pointer;font-family:inherit}
+.kpr-attn-row:hover{background:#f6f6f2}
+.kpr-attn-name{display:block;font-family:'Lora',Georgia,serif;font-weight:600;font-size:15.5px;color:${K.ink}}
+.kpr-attn-why{display:block;font-size:13px;color:${K.gray};margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpr-attn-go{display:inline-flex;align-items:center;gap:2px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:${K.charcoal};white-space:nowrap}
+.kpr-ask-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.kpr-ask-card{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:15px 16px;cursor:pointer;font-family:inherit;font-size:14px;line-height:1.45;color:${K.ink};transition:border-color .15s ease,transform .15s ease}
+.kpr-ask-card:hover{border-color:${K.green};transform:translateY(-1px)}
+.kpr-ask-icon{flex-shrink:0;width:32px;height:32px;border-radius:8px;background:#eef7eb;color:#3e8a2f;display:flex;align-items:center;justify-content:center}
+@media(max-width:1023px){.kpr-lib-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kpr-hero{grid-template-columns:1fr;gap:20px}}
+@media(max-width:640px){
+  .kpr-home{padding:0 16px 8px !important}
+  .kpr-hero{padding:22px 18px 46px;border-radius:14px}
+  .kpr-hero-greet h1{font-size:27px}
+  .kpr-hero-greet p{font-size:13.5px}
+  .kpr-hero-panel{padding:12px}
+  .kpr-rule-grid-dark{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpr-lib-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpr-stat{padding:12px 12px 13px}
+  .kpr-ask-grid{grid-template-columns:1fr}
+  .kpr-chevron{width:48px;height:48px}
+  .kpr-attn-why{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .kpr-attn-row{padding:12px 12px;gap:11px}
+}
+`;
+
+function HomeStat({ label, value, sub, dark }: { label: string; value: string; sub?: string; dark?: boolean }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", flex: `${flexWeight ?? 1} 1 0`, minWidth: 80 }}>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(1.3rem, 2.2vw, 2.4rem)", fontWeight: 500, color: accent || "#26281f", lineHeight: 1.1, whiteSpace: "nowrap" }}>
-        {typeof value === "number" ? value.toLocaleString() : value}
-      </div>
-      <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" as const, marginTop: 4 }}>{label}</div>
+    <div className={`kpr-stat${dark ? " dark" : ""}`}>
+      <div className="kpr-stat-v">{value}</div>
+      <div className="kpr-stat-l">{label}</div>
+      {sub && <div className="kpr-stat-s">{sub}</div>}
     </div>
   );
 }
 
-const panelLabel: React.CSSProperties = {
-  fontSize: 9,
-  fontWeight: 700,
-  letterSpacing: "0.14em",
-  color: "#a89f8f",
-  textTransform: "uppercase",
-  marginBottom: 8,
-  marginTop: 16,
-};
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="kpr-title">{children}</h2>;
+}
+
+/** Data-confidence score as a ring — the arc fills to score/100 in the confidence colour. */
+function ConfidenceRing({ score, color, label }: { score: number; color: string; label: string }) {
+  const r = 17, c = 2 * Math.PI * r, f = Math.max(0, Math.min(100, score)) / 100;
+  return (
+    <span title={`Data confidence ${score}/100 (${label}) — how complete, consistent and current this deal's data is. Green 85+ high · dark green 70–84 good · amber 50–69 partial · red under 50 low.`}
+      style={{ position: "relative", width: 42, height: 42, flexShrink: 0, cursor: "help" }}>
+      <svg width="42" height="42" viewBox="0 0 42 42" aria-hidden>
+        <circle cx="21" cy="21" r={r} fill="none" stroke="#ecebe6" strokeWidth="4" />
+        <circle cx="21" cy="21" r={r} fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${c * f} ${c}`} transform="rotate(-90 21 21)" />
+      </svg>
+      <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Roboto',sans-serif", fontVariantNumeric: "tabular-nums", fontWeight: 700, fontSize: 13, color: K.ink }}>{score}</span>
+    </span>
+  );
+}
+
 
 export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQuery, onClearQuery, onAsk, onNav }: Props) {
   const [msgs, setMsgs] = useState<Message[]>([]);
@@ -257,122 +328,117 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
   const isEmpty = msgs.length === 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "transparent" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: onAsk ? K.page : "transparent" }}>
       {/* Messages area */}
       <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 0 0" }}>
         {isEmpty ? (
-          <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 28px", animation: "riseIn 0.3s ease both" }}>
-            {/* Hero */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: "#26281f", marginBottom: 6, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
-                Good {getTimeGreeting()}.
+          <div className="kpr-home" style={{ maxWidth: 1400, margin: "0 auto", padding: "0 28px 8px", animation: "riseIn 0.3s ease both" }}>
+            <style>{HOME_CSS}</style>
+            {/* Hero — charcoal band: greeting + owned portfolio (KPR house style, 10/17/26) */}
+            <section className="kpr-hero">
+              <div className="kpr-hero-greet">
+                <h1>Good {getTimeGreeting()}.</h1>
+                <p>I'm your KPR deal analyst. I know your entire deal library — ask me anything about your deals, comps, lease rollover, demographics, or market trends.</p>
               </div>
-              <p style={{ fontSize: 14, color: "#7d766a", lineHeight: 1.65, maxWidth: 560, margin: 0 }}>
-                I'm your KPR deal analyst. I know your entire deal library — ask me anything about your deals, comps, lease rollover, demographics, or market trends.
-              </p>
-            </div>
-
-            {/* ── Intelligence Library stat row ────────────────────────────── */}
-            {active.length > 0 && (
-              <>
-                <div style={panelLabel}>Intelligence library — everything read into the system</div>
-                <div className="grid grid-cols-2 lg:grid-cols-6" style={{ gap: 10, marginBottom: 4, width: "100%" }}>
-                  <StatBox label="OMs Read" value={stats.total || "—"} />
-                  <StatBox label="Tenant Brands" value={stats.tenantBrands ? stats.tenantBrands.toLocaleString() : "—"} accent="#0f9d63" />
-                  <StatBox label="Leases Analyzed" value={stats.leases ? stats.leases.toLocaleString() : "—"} />
-                  <StatBox label="SF Analyzed" value={stats.sfAnalyzed ? fmtSF(stats.sfAnalyzed) : "—"} />
-                  <StatBox label="Markets Covered" value={stats.markets || "—"} />
-                  <StatBox label="Data Points" value={stats.dataPoints ? stats.dataPoints.toLocaleString() : "—"} accent="#0f9d63" />
-                </div>
-              </>
-            )}
-
-            {/* ── Owned portfolio stat row ─────────────────────────────────── */}
-            {active.length > 0 && (
-              <>
-                <div style={panelLabel}>Owned portfolio</div>
-                {portfolio.count === 0 ? (
-                  <div style={{ background: "#faf7f0", border: "1px dashed #e3dccd", borderRadius: 12, padding: "12px 16px", fontSize: 12, color: "#9a917f", marginBottom: 4 }}>
-                    No owned properties yet — mark a deal as <span style={{ color: "#6dba43", fontWeight: 600 }}>Owned</span> to build your portfolio snapshot here.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 lg:flex lg:flex-wrap" style={{ gap: 10, marginBottom: 4, width: "100%" }}>
-                    <StatBox label="Properties" value={portfolio.count} accent="#6dba43" />
-                    {portfolio.value > 0 && <StatBox label="Total Cost Basis" value={fmtM(portfolio.value)} accent="#6dba43" />}
-                    {portfolio.sf > 0 && <StatBox label="Square Footage" value={fmtSF(portfolio.sf)} />}
-                    {portfolio.igRentPct != null && <StatBox label="Investment Grade Tenant Rent" value={`${portfolio.igRentPct}%`} accent="#3f7a1f" />}
-                    {portfolio.anchors.length > 0 && (
-                      <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 14px", flex: "3 1 0", minWidth: 160, gridColumn: "1 / -1" }}>
-                        <div style={{ fontSize: 8, letterSpacing: "0.12em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>Key Anchors</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {portfolio.anchors.slice(0, 12).map(a => (
-                            <span key={a} onClick={() => onTenantClick?.(a)}
-                              style={{ background: "#f0fae8", border: "1px solid #c6e6a0", color: "#3d7a1c", borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 600, cursor: onTenantClick ? "pointer" : "default", textDecoration: onTenantClick ? "underline" : "none", textDecorationColor: "#c6e6a0", textUnderlineOffset: "2px" }}>{a}</span>
-                          ))}
-                          {portfolio.anchors.length > 12 && <span style={{ fontSize: 10, color: "#a89f8f" }}>+{portfolio.anchors.length - 12}</span>}
-                        </div>
+              {active.length > 0 && (
+                <div className="kpr-hero-panel">
+                  <div className="kpr-eyebrow kpr-eyebrow-dark">Owned portfolio</div>
+                  {portfolio.count === 0 ? (
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,.72)", padding: "4px 0 2px" }}>
+                      No owned properties yet — mark a deal as <span style={{ color: K.green, fontWeight: 700 }}>Owned</span> to build your portfolio snapshot here.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="kpr-rule-grid kpr-rule-grid-dark">
+                        <HomeStat dark label="Properties" value={portfolio.count.toLocaleString()} sub="marked Owned" />
+                        {portfolio.value > 0 && <HomeStat dark label="Cost basis" value={fmtM(portfolio.value)} sub="purchase price, or asking where none" />}
+                        {portfolio.sf > 0 && <HomeStat dark label="Square footage" value={fmtSF(portfolio.sf)} sub="gross leasable area" />}
+                        {portfolio.igRentPct != null && <HomeStat dark label="Investment-grade rent" value={`${portfolio.igRentPct}%`} sub="of in-place base rent" />}
                       </div>
-                    )}
+                      {portfolio.anchors.length > 0 && (
+                        <div className="kpr-anchors">
+                          <span className="kpr-anchors-label">Key anchors</span>
+                          {portfolio.anchors.slice(0, 12).map((a, i) => (
+                            <span key={a} style={{ display: "inline-flex", alignItems: "center" }}>
+                              {i > 0 && <span className="kpr-dot" aria-hidden />}
+                              <button type="button" onClick={() => onTenantClick?.(a)} className="kpr-wordmark" style={{ cursor: onTenantClick ? "pointer" : "default" }}>{a}</button>
+                            </span>
+                          ))}
+                          {portfolio.anchors.length > 12 && <span className="kpr-anchors-more">+{portfolio.anchors.length - 12}</span>}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              <svg className="kpr-chevron" viewBox="0 0 120 120" aria-hidden><path d="M120 0 L120 120 L0 120 Z" fill={K.green} /><path d="M120 34 L120 120 L34 120 Z" fill="#4a9a3a" /></svg>
+            </section>
+
+            {/* Intelligence library — one ruled white panel */}
+            {active.length > 0 && (
+              <section className="kpr-section">
+                <SectionTitle>Intelligence library</SectionTitle>
+                <div className="kpr-card" style={{ padding: 0, overflow: "hidden" }}>
+                  <div className="kpr-rule-grid kpr-rule-grid-light kpr-lib-grid">
+                    <HomeStat label="OMs read" value={stats.total ? stats.total.toLocaleString() : "—"} sub="every deal recorded" />
+                    <HomeStat label="Tenant brands" value={stats.tenantBrands ? stats.tenantBrands.toLocaleString() : "—"} sub="distinct brands" />
+                    <HomeStat label="Leases analyzed" value={stats.leases ? stats.leases.toLocaleString() : "—"} sub="roster rows read" />
+                    <HomeStat label="SF analyzed" value={stats.sfAnalyzed ? fmtSF(stats.sfAnalyzed) : "—"} sub="across all centers" />
+                    <HomeStat label="Markets covered" value={stats.markets ? stats.markets.toLocaleString() : "—"} sub="distinct markets" />
+                    <HomeStat label="Data points" value={stats.dataPoints ? stats.dataPoints.toLocaleString() : "—"} sub="figures captured" />
                   </div>
-                )}
-              </>
+                </div>
+              </section>
             )}
 
             {/* Owned-portfolio risk cards live on Portfolio Analytics → Owned only (Eric, 10/17/26). */}
-            {/* Deal tiles */}
-            {active.length > 0 && (
-              <>
-                <div style={{ marginTop: 14, marginBottom: 8, fontSize: 9, letterSpacing: "0.16em", color: "#a89f8f", fontWeight: 700, textTransform: "uppercase" }}>Pipeline</div>
+            {active.some(d => d.status === "Under Contract" || d.status === "Prospect") && (
+              <section className="kpr-section">
+                <SectionTitle>Pipeline</SectionTitle>
                 <DealTiles deals={active} onOpen={onOpenDeal} />
-              </>
+              </section>
             )}
 
-            {/* ── Needs your attention ─────────────────────────────────────── */}
+            {/* Needs your attention */}
             {attention.length > 0 && (
-              <div style={{ marginTop: 4 }}>
-                <div style={panelLabel}>Needs your attention — {attention.length} deal{attention.length === 1 ? "" : "s"} a first pass would flag</div>
-                <div style={{ fontSize: 10.5, color: "#a89f8f", margin: "-4px 0 8px" }}>Badge = data-confidence score out of 100 (amber 50–69 partial · red under 50 low).</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
-                  {attention.map(({ d, conf, audits }) => {
+              <section className="kpr-section">
+                <SectionTitle>Needs your attention — {attention.length} deal{attention.length === 1 ? "" : "s"}</SectionTitle>
+                <div style={{ fontSize: 13, color: K.gray, margin: "-4px 0 10px" }}>The ring is each deal's data-confidence score out of 100 — amber 50–69 is partial, red under 50 is low.</div>
+                <div className="kpr-card" style={{ padding: 0, overflow: "hidden" }}>
+                  {attention.map(({ d, conf, audits }, i) => {
                     const reasons: string[] = [];
                     if (audits > 0) reasons.push(audits === 1 ? "1 number to verify" : `${audits} numbers to verify`);
                     for (const g of conf.gaps) { if (reasons.length >= 3) break; if (!/don't tie out|doesn't tie out/.test(g)) reasons.push(g); }
                     return (
-                      <button key={d.id} onClick={() => onOpenDeal(d.id)}
-                        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fff", border: "1px solid #ece5d7", borderLeft: `3px solid ${conf.color}`, borderRadius: 10, padding: "9px 13px", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "#faf7f0"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}>
-                        <span title={`Data confidence ${conf.score}/100 (${conf.label}) — how complete, consistent and current this deal's data is. Green 85+ high · dark green 70–84 good · amber 50–69 partial · red under 50 low.`}
-                          style={{ fontSize: 9, fontWeight: 700, color: conf.color, background: `${conf.color}14`, border: `1px solid ${conf.color}40`, borderRadius: 3, padding: "2px 6px", whiteSpace: "nowrap", cursor: "help", textAlign: "center", lineHeight: 1.25 }}>
-                          DATA {conf.score}<span style={{ display: "block", fontSize: 7.5, letterSpacing: "0.06em", opacity: 0.85 }}>{conf.label.toUpperCase()}</span>
-                        </span>
+                      <button key={d.id} onClick={() => onOpenDeal(d.id)} className="kpr-attn-row" style={{ borderTop: i ? "1px solid #ecebe6" : "none" }}>
+                        <ConfidenceRing score={conf.score} color={conf.color} label={conf.label} />
                         <span style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f" }}>{d.propertyName || d.fileName || "Untitled deal"}</span>
-                          <span style={{ display: "block", fontSize: 11, color: "#9a917f", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reasons.join(" · ") || "Review the data"}</span>
+                          <span className="kpr-attn-name">{d.propertyName || d.fileName || "Untitled deal"}</span>
+                          <span className="kpr-attn-why">{reasons.join(" · ") || "Review the data"}</span>
                         </span>
-                        <span style={{ fontSize: 11, color: conf.color, fontWeight: 600, whiteSpace: "nowrap" }}>Review ›</span>
+                        <span className="kpr-attn-go">Review <ChevronRight size={15} strokeWidth={2} aria-hidden /></span>
                       </button>
                     );
                   })}
                 </div>
-              </div>
+              </section>
             )}
 
-            {/* Suggested prompts */}
-            <div>
-              <div style={{ fontSize: 10, letterSpacing: "0.14em", color: "#a89f8f", fontWeight: 700, marginBottom: 10, textTransform: "uppercase" }}>Try asking…</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {SUGGESTED.map(s => (
-                  <button key={s} onClick={() => submit(s)}
-                    style={{ textAlign: "left", background: "#fff", border: "1px solid #e7e0d2", borderRadius: 10, padding: "10px 14px", cursor: "pointer", fontSize: 12.5, color: "#4a4d46", fontFamily: "'Inter', sans-serif", transition: "background .15s ease, border-color .15s ease" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#f6f2ea"; e.currentTarget.style.borderColor = "#c8bfb0"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e7e0d2"; }}>
-                    {s}
-                  </button>
-                ))}
+            {/* Try asking — 3-column cards */}
+            <section className="kpr-section">
+              <SectionTitle>Try asking</SectionTitle>
+              <div className="kpr-ask-grid">
+                {SUGGESTED.map((s, i) => {
+                  const Icon = SUGGESTED_ICONS[i % SUGGESTED_ICONS.length];
+                  return (
+                    <button key={s} onClick={() => submit(s)} className="kpr-card kpr-ask-card">
+                      <span className="kpr-ask-icon"><Icon size={17} strokeWidth={1.8} aria-hidden /></span>
+                      <span>{s}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-
+            </section>
           </div>
         ) : (
           <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 28px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -416,14 +482,14 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
       </div>
 
       {/* Input bar */}
-      <div style={{ borderTop: "1px solid #e7e0d2", background: "rgba(250,247,240,0.85)", backdropFilter: "blur(12px)", flexShrink: 0 }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "14px 28px" }}>
+      <div className="kpr-chatbar-wrap" style={{ background: "linear-gradient(180deg, rgba(250,249,245,0) 0%, rgba(250,249,245,0.92) 38%)", flexShrink: 0 }}>
+        <div className="kpr-chatbar" style={{ maxWidth: 1400, margin: "0 auto", padding: "10px 28px 12px" }}>
         {msgs.length > 0 && (
           <button onClick={() => setMsgs([])} style={{ fontSize: 10, color: "#a89f8f", background: "transparent", border: "none", cursor: "pointer", marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>
             ← New conversation
           </button>
         )}
-        <div ref={inputWrapRef} style={{ display: "flex", gap: 10, position: "relative" }}>
+        <div ref={inputWrapRef} style={{ display: "flex", gap: 8, alignItems: "center", position: "relative", background: "#fff", border: "1px solid #e4e3de", borderRadius: 999, padding: "6px 6px 6px 8px", boxShadow: "0 2px 4px rgba(35,36,34,0.05), 0 14px 32px -16px rgba(35,36,34,0.45)" }}>
           {showSuggestions && (
             <div style={{
               position: "absolute", bottom: "calc(100% + 6px)", left: 0, right: 54,
@@ -454,38 +520,38 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); setShowSuggestions(false); submit(input); }
               if (e.key === "Escape") setShowSuggestions(false);
             }}
-            placeholder={active.length === 0 ? "Upload some OMs first, then ask me anything…" : "Ask anything about your deal library…"}
+            placeholder={active.length === 0 ? "Upload some OMs first, then ask me anything…" : "Ask about your deal library…"}
             disabled={loading}
             rows={1}
             style={{
-              flex: 1, resize: "none", fontFamily: "'Inter', sans-serif", fontSize: 13.5,
-              padding: "10px 14px", border: "1px solid #e3dccd", borderRadius: 12,
-              color: "#383a37", background: "#fff", lineHeight: 1.55,
-              outline: "none", boxShadow: "0 1px 2px rgba(56,58,55,0.05)",
+              flex: 1, resize: "none", fontFamily: "'Roboto', sans-serif", fontSize: 14.5,
+              padding: "8px 10px", border: "none", borderRadius: 999,
+              color: "#232422", background: "transparent", lineHeight: 1.5,
+              outline: "none",
             }}
           />
           {loading ? (
             <button onClick={stop} title="Stop generating"
               style={{
                 background: "#b91c1c", border: "none", color: "#fff",
-                borderRadius: 12, width: 44, cursor: "pointer", fontSize: 15, flexShrink: 0,
+                borderRadius: "50%", width: 40, height: 40, cursor: "pointer", flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-              ■
+              <Square size={14} fill="currentColor" aria-hidden />
             </button>
           ) : (
             <button onClick={() => { setShowSuggestions(false); submit(input); }} disabled={!input.trim()}
               style={{
-                background: input.trim() ? "#26281f" : "#e3dccd",
-                border: "none", color: input.trim() ? "#e8e0cf" : "#a89f8f",
-                borderRadius: 12, width: 44, cursor: input.trim() ? "pointer" : "default",
-                fontSize: 18, flexShrink: 0,
-              }}>
-              ↑
+                background: input.trim() ? "#5BBA47" : "#e7e7e3",
+                border: "none", color: input.trim() ? "#fff" : "#9b9b96",
+                borderRadius: "50%", width: 40, height: 40, cursor: input.trim() ? "pointer" : "default",
+                flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+              }} aria-label="Send">
+              <ArrowUp size={19} strokeWidth={2.2} aria-hidden />
             </button>
           )}
         </div>
-        <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6 }}><span className="kpr-kbd-hint">Enter to send · Shift+Enter for new line · </span>Powered by Claude</div>
+        <div style={{ fontSize: 11, color: "#8d8d88", marginTop: 6, paddingLeft: 18 }}><span className="kpr-kbd-hint">Enter to send · Shift+Enter for new line · </span>Powered by Claude</div>
         </div>
       </div>
     </div>
