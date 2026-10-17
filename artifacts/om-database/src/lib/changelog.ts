@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-implied-same-type",
+    date: "2026-10-17",
+    category: "fixed",
+    title: "Implied value uses only comps of the same center type",
+    detail:
+      "The implied-value range on a deal is now built only from sales of the same kind of center (a power center from power-center sales, not grocery-anchored ones). If there aren't enough same-type sales, no range is shown rather than a misleading one. On owned deals, the summary band now shows 'Acquisition price', what KPR paid, instead of 'Price'.",
+    where: "Deal page → summary band",
+  },
+  {
     id: "2026-10-17-reanalysis-v4",
     date: "2026-10-17",
     category: "improved",

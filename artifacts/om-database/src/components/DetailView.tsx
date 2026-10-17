@@ -1782,8 +1782,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     const body = JSON.stringify({
       dealId: d.id, state: d.state ?? null, market: d.market ?? null,
       propertyType: d.centerType ?? null, sf: d.totalSF ?? null, occupancy: d.occupancy ?? null,
+      // Same center type ONLY (Eric, 10/17/26: a power center was priced off grocery comps).
+      sameTypeOnly: true,
     });
-    cachedRead(`implied:${d.id}:${d.updatedAt || ""}`, 10 * 60_000, () =>
+    if (!d.centerType) return; // no type → no like-for-like set → no implied value
+    cachedRead(`implied2:${d.id}:${d.updatedAt || ""}`, 10 * 60_000, () =>
       fetch("/api/comps/benchmark", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body }).then(r => r.ok ? r.json() : null),
     ).then((bm: { insufficient?: boolean; n?: number; tierLabel?: string; capRate?: { p25: number; p75: number } | null; dateRange?: { from: string; to: string } | null } | null) => {
       if (cancelled || !bm || bm.insufficient || !bm.capRate || !(bm.capRate.p25 > 0) || !(bm.capRate.p75 > 0)) return;
@@ -2799,7 +2802,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const tiles: { l: string; v: string; c?: string; sub?: string; title?: string; wide?: boolean }[] = [];
         const noi = compactUSD(d.noi); if (noi) tiles.push({ l: "NOI", v: noi, c: "#0f9d63" });
         if (d.capRate) tiles.push({ l: "Cap Rate", v: `${d.capRate}%`, c: "#0f9d63" });
-        const price = compactUSD(d.askingPrice ?? ((d as unknown as Record<string, unknown>).txnPurchasePrice as number)); if (price) tiles.push({ l: "Price", v: price, c: "#6dba43" });
+        // Owned / Sold: what KPR paid, labelled as such (Eric, 10/17/26) — never shown as "Price".
+        const kprOwned = d.status === "Owned" || d.status === "Sold";
+        const acqPrice = kprOwned ? compactUSD(d.txnPurchasePrice) : null;
+        if (acqPrice) tiles.push({ l: "Acquisition price", v: acqPrice, c: "#6dba43" });
+        else { const price = compactUSD(d.askingPrice); if (price) tiles.push({ l: kprOwned ? "OM asking price" : "Price", v: price, c: "#6dba43" }); }
         if (Number.isFinite(sfNum) && sfNum > 0) tiles.push({ l: "GLA", v: sfNum >= 1000 ? `${Math.round(sfNum / 1000)}K SF` : `${sfNum} SF` });
         // Owned + a Datex snapshot: today's occupancy from Datex leads; the OM's figure is
         // kept and labelled with its own date (Eric, 10/16/26).
@@ -2816,7 +2823,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           tiles.push({
             l: "Implied value", v: `${compactUSD(implied.low)}–${compactUSD(implied.high)}`, c: "#3f6b24", wide: true,
             sub: `at ${implied.capLo.toFixed(2)}–${implied.capHi.toFixed(2)}% cap${psf}`,
-            title: `NOI ÷ the middle half (25th–75th percentile) of comparable cap rates: ${implied.n} comps${implied.range ? `, ${implied.range}` : ""}${implied.tier ? ` (${implied.tier})` : ""}. Computed by the comp engine — a range to frame pricing, not an appraisal.`,
+            title: `NOI ÷ the middle half (25th–75th percentile) of cap rates on comps of the same center type (${d.centerType}): ${implied.n} comps${implied.range ? `, ${implied.range}` : ""}${implied.tier ? ` (${implied.tier})` : ""}. Computed by the comp engine — a range to frame pricing, not an appraisal.`,
           });
         }
         if (tiles.length < 3) return null;   // too thin to be a useful summary

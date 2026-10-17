@@ -55,6 +55,10 @@ export interface BenchmarkRequest {
   starCompIds?: number[];
   // Extra subject signals for smart similarity matching:
   occupancy?: number | null;
+  /** Only comps of the SAME center type — no "any type" tier, no cross-type smart matches.
+   *  Used for implied value (Eric, 10/17/26: a Burlington/Ashley power center was priced
+   *  off grocery-anchored comps). */
+  sameTypeOnly?: boolean;
   /** Subject's lead anchor tenant name(s), comma-separated */
   anchor?: string | null;
   /** True if the subject's lead anchor is investment-grade */
@@ -270,16 +274,17 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
     relaxed = [];
     insufficient = chosen.length === 0;
   } else {
-    for (const t of TIERS) {
+    const tiers = req.sameTypeOnly ? TIERS.filter(t => !t.relaxed.includes("property type")) : TIERS;
+    for (const t of tiers) {
       const c = pool.filter(t.fn);
       if (c.length >= MIN_N) { chosen = c; tierLabel = t.label; relaxed = t.relaxed; break; }
     }
 
     if (chosen.length === 0) {
       // Show directional data if < MIN_N found — but do NOT fall back to the full unfiltered pool
-      for (let i = TIERS.length - 1; i >= 0; i--) {
-        const c = pool.filter(TIERS[i].fn);
-        if (c.length > 0) { chosen = c; tierLabel = TIERS[i].label; relaxed = TIERS[i].relaxed; break; }
+      for (let i = tiers.length - 1; i >= 0; i--) {
+        const c = pool.filter(tiers[i].fn);
+        if (c.length > 0) { chosen = c; tierLabel = tiers[i].label; relaxed = tiers[i].relaxed; break; }
       }
       // If still empty, n=0 empty state is returned (no pool fallback)
       insufficient = true;
@@ -305,7 +310,7 @@ export async function computeBenchmark(req: BenchmarkRequest): Promise<Benchmark
   // Auto-include strongly-similar comps (smart matching) beyond the tier set.
   // Skipped in manual mode — the user's filters define the set exactly.
   const preStrongIds = new Set(chosen.map(r => r.id));
-  const strongMatches = req.manual ? [] : pool.filter(r => !preStrongIds.has(r.id) && (scoreMap.get(r.id)?.score ?? 0) >= STRONG_SCORE);
+  const strongMatches = req.manual ? [] : pool.filter(r => !preStrongIds.has(r.id) && (scoreMap.get(r.id)?.score ?? 0) >= STRONG_SCORE && (!req.sameTypeOnly || typeOk(r)));
   chosen = [...chosen, ...strongMatches];
   const smartMatched = strongMatches.length;
 

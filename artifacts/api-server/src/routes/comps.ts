@@ -488,7 +488,7 @@ router.post("/comps/benchmark", requireAuth, async (req, res) => {
       propertyType?: string | null; sf?: number | null;
       capRate?: number | null; pricePerSf?: number | null; excludeOmComps?: boolean;
       excludeCompIds?: number[]; includeCompIds?: number[]; starCompIds?: number[];
-      occupancy?: number | null; anchor?: string | null; anchorIG?: boolean;
+      occupancy?: number | null; anchor?: string | null; anchorIG?: boolean; sameTypeOnly?: boolean;
       manual?: { months?: number | null; geography?: "national" | "state" | "metro"; sameType?: boolean; sizeBand?: boolean } | null;
     };
     if (!body.dealId) { res.status(400).json({ error: "dealId required" }); return; }
@@ -501,7 +501,7 @@ router.post("/comps/benchmark", requireAuth, async (req, res) => {
       includeCompIds: Array.isArray(body.includeCompIds) ? body.includeCompIds : [],
       starCompIds: Array.isArray(body.starCompIds) ? body.starCompIds : [],
       occupancy: body.occupancy ?? null, anchor: body.anchor ?? null, anchorIG: !!body.anchorIG,
-      manual: body.manual ?? null,
+      manual: body.manual ?? null, sameTypeOnly: !!body.sameTypeOnly,
       includePortfolioAllocations: !!(body as { includePortfolioAllocations?: boolean }).includePortfolioAllocations,
     });
     res.json(result);
