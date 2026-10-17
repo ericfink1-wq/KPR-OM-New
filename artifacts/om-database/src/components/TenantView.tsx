@@ -246,7 +246,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
           return (
             <img
               src={`https://logo.clearbit.com/${domain}`}
-              alt=""
+              alt={`${tenantName} logo`}
               onError={e => {
                 const img = e.target as HTMLImageElement;
                 if (!img.dataset.fb) { img.dataset.fb = "1"; img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`; }

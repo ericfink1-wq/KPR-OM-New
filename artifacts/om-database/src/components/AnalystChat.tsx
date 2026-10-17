@@ -328,6 +328,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             {attention.length > 0 && (
               <div style={{ marginTop: 4 }}>
                 <div style={panelLabel}>Needs your attention — {attention.length} deal{attention.length === 1 ? "" : "s"} a first pass would flag</div>
+                <div style={{ fontSize: 10.5, color: "#a89f8f", margin: "-4px 0 8px" }}>Badge = data-confidence score out of 100 (amber 50–69 partial · red under 50 low).</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
                   {attention.map(({ d, conf, audits }) => {
                     const reasons: string[] = [];
@@ -338,7 +339,10 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                         style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "#fff", border: "1px solid #ece5d7", borderLeft: `3px solid ${conf.color}`, borderRadius: 10, padding: "9px 13px", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}
                         onMouseEnter={e => { e.currentTarget.style.background = "#faf7f0"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: conf.color, background: `${conf.color}14`, border: `1px solid ${conf.color}40`, borderRadius: 3, padding: "2px 6px", whiteSpace: "nowrap" }}>{conf.score}</span>
+                        <span title={`Data confidence ${conf.score}/100 (${conf.label}) — how complete, consistent and current this deal's data is. Green 85+ high · dark green 70–84 good · amber 50–69 partial · red under 50 low.`}
+                          style={{ fontSize: 9, fontWeight: 700, color: conf.color, background: `${conf.color}14`, border: `1px solid ${conf.color}40`, borderRadius: 3, padding: "2px 6px", whiteSpace: "nowrap", cursor: "help", textAlign: "center", lineHeight: 1.25 }}>
+                          DATA {conf.score}<span style={{ display: "block", fontSize: 7.5, letterSpacing: "0.06em", opacity: 0.85 }}>{conf.label.toUpperCase()}</span>
+                        </span>
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f" }}>{d.propertyName || d.fileName || "Untitled deal"}</span>
                           <span style={{ display: "block", fontSize: 11, color: "#9a917f", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reasons.join(" · ") || "Review the data"}</span>
@@ -439,6 +443,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             </div>
           )}
           <textarea
+            aria-label="Ask the KPR Analyst"
             value={input}
             onChange={e => { setInput(e.target.value); if (e.target.value) setShowSuggestions(false); }}
             onFocus={() => { if (!input.trim()) setShowSuggestions(true); }}

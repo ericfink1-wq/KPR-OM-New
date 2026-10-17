@@ -710,9 +710,9 @@ function AppInner() {
           {view.type === "list" && (
             <>
               <div style={{ padding: "28px 28px 4px" }}>
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: "#383a37", letterSpacing: "-0.01em" }}>
+                <h1 style={{ margin: 0, fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: "#383a37", letterSpacing: "-0.01em" }}>
                   Deal Library
-                </div>
+                </h1>
                 <div style={{ fontSize: 13, color: "#a89f8f", marginTop: 4 }}>
                   {activeDeals.length === 0
                     ? "No deals uploaded yet"

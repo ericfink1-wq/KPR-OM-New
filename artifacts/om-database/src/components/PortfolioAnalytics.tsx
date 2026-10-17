@@ -727,60 +727,31 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               Tenant Analytics
             </button>
           )}
+          {/* One Maintenance menu for every admin-type action (Eric, 10/16/26: five buttons
+              crowded the title). The badge counts what needs attention. */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <button onClick={handleScoreUnscored} disabled={scoring} style={{ background: scoring ? "#eef3e6" : "transparent", border: "1px solid #6dba43", color: scoring ? "#a89f8f" : "#3f7a1f", padding: "6px 12px", borderRadius: 7, cursor: scoring ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-              <span style={{ fontSize: 12 }}>★</span>
-              {scoring ? "Scoring…" : "Score unscored deals"}
-            </button>
-            {scoreMsg && <span style={{ fontSize: 10.5, color: scoreMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{scoreMsg}</span>}
-          </div>
-          {(staleCount > 0 || batchInfo) && (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              {staleCount > 0 && (
-                <button onClick={handleRefreshStale} disabled={refreshingStale || !!batchInfo} title="These deals' written analysis was produced under older scoring logic. Refreshing re-runs the cheap AI roster pass to bring the narrative + benchmark notes up to date." style={{ background: refreshingStale ? "#fff7e6" : "transparent", border: "1px solid #f59e0b", color: (refreshingStale || batchInfo) ? "#a89f8f" : "#92400e", padding: "6px 12px", borderRadius: 7, cursor: (refreshingStale || batchInfo) ? "default" : "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                  <span style={{ fontSize: 12 }}>⚠</span>
-                  {refreshingStale ? "Refreshing…" : `Refresh ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`}
-                </button>
-              )}
-              {staleCount > 0 && !batchInfo && (
-                <button onClick={handleBatchRefresh} disabled={batchBusy} title="Submit all outdated deals as one Anthropic Message Batch — about HALF the AI cost. It runs in the background (minutes, occasionally up to ~1 hour) and applies automatically when ready; you can leave this page. Best for a big batch when you're not in a hurry." style={{ background: "none", border: "none", padding: 0, cursor: batchBusy ? "default" : "pointer", fontSize: 9.5, color: "#3f7a1f", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-                  {batchBusy ? "submitting…" : "💸 or batch all at ~½ cost"}
-                </button>
-              )}
-              {staleMsg && <span style={{ fontSize: 10.5, color: staleMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{staleMsg}</span>}
-              {batchMsg && <span style={{ fontSize: 10.5, color: batchMsg.startsWith("✓") ? "#0f9d63" : batchMsg.startsWith("⚠") ? "#dc2626" : "#a89f8f", fontFamily: "'Inter',sans-serif", maxWidth: 280, textAlign: "right" }}>{batchMsg}</span>}
-            </div>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <button onClick={() => onDataAudit?.()} title="Open the Data Audit worklist — the deals whose numbers don't tie out (SF vs GLA, NOI ÷ cap vs price, rent roll-ups, cash-flow subtotals…). Click any deal there to open it and fix the value."
-              style={{ background: "transparent", border: `1px solid ${auditStats.deals > 0 ? "#f59e0b" : "#b8d49a"}`, color: auditStats.deals > 0 ? "#92400e" : "#3f7a1f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-              <span style={{ fontSize: 12 }}>{auditStats.deals > 0 ? "⚠" : "✓"}</span>
-              {auditStats.deals > 0 ? `Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} w/ data issues (${auditStats.issues}) ›` : "Data integrity ✓"}
-            </button>
-            {onFeedback && (
-              <button onClick={() => onFeedback()} title="Feedback & Trends — every open data issue across the portfolio, grouped by type, where you answer in plain English to create guardrails that improve every future extraction."
-                style={{ background: "transparent", border: "1px solid #c3a3d8", color: "#6b3f8f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 12 }}>🧠</span> Feedback &amp; Trends ›
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setMaintMenuOpen(o => !o)} disabled={maintaining || rebuilding || rebuildingComps}
+                aria-label={`Maintenance${staleCount + auditStats.deals > 0 ? ` — ${staleCount + auditStats.deals} need attention` : ""}`}
+                style={{ position: "relative", background: "transparent", border: "1px solid #d9d2c4", color: "#6f6a5f", padding: "7px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontFamily: "'Inter',sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+                ⚙ Maintenance <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
+                {staleCount + auditStats.deals > 0 && (
+                  <span title={`${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} with data issues · ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`}
+                    style={{ position: "absolute", top: -7, right: -7, minWidth: 18, height: 18, padding: "0 5px", boxSizing: "border-box", borderRadius: 9, background: "#c97a18", color: "#fff", fontSize: 10, fontWeight: 700, lineHeight: "18px", textAlign: "center", boxShadow: "0 0 0 2px #f6f2ea" }}>
+                    {staleCount + auditStats.deals > 99 ? "99+" : staleCount + auditStats.deals}
+                  </span>
+                )}
               </button>
-            )}
-            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-              {auditStats.breakdown.length > 0 && (
-                <button onClick={() => setShowAuditBreakdown(s => !s)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 9.5, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
-                  {showAuditBreakdown ? "▴ hide breakdown" : "▾ what's flagged"}
-                </button>
-              )}
-              {/* Maintenance menu — the power/admin data-hygiene actions, grouped so the
-                  analytics screen leads with insight, not a row of buttons. */}
-              <div style={{ position: "relative" }}>
-                <button onClick={() => setMaintMenuOpen(o => !o)} disabled={maintaining || rebuilding || rebuildingComps}
-                  style={{ background: "transparent", border: "1px solid #d9d2c4", color: "#6f6a5f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
-                  ⚙ Maintenance <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
-                </button>
-                {maintMenuOpen && (
-                  <>
-                    <div onClick={() => setMaintMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
-                    <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 9001, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden", padding: "4px 0", fontFamily: "'Inter',sans-serif" }}>
-                      {([
+              {maintMenuOpen && (
+                <>
+                  <div onClick={() => setMaintMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
+                  <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 9001, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 250, maxWidth: "calc(100vw - 32px)", overflow: "hidden", padding: "4px 0", fontFamily: "'Inter',sans-serif" }}>
+                    {([
+                      [auditStats.deals > 0 ? `⚠ Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} with data issues (${auditStats.issues})` : "✓ Data integrity — nothing flagged", () => { setMaintMenuOpen(false); onDataAudit?.(); }, auditStats.deals > 0 ? "#92400e" : "#3f7a1f", false, "Open the Data Audit worklist — the deals whose numbers don't tie out."],
+                      ...(onFeedback ? [["🧠 Feedback & Trends", () => { setMaintMenuOpen(false); onFeedback(); }, "#6b3f8f", false, "Every open data issue across the library, grouped by type; answer in plain English to create guardrails for future extractions."] as const] : []),
+                      ["★ Score unscored deals", () => { setMaintMenuOpen(false); handleScoreUnscored(); }, "#3f7a1f", scoring, "Run the AI grade on every deal that has no grade yet."],
+                      ...(staleCount > 0 ? [[`⚠ Refresh ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`, () => { setMaintMenuOpen(false); handleRefreshStale(); }, "#92400e", refreshingStale || !!batchInfo, "Re-run the AI write-up on deals analyzed under older scoring logic."] as const] : []),
+                      ...(staleCount > 0 && !batchInfo ? [["💸 …or batch them at ~½ cost", () => { setMaintMenuOpen(false); handleBatchRefresh(); }, "#3f7a1f", batchBusy, "Same refresh as one background batch — about half the AI cost; applies automatically when ready."] as const] : []),
                         ["🧹 Clean & re-audit all", () => { setMaintMenuOpen(false); handleCleanAndReaudit(); }, "#383a37", maintaining, "Auto-fix the unambiguous issues across every deal, then re-check all the numbers. Token-free, snapshots first (reversible)."],
                         ["✅ Clear answered questions", () => { setMaintMenuOpen(false); handleTriageQuestions(); }, "#383a37", maintaining, "Close the import questions the data now answers by itself (e.g. a WALT the rent roll confirms), so the real contradictions aren't buried. Shows you the count first; nothing is deleted."],
                         ["↺ Rebuild comps index", () => { setMaintMenuOpen(false); handleRebuildComps(); }, "#383a37", rebuildingComps, "Rebuild the comparable-sales index from every deal's owned/manual/OM comps."],
@@ -788,36 +759,38 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                         ["📡 Import Datex snapshot (JSON)", () => { setMaintMenuOpen(false); datexFileRef.current?.click(); }, "#383a37", maintaining, "Load live occupancy, rent and tenant data exported from Datex by Claude. Shows you what would change before writing, never touches the original OM figures, and snapshots first."],
                         ...(isAdmin ? [["💲 Import transactions (JSON)", () => { setMaintMenuOpen(false); txnFileRef.current?.click(); }, "#383a37", maintaining, "Bulk-set purchase price/date, seller, NOI-at-close and going-in cap on existing deals from a JSON file (matched by property name). ONLY those fields change — roster, financials and notes are untouched."] as const] : []),
                         ...(isAdmin ? [["🗑 Remove deleted deals", () => { setMaintMenuOpen(false); handlePurgeTrashed(); }, "#b06a4e", maintaining, "Permanently remove trashed deals whose data still sits in the DB. Snapshots first."] as const] : []),
-                      ] as [string, () => void, string, boolean, string][]).map(([label, fn, color, busy, tip]) => (
-                        <button key={label} onClick={fn} disabled={busy} title={tip}
-                          style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "9px 14px", cursor: busy ? "default" : "pointer", fontSize: 12.5, fontWeight: 600, color, whiteSpace: "nowrap", opacity: busy ? 0.5 : 1 }}
-                          onMouseEnter={e => { if (!busy) e.currentTarget.style.background = "#f9f6f0"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+                                          ] as [string, () => void, string, boolean, string][]).map(([label, fn, color, busy, tip], i) => (
+                      <button key={label} onClick={fn} disabled={busy} title={tip}
+                        style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderTop: i > 0 && (label.startsWith("★") || label.startsWith("🧹")) ? "1px solid #f1eadc" : "none", padding: "10px 14px", cursor: busy ? "default" : "pointer", fontSize: 12.5, fontWeight: 600, color, whiteSpace: "normal", opacity: busy ? 0.5 : 1 }}
+                        onMouseEnter={e => { if (!busy) e.currentTarget.style.background = "#f9f6f0"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                        {label}
+                      </button>
+                    ))}
+                    {auditStats.breakdown.length > 0 && (
+                      <div style={{ borderTop: "1px solid #f1eadc", padding: "8px 12px 10px" }}>
+                        <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "#a69e91", textTransform: "uppercase", marginBottom: 5 }}>What's flagged</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {auditStats.breakdown.map(b => (
+                            <button key={b.key} onClick={() => { setMaintMenuOpen(false); onDataAudit?.(b.key); }} title={`Show the deals flagged for: ${b.label}`}
+                              style={{ fontSize: 10, color: "#6f6a5f", background: "#f6f1e7", border: "1px solid #e7e0d2", borderRadius: 10, padding: "2px 8px", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap", cursor: "pointer" }}>
+                              {b.label} · <b style={{ color: "#383a37" }}>{b.count}</b> ›
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
                 <input ref={datexFileRef} type="file" accept=".json,application/json" style={{ display: "none" }}
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleDatexImport(f); e.currentTarget.value = ""; }} />
                 <input ref={txnFileRef} type="file" accept=".json,application/json" style={{ display: "none" }}
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleImportTransactions(f); e.currentTarget.value = ""; }} />
-              </div>
             </div>
-            {maintainMsg && <span style={{ fontSize: 10.5, color: maintainMsg.startsWith("✓") ? "#0f9d63" : maintainMsg.startsWith("⚠") ? "#dc2626" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>{maintainMsg}</span>}
-            {showAuditBreakdown && auditStats.breakdown.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "flex-end", maxWidth: 360 }}>
-                {auditStats.breakdown.map(b => (
-                  <button key={b.key} onClick={() => onDataAudit?.(b.key)} title={`Show the deals flagged for: ${b.label}`}
-                    style={{ fontSize: 9.5, color: "#6f6a5f", background: "#f6f1e7", border: "1px solid #e7e0d2", borderRadius: 10, padding: "2px 8px", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap", cursor: "pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#efe7d6"; e.currentTarget.style.borderColor = "#d8cdb4"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "#f6f1e7"; e.currentTarget.style.borderColor = "#e7e0d2"; }}>
-                    {b.label} · <b style={{ color: "#383a37" }}>{b.count}</b> ›
-                  </button>
-                ))}
-              </div>
-            )}
+            {[scoreMsg, staleMsg, batchMsg, maintainMsg].filter(Boolean).map((m, i) => (
+              <span key={i} style={{ fontSize: 10.5, color: m!.startsWith("✓") ? "#0f9d63" : m!.startsWith("⚠") ? "#dc2626" : "#a69e91", fontFamily: "'Inter',sans-serif", maxWidth: 300, textAlign: "right" }}>{m}</span>
+            ))}
           </div>
           {(rebuildCompsMsg || rebuildMsg) && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>

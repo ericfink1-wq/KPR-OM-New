@@ -1235,7 +1235,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search deals…"
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search deals…" aria-label="Search deals"
           style={{ fontSize: 12, padding: "6px 12px", border: "1px solid #e3dccd", borderRadius: 8, color: "#383a37", background: "#fff", width: 180, minWidth: 0, fontFamily: "'Inter',sans-serif" }} />
         <MultiSelectDropdown
           label="statuses"
@@ -1521,7 +1521,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "scale(1.06)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "none"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "none"; }}>
                 {d.imageMeta?.cover && (
-                  <img src={`/api/deals/${d.id}/cover-thumb?v=${encodeURIComponent(d.updatedAt || d.uploadedAt || "")}${thumbBust[d.id] ? `&b=${thumbBust[d.id]}` : ""}`} alt="" loading="lazy" decoding="async"
+                  <img src={`/api/deals/${d.id}/cover-thumb?v=${encodeURIComponent(d.updatedAt || d.uploadedAt || "")}${thumbBust[d.id] ? `&b=${thumbBust[d.id]}` : ""}`} alt={d.propertyName || d.fileName || "Property photo"} loading="lazy" decoding="async"
                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transition: "transform .45s ease" }} />
                 )}

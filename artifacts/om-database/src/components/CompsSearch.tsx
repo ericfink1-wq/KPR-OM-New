@@ -865,6 +865,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
     <input
       type={type}
       placeholder={placeholder}
+      aria-label={placeholder}
       value={filters[key]}
       onChange={e => handleFilter({ [key]: e.target.value })}
       style={{
@@ -941,9 +942,9 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 21, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>
+          <h1 style={{ margin: 0, fontFamily: "'Fraunces',serif", fontSize: 21, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>
             Comp Sales Database
-          </div>
+          </h1>
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>
             {loading ? "Loading…" : `${displayRows.length} comp${displayRows.length !== 1 ? "s" : ""}${hasFilters ? " matching filters" : " in index"}`}
           </div>
@@ -1114,6 +1115,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
       <div style={{ marginBottom: 10 }}>
         <input
           type="text"
+          aria-label="Search comps"
           placeholder="Search name, address, market, state, anchor, buyer, seller, notes…"
           value={filters.q}
           onChange={e => handleFilter({ q: e.target.value })}

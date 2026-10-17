@@ -68,6 +68,7 @@ export default function AnalystBar({ onAsk }: Props) {
               if (e.key === "Escape") setShowSuggestions(false);
             }}
             placeholder="Ask anything about your deal library…"
+            aria-label="Ask the KPR Analyst"
             rows={1}
             style={{
               flex: 1,

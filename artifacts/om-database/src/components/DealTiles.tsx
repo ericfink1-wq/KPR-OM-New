@@ -47,7 +47,7 @@ export default function DealTiles({ deals, onOpen }: Props) {
               style={{ position: "relative", height: 150, borderRadius: 14, overflow: "hidden", cursor: "pointer", border: "1px solid #ece5d7", textAlign: "left", padding: 0, boxShadow: "0 1px 2px rgba(56,58,55,0.05), 0 14px 30px -24px rgba(56,58,55,0.6)", background: src ? "#26281f" : "linear-gradient(135deg,#43463b,#26281f)", transition: "transform .2s ease" }}
               onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "scale(1.06)"; }}
               onMouseLeave={e => { e.currentTarget.style.transform = "none"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "none"; }}>
-              {src && <img src={src} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transition: "transform .45s ease" }} />}
+              {src && <img src={src} alt={d.propertyName || d.fileName || "Property photo"} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transition: "transform .45s ease" }} />}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(38,40,31,0.1) 0%, rgba(38,40,31,0.32) 42%, rgba(38,40,31,0.84) 100%)" }} />
               <div style={{ position: "absolute", top: 11, left: 12, display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.93)", padding: "3px 9px", borderRadius: 20 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: sc }} />

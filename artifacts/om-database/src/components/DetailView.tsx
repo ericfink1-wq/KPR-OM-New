@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiRescore, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
-  apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader } from "../lib/api";
+  apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader, cachedRead } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, openAuditCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { extractSwap, buildSwapPatch, recognizeRateIndex } from "../lib/swapExtract";
@@ -1761,6 +1761,33 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const liveOccupancy = liveMetrics.occupancy ?? d.occupancy;
   const liveWtdRent = liveMetrics.weightedAvgRentPSF ?? d.weightedAvgRentPSF;
 
+  // Implied value (Eric, 10/16/26: most OMs come unpriced, and "what's it worth?" is the
+  // first question). NOI ÷ the comp engine's p25–p75 cap for this center type + state —
+  // the APP computes the range (cardinal comp rule), nothing is eyeballed. Shown only
+  // when the engine has enough comps; it never invents a range from a thin set.
+  const [implied, setImplied] = useState<{ low: number; high: number; capLo: number; capHi: number; n: number; tier: string; range: string | null } | null>(null);
+  useEffect(() => {
+    setImplied(null);
+    const noiN = Number(d.noi);
+    if (!(noiN > 0)) return;
+    let cancelled = false;
+    const body = JSON.stringify({
+      dealId: d.id, state: d.state ?? null, market: d.market ?? null,
+      propertyType: d.centerType ?? null, sf: d.totalSF ?? null, occupancy: d.occupancy ?? null,
+    });
+    cachedRead(`implied:${d.id}:${d.updatedAt || ""}`, 10 * 60_000, () =>
+      fetch("/api/comps/benchmark", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body }).then(r => r.ok ? r.json() : null),
+    ).then((bm: { insufficient?: boolean; n?: number; tierLabel?: string; capRate?: { p25: number; p75: number } | null; dateRange?: { from: string; to: string } | null } | null) => {
+      if (cancelled || !bm || bm.insufficient || !bm.capRate || !(bm.capRate.p25 > 0) || !(bm.capRate.p75 > 0)) return;
+      setImplied({
+        low: noiN / (bm.capRate.p75 / 100), high: noiN / (bm.capRate.p25 / 100),
+        capLo: bm.capRate.p25, capHi: bm.capRate.p75, n: bm.n ?? 0, tier: bm.tierLabel ?? "",
+        range: bm.dateRange ? `${bm.dateRange.from.slice(0, 7)} – ${bm.dateRange.to.slice(0, 7)}` : null,
+      });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [d.id, d.updatedAt, d.noi, d.state, d.market, d.centerType, d.totalSF, d.occupancy]);
+
   // Brand "prototype" size benchmark — flag a tenant whose SF is way off the typical
   // footprint for that retailer across all OTHER deals in the database. Index is built
   // once over allDeals; flags are per this deal's roster.
@@ -2734,9 +2761,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           const rawParts = [
             d.assetType && d.assetType !== "unknown" ? d.assetType : null,
             d.centerType || null,
-            loc.urbanicity || null,
-            loc.density?.tier || null,
-            loc.income?.tier || null,
+            // ONE location type: urbanicity, else the density tier — they disagreed
+            // ("Suburban · Urban") when both were shown (Eric, 10/16/26).
+            loc.urbanicity || loc.density?.tier || null,
+            loc.income?.tier ? (/income/i.test(loc.income.tier) ? loc.income.tier : `${loc.income.tier}-income`) : null,
           ].filter(Boolean) as string[];
           // urbanicity and the density tier often coincide (both "Suburban") — collapse
           // identical chips so the line never reads "… · Suburban · Suburban · …".
@@ -2761,7 +2789,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const sfNum = Number(d.totalSF);
         const occN = liveOccupancy != null ? Number(liveOccupancy) : null;
         const waltN = liveWalt != null ? Number(liveWalt) : null;
-        const tiles: { l: string; v: string; c?: string }[] = [];
+        const tiles: { l: string; v: string; c?: string; sub?: string; title?: string; wide?: boolean }[] = [];
         const noi = compactUSD(d.noi); if (noi) tiles.push({ l: "NOI", v: noi, c: "#0f9d63" });
         if (d.capRate) tiles.push({ l: "Cap Rate", v: `${d.capRate}%`, c: "#0f9d63" });
         const price = compactUSD(d.askingPrice ?? ((d as unknown as Record<string, unknown>).txnPurchasePrice as number)); if (price) tiles.push({ l: "Price", v: price, c: "#6dba43" });
@@ -2770,13 +2798,22 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         if (waltN != null && waltN > 0) tiles.push({ l: "WALT", v: `${waltN} yrs`, c: waltN < 3 ? "#dc2626" : waltN < 6 ? "#26281f" : "#0f9d63" });
         if (liveWtdRent) tiles.push({ l: "Avg Rent", v: `$${Number(liveWtdRent).toFixed(2)}` });
         if (d.pricePerSF) tiles.push({ l: "Price / SF", v: `$${d.pricePerSF}` });
+        if (implied) {
+          const psf = Number.isFinite(sfNum) && sfNum > 0 ? ` · $${Math.round(implied.low / sfNum)}–$${Math.round(implied.high / sfNum)}/SF` : "";
+          tiles.push({
+            l: "Implied value", v: `${compactUSD(implied.low)}–${compactUSD(implied.high)}`, c: "#3f6b24", wide: true,
+            sub: `at ${implied.capLo.toFixed(2)}–${implied.capHi.toFixed(2)}% cap${psf}`,
+            title: `NOI ÷ the middle half (25th–75th percentile) of comparable cap rates: ${implied.n} comps${implied.range ? `, ${implied.range}` : ""}${implied.tier ? ` (${implied.tier})` : ""}. Computed by the comp engine — a range to frame pricing, not an appraisal.`,
+          });
+        }
         if (tiles.length < 3) return null;   // too thin to be a useful summary
         return (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(94px, 1fr))", gap:1, background:"#ece5d7", border:"1px solid #ece5d7", borderRadius:12, overflow:"hidden", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             {tiles.map((t, i) => (
-              <div key={i} style={{ background:"#fff", padding:"11px 14px" }}>
+              <div key={i} title={t.title} style={{ background:"#fff", padding:"11px 14px", gridColumn: t.wide ? "span 2" : undefined, cursor: t.title ? "help" : undefined }}>
                 <div style={{ fontSize:16.5, fontWeight:600, color:t.c || "#26281f", fontFamily:"'Fraunces',serif", lineHeight:1.05, whiteSpace:"nowrap" }}>{t.v}</div>
                 <div style={{ fontSize:8.5, letterSpacing:"0.09em", textTransform:"uppercase", color:"#a69e91", fontWeight:700, marginTop:4 }}>{t.l}</div>
+                {t.sub && <div style={{ fontSize:10, color:"#7d766a", marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{t.sub}</div>}
               </div>
             ))}
           </div>
@@ -2842,12 +2879,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       </div>
 
       {tab === "overview" && (<>
-      {/* Cover hero — fit the whole photo to the window (cap to viewport height,
-          contain so nothing is cropped or overflows), centered on a soft backdrop. */}
+      {/* Cover banner — a short strip (≈280px, less on phones) so the numbers stay
+          above the fold; tap to see the full photo (Eric, 10/16/26: the photo used to
+          fill the whole first screen). */}
       {imgs?.cover && (
         <div id="section-cover"
           style={{ position:"relative", display:"flex", justifyContent:"center", borderRadius:14, overflow:"hidden", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.05), 0 20px 40px -28px rgba(56,58,55,0.6)", border:"1px solid #ece5d7", background:"#faf7f0" }}>
-          <img onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge" src={imgs.cover} alt={`${d.propertyName||"Property"} cover`} style={{ maxWidth:"100%", maxHeight:"70vh", width:"auto", height:"auto", objectFit:"contain", display:"block", cursor:"zoom-in" }}/>
+          <img onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge" src={imgs.cover} alt={`${d.propertyName||"Property"} cover`} style={{ width:"100%", height: isMobileNav ? 180 : 280, objectFit:"cover", display:"block", cursor:"zoom-in" }}/>
           <div style={{ position:"absolute", left:18, bottom:14, color:"#fff", fontSize:9, letterSpacing:"0.18em", textTransform:"uppercase", opacity:0.9, fontWeight:600, pointerEvents:"none", textShadow:"0 1px 3px rgba(0,0,0,0.6)" }}>From the offering memorandum</div>
           <button onClick={() => setConfirmDelImg("cover")} title="Remove cover photo"
             style={{ position:"absolute", top:10, right:10, background:"rgba(38,40,31,0.62)", border:"none", color:"#fff", width:30, height:30, borderRadius:8, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>🗑</button>

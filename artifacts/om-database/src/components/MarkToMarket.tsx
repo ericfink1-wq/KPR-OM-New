@@ -117,7 +117,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
 
   return (
     <div style={{ padding: "20px 18px 80px", maxWidth: 940, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
-      <h2 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#26281f", margin: "0 0 4px" }}>Mark-to-Market Upside</h2>
+      <h1 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#26281f", margin: "0 0 4px" }}>Mark-to-Market Upside</h1>
       <p style={{ fontSize: 12.5, color: "#7d766a", margin: "0 0 16px", lineHeight: 1.5 }}>
         In-place rents that sit below the same brand's portfolio-median rent — the rent you could recapture at rollover.
         Each store is compared only with the same brand in the same size band (under 10k, 10–25k, 25–50k, 50k+ SF) and region, falling back to national in that size band when the region has fewer than 3. Ground leases, pads and kiosks are left out. Medians are recency-weighted by lease start and come from your own database, not third-party market data, so treat them as directional. With fewer than 5 comparable stores the column shows where the rent ranks (percentile) instead of a % gap.

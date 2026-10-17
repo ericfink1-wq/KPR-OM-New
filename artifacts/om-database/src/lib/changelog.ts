@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-layout-pass",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Deal page pricing, tidier screens",
+    detail:
+      "Deal pages now show an Implied value tile when there are enough comparable sales: NOI divided by the middle range of comparable cap rates for that center type and state, for example '$17.8M–$19.2M at 6.0–6.5%' with the price per SF. Hover it to see how many comps it used. The cover photo is now a short banner, so the key numbers sit above the fold; tap it to see the full photo. The tags under the deal name show one location type and the income tier (e.g. 'Middle-income') instead of contradictory labels. On the home page, the attention badges now say what they are ('DATA 64 · PARTIAL'), with a tooltip explaining the colors. Portfolio Analytics' admin buttons (Score unscored, Refresh outdated, data issues, Feedback & Trends) are now inside the Maintenance menu, with one count badge. Pages also have proper headings, labels and photo descriptions for screen readers.",
+    where: "Deal page; Analyst home; Portfolio Analytics",
+  },
+  {
     id: "2026-10-17-library-cards",
     date: "2026-10-17",
     category: "improved",

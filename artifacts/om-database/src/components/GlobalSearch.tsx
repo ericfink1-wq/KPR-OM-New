@@ -84,6 +84,7 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenP
           <span style={{ fontSize: 16, color: "#a89f8f" }}>⌕</span>
           <input
             ref={inputRef}
+            aria-label="Search deals and tenants"
             value={q}
             onChange={e => setQ(e.target.value)}
             onKeyDown={onKeyDown}
