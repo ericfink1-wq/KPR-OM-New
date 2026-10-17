@@ -50,6 +50,7 @@ interface PortfolioAnalyticsData {
 const NOW_YEAR = new Date().getFullYear();
 
 function fmtRent(n: number): string {
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}B`;
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
   return `$${Math.round(n)}`;
@@ -159,19 +160,35 @@ function SegmentLegend({ items, colorMap }: {
 // Expiration Waterfall — rows are clickable
 // ---------------------------------------------------------------------------
 
-function ExpirationWaterfall({ data, onYearClick }: { data: ExpirationBucket[]; onYearClick?: (year: string) => void }) {
+// Years before this one are leases that already expired as of TODAY (the OM was older
+// than its roll). They're one "Expired" bucket, not a stack of past-year bars.
+export const EXPIRED_LABEL = "Expired";
+export function collapsePastYears(data: ExpirationBucket[], nowYear = NOW_YEAR): ExpirationBucket[] {
+  const past = data.filter(d => /^\d{4}$/.test(d.year) && parseInt(d.year) < nowYear);
+  if (!past.length) return data;
+  const rest = data.filter(d => !past.includes(d));
+  const sum = (k: "pct" | "annualRent" | "tenantCount") => past.reduce((a, d) => a + (Number(d[k]) || 0), 0);
+  const expired = { ...past[0], year: EXPIRED_LABEL, pct: Math.round(sum("pct") * 10) / 10, annualRent: sum("annualRent"), tenantCount: sum("tenantCount") };
+  return [expired, ...rest];
+}
+
+function ExpirationWaterfall({ data: raw, onYearClick }: { data: ExpirationBucket[]; onYearClick?: (year: string) => void }) {
+  const data = collapsePastYears(raw);
   const maxPct = Math.max(...data.map(d => d.pct), 1);
-  const clickable = !!onYearClick;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-      {data.map(d => (
+      {data.map(d => {
+        const isExpired = d.year === EXPIRED_LABEL;
+        const clickable = !!onYearClick && !isExpired;
+        return (
         <div
           key={d.year}
-          onClick={() => onYearClick?.(d.year)}
-          style={{ display: "flex", alignItems: "center", gap: 10, cursor: clickable ? "pointer" : "default", borderRadius: 6, padding: clickable ? "0 0" : undefined }}
-          title={clickable ? `View ${d.year === "Unknown" ? "unknown expiry" : d.year} rollover detail` : undefined}
+          onClick={() => { if (clickable) onYearClick?.(d.year); }}
+          className={clickable ? "kpr-row-hover" : undefined}
+          style={{ display: "flex", alignItems: "center", gap: 10, cursor: clickable ? "pointer" : "default", borderRadius: 6 }}
+          title={isExpired ? `Leases whose expiry date (before ${NOW_YEAR}) has already passed — expired or in holdover as of today` : clickable ? `View ${d.year === "Unknown" ? "unknown expiry" : d.year} rollover detail` : undefined}
         >
-          <div style={{ width: 40, textAlign: "right", fontSize: 11, fontWeight: 600, color: d.year === "Unknown" ? "#a89f8f" : (clickable ? "#2d4ecf" : "#383a37"), flexShrink: 0, textDecoration: clickable ? "underline" : "none", textDecorationColor: "#a8b8f0", textUnderlineOffset: 2 }}>
+          <div style={{ width: 52, textAlign: "right", fontSize: 11, fontWeight: 600, color: d.year === "Unknown" || isExpired ? "#a89f8f" : "#383a37", flexShrink: 0 }}>
             {d.year}
           </div>
           <div style={{ flex: 1, position: "relative", height: 22, background: "#f5f1ea", borderRadius: 5, overflow: "hidden" }}>
@@ -197,14 +214,15 @@ function ExpirationWaterfall({ data, onYearClick }: { data: ExpirationBucket[]; 
           <div style={{ width: 28, textAlign: "right", fontSize: 10, color: "#b8b0a3", flexShrink: 0 }}>
             {d.tenantCount}
           </div>
-          {clickable && (
-            <div style={{ width: 14, textAlign: "center", fontSize: 10, color: "#c9c2b8", flexShrink: 0 }}>›</div>
+          {onYearClick && (
+            <div style={{ width: 14, textAlign: "center", fontSize: 10, color: "#c9c2b8", flexShrink: 0 }}>{clickable ? "›" : ""}</div>
           )}
         </div>
-      ))}
+        );
+      })}
       {data.length > 0 && (
         <div style={{ display: "flex", gap: 10, marginTop: 4, paddingTop: 8, borderTop: "1px solid #f1eadc" }}>
-          <div style={{ width: 40 }} />
+          <div style={{ width: 52 }} />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
               {[
@@ -223,7 +241,7 @@ function ExpirationWaterfall({ data, onYearClick }: { data: ExpirationBucket[]; 
           </div>
           <div style={{ width: 62, textAlign: "right", fontSize: 9.5, color: "#b8b0a3" }}>Rent</div>
           <div style={{ width: 28, textAlign: "right", fontSize: 9.5, color: "#b8b0a3" }}>#</div>
-          {clickable && <div style={{ width: 14 }} />}
+          {onYearClick && <div style={{ width: 14 }} />}
         </div>
       )}
     </div>
@@ -678,7 +696,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>Portfolio Analytics</div>
+          <h1 style={{ margin: 0, fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>
+            {scope === "owned" ? "Portfolio Analytics — Owned" : `Market Corpus${data ? ` (${data.summary.dealCount} OMs)` : ""}`}
+          </h1>
           <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>{scope === "owned" ? "KPR's owned properties — each counted once" : "Every deal in the library — the market, not KPR's exposure"}</div>
         </div>
         <div style={{ display: "flex", alignItems: "flex-start", columnGap: 12, rowGap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -873,6 +893,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               ) : (
                 <ExpirationWaterfall data={data.leaseExpiration} onYearClick={onYearClick ? (year => onYearClick(year, scope)) : undefined} />
               )}
+              <div style={{ fontSize: 10.5, color: "#a89f8f", marginTop: 8, lineHeight: 1.45 }}>
+                Expiry dates come from each deal's OM or rent roll, so these are as of each document's date, not live.{scope === "owned" ? " For today's rollover on owned centers, Datex is the source of record." : ""}
+              </div>
             </Card>
 
             <Card>

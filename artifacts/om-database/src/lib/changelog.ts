@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-analytics-labels",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Clearer Portfolio Analytics headings and lease waterfall",
+    detail:
+      "The All view is now titled 'Market Corpus (N OMs)' so it can't be mistaken for KPR's portfolio, and very large totals read as $1.07B instead of $1069.1M. In the lease expiration waterfall, leases whose expiry year has already passed are grouped into a single 'Expired' bar instead of a row for every old year. The year labels no longer look like blue links, and a note says the dates are as of each OM or rent roll.",
+    where: "Analytics → Portfolio Overview",
+  },
+  {
     id: "2026-10-17-comps-cleanup-admin",
     date: "2026-10-17",
     category: "new",
