@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import SaleStagePill from "./SaleStagePill";
+import { useIsMobile } from "../hooks/use-mobile";
 import { isNonAnchorUse } from "../lib/anchorUse";
 import { isClosingDate } from "../lib/saleStage";
 import type { Deal } from "../lib/idb";
@@ -55,7 +56,17 @@ const DEAL_SORT_LABELS: Record<string, string> = {
   status: "Status", propertyName: "Property", city: "City", state: "State", market: "MSA",
   anchor: "Anchor", totalSF: "SF", occupancy: "Occupancy", capRate: "Cap rate", askingPrice: "Price",
   seller: "Seller", uploadedAt: "First uploaded", lastUploadAt: "Last upload",
+  noi: "NOI", walt: "WALT", grade: "Grade",
 };
+
+// Stated cap, else NOI ÷ asking price (marked "implied" where shown).
+function effectiveCap(d: Deal): { value: number | null; implied: boolean } {
+  if (d.capRate != null && !isNaN(Number(d.capRate))) return { value: Number(d.capRate), implied: false };
+  const noi = Number(d.noi), price = Number(d.askingPrice);
+  if (noi > 0 && price > 0) return { value: Math.round((noi / price) * 10000) / 100, implied: true };
+  return { value: null, implied: false };
+}
+const GRADE_RANK: Record<string, number> = { "A+": 7, A: 6, "B+": 5, B: 4, "C+": 3, C: 2, D: 1 };
 const DEAL_SORT_DEFAULT: SortLevel[] = [{ key: "status", dir: "asc" }, { key: "lastUploadAt", dir: "desc" }];
 
 // Compact price for a narrow column, e.g. "$28.0M", "$930K".
@@ -90,7 +101,7 @@ function RowThumb({ deal, bust }: { deal: Deal; bust?: number }) {
   return (
     <div style={{ width: 64, height: 48, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "#eef3e6", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {deal.imageMeta?.cover && !failed
-        ? <img src={`/api/deals/${deal.id}/cover-thumb?v=${v}${bust ? `&b=${bust}` : ""}`} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ? <img src={`/api/deals/${deal.id}/cover-thumb?v=${v}${bust ? `&b=${bust}` : ""}`} alt={deal.propertyName || deal.fileName || "Property photo"} loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : <span style={{ fontSize: 17, fontWeight: 700, color: "#3f7a1f", fontFamily: "'Inter', sans-serif" }}>{initial}</span>}
     </div>
   );
@@ -247,6 +258,8 @@ function dealAscending(key: string): ((a: Deal, b: Deal) => number) | null {
     case "lastUploadAt": return (a, b) => (_ts(a.lastUploadAt) || _ts(a.uploadedAt)) - (_ts(b.lastUploadAt) || _ts(b.uploadedAt));
     case "uploadedAt": return (a, b) => _ts(a.uploadedAt) - _ts(b.uploadedAt);
     case "propertyName": return (a, b) => _str(a.propertyName || a.fileName).localeCompare(_str(b.propertyName || b.fileName));
+    case "capRate": return (a, b) => _num(effectiveCap(a).value) - _num(effectiveCap(b).value);
+    case "grade": return (a, b) => (GRADE_RANK[a.dealScore?.grade || ""] ?? -1) - (GRADE_RANK[b.dealScore?.grade || ""] ?? -1);
   }
   if (NUM_SORT_KEYS.has(key)) return (a, b) => _num(a[key as keyof Deal]) - _num(b[key as keyof Deal]);
   if (key in DEAL_SORT_LABELS) return (a, b) => _str(a[key as keyof Deal]).localeCompare(_str(b[key as keyof Deal]));
@@ -255,6 +268,8 @@ function dealAscending(key: string): ((a: Deal, b: Deal) => number) | null {
 // A deal with no value for a column (no stated cap rate, no seller…) sinks to the
 // bottom whichever way that column is sorted.
 function dealMissing(key: string, d: Deal): boolean {
+  if (key === "capRate") return effectiveCap(d).value == null;
+  if (key === "grade") return !d.dealScore?.grade;
   if (NUM_SORT_KEYS.has(key)) return _num(d[key as keyof Deal]) === -Infinity;
   if (key === "status" || key === "lastUploadAt" || key === "uploadedAt" || key === "propertyName") return false;
   if (key === "anchor") return !leadAnchorName(d);
@@ -303,6 +318,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table"|"grid">("table");
+  const isPhone = useIsMobile();
+  // Columns blank on 90%+ of deals (most OMs come unpriced) are hidden by default.
+  const [showSparse, setShowSparse] = useState(false);
   const [modal, setModal] = useState<LinkMergeModal | null>(null);
   const [merging, setMerging] = useState(false);
 
@@ -397,6 +415,20 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
   // Report how many deals are showing vs the total, so the header can read
   // "39 of 94 …" while a search/filter is active.
   const shownCount = rows.length;
+  const sparse = useMemo(() => {
+    const n = Math.max(1, deals.length);
+    const share = (f: (d: Deal) => boolean) => deals.filter(f).length / n;
+    return {
+      cap: share(d => effectiveCap(d).value == null) >= 0.9,
+      price: share(d => !(Number(d.askingPrice) > 0)) >= 0.9,
+      seller: share(d => !d.seller) >= 0.9,
+    };
+  }, [deals]);
+  const sortedBy = (k: string) => sort.levels.some(l => l.key === k);
+  const showCap = showSparse || !sparse.cap || sortedBy("capRate");
+  const showPrice = showSparse || !sparse.price || sortedBy("askingPrice");
+  const showSeller = showSparse || !sparse.seller || sortedBy("seller");
+  const hiddenCols = [!showCap && "Cap", !showPrice && "Price", !showSeller && "Seller"].filter(Boolean) as string[];
   useEffect(() => { onCountsChange?.(shownCount, deals.length); }, [shownCount, deals.length, onCountsChange]);
 
   // One-time, throttled backfill: (re)generate a crisp tile-sized (600px) thumbnail
@@ -1289,7 +1321,56 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
           isDefault={sort.isDefault} onReset={sort.reset} />
       )}
 
-      {viewMode === "table" && rows.length > 0 && (
+      {viewMode === "table" && rows.length > 0 && hiddenCols.length > 0 && !isPhone && (
+        <div style={{ fontSize: 11, color: "#a89f8f", margin: "0 0 6px 2px" }}>
+          Hidden because 90%+ of deals leave them blank: {hiddenCols.join(", ")} ·{" "}
+          <button onClick={() => setShowSparse(true)} style={{ background: "none", border: "none", padding: 0, color: "#3f7a1f", fontWeight: 600, cursor: "pointer", fontSize: 11 }}>show</button>
+        </div>
+      )}
+
+      {/* Phones: one card per deal — photo, name, place, status, NOI, GLA, occupancy. */}
+      {viewMode === "table" && rows.length > 0 && isPhone && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map(d => {
+            const loc = cityState(d);
+            const stat = (label: string, value: string) => (
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", fontWeight: 700 }}>{label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#383a37", whiteSpace: "nowrap" }}>{value}</div>
+              </div>
+            );
+            return (
+              <div key={d.id} onClick={() => onOpen(d.id)} role="button"
+                style={{ display: "flex", gap: 10, alignItems: "flex-start", background: selected.has(d.id) ? "#f3f9ee" : "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: 10, cursor: "pointer" }}>
+                <RowThumb deal={d} bust={thumbBust[d.id]} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, color: "#26281f", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                      {d.propertyName || d.fileName || "Untitled"}
+                    </div>
+                    {d.dealScore?.grade && <span style={{ fontSize: 11, fontWeight: 800, color: "#383a37", background: "#f4f1ea", borderRadius: 6, padding: "1px 6px", flexShrink: 0 }}>{d.dealScore.grade}</span>}
+                    <span onClick={e => { e.stopPropagation(); toggleSel(d.id); }} style={{ padding: "2px 2px 6px 6px", flexShrink: 0 }}>
+                      <input type="checkbox" aria-label="Select deal" checked={selected.has(d.id)} onChange={() => {}} style={{ width: 18, height: 18 }} />
+                    </span>
+                  </div>
+                  {loc && <div style={{ fontSize: 11.5, color: "#7d766a", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loc}</div>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 5 }}>
+                    <StatusTag status={d.status} size="sm" />
+                    {((d.saleStage && d.status === "Owned") || (d.status === "Sold" && !isClosingDate(d.txnSaleDate))) && <SaleStagePill deal={d} size="sm" />}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 6, marginTop: 7 }}>
+                    {stat("NOI", fmtPriceShort(d.noi))}
+                    {stat("GLA", d.totalSF ? `${Math.round(Number(d.totalSF) / 1000)}K SF` : "—")}
+                    {stat("Occ", d.occupancy != null ? `${d.occupancy}%` : "—")}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {viewMode === "table" && rows.length > 0 && !isPhone && (
         <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ overflowX: "auto" }}>
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 600 }}>
@@ -1332,18 +1413,30 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                     style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("occupancy") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Occ{arrow("occupancy")}
                   </th>
-                  <th onClick={e => toggleSort("capRate", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                  <th onClick={e => toggleSort("noi", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("noi") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    NOI{arrow("noi")}
+                  </th>
+                  <th onClick={e => toggleSort("walt", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("walt") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    WALT{arrow("walt")}
+                  </th>
+                  <th onClick={e => toggleSort("grade", e)} title="AI deal grade · click to sort"
+                    style={{ padding: "10px 10px", textAlign: "center", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("grade") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    Grade{arrow("grade")}
+                  </th>
+                  {showCap && <th onClick={e => toggleSort("capRate", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
                     style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("capRate") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Cap{arrow("capRate")}
-                  </th>
-                  <th onClick={e => toggleSort("askingPrice", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                  </th>}
+                  {showPrice && <th onClick={e => toggleSort("askingPrice", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
                     style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("askingPrice") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Price{arrow("askingPrice")}
-                  </th>
-                  <th onClick={e => toggleSort("seller", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
+                  </th>}
+                  {showSeller && <th onClick={e => toggleSort("seller", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
                     style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("seller") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Seller{arrow("seller")}
-                  </th>
+                  </th>}
                   <th onClick={e => toggleSort("uploadedAt", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
                     style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("uploadedAt") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Uploaded{arrow("uploadedAt")}
@@ -1393,9 +1486,14 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: anchor ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{anchor || "—"}</td>
                       <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.totalSF ? Number(d.totalSF).toLocaleString() : "—"}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.occupancy != null ? `${d.occupancy}%` : "—"}</td>
-                      <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#0f9d63", whiteSpace: "nowrap" }}>{d.capRate != null ? `${d.capRate}%` : "—"}</td>
-                      <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.askingPrice)}</td>
-                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.seller ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{d.seller || "—"}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.noi)}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: d.walt != null && Number(d.walt) < 3 ? "#b3261e" : "#5c5f57", whiteSpace: "nowrap" }}>{d.walt != null ? `${Number(d.walt).toFixed(1)}y` : "—"}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "center", fontSize: 11.5, fontWeight: 700, color: "#383a37", whiteSpace: "nowrap" }}>{d.dealScore?.grade || "—"}</td>
+                      {showCap && (() => { const c = effectiveCap(d); return (
+                        <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: c.implied ? "#7d766a" : "#0f9d63", whiteSpace: "nowrap" }} title={c.implied ? "Implied: NOI ÷ asking price (no stated cap)" : undefined}>{c.value != null ? `${c.value}%${c.implied ? "*" : ""}` : "—"}</td>
+                      ); })()}
+                      {showPrice && <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.askingPrice)}</td>}
+                      {showSeller && <td style={{ padding: "8px 10px", fontSize: 11, color: d.seller ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{d.seller || "—"}</td>}
                       <td style={{ padding: "8px 10px", fontSize: 11, color: d.uploadedAt ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
                       {(() => { const lu = d.lastUploadAt || d.uploadedAt; return (
                         <td style={{ padding: "8px 14px 8px 10px", fontSize: 11, color: lu ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{lu ? new Date(lu).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>

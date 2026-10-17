@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-library-cards",
+    date: "2026-10-17",
+    category: "improved",
+    title: "Deal Library: phone cards, NOI / WALT / Grade columns",
+    detail:
+      "On a phone the Deal Library is now a list of cards, each with the photo, name, city and state, status (plus any sale-stage flag), NOI, GLA and occupancy. On a computer the table gains NOI, WALT and Grade columns. Where a deal has no stated cap rate but has NOI and an asking price, the implied cap is shown, marked with *. Cap, Price and Seller are hidden while 90% or more of deals leave them blank; tap 'show' to bring them back.",
+    where: "Portfolio → Deal Library",
+  },
+  {
     id: "2026-10-17-mtm-houseview",
     date: "2026-10-17",
     category: "improved",

@@ -19,11 +19,11 @@ export default function SaleStagePill({ deal, size = "md" }: { deal: Pick<Deal, 
   return (
     <span title={`Still OWNED — counts in every owned total until the sale closes. ${label}.`}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+        display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "normal", maxWidth: "100%", lineHeight: 1.35,
         fontSize: size === "sm" ? 9 : 10, fontWeight: 700, letterSpacing: "0.02em",
         color: uc ? "#9a3412" : "#8a5a12", background: uc ? "#fdecdc" : "#f6efe0",
         border: `1px solid ${uc ? "#f0c08a" : "#e0c98a"}`, borderRadius: 20,
-        padding: size === "sm" ? "1px 7px" : "3px 10px", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis",
+        padding: size === "sm" ? "1px 7px" : "3px 10px",
       }}>
       {uc ? "⏳" : "📣"} {label}
     </span>
