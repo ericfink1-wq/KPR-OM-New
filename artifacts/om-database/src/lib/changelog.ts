@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-17-dispositions-risk",
+    date: "2026-10-17",
+    category: "new",
+    title: "Dispositions page, plus owned-portfolio risk cards",
+    detail:
+      "A new Dispositions page lists every owned property KPR is selling, with stage, buyer, price and price per SF, the buyer's deposit and whether it's refundable or hard, and the PSA, diligence and expected closing dates. It flags a diligence deadline within two weeks, a closing within 30 days, and a closing date that has passed without the deal being marked Sold. Sales closed in the last 12 months are listed underneath. Enter the new deposit and date fields on a deal's Transaction tab. The home page and the Owned view of Portfolio Analytics now show two cards: how much owned rent is with tenants on the retailer watchlist, and, for each owned center, the rent at risk if its key anchor goes dark (co-tenancy clauses that trip on that anchor alone).",
+    where: "Analytics → Portfolio → Dispositions; Analyst home; Portfolio Analytics → Owned",
+  },
+  {
     id: "2026-10-17-layout-pass",
     date: "2026-10-17",
     category: "improved",

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
+import OwnedRiskCards from "./OwnedRiskCards";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount, LIBRARY_TRIMMED_MARKER } from "../lib/utils";
 import { buildFocusContext } from "../lib/analystRetrieval";
@@ -28,6 +29,8 @@ interface Props {
   // suggested prompt hands off to the drawer via onAsk instead of running the
   // conversation inline. When absent (drawer mode), the chat runs here.
   onAsk?: (q: string) => void;
+  /** Home page only: jump to an analytics page (the owned-risk cards link there). */
+  onNav?: (dest: string) => void;
 }
 
 // ── Formatting helpers ──────────────────────────────────────────────────────
@@ -66,7 +69,7 @@ const panelLabel: React.CSSProperties = {
   marginTop: 16,
 };
 
-export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQuery, onClearQuery, onAsk }: Props) {
+export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQuery, onClearQuery, onAsk, onNav }: Props) {
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -315,6 +318,9 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                 )}
               </>
             )}
+
+            {/* Owned-portfolio risk: watchlist rent + rent at risk if an anchor goes dark */}
+            {onNav && <OwnedRiskCards deals={deals} onOpenDeal={onOpenDeal} onNav={onNav} />}
 
             {/* Deal tiles */}
             {active.length > 0 && (

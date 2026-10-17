@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useIsMobile } from "../hooks/use-mobile";
+import OwnedRiskCards from "./OwnedRiskCards";
+import type { Deal } from "../lib/idb";
 import { startAiTask, finishAiTask } from "../lib/aiProgress";
 
 // ---------------------------------------------------------------------------
@@ -308,9 +310,13 @@ interface Props {
   onTenantAnalytics?: () => void;
   onDataAudit?: (checkKey?: string) => void;
   onFeedback?: () => void;
+  /** For the Owned view's risk cards (watchlist rent, rent at risk if an anchor goes dark). */
+  deals?: Deal[];
+  onOpenDeal?: (id: string) => void;
+  onNav?: (dest: string) => void;
 }
 
-export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmin, onYearClick, onTenantAudit, onTenantAnalytics, onDataAudit, onFeedback }: Props) {
+export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmin, onYearClick, onTenantAudit, onTenantAnalytics, onDataAudit, onFeedback, deals, onOpenDeal, onNav }: Props) {
   const isMobile = useIsMobile();
   const [data, setData] = useState<PortfolioAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -827,6 +833,8 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
 
       {!noDeals && !loading && !error && data && (
         <>
+          {scope === "owned" && deals && onOpenDeal && <OwnedRiskCards deals={deals} onOpenDeal={onOpenDeal} onNav={onNav} />}
+
           {/* Summary stat boxes */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
             <StatBox

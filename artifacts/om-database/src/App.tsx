@@ -663,7 +663,7 @@ function AppInner() {
             ) : (
               <>
                 {analyticsView === "portfolio" ? (
-                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} onDataAudit={(key) => { setAuditFilterKey(key ?? null); setAnalyticsView("audit"); }} onFeedback={() => setAnalyticsView("feedback")} ownedDealIds={ownedDealIds} isAdmin={isAdmin} />
+                  <PortfolioAnalytics onYearClick={(year, scope) => navigate({ type: "rollover-year", year, scope })} onTenantAudit={() => navigate({ type: "tenant-audit" })} onDataAudit={(key) => { setAuditFilterKey(key ?? null); setAnalyticsView("audit"); }} onFeedback={() => setAnalyticsView("feedback")} ownedDealIds={ownedDealIds} isAdmin={isAdmin} deals={activeDeals} onOpenDeal={handleOpenDeal} onNav={onAnalyticsNav} />
                 ) : analyticsView === "calendar" ? (
                   <CriticalDates deals={activeDeals} onOpenDeal={handleOpenDeal} />
                 ) : analyticsView === "marktomarket" ? (
@@ -705,6 +705,7 @@ function AppInner() {
             onOpenDeal={handleOpenDeal}
             onTenantClick={handleOpenTenant}
             onAsk={handleQuery}
+            onNav={onAnalyticsNav}
           />
         </div>
       )}
