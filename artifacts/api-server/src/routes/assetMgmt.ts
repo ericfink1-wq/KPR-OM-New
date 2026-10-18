@@ -54,8 +54,8 @@ router.delete("/am/records/:id", requireAdmin, async (req, res) => {
 router.post("/am/records/import", requireAdmin, async (req, res) => {
   try {
     const text = String((req.body ?? {}).text ?? "").slice(0, 2_000_000);
-    const existing = new Set((await listRecords([...ENTRY_KINDS])).map(r => r.id));
-    const plan = planImport(text, await ownedDeals(), existing);
+    const recs = await listRecords([...ENTRY_KINDS]);
+    const plan = planImport(text, await ownedDeals(), new Set(recs.map(r => r.id)), recs);
     if (plan.problem) { res.status(400).json({ error: plan.problem }); return; }
     if ((req.body ?? {}).apply === true) {
       for (const r of plan.rows) await upsertRecord(r.id, r.kind as AmKind, r.dealId, r.data, r.sourceNote, req.session.userEmail || "admin");
@@ -180,7 +180,7 @@ router.post("/am/credit-news/summarize", requireAuth, async (req, res) => {
 
 // Read-only operating docs for admins (Eric reads them in a browser — chat code blocks don't
 // render for him). Whitelisted names only; the file ships in dist/docs via build.mjs.
-const SERVED_DOCS: Record<string, string> = { "datex-refresh": "datex-refresh.md" };
+const SERVED_DOCS: Record<string, string> = { "datex-refresh": "datex-refresh.md", "datex-snapshot-example": "datex-snapshot-example.json" };
 router.get("/admin/docs/:name", requireAdmin, async (req, res) => {
   const file = SERVED_DOCS[String(req.params.name)];
   if (!file) { res.status(404).type("text/plain").send("Unknown doc. Available: " + Object.keys(SERVED_DOCS).join(", ")); return; }

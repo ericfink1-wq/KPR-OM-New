@@ -1,0 +1,108 @@
+{
+  "source": "datex",
+  "asOf": "2026-10-15",
+  "generatedBy": "Eric via Claude + Datex connector",
+  "deals": [
+    {
+      "dealId": "1780329443422-lhiainq",
+      "bldgIds": ["overland"],
+      "period": "202610",
+      "totalGLA": 172400,
+      "occupiedGLA": 165210,
+      "vacantGLA": 7190,
+      "occupancyPct": 95.8,
+      "totalUnits": 24,
+      "occupiedUnits": 22,
+      "vacantUnits": 2,
+      "segments": {
+        "shop": { "gla": 38400, "occupiedGLA": 31210, "units": 18, "occupiedUnits": 16 },
+        "major": { "gla": 128000, "occupiedGLA": 128000, "units": 3, "occupiedUnits": 3 },
+        "pad": { "gla": 6000, "occupiedGLA": 6000, "units": 2, "occupiedUnits": 2 },
+        "groundLease": { "gla": 0, "occupiedGLA": 0, "units": 1, "occupiedUnits": 1 }
+      },
+      "assetManager": "Jon Smith",
+      "tenants": [
+        {
+          "tenantId": "t0001604",
+          "name": "Schnucks #742",
+          "nationalTenant": "Schnucks",
+          "suite": "A",
+          "sf": 61000,
+          "annualRent": 671000,
+          "annualRentPSF": 11.0,
+          "annualNNN": 262300,
+          "annualNNNPSF": 4.3,
+          "annualOther": 0,
+          "leaseStart": "2009-10-01",
+          "leaseExpiry": "2029-09-30",
+          "delinquency": 0,
+          "lastSalesPeriod": "202609",
+          "salesPSF": 384.0,
+          "salesPeriod": "202609",
+          "salesReportType": "GROSS",
+          "coTenancy": false
+        },
+        {
+          "tenantId": "t0001611",
+          "name": "Commerce Bank ATM",
+          "nationalTenant": "Commerce Bank",
+          "suite": "ATM-1",
+          "sf": 0,
+          "annualRent": 12000,
+          "annualRentPSF": 0,
+          "annualNNN": 0,
+          "annualNNNPSF": 0,
+          "annualOther": 0,
+          "leaseStart": "2016-08-01",
+          "leaseExpiry": "2026-07-31",
+          "delinquency": 0,
+          "lastSalesPeriod": "190001",
+          "salesReportType": "NONE",
+          "coTenancy": false
+        }
+      ],
+      "vacantSuites": [
+        { "suite": "C-4", "sf": 7100 },
+        { "suite": "U-1", "sf": 90 }
+      ],
+      "salesHistory": [
+        { "tenantId": "t0001604", "period": "202609", "amount": 1950000, "reportingType": "RPT" },
+        { "tenantId": "t0001604", "period": "202608", "amount": 1985000, "reportingType": "RPT" },
+        { "tenantId": "t0001604", "period": "202607", "amount": 2010000, "reportingType": "RPT" }
+      ],
+      "arAging": {
+        "totalOpen": 48210.55,
+        "over60": 18400.0,
+        "over90": 9200.0,
+        "byTenant": [
+          { "tenantId": "t0001633", "name": "Nail Spa", "over60": 6400.0, "over90": 3200.0 }
+        ]
+      },
+      "financials": {
+        "period": "202609",
+        "basis": "Accrual",
+        "noiYtdActual": -1731500.22,
+        "noiYtdBudget": -1765000.0,
+        "noiTtmActual": -2310400.0,
+        "noiYearBudget": -2353000.0
+      },
+      "leasing": [
+        {
+          "tenant": "Crumbl Cookies",
+          "suite": "C-4",
+          "gla": 1600,
+          "rentPSF": 34.0,
+          "stage": "Lease out for signature",
+          "submitted": "2026-08-12",
+          "executed": null,
+          "rentCommencement": "2027-02-01",
+          "termMonths": 120
+        }
+      ],
+      "loans": [
+        { "LoanId": 1188, "Lender": "Old National Bank", "InitializeAmount": 17000000, "Balance": 17000000, "StartDate": "2025-01-15", "DueDate": "2030-01-15", "InterestRate": 6.44, "Inactive": false }
+      ],
+      "notes": "Optional free text — shown nowhere critical."
+    }
+  ]
+}

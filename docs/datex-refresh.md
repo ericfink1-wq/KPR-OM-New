@@ -1,6 +1,30 @@
 # Refreshing live Datex data into the deal library
 
 > Admins can read this page in a browser at **`/api/admin/docs/datex-refresh`** (plain text).
+> A complete example snapshot — every v2 key populated, exact field names — is at
+> **`/api/admin/docs/datex-snapshot-example`**. A test imports that exact file, so it always
+> matches what the importer reads.
+
+## The file, in one paragraph (10/18/26)
+
+One JSON file: `{ "source": "datex", "asOf": "YYYY-MM-DD", "generatedBy": "...", "deals": [ ... ] }`
+with ONE object per owned deal — **all 38 in one file is fine** (the server accepts up to 50 MB;
+2–4 MB is nothing). Each deal object: `dealId` and `bldgIds` exactly as the Datex building map
+lists them (Rockaway = all three), then `period`, `totalGLA`, `occupiedGLA`, `vacantGLA`,
+`occupancyPct`, `totalUnits`, `occupiedUnits`, `vacantUnits`, `segments`, `assetManager`,
+`tenants[]`, `vacantSuites[]`, `salesHistory[]`, `arAging`, `financials`, `leasing[]`, `loans[]`.
+Tenant fields: `tenantId, name, nationalTenant, suite, sf, annualRent, annualRentPSF, annualNNN,
+annualNNNPSF, annualOther, leaseStart, leaseExpiry, delinquency, lastSalesPeriod, salesPSF,
+salesPeriod, salesReportType, coTenancy` (`gla`, `rentPSF`, `expiration` are accepted as
+spellings of `sf`, `annualRentPSF`, `leaseExpiry`). Send EVERY occupied tenant (the roster's GLA is
+checked against `totalGLA`, ±2%) and every vacant suite in `vacantSuites`. `salesHistory.tenantId`
+must match `tenants[].tenantId`. Dates ISO, periods `YYYYMM`, money as plain numbers, NOI raw
+(negative) from Datex. Missing blocks are fine; a null is never stored as zero.
+
+**To load it:** Portfolio Analytics → maintenance menu (🧹) → **📡 Import Datex snapshot (JSON)** →
+pick the FILE. It checks the whole file first and shows what would change and anything
+rejected (with the reason, per property); nothing is written until you accept, and the library is
+snapshotted first.
 
 The deal library holds the **acquisition-era snapshot** for every deal — the figures taken
 from the offering documents at the time. Those are deliberately frozen; they are the record

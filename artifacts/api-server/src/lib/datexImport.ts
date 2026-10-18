@@ -214,7 +214,17 @@ export function buildLiveBlock(
     // A superseded lease generation repeats the SF at zero dollars; the dot is the marker.
     if (String(t?.tenantId ?? "").includes(".")) return false;
     return Boolean(String(t?.name ?? "").trim());
-  }).map(t => {
+  }).map(t0 => {
+    // Common Datex / rent-roll spellings are accepted for the core fields so a hand-built
+    // snapshot can't silently lose them: gla|suiteSqft → sf, rentPSF → annualRentPSF,
+    // expiration|expir → leaseExpiry, commencement → leaseStart.
+    const a = t0 as Record<string, unknown>;
+    const t = { ...t0,
+      sf: t0.sf ?? (a.gla ?? a.suiteSqft ?? a.SuiteSQFT) as number | null,
+      annualRentPSF: t0.annualRentPSF ?? (a.rentPSF ?? a.rentPerSF) as number | null,
+      leaseExpiry: t0.leaseExpiry ?? (a.expiration ?? a.expir ?? a.EXPIR) as string | null,
+      leaseStart: t0.leaseStart ?? (a.commencement ?? a.leaseCommencement) as string | null,
+    };
     const row: Record<string, unknown> = { name: String(t.name).trim() };
     if (t.tenantId) row.tenantId = String(t.tenantId).trim();
     if (t.suite) row.suite = String(t.suite).trim();

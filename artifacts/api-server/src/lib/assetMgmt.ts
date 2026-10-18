@@ -416,7 +416,17 @@ export function resolveDeal(raw: Record<string, unknown>, owned: OwnedDealRef[])
 }
 
 export interface ImportPlanRow { kind: string; id: string; dealId: string; property: string; data: Record<string, unknown>; sourceNote: string | null; action: "create" | "update" }
-export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set<string>): { rows: ImportPlanRow[]; rejected: Array<{ row: number; problem: string }>; problem?: string } {
+/** What makes two rows the SAME instrument regardless of wording (Eric, 10/18/26: a re-import
+ *  with "label"→"loanLabel" or retyped investor text duplicated Rockaway swaps and the
+ *  Knollwood pref). Swap / pref = property + loan label + amount; null when too thin to say. */
+export function naturalKey(kind: string, dealId: string | null, d: Record<string, unknown>): string | null {
+  const lbl = String(d.loanLabel ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const amt = (v: unknown) => (typeof v === "number" && v > 0 ? String(Math.round(v)) : "");
+  if (kind === "swap") { const a = amt(d.notional); return lbl || a ? `swap|${dealId}|${lbl}|${a}` : null; }
+  if (kind === "pref") { const a = amt(d.amount); return lbl || a ? `pref|${dealId}|${lbl}|${a}` : null; }
+  return null;
+}
+export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set<string>, existing: AmRecord[] = []): { rows: ImportPlanRow[]; rejected: Array<{ row: number; problem: string }>; problem?: string } {
   const { rows, problem } = readImportText(text);
   if (problem) return { rows: [], rejected: [], problem };
   const out: ImportPlanRow[] = [], rejected: Array<{ row: number; problem: string }> = [];
@@ -426,7 +436,13 @@ export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set
     const data = SANITIZE[r.kind](r.raw);
     const bad = validateRecord(r.kind, data);
     if (bad) { rejected.push({ row: i + 1, problem: bad }); return; }
-    const id = str(r.raw.id, 120) ?? recordId(r.kind, deal.dealId, data);
+    let id = str(r.raw.id, 120) ?? recordId(r.kind, deal.dealId, data);
+    // Same instrument already on file under another id → update it rather than add a twin.
+    const nk = naturalKey(r.kind, deal.dealId, data);
+    if (!existingIds.has(id) && nk) {
+      const twin = existing.find(e => e.kind === r.kind && naturalKey(e.kind, e.dealId, e.data) === nk && !out.some(o => o.id === e.id));
+      if (twin) id = twin.id;
+    }
     out.push({ kind: r.kind, id, dealId: deal.dealId, property: owned.find(d => d.id === deal.dealId)!.name, data, sourceNote: str(r.raw.source ?? r.raw.sourceNote, 300) ?? null, action: existingIds.has(id) ? "update" : "create" });
   });
   return { rows: out, rejected };

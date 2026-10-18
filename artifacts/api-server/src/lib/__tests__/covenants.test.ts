@@ -58,3 +58,17 @@ describe("IO period read from the amortization text", () => {
     expect(sanitizeLoan({ amortization: "25-year amortization" })).toMatchObject({ amortization: "amortizing", amortYears: 25 });
   });
 });
+
+describe("re-imports never duplicate a swap or pref", () => {
+  const OWNED = [{ id: "rock", name: "Rockaway Centers", bldgIds: ["rockcom"] }];
+  const rec = (id: string, kind: AmRecord["kind"], data: Record<string, unknown>): AmRecord => ({ id, kind, dealId: "rock", data, sourceNote: null, updatedBy: null, updatedAt: "" });
+  it("matches on property + loan label + amount, whatever the other wording", () => {
+    const existing = [rec("swap:old", "swap", { counterparty: "Wells", loanLabel: "Town Court", notional: 20e6, fixedSwapRatePct: 3.5, maturityDate: "2029-01-01" }),
+      rec("pref:old", "pref", { investor: "Kimco Realty", loanLabel: "Knollwood", amount: 25.6e6 })];
+    const p = planImport(JSON.stringify({
+      swaps: [{ dealId: "rock", counterparty: "Wells Fargo Bank, N.A.", label: "Town Court", notional: 20e6, fixedSwapRatePct: 3.5, maturityDate: "2029-01-01" }],
+      preferredEquity: [{ dealId: "rock", investor: "Kimco Income Operating Partnership", loanLabel: "Knollwood", amount: 25_600_000, ratePct: 9.25 }],
+    }), OWNED, new Set(existing.map(e => e.id)), existing);
+    expect(p.rows.map(r => [r.id, r.action])).toEqual([["swap:old", "update"], ["pref:old", "update"]]);
+  });
+});
