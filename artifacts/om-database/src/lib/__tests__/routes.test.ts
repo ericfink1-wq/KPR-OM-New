@@ -26,5 +26,10 @@ describe("URL routes round-trip", () => {
     expect(pathToRoute("/analytics/mtm")).toMatchObject({ tab: "analytics", analyticsView: "marktomarket" });
     expect(pathToRoute("/deals/abc")).toMatchObject({ view: { type: "detail", dealId: "abc" } });
   });
+  it("Asset Mgmt tabs round-trip", () => {
+    expect(routeToPath(S({ tab: "assetmgmt", amTab: "credit" }))).toBe("/asset-mgmt/credit-watch");
+    expect(pathToRoute("/asset-mgmt/credit-watch")).toMatchObject({ tab: "assetmgmt", amTab: "credit" });
+    expect(pathToRoute("/asset-mgmt")).toMatchObject({ tab: "assetmgmt", amTab: "debt" });
+  });
   it("unknown paths are left alone", () => expect(pathToRoute("/something-else")).toBeNull());
 });

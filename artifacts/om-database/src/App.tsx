@@ -10,7 +10,7 @@ import FeedbackWidget from "./components/FeedbackWidget";
 import AnalystBar from "./components/AnalystBar";
 import MobileTabBar, { MOBILE_TAB_BAR_H } from "./components/MobileTabBar";
 import { useIsMobile } from "./hooks/use-mobile";
-import { routeToPath, pathToRoute } from "./lib/routes";
+import { routeToPath, pathToRoute, type AmTab } from "./lib/routes";
 import { installEscapeToClose } from "./lib/escapeClose";
 import DealGrid from "./components/DealGrid";
 import AnalystChat from "./components/AnalystChat";
@@ -58,6 +58,7 @@ const DetailView = lazyWithReload(() => import("./components/DetailView"));
 // Opened on demand, so they don't ship with the first screen.
 // The upload pipeline (PDF/rent-roll/sales readers) loads on the first drop, then stays mounted.
 const UploadQueue = lazyWithReload(() => import("./components/UploadQueue"));
+const AssetMgmt = lazyWithReload(() => import("./components/AssetMgmt"));
 const ClosingCostEstimator = lazyWithReload(() => import("./components/ClosingCostEstimator"));
 const CriticalDates = lazyWithReload(() => import("./components/CriticalDates"));
 const MarkToMarket = lazyWithReload(() => import("./components/MarkToMarket"));
@@ -92,7 +93,7 @@ function ViewLoading() {
   );
 }
 
-type TabId = "analyst" | "portfolio" | "analytics" | "comps";
+type TabId = "analyst" | "portfolio" | "analytics" | "comps" | "assetmgmt";
 type View = { type: "list" } | { type: "detail"; dealId: string } | { type: "compare"; dealIds: string[] } | { type: "tenant"; tenantName: string } | { type: "parent"; parentName: string } | { type: "tenant-audit" } | { type: "tenant-link" } | { type: "tenant-analytics" } | { type: "lender"; lenderName: string } | { type: "rollover-year"; year: string; scope: "all" | "owned" };
 type AuthState = "checking" | "authenticated" | "unauthenticated";
 
@@ -144,6 +145,7 @@ function AppInner() {
   // (/deals/<id>, /comps, /analytics/mtm…) lands where it points.
   const [initialRoute] = useState(() => { try { return pathToRoute(window.location.pathname, window.location.search); } catch { return null; } });
   const [tab, setTab] = useState<TabId>(() => (initialRoute?.tab as TabId) ?? "analyst");
+  const [amTab, setAmTab] = useState<AmTab>(() => initialRoute?.amTab ?? "debt");
   // Data Audit → "Merge these": the duplicate group to open in the library's Merge dialog.
   const [mergePreset, setMergePreset] = useState<string[] | null>(null);
   // Right-side AI chat drawer (opened from the ask bar / "Ask about this property").
@@ -189,13 +191,15 @@ function AppInner() {
     // Seed the current entry's state so a Back to it restores this screen.
     try { window.history.replaceState({ ...(window.history.state || {}), kprStack: viewStackRef.current }, ""); } catch { /* ignore */ }
     const onPop = (e: PopStateEvent) => {
-      const st = (e.state || {}) as { kprStack?: View[]; tab?: TabId; av?: string };
+      const st = (e.state || {}) as { kprStack?: View[]; tab?: TabId; av?: string; am?: AmTab };
       const s = Array.isArray(st.kprStack) ? st.kprStack : null;
       fromPopRef.current = true;
       // Entries made before routing existed carry no tab — read it from the address.
       const fromUrl = st.tab ? null : pathToRoute(window.location.pathname, window.location.search);
       const nextTab = (st.tab ?? fromUrl?.tab) as TabId | undefined;
       if (nextTab) setTab(nextTab);
+      const nextAm = st.am ?? fromUrl?.amTab;
+      if (nextAm) setAmTab(nextAm);
       const nextAv = st.av ?? fromUrl?.analyticsView;
       if (nextAv) setAnalyticsView(nextAv as Parameters<typeof setAnalyticsView>[0]);
       setViewStack(s && s.length ? s : fromUrl?.view && fromUrl.view.type !== "list" ? [{ type: "list" }, fromUrl.view as View] : [{ type: "list" }]);
@@ -217,6 +221,7 @@ function AppInner() {
 
   // Top-nav Analytics dropdowns → jump straight to a section.
   const onAnalyticsNav = useCallback((dest: string) => {
+    if (dest.startsWith("am:")) { resetToList(); setTab("assetmgmt"); setAmTab((dest.slice(3) || "debt") as AmTab); return; }
     setTab("analytics");
     if (dest === "link-tenants") { navigate({ type: "tenant-link" }); return; }
     if (dest === "tenant-audit") { navigate({ type: "tenant-audit" }); return; }
@@ -268,16 +273,16 @@ function AppInner() {
   // ?reset= / ?verify= email links on "/" stay intact.
   useEffect(() => {
     if (auth !== "authenticated") return;
-    const path = routeToPath({ tab, analyticsView, view });
+    const path = routeToPath({ tab, analyticsView, view, amTab });
     const here = window.location.pathname + window.location.search;
-    const state = { ...(window.history.state || {}), kprStack: viewStack, tab, av: analyticsView };
+    const state = { ...(window.history.state || {}), kprStack: viewStack, tab, av: analyticsView, am: amTab };
     try {
       if (fromPopRef.current) { fromPopRef.current = false; window.history.replaceState(state, ""); return; }
       if (navPushedRef.current) { navPushedRef.current = false; window.history.replaceState(state, "", path); return; }
       if (path !== here) window.history.pushState(state, "", path);
       else window.history.replaceState(state, "");
     } catch { /* ignore */ }
-  }, [auth, tab, analyticsView, view, viewStack]);
+  }, [auth, tab, analyticsView, view, viewStack, amTab]);
   // When the Data Audit view is opened from a breakdown chip, pre-filter it to that check.
   const [auditFilterKey, setAuditFilterKey] = useState<string | null>(null);
 
@@ -575,7 +580,7 @@ function AppInner() {
   // tenant-audit) return null here; the rest get a screen-reader-only heading.
   const fallbackH1: string | null = (() => {
     if (tab === "analyst") return "KPR Analyst";
-    if (tab === "comps") return null;
+    if (tab === "comps" || tab === "assetmgmt") return null;
     if (tab === "portfolio") {
       if (view.type === "compare") return "Compare deals";
       if (view.type === "lender") return `Lender: ${view.lenderName}`;
@@ -665,6 +670,13 @@ function AppInner() {
       {tab === "comps" && (
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
           <CompsSearch onOpenDeal={id => { handleOpenDeal(id); }} isAdmin={isAdmin} />
+        </div>
+      )}
+
+      {/* Asset Mgmt tab — owned properties only */}
+      {tab === "assetmgmt" && (
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 88 }}>
+          <AssetMgmt deals={activeDeals} isAdmin={isAdmin} onOpenDeal={handleOpenDeal} tab={amTab} onTab={setAmTab} />
         </div>
       )}
 

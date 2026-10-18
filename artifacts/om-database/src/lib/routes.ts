@@ -4,7 +4,9 @@
 // refresh or a pasted link lands on the same screen. The production server already
 // rewrites every path to index.html, so any of these can be opened directly.
 
-export type RouteTab = "analyst" | "portfolio" | "analytics" | "comps";
+export type RouteTab = "analyst" | "portfolio" | "analytics" | "comps" | "assetmgmt";
+export type AmTab = "debt" | "dates" | "properties" | "credit";
+const AM_SLUG: Record<AmTab, string> = { debt: "debt", dates: "dates", properties: "properties", credit: "credit-watch" };
 export type AnalyticsView = "portfolio" | "tenant" | "watchlist" | "calendar" | "marktomarket" | "cotenancy" | "audit" | "feedback" | "learning";
 export type RouteView =
   | { type: "list" }
@@ -18,7 +20,7 @@ export type RouteView =
   | { type: "lender"; lenderName: string }
   | { type: "rollover-year"; year: string; scope: "all" | "owned" };
 
-export interface RouteState { tab: RouteTab; analyticsView: AnalyticsView; view: RouteView }
+export interface RouteState { tab: RouteTab; analyticsView: AnalyticsView; view: RouteView; amTab?: AmTab }
 
 // Readable slugs for the analytics pages (the internal ids are terse).
 const AV_SLUG: Record<AnalyticsView, string> = {
@@ -50,6 +52,7 @@ export function routeToPath(s: RouteState): string {
   }
   if (s.tab === "portfolio") return "/deals";
   if (s.tab === "comps") return "/comps";
+  if (s.tab === "assetmgmt") return `/asset-mgmt/${AM_SLUG[s.amTab ?? "debt"]}`;
   if (s.tab === "analytics") return `/analytics/${AV_SLUG[s.analyticsView] ?? "portfolio"}`;
   return "/";
 }
@@ -62,6 +65,10 @@ export function pathToRoute(pathname: string, search = ""): Partial<RouteState> 
   if (!a) return { tab: "analyst", view: { type: "list" } };
   if (a === "deals") return b ? { tab: "portfolio", view: { type: "detail", dealId: b } } : { tab: "portfolio", view: { type: "list" } };
   if (a === "comps") return { tab: "comps", view: { type: "list" } };
+  if (a === "asset-mgmt") {
+    const t = (Object.keys(AM_SLUG) as AmTab[]).find(k => AM_SLUG[k] === b || k === b) ?? "debt";
+    return { tab: "assetmgmt", amTab: t, view: { type: "list" } };
+  }
   if (a === "compare") {
     const ids = (q.get("ids") || "").split(",").filter(Boolean);
     return ids.length ? { tab: "portfolio", view: { type: "compare", dealIds: ids } } : { tab: "portfolio", view: { type: "list" } };

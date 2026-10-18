@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeLoan, sanitizeSwap, planImport, readImportText, resolveDeal, cleanBldgIds, normIndex, datexLoanToRecord, isoDate } from "../assetMgmt";
+import { sanitizeLoan, sanitizeSwap, planImport, readImportText, resolveDeal, cleanBldgIds, normIndex, datexLoanToRecord, isoDate, headlineNamesBrand } from "../assetMgmt";
 import { reduceSalesHistory, glaTieOut, buildLiveBlock } from "../datexImport";
 
 const OWNED = [
@@ -101,5 +101,15 @@ describe("Datex snapshot v2", () => {
     const t = ("block" in r ? r.block.tenants : []) as Array<Record<string, unknown>>;
     expect(t[0].sales12).toMatchObject({ sales12: 300000, staleMonths: 10 });
     expect(t[1].salesNeverReported).toBe(true);
+  });
+});
+
+describe("credit-watch headlines", () => {
+  it("only headlines that name the brand count", () => {
+    expect(headlineNamesBrand("Fred Meyer to close 3 stores in Oregon", "Fred Meyer")).toBe(true);
+    expect(headlineNamesBrand("Grocery store closures a result of government intervention", "Fred Meyer")).toBe(false);
+    expect(headlineNamesBrand("Five Below raises guidance", "Five Below")).toBe(true);
+    expect(headlineNamesBrand("Rossmann closes stores", "Ross")).toBe(false);
+    expect(headlineNamesBrand("Ross's store count grows", "Ross")).toBe(true);
   });
 });

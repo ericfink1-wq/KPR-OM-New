@@ -641,6 +641,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             }}>Tenant Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
           </div>
           <button style={T(tab === "comps")} onClick={() => onTab("comps")}>Comps</button>
+          <button style={T(tab === "assetmgmt")} onClick={() => onTab("assetmgmt")}>Asset Mgmt</button>
           {onClosingCalc && <button style={T(false)} onClick={onClosingCalc}>Closing Costs</button>}
         </div>
 

@@ -1273,3 +1273,50 @@ export async function apiDeleteSiteAgreement(id: string): Promise<{ ok: boolean;
     return { ok: false, error: "Couldn't reach the server. Try again in a moment." };
   }
 }
+
+// ── Asset Management (owned properties) ─────────────────────────────────────
+import type { AmRecord, NewsSignal } from "./assetMgmt";
+export async function apiAmRecords(): Promise<AmRecord[]> {
+  const r = await apiFetch("/am/records");
+  if (!r.ok) throw new Error("Couldn't load asset-management records");
+  return ((await r.json()) as { records: AmRecord[] }).records ?? [];
+}
+export async function apiAmSaveRecord(body: { id?: string; kind: AmRecord["kind"]; dealId: string; data: Record<string, unknown>; sourceNote?: string | null }): Promise<{ id: string }> {
+  const r = await apiFetch("/am/records", { method: "POST", body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({})) as { error?: string; id?: string };
+  if (!r.ok) throw new Error(j.error || "Couldn't save");
+  return { id: j.id ?? "" };
+}
+export async function apiAmDeleteRecord(id: string): Promise<void> {
+  const r = await apiFetch(`/am/records/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!r.ok) throw new Error("Couldn't delete");
+}
+export interface AmImportResult { applied: boolean; rows: Array<{ kind: string; id: string; dealId: string; property: string; data: Record<string, unknown>; sourceNote: string | null; action: "create" | "update" }>; rejected: Array<{ row: number; problem: string }> }
+export async function apiAmImport(text: string, apply: boolean): Promise<AmImportResult> {
+  const r = await apiFetch("/am/records/import", { method: "POST", body: JSON.stringify({ text, apply }) });
+  const j = await r.json().catch(() => ({})) as AmImportResult & { error?: string };
+  if (!r.ok) throw new Error(j.error || "Import failed");
+  return j;
+}
+export interface DatexMapRow { dealId: string; propertyName: string | null; bldgIds: string[]; note: string | null; updatedBy: string | null; updatedAt: string }
+export async function apiAmDatexMap(): Promise<DatexMapRow[]> {
+  const r = await apiFetch("/am/datex-map");
+  if (!r.ok) throw new Error("Couldn't load the Datex map");
+  return ((await r.json()) as { rows: DatexMapRow[] }).rows ?? [];
+}
+export async function apiAmSaveDatexMap(dealId: string, bldgIds: string[], note: string | null): Promise<void> {
+  const r = await apiFetch(`/am/datex-map/${encodeURIComponent(dealId)}`, { method: "PUT", body: JSON.stringify({ bldgIds, note }) });
+  const j = await r.json().catch(() => ({})) as { error?: string };
+  if (!r.ok) throw new Error(j.error || "Couldn't save the mapping");
+}
+export async function apiAmCreditNews(brands: string[]): Promise<{ signals: NewsSignal[]; remaining: number }> {
+  const r = await apiFetch("/am/credit-news", { method: "POST", body: JSON.stringify({ brands }) });
+  if (!r.ok) throw new Error("Couldn't check the news");
+  return r.json() as Promise<{ signals: NewsSignal[]; remaining: number }>;
+}
+export async function apiAmSummarizeNews(brand: string): Promise<string> {
+  const r = await apiFetch("/am/credit-news/summarize", { method: "POST", body: JSON.stringify({ brand }) });
+  const j = await r.json().catch(() => ({})) as { error?: string; summary?: string };
+  if (!r.ok) throw new Error(j.error || "Couldn't summarize");
+  return j.summary ?? "";
+}

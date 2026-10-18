@@ -313,3 +313,12 @@ export function datexLoanToRecord(l: Record<string, unknown>): { id: string; dat
   if (data.originalBalance == null && data.currentBalance == null) return null;
   return { id: `datex-loan:${loanId}`, data, note: `Datex Loans #${loanId}${l.period ? ` (period ${l.period})` : ""}` };
 }
+
+/** Does a headline actually name the brand? (whole-word match, spacing/punctuation-tolerant:
+ *  "Fred Meyer" matches "FredMeyer" and "Fred-Meyer", never a generic grocery story.) */
+export function headlineNamesBrand(title: string, brand: string): boolean {
+  const parts = brand.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (!parts.length) return false;
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${parts.map(esc).join("[^a-z0-9]*")}(?![a-z])`, "i").test(title);
+}

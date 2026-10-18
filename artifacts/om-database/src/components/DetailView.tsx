@@ -12,6 +12,7 @@ import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, api
   apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader, cachedRead } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, openAuditCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
+import { marketSwapRate } from "../lib/assetMgmt";
 import { extractSwap, buildSwapPatch, recognizeRateIndex } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
 import { extractLoan, buildLoanPatch } from "../lib/loanExtract";
@@ -49,6 +50,7 @@ import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { runWithProgress, startAiTask, finishAiTask } from "../lib/aiProgress";
 import ClosingCostsCard from "./ClosingCostsCard";
 import DatexLiveCard from "./DatexLiveCard";
+import { OwnedDealPanel } from "./AssetMgmt";
 import TaxReassessmentCard from "./TaxReassessmentCard";
 import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
@@ -3499,6 +3501,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       </>)}
       {tab === "overview" && (<>
+      {/* Asset management for an owned property — live Datex vs the OM, debt, next dates. */}
+      {d.status === "Owned" && <div id="section-asset-mgmt" style={{ marginBottom: 14 }}><OwnedDealPanel deal={d} onOpenDeal={() => {}} /></div>}
       {/* Edit metrics — below red flags */}
       <div id="section-aliases"><AkaEditor deal={d} onUpdate={onUpdate}/></div>
 
@@ -4700,37 +4704,9 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       const yrsLeft = Math.max(0, (term.getTime() - new Date(payoff).getTime()) / (365.25 * 864e5));
       const spread = (swap.floatingSpreadBps ?? 0) / 100;
 
-      // KPR's swaps hedge 1M CME Term SOFR (Eric, 10/17/26 — "that's what my loans use"), so
-      // breakage is priced off the 1M TERM SOFR swap curve. A swap whose recorded index is
-      // Daily Simple / compounded SOFR (Overland/ONB) uses the SOFR (annual/annual) curve.
-      const idx = String(swap.floatingIndex ?? "");
-      const dailySofr = /daily|simple|compound|\bOIS\b/i.test(idx) && !/term/i.test(idx);
-      const termPts = (r.termSwapCurve?.points ?? []).map(p => [p.tenor, p.rate] as [number, number]);
-      // SOFR (annual/annual) rows: "SOFR Swap – 3 Year", "… 5 Year", "… 10 Year".
-      const oisPts = (r.swaps?.rows ?? [])
-        .map(x => { const m = /(\d+)\s*Year/i.exec(x.label || ""); return m && x.value != null ? [Number(m[1]), x.value] as [number, number] : null; })
-        .filter((p): p is [number, number] => !!p);
-      const swapPts = (!dailySofr && termPts.length >= 2 ? termPts : oisPts).sort((a, b) => a[0] - b[0]);
-
-      const interp = (pts: [number, number][], t: number): number | null => {
-        if (!pts.length) return null;
-        if (t <= pts[0][0]) return pts[0][1];                       // clamp below shortest tenor (e.g. 2.5y → 3y swap)
-        if (t >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
-        for (let i = 1; i < pts.length; i++) {
-          const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
-          if (t <= x1) return y0 + (y1 - y0) * ((t - x0) / (x1 - x0));
-        }
-        return pts[pts.length - 1][1];
-      };
-
-      let mkt = interp(swapPts, yrsLeft);
-      // Fallback only if the live swap feed is empty: matching-tenor Treasury proxy
-      // (rougher — carries the swap-spread basis error, but better than nothing).
-      if (mkt == null) {
-        const tenors: Array<[string, number]> = [["1-Yr",1],["2-Yr",2],["3-Yr",3],["5-Yr",5],["7-Yr",7],["10-Yr",10],["30-Yr",30]];
-        const best = tenors.reduce((a, b) => Math.abs(b[1]-yrsLeft) < Math.abs(a[1]-yrsLeft) ? b : a);
-        mkt = r.treasuries.rows.find(x => x.label === best[0])?.value ?? null;
-      }
+      // KPR's swaps hedge 1M CME Term SOFR (Eric, 10/17/26 — "that's what my loans use"):
+      // the same curve lookup as Asset Mgmt → Debt (Daily Simple SOFR swaps use annual/annual).
+      const mkt = marketSwapRate(r, yrsLeft, swap.floatingIndex).rate;
       if (mkt != null) setSwapRate(Math.round((mkt + spread) * 100) / 100);
     }).catch(() => {});
     return () => { alive = false; };

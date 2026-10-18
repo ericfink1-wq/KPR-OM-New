@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { buildSystemPrompt, cityState, tenantKey, tenantLabel, isVacant, openAuditCount, LIBRARY_TRIMMED_MARKER } from "../lib/utils";
@@ -11,6 +11,7 @@ import { buildCompsSummary, type CompsSummary } from "../lib/compsSummary";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
+const ThisWeekCard = lazy(() => import("./ThisWeekCard"));
 import { CalendarClock, BarChart3, ShieldAlert, Scale, Landmark, Users, ChevronRight, ArrowUp, Square } from "lucide-react";
 
 interface Message {
@@ -399,6 +400,14 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                     )}
                   </div>
                 )}
+              </section>
+            )}
+
+            {/* Weekly digest of owned-property critical dates (no email in the app — it lives here). */}
+            {portfolio.count > 0 && (
+              <section className="kpr-section">
+                <SectionTitle>This week</SectionTitle>
+                <Suspense fallback={null}><ThisWeekCard deals={active} onOpenDeal={onOpenDeal} onSeeAll={() => onNav?.("am:dates")} /></Suspense>
               </section>
             )}
 

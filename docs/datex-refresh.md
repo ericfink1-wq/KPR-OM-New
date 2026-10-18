@@ -98,3 +98,48 @@ Two differences are expected rather than alarming: a deal whose library record w
 part of a multi-building property will show a large GLA jump on refresh (Rockaway Centers,
 302,289 → 535,571 SF across its three buildings), and a Datex building that covers more than
 the deal does will do the same. Check the map note before treating either as a data error.
+
+## Snapshot v2 — Asset Management (10/18/26)
+
+The **Asset Mgmt** tab (Debt · Dates · Properties · Credit Watch) and the owned-deal panel
+read the same `datexLive` block, so they also need the v2 fields. Every block is optional; a
+missing block just shows as "no Datex data" on the page. Generate them **per property**, filtered
+to that property's buildings before reading (`BuildingId contains <id>`; `Loans` uses `BLDGID`).
+
+The deal ↔ building map now lives in the database and is edited on **Asset Mgmt → Properties →
+Datex building map** (admin). It was seeded from `datex-deal-map.json`; it is never inferred
+from names. Providence (PTC) is not in Datex, so it has no map row.
+
+| Field | Entity · how |
+|---|---|
+| `assetManager` | `Occupancy.AssetManager` for the latest period |
+| `tenants[]` (add) `nationalTenant`, `annualNNN`, `annualOther`, `leaseStart`, `delinquency`, `lastSalesPeriod`, `coTenancy`, `salesReportType` | `TenantsMetrics` for ONE `Period` (latest), `AnnualRent gt 0`, dotted (superseded) `TenantId`s dropped; `EXPIR` / `NationalTenant` / `COTENANT` from `Tenants` |
+| `salesHistory[]` `{tenantId, period, amount, reportingType}` | `SalesHistory`, `SalesType` GROSS, last 24 months, sent RAW. The server keeps each tenant's 12 most recent REPORTED months — **never** `TenantsMetrics.Rolling12Sales`, which is wrong whenever `LastSalesPeriod < Period` (Michaels @ Keene: stopped reporting 12/2025). `190001` = never reports. |
+| `arAging` `{totalOpen, over60, over90, byTenant[]}` | `TenantLedger`, `TransactionOpenAmount gt 0`, bucketed by `TransactionDate` age. over90 must be ≤ over60 or the deal is rejected. |
+| `financials` `{period, noiYtdActual, noiYtdBudget, noiTtmActual, noiYearBudget}` | `FinancialGroups`, `AccountGroupId` NOI, the last COMPLETED month (the current month is partial). Send the values RAW — Datex reports NOI as a NEGATIVE number (credit convention) and the server flips it. TTM = sum of the last 12 `MtdActual`. |
+| `leasing[]` `{tenant, suite, gla, rentPSF, stage, submitted, executed, rentCommencement, termMonths}` | `LeaseAppDealHistoryBySuite` — `DBA`, `SuiteId`, `ProposedGLA`, `ProposedRentInitialPSFRent`, `DocumentStageDesc`, `ExecutionDate`, `AnticipatedRentCommencementDate`; last 12 months |
+| `loans[]` | `Loans`, `Inactive` false, filtered on `BLDGID`. **Returns 0 rows through the connector today** — loans and swaps are entered on the Debt tab (or imported) instead. A Datex loan, if one ever arrives, is superseded by an entered loan for the same deal. |
+| `vacantSuites[]` | `VacantSuites` — needed so the roster GLA ties to `Occupancy.TotalGLA` (the panel warns beyond 2%) |
+
+**Never pending-sale data.** Nothing about a pending sale goes in a snapshot or a record.
+
+## Loans, swaps and dates (Asset Mgmt → Debt / Dates, admin)
+
+Paste JSON or CSV into **Import loans & swaps**. It previews first (create / update / rejected,
+with the reason) and writes only on Save. Re-importing the same row updates it — ids are stable.
+
+```json
+{ "loans": [{ "property": "Plaza at Bensalem", "lender": "M&T", "originalBalance": 13650000,
+              "maturityDate": "2030-02-01", "rateType": "swapped", "index": "1M CME Term SOFR",
+              "spreadBps": 236, "source": "Loan summary (Drive)" }],
+  "swaps": [{ "bldgId": "bensalem", "counterparty": "M&T", "notional": 13650000,
+              "fixedSwapRatePct": 4.08, "maturityDate": "2030-02-01",
+              "index": "1M CME Term SOFR", "source": "Derivative Advisors MTM 6/9/26" }],
+  "dates": [{ "dealId": "...", "date": "2026-12-01", "type": "Co-tenancy", "tenant": "Ulta",
+              "description": "Opening co-tenancy outside date", "source": "lease §12" }] }
+```
+
+A property is matched by `dealId`, a Datex `bldgId`, or its EXACT owned name — never a fuzzy
+guess. Rates may be given as `4.08`, `"4.08%"` or `0.0408`; spreads as bps or percent. Index
+"Daily Simple SOFR" (Overland / ONB) prices swaps on the OIS curve; everything else on the 1M
+Term SOFR curve, the same engine as the deal page's breakage estimate.

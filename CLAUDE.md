@@ -564,6 +564,26 @@ SOFR spot feeds the SOFR box; `chathamLog` = DTCC−Chatham error per marked day
 Loan sizing: `om-database lib/loanSizing.ts` (base options, all-in = base + spread + premium +
 cushion, min of DSCR/DY/LTV, IO) → RatesPanel.
 
+## ASSET MGMT (10/18/26) — owned properties only
+Top-nav **Asset Mgmt** (`/asset-mgmt/debt|dates|properties|credit-watch`; phone: Analytics sheet;
+`onAnalyticsNav("am:<tab>")`) + `OwnedDealPanel` at the top of an Owned deal's Summary tab + the
+home "This week" card (the app has NO email, so the Monday digest lives there).
+- Client math is pure + tested: `om-database lib/assetMgmt.ts` (debt rows/totals, swap MTM via
+  `calcSwapBreakage` + `marketSwapRate` — the SAME function the deal page's breakage uses; Daily
+  Simple SOFR → OIS curve, everything else → 1M Term; critical dates; credit watch; sales/occ-cost).
+- Server: `api-server lib/assetMgmt.ts` + `routes/assetMgmt.ts`. Tables `am_records` (kind loan/
+  swap/date/news, per-row `source_note`) and `datex_building_map` (deal ↔ BLDGIDs, admin-edited,
+  seeded once from `datex-deal-map.json`; datex-import reads it). Both in the 3 places + startup.
+  Reads = any member; every write = admin. Import is a dry run until `apply`.
+- Credit watch = watchlist first, then a token-free Google News headline check of the top ≤60
+  brands (24h cache, must NAME the brand — `headlineNamesBrand`); AI only on a "Summarize" click.
+- Sales: NEVER `TenantsMetrics.Rolling12Sales` (wrong when LastSalesPeriod < Period) — the
+  snapshot sends raw `SalesHistory` and `reduceSalesHistory` sums the last 12 REPORTED months.
+- Datex gaps (tell Eric, don't paper over): Loans and TenantOptions return 0 rows via the
+  connector; PTC isn't in Datex; FinancialGroups NOI is negative (server flips); the server
+  can't call Datex, so "daily cache" = a Claude-generated snapshot import (docs/datex-refresh.md v2).
+- No pending-sale info anywhere in these records.
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.

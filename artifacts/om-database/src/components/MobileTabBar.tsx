@@ -37,7 +37,7 @@ export default function MobileTabBar({ tab, onTab, onAnalyticsNav }: Props) {
         {item("Analyst", "✦", tab === "analyst", () => onTab("analyst"))}
         {item("Deals", "▦", tab === "portfolio", () => onTab("portfolio"))}
         {item("Comps", "⇄", tab === "comps", () => onTab("comps"))}
-        {item("Analytics", "◔", tab === "analytics", () => setSheet(true))}
+        {item("Analytics", "◔", tab === "analytics" || tab === "assetmgmt", () => setSheet(true))}
         {item("More", "☰", false, () => window.dispatchEvent(new Event("kpr:open-menu")))}
       </nav>
       {sheet && (
@@ -57,6 +57,13 @@ export default function MobileTabBar({ tab, onTab, onAnalyticsNav }: Props) {
                   </button>
                 ))}
               </div>
+            ))}
+            <div style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase" }}>Asset management (owned)</div>
+            {([["Debt & swaps", "am:debt"], ["Critical dates", "am:dates"], ["Properties (Datex)", "am:properties"], ["Credit watch", "am:credit"]] as const).map(([label, dest]) => (
+              <button key={dest} onClick={() => { setSheet(false); onAnalyticsNav?.(dest); }}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid #f4efe5", padding: "14px 18px", fontSize: 14.5, color: "#383a37", fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
+                {label}
+              </button>
             ))}
           </div>
         </>

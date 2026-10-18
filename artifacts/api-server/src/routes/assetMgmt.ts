@@ -3,7 +3,7 @@ import { db, dealsTable } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import {
   listRecords, upsertRecord, deleteRecord, planImport, sanitizeFor, validateRecord, recordId,
-  listDatexMap, saveDatexMapRow, cleanBldgIds, loadDatexMapFromDb, type AmKind, type OwnedDealRef,
+  listDatexMap, saveDatexMapRow, cleanBldgIds, loadDatexMapFromDb, headlineNamesBrand, type AmKind, type OwnedDealRef,
 } from "../lib/assetMgmt";
 import { fetchBrandNews, assessNews, brandNorm } from "../lib/watchlistNews";
 import { callAnthropicOnce } from "../lib/extract";
@@ -95,7 +95,9 @@ router.post("/am/credit-news", requireAuth, async (req, res) => {
     for (let i = 0; i < stale.length && Date.now() < deadline; i += 4) {
       await Promise.all(stale.slice(i, i + 4).map(async brand => {
         try {
-          const articles = await fetchBrandNews(brand, 6_000);
+          // Only headlines that actually name the brand — a generic "grocery store closures" story
+          // returned for "Fred Meyer" must not read as a Fred Meyer closure.
+          const articles = (await fetchBrandNews(brand, 6_000)).filter(a => headlineNamesBrand(a.title, brand));
           const sig = assessNews(articles, "none");
           const data = { brand, level: sig?.suggestedStatus ?? null, headline: sig?.headline ?? null, url: sig?.url ?? null, at: sig?.at ?? null,
             recent: articles.slice(0, 5).map(a => ({ title: a.title, url: a.link, at: a.publishedAt, source: a.source })), scannedAt: new Date().toISOString() };
