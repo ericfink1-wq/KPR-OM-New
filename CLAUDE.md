@@ -45,6 +45,12 @@ Persistent context for this repo. Read this fully at the start of every session.
   Live-Datex facts it encodes: Period/SalesPeriod are TEXT (no gt — use eq/startsWith), Basis is "C"/"A"
   (server now stores Cash/Accrual), ids fixed-width. `rosterHash` (TS) and `roster_hash` (py) MUST agree —
   `datexJobKit.test.ts` pins it and runs the Python unit tests; change both or neither.
+- MCP tool `datex_refresh_credentials` (lib/mcpDatexCredentials.ts) — the ONLY non-read-only MCP tool
+  (`readOnly: false`, allowlisted by name in mcpAccess.test.ts; readOnlyHint false). The connector key's
+  KPR owner must be an approved ADMIN (no OAuth here — the key is bound to the account). Mints a
+  `kpr_dxt_` token (am_records kind `ingest_token_temp`, 3 h, `tokenRowUsable` fails closed without an
+  expiry), audit row kind `ingest_audit`, never in the permanent list. Auto-refresh on/off = kind
+  `ingest_setting` (default ON); OFF refuses the tool AND every token (403). Still no new tables.
 - Live-run fixes (10/18/26): SalesHistory is pulled PORTFOLIO-WIDE (no building filter) and NEVER with orderBy
   (sorted paging fails on page 2); `salesCheckedThrough` per deal so an empty result counts as checked;
   `reduceSalesHistory` excludes a month > `SUSPECT_MONTH_MULTIPLE` (3)× the tenant's median (≥4 months) and

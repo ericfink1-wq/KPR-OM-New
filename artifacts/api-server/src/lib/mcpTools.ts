@@ -7,6 +7,7 @@
 // of it for 150+ deals would blow the client's context. So list tools return compact
 // summaries and get_deal returns the full record with the heavy blocks opt-in.
 import { db, dealsTable, tenantIndexTable, leaseAbstractsTable, compsIndexTable } from "@workspace/db";
+import { datexRefreshCredentials } from "./mcpDatexCredentials";
 import { isSaleComp, isPortfolioAllocation } from "./compNormalize";
 import { creditBucket, brandFamilyKey, brandDisplayName, isInvestmentGrade } from "./tenantCredit";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
@@ -17,12 +18,17 @@ import { getHouseView } from "./houseView";
 import { getActiveLessons } from "./extractionLessons";
 import { buildKnowledgePack, renderKnowledgePack, KPR_PLAYBOOK, doctrineForTopic, TOPIC_NAMES} from "./mcpKnowledge";
 
+/** Who is calling, for the rare tool that needs it (datex_refresh_credentials). */
+export interface McpCallContext { caller: { id: string; name: string; userId: string; email: string }; baseUrl?: string }
 export interface McpToolDef {
   name: string;
   title: string;
   description: string;
   inputSchema: { type: "object"; properties: Record<string, unknown>; required?: string[] };
-  handler: (args: Record<string, unknown>) => Promise<unknown>;
+  /** Every tool is read-only unless it says otherwise — and only an explicitly allowlisted
+   *  tool may (see mcpAccess.test.ts). */
+  readOnly?: false;
+  handler: (args: Record<string, unknown>, ctx?: McpCallContext) => Promise<unknown>;
 }
 
 // ─── argument coercion ──────────────────────────────────────────────────────
@@ -1881,6 +1887,7 @@ export const MCP_TOOLS: McpToolDef[] = [
   leaseAbstracts,
   dataQuality,
   dataCoverage,
+  datexRefreshCredentials,
 ];
 
 export const MCP_TOOLS_BY_NAME: Map<string, McpToolDef> = new Map(MCP_TOOLS.map(t => [t.name, t]));

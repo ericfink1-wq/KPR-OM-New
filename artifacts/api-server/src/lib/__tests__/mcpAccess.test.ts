@@ -63,6 +63,11 @@ describe("MCP tool registry", () => {
     const offenders = MCP_TOOLS.map(t => t.name).filter(n => mutating.test(n));
     expect(offenders).toEqual([]);
   });
+  // The ONE deliberate exception (Eric, 10/18/26): datex_refresh_credentials mints a
+  // short-lived ingest token for admins. Any other tool flagged non-read-only fails here.
+  it("allows exactly one non-read-only tool, deliberately", () => {
+    expect(MCP_TOOLS.filter(t => t.readOnly === false).map(t => t.name)).toEqual(["datex_refresh_credentials"]);
+  });
   it("points a new client at the knowledge and overview tools first", () => {
     expect(MCP_SERVER_INSTRUCTIONS).toContain("get_knowledge");
     expect(MCP_SERVER_INSTRUCTIONS).toContain("library_overview");

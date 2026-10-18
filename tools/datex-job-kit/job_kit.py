@@ -4,7 +4,8 @@
 Served by the site at GET /api/datex/job-kit (same Bearer token as the ingest endpoints).
 Python 3 standard library only. The task's loop:
 
-  export DATEX_INGEST_TOKEN=kpr_dx_...
+  export DATEX_INGEST_TOKEN=kpr_dx_...    # or the kpr_dxt_ token from the KPR connector's
+                                          # datex_refresh_credentials tool (3 hours, no paste)
   python3 job_kit.py state --out state.json                       # 1. what the site has
   python3 job_kit.py plan --state state.json                      # 2a. the Occupancy call
       ... make that Datex MCP call ...

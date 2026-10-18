@@ -5,7 +5,7 @@ import { db, dealsTable } from "@workspace/db";
 import { loadDatexMapFromDb, datexLoanToRecord, upsertRecord } from "../lib/assetMgmt";
 import { DATEX_BLOCK_KEY, type DatexPayload } from "../lib/datexImport";
 import { mergeDatexDeal, dealState, type SalesRow } from "../lib/datexIngest";
-import { verifyIngestToken, loadSalesRows, saveSalesRows, writeIngestLog, type IngestLog } from "../lib/datexAutoRefresh";
+import { verifyIngestToken, loadSalesRows, saveSalesRows, writeIngestLog, getAutoRefreshSetting, type IngestLog } from "../lib/datexAutoRefresh";
 import { updateDealSafely } from "../lib/dealWrite";
 import { createSnapshot } from "./snapshots";
 
@@ -29,7 +29,10 @@ async function requireIngestToken(req: Authed, res: Response, next: NextFunction
   const h = String(req.headers.authorization ?? "");
   const raw = h.toLowerCase().startsWith("bearer ") ? h.slice(7).trim() : "";
   const tok = raw ? await verifyIngestToken(raw).catch(() => null) : null;
-  if (!tok) { res.status(401).json({ error: "A valid Datex ingest token is required (Authorization: Bearer kpr_dx_…)." }); return; }
+  if (!tok) { res.status(401).json({ error: "A valid, unexpired Datex ingest token is required (Authorization: Bearer kpr_dx_… or kpr_dxt_…)." }); return; }
+  // The admin off switch stops every token, permanent and short-lived alike.
+  const setting = await getAutoRefreshSetting().catch(() => ({ enabled: true }));
+  if (!setting.enabled) { res.status(403).json({ error: "Datex auto-refresh is turned off (Asset Mgmt → Properties → Datex auto-refresh)." }); return; }
   if (rateLimited(tok.id)) { res.status(429).json({ error: `Rate limit: at most ${PER_MINUTE} calls a minute per token.` }); return; }
   req.ingestToken = tok;
   next();

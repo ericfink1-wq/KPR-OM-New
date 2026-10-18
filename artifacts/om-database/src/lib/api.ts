@@ -1352,7 +1352,15 @@ export async function apiDatexAutoRevokeToken(id: string): Promise<void> {
   const r = await apiFetch(`/am/datex-auto/tokens/${encodeURIComponent(id)}/revoke`, { method: "POST" });
   if (!r.ok) throw new Error("Couldn't revoke the token");
 }
-export async function apiDatexAutoStatus(): Promise<{ last: IngestLogView | null; lastDryRun: IngestLogView | null; recent: IngestLogView[] }> {
+export interface AutoRefreshSettingView { enabled: boolean; updatedBy: string | null; updatedAt: string | null }
+export interface IngestAuditView { at: string; event: string; by: string; via: string; expiresAt: string }
+export async function apiDatexAutoSetEnabled(enabled: boolean): Promise<AutoRefreshSettingView> {
+  const r = await apiFetch("/am/datex-auto/settings", { method: "PUT", body: JSON.stringify({ enabled }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j as { error?: string }).error || "Couldn't save the setting");
+  return (j as { setting: AutoRefreshSettingView }).setting;
+}
+export async function apiDatexAutoStatus(): Promise<{ last: IngestLogView | null; lastDryRun: IngestLogView | null; recent: IngestLogView[]; setting?: AutoRefreshSettingView; shortLived?: IngestAuditView[] }> {
   const r = await apiFetch("/am/datex-auto/status");
   if (!r.ok) throw new Error("Couldn't load the auto-refresh status");
   return r.json();

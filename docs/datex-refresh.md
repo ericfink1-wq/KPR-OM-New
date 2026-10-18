@@ -29,6 +29,15 @@ browser, no file. An admin creates the token at **Asset Mgmt → Properties → 
   10 MB per call, 20 calls a minute per token. A library snapshot is taken before any write. The
   reply lists, per deal, the blocks sent, what changed and any warnings.
 
+**No pasted token needed: `datex_refresh_credentials` (KPR connector).** A scheduled session that
+holds the KPR_OM_Data connector calls that tool first. It returns `{token, expiresAt, baseUrl,
+jobKitUrl}` — a `kpr_dxt_…` token that lasts 3 hours and can do exactly what a `kpr_dx_` token can
+(state, ingest, job kit). Then `export DATEX_INGEST_TOKEN=<token>` and run the kit as below. Only
+works when the connector key's KPR account is an approved ADMIN, and only while auto-refresh is ON
+(Asset Mgmt → Properties → Datex auto-refresh → Turn off/on; OFF also stops every existing token).
+Each mint is audit-logged (who, when, which key) and listed under "Short-lived credentials issued";
+these tokens never appear in the permanent token list, and an expired one gets 401.
+
 **The job kit (use this — it encodes the recipe below).** `GET /api/datex/job-kit` (same Bearer
 token) returns `job_kit.py` — Python 3, standard library only:
 

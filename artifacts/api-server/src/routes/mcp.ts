@@ -87,7 +87,8 @@ async function requireMcpKey(req: Request, res: Response, next: NextFunction): P
 // One Server + transport per request (stateless mode). Statelessness is the point:
 // there is nothing to leak between callers, a restart loses nothing, and the whole
 // endpoint stays safe behind a single-process deploy.
-function buildServer(keyName: string): Server {
+function buildServer(key: VerifiedKey, baseUrl?: string): Server {
+  const keyName = key.name;
   const server = new Server(
     { name: SERVER_NAME, version: SERVER_VERSION },
     { capabilities: { tools: {} }, instructions: MCP_SERVER_INSTRUCTIONS },
@@ -99,7 +100,7 @@ function buildServer(keyName: string): Server {
       title: t.title,
       description: t.description,
       inputSchema: t.inputSchema,
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      annotations: { readOnlyHint: t.readOnly !== false, destructiveHint: false, openWorldHint: false },
     })),
   }));
 
@@ -114,7 +115,7 @@ function buildServer(keyName: string): Server {
     }
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     try {
-      const result = await tool.handler(args);
+      const result = await tool.handler(args, { caller: { id: key.id, name: key.name, userId: key.userId, email: key.email }, baseUrl });
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
       // Return the failure as tool content rather than throwing: the client can then
@@ -122,7 +123,7 @@ function buildServer(keyName: string): Server {
       logger.error({ err, tool: name, key: keyName }, "MCP tool call failed");
       return {
         isError: true,
-        content: [{ type: "text" as const, text: `The "${name}" tool failed: ${err instanceof Error ? err.message : "unknown error"}. The data was not changed (this server is read-only).` }],
+        content: [{ type: "text" as const, text: `The "${name}" tool failed: ${err instanceof Error ? err.message : "unknown error"}. ${tool.readOnly === false ? "Nothing was issued." : "The data was not changed (this tool is read-only)."}` }],
       };
     }
   });
@@ -132,7 +133,12 @@ function buildServer(keyName: string): Server {
 
 async function handleMcp(req: Request, res: Response): Promise<void> {
   const key = (req as McpRequest).mcpKey!;
-  const server = buildServer(key.name);
+  // The public origin, for tools that hand back a URL. Behind Replit's proxy the request
+  // arrives as http, so the forwarded headers win; KPR_PUBLIC_URL overrides both.
+  const fwdProto = String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim();
+  const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? "").split(",")[0].trim();
+  const baseUrl = process.env.KPR_PUBLIC_URL || (host ? `${fwdProto || req.protocol}://${host}` : undefined);
+  const server = buildServer(key, baseUrl);
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,   // stateless — no server-side session to hijack
     enableJsonResponse: true,        // plain JSON replies; clients that want SSE still get it

@@ -10,7 +10,7 @@ import {
 import { fetchBrandNews, assessNews, brandNorm } from "../lib/watchlistNews";
 import { callAnthropicOnce } from "../lib/extract";
 import { proposeCovenants } from "../lib/covenants";
-import { listIngestTokens, createIngestToken, revokeIngestToken, listIngestLogs } from "../lib/datexAutoRefresh";
+import { listIngestTokens, createIngestToken, revokeIngestToken, listIngestLogs, getAutoRefreshSetting, setAutoRefreshEnabled, listIngestAudit } from "../lib/datexAutoRefresh";
 
 // ASSET MANAGEMENT — owned properties only. Reads for any signed-in member; every write is
 // admin-only (Eric: "admin-only edit controls"). Records carry a per-row source note.
@@ -209,10 +209,17 @@ router.post("/am/datex-auto/tokens/:id/revoke", requireAdmin, async (req, res) =
   try { const ok = await revokeIngestToken(String(req.params.id), req.session.userEmail || "admin"); res.status(ok ? 200 : 404).json({ ok }); }
   catch (err) { req.log.error({ err }, "ingest token revoke failed"); res.status(500).json({ error: "Couldn't revoke the token" }); }
 });
+router.put("/am/datex-auto/settings", requireAdmin, async (req, res) => {
+  try {
+    if (typeof req.body?.enabled !== "boolean") { res.status(400).json({ error: "enabled must be true or false" }); return; }
+    res.json({ setting: await setAutoRefreshEnabled(req.body.enabled, req.session.userEmail || "admin") });
+  } catch (err) { req.log.error({ err }, "ingest setting failed"); res.status(500).json({ error: "Couldn't save the setting" }); }
+});
 router.get("/am/datex-auto/status", requireAuth, async (req, res) => {
   try {
     const logs = await listIngestLogs(20);
-    res.json({ last: logs.find(l => !l.dryRun) ?? null, lastDryRun: logs.find(l => l.dryRun) ?? null, recent: logs });
+    res.json({ last: logs.find(l => !l.dryRun) ?? null, lastDryRun: logs.find(l => l.dryRun) ?? null, recent: logs, setting: await getAutoRefreshSetting(),
+      shortLived: req.session.isAdmin ? await listIngestAudit(10) : undefined });
   } catch (err) { req.log.error({ err }, "ingest status failed"); res.status(500).json({ error: "Couldn't load the auto-refresh status" }); }
 });
 
