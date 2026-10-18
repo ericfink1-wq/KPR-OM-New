@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeLoan, sanitizeSwap, planImport, readImportText, resolveDeal, cleanBldgIds, normIndex, datexLoanToRecord, isoDate, headlineNamesBrand } from "../assetMgmt";
+import { sanitizeLoan, sanitizeSwap, planImport, readImportText, resolveDeal, cleanBldgIds, normIndex, datexLoanToRecord, isoDate, headlineNamesBrand, isPrefEquityRow } from "../assetMgmt";
 import { reduceSalesHistory, glaTieOut, buildLiveBlock } from "../datexImport";
 
 const OWNED = [
@@ -111,5 +111,32 @@ describe("credit-watch headlines", () => {
     expect(headlineNamesBrand("Five Below raises guidance", "Five Below")).toBe(true);
     expect(headlineNamesBrand("Rossmann closes stores", "Ross")).toBe(false);
     expect(headlineNamesBrand("Ross's store count grows", "Ross")).toBe(true);
+  });
+});
+
+describe("seed follow-ups (10/18/26)", () => {
+  it("keeps covenants / prepayment / open questions / confidence / loanLabel text, flattening lists and objects", () => {
+    const l = sanitizeLoan({ lender: "KeyBank", loanLabel: "Town Court", covenants: { dscr: "1.25x tested quarterly", cashTrap: "1.10x" }, prepayment: "Open after 24 mo; 1% fee before", openQuestions: ["Confirm extension fee", "Recourse carve-outs?"], confidence: "medium" });
+    expect(l).toMatchObject({ loanLabel: "Town Court", covenants: "dscr: 1.25x tested quarterly; cashTrap: 1.10x", prepayment: "Open after 24 mo; 1% fee before", openQuestions: "Confirm extension fee; Recourse carve-outs?", confidence: "medium" });
+  });
+  it("a swap without notional or maturity saves as terms pending, with its own id", () => {
+    const p = planImport(JSON.stringify({ swaps: [
+      { bldgId: "rockcom", counterparty: "Wells Fargo", fixedSwapRatePct: 3.1, loanLabel: "Commons" },
+      { bldgId: "rockcom", counterparty: "Wells Fargo", loanLabel: "Town Plaza" },
+      { bldgId: "rockcom" },
+    ] }), OWNED, new Set());
+    expect(p.rows.map(r => r.data.termsPending)).toEqual([true, true]);
+    expect(new Set(p.rows.map(r => r.id)).size).toBe(2);
+    expect(p.rejected[0].problem).toMatch(/counterparty/);
+  });
+  it("preferred equity: its own section, routed out of loans only when a label SAYS so", () => {
+    expect(isPrefEquityRow({ loanLabel: "Loan 2", instrument: "Preferred equity" })).toBe(true);
+    expect(isPrefEquityRow({ lender: "Kimco", loanLabel: "Loan 1" })).toBe(false);
+    const p = planImport(JSON.stringify({
+      loans: [{ bldgId: "rockplz", lender: "Kimco", loanLabel: "Town Plaza", type: "pref equity", originalBalance: 5_000_000, allInRatePct: 9.25 }],
+      preferredEquity: [{ property: "Plaza at Bensalem", investor: "Kimco", amount: "10,600,000", ratePct: "9.25%" }],
+    }), OWNED, new Set());
+    expect(p.rejected).toEqual([]);
+    expect(p.rows.map(r => [r.kind, r.data.amount, r.data.ratePct])).toEqual([["pref", 5_000_000, 9.25], ["pref", 10_600_000, 9.25]]);
   });
 });

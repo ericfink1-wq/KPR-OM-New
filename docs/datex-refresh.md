@@ -139,6 +139,16 @@ with the reason) and writes only on Save. Re-importing the same row updates it �
               "description": "Opening co-tenancy outside date", "source": "lease §12" }] }
 ```
 
+Optional on every row: `loanLabel` (which loan at a multi-loan property — Rockaway's Commons /
+Town Court / Town Plaza; a swap with a `loanLabel` attaches only to the loan with the same label),
+`covenants`, `prepayment`, `notes`, `openQuestions` (text, a list or a small object), `confidence`.
+A swap missing notional, fixed rate or maturity saves as **terms pending** — shown, never priced.
+**Preferred equity** goes under `"preferredEquity": [{ property|dealId|bldgId, investor, loanLabel,
+amount, ratePct, currentPayPct, accrualPct, fundingDate, maturityDate, redemption, notes, source }]`
+(a `loans` row whose `type`/`instrument`/`loanLabel` says "preferred equity" is routed there too). It
+is capital, not debt: kept out of total debt and the weighted rate. Labels and the new text fields
+are not part of a row's id, so re-importing the same seed fills them into the existing rows.
+
 A property is matched by `dealId`, a Datex `bldgId`, or its EXACT owned name — never a fuzzy
 guess. Rates may be given as `4.08`, `"4.08%"` or `0.0408`; spreads as bps or percent. Index
 "Daily Simple SOFR" (Overland / ONB) prices swaps on the OIS curve; everything else on the 1M

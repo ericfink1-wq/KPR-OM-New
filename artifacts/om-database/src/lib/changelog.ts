@@ -52,7 +52,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: "2026-10-18",
     category: "new",
     title: "Asset Mgmt: debt, critical dates, live Datex and tenant credit for owned properties",
-    detail: "A new Asset Mgmt section covers KPR's owned properties only. Debt lists every loan and swap with its all-in rate, a maturity wall, a mark-to-market on each swap from today's 1-Month Term SOFR curve, and red or amber flags when maturity is within 12 or 18 months. Dates gathers lease expirations, option notice deadlines, co-tenancy and kick-out dates, and loan and swap maturities, with days remaining and who owns each one. Properties shows each building's latest Datex figures. Credit Watch ranks your tenants by share of rent and checks the news daily for bankruptcies and store closures. Each owned deal page now opens with Datex today vs. the OM, A/R, NOI vs. budget, tenant sales and occupancy cost, and the next dates. The home page gets a \"This week\" list.",
+    detail: "A new Asset Mgmt section covers KPR's owned properties only. Debt lists every loan and swap with its all-in rate, a maturity wall, a mark-to-market on each swap from today's 1-Month Term SOFR curve, and red or amber flags when maturity is within 12 or 18 months. Dates gathers lease expirations, option notice deadlines, co-tenancy and kick-out dates, and loan and swap maturities, with days remaining and who owns each one. Properties shows each building's latest Datex figures. Credit Watch ranks your tenants by share of rent and checks the news daily for bankruptcies and store closures. Tap Details on any loan or swap to see its covenants, prepayment terms, notes and open questions. Preferred equity has its own section and is kept out of total debt. Each owned deal page now opens with Datex today vs. the OM, A/R, NOI vs. budget, tenant sales and occupancy cost, and the next dates. The home page gets a \"This week\" list.",
     where: "Asset Mgmt (top bar; Analytics on a phone), owned deal pages, and the home page",
   },
   {
@@ -61,7 +61,7 @@ export const CHANGELOG: ChangeEntry[] = [
     category: "new",
     adminOnly: true,
     title: "Asset Mgmt editing: loans, swaps, dates and the Datex building map",
-    detail: "Admins can add, edit and delete loans, swaps and critical dates, each with a source note. You can also paste a JSON or CSV file to import many at once; it previews before it saves. The Datex building map that links each owned deal to its Datex building IDs can now be edited on the Properties tab.",
+    detail: "Admins can add, edit and delete loans, swaps and critical dates, each with a source note. You can also paste a JSON or CSV file to import many at once; it previews before it saves. A swap whose notional or maturity isn't documented yet saves as "terms pending" and stays out of the mark-to-market. The Datex building map that links each owned deal to its Datex building IDs can now be edited on the Properties tab.",
     where: "Asset Mgmt → Debt, Dates and Properties",
   },
   {

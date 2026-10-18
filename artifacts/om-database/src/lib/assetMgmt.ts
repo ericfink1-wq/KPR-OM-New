@@ -8,7 +8,7 @@ import { isVacant, tenantLabel } from "./utils";
 // ASSET MANAGEMENT calculations (Eric, 10/18/26) — owned properties only, all deterministic.
 // Every figure the UI shows carries a `source` and, where there is one, an as-of date.
 
-export interface AmRecord { id: string; kind: "loan" | "swap" | "date"; dealId: string | null; data: Record<string, unknown>; sourceNote: string | null; updatedBy: string | null; updatedAt: string }
+export interface AmRecord { id: string; kind: "loan" | "swap" | "date" | "pref"; dealId: string | null; data: Record<string, unknown>; sourceNote: string | null; updatedBy: string | null; updatedAt: string }
 
 const n = (v: unknown): number | null => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v).trim());
@@ -60,12 +60,13 @@ export interface DebtRow {
   record: AmRecord; dealId: string; property: string; lender: string | null;
   balance: number | null; balanceIsOriginal: boolean; rateType: string | null; index: string | null; spreadBps: number | null;
   allInPct: number | null; allInSource: string; maturity: string | null; daysToMaturity: number | null; flag: "red" | "amber" | null;
-  swaps: SwapRow[]; datexOnly: boolean; superseded: boolean;
+  swaps: SwapRow[]; datexOnly: boolean; superseded: boolean; loanLabel: string | null;
 }
 export interface SwapRow {
   record: AmRecord; dealId: string; property: string; counterparty: string | null; notional: number | null; fixedSwapRatePct: number | null;
   allInFixedPct: number | null; effective: string | null; maturity: string | null; daysToMaturity: number | null; flag: "red" | "amber" | null;
   remainingYears: number | null; marketRatePct: number | null; curve: string | null; mtm: number | null; mtmLabel: string;
+  loanLabel: string | null; termsPending: boolean;
 }
 const flagFor = (days: number | null): DebtRow["flag"] => days == null ? null : days < 365 ? "red" : days <= 548 ? "amber" : null;
 
@@ -74,12 +75,15 @@ export function buildSwapRows(records: AmRecord[], names: Map<string, string>, r
     const d = r.data, maturity = s(d.maturityDate), notional = n(d.notional), K = n(d.fixedSwapRatePct), spread = n(d.spreadBps);
     const days = daysUntil(maturity, today), yrs = days != null ? Math.max(0, days / 365.25) : null;
     const mk = rates && yrs != null ? marketSwapRate(rates, yrs, s(d.index)) : { rate: null, curve: null, asOf: null };
-    const b = calcSwapBreakage({ notional, fixedRatePct: K, terminationDate: maturity, payFixed: d.payFixed !== false } as never, { valuationDate: today.toISOString().slice(0, 10), marketSwapRatePct: mk.rate });
+    // Terms not documented yet → shown so the hedge is visible, never priced.
+    const pending = d.termsPending === true || notional == null || K == null || !maturity;
+    const b = pending ? { value: null, label: "terms pending — not priced" } : calcSwapBreakage({ notional, fixedRatePct: K, terminationDate: maturity, payFixed: d.payFixed !== false } as never, { valuationDate: today.toISOString().slice(0, 10), marketSwapRatePct: mk.rate });
     return {
       record: r, dealId: r.dealId!, property: names.get(r.dealId!) ?? "—", counterparty: s(d.counterparty), notional, fixedSwapRatePct: K,
       allInFixedPct: n(d.allInFixedPct) ?? (K != null && spread != null ? Math.round((K + spread / 100) * 10000) / 10000 : null),
       effective: s(d.effectiveDate), maturity, daysToMaturity: days, flag: flagFor(days), remainingYears: yrs != null ? Math.round(yrs * 100) / 100 : null,
-      marketRatePct: mk.rate, curve: mk.curve, mtm: b.value, mtmLabel: b.value == null ? b.label : b.value >= 0 ? "asset to KPR" : "cost to unwind",
+      marketRatePct: pending ? null : mk.rate, curve: pending ? null : mk.curve, mtm: b.value, mtmLabel: b.value == null ? b.label : b.value >= 0 ? "asset to KPR" : "cost to unwind",
+      loanLabel: s(d.loanLabel), termsPending: pending,
     };
   });
 }
@@ -93,17 +97,22 @@ export function buildDebtRows(records: AmRecord[], deals: Deal[], rates: RatesPa
   return loans.map(r => {
     const d = r.data, datexOnly = r.id.startsWith("datex-loan:");
     const cur = n(d.currentBalance), orig = n(d.originalBalance), spread = n(d.spreadBps);
-    const mySwaps = swaps.filter(w => w.dealId === r.dealId && (!s(w.record.data.loanId) || w.record.data.loanId === r.id));
+    // A swap names its loan by id or by loanLabel (Rockaway: Commons / Town Court / Town Plaza);
+    // an unlabelled one belongs to the property's loans.
+    const label = s(d.loanLabel);
+    const mySwaps = swaps.filter(w => w.dealId === r.dealId
+      && (s(w.record.data.loanId) ? w.record.data.loanId === r.id : !w.loanLabel || !label || w.loanLabel.toLowerCase() === label.toLowerCase()));
     const type = s(d.rateType) ?? (mySwaps.length ? "swapped" : n(d.fixedRatePct) != null && spread == null ? "fixed" : spread != null ? "floating" : null);
     let allIn = n(d.allInRatePct), src = allIn != null ? "as entered" : "";
-    if (allIn == null && type === "swapped" && mySwaps[0]?.allInFixedPct != null) { allIn = mySwaps[0].allInFixedPct; src = "swap fixed + spread"; }
+    const priced = mySwaps.find(w => !w.termsPending && w.allInFixedPct != null);
+    if (allIn == null && type === "swapped" && priced) { allIn = priced.allInFixedPct; src = "swap fixed + spread"; }
     if (allIn == null && type === "fixed" && n(d.fixedRatePct) != null) { allIn = n(d.fixedRatePct); src = "fixed rate"; }
     if (allIn == null && type === "floating" && spread != null && spot.rate != null && !isDailySofr(s(d.index))) { allIn = Math.round((spot.rate + spread / 100) * 10000) / 10000; src = `1M Term SOFR ${spot.rate.toFixed(3)}% + spread (live)`; }
     const maturity = s(d.maturityDate), days = daysUntil(maturity, today);
     return {
       record: r, dealId: r.dealId!, property: names.get(r.dealId!)!, lender: s(d.lender), balance: cur ?? orig, balanceIsOriginal: cur == null && orig != null,
       rateType: type, index: s(d.index), spreadBps: spread, allInPct: allIn, allInSource: src || "not enough terms", maturity, daysToMaturity: days, flag: flagFor(days),
-      swaps: mySwaps, datexOnly, superseded: datexOnly && enteredDeals.has(r.dealId),
+      swaps: mySwaps, datexOnly, superseded: datexOnly && enteredDeals.has(r.dealId), loanLabel: label,
     };
   }).sort((a, b) => (a.maturity ?? "9999").localeCompare(b.maturity ?? "9999"));
 }
@@ -127,6 +136,22 @@ export function debtTotals(rows: DebtRow[], swaps: SwapRow[]): DebtTotals {
     wall: [...wall.entries()].sort((a, b) => a[0] - b[0]).map(([year, amount]) => ({ year, amount })),
     totalMtm: mtms.length ? mtms.reduce((a, b) => a + b, 0) : null,
   };
+}
+
+// ── Preferred equity — capital, NOT debt: never in total debt or the weighted rate ──
+export interface PrefRow { record: AmRecord; dealId: string; property: string; loanLabel: string | null; investor: string | null; amount: number | null; ratePct: number | null; maturity: string | null; daysToMaturity: number | null }
+export function buildPrefRows(records: AmRecord[], deals: Deal[], today: Date): PrefRow[] {
+  const names = new Map(deals.map(d => [d.id, d.propertyName || "Untitled"]));
+  return records.filter(r => r.kind === "pref" && r.dealId && names.has(r.dealId)).map(r => {
+    const d = r.data, maturity = s(d.maturityDate);
+    return { record: r, dealId: r.dealId!, property: names.get(r.dealId!)!, loanLabel: s(d.loanLabel), investor: s(d.investor), amount: n(d.amount), ratePct: n(d.ratePct), maturity, daysToMaturity: daysUntil(maturity, today) };
+  }).sort((a, b) => a.property.localeCompare(b.property) || (a.loanLabel ?? "").localeCompare(b.loanLabel ?? ""));
+}
+export function prefTotals(rows: PrefRow[]): { total: number; weightedRatePct: number | null; count: number } {
+  const withAmt = rows.filter(r => r.amount != null);
+  const total = withAmt.reduce((t, r) => t + r.amount!, 0);
+  const priced = withAmt.filter(r => r.ratePct != null), pb = priced.reduce((t, r) => t + r.amount!, 0);
+  return { total, count: rows.length, weightedRatePct: pb > 0 ? Math.round((priced.reduce((t, r) => t + r.amount! * r.ratePct!, 0) / pb) * 1000) / 1000 : null };
 }
 
 // ── Live tenant list (Datex first, OM roster as fallback) ────────────────────

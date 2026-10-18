@@ -6,8 +6,8 @@ import {
   apiGetRates, apiListAllLeaseAbstracts, apiLoadTenantBenchmarks, type RatesPayload, type AmImportResult, type DatexMapRow, type AnalystTenantBenchmark,
 } from "../lib/api";
 import {
-  buildDebtRows, buildSwapRows, debtTotals, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, liveTenants,
-  type AmRecord, type DebtRow, type SwapRow, type CriticalDate, type CreditRow, type NewsSignal, type DateType,
+  buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, liveTenants,
+  type AmRecord, type DebtRow, type SwapRow, type PrefRow, type CriticalDate, type CreditRow, type NewsSignal, type DateType,
 } from "../lib/assetMgmt";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -74,17 +74,22 @@ export function useAmData(enabled = true) {
 }
 
 // ── record editor (admin) ─────────────────────────────────────────────────────
-const FIELDS: Record<"loan" | "swap" | "date", Array<[string, string, "text" | "number" | "date"]>> = {
+const FIELDS: Record<"loan" | "swap" | "date" | "pref", Array<[string, string, "text" | "number" | "date"]>> = {
   loan: [["lender", "Lender", "text"], ["originalBalance", "Original balance ($)", "number"], ["currentBalance", "Current balance ($)", "number"], ["balanceAsOf", "Balance as of", "date"],
     ["rateType", "Rate type (fixed / floating / swapped)", "text"], ["index", "Index (1M CME Term SOFR / Daily Simple SOFR)", "text"], ["spreadBps", "Spread (bps)", "number"], ["fixedRatePct", "Fixed rate (%) — fixed loans", "number"],
     ["allInRatePct", "All-in rate (%) — if stated", "number"], ["maturityDate", "Maturity", "date"], ["extensionOptions", "Extension options", "text"], ["extensionNoticeDate", "Extension notice deadline", "date"],
     ["amortization", "Amortization (IO / amortizing)", "text"], ["amortYears", "Amortization (years)", "number"], ["dscrCovenant", "DSCR covenant (x)", "number"], ["debtYieldCovenantPct", "Debt-yield covenant (%)", "number"],
-    ["recourse", "Recourse", "text"], ["guarantor", "Guarantor", "text"], ["notes", "Notes", "text"]],
+    ["recourse", "Recourse", "text"], ["guarantor", "Guarantor", "text"], ["loanLabel", "Loan label (e.g. Town Court)", "text"],
+    ["covenants", "Covenants", "text"], ["prepayment", "Prepayment", "text"], ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
   swap: [["counterparty", "Counterparty", "text"], ["notional", "Notional ($)", "number"], ["fixedSwapRatePct", "Fixed swap rate (%)", "number"], ["spreadBps", "Loan spread (bps)", "number"],
-    ["allInFixedPct", "All-in fixed (%) — if stated", "number"], ["effectiveDate", "Effective", "date"], ["maturityDate", "Maturity", "date"], ["index", "Index", "text"], ["notes", "Notes", "text"]],
+    ["allInFixedPct", "All-in fixed (%) — if stated", "number"], ["effectiveDate", "Effective", "date"], ["maturityDate", "Maturity", "date"], ["index", "Index", "text"], ["loanLabel", "Loan label", "text"],
+    ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
+  pref: [["investor", "Investor", "text"], ["loanLabel", "Label (e.g. Town Plaza)", "text"], ["amount", "Amount ($)", "number"], ["ratePct", "Pref rate (%)", "number"],
+    ["currentPayPct", "Current pay (%)", "number"], ["accrualPct", "Accrual (%)", "number"], ["fundingDate", "Funded", "date"], ["maturityDate", "Maturity / redemption date", "date"],
+    ["redemption", "Redemption terms", "text"], ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
   date: [["date", "Date", "date"], ["type", "Type (Option notice / Kick-out / Co-tenancy / Termination / Other)", "text"], ["tenant", "Tenant", "text"], ["description", "What it is", "text"], ["owner", "Owner", "text"]],
 };
-function RecordEditor({ kind, deals, initial, onClose, onSaved }: { kind: "loan" | "swap" | "date"; deals: Deal[]; initial?: AmRecord | null; onClose: () => void; onSaved: () => void }) {
+function RecordEditor({ kind, deals, initial, onClose, onSaved }: { kind: "loan" | "swap" | "date" | "pref"; deals: Deal[]; initial?: AmRecord | null; onClose: () => void; onSaved: () => void }) {
   const [dealId, setDealId] = useState(initial?.dealId ?? deals[0]?.id ?? "");
   const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(FIELDS[kind].map(([k]) => [k, initial?.data[k] != null ? String(initial.data[k]) : ""])));
   const [note, setNote] = useState(initial?.sourceNote ?? "");
@@ -93,14 +98,16 @@ function RecordEditor({ kind, deals, initial, onClose, onSaved }: { kind: "loan"
   const save = async () => {
     setBusy(true); setErr(null);
     try {
-      const data: Record<string, unknown> = {};
-      for (const [k, , t] of FIELDS[kind]) if (vals[k]?.trim()) data[k] = t === "number" ? Number(vals[k].replace(/[$,%\s]/g, "")) : vals[k].trim();
+      // Start from the stored record so keys the form doesn't show (Datex loan id…) survive an edit.
+      const data: Record<string, unknown> = { ...(initial?.data ?? {}) };
+      delete data.termsPending;   // the server re-derives it from the terms
+      for (const [k, , t] of FIELDS[kind]) { if (vals[k]?.trim()) data[k] = t === "number" ? Number(vals[k].replace(/[$,%\s]/g, "")) : vals[k].trim(); else delete data[k]; }
       await apiAmSaveRecord({ id: initial?.id, kind, dealId, data, sourceNote: note || null });
       onSaved(); onClose();
     } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't save"); } finally { setBusy(false); }
   };
   return (
-    <Modal title={`${initial ? "Edit" : "Add"} ${kind === "date" ? "critical date" : kind}`} onClose={onClose}>
+    <Modal title={`${initial ? "Edit" : "Add"} ${kind === "date" ? "critical date" : kind === "pref" ? "preferred equity" : kind}`} onClose={onClose}>
       <label style={lbl}>Property
         <select value={dealId} onChange={e => setDealId(e.target.value)} style={inp}>{deals.map(d => <option key={d.id} value={d.id}>{d.propertyName}</option>)}</select>
       </label>
@@ -150,7 +157,7 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
   };
   return (
     <Modal title="Import loans, swaps and dates" onClose={onClose}>
-      <div style={{ fontSize: 12.5, color: K.gray, lineHeight: 1.5 }}>Paste JSON — <code>{`{"loans":[…],"swaps":[…],"dates":[…]}`}</code> — or CSV with a <code>kind</code> column (loan, swap, date). Each row names its property by <code>dealId</code>, Datex <code>bldgId</code>, or the exact property name, and can carry a <code>source</code>. Nothing is saved until you check the preview; re-importing the same file updates rows instead of duplicating them.</div>
+      <div style={{ fontSize: 12.5, color: K.gray, lineHeight: 1.5 }}>Paste JSON — <code>{`{"loans":[…],"swaps":[…],"dates":[…],"preferredEquity":[…]}`}</code> — or CSV with a <code>kind</code> column (loan, swap, date, pref). A swap without notional or maturity saves as "terms pending". Each row names its property by <code>dealId</code>, Datex <code>bldgId</code>, or the exact property name, and can carry a <code>source</code>. Nothing is saved until you check the preview; re-importing the same file updates rows instead of duplicating them.</div>
       <textarea value={text} onChange={e => { setText(e.target.value); setPlan(null); }} rows={8} aria-label="Import data" style={{ ...inp, fontFamily: "ui-monospace,Menlo,monospace", fontSize: 12.5, resize: "vertical" }} />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={() => run(false)} disabled={busy || text.trim().length < 5} style={btn()}>Preview</button>
@@ -160,7 +167,7 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
       {plan && (
         <div style={{ fontSize: 12.5 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>{plan.applied ? "Saved." : "Preview:"} {plan.rows.filter(r => r.action === "create").length} new, {plan.rows.filter(r => r.action === "update").length} updated, {plan.rejected.length} rejected</div>
-          {plan.rows.slice(0, 40).map(r => <div key={r.id} style={{ color: K.ink }}>{r.action === "create" ? "＋" : "↻"} {r.kind} · {r.property} · {String(r.data.lender ?? r.data.counterparty ?? r.data.type ?? "")} {r.data.maturityDate || r.data.date ? `· ${r.data.maturityDate ?? r.data.date}` : ""}</div>)}
+          {plan.rows.slice(0, 40).map(r => <div key={r.id} style={{ color: K.ink }}>{r.action === "create" ? "＋" : "↻"} {r.kind === "pref" ? "preferred equity" : r.kind}{r.data.termsPending ? " (terms pending)" : ""} · {r.property}{r.data.loanLabel ? ` · ${r.data.loanLabel}` : ""} · {String(r.data.lender ?? r.data.counterparty ?? r.data.investor ?? r.data.type ?? "")} {r.data.maturityDate || r.data.date ? `· ${r.data.maturityDate ?? r.data.date}` : ""}</div>)}
           {plan.rejected.map(r => <div key={r.row} style={{ color: K.red }}>Row {r.row}: {r.problem}</div>)}
         </div>
       )}
@@ -169,12 +176,46 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
 }
 
 // ── Debt tab ──────────────────────────────────────────────────────────────────
+const LOAN_COLS = ["Property", "Lender", "Balance", "Type", "Index", "Spread", "All-in", "Maturity", "Extension", "Amort.", "Covenants", "Prepayment", "Recourse / guarantor", "Source", ""];
+const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Source", ""];
+const PREF_COLS = ["Property", "Investor", "Amount", "Pref rate", "Maturity", "Source", ""];
+const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v));
+function Clamp({ children }: { children: ReactNode }) {
+  return <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 12.5 }}>{children}</div>;
+}
+function RowActions({ isOpen, onToggle, isAdmin, onEdit, onDelete }: { isOpen: boolean; onToggle: () => void; isAdmin: boolean; onEdit: () => void; onDelete: () => void }) {
+  return (
+    <span style={{ display: "flex", gap: 6 }}>
+      <button style={miniBtn} onClick={onToggle} aria-expanded={isOpen}>{isOpen ? "Hide" : "Details"}</button>
+      {isAdmin && <><button style={miniBtn} onClick={onEdit}>Edit</button><button style={miniBtn} onClick={onDelete}>Delete</button></>}
+    </span>
+  );
+}
+function DetailRow({ cols, rec, items }: { cols: number; rec: AmRecord; items: Array<[string, string | null]> }) {
+  const shown = items.filter(([, v]) => v);
+  return (
+    <tr><td colSpan={cols} style={{ ...td, background: "#faf9f5" }}>
+      <div style={{ position: "sticky", left: 0, paddingLeft: 4, maxWidth: "min(1100px, 82vw)", boxSizing: "border-box" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "8px 18px" }}>
+          {shown.length ? shown.map(([k, v]) => (
+            <div key={k}><div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.gray }}>{k}</div><div style={{ fontSize: 13, color: K.ink, whiteSpace: "pre-wrap" }}>{v}</div></div>
+          )) : <div style={{ fontSize: 13, color: K.gray }}>No notes, open questions or confidence recorded.</div>}
+        </div>
+        <Src>Source: {rec.sourceNote ?? "none noted"}{rec.updatedBy ? ` · last saved by ${rec.updatedBy}` : ""}{rec.updatedAt ? ` ${fmtDate(rec.updatedAt)}` : ""}</Src>
+      </div>
+    </td></tr>
+  );
+}
 function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals: Deal[]; records: AmRecord[]; rates: RatesPayload | null; isAdmin: boolean; reload: () => void; onOpenDeal: (id: string) => void }) {
   const today = useMemo(() => new Date(), []);
   const rows = useMemo(() => buildDebtRows(records, deals, rates, today), [records, deals, rates, today]);
   const swaps = useMemo(() => buildSwapRows(records, new Map(deals.map(d => [d.id, d.propertyName || "—"])), rates, today), [records, deals, rates, today]);
   const tot = useMemo(() => debtTotals(rows, swaps), [rows, swaps]);
-  const [edit, setEdit] = useState<{ kind: "loan" | "swap"; rec: AmRecord | null } | null>(null);
+  const prefs = useMemo(() => buildPrefRows(records, deals, today), [records, deals, today]);
+  const pt = useMemo(() => prefTotals(prefs), [prefs]);
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  const toggle = (id: string) => setOpen(o => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const [edit, setEdit] = useState<{ kind: "loan" | "swap" | "pref"; rec: AmRecord | null } | null>(null);
   const [imp, setImp] = useState(false);
   const maxWall = Math.max(1, ...tot.wall.map(w => w.amount));
   const curveAsOf = rates?.termSwapCurve?.asOf ?? null;
@@ -209,26 +250,32 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             ))}
           </div>
           <SectionTitle>Loans</SectionTitle>
-          <Table minWidth={1300}>
-            <thead><tr>{["Property", "Lender", "Balance", "Type", "Index", "Spread", "All-in", "Maturity", "Extension", "Amort.", "Covenants", "Recourse / guarantor", "Source", ""].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-            <tbody>{rows.map((r: DebtRow) => (
-              <tr key={r.record.id} style={{ opacity: r.superseded ? 0.5 : 1 }}>
-                <td style={td}><button onClick={() => onOpenDeal(r.dealId)} style={linkBtn}>{r.property}</button>{r.superseded && <Src>Datex row — an entered loan covers this property</Src>}</td>
-                <td style={td}>{r.lender ?? "—"}</td>
-                <td style={num}>{fmtM(r.balance)}{r.balanceIsOriginal && <Src>original</Src>}</td>
-                <td style={td}>{r.rateType ?? "—"}</td>
-                <td style={td}>{r.index ?? "—"}</td>
-                <td style={num}>{r.spreadBps != null ? `${r.spreadBps} bps` : "—"}</td>
-                <td style={num}>{fmtPct(r.allInPct, 3)}<Src>{r.allInSource}</Src></td>
-                <td style={td}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
-                <td style={td}>{String(r.record.data.extensionOptions ?? "—")}{r.record.data.extensionNoticeDate ? <Src>notice by {fmtDate(String(r.record.data.extensionNoticeDate))}</Src> : null}</td>
-                <td style={td}>{String(r.record.data.amortization ?? "—")}{r.record.data.amortYears ? ` · ${r.record.data.amortYears}y` : ""}</td>
-                <td style={td}>{[r.record.data.dscrCovenant ? `DSCR ${r.record.data.dscrCovenant}x` : null, r.record.data.debtYieldCovenantPct ? `DY ${r.record.data.debtYieldCovenantPct}%` : null].filter(Boolean).join(" · ") || "—"}</td>
-                <td style={td}>{[r.record.data.recourse, r.record.data.guarantor].filter(Boolean).map(String).join(" · ") || "—"}</td>
-                <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}>{r.record.sourceNote ?? "—"}</td>
-                <td style={td}>{isAdmin && <span style={{ display: "flex", gap: 6 }}><button style={miniBtn} onClick={() => setEdit({ kind: "loan", rec: r.record })}>Edit</button><button style={miniBtn} onClick={() => del(r.record.id)}>Delete</button></span>}</td>
-              </tr>
-            ))}</tbody>
+          <Table minWidth={1420}>
+            <thead><tr>{LOAN_COLS.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <tbody>{rows.map((r: DebtRow) => {
+              const d = r.record.data, isOpen = open.has(r.record.id);
+              const cov = s(d.covenants) ?? ([d.dscrCovenant ? `DSCR ${d.dscrCovenant}x` : null, d.debtYieldCovenantPct ? `DY ${d.debtYieldCovenantPct}%` : null].filter(Boolean).join(" · ") || null);
+              return [
+                <tr key={r.record.id} style={{ opacity: r.superseded ? 0.5 : 1 }}>
+                  <td style={td}><button onClick={() => onOpenDeal(r.dealId)} style={linkBtn}>{r.property}</button>{r.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {r.loanLabel}</span>}{r.superseded && <Src>Datex row — an entered loan covers this property</Src>}</td>
+                  <td style={td}>{r.lender ?? "—"}</td>
+                  <td style={num}>{fmtM(r.balance)}{r.balanceIsOriginal && <Src>original</Src>}</td>
+                  <td style={td}>{r.rateType ?? "—"}</td>
+                  <td style={td}>{r.index ?? "—"}</td>
+                  <td style={num}>{r.spreadBps != null ? `${r.spreadBps} bps` : "—"}</td>
+                  <td style={num}>{fmtPct(r.allInPct, 3)}<Src>{r.allInSource}</Src></td>
+                  <td style={td}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
+                  <td style={td}>{String(d.extensionOptions ?? "—")}{d.extensionNoticeDate ? <Src>notice by {fmtDate(String(d.extensionNoticeDate))}</Src> : null}</td>
+                  <td style={td}>{String(d.amortization ?? "—")}{d.amortYears ? ` · ${d.amortYears}y` : ""}</td>
+                  <td style={{ ...td, maxWidth: 220 }}><Clamp>{cov ?? "—"}</Clamp></td>
+                  <td style={{ ...td, maxWidth: 220 }}><Clamp>{s(d.prepayment) ?? "—"}</Clamp></td>
+                  <td style={td}>{[d.recourse, d.guarantor].filter(Boolean).map(String).join(" · ") || "—"}</td>
+                  <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 200 }}>{r.record.sourceNote ?? "—"}</td>
+                  <td style={td}><RowActions isOpen={isOpen} onToggle={() => toggle(r.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "loan", rec: r.record })} onDelete={() => del(r.record.id)} /></td>
+                </tr>,
+                isOpen && <DetailRow key={r.record.id + ":d"} cols={LOAN_COLS.length} rec={r.record} items={[["Covenants", cov], ["Prepayment", s(d.prepayment)], ["Notes", s(d.notes)], ["Open questions", s(d.openQuestions)], ["Confidence", s(d.confidence)], ["Recourse", s(d.recourse)], ["Guarantor", s(d.guarantor)]]} />,
+              ];
+            })}</tbody>
           </Table>
         </>
       )}
@@ -236,24 +283,56 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
         <>
           <SectionTitle>Swaps</SectionTitle>
           <Table minWidth={1150}>
-            <thead><tr>{["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Source", ""].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-            <tbody>{swaps.map((w: SwapRow) => (
-              <tr key={w.record.id}>
-                <td style={td}><button onClick={() => onOpenDeal(w.dealId)} style={linkBtn}>{w.property}</button></td>
-                <td style={td}>{w.counterparty ?? "—"}</td>
-                <td style={num}>{fmtM(w.notional)}</td>
-                <td style={num}>{fmtPct(w.fixedSwapRatePct, 4)}</td>
-                <td style={num}>{fmtPct(w.allInFixedPct, 4)}</td>
-                <td style={td}>{fmtDate(w.effective)}</td>
-                <td style={td}>{fmtDate(w.maturity)} {daysPill(w.daysToMaturity, w.flag)}</td>
-                <td style={num}>{fmtPct(w.marketRatePct, 3)}<Src>{w.curve ?? "no curve"}{w.remainingYears != null ? ` · ${w.remainingYears}y left` : ""}</Src></td>
-                <td style={{ ...num, color: w.mtm == null ? K.gray : w.mtm >= 0 ? "#3e8a2f" : K.red, fontWeight: 700 }}>{w.mtm == null ? "—" : `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))}`}<Src>{w.mtmLabel}</Src></td>
-                <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}>{w.record.sourceNote ?? "—"}</td>
-                <td style={td}>{isAdmin && <span style={{ display: "flex", gap: 6 }}><button style={miniBtn} onClick={() => setEdit({ kind: "swap", rec: w.record })}>Edit</button><button style={miniBtn} onClick={() => del(w.record.id)}>Delete</button></span>}</td>
-              </tr>
-            ))}</tbody>
+            <thead><tr>{SWAP_COLS.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <tbody>{swaps.map((w: SwapRow) => {
+              const d = w.record.data, isOpen = open.has(w.record.id);
+              return [
+                <tr key={w.record.id}>
+                  <td style={td}><button onClick={() => onOpenDeal(w.dealId)} style={linkBtn}>{w.property}</button>{w.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {w.loanLabel}</span>}{w.termsPending && <div style={{ marginTop: 3 }}><Pill flag="amber">terms pending</Pill></div>}</td>
+                  <td style={td}>{w.counterparty ?? "—"}</td>
+                  <td style={num}>{fmtM(w.notional)}</td>
+                  <td style={num}>{fmtPct(w.fixedSwapRatePct, 4)}</td>
+                  <td style={num}>{fmtPct(w.allInFixedPct, 4)}</td>
+                  <td style={td}>{fmtDate(w.effective)}</td>
+                  <td style={td}>{fmtDate(w.maturity)} {daysPill(w.daysToMaturity, w.flag)}</td>
+                  <td style={num}>{fmtPct(w.marketRatePct, 3)}<Src>{w.termsPending ? "not priced" : `${w.curve ?? "no curve"}${w.remainingYears != null ? ` · ${w.remainingYears}y left` : ""}`}</Src></td>
+                  <td style={{ ...num, color: w.mtm == null ? K.gray : w.mtm >= 0 ? "#3e8a2f" : K.red, fontWeight: 700 }}>{w.mtm == null ? "—" : `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))}`}<Src>{w.mtmLabel}</Src></td>
+                  <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}>{w.record.sourceNote ?? "—"}</td>
+                  <td style={td}><RowActions isOpen={isOpen} onToggle={() => toggle(w.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "swap", rec: w.record })} onDelete={() => del(w.record.id)} /></td>
+                </tr>,
+                isOpen && <DetailRow key={w.record.id + ":d"} cols={SWAP_COLS.length} rec={w.record} items={[["Notes", s(d.notes)], ["Open questions", s(d.openQuestions)], ["Confidence", s(d.confidence)], ["Index", s(d.index)], ["Trade date", d.tradeDate ? fmtDate(String(d.tradeDate)) : null]]} />,
+              ];
+            })}</tbody>
           </Table>
-          <Src>Mark-to-market is indicative: the fixed swap rate vs today's 1M Term SOFR swap rate for the remaining term (SOFR annual/annual for a Daily Simple SOFR swap), on the notional — the same engine as the deal page's breakage estimate. The bank's mark governs. Red = maturity under 12 months, amber = under 18.</Src>
+          <Src>Mark-to-market is indicative: the fixed swap rate vs today's 1M Term SOFR swap rate for the remaining term (SOFR annual/annual for a Daily Simple SOFR swap), on the notional — the same engine as the deal page's breakage estimate. The bank's mark governs. "Terms pending" = the hedge exists but its notional, rate or maturity isn't documented yet, so it is shown but left out of the mark-to-market. Red = maturity under 12 months, amber = under 18.</Src>
+        </>
+      )}
+      {(prefs.length > 0 || isAdmin) && (
+        <>
+          <SectionTitle right={isAdmin ? <button style={btn()} onClick={() => setEdit({ kind: "pref", rec: null })}>Add preferred equity</button> : undefined}>Preferred equity</SectionTitle>
+          {!prefs.length ? <div style={{ ...card, padding: 14, fontSize: 13.5, color: K.gray }}>None entered. Preferred equity is capital, not debt, so it is kept out of total debt and the weighted rate above.</div> : (
+            <>
+              <div style={{ fontSize: 13, color: K.gray, marginBottom: 8 }}>{fmtM(pt.total)} across {pt.count} position{pt.count === 1 ? "" : "s"}{pt.weightedRatePct != null ? ` · weighted pref rate ${fmtPct(pt.weightedRatePct, 2)}` : ""} — kept out of total debt and the weighted rate above.</div>
+              <Table minWidth={900}>
+                <thead><tr>{PREF_COLS.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                <tbody>{prefs.map((p: PrefRow) => {
+                  const d = p.record.data, isOpen = open.has(p.record.id);
+                  return [
+                    <tr key={p.record.id}>
+                      <td style={td}><button onClick={() => onOpenDeal(p.dealId)} style={linkBtn}>{p.property}</button>{p.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {p.loanLabel}</span>}</td>
+                      <td style={td}>{p.investor ?? "—"}</td>
+                      <td style={num}>{fmtM(p.amount)}</td>
+                      <td style={num}>{fmtPct(p.ratePct, 2)}{d.currentPayPct != null || d.accrualPct != null ? <Src>{[d.currentPayPct != null ? `${d.currentPayPct}% current` : null, d.accrualPct != null ? `${d.accrualPct}% accrues` : null].filter(Boolean).join(" · ")}</Src> : null}</td>
+                      <td style={td}>{fmtDate(p.maturity)} {daysPill(p.daysToMaturity)}</td>
+                      <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}>{p.record.sourceNote ?? "—"}</td>
+                      <td style={td}><RowActions isOpen={isOpen} onToggle={() => toggle(p.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "pref", rec: p.record })} onDelete={() => del(p.record.id)} /></td>
+                    </tr>,
+                    isOpen && <DetailRow key={p.record.id + ":d"} cols={PREF_COLS.length} rec={p.record} items={[["Redemption", s(d.redemption)], ["Funded", d.fundingDate ? fmtDate(String(d.fundingDate)) : null], ["Notes", s(d.notes)], ["Open questions", s(d.openQuestions)], ["Confidence", s(d.confidence)]]} />,
+                  ];
+                })}</tbody>
+              </Table>
+            </>
+          )}
         </>
       )}
       {edit && <RecordEditor kind={edit.kind} deals={deals} initial={edit.rec} onClose={() => setEdit(null)} onSaved={reload} />}
@@ -482,6 +561,7 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
   if (deal.status !== "Owned") return null;
   const mine = (records ?? []).filter(r => r.dealId === deal.id);
   const debt = buildDebtRows(mine, [deal], rates, today);
+  const prefs = buildPrefRows(mine, [deal], today);
   const dates = buildCriticalDates([deal], mine, abstracts.filter(a => a.dealId === deal.id), today, 365).items.filter(i => i.days >= 0).slice(0, 8);
   const cmp = omVsToday(deal);
   const sales = buildSalesRows(deal, bench);
@@ -539,16 +619,22 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
           </div>
         </div>
       )}
-      {(debt.length > 0 || dates.length > 0 || leasing.length > 0) && (
+      {(debt.length > 0 || prefs.length > 0 || dates.length > 0 || leasing.length > 0) && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 14 }}>
-          {debt.length > 0 && (
+          {(debt.length > 0 || prefs.length > 0) && (
             <div style={{ ...card, padding: 14 }}>
               <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: K.charcoal }}>Debt & swaps</div>
               {debt.filter(r => !r.superseded).map(r => (
                 <div key={r.record.id} style={{ fontSize: 13, marginTop: 8 }}>
-                  <b>{r.lender ?? "Loan"}</b> · {fmtM(r.balance)} · {fmtPct(r.allInPct, 3)} {r.rateType ?? ""} · matures {fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}
-                  {r.swaps.map(w => <div key={w.record.id} style={{ fontSize: 12.5, color: K.gray }}>Swap {fmtM(w.notional)} at {fmtPct(w.fixedSwapRatePct, 4)} to {fmtDate(w.maturity)} · MTM {w.mtm == null ? "—" : `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))}`} ({w.curve})</div>)}
+                  <b>{r.lender ?? "Loan"}</b>{r.loanLabel ? ` (${r.loanLabel})` : ""} · {fmtM(r.balance)} · {fmtPct(r.allInPct, 3)} {r.rateType ?? ""} · matures {fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}
+                  {r.swaps.map(w => <div key={w.record.id} style={{ fontSize: 12.5, color: K.gray }}>{w.termsPending ? <>Swap{w.counterparty ? ` with ${w.counterparty}` : ""} — terms pending (not priced)</> : <>Swap {fmtM(w.notional)} at {fmtPct(w.fixedSwapRatePct, 4)} to {fmtDate(w.maturity)} · MTM {w.mtm == null ? "—" : `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))}`} ({w.curve})</>}</div>)}
                   <Src>{r.record.sourceNote ?? "no source noted"}</Src>
+                </div>
+              ))}
+              {prefs.map(p => (
+                <div key={p.record.id} style={{ fontSize: 13, marginTop: 8 }}>
+                  <b>Preferred equity</b>{p.investor ? ` · ${p.investor}` : ""}{p.loanLabel ? ` (${p.loanLabel})` : ""} · {fmtM(p.amount)}{p.ratePct != null ? ` at ${fmtPct(p.ratePct, 2)}` : ""}
+                  <Src>not debt — excluded from loan totals · {p.record.sourceNote ?? "no source noted"}</Src>
                 </div>
               ))}
             </div>

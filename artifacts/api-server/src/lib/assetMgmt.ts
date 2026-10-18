@@ -17,8 +17,11 @@ import type { DatexMap } from "./datexImport";
 //                       Datex ids are city-based (voorhees = Eagle Plaza, brunswic = Cooks
 //                       Corner, …) and two buildings share the name "Mattatuck Commons".
 
-export type AmKind = "loan" | "swap" | "date" | "news";
-export const AM_KINDS: readonly AmKind[] = ["loan", "swap", "date", "news"];
+export type AmKind = "loan" | "swap" | "date" | "pref" | "news";
+export const AM_KINDS: readonly AmKind[] = ["loan", "swap", "date", "pref", "news"];
+/** The kinds an admin enters (news is written by the credit-watch scan only). */
+export type EntryKind = Exclude<AmKind, "news">;
+export const ENTRY_KINDS: readonly EntryKind[] = ["loan", "swap", "date", "pref"];
 
 let ready: Promise<void> | null = null;
 export function ensureAssetMgmtTables(): Promise<void> {
@@ -131,6 +134,14 @@ const prune = <T extends Record<string, unknown>>(o: T): T => {
   for (const k of Object.keys(o)) if (o[k] === undefined) delete o[k];
   return o;
 };
+/** Free text that may arrive as a string, a list or a small object (covenants, open
+ *  questions…) — flattened to readable text, never dropped. */
+const text = (v: unknown, max = 1500): string | undefined => {
+  if (v == null) return undefined;
+  if (Array.isArray(v)) return str(v.map(x => (x && typeof x === "object" ? text(x, max) : String(x ?? "").trim())).filter(Boolean).join("; "), max);
+  if (typeof v === "object") return str(Object.entries(v as Record<string, unknown>).filter(([, x]) => x != null && x !== "").map(([k, x]) => `${k}: ${typeof x === "object" ? text(x, max) : String(x)}`).join("; "), max);
+  return str(v, max);
+};
 /** A rate given as a fraction (0.0408) is a percent written the other way round. */
 const pct = (v: unknown): number | undefined => { const n = num(v, 0, 100); return n == null ? undefined : n > 0 && n < 0.25 ? Math.round(n * 1e6) / 1e4 : n; };
 
@@ -141,10 +152,19 @@ export interface LoanRec {
   amortization?: "IO" | "amortizing" | "partial IO"; amortYears?: number; ioUntil?: string;
   dscrCovenant?: number; debtYieldCovenantPct?: number; recourse?: string; guarantor?: string;
   datexLoanId?: number; notes?: string;
+  loanLabel?: string; covenants?: string; prepayment?: string; openQuestions?: string; confidence?: string;
 }
 export interface SwapRec {
   loanId?: string; counterparty?: string; notional?: number; fixedSwapRatePct?: number; spreadBps?: number; allInFixedPct?: number;
   tradeDate?: string; effectiveDate?: string; maturityDate?: string; index?: string; payFixed?: boolean; notes?: string;
+  loanLabel?: string; openQuestions?: string; confidence?: string;
+  /** Hedge known to exist but notional / rate / maturity not documented yet — shown, never priced. */
+  termsPending?: boolean;
+}
+/** Preferred equity — capital, not debt: kept OUT of total debt and the weighted rate. */
+export interface PrefRec {
+  investor?: string; loanLabel?: string; amount?: number; ratePct?: number; currentPayPct?: number; accrualPct?: number;
+  fundingDate?: string; maturityDate?: string; redemption?: string; notes?: string; openQuestions?: string; confidence?: string;
 }
 export interface DateRec { date?: string; type?: string; tenant?: string; description?: string; owner?: string; noticeDays?: number }
 
@@ -173,7 +193,9 @@ export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
     amortization: amort.includes("partial") ? "partial IO" : amort.includes("io") || amort.includes("interest") ? "IO" : amort.includes("amort") ? "amortizing" : undefined,
     amortYears: num(r.amortYears, 1, 50), ioUntil: isoDate(r.ioUntil),
     dscrCovenant: num(r.dscrCovenant ?? r.dscr, 0.5, 5), debtYieldCovenantPct: pct(r.debtYieldCovenantPct ?? r.debtYieldCovenant),
-    recourse: str(r.recourse), guarantor: str(r.guarantor), datexLoanId: num(r.datexLoanId, 0), notes: str(r.notes, 1000),
+    recourse: str(r.recourse), guarantor: str(r.guarantor), datexLoanId: num(r.datexLoanId, 0), notes: text(r.notes),
+    loanLabel: str(r.loanLabel ?? r.label, 120), covenants: text(r.covenants), prepayment: text(r.prepayment ?? r.prepaymentTerms ?? r.prepay),
+    openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
   } as LoanRec & Record<string, unknown>);
 }
 export function sanitizeSwap(r: Record<string, unknown>): SwapRec {
@@ -182,23 +204,41 @@ export function sanitizeSwap(r: Record<string, unknown>): SwapRec {
     loanId: str(r.loanId, 120), counterparty: str(r.counterparty), notional: num(r.notional, 0, 5e9),
     fixedSwapRatePct: pct(r.fixedSwapRatePct ?? r.swapRate ?? r.fixedRate), spreadBps, allInFixedPct: pct(r.allInFixedPct ?? r.allIn),
     tradeDate: isoDate(r.tradeDate), effectiveDate: isoDate(r.effectiveDate), maturityDate: isoDate(r.maturityDate ?? r.terminationDate ?? r.maturity),
-    index: normIndex(r.index ?? r.floatingIndex), payFixed: bool(r.payFixed), notes: str(r.notes, 1000),
+    index: normIndex(r.index ?? r.floatingIndex), payFixed: bool(r.payFixed), notes: text(r.notes),
+    loanLabel: str(r.loanLabel ?? r.label, 120), openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
+  });
+}
+export function sanitizePref(r: Record<string, unknown>): PrefRec {
+  return prune({
+    investor: str(r.investor ?? r.provider ?? r.lender ?? r.counterparty), loanLabel: str(r.loanLabel ?? r.label, 120),
+    amount: num(r.amount ?? r.originalBalance ?? r.currentBalance ?? r.balance, 0, 5e9),
+    ratePct: pct(r.ratePct ?? r.prefRatePct ?? r.allInRatePct ?? r.fixedRatePct ?? r.rate), currentPayPct: pct(r.currentPayPct), accrualPct: pct(r.accrualPct),
+    fundingDate: isoDate(r.fundingDate ?? r.originationDate), maturityDate: isoDate(r.maturityDate ?? r.maturity),
+    redemption: text(r.redemption ?? r.prepayment), notes: text(r.notes), openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
   });
 }
 export function sanitizeDate(r: Record<string, unknown>): DateRec {
   return prune({ date: isoDate(r.date), type: str(r.type, 60), tenant: str(r.tenant, 120), description: str(r.description, 500), owner: str(r.owner, 80), noticeDays: num(r.noticeDays, 0, 3650) });
 }
-const SANITIZE: Record<Exclude<AmKind, "news">, (r: Record<string, unknown>) => Record<string, unknown>> = {
+const SANITIZE: Record<EntryKind, (r: Record<string, unknown>) => Record<string, unknown>> = {
   loan: r => sanitizeLoan(r) as Record<string, unknown>,
-  swap: r => sanitizeSwap(r) as Record<string, unknown>,
+  swap: r => {
+    const w = sanitizeSwap(r) as Record<string, unknown>;
+    if (w.notional == null || w.fixedSwapRatePct == null || !w.maturityDate) w.termsPending = true; else delete w.termsPending;
+    return w;
+  },
+  pref: r => sanitizePref(r) as Record<string, unknown>,
   date: r => sanitizeDate(r) as Record<string, unknown>,
 };
 
 /** A record must say WHAT it is about; one that doesn't is rejected, never stored blank. */
-export function validateRecord(kind: Exclude<AmKind, "news">, d: Record<string, unknown>): string | null {
+export function validateRecord(kind: EntryKind, d: Record<string, unknown>): string | null {
   if (kind === "loan" && d.originalBalance == null && d.currentBalance == null) return "a loan needs an original or current balance";
   if (kind === "loan" && !d.maturityDate) return "a loan needs a maturity date";
-  if (kind === "swap" && (d.notional == null || d.fixedSwapRatePct == null || !d.maturityDate)) return "a swap needs notional, fixed swap rate and maturity";
+  // A swap whose terms aren't documented yet still saves (as "terms pending", never priced) —
+  // but it has to say whose hedge it is.
+  if (kind === "swap" && !d.counterparty && !d.loanLabel && !d.loanId && d.notional == null) return "a swap needs at least a counterparty, loan label or notional";
+  if (kind === "pref" && d.amount == null) return "preferred equity needs an amount";
   if (kind === "date" && (!d.date || !d.type)) return "a critical date needs a date and a type";
   return null;
 }
@@ -206,7 +246,8 @@ export function validateRecord(kind: Exclude<AmKind, "news">, d: Record<string, 
 /** Stable id so re-importing the same seed updates rows instead of duplicating them. */
 export function recordId(kind: string, dealId: string, d: Record<string, unknown>): string {
   const key = kind === "loan" ? [d.lender, d.maturityDate, d.loanName]
-    : kind === "swap" ? [d.counterparty, d.maturityDate, d.notional]
+    : kind === "swap" ? (d.termsPending ? [d.counterparty, d.maturityDate, d.notional, "pending", d.loanLabel, d.fixedSwapRatePct] : [d.counterparty, d.maturityDate, d.notional])
+    : kind === "pref" ? [d.investor, d.loanLabel, d.amount]
     : [d.date, d.type, d.tenant];
   return `${kind}:${createHash("sha1").update([dealId, ...key.map(x => String(x ?? "").toLowerCase())].join("|")).digest("hex").slice(0, 16)}`;
 }
@@ -227,28 +268,35 @@ export function parseCsvObjects(text: string): Array<Record<string, string>> {
   return rows.map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? "").trim()])));
 }
 
-export interface ImportRow { kind: Exclude<AmKind, "news">; raw: Record<string, unknown> }
+export interface ImportRow { kind: EntryKind; raw: Record<string, unknown> }
+/** A row sent under "loans" that is really preferred equity (Kimco "Loan 2" at Rockaway…) —
+ *  only when a type/label field SAYS so; never inferred from the lender's name. */
+export function isPrefEquityRow(raw: Record<string, unknown>): boolean {
+  const said = [raw.instrument, raw.type, raw.loanType, raw.category, raw.rateType, raw.loanLabel, raw.loanName, raw.label].map(v => String(v ?? "")).join(" ");
+  return /pref(erred)?[\s-]*equity|\bpref\s*eq\b/i.test(said);
+}
 /** Accepts {loans:[],swaps:[],dates:[]}, a bare array with a `kind` on each row, or CSV with a `kind` column. */
 export function readImportText(text: string): { rows: ImportRow[]; problem?: string } {
   const t = text.trim();
   if (!t) return { rows: [], problem: "nothing pasted" };
-  const asKind = (k: unknown): ImportRow["kind"] | null => { const s = String(k ?? "").toLowerCase().replace(/s$/, ""); return s === "loan" || s === "swap" || s === "date" ? s : s === "criticaldate" ? "date" : null; };
+  const asKind = (k: unknown): ImportRow["kind"] | null => { const s = String(k ?? "").toLowerCase().replace(/s$/, "").replace(/[\s_-]/g, ""); return s === "loan" || s === "swap" || s === "date" || s === "pref" ? s : s === "criticaldate" ? "date" : s === "preferredequity" || s === "prefequity" ? "pref" : null; };
+  const route = (r: ImportRow): ImportRow => (r.kind === "loan" && isPrefEquityRow(r.raw) ? { ...r, kind: "pref" } : r);
   if (t.startsWith("{") || t.startsWith("[")) {
     let j: unknown;
     try { j = JSON.parse(t); } catch { return { rows: [], problem: "that isn't valid JSON" }; }
     const out: ImportRow[] = [];
     if (Array.isArray(j)) { for (const r of j) { const k = asKind((r as Record<string, unknown>)?.kind); if (k) out.push({ kind: k, raw: r as Record<string, unknown> }); } }
     else if (j && typeof j === "object") {
-      for (const [key, kind] of [["loans", "loan"], ["swaps", "swap"], ["dates", "date"], ["criticalDates", "date"]] as const) {
+      for (const [key, kind] of [["loans", "loan"], ["swaps", "swap"], ["dates", "date"], ["criticalDates", "date"], ["preferredEquity", "pref"], ["prefs", "pref"], ["prefEquity", "pref"]] as const) {
         const arr = (j as Record<string, unknown>)[key];
         if (Array.isArray(arr)) for (const r of arr) if (r && typeof r === "object") out.push({ kind, raw: r as Record<string, unknown> });
       }
     }
-    return out.length ? { rows: out } : { rows: [], problem: "no loans, swaps or dates found — use {\"loans\":[…],\"swaps\":[…],\"dates\":[…]}" };
+    return out.length ? { rows: out.map(route) } : { rows: [], problem: "no loans, swaps, dates or preferred equity found — use {\"loans\":[…],\"swaps\":[…],\"dates\":[…],\"preferredEquity\":[…]}" };
   }
   const objs = parseCsvObjects(t);
   const rows = objs.map(o => ({ kind: asKind(o.kind), raw: o as Record<string, unknown> })).filter((r): r is ImportRow => !!r.kind);
-  return rows.length ? { rows } : { rows: [], problem: "CSV needs a header row with a `kind` column (loan, swap or date)" };
+  return rows.length ? { rows: rows.map(route) } : { rows: [], problem: "CSV needs a header row with a `kind` column (loan, swap or date)" };
 }
 
 export interface OwnedDealRef { id: string; name: string; bldgIds: string[] }
@@ -283,7 +331,7 @@ export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set
 
 // ── Storage ──────────────────────────────────────────────────────────────────
 export interface AmRecord { id: string; kind: AmKind; dealId: string | null; data: Record<string, unknown>; sourceNote: string | null; updatedBy: string | null; updatedAt: string }
-export async function listRecords(kinds: AmKind[] = ["loan", "swap", "date"]): Promise<AmRecord[]> {
+export async function listRecords(kinds: AmKind[] = [...ENTRY_KINDS]): Promise<AmRecord[]> {
   await ensureAssetMgmtTables();
   const r = await db.execute(sql`SELECT id, kind, deal_id, data, source_note, updated_by, updated_at FROM am_records WHERE kind IN (${sql.join(kinds.map(k => sql`${k}`), sql`, `)}) ORDER BY kind, deal_id, id`);
   return (r.rows as Array<Record<string, unknown>>).map(x => ({ id: String(x.id), kind: x.kind as AmKind, dealId: (x.deal_id as string) ?? null, data: (x.data as Record<string, unknown>) ?? {}, sourceNote: (x.source_note as string) ?? null, updatedBy: (x.updated_by as string) ?? null, updatedAt: new Date(String(x.updated_at)).toISOString() }));
@@ -300,7 +348,7 @@ export async function deleteRecord(id: string): Promise<boolean> {
   const r = await db.execute(sql`DELETE FROM am_records WHERE id = ${id} RETURNING id`);
   return (r.rows as unknown[]).length > 0;
 }
-export function sanitizeFor(kind: Exclude<AmKind, "news">, raw: Record<string, unknown>): Record<string, unknown> { return SANITIZE[kind](raw); }
+export function sanitizeFor(kind: EntryKind, raw: Record<string, unknown>): Record<string, unknown> { return SANITIZE[kind](raw); }
 
 /** Datex Loans → loan records (source "datex"). An admin-entered loan for the same deal
  *  always wins in totals (see the client); these only fill the gap where nothing was entered. */

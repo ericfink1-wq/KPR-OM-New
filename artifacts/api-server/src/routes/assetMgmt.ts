@@ -3,7 +3,7 @@ import { db, dealsTable } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import {
   listRecords, upsertRecord, deleteRecord, planImport, sanitizeFor, validateRecord, recordId,
-  listDatexMap, saveDatexMapRow, cleanBldgIds, loadDatexMapFromDb, headlineNamesBrand, type AmKind, type OwnedDealRef,
+  listDatexMap, saveDatexMapRow, cleanBldgIds, loadDatexMapFromDb, headlineNamesBrand, ENTRY_KINDS, type EntryKind, type AmKind, type OwnedDealRef,
 } from "../lib/assetMgmt";
 import { fetchBrandNews, assessNews, brandNorm } from "../lib/watchlistNews";
 import { callAnthropicOnce } from "../lib/extract";
@@ -22,15 +22,15 @@ async function ownedDeals(): Promise<OwnedDealRef[]> {
 }
 
 router.get("/am/records", requireAuth, async (req, res) => {
-  try { res.json({ records: await listRecords(["loan", "swap", "date"]) }); }
+  try { res.json({ records: await listRecords([...ENTRY_KINDS]) }); }
   catch (err) { req.log.error({ err }, "am records list failed"); res.status(500).json({ error: "Couldn't load asset-management records" }); }
 });
 
 router.post("/am/records", requireAdmin, async (req, res) => {
   try {
     const b = (req.body ?? {}) as { id?: string; kind?: string; dealId?: string; data?: Record<string, unknown>; sourceNote?: string };
-    const kind = b.kind as Exclude<AmKind, "news">;
-    if (!["loan", "swap", "date"].includes(kind)) { res.status(400).json({ error: "kind must be loan, swap or date" }); return; }
+    const kind = b.kind as EntryKind;
+    if (!ENTRY_KINDS.includes(kind)) { res.status(400).json({ error: "kind must be loan, swap, date or pref" }); return; }
     const owned = await ownedDeals();
     if (!b.dealId || !owned.some(d => d.id === b.dealId)) { res.status(400).json({ error: "pick an owned property" }); return; }
     const data = sanitizeFor(kind, b.data ?? {});
@@ -51,7 +51,7 @@ router.delete("/am/records/:id", requireAdmin, async (req, res) => {
 router.post("/am/records/import", requireAdmin, async (req, res) => {
   try {
     const text = String((req.body ?? {}).text ?? "").slice(0, 2_000_000);
-    const existing = new Set((await listRecords(["loan", "swap", "date"])).map(r => r.id));
+    const existing = new Set((await listRecords([...ENTRY_KINDS])).map(r => r.id));
     const plan = planImport(text, await ownedDeals(), existing);
     if (plan.problem) { res.status(400).json({ error: plan.problem }); return; }
     if ((req.body ?? {}).apply === true) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildDebtRows, buildSwapRows, debtTotals, marketSwapRate, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, daysUntil, type AmRecord } from "../assetMgmt";
+import { buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, marketSwapRate, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, daysUntil, type AmRecord } from "../assetMgmt";
 import type { Deal } from "../idb";
 import type { RatesPayload } from "../api";
 
@@ -111,5 +111,30 @@ describe("tenant sales & occupancy cost", () => {
     const d = deal("x", { occupancy: 92, noi: 2_000_000, totalSF: 100000 });
     (d as unknown as Record<string, unknown>).datexLive = { occupancyPct: 88.5, totalGLA: 101000, financials: { period: "202609", noiTtmActual: 1_900_000 } };
     expect(omVsToday(d).map(r => [r.label, r.om, r.today])).toEqual([["Occupancy", 92, 88.5], ["GLA", 100000, 101000], ["In-place base rent", null, null], ["NOI", 2_000_000, 1_900_000]]);
+  });
+});
+
+describe("labels, pending swaps, preferred equity", () => {
+  const deals = [deal("rock")];
+  const records = [
+    rec("loan:c", "loan", "rock", { lender: "Wells", loanLabel: "Commons", originalBalance: 30e6, maturityDate: "2029-01-01", rateType: "swapped", spreadBps: 200 }),
+    rec("loan:t", "loan", "rock", { lender: "Wells", loanLabel: "Town Court", originalBalance: 20e6, maturityDate: "2029-01-01", rateType: "swapped", spreadBps: 210 }),
+    rec("swap:c", "swap", "rock", { counterparty: "Wells", loanLabel: "Commons", notional: 30e6, fixedSwapRatePct: 3.5, spreadBps: 200, maturityDate: "2029-01-01" }),
+    rec("swap:t", "swap", "rock", { counterparty: "Wells", loanLabel: "Town Court", termsPending: true }),
+    rec("pref:1", "pref", "rock", { investor: "Kimco", loanLabel: "Town Plaza", amount: 10e6, ratePct: 9.25 }),
+    rec("pref:2", "pref", "rock", { investor: "Kimco", loanLabel: "Town Court", amount: 7e6, ratePct: 9.25 }),
+  ];
+  const rows = buildDebtRows(records, deals, rates, TODAY);
+  it("swaps attach by loan label; a pending swap is shown but never priced or used for the all-in", () => {
+    const c = rows.find(r => r.loanLabel === "Commons")!, t = rows.find(r => r.loanLabel === "Town Court")!;
+    expect(c.swaps.map(w => w.record.id)).toEqual(["swap:c"]);
+    expect(c.allInPct).toBeCloseTo(5.5, 4);
+    expect(t.swaps[0]).toMatchObject({ termsPending: true, mtm: null, marketRatePct: null });
+    expect(t.allInPct).toBeNull();
+  });
+  it("preferred equity stays out of total debt and the weighted rate", () => {
+    const tot = debtTotals(rows, buildSwapRows(records, new Map(), rates, TODAY));
+    expect(tot.totalDebt).toBe(50e6);
+    expect(prefTotals(buildPrefRows(records, deals, TODAY))).toEqual({ total: 17e6, count: 2, weightedRatePct: 9.25 });
   });
 });
