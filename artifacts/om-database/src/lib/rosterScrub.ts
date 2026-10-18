@@ -37,12 +37,14 @@ const MKT_BAND = 0.15;
 
 
 /** The next FUTURE rent step from a free-text schedule, compactly: "→ $27.00 Jan-27". */
+const monYY = (iso: string) => { const d = new Date(iso + "T12:00:00Z"); return `${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })}-${String(d.getUTCFullYear()).slice(2)}`; };
 export function nextRentStep(t: Pick<Tenant, "rentSchedule" | "rentBumps" | "sf" | "rentPerSF">, today: Date = new Date()): { date: string; psf: number | null; label: string } | null {
   const sched = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
   if (!sched) return null;
   const t0 = today.toISOString().slice(0, 10);
   const MON: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
-  const sf = num(t.sf);
+  const sf = num(t.sf), cur = num(t.rentPerSF);
+  let flatTo: string | null = null;
   for (const seg of sched.split(/;|\n/).map(x => x.trim()).filter(Boolean)) {
     let iso: string | null = null, m: RegExpMatchArray | null;
     if ((m = seg.match(/(\d{4})-(\d{2})(?:-(\d{2}))?/))) iso = `${m[1]}-${m[2]}-${m[3] ?? "01"}`;
@@ -53,10 +55,13 @@ export function nextRentStep(t: Pick<Tenant, "rentSchedule" | "rentBumps" | "sf"
     let psf = r ? Number(r[1].replace(/,/g, "")) : null;
     if (psf != null && psf > 500 && sf) psf = Math.round((psf / sf) * 100) / 100;   // an annual $ figure
     if (psf != null && psf > 500) psf = null;
-    const d = new Date(iso + "T12:00:00Z");
-    const when = `${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })}-${String(d.getUTCFullYear()).slice(2)}`;
+    const when = monYY(iso);
+    // A "step" to the rent already being paid is no step: a flat lease's roll often prints
+    // its current rate through expiry ("$10.96 to Mar-30"). Keep looking for a real change.
+    if (psf != null && cur && Math.abs(psf - cur) / cur < 0.005) { flatTo = iso; continue; }
     return { date: iso, psf, label: psf != null ? `→ $${psf.toFixed(2)} ${when}` : `→ step ${when}` };
   }
+  if (flatTo) return { date: flatTo, psf: cur, label: `Flat to ${monYY(flatTo)}` };
   return null;
 }
 

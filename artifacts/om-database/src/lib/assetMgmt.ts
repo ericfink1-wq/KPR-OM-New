@@ -488,3 +488,74 @@ export function omVsToday(deal: Deal): CompareRow[] {
     })(),
   ];
 }
+
+// ── Datex GLA tie-out, recomputed from the stored snapshot (Eric, 10/18/26) ──
+// The import-time check summed live + vacant suites raw, so it warned on rosters that
+// were fine once OCCPSTAT and vacancy are handled: a suite listed twice (lease
+// generations), a vacant suite that is also a live lease, or a vacant box already
+// pre-leased (an N lease Datex drops from VacantSuites). Handle those first, and only
+// WARN above 5% — 2–5% is a quiet note, ≤2% ties.
+export interface GlaTieOut { rosterGLA: number; occupancyGLA: number | null; diffPct: number | null; level: "ties" | "note" | "warn" | null; adjustments: string[] }
+const suiteKey = (v: unknown) => (s(v) ?? "").toUpperCase().replace(/^(SUITE|STE|UNIT)\s*/i, "").replace(/\s+/g, "");
+export function datexGlaTieOut(dx: Record<string, unknown> | null | undefined): GlaTieOut | null {
+  if (!dx || !Array.isArray(dx.tenants)) return null;
+  const all = dx.tenants as Array<Record<string, unknown>>;
+  const adjustments: string[] = [];
+  const bySuite = new Map<string, number>(); let noSuite = 0, dupes = 0;
+  const live = all.filter(t => !isVacant(String(t.name ?? "")) && t.futureLease !== true && String(t.occStatus ?? "").toUpperCase() !== "I");
+  for (const t of live) {
+    const sf = n(t.sf) ?? 0, k = suiteKey(t.suite);
+    if (!k) { noSuite += sf; continue; }
+    if (bySuite.has(k)) { dupes++; bySuite.set(k, Math.max(bySuite.get(k)!, sf)); } else bySuite.set(k, sf);
+  }
+  if (dupes) adjustments.push(`${dupes} suite${dupes === 1 ? "" : "s"} listed twice counted once`);
+  const vacantSrc = Array.isArray(dx.vacantSuites) && (dx.vacantSuites as unknown[]).length
+    ? dx.vacantSuites as Array<Record<string, unknown>>
+    : all.filter(t => isVacant(String(t.name ?? "")));
+  let vacant = 0, vacDup = 0;
+  for (const v of vacantSrc) {
+    const k = suiteKey(v.suite), sf = n(v.sf) ?? 0;
+    if (k && bySuite.has(k)) { vacDup++; continue; }
+    if (k) bySuite.set(k, sf); else vacant += sf;
+  }
+  if (vacDup) adjustments.push(`${vacDup} vacant suite${vacDup === 1 ? "" : "s"} already leased left out`);
+  let pre = 0;
+  for (const t of all.filter(t => t.futureLease === true)) {
+    const k = suiteKey(t.suite);
+    if (k && !bySuite.has(k)) { bySuite.set(k, n(t.sf) ?? 0); pre++; }
+  }
+  if (pre) adjustments.push(`${pre} pre-leased (signed, not yet open) suite${pre === 1 ? "" : "s"} counted`);
+  const rosterGLA = Math.round([...bySuite.values()].reduce((a, b) => a + b, 0) + noSuite + vacant);
+  const occ = n(dx.totalGLA);
+  if (occ == null || occ <= 0) return { rosterGLA, occupancyGLA: null, diffPct: null, level: null, adjustments };
+  const diffPct = Math.round(((rosterGLA - occ) / occ) * 1000) / 10;
+  return { rosterGLA, occupancyGLA: occ, diffPct, level: Math.abs(diffPct) <= 2 ? "ties" : Math.abs(diffPct) <= 5 ? "note" : "warn", adjustments };
+}
+
+// ── A/R aging: current vs FORMER tenants (Eric, 10/18/26) ──
+// A vacated tenant's unpaid balance (Big Lots after its bankruptcy) is a collections
+// write-off question, not a sign the current roster is delinquent — label it apart.
+// A row is "former" when Datex says so, or when its tenant id / brand no longer appears
+// on the live rent roll. Only rows Datex itemises can be split; the rest stays "current".
+export interface ArSplit { over60: number | null; over90: number | null; current60: number | null; current90: number | null; former60: number; former90: number; former: Array<{ name: string; over60: number | null; over90: number | null }>; currentTop: Array<{ name: string; over60: number | null; over90: number | null }> }
+export function splitArAging(dx: Record<string, unknown> | null | undefined): ArSplit | null {
+  const ar = dx?.arAging as { over60?: number; over90?: number; byTenant?: Array<{ tenantId?: string | null; name: string; over60?: number | null; over90?: number | null; occStatus?: string | null; former?: boolean | null }> } | undefined;
+  if (!ar) return null;
+  const tenants = Array.isArray(dx?.tenants) ? dx!.tenants as Array<Record<string, unknown>> : [];
+  const liveRows = tenants.filter(t => !isVacant(String(t.name ?? "")) && String(t.occStatus ?? "").toUpperCase() !== "I");
+  const ids = new Set(liveRows.map(t => s(t.tenantId)).filter(Boolean) as string[]);
+  const brands = new Set(liveRows.map(t => brandFamilyKey(String(t.name ?? ""))));
+  const isFormer = (x: NonNullable<typeof ar.byTenant>[number]) => {
+    if (x.former === true || String(x.occStatus ?? "").toUpperCase() === "I") return true;
+    if (x.former === false || String(x.occStatus ?? "").toUpperCase() === "C") return false;
+    if (!tenants.length) return false;                     // no roll to compare against → don't guess
+    if (x.tenantId && ids.has(String(x.tenantId))) return false;
+    return !brands.has(brandFamilyKey(x.name));
+  };
+  const rows = ar.byTenant ?? [];
+  const former = rows.filter(isFormer), cur = rows.filter(x => !isFormer(x));
+  const f60 = former.reduce((t, x) => t + (n(x.over60) ?? 0), 0), f90 = former.reduce((t, x) => t + (n(x.over90) ?? 0), 0);
+  const o60 = n(ar.over60), o90 = n(ar.over90);
+  return { over60: o60, over90: o90, current60: o60 == null ? null : Math.max(0, o60 - f60), current90: o90 == null ? null : Math.max(0, o90 - f90), former60: f60, former90: f90,
+    former: former.map(x => ({ name: x.name, over60: n(x.over60), over90: n(x.over90) })), currentTop: cur.map(x => ({ name: x.name, over60: n(x.over60), over90: n(x.over90) })) };
+}

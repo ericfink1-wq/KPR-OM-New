@@ -18,6 +18,12 @@ Persistent context for this repo. Read this fully at the start of every session.
 - Datex: tenants use OCCPSTAT (`occStatus` C/N/I; I dropped, N = `futureLease`, excluded from live roster);
   the dotted-TenantId drop is a fallback only. LeaseApp rows are APPLICATIONS ("leasing pipeline (applications)").
 - Home hero KPIs: `HomeLive.tsx` (lazy) — owned-only, from Datex + Asset Mgmt.
+- Datex GLA tie-out + A/R are RECOMPUTED client-side from the stored snapshot (`datexGlaTieOut`,
+  `splitArAging` in om-database lib/assetMgmt.ts) — the import-time `glaTieOut` is raw. Tie-out: dedupe suites,
+  drop vacant suites that are leased, count pre-leased (N) boxes; ≤2% ties, 2–5% gray note, >5% warn. A/R:
+  rows Datex marks I / former, or whose tenant is no longer on the roll, are "former tenants" (Big Lots), shown
+  apart from current delinquency. NOI vs budget shows `financials.basis` (Cash/Accrual) + a timing tooltip.
+- Deal-page tab NAME click only switches tabs; the section jump-menu opens from the ▾ alone.
 
 ## SESSION 2026-06-19 (extraction-quality + self-improvement push). NEXT-SESSION PICKUP.
 All on `main`, typecheck-clean, 64 api-server tests green. Built this session:

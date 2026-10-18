@@ -64,6 +64,14 @@ export const CHANGELOG: ChangeEntry[] = [
     where: "Home page and every page",
   },
   {
+    id: "2026-10-18-asset-mgmt-polish",
+    date: "2026-10-18",
+    category: "fixed",
+    title: "Clearer Datex figures for owned properties",
+    detail: "NOI vs budget now shows whether Datex books the property on a cash or accrual basis, with a note that cash-basis timing can swing year-to-date figures. A/R past 60 and 90 days now counts current tenants only, and lists balances left by tenants who have moved out (such as Big Lots) separately. The rent-roll size check now allows for suites listed twice and signed-but-not-open leases, and only warns when the gap is above 5%. Flat leases read \"Flat to Mar-30\" instead of showing a step to the same rent, and the deal-page tab menus open only when you click the small arrow.",
+    where: "Asset Mgmt → Properties, owned deal pages, and the Tenants & Sales roster",
+  },
+  {
     id: "2026-10-18-owned-deal-page",
     date: "2026-10-18",
     category: "improved",

@@ -303,7 +303,15 @@ export function buildLiveBlock(
     const o60 = keepNumber(a.over60, { min: 0 });    if (o60 != null) ar.over60 = o60;
     const o90 = keepNumber(a.over90, { min: 0 });    if (o90 != null) ar.over90 = o90;
     if (o60 != null && o90 != null && o90 > o60 + 1) return { problem: `A/R over 90 days (${o90}) exceeds A/R over 60 days (${o60})` };
-    if (Array.isArray(a.byTenant)) ar.byTenant = a.byTenant.filter(x => x && String(x.name ?? "").trim()).slice(0, 25).map(x => ({ tenantId: x.tenantId ?? null, name: String(x.name).trim(), over60: keepNumber(x.over60, { min: 0 }), over90: keepNumber(x.over90, { min: 0 }) }));
+    if (Array.isArray(a.byTenant)) ar.byTenant = a.byTenant.filter(x => x && String(x.name ?? "").trim()).slice(0, 25).map(x => {
+      // OCCPSTAT on an A/R row (or an explicit former flag) marks a VACATED tenant's balance,
+      // which the app labels apart from the current roster's delinquency.
+      const xr = x as Record<string, unknown>, st = String(xr.occStatus ?? xr.OCCPSTAT ?? "").trim().toUpperCase().slice(0, 1);
+      const o: Record<string, unknown> = { tenantId: x.tenantId ?? null, name: String(x.name).trim(), over60: keepNumber(x.over60, { min: 0 }), over90: keepNumber(x.over90, { min: 0 }) };
+      if (st) o.occStatus = st;
+      if (typeof xr.former === "boolean") o.former = xr.former;
+      return o;
+    }) as typeof ar.byTenant;
     if (Object.keys(ar).length) block.arAging = ar;
   }
   if (p.financials && typeof p.financials === "object") {

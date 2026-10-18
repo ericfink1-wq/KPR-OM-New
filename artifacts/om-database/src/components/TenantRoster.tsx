@@ -910,7 +910,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     if (!steps.length) return <span style={{ color:"#c4bbaa" }}>{toStepString(t.rentSchedule) || toStepString(t.rentBumps) ? "Flat" : "—"}</span>;
                     const nx = nextRentStep(t);
                     if (!nx && steps.every(x => /^flat\b/i.test(x) || !/\d{4}/.test(x))) return <span style={{ color:"#94928b" }} title={steps.join("\n")}>Flat</span>;
-                    return <span title={steps.join("\n")}>{nx ? nx.label : <span style={{ color:"#94928b" }}>no future step</span>}{steps.length > 1 && <span style={{ color:"#94928b", marginLeft:4 }}>+{steps.length - 1}</span>}</span>;
+                    return <span title={steps.join("\n")}>{nx ? (/^Flat/.test(nx.label) ? <span style={{ color:"#94928b" }}>{nx.label}</span> : nx.label) : <span style={{ color:"#94928b" }}>no future step</span>}{steps.length > 1 && <span style={{ color:"#94928b", marginLeft:4 }}>+{steps.length - 1}</span>}</span>;
                   })()}
                 </td>
                 <td style={{ padding:"0 10px", color:"#5c5f57", fontSize:11, whiteSpace:"nowrap" }}>

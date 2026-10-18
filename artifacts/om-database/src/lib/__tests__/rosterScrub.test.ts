@@ -20,6 +20,9 @@ describe("next rent step, compactly", () => {
     expect(nextRentStep(T({ rentSchedule: "2025-01-01 $25.00; 2027-01-01 $27.00; 2032-01-01 $29.70", sf: 2000 }), TODAY)).toEqual({ date: "2027-01-01", psf: 27, label: "→ $27.00 Jan-27" });
     expect(nextRentStep(T({ rentSchedule: "Feb-2028: $54,000/yr", sf: 2000 }), TODAY)?.label).toBe("→ $27.00 Feb-28");
     expect(nextRentStep(T({ rentSchedule: "flat" }), TODAY)).toBeNull();
+    // King Soopers: the roll prints the CURRENT rate through expiry — that is flat, not a step.
+    expect(nextRentStep(T({ rentSchedule: "2030-03-31 $10.96", rentPerSF: 10.96, sf: 60000 }), TODAY)?.label).toBe("Flat to Mar-30");
+    expect(nextRentStep(T({ rentSchedule: "2028-03-01 $10.96; 2030-03-01 $12.06", rentPerSF: 10.96, sf: 60000 }), TODAY)?.label).toBe("→ $12.06 Mar-30");
   });
   it("options: 'none' only when the roll says so; blank is unknown", () => {
     expect(optionsState(T({ renewalOptions: "None" }))).toBe("none");

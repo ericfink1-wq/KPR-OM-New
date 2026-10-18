@@ -2482,10 +2482,19 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       <div style={{ display:"flex", gap:2, borderBottom:"1.5px solid #e6e4de", flexWrap:"wrap" }}>
         {tabs.map(([k,label]) => (
           <div key={k} style={{ position:"relative" }}>
-            <button onClick={() => { setTab(k); setNavMenu(m => m === k ? null : k); }}
-              style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3e8a2f" : "2px solid transparent", color: tab===k ? "#232422" : "#7a7973", padding:"8px 11px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Roboto',sans-serif" }}>
-              {label} <span style={{ fontSize:8, opacity:0.55 }}>▾</span>
-            </button>
+            {/* Clicking the tab NAME only switches tabs; the jump-menu opens from the ▾ alone
+                (Eric, 10/18/26: it used to open with every tab click and sit over the roster). */}
+            <div style={{ display:"flex", alignItems:"stretch", borderBottom: tab===k ? "2px solid #3e8a2f" : "2px solid transparent", marginBottom:-1.5 }}>
+              <button onClick={() => { setTab(k); setNavMenu(null); }}
+                style={{ background:"transparent", border:"none", color: tab===k ? "#232422" : "#7a7973", padding:"8px 4px 8px 11px", cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Roboto',sans-serif" }}>
+                {label}
+              </button>
+              {(TAB_SECTIONS[k] || []).length > 0 && (
+                <button aria-label={`Jump to a section of ${label}`} aria-expanded={navMenu === k}
+                  onClick={e => { e.stopPropagation(); setNavMenu(m => m === k ? null : k); }}
+                  style={{ background:"transparent", border:"none", color:"#7a7973", padding:"8px 9px 8px 3px", cursor:"pointer", fontSize:9, opacity:0.7 }}>▾</button>
+              )}
+            </div>
             {navMenu === k && showMenu && (TAB_SECTIONS[k] || []).length > 0 && (
               <div style={{ position:"absolute", top:"100%", left:0, marginTop:2, background:"#fff", border:"1px solid #dfddd6", borderRadius:9, boxShadow:"0 10px 26px rgba(0,0,0,0.14)", zIndex:70, minWidth:190, padding:5 }}>
                 {(TAB_SECTIONS[k] || []).map(s => (

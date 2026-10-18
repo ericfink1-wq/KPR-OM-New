@@ -8,6 +8,7 @@ import {
 import {
   buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, liveTenants,
   type AmRecord, type DebtRow, type SwapRow, type PrefRow, type CriticalDate, type CreditRow, type NewsSignal, type DateType,
+  datexGlaTieOut, splitArAging,
 } from "../lib/assetMgmt";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -416,6 +417,19 @@ function DatesTab({ deals, records, abstracts, isAdmin, reload, onOpenDeal }: { 
   );
 }
 
+const BASIS_TIP = "Datex books NOI on the property's ledger basis. On a CASH basis, timing — a CAM/tax reconciliation, a tax bill or a prepaid rent landing in a different month than budgeted — can swing year-to-date vs budget by a lot even when the full year is on plan.";
+const basisLabel = (fin: Record<string, unknown>) => { const b = String(fin.basis ?? "").trim().toLowerCase(); return b.startsWith("cash") ? "Cash basis" : b.startsWith("accr") ? "Accrual basis" : "basis not stated"; };
+function ArCell({ ar }: { ar: NonNullable<ReturnType<typeof splitArAging>> }) {
+  return (
+    <>
+      {`${fmtM(ar.current60)} / ${fmtM(ar.current90)}`}
+      {ar.former.length > 0
+        ? <Src><span title={ar.former.map(t => `${t.name}: over 90 ${fmtM(t.over90)}`).join("\n")}>+ former tenants {fmtM(ar.former90)} over 90 ({ar.former.slice(0, 2).map(t => t.name).join(", ")}{ar.former.length > 2 ? "…" : ""})</span></Src>
+        : <Src>current tenants</Src>}
+    </>
+  );
+}
+
 // ── Properties tab ────────────────────────────────────────────────────────────
 function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin: boolean; onOpenDeal: (id: string) => void }) {
   const [map, setMap] = useState<DatexMapRow[] | null>(null);
@@ -424,9 +438,9 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
   const rows = deals.map(d => {
     const dx = (d as unknown as { datexLive?: Record<string, unknown> }).datexLive;
     const lt = liveTenants(d);
-    const tie = dx?.glaTieOut as { ties: boolean | null; diffPct: number | null; rosterGLA: number } | undefined;
+    const tie = datexGlaTieOut(dx);
     const fin = dx?.financials as Record<string, number | string> | undefined;
-    const ar = dx?.arAging as Record<string, number> | undefined;
+    const ar = splitArAging(dx);
     const rent = lt.source === "Datex" ? lt.tenants.reduce((t, x) => t + (x.annualRent ?? 0), 0) : null;
     return { d, dx, tie, fin, ar, rent, bldgs: map?.find(m => m.dealId === d.id)?.bldgIds ?? [] };
   });
@@ -440,10 +454,10 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
           <tr key={d.id}>
             <td style={td}><button onClick={() => onOpenDeal(d.id)} style={linkBtn}>{d.propertyName}</button><Src>{bldgs.length ? bldgs.join(", ") : "not mapped to Datex"}</Src></td>
             <td style={td}>{dx ? fmtDate(String(dx.asOf)) : <span style={{ color: K.gray }}>no snapshot</span>}</td>
-            <td style={num}>{dx?.occupancyPct != null ? fmtPct(Number(dx.occupancyPct), 1) : "—"}{tie && tie.ties === false && <Src><span style={{ color: K.red }}>⚠ roster GLA {tie.rosterGLA.toLocaleString()} SF is {tie.diffPct}% off Occupancy's</span></Src>}</td>
+            <td style={num}>{dx?.occupancyPct != null ? fmtPct(Number(dx.occupancyPct), 1) : "—"}{tie?.level === "warn" && <Src><span style={{ color: K.red }} title={tie.adjustments.length ? `After: ${tie.adjustments.join("; ")}` : undefined}>⚠ roster GLA {tie.rosterGLA.toLocaleString()} SF is {tie.diffPct}% off Occupancy's</span></Src>}</td>
             <td style={num}>{fmtM(rent)}</td>
-            <td style={num}>{fin?.noiYtdActual != null ? fmtM(Number(fin.noiYtdActual)) : "—"}{fin?.noiYtdBudget != null && <Src>budget {fmtM(Number(fin.noiYtdBudget))} · {fin.noiYtdActual != null ? `${(((Number(fin.noiYtdActual) - Number(fin.noiYtdBudget)) / Math.abs(Number(fin.noiYtdBudget))) * 100).toFixed(1)}%` : ""} · to {String(fin.period ?? "")}</Src>}</td>
-            <td style={num}>{ar ? `${fmtM(ar.over60 ?? null)} / ${fmtM(ar.over90 ?? null)}` : "—"}</td>
+            <td style={num}>{fin?.noiYtdActual != null ? fmtM(Number(fin.noiYtdActual)) : "—"}{fin?.noiYtdBudget != null && <Src><span title={BASIS_TIP}>budget {fmtM(Number(fin.noiYtdBudget))} · {fin.noiYtdActual != null ? `${(((Number(fin.noiYtdActual) - Number(fin.noiYtdBudget)) / Math.abs(Number(fin.noiYtdBudget))) * 100).toFixed(1)}%` : ""} · to {String(fin.period ?? "")} · {basisLabel(fin)} ⓘ</span></Src>}</td>
+            <td style={num}>{ar ? <ArCell ar={ar} /> : "—"}</td>
             <td style={td}>{String(dx?.assetManager ?? "—")}</td>
           </tr>
         ))}</tbody>
@@ -585,10 +599,10 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
   const cmp = omVsToday(deal);
   const sales = buildSalesRows(deal, bench);
   const dx = (deal as unknown as { datexLive?: Record<string, unknown> }).datexLive;
-  const ar = dx?.arAging as { over60?: number; over90?: number; totalOpen?: number; byTenant?: Array<{ name: string; over60?: number; over90?: number }> } | undefined;
+  const ar = splitArAging(dx);
   const fin = dx?.financials as Record<string, number | string> | undefined;
   const leasing = (dx?.leasing as Array<Record<string, unknown>> | undefined) ?? [];
-  const tie = dx?.glaTieOut as { ties: boolean | null; diffPct: number | null; rosterGLA: number; occupancyGLA: number | null } | undefined;
+  const tie = datexGlaTieOut(dx);
   const fmt = (v: number | null, u: string) => v == null ? "—" : u === "pct" ? `${v.toFixed(1)}%` : u === "sf" ? `${Math.round(v).toLocaleString()} SF` : fmtM(v);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -607,12 +621,13 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
                 </div>
               ))}
             </div>
-            {tie && tie.ties === false && (Math.abs(tie.diffPct ?? 99) < 5
-              ? <div style={{ color: K.gray, fontSize: 12.5, marginTop: 8 }}>Small gap: the Datex rent roll adds up to {tie.rosterGLA.toLocaleString()} SF vs {tie.occupancyGLA?.toLocaleString()} SF in Occupancy ({tie.diffPct}%) — usually a lease generation or suite split; occupancy above is taken from Datex Occupancy.</div>
-              : <div style={{ color: K.red, fontSize: 12.5, marginTop: 8 }}>⚠ The Datex rent roll adds up to {tie.rosterGLA.toLocaleString()} SF but Occupancy reports {tie.occupancyGLA?.toLocaleString()} SF ({tie.diffPct}% apart) — check for missing or duplicate suites before trusting occupancy.</div>)}
+            {tie && (tie.level === "note" || tie.level === "warn") && (tie.level === "note"
+              ? <div style={{ color: K.gray, fontSize: 12.5, marginTop: 8 }}>Small gap: the Datex rent roll adds up to {tie.rosterGLA.toLocaleString()} SF vs {tie.occupancyGLA?.toLocaleString()} SF in Occupancy ({tie.diffPct}%) — usually a lease generation or suite split; occupancy above is taken from Datex Occupancy.{tie.adjustments.length ? ` (Already allowed for: ${tie.adjustments.join("; ")}.)` : ""}</div>
+              : <div style={{ color: K.red, fontSize: 12.5, marginTop: 8 }}>⚠ The Datex rent roll adds up to {tie.rosterGLA.toLocaleString()} SF but Occupancy reports {tie.occupancyGLA?.toLocaleString()} SF ({tie.diffPct}% apart) — check for missing or duplicate suites before trusting occupancy.{tie.adjustments.length ? ` (Already allowed for: ${tie.adjustments.join("; ")}.)` : ""}</div>)}
             <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13 }}>
-              {fin?.noiYtdActual != null && <span><b>NOI YTD</b> {fmtM(Number(fin.noiYtdActual))} vs budget {fmtM(fin.noiYtdBudget != null ? Number(fin.noiYtdBudget) : null)} <span style={{ color: K.gray }}>(to {String(fin.period)})</span></span>}
-              {ar && <span><b>A/R</b> over 60 days {fmtM(ar.over60 ?? null)} · over 90 {fmtM(ar.over90 ?? null)}{ar.byTenant?.length ? <span style={{ color: K.gray }}> · largest: {ar.byTenant.slice(0, 3).map(t => `${t.name} ${fmtM(t.over60 ?? null)}`).join(", ")}</span> : null}</span>}
+              {fin?.noiYtdActual != null && <span title={BASIS_TIP}><b>NOI YTD</b> {fmtM(Number(fin.noiYtdActual))} vs budget {fmtM(fin.noiYtdBudget != null ? Number(fin.noiYtdBudget) : null)} <span style={{ color: K.gray }}>(to {String(fin.period)} · {basisLabel(fin)} ⓘ)</span></span>}
+              {ar && <span><b>A/R</b> current tenants over 60 days {fmtM(ar.current60)} · over 90 {fmtM(ar.current90)}{ar.currentTop.length ? <span style={{ color: K.gray }}> · largest: {ar.currentTop.slice(0, 3).map(t => `${t.name} ${fmtM(t.over60)}`).join(", ")}</span> : null}
+                {ar.former.length > 0 && <span style={{ color: K.gray }}> · <b>former tenants</b> over 90 {fmtM(ar.former90)} ({ar.former.slice(0, 3).map(t => t.name).join(", ")})</span>}</span>}
             </div>
           </>
         )}

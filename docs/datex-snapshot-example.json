@@ -77,7 +77,7 @@
         "over60": 18400.0,
         "over90": 9200.0,
         "byTenant": [
-          { "tenantId": "t0001633", "name": "Nail Spa", "over60": 6400.0, "over90": 3200.0 }
+          { "tenantId": "t0001633", "name": "Nail Spa", "occStatus": "C", "over60": 6400.0, "over90": 3200.0 }
         ]
       },
       "financials": {
