@@ -46,6 +46,10 @@ export interface DatexDealPayload {
     nationalTenant?: string | null; annualNNN?: number | null; annualOther?: number | null;
     leaseStart?: string | null; delinquency?: number | null; lastSalesPeriod?: string | null;
     coTenancy?: boolean | string | null; salesReportType?: string | null;
+    /** Tenants.OCCPSTAT — C current, N future (signed, not open), I vacated. When present it
+     *  decides inclusion; the dotted-TenantId rule is only the fallback (live leases DO sit
+     *  under dotted ids: Academy's Giant Fitness 003, Trexlertown's Kiku 010). */
+    occStatus?: string | null;
   }> | null;
   vacantSuites?: Array<{ suite?: string | null; sf?: number | null }> | null;
   notes?: string | null;
@@ -159,7 +163,9 @@ export function reduceSalesHistory(rows: NonNullable<DatexDealPayload["salesHist
   const byTenant = new Map<string, Map<string, { amount: number; rpt: boolean }>>();
   for (const r of rows) {
     const t = String(r?.tenantId ?? "").trim(), p = yyyymm(r?.period), a = num(r?.amount);
-    if (!t || t.includes(".") || !p || p === "190001" || a == null || a < 0) continue;
+    // Dotted ids are kept: sales attach to tenants by exact id, and a live lease can sit under
+    // a dotted generation id — a superseded one simply never matches a roster row.
+    if (!t || !p || p === "190001" || a == null || a < 0) continue;
     const rpt = String(r?.reportingType ?? "RPT").trim().toUpperCase() === "RPT";
     const m = byTenant.get(t) ?? new Map(); const cur = m.get(p);
     if (!cur || (rpt && !cur.rpt)) m.set(p, { amount: a, rpt });
@@ -211,8 +217,11 @@ export function buildLiveBlock(
   }
 
   const tenants = Array.isArray(p.tenants) ? p.tenants.filter(t => {
-    // A superseded lease generation repeats the SF at zero dollars; the dot is the marker.
-    if (String(t?.tenantId ?? "").includes(".")) return false;
+    // OCCPSTAT decides when present: I (vacated) is dropped, C and N kept. Without it, a
+    // dotted id is treated as a superseded generation (it repeats the SF at zero dollars).
+    const st = String((t as Record<string, unknown>)?.occStatus ?? (t as Record<string, unknown>)?.OCCPSTAT ?? "").trim().toUpperCase();
+    if (st) { if (st.startsWith("I")) return false; }
+    else if (String(t?.tenantId ?? "").includes(".")) return false;
     return Boolean(String(t?.name ?? "").trim());
   }).map(t0 => {
     // Common Datex / rent-roll spellings are accepted for the core fields so a hand-built
@@ -247,6 +256,9 @@ export function buildLiveBlock(
     const lsp = yyyymm(t.lastSalesPeriod);                        if (lsp) row.lastSalesPeriod = lsp;
     const ct = t.coTenancy === true || /^y/i.test(String(t.coTenancy ?? ""));   if (ct) row.coTenancy = true;
     if (t.salesReportType && String(t.salesReportType).trim()) row.salesReportType = String(t.salesReportType).trim().toUpperCase();
+    const occ = String((t as Record<string, unknown>).occStatus ?? (t as Record<string, unknown>).OCCPSTAT ?? "").trim().toUpperCase();
+    if (occ) row.occStatus = occ.slice(0, 1);
+    if (occ.startsWith("N")) row.futureLease = true;   // signed, not yet open — not in-place rent
     return row;
   }) : null;
 
@@ -282,7 +294,7 @@ export function buildLiveBlock(
     block.salesHistoryCovered = true;
   }
   if (tenants) {
-    const live = tenants.filter(t => !/^vacant\b/i.test(String(t.name)));
+    const live = tenants.filter(t => !/^vacant\b/i.test(String(t.name)) && !t.futureLease);
     block.glaTieOut = glaTieOut(live, Array.isArray(p.vacantSuites) ? p.vacantSuites : [], totalGLA);
   }
   if (p.arAging && typeof p.arAging === "object") {

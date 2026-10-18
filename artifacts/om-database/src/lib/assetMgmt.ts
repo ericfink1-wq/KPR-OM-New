@@ -161,7 +161,7 @@ export function liveTenants(deal: Deal): { tenants: LiveTenant[]; source: "Datex
   const omAnchors = new Set((deal.tenants ?? []).filter(t => t.isAnchor).map(t => brandFamilyKey(t.canonicalName || t.name)));
   const dxT = Array.isArray(dx?.tenants) ? dx!.tenants as Array<Record<string, unknown>> : null;
   if (dxT && dxT.length) {
-    return { source: "Datex", asOf: s(dx!.asOf), tenants: dxT.filter(t => !isVacant(String(t.name ?? ""))).map(t => {
+    return { source: "Datex", asOf: s(dx!.asOf), tenants: dxT.filter(t => !isVacant(String(t.name ?? "")) && t.futureLease !== true).map(t => {
       const name = String(t.name), sf = n(t.sf);
       return { name, tenantId: s(t.tenantId), sf, annualRent: n(t.annualRent), annualNNN: n(t.annualNNN) ?? (n(t.nnnPerSF) != null && sf ? n(t.nnnPerSF)! * sf : null), annualOther: n(t.annualOther),
         leaseExpiry: s(t.leaseExpiry), isAnchor: omAnchors.has(brandFamilyKey(name)) || (sf ?? 0) >= 15_000, nationalTenant: s(t.nationalTenant),
@@ -372,7 +372,9 @@ export function sinceAcquisition(deal: Deal, records: AmRecord[], today: Date): 
   for (const l of (dx?.leasing as Array<Record<string, unknown>> | undefined) ?? []) {
     const d = s(l.executed) ?? s(l.submitted);
     if (!d || (close && d < close)) continue;
-    out.push({ date: d, kind: "leasing", text: `${s(l.executed) ? "Lease executed" : "Lease in progress"}: ${s(l.tenant)}${l.gla ? ` · ${Number(l.gla).toLocaleString()} SF` : ""}${l.rentPSF ? ` · $${Number(l.rentPSF).toFixed(2)}/SF` : ""}${s(l.stage) && !s(l.executed) ? ` (${s(l.stage)})` : ""}`, source: "Datex leasing activity" });
+    // Datex LeaseAppDealHistoryBySuite rows are APPLICATIONS (stage "Lease Application", no
+    // execution date) — never call one an executed lease unless it carries ExecutionDate.
+    out.push({ date: d, kind: "leasing", text: `${s(l.executed) ? "Lease executed" : "Lease application"}: ${s(l.tenant)}${l.gla ? ` · ${Number(l.gla).toLocaleString()} SF` : ""}${l.rentPSF ? ` · $${Number(l.rentPSF).toFixed(2)}/SF` : ""}${s(l.stage) && !s(l.executed) ? ` (${s(l.stage)})` : ""}`, source: "Datex leasing activity" });
   }
   for (const h of deal.propertyHistory ?? []) {
     const d = (h.toAsOf ?? h.recordedAt ?? "").slice(0, 10);

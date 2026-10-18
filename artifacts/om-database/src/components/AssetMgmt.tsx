@@ -607,7 +607,9 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
                 </div>
               ))}
             </div>
-            {tie && tie.ties === false && <div style={{ color: K.red, fontSize: 12.5, marginTop: 8 }}>⚠ The Datex rent roll adds up to {tie.rosterGLA.toLocaleString()} SF but Occupancy reports {tie.occupancyGLA?.toLocaleString()} SF ({tie.diffPct}% apart) — check for missing or duplicate suites before trusting occupancy.</div>}
+            {tie && tie.ties === false && (Math.abs(tie.diffPct ?? 99) < 5
+              ? <div style={{ color: K.gray, fontSize: 12.5, marginTop: 8 }}>Small gap: the Datex rent roll adds up to {tie.rosterGLA.toLocaleString()} SF vs {tie.occupancyGLA?.toLocaleString()} SF in Occupancy ({tie.diffPct}%) — usually a lease generation or suite split; occupancy above is taken from Datex Occupancy.</div>
+              : <div style={{ color: K.red, fontSize: 12.5, marginTop: 8 }}>⚠ The Datex rent roll adds up to {tie.rosterGLA.toLocaleString()} SF but Occupancy reports {tie.occupancyGLA?.toLocaleString()} SF ({tie.diffPct}% apart) — check for missing or duplicate suites before trusting occupancy.</div>)}
             <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 10, fontSize: 13 }}>
               {fin?.noiYtdActual != null && <span><b>NOI YTD</b> {fmtM(Number(fin.noiYtdActual))} vs budget {fmtM(fin.noiYtdBudget != null ? Number(fin.noiYtdBudget) : null)} <span style={{ color: K.gray }}>(to {String(fin.period)})</span></span>}
               {ar && <span><b>A/R</b> over 60 days {fmtM(ar.over60 ?? null)} · over 90 {fmtM(ar.over90 ?? null)}{ar.byTenant?.length ? <span style={{ color: K.gray }}> · largest: {ar.byTenant.slice(0, 3).map(t => `${t.name} ${fmtM(t.over60 ?? null)}`).join(", ")}</span> : null}</span>}
@@ -644,8 +646,8 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
           )}
           {leasing.length > 0 && (
             <div style={{ ...card, padding: 14 }}>
-              <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: K.charcoal }}>Recent leasing activity</div>
-              <Src>Datex lease applications</Src>
+              <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: K.charcoal }}>Leasing pipeline (applications)</div>
+              <Src>Datex lease applications — deals in negotiation, not executed leases (unless an execution date shows)</Src>
               {leasing.slice(0, 8).map((l, i) => <div key={i} style={{ fontSize: 13, marginTop: 6 }}><b>{String(l.tenant)}</b>{l.suite ? ` · ${l.suite}` : ""}{l.gla ? ` · ${Number(l.gla).toLocaleString()} SF` : ""}{l.rentPSF ? ` · $${Number(l.rentPSF).toFixed(2)}/SF` : ""}<div style={{ fontSize: 12, color: K.gray }}>{String(l.stage ?? "")}{l.executed ? ` · executed ${fmtDate(String(l.executed))}` : l.submitted ? ` · submitted ${fmtDate(String(l.submitted))}` : ""}</div></div>)}
             </div>
           )}

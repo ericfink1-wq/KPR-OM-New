@@ -178,7 +178,7 @@ function QuarterlyComment({ deal, recs, debt, plan, timeline }: { deal: Deal; re
       property: deal.propertyName, city: deal.city, state: deal.state, gla: dx?.totalGLA ?? deal.totalSF,
       occupancy: { today: dx?.occupancyPct ?? null, asOf: dx?.asOf ?? null, atUnderwriting: deal.occupancy ?? null },
       planVsActual: plan.map(r => ({ item: r.label, plan: r.plan, actual: r.actual, variancePct: r.variancePct, unit: r.unit })),
-      leasingLast12Months: ((dx?.leasing as Array<Record<string, unknown>> | undefined) ?? []).filter(l => String(l.executed ?? l.submitted ?? "") >= yearAgo).map(l => ({ tenant: l.tenant, sf: l.gla, rentPSF: l.rentPSF, stage: l.stage, executed: l.executed })),
+      leasingPipelineApplicationsLast12Months_notExecutedUnlessExecutedDateSet: ((dx?.leasing as Array<Record<string, unknown>> | undefined) ?? []).filter(l => String(l.executed ?? l.submitted ?? "") >= yearAgo).map(l => ({ tenant: l.tenant, sf: l.gla, rentPSF: l.rentPSF, stage: l.stage, executed: l.executed })),
       tenantChangesLast12Months: timeline.filter(t => t.kind === "change" && t.date >= yearAgo).map(t => t.text),
       debt: debt.map(r => ({ lender: r.lender, loan: r.loanLabel, balance: r.balance, allInRatePct: r.allInPct, rateType: r.rateType, hedged: r.swaps.some(w => !w.termsPending), maturity: r.maturity })),
       noi: (dx?.financials as Record<string, unknown> | undefined) ?? null,

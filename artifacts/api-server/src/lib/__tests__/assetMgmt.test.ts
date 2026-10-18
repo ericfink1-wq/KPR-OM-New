@@ -66,6 +66,20 @@ describe("import", () => {
   });
 });
 
+describe("Datex OCCPSTAT decides live tenants (Eric, 10/18/26)", () => {
+  it("a live lease under a dotted id is kept; vacated rows dropped; future flagged and kept out of the tie-out", () => {
+    const r = buildLiveBlock({ dealId: "d", bldgIds: ["academy"], totalGLA: 10000, tenants: [
+      { tenantId: "t0000003.003", name: "Giant Fitness", sf: 4638, annualRent: 60000, occStatus: "C" },
+      { tenantId: "t0000004", name: "Old Tenant", sf: 2000, annualRent: 0, occStatus: "I" },
+      { tenantId: "t0000005.010", name: "Hair Palace", sf: 1200, annualRent: 24000, occStatus: "N" },
+      { tenantId: "t0000006.1.30", name: "Superseded", sf: 4638, annualRent: 0 },
+    ] }, "2026-10-17", { bldgIds: ["academy"] });
+    const t = ("block" in r ? r.block.tenants : []) as Array<Record<string, unknown>>;
+    expect(t.map(x => [x.name, x.occStatus ?? null, x.futureLease ?? false])).toEqual([["Giant Fitness", "C", false], ["Hair Palace", "N", true]]);
+    expect(("block" in r && r.block.glaTieOut as { rosterGLA: number }).rosterGLA).toBe(4638);
+  });
+});
+
 describe("Datex snapshot v2", () => {
   it("sales: sums the last 12 REPORTED months — the Michaels @ keene trap", () => {
     // Reported monthly through 2025-12, then stopped. Rolling12Sales as of 2026-10 would sum only
@@ -80,7 +94,9 @@ describe("Datex snapshot v2", () => {
       { tenantId: "t1.0.00011", period: "202609", amount: 999 }, { tenantId: "t2", period: "190001", amount: 50 }, { tenantId: "t3", period: "202609", amount: -5 },
     ], "202610");
     expect(s.get("t1")).toMatchObject({ sales12: 120, months: 1, partial: true });
-    expect(s.has("t2") || s.has("t3") || s.has("t1.0.00011")).toBe(false);
+    // A dotted id keeps its OWN sales (it only matters if a roster row carries that id).
+    expect(s.get("t1.0.00011")?.sales12).toBe(999);
+    expect(s.has("t2") || s.has("t3")).toBe(false);
   });
   it("GLA tie-out: roster (live + vacant) vs Occupancy.TotalGLA, warns beyond 2%", () => {
     expect(glaTieOut([{ sf: 200_000 }], [{ sf: 100_386 }], 300_386)).toMatchObject({ rosterGLA: 300_386, ties: true });

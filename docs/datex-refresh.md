@@ -15,7 +15,13 @@ lists them (Rockaway = all three), then `period`, `totalGLA`, `occupiedGLA`, `va
 `tenants[]`, `vacantSuites[]`, `salesHistory[]`, `arAging`, `financials`, `leasing[]`, `loans[]`.
 Tenant fields: `tenantId, name, nationalTenant, suite, sf, annualRent, annualRentPSF, annualNNN,
 annualNNNPSF, annualOther, leaseStart, leaseExpiry, delinquency, lastSalesPeriod, salesPSF,
-salesPeriod, salesReportType, coTenancy` (`gla`, `rentPSF`, `expiration` are accepted as
+salesPeriod, salesReportType, coTenancy, occStatus` — **`occStatus` = Tenants.OCCPSTAT (C current,
+N future, I vacated) decides which rows count**: I is dropped, N is kept but flagged as a future
+lease (not in-place rent, not in the GLA tie-out), and only when it is missing does a dotted
+TenantId fall back to "superseded generation" (live leases do sit under dotted ids — Academy's
+Giant Fitness 003, Trexlertown's Kiku 010). Small GLA tie-out gaps (<5%) show as a note, not a
+warning. `leasing[]` rows from LeaseAppDealHistoryBySuite are APPLICATIONS (stage "Lease
+Application", no ExecutionDate) and are labelled "leasing pipeline (applications)" (`gla`, `rentPSF`, `expiration` are accepted as
 spellings of `sf`, `annualRentPSF`, `leaseExpiry`). Send EVERY occupied tenant (the roster's GLA is
 checked against `totalGLA`, ±2%) and every vacant suite in `vacantSuites`. `salesHistory.tenantId`
 must match `tenants[].tenantId`. Dates ISO, periods `YYYYMM`, money as plain numbers, NOI raw

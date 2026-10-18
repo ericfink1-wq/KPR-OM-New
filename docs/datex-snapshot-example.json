@@ -25,6 +25,7 @@
         {
           "tenantId": "t0001604",
           "name": "Schnucks #742",
+          "occStatus": "C",
           "nationalTenant": "Schnucks",
           "suite": "A",
           "sf": 61000,
@@ -45,6 +46,7 @@
         {
           "tenantId": "t0001611",
           "name": "Commerce Bank ATM",
+          "occStatus": "C",
           "nationalTenant": "Commerce Bank",
           "suite": "ATM-1",
           "sf": 0,

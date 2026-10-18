@@ -117,7 +117,7 @@ router.post("/am/quarterly-comment", requireAuth, async (req, res) => {
 
 Rules:
 - Use ONLY the facts below. Never invent a number, tenant, date or event. If a fact is missing, leave the topic out — do not mention that it is missing.
-- Cover, in this order where the facts exist: occupancy and its change; leasing activity (new leases, renewals, deals in negotiation — name tenants); NOI versus budget year to date; debt (balance, rate/hedge, maturity) only if notable.
+- Cover, in this order where the facts exist: occupancy and its change; leasing (name tenants; the Datex leasing pipeline rows are APPLICATIONS in negotiation — describe them as "in lease negotiations" or "applications", never as signed or executed leases unless an executed date is given); NOI versus budget year to date; debt (balance, rate/hedge, maturity) only if notable.
 - Investor-letter voice: confident, plain, factual, third person ("the property", "we"). No bullet points, no headings, no markdown.
 - Round money to $0.1M (or $K under $1M), percentages to one decimal.
 - Never mention a pending sale, a marketing process or anything about selling the property.
