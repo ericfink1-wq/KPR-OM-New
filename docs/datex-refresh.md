@@ -1,5 +1,7 @@
 # Refreshing live Datex data into the deal library
 
+> Admins can read this page in a browser at **`/api/admin/docs/datex-refresh`** (plain text).
+
 The deal library holds the **acquisition-era snapshot** for every deal — the figures taken
 from the offering documents at the time. Those are deliberately frozen; they are the record
 of what was marketed. Datex holds what the owned assets are doing **today**. This brings the
@@ -153,3 +155,28 @@ A property is matched by `dealId`, a Datex `bldgId`, or its EXACT owned name —
 guess. Rates may be given as `4.08`, `"4.08%"` or `0.0408`; spreads as bps or percent. Index
 "Daily Simple SOFR" (Overland / ONB) prices swaps on the OIS curve; everything else on the 1M
 Term SOFR curve, the same engine as the deal page's breakage estimate.
+
+## Covenants, acquisitions and option status (10/18/26)
+
+The same **Import** box (Asset Mgmt → Debt) takes three more keys. Each row names its property
+the same way (`dealId`, `bldgId` or exact name) and can carry a `source`.
+
+- **`covenants`** — `{ type: "DSCR"|"DY"|"LTV"|"cash sweep"|"cash trap"|"other", threshold, sweepBelow,
+  testFrequency: "quarterly"|"annual"|…, firstTestDate, testMonthDay: "12-31", amortYears (the test's
+  amortization, e.g. 25), testRatePct, linkedTenant, triggerDate, trigger, loanLabel | loanId }`.
+  Shown on each owned deal's Asset tab with live headroom; a `triggerDate` and the next test date
+  land on the Dates calendar. **Detect from loan docs** (Asset tab, admin) proposes them from KPR's
+  covenant brief and the `covenants` text on each loan row, previewed before saving.
+- **`acquisitions`** — one per property (re-importing replaces it): `{ purchasePrice, closeDate,
+  seller, kpPct, jvPartner, mzlEquity, kpMemberEquity, totalEquity, noiAtPurchase, goingInCapPct,
+  budgetNoi, budgetYear }` — a column named `budgetNoi2026` is read as budgetNoi + budgetYear 2026.
+  Fills the Transaction tab's Acquisition card; "Fill blank deal fields" copies price / close date /
+  seller / going-in cap / NOI at close into the deal only where the deal is blank.
+- **`optionStatuses`** — `{ tenant, option, noticeDate, status: "Exercised"|"Pending"|"Lapsed" }`
+  (also set by an admin straight from the roster's "NOTICE PASSED" chip).
+
+**Columns the importer doesn't model are kept, not dropped**, and any column whose name mentions
+drive / file / doc / link / url is read for Google Drive file ids (bare ids, `/d/<id>/` links or
+`{id, name}` objects) — those show as clickable "Source doc" links on the Financing tab.
+`amortization: "IO to 1/15/2030, then 30-yr amortization"` is read as interest-only until 1/15/2030,
+then a 30-year amortization, so debt service and DSCR use interest only until then.

@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-18-owned-deal-page",
+    date: "2026-10-18",
+    category: "improved",
+    title: "Owned deal pages: a new Asset tab, live covenants, and a cleaner layout",
+    detail: "Owned properties now open on an Asset tab. It shows Datex occupancy, base rent, NOI year to date vs. budget, debt, DSCR, debt yield and the next critical date. Below that are a covenant monitor with live headroom, plan vs. actual, a since-acquisition timeline, and a button that drafts the quarterly investor-letter paragraph (one AI call, only when you click). Financing now reads the loan and swap from Asset Mgmt, with interest-only debt service, swap mark-to-market and links to the loan documents. Transaction shows the acquisition details. The page header and tab bar appear once, cap rate and price/SF are computed for owned deals, and the CAM text opens in a side panel. The roster flags holdover leases and passed option notices, and no longer counts utility closets and ATMs as vacancy. Tenant sales flag identical year-over-year figures and tuck former tenants behind a toggle.",
+    where: "Any owned property's deal page",
+  },
+  {
     id: "2026-10-18-asset-mgmt",
     date: "2026-10-18",
     category: "new",
@@ -61,7 +69,7 @@ export const CHANGELOG: ChangeEntry[] = [
     category: "new",
     adminOnly: true,
     title: "Asset Mgmt editing: loans, swaps, dates and the Datex building map",
-    detail: "Admins can add, edit and delete loans, swaps and critical dates, each with a source note. You can also paste a JSON or CSV file to import many at once; it previews before it saves. A swap whose notional or maturity isn't documented yet saves as \"terms pending\" and stays out of the mark-to-market. The Datex building map that links each owned deal to its Datex building IDs can now be edited on the Properties tab.",
+    detail: "Admins can add, edit and delete loans, swaps and critical dates, each with a source note. You can also paste a JSON or CSV file to import many at once; it previews before it saves. A swap whose notional or maturity isn't documented yet saves as \"terms pending\" and stays out of the mark-to-market. The Datex building map that links each owned deal to its Datex building IDs can now be edited on the Properties tab. The import now also takes covenants, acquisitions and option statuses, keeps every column it doesn't recognise, and turns Drive file IDs into links. On an owned deal's Asset tab, \"Detect from loan docs\" proposes covenants for you to review before saving. The Datex snapshot recipe is now a page you can open in the browser.",
     where: "Asset Mgmt → Debt, Dates and Properties",
   },
   {

@@ -33,6 +33,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getRecency(deal: Deal): { label: string; color: string; bg: string } | null {
+  // An OM's age says how fresh a MARKETED deal's figures are. Once KPR owns (or has sold)
+  // the property, Datex is the live record — "AGING" on an owned asset is just noise.
+  if (deal.status === "Owned" || deal.status === "Sold") return null;
   const date = deal.omDate || deal.uploadedAt;
   if (!date) return null;
   const months = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24 * 30);
@@ -1124,6 +1127,63 @@ export function recomputeRosterMetrics(
 // real bank BRANCH. Two tells: the name often says "ATM", and the footprint is
 // tiny (a kiosk is well under a branch's few-thousand SF). Tracked separately
 // from branches in analytics, though they roll up to the same parent company.
+/** Rows on a rent roll that aren't leasable GLA — an ATM, a utility / electrical closet, a
+ *  rooftop antenna or billboard, a license agreement, a vending or kiosk spot, or a
+ *  sliver "vacant" suite under 150 SF (Overland's 90 SF utility closet read as "1 vacant").
+ *  Their rent still counts; their SF never counts toward GLA or vacancy. */
+export function isNonGLA(t: { name?: string | null; sf?: number | string | null; leaseType?: string | null }): boolean {
+  if (isATM(t.name, t.sf)) return true;
+  const name = String(t.name ?? ""), lt = String(t.leaseType ?? "");
+  if (/\b(utility|utilities|electrical|electric room|mechanical|meter room|telecom|antenna|cell(ular)? tower|billboard|pylon sign|vending|kiosk|rooftop|closet|janitor)\b/i.test(name)) return true;
+  if (/\blicen[cs]e\b/i.test(lt) || /\blicen[cs]e agreement\b/i.test(name)) return true;
+  const sf = t.sf == null || t.sf === "" ? null : Number(t.sf);
+  return isVacant(name) && sf != null && sf > 0 && sf < 150;
+}
+/** An occupied lease whose expiry has passed but which is still on the roll — a holdover
+ *  (month-to-month) tenancy, never a firm lease. */
+export function isHoldover(t: { name?: string | null; leaseExpiry?: string | null; isNAP?: boolean | null }, today: Date = new Date()): boolean {
+  if (t.isNAP || isVacant(t.name) || !t.leaseExpiry || !/^\d{4}-\d{2}-\d{2}/.test(t.leaseExpiry)) return false;
+  return t.leaseExpiry.slice(0, 10) < today.toISOString().slice(0, 10);
+}
+/** Renewal-option notice deadlines that have already PASSED for a tenant: from the executed
+ *  abstract's option table (skipping ones marked exercised / expired) and from a "notice
+ *  … <date>" phrase in the roster's options text. The status (exercised? lapsed?) is a
+ *  human call, recorded separately — this only finds the dates. */
+export function passedOptionNotices(
+  t: { renewalOptions?: unknown },
+  abstract: { options?: Array<{ number?: string | null; noticeDate?: string | null; status?: string | null }> | null } | null | undefined,
+  today: Date = new Date(),
+): Array<{ option: string; noticeDate: string; source: "abstract" | "roster" }> {
+  const t0 = today.toISOString().slice(0, 10), out: Array<{ option: string; noticeDate: string; source: "abstract" | "roster" }> = [];
+  for (const o of abstract?.options ?? []) {
+    const nd = String(o.noticeDate ?? "").slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(nd) && nd < t0 && !/exercis|expired|lapsed|waived/i.test(String(o.status ?? ""))) out.push({ option: String(o.number ?? "Option"), noticeDate: nd, source: "abstract" });
+  }
+  const txt = typeof t.renewalOptions === "string" ? t.renewalOptions : Array.isArray(t.renewalOptions) ? t.renewalOptions.join("; ") : "";
+  for (const m of txt.matchAll(/notice[^0-9;]{0,30}?(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?!\d)/gi)) {
+    const nd = `${m[3].length === 2 ? "20" + m[3] : m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    if (nd < t0 && !out.some(x => x.noticeDate === nd)) out.push({ option: "Option", noticeDate: nd, source: "roster" });
+  }
+  return out;
+}
+/** Compact chips for a recovery clause: "cap 5%", "admin 15%", "audit", "base year",
+ *  "pro rata", "fixed CAM". Only what the text says. */
+export function reimbursementChips(text: string): string[] {
+  const t = String(text ?? "");
+  const out: string[] = [];
+  const cap = /\bcap(?:ped)?\b[^.%]{0,40}?(\d{1,2}(?:\.\d+)?)\s*%/i.exec(t) ?? /(\d{1,2}(?:\.\d+)?)\s*%[^.]{0,25}\bcap\b/i.exec(t);
+  if (cap) out.push(`cap ${cap[1]}%`);
+  const adm = /\badmin(?:istrative|istration)?(?: fee)?\b[^.%]{0,30}?(\d{1,2}(?:\.\d+)?)\s*%/i.exec(t) ?? /(\d{1,2}(?:\.\d+)?)\s*%[^.]{0,20}\badmin/i.exec(t);
+  if (adm) out.push(`admin ${adm[1]}%`);
+  if (/\baudit\b/i.test(t)) out.push("audit");
+  if (/\bnon[- ]cumulative\b/i.test(t)) out.push("non-cumulative");
+  else if (/\bcumulative\b/i.test(t) && cap) out.push("cumulative");
+  if (/\bcontrollable\b/i.test(t) && cap) out.push("controllables");
+  if (/\bbase year\b/i.test(t)) out.push("base year");
+  if (/\bpro[- ]?rata\b/i.test(t)) out.push("pro rata");
+  if (/\bgross[- ]?up\b/i.test(t)) out.push("gross-up");
+  return out.slice(0, 7);
+}
 export function isATM(name?: unknown, sf?: number | string | null): boolean {
   const n = String(name ?? "");
   if (/\batms?\b/i.test(n)) return true;

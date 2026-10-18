@@ -1314,6 +1314,19 @@ export async function apiAmCreditNews(brands: string[]): Promise<{ signals: News
   if (!r.ok) throw new Error("Couldn't check the news");
   return r.json() as Promise<{ signals: NewsSignal[]; remaining: number }>;
 }
+export interface CovenantProposal { id: string; dealId: string; property: string; loanId: string | null; data: Record<string, unknown>; sourceNote: string; from: "seed" | "parsed" }
+export async function apiAmDetectCovenants(apply: boolean, ids?: string[]): Promise<{ rows: CovenantProposal[]; notes: string[]; saved?: number }> {
+  const r = await apiFetch("/am/covenants/detect", { method: "POST", body: JSON.stringify({ apply, ids }) });
+  const j = await r.json().catch(() => ({})) as { rows?: CovenantProposal[]; notes?: string[]; saved?: number; error?: string };
+  if (!r.ok) throw new Error(j.error || "Couldn't detect covenants");
+  return { rows: j.rows ?? [], notes: j.notes ?? [], saved: j.saved };
+}
+export async function apiAmQuarterlyComment(dealId: string, facts: unknown, quarter: string): Promise<string> {
+  const r = await apiFetch("/am/quarterly-comment", { method: "POST", body: JSON.stringify({ dealId, facts, quarter }) });
+  const j = await r.json().catch(() => ({})) as { draft?: string; error?: string };
+  if (!r.ok) throw new Error(j.error || "Couldn't draft the comment");
+  return j.draft ?? "";
+}
 export async function apiAmSummarizeNews(brand: string): Promise<string> {
   const r = await apiFetch("/am/credit-news/summarize", { method: "POST", body: JSON.stringify({ brand }) });
   const j = await r.json().catch(() => ({})) as { error?: string; summary?: string };

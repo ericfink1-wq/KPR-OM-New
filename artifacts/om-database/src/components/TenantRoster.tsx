@@ -8,7 +8,7 @@ import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import type { RentFlag } from "../lib/tenantRentBenchmark";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { tjxComboRead } from "../lib/tjxCombo";
-import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag, statedReimbursementFlag, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
+import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, isNonGLA, isHoldover, reimbursementChips, passedOptionNotices, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag, statedReimbursementFlag, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { gradeOccupancyCost, type OccGrade } from "../lib/retailCategory";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
@@ -71,6 +71,10 @@ interface Props {
   // tenantKey -> kickout / early-termination summary (sales kickout, co-tenancy out,
   // early-termination option). Shown in the Kickout column. Optional.
   kickoutByTenant?: Map<string, { label: string; tip: string }>;
+  // Owned deals: the recorded status of option notices whose date has passed (key =
+  // "tenant|noticeDate"), and — for admins — a setter. Optional.
+  optionStatus?: Map<string, string>;
+  onSetOptionStatus?: (tenant: string, option: string, noticeDate: string, status: string) => void;
 }
 
 function OccTip({ val, source, breakdown, grade }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null; grade?: OccGrade | null }) {
@@ -327,7 +331,7 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, datexLive, estimatedRecoveries, recoveryNote, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant }: Props) {
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, datexLive, estimatedRecoveries, recoveryNote, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant, optionStatus, onSetOptionStatus }: Props) {
   const watchMap = useWatchlist();
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [q, setQ] = useState("");
@@ -413,17 +417,41 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
 
   const isVacantRow = (t: Tenant) => isVacant(t.name);
 
+  // The reimbursement / lease structure for one row: badge (NNN / Fixed CAM / Gross), the
+  // compact chips (cap 5% · admin 15% · audit), and the full text + CAM/Tax/Insurance
+  // breakdown the drawer shows. The executed abstract outranks a stated method.
+  const reimbInfo = (t: Tenant) => {
+    const lt = t.leaseType || "";
+    const isStruct = /\b(nnn|nn|net|gross|modified gross|mg|base\s*year|stop|triple net|double net|single net|cam)\b/i.test(lt);
+    const stated = t.reimbursementMethod || (isStruct ? lt : "");
+    const absObj = abstractsByTenant?.get((t.name || "").trim().toLowerCase());
+    const absText = reimbursementFromAbstract(absObj);
+    const m = absText || stated || "";
+    if (!m) return null;
+    const fromAbstract = !!absText;
+    const flag = fromAbstract ? reimbursementFlag(m) : statedReimbursementFlag(t.reimbursementMethod || "", lt);
+    const norm = (x: string) => x.replace(/[^a-z]/gi, "").toLowerCase();
+    const body = (fromAbstract ? m.replace(/^\s*(fixed cam \(net\)|fixed cam|modified gross|nnn|gross)\s*[—\-:]\s*/i, "").trim() : m).trim();
+    const noteOf = (code: string) => (absObj?.leaseNotes || []).find(nn => (nn.code || "").toUpperCase() === code)?.value?.trim() || "";
+    const breakdown = ([["CAM", noteOf("CAM")], ["Taxes", noteOf("RETX")], ["Insurance", noteOf("INS")]] as [string, string][]).filter(([, v]) => v && !/^none\b/i.test(v));
+    const showBody = !!body && !(flag && norm(body) === norm(flag.label));
+    const chips = reimbursementChips([m, ...breakdown.map(([, v]) => v)].join(" "));
+    return { flag, fromAbstract, body: showBody ? body : "", breakdown, chips, textColor: flag && flag.warn ? flag.color : "#5c5f57", hasDetail: showBody || breakdown.length > 0 };
+  };
+
   // Roster occupancy aggregates by SQUARE FOOTAGE (the CRE standard), over the FULL
   // roster: NAP parcels are excluded (owner-occupied, not leasable GLA) and dark
   // stores count as occupied (still leased/paying). Null when there's no SF to
   // compute from. Memoized so the several passes over the roster only run when the
   // tenant list changes (not on every keystroke / sort toggle). Logic unchanged.
   const { vacantCount, occupiedCount, totalRosterSF, vacantSF, darkSF, pctOccupied, pctVacant, pctVacantInclDark } = useMemo(() => {
-    const vacant = (t: Tenant) => isVacant(t.name);
-    const sfOf = (t: Tenant) => { const v = n(t.sf); return v != null && v > 0 ? v : 0; };
-    const vacantCount = tenants.filter(vacant).length;
-    const occupiedCount = tenants.length - vacantCount;
-    const leasableRows = tenants.filter(t => !isNAPTenant(t));
+    // A non-GLA sliver (a 90 SF utility closet) is not vacancy; its SF isn't GLA either.
+    const vacant = (t: Tenant) => isVacant(t.name) && !isNonGLA(t);
+    const sfOf = (t: Tenant) => { if (isNonGLA(t)) return 0; const v = n(t.sf); return v != null && v > 0 ? v : 0; };
+    const counted = tenants.filter(t => !(isNonGLA(t) && isVacant(t.name)));
+    const vacantCount = counted.filter(vacant).length;
+    const occupiedCount = counted.length - vacantCount;
+    const leasableRows = counted.filter(t => !isNAPTenant(t));
     const totalRosterSF = leasableRows.reduce((s, t) => s + sfOf(t), 0);
     const vacantSF = leasableRows.filter(vacant).reduce((s, t) => s + sfOf(t), 0);
     // Dark stores still pay rent (so they count as OCCUPIED in the headline figure),
@@ -506,7 +534,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
               <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1, background: t.isDark && !isVacantRow(t) ? "#fbf1e4" : undefined }}>
                 <td className="freeze-col" style={{ padding:"8px 10px", whiteSpace:"nowrap", ...stickyFirstCol(t.isDark && !isVacantRow(t) ? "#fbf1e4" : "#fff") }}>
                   {isVacantRow(t) ? (
-                    <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
+                    isNonGLA(t)
+                      ? <span title="Not leasable GLA (a utility / meter closet or similar) — excluded from GLA and vacancy" style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>{t.name && !/^vacant$/i.test(t.name.trim()) ? t.name : "Utility / non-GLA space"} <span style={{ fontStyle:"normal", fontSize:8.5, fontWeight:700, color:"#6f6a5f", background:"#f1f0ec", padding:"1px 6px", borderRadius:9 }}>NON-GLA</span></span>
+                      : <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
                   ) : (
                     <div style={{ display:"flex", alignItems:"center", flexWrap:"nowrap", gap:4, minWidth:0 }}>
                       <span
@@ -516,6 +546,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
+                      {isNonGLA(t) && <span title="Not leasable GLA (ATM, antenna, license, utility space) — its rent counts, its SF doesn't count toward GLA or vacancy" style={{ fontSize:9, color:"#6f6a5f", background:"#f1f0ec", padding:"1px 6px", borderRadius:10, fontWeight:700 }}>NON-GLA</span>}
+                      {isHoldover(t) && <span title={`Lease expired ${fmtLeaseDate(t.leaseExpiry)} but the tenant is still on the roll — a holdover (month-to-month) tenancy, not a firm lease. Confirm a renewal or extension.`} style={{ fontSize:9, color:"#b3403f", background:"#fdecec", padding:"1px 6px", borderRadius:10, fontWeight:700 }}>HOLDOVER</span>}
                       {(() => {
                         // TJX combo box — two banners (e.g. Marshalls + HomeGoods) on one
                         // lease. Explicit two-banner names show "COMBO"; a single-banner
@@ -647,73 +679,23 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{fmtLeaseDate(t.leaseExpiry)}</td>
                 <td
-                  onClick={() => setExpandedReimb(expandedReimb === i ? null : i)}
-                  style={{ padding:"8px 10px", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedReimb === i ? 300 : 190, minWidth:100, overflow:"hidden" }}
+                  onClick={() => { const r = reimbInfo(t); if (r && r.hasDetail) setExpandedReimb(i); }}
+                  style={{ padding:"8px 10px", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth:230, minWidth:100 }}
                 >
                   {(() => {
-                    // The "Reimb." column shows the reimbursement / lease structure
-                    // (NNN, Gross, Modified Gross, etc.). leaseType is a fallback ONLY
-                    // when it actually describes that — NOT when it carries a renewal
-                    // option type like "AUT"/"REN", which would be meaningless here.
-                    const lt = t.leaseType || "";
-                    const isStruct = /\b(nnn|nn|net|gross|modified gross|mg|base\s*year|stop|triple net|double net|single net|cam)\b/i.test(lt);
-                    const stated = t.reimbursementMethod || (isStruct ? lt : "");
-                    // The EXECUTED lease abstract (when on file) is the authoritative and
-                    // richest source for the recovery structure, so prefer its prose over a
-                    // short stated method — this is what surfaces Fixed CAM vs pro-rata NNN.
-                    const absText = reimbursementFromAbstract(abstractsByTenant?.get((t.name || "").trim().toLowerCase()));
-                    const m = absText || stated || "";
-                    const fromAbstract = !!absText;
-                    if (!m) return <span style={{ color:"#c4bbaa" }}>—</span>;
-                    // One substance-based classifier for BOTH a stated method and abstract
-                    // prose: NNN (pro-rata, incl. capped controllable CAM), FIXED CAM (net
-                    // but CAM is a fixed/escalating amount — landlord bears CAM growth),
-                    // or GROSS (genuine). A cap / "gross-up" / "gross sales" never trips it.
-                    const flag = fromAbstract ? reimbursementFlag(m) : statedReimbursementFlag(t.reimbursementMethod || "", lt);
-                    const textColor = flag && flag.warn ? flag.color : "#5c5f57";
-                    // Body text shown NEXT TO the badge. Strip the leading classification
-                    // prefix from an abstract one-liner ("NNN — …", "Fixed CAM (net) — …")
-                    // so the badge isn't repeated; and hide the body entirely when it's just
-                    // the bare method the badge already shows (avoids the redundant "NNN NNN").
-                    const norm = (s: string) => s.replace(/[^a-z]/gi, "").toLowerCase();
-                    const body = (fromAbstract ? m.replace(/^\s*(fixed cam \(net\)|fixed cam|modified gross|nnn|gross)\s*[—\-:]\s*/i, "").trim() : m).trim();
-                    // On EXPAND, show a concise CAM / Taxes / Insurance breakdown pulled from
-                    // the abstract's component notes — a strong summary, not paragraphs.
-                    const absObj = abstractsByTenant?.get((t.name || "").trim().toLowerCase());
-                    const noteOf = (code: string) => (absObj?.leaseNotes || []).find(nn => (nn.code || "").toUpperCase() === code)?.value?.trim() || "";
-                    const concise = (s: string) => { const first = s.split(/(?<=[.;])\s+/)[0].trim(); return first.length > 200 ? first.slice(0, 200).trim() + "…" : first; };
-                    const breakdown = ([["CAM", noteOf("CAM")], ["Taxes", noteOf("RETX")], ["Insurance", noteOf("INS")]] as [string, string][])
-                      .filter(([, v]) => v && !/^none\b/i.test(v))
-                      .map(([k, v]) => [k, concise(v)] as [string, string]);
-                    const hasDetail = (!!body && !(flag && norm(body) === norm(flag.label))) || breakdown.length > 0;
-                    const absPill = fromAbstract ? (
-                      <span title="From the executed lease abstract — more authoritative than the OM / rent roll" style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 6px", borderRadius:9, flexShrink:0 }}>ABSTRACT</span>
-                    ) : null;
-                    const showBody = !!body && !(flag && norm(body) === norm(flag.label));
-                    if (expandedReimb !== i || !hasDetail) {
-                      return (
-                        <span title={flag?.tip || (hasDetail ? "Click to expand" : "")} style={{ display:"inline-flex", alignItems:"center", gap:6, color:textColor, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
-                          {flag && <span title={flag.tip} style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.color, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.label}</span>}
-                          {absPill}
-                          {showBody && <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{body}</span>}
-                          {hasDetail && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
-                        </span>
-                      );
-                    }
+                    // Compact chips in the row (Eric, 10/18/26: the abstract's CAM prose made
+                    // the roster unreadable); the full text opens in a side drawer.
+                    const r = reimbInfo(t);
+                    if (!r) return <span style={{ color:"#c4bbaa" }}>—</span>;
                     return (
-                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:textColor, whiteSpace:"normal", lineHeight:1.5 }}>
-                          {flag && <span title={flag.tip} style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:flag.color, background:flag.bg, padding:"1px 6px", borderRadius:9, flexShrink:0 }}>{flag.label}</span>}
-                          {absPill}
-                          {showBody && <span>{body}</span>}
-                        </span>
-                        {breakdown.map(([k, v]) => (
-                          <div key={k} style={{ fontSize:10.5, color:"#5c5f57", whiteSpace:"normal", lineHeight:1.45 }}>
-                            <span style={{ fontWeight:700, color:"#383a37" }}>{k}:</span> {v}
-                          </div>
-                        ))}
-                        <span style={{ fontSize:9, color:"#a69e91", marginTop:2 }}>▲ click to collapse</span>
-                      </div>
+                      <span title={r.flag?.tip || (r.hasDetail ? "Open the full recovery terms" : "")} style={{ display:"inline-flex", alignItems:"center", gap:4, flexWrap:"wrap", color:r.textColor }}>
+                        {r.flag && <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:r.flag.color, background:r.flag.bg, padding:"1px 6px", borderRadius:9 }}>{r.flag.label}</span>}
+                        {r.chips.slice(0, 3).map(c => <span key={c} style={{ fontSize:9, color:"#5c5f57", background:"#f3f1ea", border:"1px solid #e7e0d2", padding:"0 6px", borderRadius:9, whiteSpace:"nowrap" }}>{c}</span>)}
+                        {r.chips.length > 3 && <span style={{ fontSize:9, color:"#a69e91" }}>+{r.chips.length - 3}</span>}
+                        {r.fromAbstract && <span title="From the executed lease abstract — more authoritative than the OM / rent roll" style={{ fontSize:8.5, fontWeight:700, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"0 6px", borderRadius:9 }}>ABSTRACT</span>}
+                        {!r.flag && !r.chips.length && <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:170 }}>{r.body}</span>}
+                        {r.hasDetail && <span style={{ fontSize:9, color:"#a69e91" }}>›</span>}
+                      </span>
                     );
                   })()}
                 </td>
@@ -902,6 +884,19 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   onClick={() => setExpandedOption(expandedOption === i ? null : i)}
                   style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedOption === i ? 340 : 220, minWidth: 120 }}
                 >
+                  {!isVacantRow(t) && passedOptionNotices(t, abstractsByTenant?.get((t.name || "").trim().toLowerCase())).map(pn => {
+                    const key = `${(t.name || "").trim().toLowerCase()}|${pn.noticeDate}`, st = optionStatus?.get(key);
+                    return (
+                      <div key={key} onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap", marginBottom:4 }}>
+                        <span title={`${pn.option} notice was due ${fmtLeaseDate(pn.noticeDate)} (${pn.source === "abstract" ? "lease abstract" : "rent roll"}). Record whether it was exercised.`} style={{ fontSize:9, fontWeight:700, color: st === "Exercised" ? "#3e8a2f" : st === "Lapsed" ? "#b3403f" : "#b3711a", background: st === "Exercised" ? "#eef7eb" : st === "Lapsed" ? "#fdecec" : "#fff2e0", padding:"1px 6px", borderRadius:9, whiteSpace:"nowrap" }}>NOTICE PASSED {fmtLeaseDate(pn.noticeDate)}</span>
+                        {onSetOptionStatus ? (
+                          <select aria-label="Option status" value={st ?? ""} onChange={e => e.target.value && onSetOptionStatus(t.name || "", pn.option, pn.noticeDate, e.target.value)} style={{ fontSize:10.5, border:"1px solid #e0d8c8", borderRadius:6, padding:"1px 4px", background:"#fff", color:"#383a37" }}>
+                            <option value="">status?</option><option>Exercised</option><option>Pending</option><option>Lapsed</option>
+                          </select>
+                        ) : <span style={{ fontSize:10.5, color:"#6f6a5f" }}>{st ?? "status not recorded"}</span>}
+                      </div>
+                    );
+                  })}
                   {(() => {
                     const s = toStepString(t.renewalOptions);
                     const rs = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
@@ -1019,6 +1014,37 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
             </tfoot>
           )}
         </table>
+        {expandedReimb != null && rows[expandedReimb] && (() => {
+          const t = rows[expandedReimb], r = reimbInfo(t);
+          if (!r) return null;
+          return (
+            <>
+              <div onClick={() => setExpandedReimb(null)} style={{ position:"fixed", inset:0, zIndex:1300, background:"rgba(35,36,34,0.32)" }} />
+              <aside role="dialog" aria-label={`Recovery terms — ${t.name}`} style={{ position:"fixed", top:0, right:0, bottom:0, width:"min(440px, 100vw)", zIndex:1301, background:"#fff", boxShadow:"-12px 0 40px rgba(35,36,34,0.22)", padding:"18px 18px 28px", overflowY:"auto", boxSizing:"border-box", fontFamily:"'Inter',sans-serif" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+                  <div>
+                    <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#a69e91", fontWeight:700 }}>Recovery terms</div>
+                    <div style={{ fontFamily:"'Lora',serif", fontSize:19, color:"#232422", marginTop:2 }}>{t.name}</div>
+                  </div>
+                  <button onClick={() => setExpandedReimb(null)} aria-label="Close" style={{ background:"#fff", border:"1px solid #e0d8c8", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:14 }}>✕</button>
+                </div>
+                <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginTop:10 }}>
+                  {r.flag && <span style={{ fontSize:10, fontWeight:700, color:r.flag.color, background:r.flag.bg, padding:"2px 8px", borderRadius:9 }}>{r.flag.label}</span>}
+                  {r.chips.map(c => <span key={c} style={{ fontSize:10.5, color:"#5c5f57", background:"#f3f1ea", border:"1px solid #e7e0d2", padding:"1px 8px", borderRadius:9 }}>{c}</span>)}
+                </div>
+                {r.flag?.tip && <div style={{ fontSize:12, color:"#6f6a5f", marginTop:8, lineHeight:1.5 }}>{r.flag.tip}</div>}
+                {r.body && <div style={{ fontSize:13, color:"#383a37", marginTop:12, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{r.body}</div>}
+                {r.breakdown.map(([k, v]) => (
+                  <div key={k} style={{ marginTop:12 }}>
+                    <div style={{ fontSize:10.5, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#383a37" }}>{k}</div>
+                    <div style={{ fontSize:13, color:"#383a37", lineHeight:1.6, whiteSpace:"pre-wrap" }}>{v}</div>
+                  </div>
+                ))}
+                <div style={{ fontSize:11, color:"#a69e91", marginTop:16 }}>{r.fromAbstract ? "From the executed lease abstract." : "From the rent roll / OM."}</div>
+              </aside>
+            </>
+          );
+        })()}
       </div>
       <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover the ⓘ icon for tenant notes.</div>
       {editingOcc != null && onUpdateTenant && createPortal(

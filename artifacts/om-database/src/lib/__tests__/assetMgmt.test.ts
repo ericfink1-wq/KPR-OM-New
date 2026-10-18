@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, marketSwapRate, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, daysUntil, type AmRecord } from "../assetMgmt";
+import { buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, annualDebtService, nextCovenantTest, buildCovenantRows, planVsActual, optionLabel, sinceAcquisition, driveLinks, marketSwapRate, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, daysUntil, type AmRecord } from "../assetMgmt";
 import type { Deal } from "../idb";
 import type { RatesPayload } from "../api";
 
@@ -73,7 +73,7 @@ describe("critical dates", () => {
   });
   it("option notice dates come from lease abstracts; exercised options are skipped", () => {
     const { items } = buildCriticalDates([d], [], [{ dealId: "keene", tenantName: "Michaels", options: [{ number: "1st", noticeDate: "2026-11-01", status: "available" }, { number: "2nd", noticeDate: "2026-11-15", status: "exercised" }] } as never], TODAY);
-    expect(items.filter(i => i.type === "Option notice").map(i => i.description)).toEqual(["1st"]);
+    expect(items.filter(i => i.type === "Option notice").map(i => i.description)).toEqual(["Option 1"]);
   });
   it("days are whole calendar days", () => { expect(daysUntil("2026-10-19", TODAY)).toBe(1); });
 });
@@ -136,5 +136,55 @@ describe("labels, pending swaps, preferred equity", () => {
     const tot = debtTotals(rows, buildSwapRows(records, new Map(), rates, TODAY));
     expect(tot.totalDebt).toBe(50e6);
     expect(prefTotals(buildPrefRows(records, deals, TODAY))).toEqual({ total: 17e6, count: 2, weightedRatePct: 9.25 });
+  });
+});
+
+describe("owned deal page: debt service, covenants, plan vs actual", () => {
+  it("debt service is interest-only inside the IO period (Overland, IO to 1/15/2030), amortizing after", () => {
+    const loan = { amortization: "IO", ioUntil: "2030-01-15", amortYears: 30 };
+    expect(annualDebtService(17_000_000, 6.44, loan, TODAY)).toEqual({ amount: 1_094_800, basis: "interest only to 2030-01-15" });
+    const after = annualDebtService(17_000_000, 6.44, loan, new Date("2030-06-01T12:00:00Z"));
+    expect(after.amount).toBe(1_281_380);   // 30-yr level payment, $106,782/mo
+    // A covenant tested on a 25-yr amortization ignores the IO period.
+    expect(annualDebtService(10_000_000, 6, loan, TODAY, 25).basis).toMatch(/25-yr amortization \(covenant test basis\)/);
+  });
+  it("next test date: from the first test, each 12/31, or the next quarter end", () => {
+    expect(nextCovenantTest({ testFrequency: "quarterly", firstTestDate: "2027-03-31" }, TODAY)).toBe("2027-03-31");
+    expect(nextCovenantTest({ testFrequency: "quarterly", firstTestDate: "2026-06-30" }, TODAY)).toBe("2026-12-31");
+    expect(nextCovenantTest({ testFrequency: "annual", testMonthDay: "12-31" }, TODAY)).toBe("2026-12-31");
+    expect(nextCovenantTest({ testFrequency: "quarterly" }, TODAY)).toBe("2026-12-31");
+    expect(nextCovenantTest({}, TODAY)).toBeNull();
+  });
+  it("DSCR headroom from Datex trailing NOI over IO-aware debt service; tenant triggers land on the calendar", () => {
+    const d = deal("ovl", { noi: 2_300_000 });
+    (d as unknown as Record<string, unknown>).datexLive = { asOf: "2026-10-15", financials: { period: "202609", noiTtmActual: 2_310_000 } };
+    const records = [
+      rec("loan:o", "loan", "ovl", { lender: "ONB", originalBalance: 17_000_000, rateType: "fixed", fixedRatePct: 6.44, amortization: "IO", ioUntil: "2030-01-15", maturityDate: "2030-01-15" }),
+      rec("cov:1", "covenant", "ovl", { loanId: "loan:o", type: "DSCR", threshold: 1.25, testFrequency: "quarterly", firstTestDate: "2027-03-31" }),
+      rec("cov:2", "covenant", "ovl", { loanId: "loan:o", type: "cash-sweep", linkedTenant: "Schnucks", triggerDate: "2029-09-29", trigger: "Sweep if Schnucks not extended" }),
+    ];
+    const rows = buildCovenantRows(d, records, buildDebtRows(records, [d], rates, TODAY), TODAY);
+    const dscr = rows.find(r => r.type === "DSCR")!;
+    expect(dscr).toMatchObject({ actual: 2.11, status: "ok", nextTest: "2027-03-31" });
+    expect(dscr.headroomPct).toBeCloseTo(68.8, 1);
+    expect(dscr.actualBasis).toMatch(/Datex trailing 12 months to 202609 ÷ \$1\.09M debt service \(interest only/);
+    expect(rows.find(r => r.type === "cash-sweep")).toMatchObject({ status: "info", triggerDate: "2029-09-29" });
+    const cal = buildCriticalDates([d], records, [], TODAY).items;
+    expect(cal.filter(i => i.type.startsWith("Covenant")).map(i => [i.type, i.date, i.tenant])).toEqual([["Covenant test", "2027-03-31", null], ["Covenant trigger", "2029-09-29", "Schnucks"]]);
+  });
+  it("plan vs actual: underwritten NOI at purchase vs Datex, with variance", () => {
+    const d = deal("p", { noi: 2_000_000, occupancy: 95 });
+    (d as unknown as Record<string, unknown>).datexLive = { asOf: "2026-10-15", occupancyPct: 92.5, financials: { period: "202609", noiTtmActual: 2_100_000, noiYtdActual: 1_500_000, noiYtdBudget: 1_550_000 } };
+    const rows = planVsActual(d, [rec("acq:p", "acquisition", "p", { noiAtPurchase: 1_950_000, closeDate: "2024-05-01" })]);
+    expect(rows[0]).toMatchObject({ plan: 1_950_000, actual: 2_100_000, variance: 150_000, variancePct: 7.7 });
+    expect(rows[1]).toMatchObject({ plan: 1_550_000, actual: 1_500_000, variancePct: -3.2 });
+    expect(rows.find(r => r.label === "Occupancy")).toMatchObject({ plan: 95, actual: 92.5, variance: -2.5 });
+  });
+  it("labels and links", () => {
+    expect(optionLabel({ number: "1", ratePSF: 17.6 })).toBe("Option 1 · $17.60/SF");
+    expect(optionLabel({ number: "2nd Renewal", length: "5 yrs" })).toBe("2nd Renewal · 5 yrs");
+    expect(driveLinks(rec("l", "loan", "x", { sourceDocs: [{ id: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123", name: "Loan agreement" }] }))).toEqual([{ url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123/view", name: "Loan agreement" }]);
+    const t = sinceAcquisition(deal("q", { txnCloseDate: "2024-05-01", txnPurchasePrice: 28_700_000 } as Partial<Deal>), [], TODAY);
+    expect(t[0].text).toBe("KPR closed the acquisition for $28.7M");
   });
 });

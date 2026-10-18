@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { db, dealsTable } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import {
@@ -7,6 +9,7 @@ import {
 } from "../lib/assetMgmt";
 import { fetchBrandNews, assessNews, brandNorm } from "../lib/watchlistNews";
 import { callAnthropicOnce } from "../lib/extract";
+import { proposeCovenants } from "../lib/covenants";
 
 // ASSET MANAGEMENT — owned properties only. Reads for any signed-in member; every write is
 // admin-only (Eric: "admin-only edit controls"). Records carry a per-row source note.
@@ -81,6 +84,53 @@ router.put("/am/datex-map/:dealId", requireAdmin, async (req, res) => {
   } catch (err) { req.log.error({ err }, "datex map save failed"); res.status(500).json({ error: "Couldn't save the mapping" }); }
 });
 
+// Covenant detection: KPR's seed list + a parser over each loan's covenant text. DRY RUN by
+// default; {apply:true, ids?:[…]} saves the chosen proposals (all when ids is omitted).
+router.post("/am/covenants/detect", requireAdmin, async (req, res) => {
+  try {
+    const owned = await ownedDeals();
+    const { proposals, notes } = proposeCovenants(await listRecords([...ENTRY_KINDS]), new Set(owned.map(d => d.id)));
+    const name = new Map(owned.map(d => [d.id, d.name]));
+    const rows = proposals.map(p => ({ ...p, property: name.get(p.dealId) ?? p.dealId }));
+    if ((req.body ?? {}).apply === true) {
+      const want = Array.isArray(req.body.ids) ? new Set((req.body.ids as unknown[]).map(String)) : null;
+      let saved = 0;
+      for (const p of proposals) if (!want || want.has(p.id)) { await upsertRecord(p.id, "covenant", p.dealId, p.data, p.sourceNote, req.session.userEmail || "admin"); saved++; }
+      res.json({ ok: true, applied: true, saved, rows, notes }); return;
+    }
+    res.json({ ok: true, applied: false, rows, notes });
+  } catch (err) { req.log.error({ err }, "covenant detect failed"); res.status(500).json({ error: "Couldn't detect covenants" }); }
+});
+
+// QUARTERLY COMMENT DRAFT — one AI call, only when someone clicks the button. The client sends
+// the facts it already computed and shows (Datex occupancy change, leasing, NOI vs budget,
+// debt); the model only writes them up, in KPR's investor-letter voice. Nothing is stored.
+router.post("/am/quarterly-comment", requireAuth, async (req, res) => {
+  try {
+    const b = (req.body ?? {}) as { dealId?: string; facts?: unknown; quarter?: string };
+    const owned = await ownedDeals();
+    const deal = owned.find(d => d.id === b.dealId);
+    if (!deal) { res.status(400).json({ error: "Quarterly comments are for owned properties only." }); return; }
+    const facts = JSON.stringify(b.facts ?? {}).slice(0, 12_000);
+    if (!process.env.ANTHROPIC_API_KEY) { res.status(503).json({ error: "AI is not configured" }); return; }
+    const prompt = `You write the property paragraph of KPR Centers' quarterly investor letter (KPR owns and operates grocery-anchored and open-air retail centers). Write ONE paragraph of 4-6 sentences for ${deal.name}${b.quarter ? ` for ${b.quarter}` : ""}.
+
+Rules:
+- Use ONLY the facts below. Never invent a number, tenant, date or event. If a fact is missing, leave the topic out — do not mention that it is missing.
+- Cover, in this order where the facts exist: occupancy and its change; leasing activity (new leases, renewals, deals in negotiation — name tenants); NOI versus budget year to date; debt (balance, rate/hedge, maturity) only if notable.
+- Investor-letter voice: confident, plain, factual, third person ("the property", "we"). No bullet points, no headings, no markdown.
+- Round money to $0.1M (or $K under $1M), percentages to one decimal.
+- Never mention a pending sale, a marketing process or anything about selling the property.
+
+FACTS (JSON):
+${facts}`;
+    const r = await callAnthropicOnce({ model: "claude-sonnet-4-6", max_tokens: 600, messages: [{ role: "user", content: prompt }] });
+    const j = await r.json() as { content?: Array<{ type: string; text?: string }>; error?: { message?: string } };
+    if (!r.ok) { res.status(502).json({ error: j.error?.message ?? "AI call failed" }); return; }
+    res.json({ draft: (j.content ?? []).find(x => x.type === "text")?.text?.trim() ?? "" });
+  } catch (err) { req.log.error({ err }, "quarterly comment failed"); res.status(500).json({ error: "Couldn't draft the comment" }); }
+});
+
 // ── Credit watch news: free Google News RSS, headline keyword match, NO AI. The client sends
 //    its top brands by owned rent (≤60, brand grouping is client-side); anything not scanned
 //    in 24 h is re-scanned inside this request's time budget, the rest on the next call. ──
@@ -126,6 +176,20 @@ router.post("/am/credit-news/summarize", requireAuth, async (req, res) => {
     if (!r.ok) { res.status(502).json({ error: j.error?.message ?? "AI call failed" }); return; }
     res.json({ summary: (j.content ?? []).find(b => b.type === "text")?.text?.trim() ?? "", headlines: recent.length });
   } catch (err) { req.log.error({ err }, "credit news summarize failed"); res.status(500).json({ error: "Couldn't summarize" }); }
+});
+
+// Read-only operating docs for admins (Eric reads them in a browser — chat code blocks don't
+// render for him). Whitelisted names only; the file ships in dist/docs via build.mjs.
+const SERVED_DOCS: Record<string, string> = { "datex-refresh": "datex-refresh.md" };
+router.get("/admin/docs/:name", requireAdmin, async (req, res) => {
+  const file = SERVED_DOCS[String(req.params.name)];
+  if (!file) { res.status(404).type("text/plain").send("Unknown doc. Available: " + Object.keys(SERVED_DOCS).join(", ")); return; }
+  const here = typeof __dirname === "string" ? __dirname : process.cwd();
+  for (const p of [path.join(here, "docs", file), path.resolve(process.cwd(), "dist/docs", file), path.resolve(process.cwd(), "../../docs", file), path.resolve(process.cwd(), "docs", file)]) {
+    try { const text = await readFile(p, "utf8"); res.type("text/plain; charset=utf-8").set("Cache-Control", "no-store").send(text); return; }
+    catch { /* try the next location */ }
+  }
+  res.status(404).type("text/plain").send(`${file} is missing from this build.`);
 });
 
 export default router;

@@ -78,7 +78,9 @@ async function tick(log: Logger, budgetMs = 45_000): Promise<RefreshTick> {
   }
   // 2) Nothing in flight → send every still-stale deal that hasn't used its tries.
   const tries = (d: Record<string, unknown>) => { const t = d.analysisAutoTries as { v?: number; n?: number } | undefined; return t?.v === ANALYSIS_VERSION ? (t.n ?? 0) : 0; };
-  const sent = await submitStaleAnalysisBatch(log, (_id, d) => tries(d) < MAX_TRIES);
+  // OWNED deals are never re-analysed in the background (Eric, 10/18/26: the asset brief
+  // regenerates only on demand) — their write-up refreshes from the deal page's button.
+  const sent = await submitStaleAnalysisBatch(log, (_id, d) => tries(d) < MAX_TRIES && d.status !== "Owned");
   if (!sent.batchId || !sent.ids.length) return { at, action: "done (nothing left to refresh)" };
   for (const id of sent.ids) {
     await db.execute(sql`UPDATE deals SET data = data || jsonb_build_object('analysisBatchPending', ${sent.batchId}::text,
@@ -108,7 +110,7 @@ export async function runAnalysisRefreshSlice(log: Logger = logger, budgetMs = 4
 export async function analysisRefreshStatus(): Promise<{ version: number; build: string; current: number; outdated: number; inBatch: number; appliedByAutoRefresh: number; lastAppliedAt: string | null; notApplied: Array<{ id: string; name: string | null; tries: number; willRetry: boolean; reason: string }>; batchId: string | null; workPending: boolean; lastTick: RefreshTick | null }> {
   const r = await db.execute(sql`SELECT
       count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION})::int AS current,
-      count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) < ${ANALYSIS_VERSION} AND data ? 'dealScore')::int AS outdated,
+      count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) < ${ANALYSIS_VERSION} AND data ? 'dealScore' AND COALESCE(data->>'status', '') <> 'Owned')::int AS outdated,
       count(*) FILTER (WHERE data ? 'analysisBatchPending')::int AS inbatch,
       count(*) FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION} AND (data->'analysisAutoTries'->>'v')::int = ${ANALYSIS_VERSION})::int AS applied,
       max(data->>'lastScoredAt') FILTER (WHERE COALESCE((data->>'analysisVersion')::int, 0) >= ${ANALYSIS_VERSION} AND (data->'analysisAutoTries'->>'v')::int = ${ANALYSIS_VERSION}) AS last_applied,

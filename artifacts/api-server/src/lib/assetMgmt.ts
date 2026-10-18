@@ -17,11 +17,11 @@ import type { DatexMap } from "./datexImport";
 //                       Datex ids are city-based (voorhees = Eagle Plaza, brunswic = Cooks
 //                       Corner, …) and two buildings share the name "Mattatuck Commons".
 
-export type AmKind = "loan" | "swap" | "date" | "pref" | "news";
-export const AM_KINDS: readonly AmKind[] = ["loan", "swap", "date", "pref", "news"];
+export type AmKind = "loan" | "swap" | "date" | "pref" | "covenant" | "acquisition" | "optstatus" | "news";
+export const AM_KINDS: readonly AmKind[] = ["loan", "swap", "date", "pref", "covenant", "acquisition", "optstatus", "news"];
 /** The kinds an admin enters (news is written by the credit-watch scan only). */
 export type EntryKind = Exclude<AmKind, "news">;
-export const ENTRY_KINDS: readonly EntryKind[] = ["loan", "swap", "date", "pref"];
+export const ENTRY_KINDS: readonly EntryKind[] = ["loan", "swap", "date", "pref", "covenant", "acquisition", "optstatus"];
 
 let ready: Promise<void> | null = null;
 export function ensureAssetMgmtTables(): Promise<void> {
@@ -149,7 +149,7 @@ export interface LoanRec {
   lender?: string; loanName?: string; originalBalance?: number; currentBalance?: number; balanceAsOf?: string;
   rateType?: "fixed" | "floating" | "swapped"; index?: string; spreadBps?: number; fixedRatePct?: number; allInRatePct?: number;
   originationDate?: string; maturityDate?: string; extensionOptions?: string; extensionNoticeDate?: string;
-  amortization?: "IO" | "amortizing" | "partial IO"; amortYears?: number; ioUntil?: string;
+  amortization?: "IO" | "amortizing" | "partial IO"; amortYears?: number; ioUntil?: string; amortizationText?: string;
   dscrCovenant?: number; debtYieldCovenantPct?: number; recourse?: string; guarantor?: string;
   datexLoanId?: number; notes?: string;
   loanLabel?: string; covenants?: string; prepayment?: string; openQuestions?: string; confidence?: string;
@@ -190,8 +190,12 @@ export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
     rateType: rateType(r.rateType), index: normIndex(r.index), spreadBps, fixedRatePct: pct(r.fixedRatePct ?? r.fixedRate),
     allInRatePct: pct(r.allInRatePct ?? r.allInRate), originationDate: isoDate(r.originationDate ?? r.startDate),
     maturityDate: isoDate(r.maturityDate ?? r.maturity), extensionOptions: str(r.extensionOptions), extensionNoticeDate: isoDate(r.extensionNoticeDate),
-    amortization: amort.includes("partial") ? "partial IO" : amort.includes("io") || amort.includes("interest") ? "IO" : amort.includes("amort") ? "amortizing" : undefined,
-    amortYears: num(r.amortYears, 1, 50), ioUntil: isoDate(r.ioUntil),
+    // Word-boundary IO test: "amortizat-io-n" contains "io" and used to read as interest-only.
+    amortization: amort.includes("partial") ? "partial IO" : /\bio\b|interest[- ]only/.test(amort) ? "IO" : amort.includes("amort") ? "amortizing" : undefined,
+    // "IO to 1/15/2030, then 30-yr amortization" → ioUntil + amortYears, read from the text.
+    amortYears: num(r.amortYears, 1, 50) ?? num(/(\d{2})[- ]?(?:yr|year)s?\s*amort/i.exec(String(r.amortization ?? ""))?.[1], 1, 50),
+    ioUntil: isoDate(r.ioUntil) ?? isoDate(/(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/.exec(String(r.ioPeriod ?? r.interestOnly ?? (/\bIO\b|interest[- ]only/i.test(String(r.amortization ?? "")) ? r.amortization : "")))?.[1]),
+    amortizationText: str(r.amortization, 300),
     dscrCovenant: num(r.dscrCovenant ?? r.dscr, 0.5, 5), debtYieldCovenantPct: pct(r.debtYieldCovenantPct ?? r.debtYieldCovenant),
     recourse: str(r.recourse), guarantor: str(r.guarantor), datexLoanId: num(r.datexLoanId, 0), notes: text(r.notes),
     loanLabel: str(r.loanLabel ?? r.label, 120), covenants: text(r.covenants), prepayment: text(r.prepayment ?? r.prepaymentTerms ?? r.prepay),
@@ -220,14 +224,105 @@ export function sanitizePref(r: Record<string, unknown>): PrefRec {
 export function sanitizeDate(r: Record<string, unknown>): DateRec {
   return prune({ date: isoDate(r.date), type: str(r.type, 60), tenant: str(r.tenant, 120), description: str(r.description, 500), owner: str(r.owner, 80), noticeDays: num(r.noticeDays, 0, 3650) });
 }
+// ── Columns we don't model are KEPT, not silently dropped (Eric's 10/18 seed lost its
+//    covenant, prepayment and Drive-link columns to a whitelist). Bounded, primitive-ish only.
+const META_KEYS = new Set(["kind", "id", "dealId", "bldgId", "BLDGID", "property", "propertyName", "source", "sourceNote"]);
+const ALIAS_KEYS = new Set(["spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
+  "dscr", "debtYieldCovenant", "swapRate", "allIn", "terminationDate", "floatingIndex", "label", "prepaymentTerms", "prepay", "provider",
+  "prefRatePct", "rate", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
+function withExtras(raw: Record<string, unknown>, clean: Record<string, unknown>): Record<string, unknown> {
+  let kept = 0;
+  for (const [k, v] of Object.entries(raw)) {
+    if (kept >= 40 || META_KEYS.has(k) || ALIAS_KEYS.has(k) || k in clean || v == null || v === "" || !/^[A-Za-z][A-Za-z0-9_ ]{0,60}$/.test(k)) continue;
+    const t = typeof v === "object" ? JSON.stringify(v) : String(v);
+    if (t.length > 2000) continue;
+    clean[k] = typeof v === "number" || typeof v === "boolean" ? v : typeof v === "object" ? v : String(v).trim();
+    kept++;
+  }
+  const docs = extractDocs(raw);
+  if (docs.length) clean.sourceDocs = docs;
+  return clean;
+}
+/** Google Drive files named on a row (bare ids, /d/<id>/ links, ?id= links, {id,name} objects). */
+export function extractDocs(raw: Record<string, unknown>): Array<{ id: string; name?: string }> {
+  const out = new Map<string, string | undefined>();
+  const idOf = (x: string): string | null => {
+    const m = /\/d\/([A-Za-z0-9_-]{20,})/.exec(x) ?? /[?&]id=([A-Za-z0-9_-]{20,})/.exec(x);
+    if (m) return m[1];
+    return /^[A-Za-z0-9_-]{25,}$/.test(x.trim()) ? x.trim() : null;
+  };
+  const visit = (v: unknown, name?: string, depth = 0): void => {
+    if (v == null || depth > 3) return;
+    if (typeof v === "string") { for (const part of v.split(/[\s,;]+/)) { const id = idOf(part); if (id && !out.has(id)) out.set(id, name); } return; }
+    if (Array.isArray(v)) { v.forEach(x => visit(x, name, depth + 1)); return; }
+    if (typeof v === "object") {
+      const o = v as Record<string, unknown>;
+      const nm = str(o.name ?? o.title ?? o.label ?? o.fileName, 160) ?? name;
+      for (const k of ["id", "fileId", "driveId", "driveFileId", "url", "link", "href"]) if (o[k] != null) visit(o[k], nm, depth + 1);
+    }
+  };
+  for (const [k, v] of Object.entries(raw)) if (/drive|file|doc|link|url|source_?id/i.test(k) && !/^source(Note)?$/.test(k)) visit(v, undefined);
+  return [...out.entries()].slice(0, 20).map(([id, name]) => (name ? { id, name } : { id }));
+}
+
+// ── Covenants (structured; admin-editable) ──
+export type CovenantType = "DSCR" | "DY" | "LTV" | "cash-sweep" | "cash-trap" | "other";
+export function covType(v: unknown): CovenantType | undefined {
+  const x = String(v ?? "").toLowerCase();
+  if (!x) return undefined;
+  if (/sweep/.test(x)) return "cash-sweep";
+  if (/trap|cash ?management|lockbox/.test(x)) return "cash-trap";
+  if (/dscr|debt service coverage/.test(x)) return "DSCR";
+  if (/\bdy\b|debt yield/.test(x)) return "DY";
+  if (/ltv|loan[- ]to[- ]value|right[- ]?siz/.test(x)) return "LTV";
+  return "other";
+}
+const freq = (v: unknown): string | undefined => {
+  const x = String(v ?? "").toLowerCase();
+  return /quarter/.test(x) ? "quarterly" : /semi/.test(x) ? "semi-annual" : /month/.test(x) ? "monthly" : /annual|year|12\/31/.test(x) ? "annual" : undefined;
+};
+export function sanitizeCovenant(r: Record<string, unknown>): Record<string, unknown> {
+  return prune({
+    loanId: str(r.loanId, 120), loanLabel: str(r.loanLabel, 120), type: covType(r.type ?? r.covenantType),
+    threshold: num(r.threshold ?? r.min ?? r.level, 0, 100), sweepBelow: num(r.sweepBelow ?? r.sweepThreshold, 0, 100),
+    testFrequency: freq(r.testFrequency ?? r.frequency), firstTestDate: isoDate(r.firstTestDate ?? r.firstTest),
+    testMonthDay: /^\d{2}-\d{2}$/.test(String(r.testMonthDay ?? "")) ? String(r.testMonthDay) : undefined,
+    amortYears: num(r.amortYears ?? r.testAmortYears, 1, 50), testRatePct: pct(r.testRatePct),
+    linkedTenant: str(r.linkedTenant ?? r.tenant, 160), triggerDate: isoDate(r.triggerDate ?? r.deadline), trigger: text(r.trigger, 600),
+    description: text(r.description, 800), notes: text(r.notes), confidence: str(r.confidence, 60),
+  } as Record<string, unknown>);
+}
+// ── Acquisition (one per deal, from the KPR Corporate Overview) ──
+export function sanitizeAcquisition(r: Record<string, unknown>): Record<string, unknown> {
+  const budgetKey = Object.keys(r).find(k => /^budget_?noi_?(20\d\d)$/i.test(k));
+  return prune({
+    purchasePrice: num(r.purchasePrice ?? r.price, 0, 5e9), closeDate: isoDate(r.closeDate ?? r.closingDate),
+    seller: str(r.seller, 200), kpPct: pct(r.kpPct ?? r.kpOwnershipPct ?? r.kpPercent), jvPartner: str(r.jvPartner ?? r.jv ?? r.partner, 200),
+    mzlEquity: num(r.mzlEquity, -5e9, 5e9), kpMemberEquity: num(r.kpMemberEquity, -5e9, 5e9), totalEquity: num(r.totalEquity, -5e9, 5e9),
+    noiAtPurchase: num(r.noiAtPurchase ?? r.noiAtClose, -1e9, 1e9), goingInCapPct: pct(r.goingInCapPct ?? r.goingInCap ?? r.capRate),
+    budgetNoi: num(r.budgetNoi ?? (budgetKey ? r[budgetKey] : undefined), -1e9, 1e9),
+    budgetYear: num(r.budgetYear, 2000, 2100) ?? (budgetKey ? Number(/(20\d\d)/.exec(budgetKey)![1]) : undefined),
+    notes: text(r.notes),
+  } as Record<string, unknown>);
+}
+// ── Option-notice status (a passed notice date: did the tenant exercise?) ──
+const OPT_STATUS = ["Exercised", "Pending", "Lapsed"] as const;
+export function sanitizeOptStatus(r: Record<string, unknown>): Record<string, unknown> {
+  const st = OPT_STATUS.find(x => x.toLowerCase() === String(r.status ?? "").trim().toLowerCase());
+  return prune({ tenant: str(r.tenant, 160), option: str(r.option, 80), noticeDate: isoDate(r.noticeDate), status: st, note: text(r.note ?? r.notes, 600) } as Record<string, unknown>);
+}
+
 const SANITIZE: Record<EntryKind, (r: Record<string, unknown>) => Record<string, unknown>> = {
-  loan: r => sanitizeLoan(r) as Record<string, unknown>,
+  loan: r => withExtras(r, sanitizeLoan(r) as Record<string, unknown>),
   swap: r => {
-    const w = sanitizeSwap(r) as Record<string, unknown>;
+    const w = withExtras(r, sanitizeSwap(r) as Record<string, unknown>);
     if (w.notional == null || w.fixedSwapRatePct == null || !w.maturityDate) w.termsPending = true; else delete w.termsPending;
     return w;
   },
-  pref: r => sanitizePref(r) as Record<string, unknown>,
+  pref: r => withExtras(r, sanitizePref(r) as Record<string, unknown>),
+  covenant: r => withExtras(r, sanitizeCovenant(r)),
+  acquisition: r => withExtras(r, sanitizeAcquisition(r)),
+  optstatus: r => sanitizeOptStatus(r),
   date: r => sanitizeDate(r) as Record<string, unknown>,
 };
 
@@ -239,6 +334,10 @@ export function validateRecord(kind: EntryKind, d: Record<string, unknown>): str
   // but it has to say whose hedge it is.
   if (kind === "swap" && !d.counterparty && !d.loanLabel && !d.loanId && d.notional == null) return "a swap needs at least a counterparty, loan label or notional";
   if (kind === "pref" && d.amount == null) return "preferred equity needs an amount";
+  if (kind === "covenant" && !d.type) return "a covenant needs a type (DSCR, DY, LTV, cash sweep, cash trap or other)";
+  if (kind === "covenant" && d.threshold == null && !d.trigger && !d.linkedTenant && !d.description) return "a covenant needs a threshold or a described trigger";
+  if (kind === "acquisition" && d.purchasePrice == null && !d.closeDate) return "an acquisition row needs a purchase price or a close date";
+  if (kind === "optstatus" && (!d.tenant || !d.status)) return "an option status needs a tenant and a status (Exercised, Pending or Lapsed)";
   if (kind === "date" && (!d.date || !d.type)) return "a critical date needs a date and a type";
   return null;
 }
@@ -248,6 +347,9 @@ export function recordId(kind: string, dealId: string, d: Record<string, unknown
   const key = kind === "loan" ? [d.lender, d.maturityDate, d.loanName]
     : kind === "swap" ? (d.termsPending ? [d.counterparty, d.maturityDate, d.notional, "pending", d.loanLabel, d.fixedSwapRatePct] : [d.counterparty, d.maturityDate, d.notional])
     : kind === "pref" ? [d.investor, d.loanLabel, d.amount]
+    : kind === "covenant" ? [d.loanId ?? d.loanLabel, d.type, d.threshold, d.linkedTenant, d.triggerDate]
+    : kind === "acquisition" ? []          // one per property — re-importing replaces it
+    : kind === "optstatus" ? [String(d.tenant ?? "").toLowerCase().replace(/[^a-z0-9]+/g, ""), d.option, d.noticeDate]
     : [d.date, d.type, d.tenant];
   return `${kind}:${createHash("sha1").update([dealId, ...key.map(x => String(x ?? "").toLowerCase())].join("|")).digest("hex").slice(0, 16)}`;
 }
@@ -279,7 +381,7 @@ export function isPrefEquityRow(raw: Record<string, unknown>): boolean {
 export function readImportText(text: string): { rows: ImportRow[]; problem?: string } {
   const t = text.trim();
   if (!t) return { rows: [], problem: "nothing pasted" };
-  const asKind = (k: unknown): ImportRow["kind"] | null => { const s = String(k ?? "").toLowerCase().replace(/s$/, "").replace(/[\s_-]/g, ""); return s === "loan" || s === "swap" || s === "date" || s === "pref" ? s : s === "criticaldate" ? "date" : s === "preferredequity" || s === "prefequity" ? "pref" : null; };
+  const asKind = (k: unknown): ImportRow["kind"] | null => { const s = String(k ?? "").toLowerCase().replace(/s$/, "").replace(/[\s_-]/g, ""); return s === "loan" || s === "swap" || s === "date" || s === "pref" || s === "covenant" || s === "acquisition" || s === "optstatus" ? s : s === "criticaldate" ? "date" : s === "preferredequity" || s === "prefequity" ? "pref" : null; };
   const route = (r: ImportRow): ImportRow => (r.kind === "loan" && isPrefEquityRow(r.raw) ? { ...r, kind: "pref" } : r);
   if (t.startsWith("{") || t.startsWith("[")) {
     let j: unknown;
@@ -287,12 +389,13 @@ export function readImportText(text: string): { rows: ImportRow[]; problem?: str
     const out: ImportRow[] = [];
     if (Array.isArray(j)) { for (const r of j) { const k = asKind((r as Record<string, unknown>)?.kind); if (k) out.push({ kind: k, raw: r as Record<string, unknown> }); } }
     else if (j && typeof j === "object") {
-      for (const [key, kind] of [["loans", "loan"], ["swaps", "swap"], ["dates", "date"], ["criticalDates", "date"], ["preferredEquity", "pref"], ["prefs", "pref"], ["prefEquity", "pref"]] as const) {
+      for (const [key, kind] of [["loans", "loan"], ["swaps", "swap"], ["dates", "date"], ["criticalDates", "date"], ["preferredEquity", "pref"], ["prefs", "pref"], ["prefEquity", "pref"],
+        ["covenants", "covenant"], ["acquisitions", "acquisition"], ["acquisition", "acquisition"], ["optionStatuses", "optstatus"]] as const) {
         const arr = (j as Record<string, unknown>)[key];
         if (Array.isArray(arr)) for (const r of arr) if (r && typeof r === "object") out.push({ kind, raw: r as Record<string, unknown> });
       }
     }
-    return out.length ? { rows: out.map(route) } : { rows: [], problem: "no loans, swaps, dates or preferred equity found — use {\"loans\":[…],\"swaps\":[…],\"dates\":[…],\"preferredEquity\":[…]}" };
+    return out.length ? { rows: out.map(route) } : { rows: [], problem: "nothing recognised — use {\"loans\":[…],\"swaps\":[…],\"dates\":[…],\"preferredEquity\":[…],\"covenants\":[…],\"acquisitions\":[…]}" };
   }
   const objs = parseCsvObjects(t);
   const rows = objs.map(o => ({ kind: asKind(o.kind), raw: o as Record<string, unknown> })).filter((r): r is ImportRow => !!r.kind);

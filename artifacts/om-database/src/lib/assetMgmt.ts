@@ -8,7 +8,7 @@ import { isVacant, tenantLabel } from "./utils";
 // ASSET MANAGEMENT calculations (Eric, 10/18/26) — owned properties only, all deterministic.
 // Every figure the UI shows carries a `source` and, where there is one, an as-of date.
 
-export interface AmRecord { id: string; kind: "loan" | "swap" | "date" | "pref"; dealId: string | null; data: Record<string, unknown>; sourceNote: string | null; updatedBy: string | null; updatedAt: string }
+export interface AmRecord { id: string; kind: "loan" | "swap" | "date" | "pref" | "covenant" | "acquisition" | "optstatus"; dealId: string | null; data: Record<string, unknown>; sourceNote: string | null; updatedBy: string | null; updatedAt: string }
 
 const n = (v: unknown): number | null => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v).trim());
@@ -175,7 +175,7 @@ export function liveTenants(deal: Deal): { tenants: LiveTenant[]; source: "Datex
 }
 
 // ── Critical dates ───────────────────────────────────────────────────────────
-export type DateType = "Lease expiry" | "Option notice" | "Termination / kick-out" | "Co-tenancy" | "Loan maturity" | "Extension notice" | "Swap maturity" | "Other";
+export type DateType = "Lease expiry" | "Option notice" | "Termination / kick-out" | "Co-tenancy" | "Loan maturity" | "Extension notice" | "Swap maturity" | "Covenant test" | "Covenant trigger" | "Other";
 export interface CriticalDate { date: string; days: number; type: DateType; dealId: string; property: string; tenant: string | null; description: string; source: string; owner: string | null; recordId?: string }
 const asType = (t: unknown): DateType => {
   const x = String(t ?? "").toLowerCase();
@@ -188,6 +188,13 @@ const asType = (t: unknown): DateType => {
   if (/expir/.test(x)) return "Lease expiry";
   return "Other";
 };
+/** "Option 1 · 5 yrs · $17.60/SF" — never a bare "1 · $17.6/SF" (Eric, 10/18/26). */
+export function optionLabel(o: { number?: unknown; ordinal?: unknown; length?: unknown; ratePSF?: unknown }): string {
+  const raw = s(o.number) ?? s(o.ordinal);
+  const name = !raw ? "Option" : /option|renewal/i.test(raw) ? raw : `Option ${raw.replace(/^(\d+)(st|nd|rd|th)$/i, "$1")}`;
+  const rate = n(o.ratePSF);
+  return `${name}${s(o.length) ? ` · ${s(o.length)}` : ""}${rate != null && rate > 0 ? ` · $${rate.toFixed(2)}/SF` : ""}`;
+}
 export function buildCriticalDates(deals: Deal[], records: AmRecord[], abstracts: LeaseAbstract[], today: Date, horizonDays = 3650): { items: CriticalDate[]; undatedRights: Map<string, number> } {
   const owned = new Map(deals.map(d => [d.id, d]));
   const owner = (d: Deal | undefined) => s((d as unknown as { datexLive?: { assetManager?: string } } | undefined)?.datexLive?.assetManager);
@@ -200,7 +207,7 @@ export function buildCriticalDates(deals: Deal[], records: AmRecord[], abstracts
   for (const a of abstracts) {
     const d = a.dealId ? owned.get(a.dealId) : undefined;
     if (!d) continue;
-    for (const o of a.options ?? []) if (o.noticeDate && o.status !== "exercised" && o.status !== "expired") push({ date: o.noticeDate, type: "Option notice", dealId: d.id, property: d.propertyName || "—", tenant: a.tenantName ?? null, description: `${o.number ?? (o.ordinal ? `Option ${o.ordinal}` : "Option")}${o.length ? ` · ${o.length}` : ""}${o.ratePSF ? ` · $${o.ratePSF}/SF` : ""}`, source: "Lease abstract", owner: owner(d) });
+    for (const o of a.options ?? []) if (o.noticeDate && o.status !== "exercised" && o.status !== "expired") push({ date: o.noticeDate, type: "Option notice", dealId: d.id, property: d.propertyName || "—", tenant: a.tenantName ?? null, description: optionLabel(o), source: "Lease abstract", owner: owner(d) });
     const cancel = a.dates?.cancelDate?.value as string | undefined;
     if (cancel && /^\d{4}-\d{2}-\d{2}/.test(String(cancel))) push({ date: String(cancel).slice(0, 10), type: "Termination / kick-out", dealId: d.id, property: d.propertyName || "—", tenant: a.tenantName ?? null, description: "Cancel / termination date", source: "Lease abstract", owner: owner(d) });
   }
@@ -214,6 +221,11 @@ export function buildCriticalDates(deals: Deal[], records: AmRecord[], abstracts
       if (s(x.extensionNoticeDate)) push({ date: String(x.extensionNoticeDate), type: "Extension notice", dealId: d.id, property: d.propertyName || "—", tenant: null, description: `${s(x.lender) ?? "Loan"} extension notice`, source: src, owner: owner(d), recordId: r.id });
     } else if (r.kind === "swap" && s(x.maturityDate)) {
       push({ date: String(x.maturityDate), type: "Swap maturity", dealId: d.id, property: d.propertyName || "—", tenant: null, description: `${s(x.counterparty) ?? "Swap"}${n(x.notional) ? ` · $${(n(x.notional)! / 1e6).toFixed(2)}M` : ""}`, source: src, owner: owner(d), recordId: r.id });
+    } else if (r.kind === "covenant") {
+      const label = covenantLabel(x);
+      if (s(x.triggerDate)) push({ date: String(x.triggerDate), type: "Covenant trigger", dealId: d.id, property: d.propertyName || "—", tenant: s(x.linkedTenant), description: s(x.trigger) ?? label, source: src.replace("Debt record", "Covenant"), owner: owner(d), recordId: r.id });
+      const next = nextCovenantTest(x, today);
+      if (next) push({ date: next, type: "Covenant test", dealId: d.id, property: d.propertyName || "—", tenant: null, description: label, source: src.replace("Debt record", "Covenant"), owner: owner(d), recordId: r.id });
     } else if (r.kind === "date" && s(x.date)) {
       push({ date: String(x.date), type: asType(x.type), dealId: d.id, property: d.propertyName || "—", tenant: s(x.tenant), description: s(x.description) ?? String(x.type ?? ""), source: src, owner: s(x.owner) ?? owner(d), recordId: r.id });
     }
@@ -228,6 +240,157 @@ export function buildCriticalDates(deals: Deal[], records: AmRecord[], abstracts
   }
   out.sort((a, b) => a.date.localeCompare(b.date) || a.property.localeCompare(b.property));
   return { items: out, undatedRights: undated };
+}
+
+// ── Covenants, debt service, plan vs actual (owned deal page) ─────────────────
+export function covenantLabel(x: Record<string, unknown>): string {
+  const t = s(x.type) ?? "Covenant", th = n(x.threshold);
+  const lvl = th == null ? "" : t === "DSCR" || t === "cash-sweep" || t === "cash-trap" ? ` ${th.toFixed(2)}x` : ` ${th}%`;
+  const name = t === "cash-sweep" ? "Cash sweep" : t === "cash-trap" ? "Cash trap" : t === "DY" ? "Debt yield" : t;
+  return `${name}${lvl}${n(x.amortYears) ? ` (${n(x.amortYears)}-yr amort.)` : ""}${n(x.sweepBelow) ? ` · sweep below ${n(x.sweepBelow)!.toFixed(2)}x` : ""}${s(x.testFrequency) ? ` · ${s(x.testFrequency)}` : ""}`;
+}
+const isoUTC = (d: Date) => d.toISOString().slice(0, 10);
+/** Next test date on or after today: from the first test date stepping by the frequency, else
+ *  each testMonthDay, else calendar quarter / year ends. Null when the frequency is unknown. */
+export function nextCovenantTest(x: Record<string, unknown>, today: Date): string | null {
+  const f = s(x.testFrequency), t0 = isoUTC(today);
+  const step = f === "quarterly" ? 3 : f === "semi-annual" ? 6 : f === "monthly" ? 1 : f === "annual" ? 12 : null;
+  if (!step) return null;
+  const first = s(x.firstTestDate);
+  if (first && first >= t0) return first;
+  if (first) {
+    // Step whole months from the first test; a month-end first test (6/30) stays on month
+    // ends (9/30, 12/31), never drifting to the 30th.
+    const f0 = new Date(first + "T12:00:00Z"), day = f0.getUTCDate();
+    const monthEnd = day === new Date(Date.UTC(f0.getUTCFullYear(), f0.getUTCMonth() + 1, 0)).getUTCDate();
+    for (let i = 1; i < 600; i++) {
+      const y = f0.getUTCFullYear(), m = f0.getUTCMonth() + i * step;
+      const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      const c = isoUTC(new Date(Date.UTC(y, m, monthEnd ? last : Math.min(day, last), 12)));
+      if (c >= t0) return c;
+    }
+    return null;
+  }
+  const md = s(x.testMonthDay);
+  if (md && step === 12) { const y = today.getUTCFullYear(); const c = `${y}-${md}`; return c >= t0 ? c : `${y + 1}-${md}`; }
+  // Period ends (3/31, 6/30, 9/30, 12/31) when only the frequency is known.
+  for (let k = 0; k < 24; k++) {
+    const m = today.getUTCMonth() + k, end = new Date(Date.UTC(today.getUTCFullYear(), m + 1, 0));
+    if ((end.getUTCMonth() + 1) % step === 0 && isoUTC(end) >= t0) return isoUTC(end);
+  }
+  return null;
+}
+
+/** Annual debt service, IO-aware: interest only while inside the IO period (or when the loan
+ *  is IO for its term), otherwise the level payment on its amortization. */
+export function annualDebtService(balance: number | null, ratePct: number | null, loan: Record<string, unknown>, today: Date, amortOverride?: number | null): { amount: number | null; basis: string } {
+  if (balance == null || ratePct == null) return { amount: null, basis: "needs a balance and a rate" };
+  const ioUntil = s(loan.ioUntil), amortType = s(loan.amortization), years = amortOverride ?? n(loan.amortYears);
+  const inIO = !amortOverride && ((ioUntil != null && ioUntil > isoUTC(today)) || (amortType === "IO" && !ioUntil));
+  if (inIO || !years) return { amount: Math.round(balance * ratePct / 100), basis: inIO ? `interest only${ioUntil ? ` to ${ioUntil}` : ""}` : "interest only (no amortization on file)" };
+  const r = ratePct / 100 / 12, k = years * 12;
+  const pmt = r === 0 ? balance / k : balance * r / (1 - Math.pow(1 + r, -k));
+  return { amount: Math.round(pmt * 12), basis: `${years}-yr amortization${amortOverride ? " (covenant test basis)" : ""}` };
+}
+
+/** The NOI an owned asset is actually earning, best source first, always labelled. */
+export function actualNoi(deal: Deal, acq: Record<string, unknown> | null): { value: number | null; source: string } {
+  const f = (deal as unknown as { datexLive?: { financials?: Record<string, unknown> } }).datexLive?.financials;
+  if (f && n(f.noiTtmActual) != null) return { value: n(f.noiTtmActual), source: `Datex trailing 12 months to ${s(f.period) ?? "?"}` };
+  if (f && n(f.noiYtdActual) != null && s(f.period)) {
+    const months = Number(String(f.period).slice(4, 6));
+    if (months >= 3) return { value: Math.round(n(f.noiYtdActual)! * 12 / months), source: `Datex YTD to ${f.period}, annualised (${months} months)` };
+  }
+  if (acq && n(acq.budgetNoi) != null) return { value: n(acq.budgetNoi), source: `${n(acq.budgetYear) ?? ""} budget NOI (KPR Corporate Overview)`.trim() };
+  if (n(deal.noi) != null) return { value: n(deal.noi), source: "underwritten NOI (deal record)" };
+  return { value: null, source: "no NOI on file" };
+}
+
+export interface CovenantRow { record: AmRecord; label: string; type: string; threshold: number | null; actual: number | null; actualBasis: string; headroomPct: number | null; noiCushionPct: number | null; status: "ok" | "watch" | "breach" | "info"; nextTest: string | null; loanLabel: string | null; trigger: string | null; triggerDate: string | null; daysToTrigger: number | null }
+export function buildCovenantRows(deal: Deal, records: AmRecord[], debt: DebtRow[], today: Date): CovenantRow[] {
+  const acq = records.find(r => r.kind === "acquisition" && r.dealId === deal.id)?.data ?? null;
+  const noi = actualNoi(deal, acq);
+  const live = debt.filter(r => r.dealId === deal.id && !r.superseded);
+  return records.filter(r => r.kind === "covenant" && r.dealId === deal.id).map(r => {
+    const x = r.data, type = s(x.type) ?? "other", th = n(x.threshold);
+    const loans = s(x.loanId) ? live.filter(l => l.record.id === x.loanId) : live;
+    const bal = loans.reduce((t, l) => t + (l.balance ?? 0), 0) || null;
+    let actual: number | null = null, basis = "";
+    if (type === "DSCR" || ((type === "cash-sweep" || type === "cash-trap") && th != null && th < 5)) {
+      let ds = 0, ok = loans.length > 0;
+      for (const l of loans) {
+        const rate = n(x.testRatePct) ?? l.allInPct;
+        const a = annualDebtService(l.balance, rate, l.record.data, today, n(x.amortYears));
+        if (a.amount == null) { ok = false; break; }
+        ds += a.amount; basis = a.basis;
+      }
+      if (ok && ds > 0 && noi.value != null) { actual = Math.round((noi.value / ds) * 100) / 100; basis = `${noi.source} ÷ $${(ds / 1e6).toFixed(2)}M debt service (${basis})`; }
+      else basis = noi.value == null ? noi.source : "debt service needs the loan's balance and rate";
+    } else if (type === "DY") {
+      if (bal && noi.value != null) { actual = Math.round((noi.value / bal) * 1000) / 10; basis = `${noi.source} ÷ $${(bal / 1e6).toFixed(2)}M balance`; } else basis = "needs NOI and a balance";
+    } else if (type === "LTV") basis = "needs an appraised value — not computed";
+    const higherIsBetter = type !== "LTV";
+    const headroom = actual != null && th != null ? Math.round(((higherIsBetter ? actual / th : th / actual) - 1) * 1000) / 10 : null;
+    const cushion = actual != null && th != null && type !== "LTV" && actual > 0 ? Math.round((1 - th / actual) * 1000) / 10 : null;
+    const status: CovenantRow["status"] = headroom == null ? "info" : headroom < 0 ? "breach" : headroom < 10 ? "watch" : "ok";
+    const trig = s(x.triggerDate);
+    return { record: r, label: covenantLabel(x), type, threshold: th, actual, actualBasis: basis, headroomPct: headroom, noiCushionPct: cushion, status,
+      nextTest: nextCovenantTest(x, today), loanLabel: s(x.loanLabel) ?? (loans.length === 1 ? loans[0].loanLabel : null), trigger: s(x.trigger) ?? s(x.description), triggerDate: trig, daysToTrigger: daysUntil(trig, today) };
+  }).sort((a, b) => ({ breach: 0, watch: 1, ok: 2, info: 3 }[a.status] - { breach: 0, watch: 1, ok: 2, info: 3 }[b.status]));
+}
+
+export interface PlanRow { label: string; plan: number | null; planSource: string; actual: number | null; actualSource: string; unit: "usd" | "pct"; variance: number | null; variancePct: number | null }
+export function planVsActual(deal: Deal, records: AmRecord[]): PlanRow[] {
+  const acq = records.find(r => r.kind === "acquisition" && r.dealId === deal.id)?.data ?? null;
+  const dx = (deal as unknown as { datexLive?: Record<string, unknown> }).datexLive;
+  const f = dx?.financials as Record<string, unknown> | undefined;
+  const lt = liveTenants(deal);
+  const rows: PlanRow[] = [];
+  const add = (label: string, plan: number | null, planSource: string, actual: number | null, actualSource: string, unit: PlanRow["unit"]) => {
+    const v = plan != null && actual != null ? actual - plan : null;
+    rows.push({ label, plan, planSource, actual, actualSource, unit, variance: v != null ? Math.round(v * 10) / 10 : null, variancePct: v != null && plan ? Math.round((v / Math.abs(plan)) * 1000) / 10 : null });
+  };
+  const uwNoi = n(acq?.noiAtPurchase) ?? n(deal.acqNOIAtClose) ?? n(deal.noi);
+  const act = actualNoi(deal, acq);
+  add("NOI — underwritten year 1", uwNoi, n(acq?.noiAtPurchase) != null ? "NOI at purchase (Corporate Overview)" : n(deal.acqNOIAtClose) != null ? "NOI at close (deal record)" : "OM year-1 NOI", act.value, act.source, "usd");
+  if (f && n(f.noiYtdBudget) != null) add(`NOI year to date vs budget (to ${s(f.period)})`, n(f.noiYtdBudget), "Datex budget", n(f.noiYtdActual), "Datex actual", "usd");
+  if (acq && n(acq.budgetNoi) != null && f && n(f.noiTtmActual) != null) add(`${n(acq.budgetYear) ?? ""} budget NOI vs trailing 12`.trim(), n(acq.budgetNoi), "KPR budget", n(f.noiTtmActual), "Datex trailing 12", "usd");
+  add("Occupancy", n(deal.occupancy), deal.tenantsAsOf ? `underwriting roll (${deal.tenantsAsOf})` : "underwriting", n(dx?.occupancyPct), dx ? `Datex (${s(dx.asOf) ?? "?"})` : "no Datex snapshot", "pct");
+  const omRent = (deal.tenants ?? []).filter(t => !t.isNAP).reduce((t, x) => t + (Number(x.annualRent) || 0), 0) || null;
+  const dxRent = lt.source === "Datex" ? lt.tenants.reduce((t, x) => t + (x.annualRent ?? 0), 0) || null : null;
+  add("In-place base rent", omRent, "underwriting roll", dxRent, dxRent != null ? `Datex rent roll (${lt.asOf ?? "?"})` : "no Datex snapshot", "usd");
+  return rows;
+}
+
+export interface TimelineItem { date: string; kind: "close" | "leasing" | "change" | "debt" | "event"; text: string; source: string }
+export function sinceAcquisition(deal: Deal, records: AmRecord[], today: Date): TimelineItem[] {
+  const out: TimelineItem[] = [];
+  const acq = records.find(r => r.kind === "acquisition" && r.dealId === deal.id);
+  const close = s(acq?.data.closeDate) ?? s(deal.txnCloseDate);
+  if (close) out.push({ date: close, kind: "close", text: `KPR closed the acquisition${n(acq?.data.purchasePrice ?? deal.txnPurchasePrice) ? ` for $${(n(acq?.data.purchasePrice ?? deal.txnPurchasePrice)! / 1e6).toFixed(1)}M` : ""}${s(acq?.data.seller ?? deal.txnSeller) ? ` from ${s(acq?.data.seller ?? deal.txnSeller)}` : ""}`, source: acq ? "Acquisition record" : "Deal record" });
+  const dx = (deal as unknown as { datexLive?: Record<string, unknown> }).datexLive;
+  for (const l of (dx?.leasing as Array<Record<string, unknown>> | undefined) ?? []) {
+    const d = s(l.executed) ?? s(l.submitted);
+    if (!d || (close && d < close)) continue;
+    out.push({ date: d, kind: "leasing", text: `${s(l.executed) ? "Lease executed" : "Lease in progress"}: ${s(l.tenant)}${l.gla ? ` · ${Number(l.gla).toLocaleString()} SF` : ""}${l.rentPSF ? ` · $${Number(l.rentPSF).toFixed(2)}/SF` : ""}${s(l.stage) && !s(l.executed) ? ` (${s(l.stage)})` : ""}`, source: "Datex leasing activity" });
+  }
+  for (const h of deal.propertyHistory ?? []) {
+    const d = (h.toAsOf ?? h.recordedAt ?? "").slice(0, 10);
+    if (!d || (close && d < close)) continue;
+    for (const e of h.events) if (e.kind !== "metric") out.push({ date: d, kind: "change", text: e.text, source: "Property history (document compare)" });
+  }
+  for (const r of records.filter(x => x.dealId === deal.id)) {
+    if (r.kind === "loan" && s(r.data.originationDate)) out.push({ date: String(r.data.originationDate), kind: "debt", text: `Loan closed: ${s(r.data.lender) ?? "lender"}${s(r.data.loanLabel) ? ` (${s(r.data.loanLabel)})` : ""}${n(r.data.originalBalance) ? ` · $${(n(r.data.originalBalance)! / 1e6).toFixed(2)}M` : ""}`, source: r.sourceNote ?? "Debt record" });
+    if (r.kind === "swap" && s(r.data.tradeDate ?? r.data.effectiveDate)) out.push({ date: String(r.data.tradeDate ?? r.data.effectiveDate), kind: "debt", text: `Swap: ${n(r.data.notional) ? `$${(n(r.data.notional)! / 1e6).toFixed(2)}M ` : ""}fixed at ${n(r.data.fixedSwapRatePct) ?? "?"}%${s(r.data.counterparty) ? ` with ${s(r.data.counterparty)}` : ""}`, source: r.sourceNote ?? "Swap record" });
+    if (r.kind === "date" && s(r.data.date) && String(r.data.date) <= isoUTC(today) && /other|event/i.test(String(r.data.type ?? ""))) out.push({ date: String(r.data.date), kind: "event", text: s(r.data.description) ?? "Event", source: r.sourceNote ?? "Entered" });
+  }
+  return out.filter(x => x.date <= isoUTC(today)).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** Drive links on a record: drive.google.com/file/d/<id>/view. */
+export function driveLinks(rec: AmRecord): Array<{ url: string; name: string }> {
+  const docs = (rec.data.sourceDocs as Array<{ id: string; name?: string }> | undefined) ?? [];
+  return docs.filter(d => /^[A-Za-z0-9_-]{20,}$/.test(d.id)).map((d, i) => ({ url: `https://drive.google.com/file/d/${d.id}/view`, name: d.name ?? (docs.length > 1 ? `Source doc ${i + 1}` : "Source doc") }));
 }
 
 // ── Credit watch ─────────────────────────────────────────────────────────────
@@ -316,6 +479,10 @@ export function omVsToday(deal: Deal): CompareRow[] {
     { label: "Occupancy", om: n(deal.occupancy), today: n(dx.occupancyPct), unit: "pct", todaySource: `Datex Occupancy ${s(dx.period) ?? ""}`.trim() },
     { label: "GLA", om: n(deal.totalSF), today: n(dx.totalGLA), unit: "sf", todaySource: "Datex Occupancy.TotalGLA" },
     { label: "In-place base rent", om: omBase || null, today: baseToday, unit: "usd", todaySource: "Datex TenantsMetrics (annual rent)" },
-    { label: "NOI", om: n(deal.noi), today: n(fin?.noiTtmActual), unit: "usd", todaySource: fin ? `Datex FinancialGroups, trailing 12 months to ${s(fin.period) ?? "?"}` : "no Datex financials" },
+    (() => {
+      // Trailing 12 when the snapshot carries it, else the YTD annualised — always labelled.
+      const a = actualNoi(deal, null), dx = a.source.startsWith("Datex");
+      return { label: "NOI", om: n(deal.noi), today: dx ? a.value : null, unit: "usd" as const, todaySource: dx ? a.source : "no Datex financials" };
+    })(),
   ];
 }

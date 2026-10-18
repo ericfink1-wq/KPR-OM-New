@@ -584,6 +584,25 @@ home "This week" card (the app has NO email, so the Monday digest lives there).
   can't call Datex, so "daily cache" = a Claude-generated snapshot import (docs/datex-refresh.md v2).
 - No pending-sale info anywhere in these records.
 
+## OWNED DEAL PAGE (10/18/26)
+Owned deals open on an **Asset** tab (`OwnedAsset.tsx`): KPI band, covenant monitor, plan vs actual,
+`OwnedDealPanel` (Datex today), since-acquisition timeline, quarterly comment (POST
+`/am/quarterly-comment`, ONE Sonnet call on click — facts computed client-side, nothing stored).
+Financing (owned) = `OwnedFinancing` from am_records (manual form folded away); Transaction (owned) =
+`AcquisitionCard` (kind `acquisition`, one per deal). New am_records kinds: `covenant`, `acquisition`,
+`optstatus` (no new tables). `lib/covenants.ts` (api) = `COVENANT_SEED` (Eric's brief, by dealId) +
+`parseCovenantText`; `POST /am/covenants/detect` dry-runs. Client math in `lib/assetMgmt.ts`:
+`annualDebtService` (IO until `ioUntil`, then amortizing; a covenant's own test amort overrides),
+`actualNoi` (Datex TTM → YTD annualised → budget → deal NOI, always labelled), `buildCovenantRows`,
+`planVsActual`, `sinceAcquisition`, `nextCovenantTest`. Covenant triggers/tests are on the Dates calendar.
+Importer now KEEPS unknown columns (`withExtras`) and reads Drive ids (`extractDocs` → `sourceDocs`).
+Roster: `isNonGLA` (ATM/utility/license/sub-150 SF vacant sliver — rent counts, SF never GLA/vacancy),
+`isHoldover`, `passedOptionNotices`, `reimbursementChips` + side drawer. Owned deals are SKIPPED by
+the background re-analysis batch (asset brief regenerates on demand only). Admin docs:
+`GET /api/admin/docs/:name` (whitelist; build.mjs copies the md into dist/docs).
+Fixed on the way: "amortizat-io-n" no longer reads as interest-only; m/d/yyyy dates in covenant text
+no longer parse "2027" as "20".
+
 ## Who I'm working with
 - Eric Fink, acquisitions at **KPR Centers** (commercial real estate — almost always **retail shopping centers**; not residential, not raw land).
 - **Beginner coder.** Take initiative. Do NOT ask him to edit files by hand, run shell commands, or do anything technical. Make the changes, verify them, and commit. Explain in plain English what changed and why.

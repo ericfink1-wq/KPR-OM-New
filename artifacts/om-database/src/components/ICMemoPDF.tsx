@@ -96,7 +96,7 @@ const thesisOf = (t: string | null | undefined, maxChars = 340, maxSent = 3): st
 };
 // A bullet: its first sentence, or a clean word-boundary truncation — one scannable line.
 const tighten = (t: string, max = 135): string => {
-  const clean = (t || "").replace(/\s+/g, " ").trim();
+  const clean = (t || "").replace(/\*\*/g, "").replace(/\s+/g, " ").trim();   // the PDF has no bold run here — drop the markdown
   const first = sentencesOf(clean)[0] || clean;
   let out = first.length >= 30 ? first : clean;
   if (out.length > max) {

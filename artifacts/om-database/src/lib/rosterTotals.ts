@@ -3,6 +3,7 @@
 // Computed over the rows currently SHOWN (so filtering to "Anchors" totals just the
 // anchors). Conventions, matching how the rest of the site reads a rent roll:
 //  - NAP parcels are excluded entirely (not part of the owned GLA).
+//  - Non-GLA rows (ATMs, utility closets, antennas, licenses) count for rent, not SF/vacancy.
 //  - Vacant suites count toward total SF but not occupied SF, rent or averages.
 //  - Rent is BASE rent only (annualRent never includes recoveries).
 //  - Weighted rent/SF = Σ base rent ÷ Σ SF over tenants that have BOTH a rent and an
@@ -11,7 +12,7 @@
 //  - WALT and sales/SF are weighted by SF; sales only over tenants that reported.
 
 import type { Tenant } from "./idb";
-import { isNAPTenant, isVacant } from "./utils";
+import { isNAPTenant, isVacant, isNonGLA } from "./utils";
 
 export interface RosterTotals {
   tenantCount: number;
@@ -45,9 +46,11 @@ export function rosterTotals(
   salesPSFOf: (t: Tenant) => number | null = t => num(t.salesPSF),
   now: number = Date.now(),
 ): RosterTotals {
-  const leasable = rows.filter(t => !isNAPTenant(t));
+  // Non-GLA rows (ATM, utility closet, antenna, license) keep their RENT but never count as
+  // GLA or vacancy; an empty non-GLA sliver (a "vacant" 90 SF closet) drops out entirely.
+  const leasable = rows.filter(t => !isNAPTenant(t) && !(isNonGLA(t) && isVacant(t.name)));
   const occupied = leasable.filter(t => !isVacant(t.name));
-  const sf = (t: Tenant) => { const v = num(t.sf); return v != null && v > 0 ? v : 0; };
+  const sf = (t: Tenant) => { if (isNonGLA(t)) return 0; const v = num(t.sf); return v != null && v > 0 ? v : 0; };
 
   const totalSF = leasable.reduce((s, t) => s + sf(t), 0);
   const occupiedSF = occupied.reduce((s, t) => s + sf(t), 0);

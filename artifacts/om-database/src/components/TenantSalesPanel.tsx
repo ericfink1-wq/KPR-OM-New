@@ -17,6 +17,22 @@ interface Props {
   onChangeSalesHistory?: (next: TenantSalesYear[]) => void; // persist link/remove edits
   onLinkRoster?: (rosterName: string, salesPSF: number | null, salesYear: number | null) => void; // relay a link to the roster above
   onEraseAllSales?: () => void; // wipe ALL sales — uploaded snapshots AND OM-derived roster figures
+  /** tenantKeys on the CURRENT roll beyond the OM roster (Datex, for owned deals). */
+  currentKeys?: Set<string>;
+}
+
+/** Two consecutive years reporting EXACTLY the same sales (Schnucks 2024 = 2025 = $23.4M) are
+ *  almost always a figure carried forward, not a fresh report. Returns [newer, older] years. */
+export function identicalSalesYears(byYear: Record<number, { annualSales?: number | null; salesPSF?: number | null }>): [number, number] | null {
+  const ys = Object.keys(byYear).map(Number).filter(y => y > 0).sort((a, b) => b - a);
+  for (let i = 0; i + 1 < ys.length; i++) {
+    const a = byYear[ys[i]], b = byYear[ys[i + 1]];
+    const sa = Number(a?.annualSales), sb = Number(b?.annualSales);
+    if (sa > 0 && sa === sb) return [ys[i], ys[i + 1]];
+    const pa = Number(a?.salesPSF), pb = Number(b?.salesPSF);
+    if (!(sa > 0 && sb > 0) && pa > 0 && pa === pb) return [ys[i], ys[i + 1]];
+  }
+  return null;
 }
 
 type SortKey = "name" | "salesPSF" | "annualSales" | "sf" | "occupancyCost";
@@ -286,7 +302,7 @@ function yearLabel(year: number, source: TenantSalesYear["source"]): string {
   return String(year);
 }
 
-export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError, onChangeSalesHistory, onLinkRoster, onEraseAllSales }: Props) {
+export default function TenantSalesPanel({ salesHistory, omTenants, omDate, recoveries, onUpload, uploadBusy, uploadError, onChangeSalesHistory, onLinkRoster, onEraseAllSales, currentKeys }: Props) {
   // Key the roster the SAME way deriveSalesRecord/mergeRows look it up (suite-stripped)
   // so a freshly-linked sales row actually registers as linked.
   const rosterByKey = useMemo(() => new Map((omTenants || []).map(t => [tenantKey(stripSuiteCode(t.canonicalName || t.name)), t])), [omTenants]);
@@ -298,6 +314,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [collapsed, setCollapsed] = useState(false);
   const [linkEditKey, setLinkEditKey] = useState<string | null>(null);
+  const [showFormer, setShowFormer] = useState(false);
 
   // Roster tenants a sales row can be linked to (the rent roll), alphabetized.
   const rosterOptions = useMemo(() =>
@@ -421,6 +438,11 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
     // Removed (soft-deleted) tenants always sink to the bottom.
     return [...r.filter(x => !x.removed), ...r.filter(x => x.removed)];
   }, [allRows, filter, sortKey, sortDir, displayYears]);
+  // FORMER tenants — not linked to the current roll and not on it (Bar Louie, Sally Beauty…) —
+  // sit behind a toggle so the table reads as the center today. Only with a roster to compare.
+  const isFormer = (row: MergedRow) => (omTenants?.length ?? 0) > 0 && (!!row.removed || (!rosterByKey.has(row.key) && !currentKeys?.has(row.key)));
+  const formerCount = rows.filter(isFormer).length;
+  const shownRows = showFormer ? rows : rows.filter(r => !isFormer(r));
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -642,11 +664,17 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                   )}
                 </thead>
                 <tbody>
-                  {rows.map((row, i) => (
+                  {shownRows.map((row, i) => (
                     <tr key={row.name} style={{ background: row.removed ? "#f6f4ef" : (i % 2 === 0 ? "#fff" : "#f8fbf5"), borderBottom: "1px solid #eef0eb", opacity: row.removed ? 0.65 : 1 }}>
                       <td style={{ padding: "7px 10px", fontWeight: 600, color: "#262724", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                           <span style={row.removed ? { textDecoration: "line-through", color: "#a89f8f", fontWeight: 500 } : undefined}>{row.name}</span>
+                          {(() => {
+                            const same = identicalSalesYears(row.byYear);
+                            if (!same) return null;
+                            return <span title={`${same[0]} and ${same[1]} report exactly the same sales — usually a figure carried forward rather than a real report. Verify with the tenant's statement.`} style={{ fontSize: 8.5, fontWeight: 700, color: "#9a6a12", background: "#fff3df", border: "1px solid #f2d4a0", borderRadius: 3, padding: "1px 6px", cursor: "help", whiteSpace: "nowrap" }}>⚠ {same[0]} = {same[1]}</span>;
+                          })()}
+                          {isFormer(row) && !row.removed && <span title="Not on the current rent roll — a former tenant" style={{ fontSize: 8, fontWeight: 700, color: "#6f6a5f", background: "#f1f0ec", borderRadius: 3, padding: "0 5px" }}>FORMER</span>}
                           {!row.removed && (() => {
                             const r = riskFor(row);
                             if (!r) return null;
@@ -739,6 +767,11 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                 </tbody>
               </table>
             </div>
+          )}
+          {formerCount > 0 && (
+            <button onClick={() => setShowFormer(v => !v)} style={{ marginTop: 8, background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>
+              {showFormer ? "Hide" : "Show"} former tenants ({formerCount})
+            </button>
           )}
 
           <div style={{ marginTop: 8, fontSize: 10, color: "#8a9a7a", lineHeight: 1.5 }}>

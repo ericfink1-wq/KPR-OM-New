@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, mkdir, copyFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
 
 // Build stamp (short git SHA) so GET /api/version says exactly which commit is live —
@@ -132,7 +132,19 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 }
 
-buildAll().catch((err) => {
+// Read-only docs served to admins (GET /api/admin/docs/:name) travel with the bundle so the
+// route never depends on where the deploy's working directory is.
+const SERVED_DOCS = ["datex-refresh.md"];
+async function copyDocs() {
+  const out = path.resolve(artifactDir, "dist/docs");
+  await mkdir(out, { recursive: true });
+  for (const f of SERVED_DOCS) {
+    try { await copyFile(path.resolve(artifactDir, "../../docs", f), path.join(out, f)); }
+    catch (err) { console.warn(`docs: couldn't copy ${f}: ${err.message}`); }
+  }
+}
+
+buildAll().then(copyDocs).catch((err) => {
   console.error(err);
   process.exit(1);
 });

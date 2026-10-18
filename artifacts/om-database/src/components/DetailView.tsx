@@ -50,7 +50,8 @@ import { computeWatchlistImpact } from "../lib/watchlistImpact";
 import { runWithProgress, startAiTask, finishAiTask } from "../lib/aiProgress";
 import ClosingCostsCard from "./ClosingCostsCard";
 import DatexLiveCard from "./DatexLiveCard";
-import { OwnedDealPanel } from "./AssetMgmt";
+import { OwnedAssetTab, OwnedFinancing, AcquisitionCard, useOwnedPricing, useOptionStatus } from "./OwnedAsset";
+import { DatexSalesCard } from "./AssetMgmt";
 import TaxReassessmentCard from "./TaxReassessmentCard";
 import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
@@ -95,13 +96,13 @@ import { useIsMobile } from "../hooks/use-mobile";
 // (transaction/financing/underwriting) last. Keys are unchanged so all the section
 // logic keeps working; only the label ("Overview"→"Summary") and order changed.
 const PAGE_TABS = [
-  ["overview","Summary"],["tenants","Tenants & Sales"],["ai","AI Analysis"],
+  ["asset","Asset"],["overview","Summary"],["tenants","Tenants & Sales"],["ai","AI Analysis"],
   ["market","Market & Comps"],
   ["transaction","Transaction Details"],["financing","Financing"],["underwriting","Underwriting"],
 ] as const;
 const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map(([k,l]) => [k,l]));
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
-  overview: [{label:"Cover photo",id:"section-cover"},{label:"Site plan",id:"section-site"},{label:"Risks & upside",id:"section-signals"},{label:"Anchor comparison",id:"section-anchors"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
+  overview: [{label:"Cover photo",id:"section-cover"},{label:"Risks & upside",id:"section-signals"},{label:"Anchor comparison",id:"section-anchors"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
   ai: [{label:"Highlights",id:"section-highlights"},{label:"Our take",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
   tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Site agreements / REAs",id:"section-site-agreements"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Tax reassessment",id:"section-tax-reassessment"},{label:"Ownership structure",id:"section-ownership"}],
@@ -114,6 +115,10 @@ const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
 // figures/terms stand out. Plain text otherwise.
 function BoldText({ text }: { text: string }) {
   if (!text) return null;
+  // A clipped preview can cut a **bold** pair in half — drop the orphaned marker rather
+  // than show raw asterisks (Eric, 10/18/26: "markdown ** leaks into the bullets").
+  const pairs = (text.match(/\*\*/g) || []).length;
+  if (pairs % 2) { const i = text.lastIndexOf("**"); text = text.slice(0, i) + text.slice(i + 2); }
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return <>{parts.map((p, i) =>
     p.startsWith("**") && p.endsWith("**")
@@ -473,7 +478,7 @@ function SignalList({ items, dot }: { items: string[]; dot: string }) {
         <div key={i} style={{ display: "flex", gap: 7, marginBottom: 6 }}>
           <span style={{ color: dot, fontWeight: 700, fontSize: 12 }}>•</span>
           <span style={{ flex: 1, fontSize: 12, lineHeight: 1.4, color: "#3f3d37", fontFamily: "'Inter',sans-serif" }}>
-            {expanded ? (t || "").replace(/\s+/g, " ").trim() : signalFirstLine(t)}
+            <BoldText text={expanded ? (t || "").replace(/\s+/g, " ").trim() : signalFirstLine(t)} />
           </span>
         </div>
       ))}
@@ -1651,7 +1656,19 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const [marketBusy, setMarketBusy] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [tab, setTab] = useState<"overview" | "ai" | "tenants" | "transaction" | "financing" | "market" | "underwriting">("overview");
+  // OWNED deals open on the Asset tab (Eric, 10/18/26); prospects keep Summary first.
+  const isOwnedDeal = d.status === "Owned";
+  const [tab, setTab] = useState<"asset" | "overview" | "ai" | "tenants" | "transaction" | "financing" | "market" | "underwriting">(() => d.status === "Owned" ? "asset" : "overview");
+  useEffect(() => { if (tab === "asset" && !isOwnedDeal) setTab("overview"); }, [tab, isOwnedDeal]);
+  const ownedPx = useOwnedPricing(d);
+  const optStatus = useOptionStatus(d, !!isAdmin);
+  // Tenants on the CURRENT roll per Datex (owned) — so a sales row for a tenant Datex still
+  // shows is never filed under "former".
+  const datexCurrentKeys = useMemo(() => {
+    const ts = (d.datexLive as { tenants?: Array<{ name?: string; nationalTenant?: string }> } | null | undefined)?.tenants ?? [];
+    return new Set(ts.flatMap(t => [t.name, t.nationalTenant].filter(Boolean).map(x => tenantKey(String(x).replace(/\s*#\s*\d+\s*$/, "")))));
+  }, [d.datexLive]);
+  const [showManualLoan, setShowManualLoan] = useState(false);
   // If the underwriting tabs are hidden while one of them is open, fall back to Summary.
   useEffect(() => { if (!showUnderwriting && UW_TABS.has(tab)) setTab("overview"); }, [showUnderwriting, tab]);
   const [navMenu, setNavMenu] = useState<string | null>(null);  // open jump-dropdown (a tab key, or "toc" on mobile)
@@ -2423,16 +2440,17 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // Both copies share one `navMenu` state, so gate each so only the currently
   // visible nav renders the open dropdown — otherwise the floating header and the
   // in-flow bar both show the same menu, stacked on top of each other.
-  const renderSubNav = (floating: boolean) => {
-   const showMenu = floating ? titleScrolled : !titleScrolled;
-   const tabs = PAGE_TABS.filter(([k]) => showUnderwriting || !UW_TABS.has(k));
+  const renderSubNav = () => {
+   const showMenu = true;
+   const tabs = PAGE_TABS.filter(([k]) => (showUnderwriting || !UW_TABS.has(k)) && (k !== "asset" || isOwnedDeal));
    return (
     isMobileNav ? (
-      <div style={{ position:"relative" }}>
+      <div style={{ position:"relative", display:"flex", gap:8, alignItems:"stretch" }}>
         <button onClick={() => setNavMenu(m => m ? null : "toc")}
-          style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", border:"1px solid #e3dccd", borderRadius:8, padding:"9px 13px", fontSize:13, fontWeight:700, color:"#26281f", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
+          style={{ flex:1, minWidth:0, width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", border:"1px solid #e3dccd", borderRadius:8, padding:"9px 13px", fontSize:13, fontWeight:700, color:"#26281f", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
           <span>{PAGE_TAB_LABEL[tab]}</span><span style={{ fontSize:11, color:"#a69e91", fontWeight:600 }}>☰ sections ▾</span>
         </button>
+        <AddIntelButton onClick={() => setIntelOpen(true)} style={{ padding: "5px 10px", fontSize: 11.5, flexShrink: 0 }} />
         {navMenu && showMenu && (
           <div style={{ position:"absolute", left:0, right:0, top:"calc(100% + 4px)", background:"#fff", border:"1px solid #e3dccd", borderRadius:10, boxShadow:"0 14px 34px rgba(0,0,0,0.2)", zIndex:70, maxHeight:"68vh", overflowY:"auto", padding:6 }}>
             {tabs.map(([k,label]) => (
@@ -2480,66 +2498,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
   return (
     <div ref={scrollContainerRef} style={{ flex:1, minHeight:0, overflowY:"auto", padding:"20px 24px 96px 24px" }}>
-      <div style={{
-        position: "fixed",
-        top: 88,
-        // Centered to the same max width as the body so the floating title bar
-        // lines up with the content on a wide monitor instead of spanning the
-        // whole screen.
-        left: "50%",
-        right: "auto",
-        width: "100%",
-        maxWidth: DETAIL_MAX_WIDTH,
-        zIndex: 90,
-        background: "rgba(252,250,245,0.94)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid #e7e0d2",
-        padding: "12px 16px",
-        boxShadow: titleScrolled ? "0 6px 18px -10px rgba(56,58,55,0.25)" : "none",
-        // Hidden state must clear the top:88 offset too — translateY(-110%) only moved
-        // it up by its own height, leaving its bottom edge stuck visible at the top
-        // before any scroll. Move up its full height PLUS the offset so it's fully gone.
-        transform: titleScrolled ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(calc(-100% - 96px))",
-        transition: "transform 220ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 220ms ease",
-        pointerEvents: titleScrolled ? "auto" : "none",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <button onClick={onBack} title="Back" aria-label="Back" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "#fff", border: "1px solid #e0d8c8", color: "#5c5047", fontSize: 15, cursor: "pointer", lineHeight: 1, boxShadow: "0 1px 3px rgba(56,58,55,0.1)" }}>←</button>
-          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-            <div style={{
-              fontFamily: "'Fraunces',serif",
-              fontSize: 16,
-              fontWeight: 600,
-              color: "#26281f",
-              letterSpacing: "-0.01em",
-              lineHeight: 1.3,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}>
-              {d.propertyName || d.fileName}
-            </div>
-            {fullAddress && (
-              <div style={{
-                fontSize: 11,
-                color: "#6f6a5f",
-                marginTop: 1,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}>
-                {fullAddress}
-              </div>
-            )}
-          </div>
-        </div>
-        {/* Tabs live inside the floating header so they stay pinned all the way down */}
-        <div onClick={e => e.stopPropagation()} style={{ marginTop:8 }}>
-          {renderSubNav(true)}
-        </div>
-      </div>
-
       {/* Width-constrained body — like the Comps page, the deal page and all its
           sub-tabs sit in a centered max-width column so they stay readable on a big
           monitor. The scroll stays on the full-width container above; only the
@@ -2711,7 +2669,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             </button>
           )}
         />
-        <AddIntelButton onClick={() => setIntelOpen(true)} />
       </div>
       {markSoldOpen && (
         <MarkSoldDialog deal={d}
@@ -2884,8 +2841,19 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       {/* ── Sub-page nav — sticky under the property name. Desktop: a row of tabs,
           each opening a jump-menu of its sections. Mobile: one compact dropdown. ── */}
-      <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top:0, zIndex:55, background:"#f6f2ea", margin:"0 -24px 14px", padding:"6px 24px 0" }}>
-        {renderSubNav(false)}
+      {/* ONE sticky bar (Eric, 10/18/26): the deal header and tab bar used to render twice —
+          a floating copy plus this one — so the title, tabs and Add intel were all
+          duplicated. Once the title scrolls away this bar picks up a compact title line. */}
+      <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top:-20, zIndex:55, background:"#f6f2ea", margin:"-20px -24px 14px", padding:"26px 24px 0", boxShadow: titleScrolled ? "0 6px 18px -12px rgba(56,58,55,0.35)" : "none" }}>
+        {titleScrolled && (
+          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"2px 0 6px" }}>
+            <button onClick={onBack} title="Back" aria-label="Back" style={{ flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28, borderRadius:"50%", background:"#fff", border:"1px solid #e0d8c8", color:"#5c5047", fontSize:14, cursor:"pointer", lineHeight:1 }}>←</button>
+            <div style={{ minWidth:0, fontFamily:"'Fraunces',serif", fontSize:15.5, fontWeight:600, color:"#26281f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} aria-hidden="true">
+              {d.propertyName || d.fileName}{fullAddress && <span style={{ fontFamily:"'Inter',sans-serif", fontSize:11, fontWeight:400, color:"#6f6a5f", marginLeft:8 }}>{fullAddress}</span>}
+            </div>
+          </div>
+        )}
+        {renderSubNav()}
       </div>
 
       {tab === "overview" && (<>
@@ -3008,8 +2976,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {(d.notes || d.analysisStale) && (
         <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
-            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
+            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>{isOwnedDeal ? "Asset brief" : "AI Investment Highlights"}</div>
             {d.analysisStale && <StaleBadge />}
+            {isOwnedDeal && <span style={{ fontSize:10.5, color:"#958d80" }}>regenerates only when you ask — Actions → ✨ Refresh Analysis</span>}
           </div>
           {d.notes && <ExpandableNarrative text={d.notes} />}
         </div>
@@ -3054,7 +3023,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       )}
 
       </>)}
-      {(tab === "overview" || tab === "tenants") && (<>
+      {/* Owned: the Asset tab — KPIs, covenants, plan vs actual, Datex today, timeline. */}
+      {tab === "asset" && isOwnedDeal && <div id="section-asset-mgmt"><OwnedAssetTab deal={d} isAdmin={!!isAdmin} /></div>}
+
+      {/* Site plan lives on Tenants & Sales only (it used to render on Summary too). */}
+      {tab === "tenants" && (<>
       {/* Site plan (all states wrapped in one jump anchor; rendered only when the
           image bundle has loaded so the menu entry tracks the visible section) */}
       {imgs != null && (
@@ -3276,6 +3249,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           abstractsByTenant={abstractsByTenant}
           abstractDiscrepancies={abstractDiscrepancies}
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
+          optionStatus={optStatus.map}
+          onSetOptionStatus={optStatus.set}
         /></div>
       )}
 
@@ -3315,7 +3290,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* Tenant Sales Panel */}
       {(d.tenants||[]).length > 0 && (
         <div id="section-tenant-sales">
+          {/* Owned + Datex v2 snapshot: Datex SalesHistory leads; the uploads/OM years are history. */}
+          {isOwnedDeal && !!d.datexLive && Array.isArray((d.datexLive as { tenants?: unknown[] }).tenants) && (d.datexLive as { salesHistoryCovered?: boolean }).salesHistoryCovered && (
+            <div style={{ marginBottom: 12 }}><DatexSalesCard deal={d} note="Live from Datex — the 12 most recent months each tenant actually reported. The uploaded and OM years below are the history." /></div>
+          )}
           <TenantSalesPanel
+            currentKeys={datexCurrentKeys}
             salesHistory={d.tenantSalesHistory || []}
             omTenants={d.tenants}
             omDate={d.omDate}
@@ -3384,11 +3364,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <div>
                   <div style={{ fontSize:8*fs, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
-                  {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› {s}</div>)}
+                  {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› <BoldText text={s} /></div>)}
                 </div>
                 <div>
                   <div style={{ fontSize:8*fs, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
-                  {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› {r}</div>)}
+                  {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› <BoldText text={r} /></div>)}
                 </div>
               </div>
             </>}
@@ -3471,7 +3451,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               {allRedFlags.map((f,i) => (
                 <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<allRedFlags.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
                   <span style={{ fontSize:9*fs, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262615":f.severity==="medium"?"#f9731615":"#eab30815", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#ea6000":"#b08000", fontWeight:600, flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
-                  <span style={{ fontSize:11*fs, color:"#5c5f57" }}>{f.description}</span>
+                  <span style={{ fontSize:11*fs, color:"#5c5f57" }}><BoldText text={f.description} /></span>
                 </div>
               ))}
             </div>
@@ -3501,8 +3481,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       </>)}
       {tab === "overview" && (<>
-      {/* Asset management for an owned property — live Datex vs the OM, debt, next dates. */}
-      {d.status === "Owned" && <div id="section-asset-mgmt" style={{ marginBottom: 14 }}><OwnedDealPanel deal={d} onOpenDeal={() => {}} /></div>}
       {/* Edit metrics — below red flags */}
       <div id="section-aliases"><AkaEditor deal={d} onUpdate={onUpdate}/></div>
 
@@ -3511,7 +3489,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {d.notes && (
         <div style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
-            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>AI Investment Highlights</div>
+            <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>{isOwnedDeal ? "Asset brief" : "AI Investment Highlights"}</div>
             {d.analysisStale && <StaleBadge />}
           </div>
           {d.notes && <ExpandableNarrative text={d.notes} />}
@@ -3533,13 +3511,24 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* Financial grid */}
       <div id="section-financials" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:12, marginBottom:12 }}>
         <Card title="KEY FINANCIALS">
+          {isOwnedDeal ? (<>
+            {/* Owned: the price is what KPR PAID, and cap / price-per-SF follow from it rather
+                than reading "—" when only the OM's (unpriced) fields are blank. */}
+            <Row l="ACQUISITION PRICE" v={ownedPx.price?fmtUSD(ownedPx.price):null} c="#6dba43"/>
+            <Row l="CAP RATE" v={ownedPx.cap!=null?`${ownedPx.cap.toFixed(2)}%`:null} c="#0f9d63"/>
+            {ownedPx.capSource && <div style={{ fontSize:9.5, color:"#a69e91", textAlign:"right", marginTop:-4, marginBottom:2 }}>{ownedPx.capSource}{ownedPx.priceSource && ownedPx.priceSource !== "acquisition price" ? ` · price from ${ownedPx.priceSource}` : ""}</div>}
+            <Row l="NOI" v={d.noi?fmtUSD(d.noi):null} c="#0f9d63" field="noi"/>
+            <Row l="PRICE / SF" v={ownedPx.psf?`$${ownedPx.psf}`:null}/>
+          </>) : (<>
           <Row l="ASKING PRICE" v={d.askingPrice?fmtUSD(d.askingPrice):null} c="#6dba43" field="askingPrice"/>
           <Row l="CAP RATE" v={d.capRate?`${d.capRate}%`:null} c="#0f9d63" field="capRate"/>
           <Row l="NOI" v={d.noi?fmtUSD(d.noi):null} c="#0f9d63" field="noi"/>
           <Row l="PRICE / SF" v={d.pricePerSF?`$${d.pricePerSF}`:null} field="pricePerSF"/>
+          </>)}
           <Row l="TOTAL SF" v={d.totalSF?`${Number(d.totalSF).toLocaleString()} SF`:null} field="totalSF"/>
           <Row l="OCCUPANCY" v={liveOccupancy?`${liveOccupancy}%`:null} c="#383a37" field="occupancy" warn={reconWarns.occupancy}/>
-          <PriceCapEditor deal={d} onUpdate={onUpdate}/>
+          {/* Owned deals edit price/cap in "Edit metrics" — the manual price/cap box is for prospects. */}
+          {!isOwnedDeal && <PriceCapEditor deal={d} onUpdate={onUpdate}/>}
         </Card>
         <Card title="INCOME & EXPENSES">
           <Row l="GROSS POTENTIAL RENT" v={d.grossPotentialRent?fmtUSD(d.grossPotentialRent):null} field="grossPotentialRent" warn={reconWarns.grossPotentialRent}/>
@@ -3673,6 +3662,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       </>)}
       {tab === "transaction" && (<>
+      {isOwnedDeal && <AcquisitionCard deal={d} isAdmin={!!isAdmin} onUpdate={onUpdate} />}
       {/* TRANSACTION DETAILS — acquisition record (LOI → close) and disposition */}
       {(() => {
         const owned = d.status === "Owned" || d.status === "Sold";
@@ -3829,6 +3819,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       )}
       </>)}
       {tab === "financing" && (<>
+      {/* OWNED: the loan, swap and covenants come from Asset Mgmt's records (one source of
+          truth); the older manual loan form stays reachable but folded away. */}
+      {isOwnedDeal && <OwnedFinancing deal={d} />}
+      {isOwnedDeal && (
+        <button onClick={() => setShowManualLoan(v => !v)} style={{ background:"transparent", border:"1px solid #e3dccd", color:"#7d766a", borderRadius:8, padding:"6px 12px", fontSize:11.5, cursor:"pointer", marginBottom:12 }}>
+          {showManualLoan ? "Hide" : "Show"} the older manual loan form
+        </button>
+      )}
       {/* FINANCING & DEBT — loan record / term sheet for deals Under Contract, Owned, or Sold */}
       {(() => {
         const owned = d.status === "Owned" || d.status === "Sold" || d.status === "Under Contract";
@@ -3867,8 +3865,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         );
 
         return (
-          <div id="section-financing">
-            <div id="section-senior-loan" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div id="section-financing" style={isOwnedDeal && !showManualLoan ? { display:"none" } : undefined}>
+            <div id={isOwnedDeal ? "section-manual-loan" : "section-senior-loan"} style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Senior Loan</div>
             <TermSheetImport deal={d} onUpdate={onUpdate}/>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
@@ -4330,6 +4328,8 @@ function AkaEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patc
 function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
   const [open, setOpen] = useState(false);
   const fields: Array<{ field: keyof Deal; label: string; prefix?: string; suffix?: string; numeric?: boolean }> = [
+    // Owned: price/cap live here (the Key Financials manual box is hidden for owned deals).
+    ...(deal.status === "Owned" ? [{ field:"txnPurchasePrice" as keyof Deal, label:"Acquisition Price", prefix:"$" }] : []),
     { field:"noi", label:"NOI", prefix:"$" },
     { field:"capRate", label:"Cap Rate", suffix:"%" },
     { field:"askingPrice", label:"Asking Price", prefix:"$" },

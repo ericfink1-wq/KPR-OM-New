@@ -17,24 +17,24 @@ import { useIsMobile } from "../hooks/use-mobile";
 
 export type AmTab = "debt" | "dates" | "properties" | "credit";
 const TABS: Array<[AmTab, string]> = [["debt", "Debt"], ["dates", "Dates"], ["properties", "Properties"], ["credit", "Credit Watch"]];
-const K = { green: "#5BBA47", charcoal: "#383A37", ink: "#232422", gray: "#676767", page: "#FAF9F5", line: "#ecebe6", red: "#b3403f", amber: "#b3711a" };
+export const K = { green: "#5BBA47", charcoal: "#383A37", ink: "#232422", gray: "#676767", page: "#FAF9F5", line: "#ecebe6", red: "#b3403f", amber: "#b3711a" };
 
 export const fmtM = (v: number | null | undefined) => v == null ? "—" : Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : Math.abs(v) >= 1e3 ? `$${Math.round(v / 1e3).toLocaleString()}K` : `$${Math.round(v).toLocaleString()}`;
-const fmtPct = (v: number | null | undefined, d = 2) => v == null ? "—" : `${v.toFixed(d)}%`;
-const fmtDate = (iso: string | null | undefined) => iso ? new Date(iso.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-const card: React.CSSProperties = { background: "#fff", border: `1px solid ${K.line}`, borderRadius: 12, boxShadow: "0 1px 2px rgba(35,36,34,.04)" };
-const th: React.CSSProperties = { textAlign: "left", padding: "8px 10px", fontFamily: "'Montserrat',sans-serif", fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.gray, borderBottom: `1px solid ${K.line}`, whiteSpace: "nowrap", position: "sticky", top: 0, background: "#fff" };
-const td: React.CSSProperties = { padding: "8px 10px", borderBottom: `1px solid #f3f2ee`, fontSize: 13, color: K.ink, verticalAlign: "top" };
-const num: React.CSSProperties = { ...td, textAlign: "right", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" };
-const btn = (primary = false): React.CSSProperties => ({ background: primary ? K.charcoal : "#fff", color: primary ? "#fff" : K.charcoal, border: `1px solid ${primary ? K.charcoal : "#d9d8d2"}`, borderRadius: 8, padding: "7px 12px", minHeight: 34, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Montserrat',sans-serif" });
+export const fmtPct = (v: number | null | undefined, d = 2) => v == null ? "—" : `${v.toFixed(d)}%`;
+export const fmtDate = (iso: string | null | undefined) => iso ? new Date(iso.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+export const card: React.CSSProperties = { background: "#fff", border: `1px solid ${K.line}`, borderRadius: 12, boxShadow: "0 1px 2px rgba(35,36,34,.04)" };
+export const th: React.CSSProperties = { textAlign: "left", padding: "8px 10px", fontFamily: "'Montserrat',sans-serif", fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.gray, borderBottom: `1px solid ${K.line}`, whiteSpace: "nowrap", position: "sticky", top: 0, background: "#fff" };
+export const td: React.CSSProperties = { padding: "8px 10px", borderBottom: `1px solid #f3f2ee`, fontSize: 13, color: K.ink, verticalAlign: "top" };
+export const num: React.CSSProperties = { ...td, textAlign: "right", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" };
+export const btn = (primary = false): React.CSSProperties => ({ background: primary ? K.charcoal : "#fff", color: primary ? "#fff" : K.charcoal, border: `1px solid ${primary ? K.charcoal : "#d9d8d2"}`, borderRadius: 8, padding: "7px 12px", minHeight: 34, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Montserrat',sans-serif" });
 
-function Pill({ flag, children }: { flag: "red" | "amber" | "green" | "gray"; children: ReactNode }) {
+export function Pill({ flag, children }: { flag: "red" | "amber" | "green" | "gray"; children: ReactNode }) {
   const c = { red: ["#fdecec", K.red], amber: ["#fff2e0", K.amber], green: ["#eef7eb", "#3e8a2f"], gray: ["#f1f0ec", K.gray] }[flag];
   return <span style={{ display: "inline-block", background: c[0], color: c[1], borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{children}</span>;
 }
-const daysPill = (days: number | null, flag?: "red" | "amber" | null) => days == null ? null : <Pill flag={flag ?? (days < 0 ? "gray" : days < 90 ? "red" : days < 180 ? "amber" : "gray")}>{days < 0 ? `${-days}d ago` : `${days}d`}</Pill>;
-function Src({ children }: { children: ReactNode }) { return <div style={{ fontSize: 11, color: K.gray, marginTop: 3, lineHeight: 1.35 }}>{children}</div>; }
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+export const daysPill = (days: number | null, flag?: "red" | "amber" | null) => days == null ? null : <Pill flag={flag ?? (days < 0 ? "gray" : days < 90 ? "red" : days < 180 ? "amber" : "gray")}>{days < 0 ? `${-days}d ago` : `${days}d`}</Pill>;
+export function Src({ children }: { children: ReactNode }) { return <div style={{ fontSize: 11, color: K.gray, marginTop: 3, lineHeight: 1.35 }}>{children}</div>; }
+export function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{ ...card, padding: "12px 14px", minWidth: 0 }}>
       <div style={{ fontFamily: "'Roboto',sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 22, fontWeight: 500, color: K.ink, whiteSpace: "nowrap" }}>{value}</div>
@@ -46,7 +46,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 function Table({ children, minWidth = 900 }: { children: ReactNode; minWidth?: number }) {
   return <div style={{ ...card, overflow: "auto", maxHeight: "70vh" }}><table style={{ width: "100%", minWidth, borderCollapse: "collapse" }}>{children}</table></div>;
 }
-function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
+export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, flexWrap: "wrap", margin: "22px 0 10px" }}>
       <h2 style={{ margin: 0, fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: ".12em", textTransform: "uppercase", color: K.charcoal }}>{children}</h2>
@@ -56,25 +56,38 @@ function SectionTitle({ children, right }: { children: ReactNode; right?: ReactN
 }
 
 // ── shared data hook ──────────────────────────────────────────────────────────
+// One shared fetch for the whole app: the Asset Mgmt page, the owned deal page's Asset,
+// Financing and Transaction tabs and the home card all read the same records, so they share
+// a promise (kept 60 s) instead of each calling the server. reload() refreshes it for all.
+type AmBundle = { records: AmRecord[]; rates: RatesPayload | null; abstracts: LeaseAbstract[]; error: string | null };
+let amCache: { at: number; p: Promise<AmBundle> } | null = null;
+const amListeners = new Set<() => void>();
+function loadAm(force = false): Promise<AmBundle> {
+  if (!force && amCache && Date.now() - amCache.at < 60_000) return amCache.p;
+  const p = (async () => {
+    const [rec, rates, abs] = await Promise.allSettled([apiAmRecords(), apiGetRates(), apiListAllLeaseAbstracts()]);
+    return { records: rec.status === "fulfilled" ? rec.value : [], error: rec.status === "rejected" ? String((rec.reason as Error)?.message ?? rec.reason) : null,
+      rates: rates.status === "fulfilled" ? rates.value : null, abstracts: abs.status === "fulfilled" ? abs.value : [] };
+  })();
+  amCache = { at: Date.now(), p };
+  return p;
+}
+export function reloadAm() { amCache = null; amListeners.forEach(f => f()); }
 export function useAmData(enabled = true) {
-  const [records, setRecords] = useState<AmRecord[] | null>(null);
-  const [rates, setRates] = useState<RatesPayload | null>(null);
-  const [abstracts, setAbstracts] = useState<LeaseAbstract[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [b, setB] = useState<AmBundle | null>(null);
   const [nonce, setNonce] = useState(0);
+  useEffect(() => { const f = () => setNonce(n => n + 1); amListeners.add(f); return () => { amListeners.delete(f); }; }, []);
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    apiAmRecords().then(r => alive && setRecords(r)).catch(e => alive && (setRecords([]), setError(e.message)));
-    apiGetRates().then(r => alive && setRates(r)).catch(() => {});
-    apiListAllLeaseAbstracts().then(a => alive && setAbstracts(a)).catch(() => {});
+    loadAm().then(x => alive && setB(x));
     return () => { alive = false; };
   }, [enabled, nonce]);
-  return { records, rates, abstracts, error, reload: () => setNonce(n => n + 1) };
+  return { records: b?.records ?? null, rates: b?.rates ?? null, abstracts: b?.abstracts ?? [], error: b?.error ?? null, reload: reloadAm };
 }
 
 // ── record editor (admin) ─────────────────────────────────────────────────────
-const FIELDS: Record<"loan" | "swap" | "date" | "pref", Array<[string, string, "text" | "number" | "date"]>> = {
+const FIELDS: Record<"loan" | "swap" | "date" | "pref" | "covenant" | "acquisition", Array<[string, string, "text" | "number" | "date"]>> = {
   loan: [["lender", "Lender", "text"], ["originalBalance", "Original balance ($)", "number"], ["currentBalance", "Current balance ($)", "number"], ["balanceAsOf", "Balance as of", "date"],
     ["rateType", "Rate type (fixed / floating / swapped)", "text"], ["index", "Index (1M CME Term SOFR / Daily Simple SOFR)", "text"], ["spreadBps", "Spread (bps)", "number"], ["fixedRatePct", "Fixed rate (%) — fixed loans", "number"],
     ["allInRatePct", "All-in rate (%) — if stated", "number"], ["maturityDate", "Maturity", "date"], ["extensionOptions", "Extension options", "text"], ["extensionNoticeDate", "Extension notice deadline", "date"],
@@ -87,11 +100,17 @@ const FIELDS: Record<"loan" | "swap" | "date" | "pref", Array<[string, string, "
   pref: [["investor", "Investor", "text"], ["loanLabel", "Label (e.g. Town Plaza)", "text"], ["amount", "Amount ($)", "number"], ["ratePct", "Pref rate (%)", "number"],
     ["currentPayPct", "Current pay (%)", "number"], ["accrualPct", "Accrual (%)", "number"], ["fundingDate", "Funded", "date"], ["maturityDate", "Maturity / redemption date", "date"],
     ["redemption", "Redemption terms", "text"], ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
+  covenant: [["type", "Type (DSCR / DY / LTV / cash sweep / cash trap / other)", "text"], ["threshold", "Threshold (x for DSCR, % for DY/LTV)", "number"], ["sweepBelow", "Cash sweep below (x)", "number"],
+    ["testFrequency", "Test frequency (quarterly / annual)", "text"], ["firstTestDate", "First test date", "date"], ["testMonthDay", "Annual test day (MM-DD)", "text"], ["amortYears", "Test amortization (years)", "number"],
+    ["testRatePct", "Test rate (%) — if not the loan rate", "number"], ["linkedTenant", "Linked tenant", "text"], ["triggerDate", "Trigger date", "date"], ["trigger", "Trigger / remedy", "text"], ["loanLabel", "Loan label", "text"], ["notes", "Notes", "text"]],
+  acquisition: [["purchasePrice", "Purchase price ($)", "number"], ["closeDate", "Close date", "date"], ["seller", "Seller", "text"], ["kpPct", "KP ownership (%)", "number"], ["jvPartner", "JV partner", "text"],
+    ["mzlEquity", "MZL equity ($)", "number"], ["kpMemberEquity", "KP member equity ($)", "number"], ["totalEquity", "Total equity ($)", "number"], ["noiAtPurchase", "NOI at purchase ($)", "number"],
+    ["goingInCapPct", "Going-in cap (%)", "number"], ["budgetNoi", "Budget NOI ($)", "number"], ["budgetYear", "Budget year", "number"], ["notes", "Notes", "text"]],
   date: [["date", "Date", "date"], ["type", "Type (Option notice / Kick-out / Co-tenancy / Termination / Other)", "text"], ["tenant", "Tenant", "text"], ["description", "What it is", "text"], ["owner", "Owner", "text"]],
 };
-function RecordEditor({ kind, deals, initial, onClose, onSaved }: { kind: "loan" | "swap" | "date" | "pref"; deals: Deal[]; initial?: AmRecord | null; onClose: () => void; onSaved: () => void }) {
+export function RecordEditor({ kind, deals, initial, onClose, onSaved, preset }: { kind: "loan" | "swap" | "date" | "pref" | "covenant" | "acquisition"; preset?: Record<string, unknown>; deals: Deal[]; initial?: AmRecord | null; onClose: () => void; onSaved: () => void }) {
   const [dealId, setDealId] = useState(initial?.dealId ?? deals[0]?.id ?? "");
-  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(FIELDS[kind].map(([k]) => [k, initial?.data[k] != null ? String(initial.data[k]) : ""])));
+  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(FIELDS[kind].map(([k]) => { const v = initial?.data[k] ?? preset?.[k]; return [k, v != null ? String(v) : ""]; })));
   const [note, setNote] = useState(initial?.sourceNote ?? "");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -99,7 +118,7 @@ function RecordEditor({ kind, deals, initial, onClose, onSaved }: { kind: "loan"
     setBusy(true); setErr(null);
     try {
       // Start from the stored record so keys the form doesn't show (Datex loan id…) survive an edit.
-      const data: Record<string, unknown> = { ...(initial?.data ?? {}) };
+      const data: Record<string, unknown> = { ...(preset ?? {}), ...(initial?.data ?? {}) };
       delete data.termsPending;   // the server re-derives it from the terms
       for (const [k, , t] of FIELDS[kind]) { if (vals[k]?.trim()) data[k] = t === "number" ? Number(vals[k].replace(/[$,%\s]/g, "")) : vals[k].trim(); else delete data[k]; }
       await apiAmSaveRecord({ id: initial?.id, kind, dealId, data, sourceNote: note || null });
@@ -107,7 +126,7 @@ function RecordEditor({ kind, deals, initial, onClose, onSaved }: { kind: "loan"
     } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't save"); } finally { setBusy(false); }
   };
   return (
-    <Modal title={`${initial ? "Edit" : "Add"} ${kind === "date" ? "critical date" : kind === "pref" ? "preferred equity" : kind}`} onClose={onClose}>
+    <Modal title={`${initial ? "Edit" : "Add"} ${kind === "date" ? "critical date" : kind === "pref" ? "preferred equity" : kind === "acquisition" ? "acquisition details" : kind}`} onClose={onClose}>
       <label style={lbl}>Property
         <select value={dealId} onChange={e => setDealId(e.target.value)} style={inp}>{deals.map(d => <option key={d.id} value={d.id}>{d.propertyName}</option>)}</select>
       </label>
@@ -131,7 +150,7 @@ function RecordEditor({ kind, deals, initial, onClose, onSaved }: { kind: "loan"
 }
 const lbl: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 11.5, fontWeight: 600, color: K.gray };
 const inp: React.CSSProperties = { border: "1px solid #d9d8d2", borderRadius: 8, padding: "8px 10px", fontSize: 14, color: K.ink, background: "#fff", minHeight: 36, fontFamily: "inherit" };
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => { const f = (e: KeyboardEvent) => e.key === "Escape" && onClose(); window.addEventListener("keydown", f); return () => window.removeEventListener("keydown", f); }, [onClose]);
   return (
     <>
@@ -180,10 +199,10 @@ const LOAN_COLS = ["Property", "Lender", "Balance", "Type", "Index", "Spread", "
 const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Source", ""];
 const PREF_COLS = ["Property", "Investor", "Amount", "Pref rate", "Maturity", "Source", ""];
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v));
-function Clamp({ children }: { children: ReactNode }) {
+export function Clamp({ children }: { children: ReactNode }) {
   return <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 12.5 }}>{children}</div>;
 }
-function RowActions({ isOpen, onToggle, isAdmin, onEdit, onDelete }: { isOpen: boolean; onToggle: () => void; isAdmin: boolean; onEdit: () => void; onDelete: () => void }) {
+export function RowActions({ isOpen, onToggle, isAdmin, onEdit, onDelete }: { isOpen: boolean; onToggle: () => void; isAdmin: boolean; onEdit: () => void; onDelete: () => void }) {
   return (
     <span style={{ display: "flex", gap: 6 }}>
       <button style={miniBtn} onClick={onToggle} aria-expanded={isOpen}>{isOpen ? "Hide" : "Details"}</button>
@@ -191,7 +210,7 @@ function RowActions({ isOpen, onToggle, isAdmin, onEdit, onDelete }: { isOpen: b
     </span>
   );
 }
-function DetailRow({ cols, rec, items }: { cols: number; rec: AmRecord; items: Array<[string, string | null]> }) {
+export function DetailRow({ cols, rec, items }: { cols: number; rec: AmRecord; items: Array<[string, string | null]> }) {
   const shown = items.filter(([, v]) => v);
   return (
     <tr><td colSpan={cols} style={{ ...td, background: "#faf9f5" }}>
@@ -340,11 +359,11 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
     </>
   );
 }
-const linkBtn: React.CSSProperties = { background: "none", border: "none", padding: 0, color: K.ink, fontWeight: 600, cursor: "pointer", textAlign: "left", fontSize: 13, fontFamily: "inherit", textDecoration: "underline", textDecorationColor: "#d9d8d2", textUnderlineOffset: 3 };
-const miniBtn: React.CSSProperties = { background: "#fff", border: "1px solid #d9d8d2", borderRadius: 6, padding: "3px 8px", fontSize: 11.5, cursor: "pointer", color: K.charcoal };
+export const linkBtn: React.CSSProperties = { background: "none", border: "none", padding: 0, color: K.ink, fontWeight: 600, cursor: "pointer", textAlign: "left", fontSize: 13, fontFamily: "inherit", textDecoration: "underline", textDecorationColor: "#d9d8d2", textUnderlineOffset: 3 };
+export const miniBtn: React.CSSProperties = { background: "#fff", border: "1px solid #d9d8d2", borderRadius: 6, padding: "3px 8px", fontSize: 11.5, cursor: "pointer", color: K.charcoal };
 
 // ── Dates tab ─────────────────────────────────────────────────────────────────
-const TYPES: DateType[] = ["Lease expiry", "Option notice", "Termination / kick-out", "Co-tenancy", "Loan maturity", "Extension notice", "Swap maturity", "Other"];
+const TYPES: DateType[] = ["Lease expiry", "Option notice", "Termination / kick-out", "Co-tenancy", "Covenant test", "Covenant trigger", "Loan maturity", "Extension notice", "Swap maturity", "Other"];
 export function DatesList({ items, onOpenDeal, compact = false }: { items: CriticalDate[]; onOpenDeal: (id: string) => void; compact?: boolean }) {
   const isMobile = useIsMobile();
   if (!items.length) return <div style={{ ...card, padding: 16, fontSize: 13.5, color: K.gray }}>Nothing in this window.</div>;
@@ -596,29 +615,7 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
           </>
         )}
       </div>
-      {dx && sales.rows.length > 0 && (
-        <div style={{ ...card, padding: 14 }}>
-          <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: K.charcoal }}>Tenant sales & occupancy cost</div>
-          <Src>{sales.source}. Occupancy cost = base rent + recoveries + other ÷ 12-month sales; at risk over 12% (anchors) / 15% (shops). Benchmark = library median sales PSF for the brand.</Src>
-          <div style={{ overflowX: "auto", marginTop: 8 }}>
-            <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
-              <thead><tr>{["Tenant", "SF", "12-mo sales", "Sales PSF", "Period", "Occ. cost", "vs library", "Flags"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-              <tbody>{sales.rows.map(r => (
-                <tr key={r.tenant}>
-                  <td style={td}>{r.tenant}{r.isAnchor && <Src>anchor</Src>}</td>
-                  <td style={num}>{r.sf ? Math.round(r.sf).toLocaleString() : "—"}</td>
-                  <td style={num}>{fmtM(r.sales12)}</td>
-                  <td style={num}>{r.salesPSF != null ? `$${r.salesPSF.toFixed(0)}` : "—"}</td>
-                  <td style={td}>{r.period ?? "—"}</td>
-                  <td style={{ ...num, color: r.atRisk ? K.red : K.ink, fontWeight: r.atRisk ? 700 : 400 }}>{r.occCostPct != null ? `${r.occCostPct.toFixed(1)}%` : "—"}<Src>{r.occCostBasis}</Src></td>
-                  <td style={num}>{r.vsBenchmarkPct != null ? `${r.vsBenchmarkPct > 0 ? "+" : ""}${r.vsBenchmarkPct.toFixed(0)}%` : "—"}{r.benchmarkN ? <Src>n={r.benchmarkN}</Src> : null}</td>
-                  <td style={{ ...td, fontSize: 12, color: K.amber }}>{r.flags.join(" · ")}</td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {dx && sales.rows.length > 0 && <DatexSalesCard deal={deal} bench={bench} />}
       {(debt.length > 0 || prefs.length > 0 || dates.length > 0 || leasing.length > 0) && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 14 }}>
           {(debt.length > 0 || prefs.length > 0) && (
@@ -655,6 +652,39 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
         </div>
       )}
     </div>
+  );
+}
+
+
+/** Datex tenant sales & occupancy cost (12 most recent REPORTED months from SalesHistory). */
+export function DatexSalesCard({ deal, bench, note }: { deal: Deal; bench?: AnalystTenantBenchmark[]; note?: string }) {
+  const [b, setB] = useState<AnalystTenantBenchmark[]>(bench ?? []);
+  useEffect(() => { if (!bench) apiLoadTenantBenchmarks().then(setB).catch(() => {}); }, [bench]);
+  const sales = buildSalesRows(deal, bench ?? b);
+  if (!sales.rows.length) return null;
+  return (
+        <div style={{ ...card, padding: 14 }}>
+          <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: K.charcoal }}>Tenant sales & occupancy cost</div>
+          {note && <div style={{ fontSize: 12.5, color: K.ink, marginTop: 4 }}>{note}</div>}
+          <Src>{sales.source}. Occupancy cost = base rent + recoveries + other ÷ 12-month sales; at risk over 12% (anchors) / 15% (shops). Benchmark = library median sales PSF for the brand.</Src>
+          <div style={{ overflowX: "auto", marginTop: 8 }}>
+            <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
+              <thead><tr>{["Tenant", "SF", "12-mo sales", "Sales PSF", "Period", "Occ. cost", "vs library", "Flags"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>{sales.rows.map(r => (
+                <tr key={r.tenant}>
+                  <td style={td}>{r.tenant}{r.isAnchor && <Src>anchor</Src>}</td>
+                  <td style={num}>{r.sf ? Math.round(r.sf).toLocaleString() : "—"}</td>
+                  <td style={num}>{fmtM(r.sales12)}</td>
+                  <td style={num}>{r.salesPSF != null ? `$${r.salesPSF.toFixed(0)}` : "—"}</td>
+                  <td style={td}>{r.period ?? "—"}</td>
+                  <td style={{ ...num, color: r.atRisk ? K.red : K.ink, fontWeight: r.atRisk ? 700 : 400 }}>{r.occCostPct != null ? `${r.occCostPct.toFixed(1)}%` : "—"}<Src>{r.occCostBasis}</Src></td>
+                  <td style={num}>{r.vsBenchmarkPct != null ? `${r.vsBenchmarkPct > 0 ? "+" : ""}${r.vsBenchmarkPct.toFixed(0)}%` : "—"}{r.benchmarkN ? <Src>n={r.benchmarkN}</Src> : null}</td>
+                  <td style={{ ...td, fontSize: 12, color: K.amber }}>{r.flags.join(" · ")}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </div>
   );
 }
 
