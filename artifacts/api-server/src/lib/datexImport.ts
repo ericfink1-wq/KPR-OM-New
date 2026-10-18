@@ -331,7 +331,8 @@ export function buildLiveBlock(
     const f = p.financials, flip = (v: unknown) => { const n = num(v); return n == null ? null : Math.round(-n); };
     const fin: Record<string, unknown> = { source: "FinancialGroups NOI" };
     const per = yyyymm(f.period); if (per) fin.period = per;
-    if (f.basis) fin.basis = String(f.basis).trim();
+    // Datex stores the book as a one-letter code ("C" seen live); keep a readable word.
+    if (f.basis) { const b = String(f.basis).trim(); fin.basis = /^c(ash)?$/i.test(b) ? "Cash" : /^a(ccrual)?$/i.test(b) ? "Accrual" : b; }
     for (const k of ["noiYtdActual", "noiYtdBudget", "noiTtmActual", "noiYearBudget"] as const) { const v = flip(f[k]); if (v != null) fin[k] = v; }
     if (Object.keys(fin).length > 2) block.financials = fin;
   }

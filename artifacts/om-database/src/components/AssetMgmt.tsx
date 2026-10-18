@@ -419,7 +419,7 @@ function DatesTab({ deals, records, abstracts, isAdmin, reload, onOpenDeal }: { 
 }
 
 const BASIS_TIP = "Datex books NOI on the property's ledger basis. On a CASH basis, timing — a CAM/tax reconciliation, a tax bill or a prepaid rent landing in a different month than budgeted — can swing year-to-date vs budget by a lot even when the full year is on plan.";
-const basisLabel = (fin: Record<string, unknown>) => { const b = String(fin.basis ?? "").trim().toLowerCase(); return b.startsWith("cash") ? "Cash basis" : b.startsWith("accr") ? "Accrual basis" : "basis not stated"; };
+const basisLabel = (fin: Record<string, unknown>) => { const b = String(fin.basis ?? "").trim().toLowerCase(); return b === "c" || b.startsWith("cash") ? "Cash basis" : b === "a" || b.startsWith("accr") ? "Accrual basis" : b === "mixed" ? "mixed cash/accrual" : "basis not stated"; };
 function ArCell({ ar }: { ar: NonNullable<ReturnType<typeof splitArAging>> }) {
   return (
     <>

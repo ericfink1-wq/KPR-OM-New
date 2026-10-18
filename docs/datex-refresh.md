@@ -29,6 +29,34 @@ browser, no file. An admin creates the token at **Asset Mgmt → Properties → 
   10 MB per call, 20 calls a minute per token. A library snapshot is taken before any write. The
   reply lists, per deal, the blocks sent, what changed and any warnings.
 
+**The job kit (use this — it encodes the recipe below).** `GET /api/datex/job-kit` (same Bearer
+token) returns `job_kit.py` — Python 3, standard library only:
+
+```
+export DATEX_INGEST_TOKEN=kpr_dx_...            # KPR_BASE_URL defaults to https://kpr-oms.replit.app
+curl -s -H "Authorization: Bearer $DATEX_INGEST_TOKEN" https://kpr-oms.replit.app/api/datex/job-kit -o job_kit.py
+python3 job_kit.py state --out state.json
+python3 job_kit.py plan --state state.json [--mode weekly|monthly]          # phase 1: the one Occupancy call
+#   make it; then extract the session's Datex results:
+python3 job_kit.py extract --transcript "/root/.claude/projects/*/<session-id>.jsonl" --out calls.jsonl
+python3 job_kit.py plan --state state.json --calls calls.jsonl [--mode …]  # phase 2: every remaining call
+#   make those (follow nextCursor while hasMore), extract again, then:
+python3 job_kit.py build --state state.json --calls calls.jsonl --out payload.json
+python3 job_kit.py post --payload payload.json --dry-run
+python3 job_kit.py post --payload payload.json
+```
+
+`plan` prints each call as `{tool, why, args}` — pass `args` to the Datex tool unchanged. Verified
+against live Datex (10/18/26): `Period` and `SalesPeriod` are TEXT fields (only eq / startsWith /
+contains work — no gt), so sales are read per building per YEAR and the site upserts; `Basis`
+arrives as a one-letter code ("C" = Cash); `AccountGroupId` is padded ("NOI     "); a read returns
+`{items, nextCursor, hasMore}` and an aggregate `{results: [{group, value}]}`. `extract` reads
+tool results that were too large and "saved to <path>.txt" from that file. `build` only sends a
+block for a deal when the calls covered that deal's buildings (building filter, or none = all), so
+the payload is a true delta. Rockaway's three buildings are summed. Tests:
+`tools/datex-job-kit/test_job_kit.py` (fixture in `fixtures/`), plus a server-side test that the
+built payload passes the merge rules and both roster hashes agree.
+
 **Delta recipe — each run, in this order (pin ONE period; aggregate, don't page):**
 1. **State:** `GET /api/datex/state` once.
 2. **Occupancy, all buildings, latest period — 1 call:** `Occupancy`, latest `Period`, all mapped
@@ -39,8 +67,8 @@ browser, no file. An admin creates the token at **Asset Mgmt → Properties → 
    (OCCPSTAT decides which rows count) ONLY for buildings whose
    `occupiedGLA` / `occupiedUnits` differ from state — plus every building on the monthly run.
    Send `tenants[]` (with `occStatus`) and `vacantSuites[]` for those deals only.
-4. **Sales — only new months:** `SalesHistory` with `Period gt <state.sales.maxPeriod>` (or per
-   tenant from `byTenant`). Send just those rows in `salesHistory[]`; the server appends them and
+4. **Sales — only new months:** `SalesHistory` per building, `SalesPeriod startsWith <year>` for each year
+   since `state.sales.maxPeriod` − 3 months (SalesPeriod is text — no `gt`). Send just those rows in `salesHistory[]`; the server appends them and
    recomputes trailing 12. First run for a deal (no stored months): send the last 24 months.
 5. **A/R:** `TenantLedger` `TransactionOpenAmount gt 0`, aggregated by building + tenant into
    `over60` / `over90` (and `totalOpen`). Put the tenant's OCCPSTAT on each `byTenant[]` row as

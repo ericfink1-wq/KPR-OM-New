@@ -1,4 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { db, dealsTable } from "@workspace/db";
 import { loadDatexMapFromDb, datexLoanToRecord, upsertRecord } from "../lib/assetMgmt";
 import { DATEX_BLOCK_KEY, type DatexPayload } from "../lib/datexImport";
@@ -126,6 +128,21 @@ router.post("/datex/ingest", requireIngestToken, async (req: Authed, res) => {
     req.log.error({ err }, "Datex ingest failed");
     res.status(500).json({ error: log.error });
   }
+});
+
+// GET /api/datex/job-kit — the Python helper the scheduled task runs (stdlib only). The task
+// starts in a fresh session with no files, so it downloads this with the same token.
+router.get("/datex/job-kit", requireIngestToken, async (req, res) => {
+  const here = typeof __dirname === "string" ? __dirname : process.cwd();
+  for (const p of [path.join(here, "docs", "job_kit.py"), path.resolve(process.cwd(), "dist/docs/job_kit.py"), path.resolve(process.cwd(), "../../tools/datex-job-kit/job_kit.py"), path.resolve(process.cwd(), "tools/datex-job-kit/job_kit.py")]) {
+    try {
+      const text = await readFile(p, "utf8");
+      res.type("text/plain; charset=utf-8").set("Cache-Control", "no-store").set("Content-Disposition", 'inline; filename="job_kit.py"').send(text);
+      return;
+    } catch { /* next location */ }
+  }
+  req.log.error("job_kit.py missing from this build");
+  res.status(404).type("text/plain").send("job_kit.py is missing from this build.");
 });
 
 export default router;

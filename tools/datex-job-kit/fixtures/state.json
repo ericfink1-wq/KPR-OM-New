@@ -1,0 +1,90 @@
+{
+ "generatedAt": "2026-10-18T12:00:00Z",
+ "deals": [
+  {
+   "dealId": "d-cooks",
+   "propertyName": "Cooks Corner",
+   "bldgIds": [
+    "brunswic"
+   ],
+   "hasSnapshot": true,
+   "asOf": "2026-10-01",
+   "occupancy": {
+    "period": "202609",
+    "totalGLA": 300386,
+    "occupiedGLA": 201900,
+    "totalUnits": 40,
+    "occupiedUnits": 30
+   },
+   "tenants": {
+    "count": 5,
+    "hash": "0000000000000000",
+    "ids": [
+     "t0000001",
+     "t0000002",
+     "t0000009"
+    ]
+   },
+   "sales": {
+    "maxPeriod": "202608",
+    "storedMonthlyRows": 10,
+    "byTenant": {
+     "t0000001": "202608"
+    }
+   },
+   "leasing": {
+    "count": 1,
+    "latestSubmitted": "2026-08-01"
+   },
+   "financials": {
+    "period": "202608",
+    "basis": "Cash"
+   },
+   "arAging": {
+    "asOf": "2026-10-01"
+   }
+  },
+  {
+   "dealId": "d-rock",
+   "propertyName": "Rockaway Centers",
+   "bldgIds": [
+    "rockcom",
+    "rockcrt",
+    "rockplz"
+   ],
+   "hasSnapshot": true,
+   "asOf": "2026-10-01",
+   "occupancy": {
+    "period": "202610",
+    "totalGLA": 600000,
+    "occupiedGLA": 540000,
+    "totalUnits": 60,
+    "occupiedUnits": 54
+   },
+   "tenants": {
+    "count": 50,
+    "hash": "abc",
+    "ids": []
+   },
+   "sales": {
+    "maxPeriod": "202609",
+    "storedMonthlyRows": 400,
+    "byTenant": {}
+   },
+   "leasing": {
+    "count": 0,
+    "latestSubmitted": null
+   },
+   "financials": {
+    "period": "202608"
+   },
+   "arAging": null
+  },
+  {
+   "dealId": "d-ptc",
+   "propertyName": "Providence (not in Datex)",
+   "bldgIds": [],
+   "hasSnapshot": false
+  }
+ ]
+}

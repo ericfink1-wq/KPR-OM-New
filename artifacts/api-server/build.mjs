@@ -142,6 +142,9 @@ async function copyDocs() {
     try { await copyFile(path.resolve(artifactDir, "../../docs", f), path.join(out, f)); }
     catch (err) { console.warn(`docs: couldn't copy ${f}: ${err.message}`); }
   }
+  // The Datex job kit (served to the scheduled task at GET /api/datex/job-kit).
+  try { await copyFile(path.resolve(artifactDir, "../../tools/datex-job-kit/job_kit.py"), path.join(out, "job_kit.py")); }
+  catch (err) { console.warn(`docs: couldn't copy job_kit.py: ${err.message}`); }
 }
 
 buildAll().then(copyDocs).catch((err) => {

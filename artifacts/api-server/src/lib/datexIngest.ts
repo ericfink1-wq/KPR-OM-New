@@ -229,7 +229,7 @@ export function dealState(dealId: string, propertyName: string, bldgIds: string[
     dealId, propertyName, bldgIds, hasSnapshot: true,
     asOf: block.asOf ?? null, blockAsOf,
     occupancy: { period: block.period ?? null, totalGLA: block.totalGLA ?? null, occupiedGLA: block.occupiedGLA ?? null, totalUnits: block.totalUnits ?? null, occupiedUnits: block.occupiedUnits ?? null },
-    tenants: { count: tenants.length, hash: rosterHash(tenants) },
+    tenants: { count: tenants.length, hash: rosterHash(tenants), ids: tenants.map(t => String(t.tenantId ?? "").trim()).filter(Boolean) },
     sales: { maxPeriod: salesMax, storedMonthlyRows: salesRows.length, byTenant },
     leasing: { count: leasing.length, latestSubmitted },
     financials: fin ? { period: fin.period ?? null, basis: fin.basis ?? null } : null,

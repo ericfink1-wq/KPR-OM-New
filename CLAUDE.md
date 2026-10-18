@@ -40,6 +40,11 @@ Persistent context for this repo. Read this fully at the start of every session.
   through `buildLiveBlock` (same guardrails as the file import). `pendingSaleProblem` refuses any sale
   field — now in the file import too. Roster hash formula is in `rosterHash` + the doc; the job must match it.
 - Status: `/am/datex-auto/status` → "Last auto-refresh" line on Properties. Recipe: docs/datex-refresh.md.
+- JOB KIT: `tools/datex-job-kit/job_kit.py` (stdlib Python; served at `GET /api/datex/job-kit`, copied into
+  dist/docs by build.mjs) — `state` / `plan` / `extract` (from the session transcript) / `build` / `post`.
+  Live-Datex facts it encodes: Period/SalesPeriod are TEXT (no gt — use eq/startsWith), Basis is "C"/"A"
+  (server now stores Cash/Accrual), ids fixed-width. `rosterHash` (TS) and `roster_hash` (py) MUST agree —
+  `datexJobKit.test.ts` pins it and runs the Python unit tests; change both or neither.
 
 ## SESSION 2026-06-19 (extraction-quality + self-improvement push). NEXT-SESSION PICKUP.
 All on `main`, typecheck-clean, 64 api-server tests green. Built this session:
