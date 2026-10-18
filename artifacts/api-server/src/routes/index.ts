@@ -23,6 +23,7 @@ import leaseAbstractsRouter from "./leaseAbstracts";
 import siteAgreementsRouter from "./siteAgreements";
 import houseViewRouter from "./houseView";
 import mcpRouter, { mcpAdminRouter } from "./mcp";
+import datexIngestRouter from "./datexIngest";
 import { needs2faReverify } from "./../lib/twoFactorPolicy";
 
 const router: IRouter = Router();
@@ -34,6 +35,8 @@ router.use(authRouter);
 // browser session, so it is mounted ahead of the session/2FA gate below. Minting and
 // revoking those keys stays behind the gate (mcpAdminRouter, registered further down).
 router.use(mcpRouter);
+// Datex auto-refresh: its own scoped ingest token (routes/datexIngest.ts), same reasoning.
+router.use(datexIngestRouter);
 
 // MANDATORY two-factor: an authenticated user who hasn't enrolled in TOTP can reach
 // only the auth endpoints above (to enroll) — every data route below is blocked with

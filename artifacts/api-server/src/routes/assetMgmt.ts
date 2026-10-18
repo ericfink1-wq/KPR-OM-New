@@ -10,6 +10,7 @@ import {
 import { fetchBrandNews, assessNews, brandNorm } from "../lib/watchlistNews";
 import { callAnthropicOnce } from "../lib/extract";
 import { proposeCovenants } from "../lib/covenants";
+import { listIngestTokens, createIngestToken, revokeIngestToken, listIngestLogs } from "../lib/datexAutoRefresh";
 
 // ASSET MANAGEMENT — owned properties only. Reads for any signed-in member; every write is
 // admin-only (Eric: "admin-only edit controls"). Records carry a per-row source note.
@@ -190,6 +191,29 @@ router.get("/admin/docs/:name", requireAdmin, async (req, res) => {
     catch { /* try the next location */ }
   }
   res.status(404).type("text/plain").send(`${file} is missing from this build.`);
+});
+
+// ── Datex auto-refresh: scoped ingest tokens (admin) + status (members) ──
+router.get("/am/datex-auto/tokens", requireAdmin, async (req, res) => {
+  try { res.json({ tokens: await listIngestTokens() }); }
+  catch (err) { req.log.error({ err }, "ingest tokens list failed"); res.status(500).json({ error: "Couldn't load tokens" }); }
+});
+router.post("/am/datex-auto/tokens", requireAdmin, async (req, res) => {
+  try {
+    const r = await createIngestToken(String(req.body?.label ?? ""), { email: req.session.userEmail || "admin", userId: req.session.userId ?? null });
+    if ("problem" in r) { res.status(400).json({ error: r.problem }); return; }
+    res.json(r);
+  } catch (err) { req.log.error({ err }, "ingest token create failed"); res.status(500).json({ error: "Couldn't create the token" }); }
+});
+router.post("/am/datex-auto/tokens/:id/revoke", requireAdmin, async (req, res) => {
+  try { const ok = await revokeIngestToken(String(req.params.id), req.session.userEmail || "admin"); res.status(ok ? 200 : 404).json({ ok }); }
+  catch (err) { req.log.error({ err }, "ingest token revoke failed"); res.status(500).json({ error: "Couldn't revoke the token" }); }
+});
+router.get("/am/datex-auto/status", requireAuth, async (req, res) => {
+  try {
+    const logs = await listIngestLogs(20);
+    res.json({ last: logs.find(l => !l.dryRun) ?? null, lastDryRun: logs.find(l => l.dryRun) ?? null, recent: logs });
+  } catch (err) { req.log.error({ err }, "ingest status failed"); res.status(500).json({ error: "Couldn't load the auto-refresh status" }); }
 });
 
 export default router;

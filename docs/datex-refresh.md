@@ -5,6 +5,57 @@
 > **`/api/admin/docs/datex-snapshot-example`**. A test imports that exact file, so it always
 > matches what the importer reads.
 
+## Automated refresh — the scheduled task (10/18/26)
+
+A scheduled Claude task (which IS signed in to Datex) posts changes straight to the site — no
+browser, no file. An admin creates the token at **Asset Mgmt → Properties → Datex auto-refresh**
+(shown once, stored hashed, turn it off there). The token can call exactly two endpoints:
+
+- `GET https://kpr-oms.replit.app/api/datex/state` — header `Authorization: Bearer kpr_dx_…`.
+  Per mapped owned deal: `dealId`, `bldgIds`, `asOf`, `blockAsOf` (one date per block),
+  `occupancy {period, totalGLA, occupiedGLA, totalUnits, occupiedUnits}`, `tenants {count, hash}`,
+  `sales {maxPeriod, byTenant: {tenantId: lastPeriod}}`, `leasing {count, latestSubmitted}`,
+  `financials {period, basis}`, `arAging {asOf}`. `tenants.hash` = sha256 of the sorted lines
+  `tenantId|sf|annualRent|leaseExpiry` (numbers rounded to 2 dp, blank when unknown, C + N tenants
+  only), joined by `\n`, first 16 hex chars — compute the same from Datex to see if a roll changed.
+- `POST https://kpr-oms.replit.app/api/datex/ingest` (add `?dryRun=1` to preview) — same body as
+  the file (`{source, asOf, deals:[…]}`, same field names), but **MERGE MODE**: send only the blocks
+  that changed. A block a deal doesn't carry is KEPT. `tenants` replaces the rent roll only when
+  sent; `salesHistory` APPENDS (upsert by tenantId + period, last 24 months kept, a reported month
+  never overwritten by an estimate); `leasing` upserts by tenant + suite + submitted date;
+  `occupancy` fields, `vacantSuites`, `arAging`, `financials` replace when sent. Every block is
+  stamped with the payload's `asOf`. Same guardrails as the file import (Owned + in the map,
+  `bldgIds` must match, occupied ≤ total, over90 ≤ over60, no sale fields of any kind). Limits:
+  10 MB per call, 20 calls a minute per token. A library snapshot is taken before any write. The
+  reply lists, per deal, the blocks sent, what changed and any warnings.
+
+**Delta recipe — each run, in this order (pin ONE period; aggregate, don't page):**
+1. **State:** `GET /api/datex/state` once.
+2. **Occupancy, all buildings, latest period — 1 call:** `Occupancy`, latest `Period`, all mapped
+   BLDGIDs (`contains`, ids are fixed-width). Send `period`, `totalGLA`, `occupiedGLA`, `vacantGLA`,
+   unit counts, `segments` for every deal (cheap, and it keeps occupancy current).
+3. **Rent roll only where it moved:** re-pull `TenantsMetrics` (latest Period only; do NOT drop
+   zero-rent rows — a dark anchor pays $0, see "Do not filter zero-rent rows" below) + `Tenants`
+   (OCCPSTAT decides which rows count) ONLY for buildings whose
+   `occupiedGLA` / `occupiedUnits` differ from state — plus every building on the monthly run.
+   Send `tenants[]` (with `occStatus`) and `vacantSuites[]` for those deals only.
+4. **Sales — only new months:** `SalesHistory` with `Period gt <state.sales.maxPeriod>` (or per
+   tenant from `byTenant`). Send just those rows in `salesHistory[]`; the server appends them and
+   recomputes trailing 12. First run for a deal (no stored months): send the last 24 months.
+5. **A/R:** `TenantLedger` `TransactionOpenAmount gt 0`, aggregated by building + tenant into
+   `over60` / `over90` (and `totalOpen`). Put the tenant's OCCPSTAT on each `byTenant[]` row as
+   `occpstat` (or `occStatus`) so balances left by vacated tenants are labelled as such.
+6. **Financials:** `FinancialGroups` NOI for the last CLOSED period, all buildings, raw sign; include
+   `basis` ("Cash" or "Accrual"). Skip when `state.financials.period` already equals that period.
+7. **Leasing:** `LeaseAppDealHistoryBySuite` with `DateSubmitted ge <state.leasing.latestSubmitted>`;
+   send only those rows in `leasing[]`.
+8. **Post** with `?dryRun=1` first if anything looks unusual, then without it. Stop when done —
+   `hasMore:true` from Datex is not an instruction to keep paging.
+
+Suggested cadence: weekly = steps 1–2, 4, 5, 7 (+3 where occupancy moved); monthly (after close) =
+everything, including step 3 for all buildings and step 6. The last run is shown on Asset Mgmt →
+Properties ("Last auto-refresh").
+
 ## The file, in one paragraph (10/18/26)
 
 One JSON file: `{ "source": "datex", "asOf": "YYYY-MM-DD", "generatedBy": "...", "deals": [ ... ] }`
@@ -37,7 +88,7 @@ from the offering documents at the time. Those are deliberately frozen; they are
 of what was marketed. Datex holds what the owned assets are doing **today**. This brings the
 second one alongside the first without disturbing it.
 
-## Why it works by file rather than automatically
+## Why it originally worked by file (the automated path above now covers it)
 
 Datex's MCP endpoint is OAuth-only, and its authorization server offers
 `authorization_code`, `refresh_token` and token-exchange — **no machine-to-machine grant** —

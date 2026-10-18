@@ -25,6 +25,22 @@ Persistent context for this repo. Read this fully at the start of every session.
   apart from current delinquency. NOI vs budget shows `financials.basis` (Cash/Accrual) + a timing tooltip.
 - Deal-page tab NAME click only switches tabs; the section jump-menu opens from the ▾ alone.
 
+## DATEX AUTO-REFRESH (10/18/26) — scheduled Claude task posts straight to the site
+- `GET /api/datex/state` + `POST /api/datex/ingest[?dryRun=1]` (routes/datexIngest.ts), authed by a
+  scoped **ingest token** (`kpr_dx_…`, Bearer) — mounted BEFORE the session/2FA gate like MCP; the token
+  works on these two routes ONLY. Tokens: admin UI Asset Mgmt → Properties → "Datex auto-refresh"
+  (`/am/datex-auto/tokens`, shown once, sha256 only, max 5 active, revoke = timestamp; fails closed if the
+  creating account is no longer approved). 10 MB/call, 20 calls/min/token, snapshot before any write.
+- **NO NEW TABLES:** stored in `am_records` under kinds `ingest_token`, `datex_sales` (raw monthly
+  SalesHistory per deal, 24 months), `ingest_log` (newest 60). Those kinds are NOT in ENTRY_KINDS, so
+  the member record list never returns them — keep it that way.
+- MERGE semantics (`lib/datexIngest.ts`, pure, tested): a block absent from a deal is KEPT; occupancy /
+  tenants / vacantSuites / arAging / financials replace when sent; sales APPEND (tenantId+period, RPT
+  beats estimate); leasing upserts (tenant+suite+submitted); `blockAsOf` per block. Every sent block goes
+  through `buildLiveBlock` (same guardrails as the file import). `pendingSaleProblem` refuses any sale
+  field — now in the file import too. Roster hash formula is in `rosterHash` + the doc; the job must match it.
+- Status: `/am/datex-auto/status` → "Last auto-refresh" line on Properties. Recipe: docs/datex-refresh.md.
+
 ## SESSION 2026-06-19 (extraction-quality + self-improvement push). NEXT-SESSION PICKUP.
 All on `main`, typecheck-clean, 64 api-server tests green. Built this session:
 - **Continuous self-improvement loop** (`artifacts/api-server/src/lib/selfImprove.ts`,

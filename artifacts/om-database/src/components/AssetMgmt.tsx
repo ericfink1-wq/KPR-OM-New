@@ -4,6 +4,7 @@ import { getOwnedProperties } from "../lib/ownedPortfolio";
 import {
   apiAmRecords, apiAmSaveRecord, apiAmDeleteRecord, apiAmImport, apiAmDatexMap, apiAmSaveDatexMap, apiAmCreditNews, apiAmSummarizeNews,
   apiGetRates, apiListAllLeaseAbstracts, apiLoadTenantBenchmarks, type RatesPayload, type AmImportResult, type DatexMapRow, type AnalystTenantBenchmark,
+  apiDatexAutoTokens, apiDatexAutoCreateToken, apiDatexAutoRevokeToken, apiDatexAutoStatus, type IngestTokenView, type IngestLogView,
 } from "../lib/api";
 import {
   buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, liveTenants,
@@ -434,6 +435,7 @@ function ArCell({ ar }: { ar: NonNullable<ReturnType<typeof splitArAging>> }) {
 function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin: boolean; onOpenDeal: (id: string) => void }) {
   const [map, setMap] = useState<DatexMapRow[] | null>(null);
   const [editMap, setEditMap] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
   useEffect(() => { apiAmDatexMap().then(setMap).catch(() => setMap([])); }, []);
   const rows = deals.map(d => {
     const dx = (d as unknown as { datexLive?: Record<string, unknown> }).datexLive;
@@ -446,7 +448,11 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
   });
   return (
     <>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>{isAdmin && <button style={btn()} onClick={() => setEditMap(true)}>Datex building map</button>}</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+        {isAdmin && <button style={btn()} onClick={() => setEditMap(true)}>Datex building map</button>}
+        {isAdmin && <button style={btn()} onClick={() => setAutoOpen(true)}>Datex auto-refresh</button>}
+      </div>
+      <AutoRefreshStatus />
       <SectionTitle>Today from Datex</SectionTitle>
       <Table minWidth={1050}>
         <thead><tr>{["Property", "Datex as of", "Occupancy", "In-place base rent", "NOI YTD vs budget", "A/R > 60 / > 90", "Asset manager"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
@@ -462,9 +468,83 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
           </tr>
         ))}</tbody>
       </Table>
-      <Src>Each owned deal page has the full live panel: rent roll, Underwritten vs Today, leasing activity, and tenant sales & occupancy cost. Datex can't be read by the server directly — a snapshot is generated in a Claude session and imported (Portfolio Analytics → Maintenance → Import Datex snapshot).</Src>
+      <Src>Each owned deal page has the full live panel: rent roll, Underwritten vs Today, leasing activity, and tenant sales & occupancy cost. Datex can't be read by the server directly — a scheduled Claude task posts the changes with an auto-refresh token, and a full snapshot can still be imported by hand (Portfolio Analytics → Maintenance → Import Datex snapshot).</Src>
+      {autoOpen && <AutoRefreshTokens onClose={() => setAutoOpen(false)} />}
       {editMap && map && <DatexMapEditor deals={deals} rows={map} onClose={() => setEditMap(false)} onSaved={() => apiAmDatexMap().then(setMap)} />}
     </>
+  );
+}
+// ── Datex auto-refresh: status line (everyone) + scoped tokens (admin) ──
+const BLOCK_LABEL: Record<string, string> = { occupancy: "occupancy", tenants: "rent roll", vacantSuites: "vacant suites", sales: "sales", arAging: "A/R", financials: "financials", leasing: "leasing", assetManager: "asset manager", notes: "notes" };
+const fmtWhen = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+function AutoRefreshStatus() {
+  const [st, setSt] = useState<{ last: IngestLogView | null } | null>(null);
+  useEffect(() => { apiDatexAutoStatus().then(setSt).catch(() => setSt({ last: null })); }, []);
+  if (!st) return null;
+  const l = st.last;
+  return (
+    <div style={{ ...card, padding: "9px 14px", marginTop: 10, fontSize: 12.5, color: K.ink, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "baseline" }}>
+      <b style={{ fontFamily: "'Montserrat',sans-serif", fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase", color: K.charcoal }}>Last auto-refresh</b>
+      {!l ? <span style={{ color: K.gray }}>none yet — the scheduled Datex task hasn't posted.</span> : (
+        <span>
+          {fmtWhen(l.at)}{l.asOf ? ` (Datex as of ${fmtDate(l.asOf)})` : ""} · {Object.keys(l.blocks).map(b => BLOCK_LABEL[b] ?? b).join(", ") || "no blocks"} · {l.dealsChanged} propert{l.dealsChanged === 1 ? "y" : "ies"} changed, {l.dealsUnchanged} unchanged
+          {l.rejected.length > 0 && <span style={{ color: K.red }} title={l.rejected.map(r => `${r.dealId}: ${r.problem}`).join("\n")}> · {l.rejected.length} rejected ⓘ</span>}
+          {l.error && <span style={{ color: K.red }}> · failed: {l.error}</span>}
+          {l.warnings > 0 && <span style={{ color: K.gray }}> · {l.warnings} warning{l.warnings === 1 ? "" : "s"}</span>}
+        </span>
+      )}
+    </div>
+  );
+}
+function AutoRefreshTokens({ onClose }: { onClose: () => void }) {
+  const [tokens, setTokens] = useState<IngestTokenView[] | null>(null);
+  const [recent, setRecent] = useState<IngestLogView[]>([]);
+  const [label, setLabel] = useState("Weekly Datex task");
+  const [fresh, setFresh] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const load = () => { apiDatexAutoTokens().then(setTokens).catch(e => setErr(e.message)); apiDatexAutoStatus().then(s => setRecent(s.recent)).catch(() => {}); };
+  useEffect(load, []);
+  const create = async () => { setErr(null); try { const r = await apiDatexAutoCreateToken(label); setFresh(r.token); setCopied(false); load(); } catch (e) { setErr(e instanceof Error ? e.message : "failed"); } };
+  const revoke = async (t: IngestTokenView) => { if (!window.confirm(`Turn off "${t.label}"? Any task using it stops working.`)) return; try { await apiDatexAutoRevokeToken(t.id); load(); } catch (e) { setErr(e instanceof Error ? e.message : "failed"); } };
+  const copy = async () => { try { await navigator.clipboard.writeText(fresh ?? ""); setCopied(true); } catch { setCopied(false); } };
+  return (
+    <Modal title="Datex auto-refresh" onClose={onClose}>
+      <div style={{ fontSize: 12.5, color: K.gray, lineHeight: 1.45 }}>A token lets a scheduled Claude task read what's stored (<code>GET /api/datex/state</code>) and post Datex changes (<code>POST /api/datex/ingest</code>). It can do nothing else on the site. Anything the task doesn't send is kept as it is.</div>
+      {fresh && (
+        <div style={{ border: `1px solid ${K.green}`, background: "#f3faf0", borderRadius: 10, padding: 12, marginTop: 12 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: K.ink }}>Copy this token now — it won't be shown again.</div>
+          <div style={{ fontFamily: "monospace", fontSize: 12, wordBreak: "break-all", background: "#fff", border: `1px solid ${K.line}`, borderRadius: 6, padding: "8px 10px", marginTop: 6 }}>{fresh}</div>
+          <button style={{ ...btn(true), marginTop: 8 }} onClick={copy}>{copied ? "Copied ✓" : "Copy token"}</button>
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+        <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Weekly Datex task)" style={{ flex: "1 1 200px", minWidth: 0, border: `1px solid ${K.line}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, minHeight: 36 }} />
+        <button style={btn(true)} onClick={create}>Create token</button>
+      </div>
+      {err && <div style={{ color: K.red, fontSize: 12.5, marginTop: 8 }}>{err}</div>}
+      <SectionTitle>Tokens</SectionTitle>
+      {!tokens ? <Src>Loading…</Src> : !tokens.length ? <Src>No tokens yet.</Src> : tokens.map(t => (
+        <div key={t.id} style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", borderTop: `1px solid ${K.line}`, padding: "8px 0", opacity: t.revokedAt ? 0.55 : 1 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: K.ink }}>{t.label} <span style={{ fontFamily: "monospace", fontWeight: 400, color: K.gray, fontSize: 11.5 }}>{t.display}</span></div>
+            <Src>created {fmtWhen(t.createdAt)}{t.createdBy ? ` by ${t.createdBy}` : ""} · {t.lastUsedAt ? `last used ${fmtWhen(t.lastUsedAt)}` : "never used"}{t.revokedAt ? ` · turned off ${fmtWhen(t.revokedAt)}` : ""}</Src>
+          </div>
+          {!t.revokedAt && <button style={btn()} onClick={() => revoke(t)}>Turn off</button>}
+        </div>
+      ))}
+      {recent.length > 0 && (
+        <>
+          <SectionTitle>Recent runs</SectionTitle>
+          {recent.slice(0, 10).map(l => (
+            <div key={l.at} style={{ fontSize: 12, color: K.ink, borderTop: `1px solid ${K.line}`, padding: "6px 0" }}>
+              {fmtWhen(l.at)} · {l.dryRun ? "dry run" : "applied"} · {Object.keys(l.blocks).map(b => BLOCK_LABEL[b] ?? b).join(", ") || "—"} · {l.dealsChanged} changed{l.rejected.length ? ` · ${l.rejected.length} rejected` : ""}{l.error ? ` · failed: ${l.error}` : ""}
+              {l.rejected.length > 0 && <Src>{l.rejected.slice(0, 3).map(r => `${r.dealId}: ${r.problem}`).join(" · ")}</Src>}
+            </div>
+          ))}
+        </>
+      )}
+    </Modal>
   );
 }
 function DatexMapEditor({ deals, rows, onClose, onSaved }: { deals: Deal[]; rows: DatexMapRow[]; onClose: () => void; onSaved: () => void }) {

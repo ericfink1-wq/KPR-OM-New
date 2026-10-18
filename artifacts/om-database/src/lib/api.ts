@@ -1333,3 +1333,27 @@ export async function apiAmSummarizeNews(brand: string): Promise<string> {
   if (!r.ok) throw new Error(j.error || "Couldn't summarize");
   return j.summary ?? "";
 }
+
+// ── Datex auto-refresh (scoped ingest tokens + status) ──
+export interface IngestTokenView { id: string; label: string; display: string; scope: string[]; createdAt: string; createdBy: string | null; lastUsedAt: string | null; revokedAt: string | null }
+export interface IngestLogView { at: string; dryRun: boolean; token: string; asOf: string | null; blocks: Record<string, number>; dealsChanged: number; dealsUnchanged: number; rejected: Array<{ dealId: string; problem: string }>; warnings: number; error?: string }
+export async function apiDatexAutoTokens(): Promise<IngestTokenView[]> {
+  const r = await apiFetch("/am/datex-auto/tokens");
+  if (!r.ok) throw new Error("Couldn't load tokens");
+  return ((await r.json()) as { tokens: IngestTokenView[] }).tokens ?? [];
+}
+export async function apiDatexAutoCreateToken(label: string): Promise<{ token: string; view: IngestTokenView }> {
+  const r = await apiFetch("/am/datex-auto/tokens", { method: "POST", body: JSON.stringify({ label }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j as { error?: string }).error || "Couldn't create the token");
+  return j as { token: string; view: IngestTokenView };
+}
+export async function apiDatexAutoRevokeToken(id: string): Promise<void> {
+  const r = await apiFetch(`/am/datex-auto/tokens/${encodeURIComponent(id)}/revoke`, { method: "POST" });
+  if (!r.ok) throw new Error("Couldn't revoke the token");
+}
+export async function apiDatexAutoStatus(): Promise<{ last: IngestLogView | null; lastDryRun: IngestLogView | null; recent: IngestLogView[] }> {
+  const r = await apiFetch("/am/datex-auto/status");
+  if (!r.ok) throw new Error("Couldn't load the auto-refresh status");
+  return r.json();
+}

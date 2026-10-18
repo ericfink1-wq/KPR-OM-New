@@ -152,6 +152,17 @@ const yyyymm = (v: unknown): string | null => { const s = String(v ?? "").trim()
 const monthsBetween = (a: string, b: string) => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + (Number(b.slice(4)) - Number(a.slice(4)));
 const isoDay = (v: unknown): string | null => /^\d{4}-\d{2}-\d{2}/.test(String(v ?? "")) ? String(v).slice(0, 10) : null;
 
+// ── pending-sale guard ──────────────────────────────────────────────────────
+// Eric (10/17/26): nothing about a pending / under-contract sale is ever recorded. Datex
+// carries no such fields, so a payload that has one was built wrong — refuse the deal
+// rather than strip the key and carry on as if nothing happened.
+const PENDING_SALE_KEY = /^(pendingSale\w*|underContract|contract\w*|saleStage|salePrice|saleDate|saleStatus|buyer\w*|psa\w*|earnestMoney\w*|closingDate|disp[A-Z]\w*|txn[A-Z]\w*)$/;
+export function pendingSaleProblem(p: unknown): string | null {
+  if (!p || typeof p !== "object") return null;
+  const bad = Object.keys(p as Record<string, unknown>).filter(k => PENDING_SALE_KEY.test(k));
+  return bad.length ? `carries sale fields (${bad.join(", ")}) — pending-sale information is never recorded, and Datex has no such fields` : null;
+}
+
 export interface SalesSummary { sales12: number; months: number; from: string; to: string; staleMonths: number; partial: boolean }
 /**
  * Per-tenant trailing sales from SalesHistory MONTHLY rows — the 12 most recent REPORTED
@@ -219,7 +230,7 @@ export function buildLiveBlock(
   const tenants = Array.isArray(p.tenants) ? p.tenants.filter(t => {
     // OCCPSTAT decides when present: I (vacated) is dropped, C and N kept. Without it, a
     // dotted id is treated as a superseded generation (it repeats the SF at zero dollars).
-    const st = String((t as Record<string, unknown>)?.occStatus ?? (t as Record<string, unknown>)?.OCCPSTAT ?? "").trim().toUpperCase();
+    const st = String((t as Record<string, unknown>)?.occStatus ?? (t as Record<string, unknown>)?.OCCPSTAT ?? (t as Record<string, unknown>)?.occpstat ?? "").trim().toUpperCase();
     if (st) { if (st.startsWith("I")) return false; }
     else if (String(t?.tenantId ?? "").includes(".")) return false;
     return Boolean(String(t?.name ?? "").trim());
@@ -256,7 +267,7 @@ export function buildLiveBlock(
     const lsp = yyyymm(t.lastSalesPeriod);                        if (lsp) row.lastSalesPeriod = lsp;
     const ct = t.coTenancy === true || /^y/i.test(String(t.coTenancy ?? ""));   if (ct) row.coTenancy = true;
     if (t.salesReportType && String(t.salesReportType).trim()) row.salesReportType = String(t.salesReportType).trim().toUpperCase();
-    const occ = String((t as Record<string, unknown>).occStatus ?? (t as Record<string, unknown>).OCCPSTAT ?? "").trim().toUpperCase();
+    const occ = String((t as Record<string, unknown>).occStatus ?? (t as Record<string, unknown>).OCCPSTAT ?? (t as Record<string, unknown>).occpstat ?? "").trim().toUpperCase();
     if (occ) row.occStatus = occ.slice(0, 1);
     if (occ.startsWith("N")) row.futureLease = true;   // signed, not yet open — not in-place rent
     return row;
@@ -306,7 +317,7 @@ export function buildLiveBlock(
     if (Array.isArray(a.byTenant)) ar.byTenant = a.byTenant.filter(x => x && String(x.name ?? "").trim()).slice(0, 25).map(x => {
       // OCCPSTAT on an A/R row (or an explicit former flag) marks a VACATED tenant's balance,
       // which the app labels apart from the current roster's delinquency.
-      const xr = x as Record<string, unknown>, st = String(xr.occStatus ?? xr.OCCPSTAT ?? "").trim().toUpperCase().slice(0, 1);
+      const xr = x as Record<string, unknown>, st = String(xr.occStatus ?? xr.OCCPSTAT ?? xr.occpstat ?? "").trim().toUpperCase().slice(0, 1);
       const o: Record<string, unknown> = { tenantId: x.tenantId ?? null, name: String(x.name).trim(), over60: keepNumber(x.over60, { min: 0 }), over90: keepNumber(x.over90, { min: 0 }) };
       if (st) o.occStatus = st;
       if (typeof xr.former === "boolean") o.former = xr.former;
@@ -376,6 +387,8 @@ export function planDatexImport(payload: DatexPayload, deals: DealRef[], map: Da
       continue;
     }
 
+    const sale = pendingSaleProblem(p);
+    if (sale) { out.rejected.push({ dealId, propertyName: name, problem: sale }); continue; }
     const built = buildLiveBlock(p, asOf, entry);
     if ("problem" in built) { out.rejected.push({ dealId, propertyName: name, problem: built.problem }); continue; }
 
