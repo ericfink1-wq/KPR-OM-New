@@ -61,7 +61,7 @@ export const CHANGELOG: ChangeEntry[] = [
     category: "new",
     adminOnly: true,
     title: "Asset Mgmt editing: loans, swaps, dates and the Datex building map",
-    detail: "Admins can add, edit and delete loans, swaps and critical dates, each with a source note. You can also paste a JSON or CSV file to import many at once; it previews before it saves. A swap whose notional or maturity isn't documented yet saves as "terms pending" and stays out of the mark-to-market. The Datex building map that links each owned deal to its Datex building IDs can now be edited on the Properties tab.",
+    detail: "Admins can add, edit and delete loans, swaps and critical dates, each with a source note. You can also paste a JSON or CSV file to import many at once; it previews before it saves. A swap whose notional or maturity isn't documented yet saves as \"terms pending\" and stays out of the mark-to-market. The Datex building map that links each owned deal to its Datex building IDs can now be edited on the Properties tab.",
     where: "Asset Mgmt → Debt, Dates and Properties",
   },
   {
