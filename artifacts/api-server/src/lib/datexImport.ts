@@ -42,9 +42,27 @@ export interface DatexDealPayload {
     sf?: number | null; annualRent?: number | null; annualRentPSF?: number | null;
     annualNNNPSF?: number | null; leaseExpiry?: string | null;
     salesPSF?: number | null; salesPeriod?: string | null;
+    // v2
+    nationalTenant?: string | null; annualNNN?: number | null; annualOther?: number | null;
+    leaseStart?: string | null; delinquency?: number | null; lastSalesPeriod?: string | null;
+    coTenancy?: boolean | string | null; salesReportType?: string | null;
   }> | null;
   vacantSuites?: Array<{ suite?: string | null; sf?: number | null }> | null;
   notes?: string | null;
+  // ── Snapshot v2 (Asset Management, 10/18/26) — every block optional ──
+  assetManager?: string | null;
+  /** Raw SalesHistory rows (SalesType GROSS), last ~24 months. Reduced on arrival — see
+   *  reduceSalesHistory — because Rolling12Sales is WRONG whenever LastSalesPeriod < Period. */
+  salesHistory?: Array<{ tenantId?: string | null; period?: string | null; amount?: number | null; reportingType?: string | null }> | null;
+  /** Open A/R from TenantLedger (TransactionOpenAmount > 0), bucketed by TransactionDate age. */
+  arAging?: { totalOpen?: number | null; over60?: number | null; over90?: number | null; byTenant?: Array<{ tenantId?: string | null; name?: string | null; over60?: number | null; over90?: number | null }> | null } | null;
+  /** FinancialGroups AccountGroupId NOI, RAW Datex values (credit convention: NOI arrives
+   *  NEGATIVE — the server flips the sign). Use the last COMPLETED month. */
+  financials?: { period?: string | null; basis?: string | null; noiYtdActual?: number | null; noiYtdBudget?: number | null; noiTtmActual?: number | null; noiYearBudget?: number | null } | null;
+  /** LeaseAppDealHistoryBySuite — recent deals (submitted or executed in the last 12 months). */
+  leasing?: Array<{ tenant?: string | null; suite?: string | null; gla?: number | null; rentPSF?: number | null; stage?: string | null; submitted?: string | null; executed?: string | null; rentCommencement?: string | null; termMonths?: number | null }> | null;
+  /** Datex Loans rows for these buildings (Inactive = false). */
+  loans?: Array<Record<string, unknown>> | null;
 }
 
 export interface DatexPayload {
@@ -126,6 +144,46 @@ export function __setDatexMap(m: DatexMap | null): void { overrideMap = m; }
 const sameIds = (a: string[], b: string[]) =>
   a.length === b.length && [...a].map(s => s.trim().toLowerCase()).sort().join("|") === [...b].map(s => s.trim().toLowerCase()).sort().join("|");
 
+const yyyymm = (v: unknown): string | null => { const s = String(v ?? "").trim(); return /^\d{6}$/.test(s) ? s : null; };
+const monthsBetween = (a: string, b: string) => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + (Number(b.slice(4)) - Number(a.slice(4)));
+const isoDay = (v: unknown): string | null => /^\d{4}-\d{2}-\d{2}/.test(String(v ?? "")) ? String(v).slice(0, 10) : null;
+
+export interface SalesSummary { sales12: number; months: number; from: string; to: string; staleMonths: number; partial: boolean }
+/**
+ * Per-tenant trailing sales from SalesHistory MONTHLY rows — the 12 most recent REPORTED
+ * months, summed. Never TenantsMetrics.Rolling12Sales: when a tenant stops reporting it keeps
+ * summing only the stale months still inside the window (Michaels @ keene read $1.13M = 3
+ * months vs a true 2025 $3.09M). RPT rows win over estimates for the same month.
+ */
+export function reduceSalesHistory(rows: NonNullable<DatexDealPayload["salesHistory"]>, asOfPeriod: string): Map<string, SalesSummary> {
+  const byTenant = new Map<string, Map<string, { amount: number; rpt: boolean }>>();
+  for (const r of rows) {
+    const t = String(r?.tenantId ?? "").trim(), p = yyyymm(r?.period), a = num(r?.amount);
+    if (!t || t.includes(".") || !p || p === "190001" || a == null || a < 0) continue;
+    const rpt = String(r?.reportingType ?? "RPT").trim().toUpperCase() === "RPT";
+    const m = byTenant.get(t) ?? new Map(); const cur = m.get(p);
+    if (!cur || (rpt && !cur.rpt)) m.set(p, { amount: a, rpt });
+    byTenant.set(t, m);
+  }
+  const out = new Map<string, SalesSummary>();
+  for (const [t, m] of byTenant) {
+    const periods = [...m.keys()].sort().reverse().slice(0, 12);
+    if (!periods.length) continue;
+    const to = periods[0], from = periods[periods.length - 1];
+    out.set(t, { sales12: Math.round(periods.reduce((s, p) => s + m.get(p)!.amount, 0)), months: periods.length, from, to,
+      staleMonths: Math.max(0, monthsBetween(to, asOfPeriod)), partial: periods.length < 12 });
+  }
+  return out;
+}
+
+/** GLA from the rent roll (live suites + vacant suites) vs Occupancy.TotalGLA. */
+export function glaTieOut(tenants: Array<{ sf?: unknown }>, vacant: Array<{ sf?: unknown }>, occupancyTotal: number | null): { rosterGLA: number; occupancyGLA: number | null; diffPct: number | null; ties: boolean | null } {
+  const rosterGLA = Math.round([...tenants, ...vacant].reduce((s, t) => s + (num(t.sf) ?? 0), 0));
+  if (occupancyTotal == null || occupancyTotal <= 0) return { rosterGLA, occupancyGLA: null, diffPct: null, ties: null };
+  const diffPct = Math.round(((rosterGLA - occupancyTotal) / occupancyTotal) * 1000) / 10;
+  return { rosterGLA, occupancyGLA: occupancyTotal, diffPct, ties: Math.abs(diffPct) <= 2 };
+}
+
 /**
  * Validate one deal's payload and build the live block. Returns null with a reason when the
  * payload cannot be trusted — the caller records it rather than writing anything.
@@ -166,9 +224,19 @@ export function buildLiveBlock(
     const rent = keepNumber(t.annualRent, { min: 0 });            if (rent != null) row.annualRent = rent;
     const psf = keepNumber(t.annualRentPSF, { min: 0 });          if (psf != null) row.rentPerSF = psf;
     const nnn = keepNumber(t.annualNNNPSF, { min: 0 });           if (nnn != null) row.nnnPerSF = nnn;
+    // salesPSF from TenantsMetrics is Rolling12SalesPSF — wrong when the tenant stopped
+    // reporting. Kept only for reference; sales12 (from SalesHistory) is what the app uses.
     const sales = keepNumber(t.salesPSF, { min: 0 });             if (sales != null) row.salesPSF = sales;
     if (t.leaseExpiry && /^\d{4}-\d{2}-\d{2}/.test(String(t.leaseExpiry))) row.leaseExpiry = String(t.leaseExpiry).slice(0, 10);
     if (t.salesPeriod) row.salesPeriod = String(t.salesPeriod);
+    if (t.nationalTenant && String(t.nationalTenant).trim()) row.nationalTenant = String(t.nationalTenant).trim();
+    const nnnA = keepNumber(t.annualNNN, { min: 0 });            if (nnnA != null) row.annualNNN = nnnA;
+    const oth = keepNumber(t.annualOther, { min: 0 });           if (oth != null) row.annualOther = oth;
+    const ls = isoDay(t.leaseStart);                              if (ls) row.leaseStart = ls;
+    const dq = keepNumber(t.delinquency);                         if (dq != null) row.delinquency = dq;
+    const lsp = yyyymm(t.lastSalesPeriod);                        if (lsp) row.lastSalesPeriod = lsp;
+    const ct = t.coTenancy === true || /^y/i.test(String(t.coTenancy ?? ""));   if (ct) row.coTenancy = true;
+    if (t.salesReportType && String(t.salesReportType).trim()) row.salesReportType = String(t.salesReportType).trim().toUpperCase();
     return row;
   }) : null;
 
@@ -190,6 +258,54 @@ export function buildLiveBlock(
   if (tenants && tenants.length) block.tenants = tenants;
   if (Array.isArray(p.vacantSuites) && p.vacantSuites.length) block.vacantSuites = p.vacantSuites;
   if (p.notes) block.notes = String(p.notes);
+
+  // ── v2 ──
+  if (p.assetManager && String(p.assetManager).trim()) block.assetManager = String(p.assetManager).trim();
+  const asOfPeriod = asOf.slice(0, 4) + asOf.slice(5, 7);
+  if (tenants && Array.isArray(p.salesHistory) && p.salesHistory.length) {
+    const sums = reduceSalesHistory(p.salesHistory, asOfPeriod);
+    for (const t of tenants) {
+      const s = sums.get(String(t.tenantId ?? ""));
+      if (s) t.sales12 = s;
+      else if (t.lastSalesPeriod === "190001") t.salesNeverReported = true;
+    }
+    block.salesHistoryCovered = true;
+  }
+  if (tenants) {
+    const live = tenants.filter(t => !/^vacant\b/i.test(String(t.name)));
+    block.glaTieOut = glaTieOut(live, Array.isArray(p.vacantSuites) ? p.vacantSuites : [], totalGLA);
+  }
+  if (p.arAging && typeof p.arAging === "object") {
+    const a = p.arAging, ar: Record<string, unknown> = {};
+    const tot = keepNumber(a.totalOpen, { min: 0 }); if (tot != null) ar.totalOpen = tot;
+    const o60 = keepNumber(a.over60, { min: 0 });    if (o60 != null) ar.over60 = o60;
+    const o90 = keepNumber(a.over90, { min: 0 });    if (o90 != null) ar.over90 = o90;
+    if (o60 != null && o90 != null && o90 > o60 + 1) return { problem: `A/R over 90 days (${o90}) exceeds A/R over 60 days (${o60})` };
+    if (Array.isArray(a.byTenant)) ar.byTenant = a.byTenant.filter(x => x && String(x.name ?? "").trim()).slice(0, 25).map(x => ({ tenantId: x.tenantId ?? null, name: String(x.name).trim(), over60: keepNumber(x.over60, { min: 0 }), over90: keepNumber(x.over90, { min: 0 }) }));
+    if (Object.keys(ar).length) block.arAging = ar;
+  }
+  if (p.financials && typeof p.financials === "object") {
+    // Datex books income as a CREDIT: NOI arrives negative. Flip it (a real loss arrives
+    // positive and becomes negative — the sign carries through, never clamped).
+    const f = p.financials, flip = (v: unknown) => { const n = num(v); return n == null ? null : Math.round(-n); };
+    const fin: Record<string, unknown> = { source: "FinancialGroups NOI" };
+    const per = yyyymm(f.period); if (per) fin.period = per;
+    if (f.basis) fin.basis = String(f.basis).trim();
+    for (const k of ["noiYtdActual", "noiYtdBudget", "noiTtmActual", "noiYearBudget"] as const) { const v = flip(f[k]); if (v != null) fin[k] = v; }
+    if (Object.keys(fin).length > 2) block.financials = fin;
+  }
+  if (Array.isArray(p.leasing) && p.leasing.length) {
+    block.leasing = p.leasing.filter(x => x && String(x.tenant ?? "").trim()).slice(0, 40).map(x => {
+      const o: Record<string, unknown> = { tenant: String(x.tenant).trim() };
+      if (x.suite) o.suite = String(x.suite).trim();
+      const g = keepNumber(x.gla, { min: 0 }); if (g) o.gla = g;
+      const r = keepNumber(x.rentPSF, { min: 0 }); if (r) o.rentPSF = r;
+      if (x.stage) o.stage = String(x.stage).trim();
+      for (const k of ["submitted", "executed", "rentCommencement"] as const) { const d = isoDay(x[k]); if (d) o[k] = d; }
+      const tm = keepNumber(x.termMonths, { min: 0 }); if (tm) o.termMonths = tm;
+      return o;
+    });
+  }
   return { block };
 }
 

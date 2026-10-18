@@ -19,3 +19,4 @@ export * from "./siteAgreements";
 export * from "./mcpKeys";
 export * from "./rateCurves";
 export * from "./userPrefs";
+export * from "./assetMgmt";

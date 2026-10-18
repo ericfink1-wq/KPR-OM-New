@@ -1731,7 +1731,17 @@ router.post("/deals/datex-import", requireAuth, async (req, res) => {
       return !d.trashedAt && !d._processing;
     });
 
-    const plan = planDatexImport(payload as DatexPayload, active.map(r => ({ id: r.id, data: r.data as Record<string, unknown> })));
+    // The deal ↔ building map is admin-editable now (Asset Mgmt → Properties → Datex map),
+    // so it is read from the database, seeded once from data/datex-deal-map.json.
+    const { loadDatexMapFromDb, datexLoanToRecord, upsertRecord } = await import("../lib/assetMgmt");
+    const plan = planDatexImport(payload as DatexPayload, active.map(r => ({ id: r.id, data: r.data as Record<string, unknown> })), await loadDatexMapFromDb());
+
+    // Datex Loans rows ride along in the snapshot (Loans is incomplete via the connector, so
+    // admin-entered loans always win in the debt totals; these only fill gaps).
+    const loanSeeds = plan.applied.flatMap(a => {
+      const p = ((payload as DatexPayload).deals ?? []).find(x => x.dealId === a.dealId);
+      return (Array.isArray(p?.loans) ? p!.loans : []).map(l => ({ dealId: a.dealId, rec: datexLoanToRecord(l) })).filter(x => x.rec);
+    });
 
     if (apply && plan.applied.length) {
       await createSnapshot("before-datex-import");
@@ -1740,6 +1750,7 @@ router.post("/deals/datex-import", requireAuth, async (req, res) => {
         // the start would revert anything another process changed in between.
         await updateDealSafely(a.dealId, () => ({ [DATEX_BLOCK_KEY]: a.block }));
       }
+      for (const s of loanSeeds) await upsertRecord(s.rec!.id, "loan", s.dealId, s.rec!.data as Record<string, unknown>, s.rec!.note, "datex-import");
     }
 
     // Report the spread against the acquisition snapshot — the reason for holding both.
@@ -1753,7 +1764,7 @@ router.post("/deals/datex-import", requireAuth, async (req, res) => {
     res.json({
       ok: true,
       applied: apply,
-      counts: { wouldUpdate: plan.applied.length, skipped: plan.skipped.length, rejected: plan.rejected.length },
+      counts: { wouldUpdate: plan.applied.length, skipped: plan.skipped.length, rejected: plan.rejected.length, datexLoans: loanSeeds.length },
       deals: plan.applied.map(a => ({ dealId: a.dealId, propertyName: a.propertyName, block: a.block, hadPrevious: !!a.changedFrom })),
       skipped: plan.skipped,
       rejected: plan.rejected,
