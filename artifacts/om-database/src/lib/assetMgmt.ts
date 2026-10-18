@@ -155,7 +155,7 @@ export function prefTotals(rows: PrefRow[]): { total: number; weightedRatePct: n
 }
 
 // ── Live tenant list (Datex first, OM roster as fallback) ────────────────────
-export interface LiveTenant { name: string; tenantId: string | null; sf: number | null; annualRent: number | null; annualNNN: number | null; annualOther: number | null; leaseExpiry: string | null; isAnchor: boolean; nationalTenant: string | null; sales12: { sales12: number; months: number; from: string; to: string; staleMonths: number; partial: boolean } | null; salesNeverReported: boolean; lastSalesPeriod: string | null; delinquency: number | null; coTenancy: boolean }
+export interface LiveTenant { name: string; tenantId: string | null; sf: number | null; annualRent: number | null; annualNNN: number | null; annualOther: number | null; leaseExpiry: string | null; isAnchor: boolean; nationalTenant: string | null; sales12: { sales12: number; months: number; from: string; to: string; staleMonths: number; partial: boolean; suspectMonths?: Array<{ period: string; amount: number; medianMonth: number }> } | null; salesNeverReported: boolean; lastSalesPeriod: string | null; delinquency: number | null; coTenancy: boolean }
 export function liveTenants(deal: Deal): { tenants: LiveTenant[]; source: "Datex" | "OM roster"; asOf: string | null } {
   const dx = (deal as unknown as { datexLive?: Record<string, unknown> }).datexLive;
   const omAnchors = new Set((deal.tenants ?? []).filter(t => t.isAnchor).map(t => brandFamilyKey(t.canonicalName || t.name)));
@@ -439,7 +439,7 @@ export function buildCreditWatch(deals: Deal[], abstracts: LeaseAbstract[], watc
 }
 
 // ── Tenant sales & occupancy cost ────────────────────────────────────────────
-export interface SalesRow { tenant: string; sf: number | null; sales12: number | null; salesPSF: number | null; period: string | null; months: number | null; staleMonths: number | null; occCostPct: number | null; occCostBasis: string; isAnchor: boolean; atRisk: boolean; flags: string[]; benchmarkPSF: number | null; vsBenchmarkPct: number | null; benchmarkN: number | null }
+export interface SalesRow { tenant: string; sf: number | null; sales12: number | null; suspect: Array<{ period: string; amount: number; medianMonth: number }>; salesPSF: number | null; period: string | null; months: number | null; staleMonths: number | null; occCostPct: number | null; occCostBasis: string; isAnchor: boolean; atRisk: boolean; flags: string[]; benchmarkPSF: number | null; vsBenchmarkPct: number | null; benchmarkN: number | null }
 const fmtPeriod = (p: string) => `${p.slice(4)}/${p.slice(0, 4)}`;
 export function buildSalesRows(deal: Deal, benchmarks: AnalystTenantBenchmark[]): { rows: SalesRow[]; source: string; asOf: string | null } {
   const lt = liveTenants(deal);
@@ -447,11 +447,15 @@ export function buildSalesRows(deal: Deal, benchmarks: AnalystTenantBenchmark[])
   const rows: SalesRow[] = [];
   for (const t of lt.tenants) {
     const flags: string[] = [];
-    if (t.salesNeverReported) { rows.push({ tenant: t.name, sf: t.sf, sales12: null, salesPSF: null, period: null, months: null, staleMonths: null, occCostPct: null, occCostBasis: "never reports sales", isAnchor: t.isAnchor, atRisk: false, flags: ["never reports"], benchmarkPSF: null, vsBenchmarkPct: null, benchmarkN: null }); continue; }
+    if (t.salesNeverReported) { rows.push({ tenant: t.name, sf: t.sf, sales12: null, suspect: [], salesPSF: null, period: null, months: null, staleMonths: null, occCostPct: null, occCostBasis: "never reports sales", isAnchor: t.isAnchor, atRisk: false, flags: ["never reports"], benchmarkPSF: null, vsBenchmarkPct: null, benchmarkN: null }); continue; }
     if (!t.sales12) continue;
     const s12 = t.sales12;
     if (s12.staleMonths > 6) flags.push(`last report ${fmtPeriod(s12.to)} (${s12.staleMonths} months ago)`);
     if (s12.partial) flags.push(`only ${s12.months} months reported`);
+    // A month far above the tenant's usual (a mis-keyed ANNUAL figure) is already left out of
+    // the 12-month total on the server — say so, so the total isn't read as complete.
+    const suspect = s12.suspectMonths ?? [];
+    if (suspect.length) flags.push(`${suspect.length} month${suspect.length === 1 ? "" : "s"} excluded as suspect (> 3× usual month)`);
     const psf = t.sf ? Math.round((s12.sales12 / t.sf) * 100) / 100 : null;
     const parts = [t.annualRent, t.annualNNN, t.annualOther].filter((v): v is number => v != null);
     const occ = s12.sales12 > 0 && t.annualRent != null ? Math.round((parts.reduce((a, b) => a + b, 0) / s12.sales12) * 1000) / 10 : null;
@@ -460,7 +464,7 @@ export function buildSalesRows(deal: Deal, benchmarks: AnalystTenantBenchmark[])
     if (atRisk) flags.push(`occupancy cost over ${limit}% (${t.isAnchor ? "anchor" : "shop"})`);
     const b = bench.get(brandFamilyKey(t.nationalTenant || t.name));
     const bp = b?.medianSalesPerSf ?? null;
-    rows.push({ tenant: t.name, sf: t.sf, sales12: s12.sales12, salesPSF: psf, period: `${fmtPeriod(s12.from)}–${fmtPeriod(s12.to)}`, months: s12.months, staleMonths: s12.staleMonths,
+    rows.push({ tenant: t.name, sf: t.sf, sales12: s12.sales12, suspect, salesPSF: psf, period: `${fmtPeriod(s12.from)}–${fmtPeriod(s12.to)}`, months: s12.months, staleMonths: s12.staleMonths,
       occCostPct: occ, occCostBasis: t.annualNNN == null ? "base rent ÷ sales (no recoveries on file)" : "base + recoveries + other ÷ sales", isAnchor: t.isAnchor, atRisk, flags,
       benchmarkPSF: bp, vsBenchmarkPct: bp && psf ? Math.round(((psf - bp) / bp) * 1000) / 10 : null, benchmarkN: b?.salesCount ?? null });
   }

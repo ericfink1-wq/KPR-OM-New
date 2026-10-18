@@ -135,6 +135,70 @@ class PlanTest(unittest.TestCase):
         self.assertTrue(any(c["args"]["entity"] == "SalesHistory" for c in p["calls"]))
 
 
+class SalesAndFinancialsFixesTest(unittest.TestCase):
+    """Fixes from the first live run (10/18/26)."""
+
+    def occ_only(self):
+        state, calls = load()
+        return state, [c for c in calls if c["entity"] == "Occupancy"]
+
+    def sales_calls(self, p):
+        return [c for c in p["calls"] if c["args"]["entity"] == "SalesHistory"]
+
+    def test_first_pull_is_portfolio_wide_by_year_never_sorted(self):
+        state, calls = self.occ_only()
+        for d in state["deals"]:
+            d.setdefault("sales", {})["storedMonthlyRows"] = 0
+        sc = self.sales_calls(K.plan(state, calls, AS_OF))
+        self.assertEqual([c["args"]["filters"][1]["value"] for c in sc], ["2024", "2025", "2026"])   # 202410…202609
+        for c in sc:
+            self.assertNotIn("orderBy", c["args"])                                                 # sorted paging fails on page 2
+            self.assertFalse(any(f["field"] == "BuildingId" for f in c["args"]["filters"]))        # one pull, split in build
+            self.assertEqual(c["args"]["filters"][0], {"field": "SalesType", "operator": "contains", "value": "GROSS"})
+
+    def test_checked_through_stops_a_repeat_first_pull(self):
+        state, calls = self.occ_only()
+        for d in state["deals"]:
+            d.setdefault("sales", {}).update({"storedMonthlyRows": 0, "checkedThrough": "202609"})      # Girard: none in Datex, but checked
+        self.assertEqual(self.sales_calls(K.plan(state, calls, AS_OF)), [])
+
+    def test_sales_modes(self):
+        state, calls = self.occ_only()
+        self.assertEqual(self.sales_calls(K.plan(state, calls, AS_OF, "weekly")), [])
+        m = self.sales_calls(K.plan(state, calls, AS_OF, "monthly"))
+        self.assertEqual([c["args"]["filters"][1] for c in m], [{"field": "SalesPeriod", "operator": "eq", "value": "202609"}])
+        self.assertEqual(len(self.sales_calls(K.plan(state, calls, AS_OF, "all"))), 3)
+        self.assertEqual(len(self.sales_calls(K.plan(state, calls, AS_OF, "weekly", "all"))), 3)
+
+    def test_build_splits_a_portfolio_pull_and_stamps_checked_through(self):
+        state, calls = load()
+        calls = [c for c in calls if c["entity"] != "SalesHistory"] + [{"entity": "SalesHistory", "tool": "read",
+            "filters": [{"field": "SalesType", "operator": "contains", "value": "GROSS"}, {"field": "SalesPeriod", "operator": "contains", "value": "2026"}],
+            "rows": [{"BuildingId": "brunswic ", "TenantId": "t0000001", "SalesType": "GROSS", "ReportingType": "RPT", "SalesPeriod": "202608", "SalesAmount": 2300000},
+                     {"BuildingId": "academy", "TenantId": "t9", "SalesType": "GROSS", "ReportingType": "RPT", "SalesPeriod": "202608", "SalesAmount": 5}]}]
+        p, _ = K.build(state, calls, AS_OF)
+        d = {x["dealId"]: x for x in p["deals"]}
+        self.assertEqual([r["tenantId"] for r in d["d-cooks"]["salesHistory"]], ["t0000001"])
+        self.assertEqual(d["d-rock"]["salesHistory"], [])                    # covered, none found — still sent
+        self.assertEqual(d["d-rock"]["salesCheckedThrough"], "202609")        # year 2026 read, capped at last closed month
+        self.assertEqual(K.sales_checked_through([{"entity": "SalesHistory", "filters": [{"field": "SalesPeriod", "operator": "eq", "value": "202609"}]}], AS_OF), "202609")
+
+    def test_financials_skip_quietly_when_a_building_is_not_in_datex(self):
+        state, calls = load()
+        state["deals"].append({"dealId": "d-uh", "propertyName": "University Hills", "bldgIds": ["unihills"], "hasSnapshot": True, "financials": None})
+        p, rep = K.build(state, calls, AS_OF)
+        self.assertNotIn("financials", next((d for d in p["deals"] if d["dealId"] == "d-uh"), {}))
+        self.assertIn("financials: not in Datex", next(r for r in rep if r["dealId"] == "d-uh")["notes"])
+        # One building of several missing: the others are summed, the gap is named.
+        fin = [c for c in calls if c["entity"] == "FinancialGroups"]
+        for c in fin:
+            c["rows"] = [r for r in c["rows"] if not r["EntityID"].startswith("rockplz")]
+        p, rep = K.build(state, [c for c in calls if c["entity"] != "FinancialGroups"] + fin, AS_OF)
+        r = next(d for d in p["deals"] if d["dealId"] == "d-rock")["financials"]
+        self.assertEqual(r["noiYtdActual"], -900000 - 1000000)
+        self.assertTrue(any("rockplz not in Datex" in n for n in next(x for x in rep if x["dealId"] == "d-rock")["notes"]))
+
+
 class ExtractTest(unittest.TestCase):
     def test_transcript_extraction_incl_saved_file_and_errors(self):
         with tempfile.TemporaryDirectory() as tmp:

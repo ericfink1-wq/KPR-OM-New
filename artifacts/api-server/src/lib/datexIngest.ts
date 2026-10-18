@@ -180,11 +180,18 @@ export function mergeDatexDeal(
     const r = mergeSalesRows(storedSales, p.salesHistory as unknown[]);
     salesRows = r.rows;
     if (r.added || r.updated) changed.push(`sales +${r.added} months${r.updated ? `, ${r.updated} revised` : ""}`);
+    // "Checked through" survives an empty result (Girard Plaza has no sales in Datex) so the
+    // next run doesn't re-plan a first-time pull. Never later than the payload's own month.
+    const ct = yyyymm(p.salesCheckedThrough) ?? (r.rows.length ? r.rows.reduce((a, x) => (x.period > a ? x.period : a), "") : null);
+    const cap = asOf.slice(0, 4) + asOf.slice(5, 7);
+    if (ct && ct <= cap && ct > String(prev?.salesCheckedThrough ?? "")) next.salesCheckedThrough = ct;
     if (r.dropped) warnings.push(`${r.dropped} sales row(s) dropped (no tenant, bad period, the 190001 never-reported sentinel, or a negative amount)`);
     stamp("sales");
   }
   const tenants = Array.isArray(next.tenants) ? (next.tenants as Array<Record<string, unknown>>) : null;
-  if (tenants && (sent.includes("sales") || sent.includes("tenants"))) {
+  // Recomputed on EVERY merge when monthly history is stored (cheap), so a rule change — e.g.
+  // the suspect-month exclusion — reaches stored totals on the next weekly post.
+  if (tenants && (salesRows.length || sent.includes("tenants"))) {
     if (salesRows.length) {
       const asOfPeriod = String(next.asOf).slice(0, 4) + String(next.asOf).slice(5, 7);
       const sums = reduceSalesHistory(salesRows, asOfPeriod);
@@ -204,6 +211,7 @@ export function mergeDatexDeal(
       if (carried) warnings.push(`${carried} tenant sales summaries carried over from the previous snapshot — send SalesHistory to refresh them`);
     }
   }
+  if (!sent.includes("tenants") && !sent.includes("sales") && differs(prevTenants, next.tenants)) changed.push("tenant 12-month sales recomputed");
   if ((sent.includes("tenants") || sent.includes("vacantSuites") || sent.includes("occupancy")) && Array.isArray(next.tenants)) {
     const live = (next.tenants as Array<Record<string, unknown>>).filter(t => !/^vacant\b/i.test(String(t.name)) && !t.futureLease);
     next.glaTieOut = glaTieOut(live, Array.isArray(next.vacantSuites) ? (next.vacantSuites as Array<{ sf?: unknown }>) : [], num(next.totalGLA));
@@ -230,7 +238,8 @@ export function dealState(dealId: string, propertyName: string, bldgIds: string[
     asOf: block.asOf ?? null, blockAsOf,
     occupancy: { period: block.period ?? null, totalGLA: block.totalGLA ?? null, occupiedGLA: block.occupiedGLA ?? null, totalUnits: block.totalUnits ?? null, occupiedUnits: block.occupiedUnits ?? null },
     tenants: { count: tenants.length, hash: rosterHash(tenants), ids: tenants.map(t => String(t.tenantId ?? "").trim()).filter(Boolean) },
-    sales: { maxPeriod: salesMax, storedMonthlyRows: salesRows.length, byTenant },
+    sales: { maxPeriod: salesMax, checkedThrough: (block.salesCheckedThrough as string | undefined) ?? null, storedMonthlyRows: salesRows.length, byTenant,
+      suspectMonths: tenants.reduce((n, t) => n + (((t.sales12 as { suspectMonths?: unknown[] } | undefined)?.suspectMonths?.length) ?? 0), 0) },
     leasing: { count: leasing.length, latestSubmitted },
     financials: fin ? { period: fin.period ?? null, basis: fin.basis ?? null } : null,
     arAging: block.arAging ? { asOf: blockAsOf?.arAging ?? block.asOf ?? null } : null,

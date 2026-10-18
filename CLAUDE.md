@@ -45,6 +45,11 @@ Persistent context for this repo. Read this fully at the start of every session.
   Live-Datex facts it encodes: Period/SalesPeriod are TEXT (no gt — use eq/startsWith), Basis is "C"/"A"
   (server now stores Cash/Accrual), ids fixed-width. `rosterHash` (TS) and `roster_hash` (py) MUST agree —
   `datexJobKit.test.ts` pins it and runs the Python unit tests; change both or neither.
+- Live-run fixes (10/18/26): SalesHistory is pulled PORTFOLIO-WIDE (no building filter) and NEVER with orderBy
+  (sorted paging fails on page 2); `salesCheckedThrough` per deal so an empty result counts as checked;
+  `reduceSalesHistory` excludes a month > `SUSPECT_MONTH_MULTIPLE` (3)× the tenant's median (≥4 months) and
+  lists it in `sales12.suspectMonths` (chip on the sales table); totals recompute on EVERY merge from stored
+  months; a building with no NOI rows is "not in Datex" (quiet). Plan modes weekly / monthly / all (+ --sales).
 
 ## SESSION 2026-06-19 (extraction-quality + self-improvement push). NEXT-SESSION PICKUP.
 All on `main`, typecheck-clean, 64 api-server tests green. Built this session:

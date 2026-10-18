@@ -38,7 +38,7 @@ import sys
 import urllib.error
 import urllib.request
 
-KIT_VERSION = "2026-10-18.1"
+KIT_VERSION = "2026-10-18.2"
 DEFAULT_BASE = os.environ.get("KPR_BASE_URL", "https://kpr-oms.replit.app")
 
 # The field that names the building, per entity (Datex ids are fixed-width: always trim).
@@ -370,6 +370,23 @@ def build_sales(calls, bl):
     return out
 
 
+def sales_checked_through(calls, as_of):
+    """The latest month the SalesHistory calls fully covered: an `eq` month, or a year read
+    via contains/startsWith (capped at the last closed month)."""
+    best, cap = None, closed_period(as_of)
+    for c in calls:
+        if c.get("entity") != "SalesHistory":
+            continue
+        for f in c.get("filters") or []:
+            if f.get("field") != "SalesPeriod":
+                continue
+            v, op = str(f.get("value") or "").strip(), str(f.get("operator") or "").lower()
+            p = v if op == "eq" and re.fullmatch(r"\d{6}", v) else min(v + "12", cap) if op in ("contains", "startswith") and re.fullmatch(r"\d{4}", v) else None
+            if p and p <= cap and (best is None or p > best):
+                best = p
+    return best
+
+
 def _age_days(as_of, v):
     d = iso_day(v)
     return None if not d else (dt.date.fromisoformat(as_of) - dt.date.fromisoformat(d)).days
@@ -426,10 +443,18 @@ def build_ar(calls, bl, as_of, current_ids):
 
 
 def build_financials(calls, bl, period):
+    """NOI for the deal's buildings. A building with NO NOI rows at all is simply not in Datex
+    (University Hills) and is left out quietly; a building that has NOI history but no row for
+    this period means the month isn't closed there yet, so the deal waits (no partial sum)."""
     rows = [r for r in rows_for(calls, "FinancialGroups", bl) if (s(r.get("AccountGroupId")) or "").upper() == "NOI"]
+    present = {nid(r.get("EntityID")) for r in rows}
+    absent = [b for b in bl if b not in present]
+    bl = [b for b in bl if b in present]
+    if not bl:
+        return None, "financials: not in Datex"
     at = [r for r in rows if yyyymm(r.get("Period")) == period]
-    if not at or {nid(r.get("EntityID")) for r in at} != set(bl):
-        return None
+    if {nid(r.get("EntityID")) for r in at} != set(bl):
+        return None, f"financials: {period} not posted yet for every building"
     out = {"period": period}
     for key, f in (("noiYtdActual", "YtdActual"), ("noiYtdBudget", "YtdBudget"), ("noiYearBudget", "CurrentYearBudget")):
         vals = [num(r.get(f)) for r in at]
@@ -452,7 +477,7 @@ def build_financials(calls, bl, period):
     bases = {BASIS.get((s(r.get("Basis")) or "").upper()[:1], s(r.get("Basis"))) for r in at if s(r.get("Basis"))}
     if bases:
         out["basis"] = bases.pop() if len(bases) == 1 else "Mixed"
-    return out
+    return out, (f"financials: {', '.join(absent)} not in Datex (left out)" if absent else None)
 
 
 def build_leasing(calls, bl):
@@ -514,6 +539,9 @@ def build(state, calls, as_of, fin_period=None, force=False):
             p["vacantSuites"] = build_vacant(calls, bl)
         if covered(calls, "SalesHistory", bl):
             p["salesHistory"] = build_sales(calls, bl)
+            ct = sales_checked_through(calls, as_of)
+            if ct:
+                p["salesCheckedThrough"] = ct            # an empty result still counts as checked
         if covered(calls, "TenantLedger", bl):
             # Former vs current: the fresh Tenants read when there is one, else the site's roster.
             cur = None
@@ -527,11 +555,11 @@ def build(state, calls, as_of, fin_period=None, force=False):
             if not force and (d.get("financials") or {}).get("period") == fin_period:
                 notes.append(f"financials already at {fin_period} — not resent")
             else:
-                fin = build_financials(calls, bl, fin_period)
+                fin, why = build_financials(calls, bl, fin_period)
                 if fin:
                     p["financials"] = fin
-                else:
-                    notes.append(f"financials skipped: no NOI row for every building at {fin_period}")
+                if why:
+                    notes.append(why)
         if covered(calls, "LeaseAppDealHistoryBySuite", bl):
             lease = build_leasing(calls, set(bl))
             if lease:
@@ -555,7 +583,7 @@ def F(field, op, value):
     return {"field": field, "operator": op, "value": value}
 
 
-def plan(state, calls, as_of, mode="weekly"):
+def plan(state, calls, as_of, mode="weekly", sales_mode="auto"):
     """Phase 1 (no Occupancy yet): the one Occupancy call. Phase 2: everything else, sized to
     what changed. Each entry is ready to pass to the Datex MCP tool as-is."""
     out = []
@@ -576,9 +604,9 @@ def plan(state, calls, as_of, mode="weekly"):
         occ, _ = build_occupancy(calls, bl, period)
         st = d.get("occupancy") or {}
         moved = occ is None or any(num(occ.get(k)) != num(st.get(k)) for k in ("totalGLA", "occupiedGLA", "occupiedUnits"))
-        if mode == "monthly" or not d.get("hasSnapshot") or not (d.get("tenants") or {}).get("count") or moved:
+        if mode in ("monthly", "all") or not d.get("hasSnapshot") or not (d.get("tenants") or {}).get("count") or moved:
             roster.append(d)
-    notes.append(f"latest period {period}; rent roll re-pull for {len(roster)} of {len(deals)} properties ({'monthly: all' if mode == 'monthly' else 'occupancy moved or no stored roll'})")
+    notes.append(f"latest period {period}; rent roll re-pull for {len(roster)} of {len(deals)} properties ({'all, ' + mode if mode in ('monthly', 'all') else 'occupancy moved or no stored roll'})")
     for d in roster:
         for b in d["bldgIds"]:
             bid = nid(b)
@@ -590,19 +618,29 @@ def plan(state, calls, as_of, mode="weekly"):
             add("read_records", f"{d.get('propertyName') or d['dealId']}: suite square feet (for vacant suites)", entity="Spaces",
                 filters=[F("BLDGID", "contains", bid)], select=["BLDGID", "SUITID", "SUITSQFT"], first=100)
 
-    # Sales: monthly, plus any property with no monthly history stored yet. SalesPeriod is a
-    # text field (no 'gt'), so filter by year and let the site upsert.
-    for d in deals:
-        sl = d.get("sales") or {}
-        first_run = not sl.get("storedMonthlyRows")
-        if mode != "monthly" and not first_run:
-            continue
-        since = add_months(period, -24) if first_run or not sl.get("maxPeriod") else add_months(sl["maxPeriod"], -3)
-        for b in d["bldgIds"]:
-            for y in range(int(since[:4]), int(period[:4]) + 1):
-                add("read_records", f"{d.get('propertyName') or d['dealId']}: sales {y}{' (first run: 24 months)' if first_run else ''}", entity="SalesHistory",
-                    filters=[F("BuildingId", "contains", nid(b)), F("SalesType", "contains", "GROSS"), F("SalesPeriod", "startsWith", str(y))],
-                    select=["BuildingId", "TenantId", "SalesType", "ReportingType", "SalesPeriod", "SalesAmount"], first=100)
+    # Sales — PORTFOLIO-WIDE, never per building (Eric, 10/18/26: the per-building first pull
+    # planned 120 calls). No building filter; build() splits rows by building. NO orderBy:
+    # sorted paging failed on page 2 ("The downstream data request failed safely") while
+    # unsorted pages worked. SalesPeriod is text, so: eq one month, or contains a year.
+    fp = closed_period(as_of)
+    unchecked = [d for d in deals if not (d.get("sales") or {}).get("storedMonthlyRows") and not (d.get("sales") or {}).get("checkedThrough")]
+    sales = sales_mode
+    if sales == "auto":
+        sales = "all" if unchecked else ("newest" if mode in ("monthly", "all") else "none")
+    if mode == "all":
+        sales = "all"
+    gross = F("SalesType", "contains", "GROSS")
+    sel = ["BuildingId", "TenantId", "SalesType", "ReportingType", "SalesPeriod", "SalesAmount"]
+    if sales == "newest":
+        add("read_records", f"sales for {fp} (newest closed month), every building — page with after; do NOT add orderBy", entity="SalesHistory",
+            filters=[gross, F("SalesPeriod", "eq", fp)], select=sel, first=100)
+    elif sales == "all":
+        start_p = add_months(fp, -23)
+        why = f"{len(unchecked)} propert{'y has' if len(unchecked) == 1 else 'ies have'} no sales checked yet" if unchecked else "full 24-month sales refresh"
+        for y in range(int(start_p[:4]), int(fp[:4]) + 1):
+            add("read_records", f"sales {y}, every building ({why}) — page with after; do NOT add orderBy", entity="SalesHistory",
+                filters=[gross, F("SalesPeriod", "contains", str(y))], select=sel, first=100)
+    notes.append(f"sales: {sales}" + (f" ({len(unchecked)} propert{'y' if len(unchecked) == 1 else 'ies'} never checked)" if unchecked else ""))
 
     # A/R: three portfolio-wide aggregates (total / over 60 / over 90 days).
     d60 = (dt.date.fromisoformat(as_of) - dt.timedelta(days=60)).isoformat()
@@ -611,8 +649,7 @@ def plan(state, calls, as_of, mode="weekly"):
         add("aggregate_records", f"A/R {label}, every building", entity="TenantLedger", function="sum", field="TransactionOpenAmount",
             groupBy=["BuildingId", "TenantId", "TenantFlags"], filters=[F("TransactionOpenAmount", "gt", 0)] + extra, first=100)
 
-    fp = closed_period(as_of)
-    if mode == "monthly" or any((d.get("financials") or {}).get("period") != fp for d in deals):
+    if mode in ("monthly", "all") or any((d.get("financials") or {}).get("period") != fp for d in deals):
         add("read_records", f"NOI for {fp} (last closed month), every building", entity="FinancialGroups",
             filters=[F("Period", "eq", fp), F("AccountGroupId", "contains", "NOI")],
             select=["EntityID", "Period", "Basis", "AccountGroupId", "Actual", "YtdActual", "YtdBudget", "CurrentYearBudget", "TwelveMoActual"], first=100)
@@ -675,7 +712,10 @@ def main(argv=None):
     pl = sub.add_parser("plan")
     pl.add_argument("--state", required=True)
     pl.add_argument("--calls")
-    pl.add_argument("--mode", choices=["weekly", "monthly"], default="weekly")
+    pl.add_argument("--mode", choices=["weekly", "monthly", "all"], default="weekly",
+                    help="weekly: occupancy + moved rolls + A/R + leasing; monthly: every roll, financials, newest closed sales month; all: monthly + a full 24-month sales pull")
+    pl.add_argument("--sales", choices=["auto", "none", "newest", "all"], default="auto",
+                    help="auto: 'all' if any property was never checked, else newest on monthly/none on weekly")
     pl.add_argument("--as-of", default=dt.date.today().isoformat())
     bd = sub.add_parser("build")
     bd.add_argument("--state", required=True)
@@ -706,7 +746,7 @@ def main(argv=None):
     elif a.cmd == "plan":
         st = json.load(open(a.state, encoding="utf-8"))
         calls = load_calls(a.calls) if a.calls and os.path.exists(a.calls) else []
-        p = plan(st, calls, a.as_of, a.mode)
+        p = plan(st, calls, a.as_of, a.mode, a.sales)
         print(json.dumps(p, indent=1))
     elif a.cmd == "build":
         st = json.load(open(a.state, encoding="utf-8"))

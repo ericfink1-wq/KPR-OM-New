@@ -67,21 +67,28 @@ built payload passes the merge rules and both roster hashes agree.
    (OCCPSTAT decides which rows count) ONLY for buildings whose
    `occupiedGLA` / `occupiedUnits` differ from state — plus every building on the monthly run.
    Send `tenants[]` (with `occStatus`) and `vacantSuites[]` for those deals only.
-4. **Sales — only new months:** `SalesHistory` per building, `SalesPeriod startsWith <year>` for each year
-   since `state.sales.maxPeriod` − 3 months (SalesPeriod is text — no `gt`). Send just those rows in `salesHistory[]`; the server appends them and
-   recomputes trailing 12. First run for a deal (no stored months): send the last 24 months.
+4. **Sales — portfolio-wide, never per building, never sorted.** One `SalesHistory` read with NO building
+   filter (`SalesType contains GROSS` + `SalesPeriod eq <last closed month>` on the monthly run; `SalesPeriod
+   contains <year>` per year for a full pull), paged with `after`, and the kit splits rows by building. Do NOT
+   add `orderBy`: sorted paging failed on page 2 ("The downstream data request failed safely") while unsorted
+   pages worked. Each property is stamped `salesCheckedThrough`, so a center with no sales in Datex (Girard
+   Plaza) isn't re-pulled as "first time" next week. A month > 3× the tenant's median month is treated as a
+   mis-keyed annual total (Rosedale t0001371: $28.3M in one month) — left out of the 12-month sum and shown
+   as a "suspect month" chip. `plan --mode all` (or `--sales all`) forces the full 24-month pull.
 5. **A/R:** `TenantLedger` `TransactionOpenAmount gt 0`, aggregated by building + tenant into
    `over60` / `over90` (and `totalOpen`). Put the tenant's OCCPSTAT on each `byTenant[]` row as
    `occpstat` (or `occStatus`) so balances left by vacated tenants are labelled as such.
-6. **Financials:** `FinancialGroups` NOI for the last CLOSED period, all buildings, raw sign; include
+6. **Financials:** `FinancialGroups` NOI for the last CLOSED period, all buildings, raw sign (a building with no
+   NOI rows at all — University Hills — is left out quietly as "not in Datex"); include
    `basis` ("Cash" or "Accrual"). Skip when `state.financials.period` already equals that period.
 7. **Leasing:** `LeaseAppDealHistoryBySuite` with `DateSubmitted ge <state.leasing.latestSubmitted>`;
    send only those rows in `leasing[]`.
 8. **Post** with `?dryRun=1` first if anything looks unusual, then without it. Stop when done —
    `hasMore:true` from Datex is not an instruction to keep paging.
 
-Suggested cadence: weekly = steps 1–2, 4, 5, 7 (+3 where occupancy moved); monthly (after close) =
-everything, including step 3 for all buildings and step 6. The last run is shown on Asset Mgmt →
+Suggested cadence: weekly (`--mode weekly`) = occupancy, moved rent rolls, A/R, leasing — no sales unless a
+property was never checked; monthly on the 12th (`--mode monthly`) = every rent roll, financials, and the newest
+closed sales month; `--mode all` = monthly plus the full 24-month sales pull. The last run is shown on Asset Mgmt →
 Properties ("Last auto-refresh").
 
 ## The file, in one paragraph (10/18/26)

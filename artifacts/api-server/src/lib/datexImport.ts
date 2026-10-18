@@ -65,6 +65,9 @@ export interface DatexDealPayload {
   financials?: { period?: string | null; basis?: string | null; noiYtdActual?: number | null; noiYtdBudget?: number | null; noiTtmActual?: number | null; noiYearBudget?: number | null } | null;
   /** LeaseAppDealHistoryBySuite — recent deals (submitted or executed in the last 12 months). */
   leasing?: Array<{ tenant?: string | null; suite?: string | null; gla?: number | null; rentPSF?: number | null; stage?: string | null; submitted?: string | null; executed?: string | null; rentCommencement?: string | null; termMonths?: number | null }> | null;
+  /** Kit-stamped (YYYYMM): SalesHistory was read through this period for this deal, so an
+   *  empty result means "checked, none" — not "never pulled". */
+  salesCheckedThrough?: string | null;
   /** Datex Loans rows for these buildings (Inactive = false). */
   loans?: Array<Record<string, unknown>> | null;
 }
@@ -163,12 +166,19 @@ export function pendingSaleProblem(p: unknown): string | null {
   return bad.length ? `carries sale fields (${bad.join(", ")}) — pending-sale information is never recorded, and Datex has no such fields` : null;
 }
 
-export interface SalesSummary { sales12: number; months: number; from: string; to: string; staleMonths: number; partial: boolean }
+export interface SalesSummary { sales12: number; months: number; from: string; to: string; staleMonths: number; partial: boolean; suspectMonths?: Array<{ period: string; amount: number; medianMonth: number }> }
+/** A month above this multiple of the tenant's median month is treated as a mis-keyed
+ *  ANNUAL figure (Eric, 10/18/26: Rosedale t0001371 = $28.3M in one month) — excluded from
+ *  the 12-month sum and shown as a warning, never silently summed. */
+export const SUSPECT_MONTH_MULTIPLE = 3;
+const medianOf = (v: number[]) => { const a = [...v].sort((x, y) => x - y), m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
 /**
  * Per-tenant trailing sales from SalesHistory MONTHLY rows — the 12 most recent REPORTED
  * months, summed. Never TenantsMetrics.Rolling12Sales: when a tenant stops reporting it keeps
  * summing only the stale months still inside the window (Michaels @ keene read $1.13M = 3
- * months vs a true 2025 $3.09M). RPT rows win over estimates for the same month.
+ * months vs a true 2025 $3.09M). RPT rows win over estimates for the same month. A month more
+ * than SUSPECT_MONTH_MULTIPLE × the tenant's median month (judged with ≥4 months on file) is
+ * left out of the sum and listed in `suspectMonths`.
  */
 export function reduceSalesHistory(rows: NonNullable<DatexDealPayload["salesHistory"]>, asOfPeriod: string): Map<string, SalesSummary> {
   const byTenant = new Map<string, Map<string, { amount: number; rpt: boolean }>>();
@@ -184,11 +194,18 @@ export function reduceSalesHistory(rows: NonNullable<DatexDealPayload["salesHist
   }
   const out = new Map<string, SalesSummary>();
   for (const [t, m] of byTenant) {
-    const periods = [...m.keys()].sort().reverse().slice(0, 12);
+    const all = [...m.entries()].filter(([, v]) => v.amount > 0);
+    const med = all.length >= 4 ? medianOf(all.map(([, v]) => v.amount)) : null;
+    const suspect = med && med > 0 ? all.filter(([, v]) => v.amount > SUSPECT_MONTH_MULTIPLE * med).map(([p, v]) => ({ period: p, amount: Math.round(v.amount), medianMonth: Math.round(med) })) : [];
+    const bad = new Set(suspect.map(x => x.period));
+    const periods = [...m.keys()].filter(p => !bad.has(p)).sort().reverse().slice(0, 12);
     if (!periods.length) continue;
     const to = periods[0], from = periods[periods.length - 1];
-    out.set(t, { sales12: Math.round(periods.reduce((s, p) => s + m.get(p)!.amount, 0)), months: periods.length, from, to,
-      staleMonths: Math.max(0, monthsBetween(to, asOfPeriod)), partial: periods.length < 12 });
+    const sum: SalesSummary = { sales12: Math.round(periods.reduce((s, p) => s + m.get(p)!.amount, 0)), months: periods.length, from, to,
+      staleMonths: Math.max(0, monthsBetween(to, asOfPeriod)), partial: periods.length < 12 };
+    const inWindow = suspect.filter(x => x.period >= from);   // the ones that would have landed in this 12-month window
+    if (inWindow.length) sum.suspectMonths = inWindow.sort((a, b) => b.period.localeCompare(a.period));
+    out.set(t, sum);
   }
   return out;
 }

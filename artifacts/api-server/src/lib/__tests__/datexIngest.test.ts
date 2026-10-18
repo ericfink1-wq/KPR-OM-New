@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mergeDatexDeal, mergeSalesRows, mergeLeasing, rosterHash, dealState, blocksSent, pendingSaleProblem } from "../datexIngest";
-import { planDatexImport } from "../datexImport";
+import { planDatexImport, reduceSalesHistory } from "../datexImport";
 
 const MAP = { bldgIds: ["cooks"] };
 const PREV = {
@@ -75,5 +75,29 @@ describe("Datex ingest merge", () => {
     const r = mergeDatexDeal(PREV, [], { dealId: "d", bldgIds: ["cooks"], arAging: { over60: 10, over90: 5, byTenant: [{ name: "Big Lots", over60: 10, over90: 5, ...({ occpstat: "I" } as object) }] } }, "2026-10-18", MAP);
     if ("problem" in r) throw new Error(r.problem);
     expect((r.block.arAging as any).byTenant[0].occStatus).toBe("I");
+  });
+  it("a month > 3× the tenant's median is a suspect annual total — excluded and listed", () => {
+    const rows = ["202601", "202602", "202603", "202604", "202605", "202606"].map(p => ({ tenantId: "t0001371", period: p, amount: 2_000_000 }));
+    rows.push({ tenantId: "t0001371", period: "202607", amount: 28_300_000 });
+    const s = reduceSalesHistory(rows, "202610").get("t0001371")!;
+    expect(s.sales12).toBe(12_000_000);
+    expect(s.months).toBe(6);
+    expect(s.suspectMonths).toEqual([{ period: "202607", amount: 28_300_000, medianMonth: 2_000_000 }]);
+    // Too few months to judge → nothing flagged.
+    expect(reduceSalesHistory([{ tenantId: "x", period: "202601", amount: 1 }, { tenantId: "x", period: "202602", amount: 100 }], "202610").get("x")!.suspectMonths).toBeUndefined();
+  });
+  it("salesCheckedThrough survives an empty result and shows in state; totals recompute on any merge", () => {
+    const r = mergeDatexDeal(PREV, [], { dealId: "d", bldgIds: ["cooks"], salesHistory: [], salesCheckedThrough: "202609" }, "2026-10-18", MAP);
+    if ("problem" in r) throw new Error(r.problem);
+    expect(r.block.salesCheckedThrough).toBe("202609");
+    expect(dealState("d", "Cooks", ["cooks"], r.block, []).sales).toMatchObject({ checkedThrough: "202609", storedMonthlyRows: 0 });
+    expect((mergeDatexDeal(PREV, [], { dealId: "d", bldgIds: ["cooks"], salesHistory: [], salesCheckedThrough: "203001" }, "2026-10-18", MAP) as { block: Record<string, unknown> }).block.salesCheckedThrough).toBeUndefined();   // future: refused
+    const stored = ["202601", "202602", "202603", "202604", "202605"].map(p => ({ tenantId: "t1", period: p, amount: 1_000_000, reportingType: "RPT" }));
+    stored.push({ tenantId: "t1", period: "202606", amount: 30_000_000, reportingType: "RPT" });
+    const occ = mergeDatexDeal(PREV, stored, { dealId: "d", bldgIds: ["cooks"], occupiedGLA: 270_000, totalGLA: 300_000 }, "2026-10-18", MAP);
+    if ("problem" in occ) throw new Error(occ.problem);
+    const k = (occ.block.tenants as Array<Record<string, any>>).find(t => t.tenantId === "t1")!;
+    expect(k.sales12.sales12).toBe(5_000_000);
+    expect(occ.changed).toContain("tenant 12-month sales recomputed");
   });
 });

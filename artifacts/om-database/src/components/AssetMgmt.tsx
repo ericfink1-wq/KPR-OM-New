@@ -771,7 +771,9 @@ export function DatexSalesCard({ deal, bench, note }: { deal: Deal; bench?: Anal
                 <tr key={r.tenant}>
                   <td style={td}>{r.tenant}{r.isAnchor && <Src>anchor</Src>}</td>
                   <td style={num}>{r.sf ? Math.round(r.sf).toLocaleString() : "—"}</td>
-                  <td style={num}>{fmtM(r.sales12)}</td>
+                  <td style={num}>{fmtM(r.sales12)}{r.suspect.length > 0 && (
+                    <div><span className="kpr-chip" title={r.suspect.map(x => `${x.period.slice(4)}/${x.period.slice(0, 4)}: ${fmtM(x.amount)} vs a usual month of ${fmtM(x.medianMonth)} — looks like an annual total; left out of the 12-month sum`).join("\n")}
+                      style={{ background: "#fff2e0", color: K.amber, fontSize: 10.5, fontWeight: 700, padding: "1px 6px", borderRadius: 6, whiteSpace: "nowrap" }}>⚠ {r.suspect.length} suspect month{r.suspect.length === 1 ? "" : "s"}</span></div>)}</td>
                   <td style={num}>{r.salesPSF != null ? `$${r.salesPSF.toFixed(0)}` : "—"}</td>
                   <td style={td}>{r.period ?? "—"}</td>
                   <td style={{ ...num, color: r.atRisk ? K.red : K.ink, fontWeight: r.atRisk ? 700 : 400 }}>{r.occCostPct != null ? `${r.occCostPct.toFixed(1)}%` : "—"}<Src>{r.occCostBasis}</Src></td>
