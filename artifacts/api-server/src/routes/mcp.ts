@@ -24,6 +24,7 @@ import {
 } from "../lib/mcpKeys";
 import { requireAdmin, requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
+import { BUILD_COMMIT } from "../lib/buildInfo";
 
 // Two routers, deliberately: `router` (the MCP protocol endpoint) is mounted BEFORE
 // the site's session/2FA gate because it authenticates with its own API key, while
@@ -33,7 +34,10 @@ const router = Router();
 export const mcpAdminRouter: Router = Router();
 
 const SERVER_NAME = "kpr-deal-library";
-const SERVER_VERSION = "1.0.0";
+// The build rides in the version so a client that caches a server's tool list per version
+// (claude.ai connectors appear to) sees a NEW server after every deploy and re-reads it —
+// a tool added in a deploy was otherwise invisible behind a stale cached list (10/18/26).
+const SERVER_VERSION = `1.1.0+${BUILD_COMMIT}`;
 
 // ─── per-key rate limit ─────────────────────────────────────────────────────
 // Keyed on the API key (not the session, which MCP requests don't have), so one
@@ -219,6 +223,10 @@ router.get("/mcp/health", async (_req, res) => {
       usable: st.configured && ownerApproved === true,
     },
     storedActiveKeys: storedKeys,
+    // What tools/list returns to EVERY key (no per-role filtering). If a client shows fewer,
+    // the client is filtering or caching — not this server. Names only; no secrets.
+    build: BUILD_COMMIT,
+    tools: MCP_TOOLS.map(t => ({ name: t.name, readOnly: t.readOnly !== false })),
     howToAuthenticate: "Authorization: Bearer <key>, X-API-Key: <key>, or POST to /api/mcp/k/<key>",
   });
 });
