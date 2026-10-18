@@ -70,3 +70,6 @@ kpr-worklist-*.docx
 kpr-checklist-*.md
 kpr-checklist-*.docx
 kpr-DO-THIS-*.docx
+
+__pycache__/
+*.pyc
